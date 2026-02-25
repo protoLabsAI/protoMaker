@@ -4,6 +4,8 @@
 
 import type { PenNode } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Slider } from '@protolabs-ai/ui/atoms';
 
 interface TransformSectionProps {
   node: PenNode;
@@ -39,7 +41,7 @@ export function TransformSection({ node }: TransformSectionProps) {
   };
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm space-y-3">
+    <div className="rounded-lg bg-card p-3 shadow-sm space-y-3">
       <div className="text-sm font-semibold">Transform</div>
 
       {/* Position */}
@@ -48,20 +50,22 @@ export function TransformSection({ node }: TransformSectionProps) {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-muted-foreground">X</label>
-            <input
+            <Input
               type="number"
               value={x}
               onChange={(e) => handleUpdate('x', Number(e.target.value))}
-              className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+              className="w-full text-sm"
+              aria-label="X position"
             />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Y</label>
-            <input
+            <Input
               type="number"
               value={y}
               onChange={(e) => handleUpdate('y', Number(e.target.value))}
-              className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+              className="w-full text-sm"
+              aria-label="Y position"
             />
           </div>
         </div>
@@ -74,20 +78,22 @@ export function TransformSection({ node }: TransformSectionProps) {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs text-muted-foreground">W</label>
-              <input
+              <Input
                 type="number"
                 value={width}
                 onChange={(e) => handleUpdate('width', Number(e.target.value))}
-                className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                className="w-full text-sm"
+                aria-label="Width"
               />
             </div>
             <div>
               <label className="text-xs text-muted-foreground">H</label>
-              <input
+              <Input
                 type="number"
                 value={height}
                 onChange={(e) => handleUpdate('height', Number(e.target.value))}
-                className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                className="w-full text-sm"
+                aria-label="Height"
               />
             </div>
           </div>
@@ -98,14 +104,14 @@ export function TransformSection({ node }: TransformSectionProps) {
       {node.opacity !== undefined && (
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground">Opacity</div>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={node.opacity}
-            onChange={(e) => updateNode(node.id, { opacity: Number(e.target.value) })}
+          <Slider
+            min={0}
+            max={1}
+            step={0.01}
+            value={[node.opacity]}
+            onValueChange={(value) => updateNode(node.id, { opacity: value[0] })}
             className="w-full"
+            aria-label="Opacity"
           />
           <div className="text-xs text-right text-muted-foreground">
             {Math.round((node.opacity || 1) * 100)}%

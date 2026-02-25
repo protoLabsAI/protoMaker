@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import type { PenTheme } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { Save } from 'lucide-react';
+import { Button } from '@protolabs-ai/ui/atoms';
 
 interface DesignsToolbarProps {
   themes: PenTheme[];
@@ -64,91 +65,71 @@ export function DesignsToolbar({ themes, selectedTheme, onThemeChange }: Designs
   // If no structured themes found, show a simple message
   if (themeAxes.size === 0) {
     return (
-      <div className="flex items-center gap-3 rounded-lg bg-white px-4 py-2 shadow-sm text-sm text-muted-foreground">
+      <div className="flex items-center gap-3 rounded-lg bg-card px-4 py-2 shadow-sm text-sm text-muted-foreground">
         No theme axes available
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-4 rounded-lg bg-white px-4 py-2 shadow-sm">
+    <div className="flex items-center gap-4 rounded-lg bg-card px-4 py-2 shadow-sm">
       {/* Save button and undo/redo */}
-      <div className="flex items-center gap-2 border-r border-gray-200 pr-4">
-        <button
+      <div className="flex items-center gap-2 border-r border-border pr-4">
+        <Button
           onClick={() => saveDocument()}
           disabled={!isDirty || isSaving}
-          className={`
-            flex items-center gap-1.5 rounded px-3 py-1 text-sm font-medium transition-colors
-            ${
-              isDirty && !isSaving
-                ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }
-          `}
+          variant={isDirty && !isSaving ? 'default' : 'secondary'}
+          size="sm"
           title={isDirty ? 'Save (Cmd+S)' : 'No changes to save'}
+          aria-label={isSaving ? 'Saving document' : 'Save document'}
         >
-          {isDirty && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+          {isDirty && <span className="w-1.5 h-1.5 bg-primary-foreground rounded-full" />}
           <Save className="w-4 h-4" />
           {isSaving ? 'Saving...' : 'Save'}
-        </button>
+        </Button>
 
         <div className="flex items-center gap-1">
-          <button
+          <Button
             onClick={() => undo()}
             disabled={!canUndo}
-            className={`
-              rounded px-2 py-1 text-xs font-medium transition-colors
-              ${
-                canUndo
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  : 'bg-gray-50 text-gray-300 cursor-not-allowed'
-              }
-            `}
+            variant="secondary"
+            size="sm"
             title="Undo (Cmd+Z)"
+            aria-label="Undo"
           >
             Undo
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => redo()}
             disabled={!canRedo}
-            className={`
-              rounded px-2 py-1 text-xs font-medium transition-colors
-              ${
-                canRedo
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  : 'bg-gray-50 text-gray-300 cursor-not-allowed'
-              }
-            `}
+            variant="secondary"
+            size="sm"
             title="Redo (Cmd+Shift+Z)"
+            aria-label="Redo"
           >
             Redo
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Theme switcher */}
       {Array.from(themeAxes.entries()).map(([axis, values]) => (
         <div key={axis} className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">{axis}:</span>
+          <span className="text-sm font-medium text-foreground">{axis}:</span>
           <div className="flex gap-1">
             {values.map((value) => {
               const isSelected = selectedTheme[axis] === value;
               return (
-                <button
+                <Button
                   key={value}
                   onClick={() => onThemeChange(axis, value)}
-                  className={`
-                    rounded px-3 py-1 text-sm font-medium transition-colors
-                    ${
-                      isSelected
-                        ? 'bg-blue-500 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }
-                  `}
+                  variant={isSelected ? 'default' : 'secondary'}
+                  size="sm"
                   title={`Switch to ${axis}: ${value}`}
+                  aria-label={`Switch to ${axis}: ${value}`}
                 >
                   {value}
-                </button>
+                </Button>
               );
             })}
           </div>

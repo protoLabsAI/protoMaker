@@ -29,11 +29,12 @@ export function StrokeSection({ node }: StrokeSectionProps) {
   }>;
 
   return (
-    <div className="border-b border-gray-200">
+    <div className="border-b border-border">
       {/* Section header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between p-4 text-left hover:bg-gray-50"
+        className="flex w-full items-center justify-between p-4 text-left hover:bg-accent"
+        aria-label={isExpanded ? "Collapse stroke section" : "Expand stroke section"}
       >
         <span className="text-sm font-semibold">Stroke</span>
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -48,7 +49,7 @@ export function StrokeSection({ node }: StrokeSectionProps) {
               <div className="flex items-center gap-2">
                 {stroke.color && (
                   <div
-                    className="h-6 w-6 rounded border border-gray-300"
+                    className="h-6 w-6 rounded border border-border"
                     style={{ backgroundColor: stroke.color }}
                     title={stroke.color}
                   />
@@ -67,7 +68,7 @@ export function StrokeSection({ node }: StrokeSectionProps) {
               {stroke.thickness !== undefined && (
                 <div>
                   <label className="text-xs text-muted-foreground">Thickness</label>
-                  <div className="mt-1 rounded border border-gray-300 bg-gray-50 px-2 py-1 text-sm">
+                  <div className="mt-1 rounded border border-border bg-muted px-2 py-1 text-sm">
                     {stroke.thickness}px
                   </div>
                 </div>

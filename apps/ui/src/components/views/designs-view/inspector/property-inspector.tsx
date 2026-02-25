@@ -7,6 +7,7 @@ import type { PenNode, PenDocument as PenDocumentParsed } from '@protolabs-ai/ty
 import { useDesignsStore } from '@/store/designs-store';
 import { TransformSection } from './transform-section';
 import { FillSection } from './fill-section';
+import { StrokeSection } from './stroke-section';
 import { TypographySection } from './typography-section';
 import { LayoutSection } from './layout-section';
 
@@ -49,7 +50,7 @@ export function PropertyInspector() {
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
       {/* Node info */}
-      <div className="rounded-lg bg-white p-3 shadow-sm">
+      <div className="rounded-lg bg-card p-3 shadow-sm">
         <div className="text-xs text-muted-foreground">Selected</div>
         <div className="font-medium">{selectedNode.name || selectedNode.type}</div>
         <div className="text-xs text-muted-foreground">{selectedNode.type}</div>
@@ -61,6 +62,11 @@ export function PropertyInspector() {
       {/* Fill section - for nodes with fills */}
       {('fills' in selectedNode || selectedNode.type === 'text') && (
         <FillSection node={selectedNode} />
+      )}
+
+      {/* Stroke section - for nodes with strokes */}
+      {('strokes' in selectedNode) && (
+        <StrokeSection node={selectedNode} />
       )}
 
       {/* Typography section - for text nodes */}
