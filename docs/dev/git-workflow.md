@@ -432,9 +432,63 @@ cd ../..
 git worktree remove .worktrees/my-branch
 ```
 
+## Multi-Instance PR Ownership
+
+When multiple Automaker instances (local dev, staging, CI bot) monitor the same repository, they coordinate via **instance-stamped ownership** embedded in every PR body.
+
+### PR Watermark
+
+Every PR created by Automaker includes a hidden HTML comment:
+
+```html
+<!-- automaker:owner instance=ava-staging team=proto-labs-ai created=2026-02-25T19:00:00.000Z -->
+```
+
+This is invisible in rendered GitHub markdown but parseable by `check-pr-status`.
+
+### Nudge Rules
+
+Use the `ownership` field returned by `POST /api/github/check-pr-status`:
+
+| Scenario                                         | Action                                             |
+| ------------------------------------------------ | -------------------------------------------------- |
+| `isOwnedByThisInstance: true`                    | Act freely (rebase, fix, comment, merge)           |
+| `isOwnedByThisInstance: false`, `isStale: false` | **Skip** — another live instance owns this PR      |
+| `isOwnedByThisInstance: false`, `isStale: true`  | May act — original owner appears inactive          |
+| `instanceId: null`                               | PR not created by Automaker — apply project policy |
+
+Stale = BOTH last commit AND last activity older than `prOwnershipStaleTtlHours` (default 24h).
+
+### Instance Identity Configuration
+
+```json
+{
+  "instanceId": "ava-staging",
+  "teamId": "proto-labs-ai",
+  "prOwnershipStaleTtlHours": 24
+}
+```
+
+`instanceId` is auto-generated as a UUID on first startup if not set.
+
+For the full reference, see [Multi-Instance PR Coordination](./multi-instance-pr-coordination.md).
+
+## Post-Agent Worktree Recovery
+
+`WorktreeRecoveryService` runs after every agent exit (success or failure). It detects uncommitted changes in the worktree and automatically:
+
+1. Formats changed files via prettier stdin pipe
+2. Stages selectively (excludes `.automaker/`)
+3. Commits with `HUSKY=0` to skip hooks
+4. Pushes the branch
+5. Creates a PR via `gh pr create`
+
+If recovery fails, the feature is marked `blocked` with a `statusChangeReason` pointing to the worktree path. This prevents the Lead Engineer from retrying a feature whose failure was caused by a git or network error — retrying the agent won't fix it.
+
 ## Learn More
 
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure and dependencies
+- [Multi-Instance PR Coordination](./multi-instance-pr-coordination.md) - Ownership model and stale decay
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Complete contribution guide
 - [Graphite Docs](https://graphite.dev/docs) - Stack-aware PR management
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message format

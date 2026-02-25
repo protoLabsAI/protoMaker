@@ -173,6 +173,8 @@ This is your routing table. For every signal, find the right row and delegate ac
 | PR behind main                    | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer` |
 | Build failure (TypeScript)        | Feature agent retry or PR Maintainer | Retry first, delegate if mechanical              |
 | Orphaned worktree with commits    | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer` |
+| PR owned by another instance      | **Skip** (not stale)                 | Check `ownership.isOwnedByThisInstance` first    |
+| PR owned by another, stale >24h   | PR Maintainer agent                  | May reclaim — original owner inactive            |
 | **Board Consistency**             |                                      |                                                  |
 | Review + PR merged, not done      | Board Janitor crew (auto)            | Runs every 15min                                 |
 | In-progress, no running agent >4h | Board Janitor crew (auto)            | Runs every 15min                                 |
@@ -450,6 +452,15 @@ LinearSyncService moves issue to "Done" + adds comment
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 
 **Worktree safety** — NEVER `cd` into worktree directories. Always use `git -C <worktree-path>` or absolute paths.
+
+**PR Ownership** — Every Automaker-created PR has a hidden watermark: `<!-- automaker:owner instance=X team=Y created=Z -->`. Before acting on any PR, call `POST /api/github/check-pr-status` and check the `ownership` field:
+
+- `isOwnedByThisInstance: true` → act freely
+- `isOwnedByThisInstance: false`, `isStale: false` → **skip** — another live instance owns it
+- `isOwnedByThisInstance: false`, `isStale: true` → may reclaim (original owner inactive after 24h)
+- `instanceId: null` → not an Automaker PR — apply project policy
+
+Configure your identity in global settings: `instanceId` (auto-generated UUID if absent), `teamId`, `prOwnershipStaleTtlHours` (default 24). See `docs/dev/multi-instance-pr-coordination.md`.
 
 **Package rebuilds** — After ANY types or shared package PR merges, run `npm run build:packages`.
 

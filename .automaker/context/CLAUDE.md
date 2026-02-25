@@ -133,3 +133,23 @@ Key fields available on every feature:
 ## Dev Server
 
 NEVER start, stop, or restart the dev server. It's managed externally.
+
+## PR Ownership (Multi-Instance Coordination)
+
+When implementing features, every PR created by Automaker contains a hidden ownership watermark:
+
+```html
+<!-- automaker:owner instance=<instanceId> team=<teamId> created=<ISO8601> -->
+```
+
+This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark()`. You do not need to add it manually.
+
+**WorktreeRecoveryService** runs after every agent exit. If you leave uncommitted changes in the worktree, it will:
+1. Format changed files
+2. Stage (excluding `.automaker/`)
+3. Commit with `HUSKY=0`
+4. Push and create a PR
+
+If recovery fails, the feature is marked `blocked` with a `statusChangeReason`. The Lead Engineer will escalate rather than retry — retrying the agent won't resolve a git or network failure.
+
+**Implication**: Commit your work before exiting. The recovery service is a safety net, not a substitute for proper commits.
