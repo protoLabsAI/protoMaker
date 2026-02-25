@@ -70,7 +70,7 @@ export function ComponentLibrary({ penFile }: ComponentLibraryProps) {
   } = useDesignsStore();
 
   // Parse the document
-  const document = useMemo<PenDocumentParsed | null>(() => {
+  const parsedDoc = useMemo<PenDocumentParsed | null>(() => {
     if (!penFile?.content) return null;
     try {
       const parsed = JSON.parse(penFile.content);
@@ -85,9 +85,9 @@ export function ComponentLibrary({ penFile }: ComponentLibraryProps) {
 
   // Extract reusable components
   const reusableComponents = useMemo(() => {
-    if (!document?.children) return [];
-    return findReusableNodes(document.children);
-  }, [document]);
+    if (!parsedDoc?.children) return [];
+    return findReusableNodes(parsedDoc.children);
+  }, [parsedDoc]);
 
   // Group components
   const groups = useMemo(() => {
@@ -163,6 +163,7 @@ export function ComponentLibrary({ penFile }: ComponentLibraryProps) {
           <input
             type="text"
             placeholder="Search components..."
+            aria-label="Search components"
             value={librarySearchFilter}
             onChange={(e) => setLibrarySearchFilter(e.target.value)}
             className="w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -204,7 +205,7 @@ export function ComponentLibrary({ penFile }: ComponentLibraryProps) {
                         <div key={component.id} className="space-y-1">
                           <ComponentThumbnail
                             node={component}
-                            document={document}
+                            document={parsedDoc}
                             onClick={() => handleComponentClick(component)}
                           />
                           <p className="text-xs text-muted-foreground truncate px-1">
