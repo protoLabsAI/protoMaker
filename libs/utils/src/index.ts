@@ -174,3 +174,14 @@ export {
 
 // Memory chunking
 export { chunkMarkdownFile, type MemoryChunk } from './memory-chunker.js';
+
+// Sanitization utilities
+export {
+  normalizeUnicode,
+  sanitizeMarkdownForLLM,
+  detectPromptInjection,
+  validateFilePaths,
+  type SanitizationViolation,
+  type SanitizationResult,
+  type SanitizationSeverity,
+} from './sanitize.js';
