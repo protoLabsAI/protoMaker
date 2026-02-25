@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 463
-  referenced: 230
-  successfulFeatures: 230
+  loaded: 457
+  referenced: 227
+  successfulFeatures: 227
 ---
 # gotchas
 
@@ -383,7 +383,6 @@ usageStats:
 - **Root cause:** Prometheus ecosystem standardizes on seconds for duration histograms. Conversion ensures metrics are compatible with standard dashboards and alert thresholds.
 - **How to avoid:** Conversion required at metric ingestion point, but keeps internal timing logic unchanged; missing conversion creates 1000x inflated duration metrics
 
-<<<<<<< Updated upstream
 #### [Gotcha] LLM output regex parsing fails silently: patterns like `**dimension[:\s]*\*\*` that don't match LLM output format return default scores (50%) instead of the actual LLM score, making it impossible to detect parsing failures. (2026-02-25)
 - **Situation:** Antagonistic reviewer extracts review scores via regex. If pattern doesn't match actual LLM output format, the regex silently fails and a default score is assigned, causing all quality gates to fail incorrectly.
 - **Root cause:** The fix changed pattern to `**dimension\*\*:` (exact format matching) because LLM output format is inconsistent. Exact matching + subsequent validation would catch mismatches, but the code doesn't currently fail fast on non-match.
@@ -443,25 +442,3 @@ usageStats:
 - **Situation:** Dialog footer has disabled state on empty input, but no visual feedback if API call times out or returns error.
 - **Root cause:** Implementation focused on happy path. `.then(success => {})` pattern checks success bool but doesn't distinguish between network error, validation error, or permission error.
 - **How to avoid:** Current: clean code, but silent failures. With error handling: more verbose but better UX for failure cases.
-=======
-#### [Gotcha] Git worktrees do not automatically include node_modules - environment setup required for builds to work (2026-02-25)
-- **Situation:** Created worktree for feature branch but npm run build failed with 'Cannot find package' errors
-- **Root cause:** Worktrees are shallow copies of git state, not full environment clones. Dependencies are in .gitignore and not transferred
-- **How to avoid:** Must either npm install or use symlinks to parent node_modules. Choosing npm install doubles disk usage; symlinks risk conflicts
-
-#### [Gotcha] Git command `git rev-list origin/branch..branch --count` fails (non-zero exit) when remote branch doesn't exist yet (2026-02-25)
-- **Situation:** Checking for unpushed commits on new branches that haven't been pushed to remote
-- **Root cause:** Root cause: remote branch literally doesn't exist. Conservative handling: treat as 'unpushed' and proceed with push.
-- **How to avoid:** Graceful handling means new branches get pushed (desired) but silent failures could hide real git issues if not logged carefully.
-
-#### [Gotcha] Pre-existing platform package p-limit import error blocks build verification, even though implementation is correct and isolated (2026-02-25)
-- **Situation:** Full monorepo build fails on unrelated @protolabs-ai/platform package TypeScript compilation before reaching actual feature tests
-- **Root cause:** Root cause is broken dependency resolution in platform/secure-fs.ts, not caused by this feature. Discovered via baseline testing (stashing changes, building clean, restashing).
-- **How to avoid:** Requires extra diagnostic steps (stash-test-unstash) to verify isolation; creates false blocker on acceptance criteria checklist even though feature is correct
->>>>>>> Stashed changes
-
-
-#### [Gotcha] Git worktree TypeScript compilation resolves to main repo's node_modules via symlinks, not worktree's own updates. Type changes must be applied to main repo for worktree build to pass, even though source code is only in worktree. (2026-02-25)
-- **Situation:** During implementation in worktree, added 'maintenance' event type to worktree's types/src/event.ts, but server build failed to find it. Discovery: worktree's TypeScript was resolving @protolabs-ai/types from main repo's symlinked node_modules.
-- **Root cause:** Worktrees inherit parent repo's node_modules symlink structure. TypeScript module resolution prefers symlinks over local files, causing version divergence between worktree source and resolved dependencies.
-- **How to avoid:** Added complexity where type changes must be made in two places, but simplifies maintenance (no duplicate node_modules). Both changes merge together when PR is integrated.

@@ -1402,7 +1402,7 @@ export async function scanWorktreesForCrashRecovery(
         );
         const unpushedCount = parseInt(revListOutput.trim(), 10);
         hasUnpushedCommits = unpushedCount > 0;
-      } catch (error) {
+      } catch (_error) {
         // Remote branch might not exist yet - treat as unpushed
         logger.debug(`Could not check unpushed commits for ${worktree.branch}, assuming unpushed`);
         hasUnpushedCommits = true;

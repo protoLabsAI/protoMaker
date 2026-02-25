@@ -4,7 +4,6 @@
  */
 
 import type { Request, Response } from 'express';
-import { join } from 'node:path';
 import { readdir, stat } from 'node:fs/promises';
 import { createLogger } from '@protolabs-ai/utils';
 import { validatePath } from '@protolabs-ai/platform';

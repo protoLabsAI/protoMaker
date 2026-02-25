@@ -5,15 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-<<<<<<< Updated upstream
-  loaded: 65
+  loaded: 67
   referenced: 35
   successfulFeatures: 35
-=======
-  loaded: 52
-  referenced: 32
-  successfulFeatures: 32
->>>>>>> Stashed changes
 ---
 # documentation
 

@@ -4,7 +4,7 @@
 
 import type { PenFrame } from '@protolabs-ai/types';
 import { PenNodeRenderer } from './pen-node-renderer';
-import { fillToCSS, strokeToCSS, paddingToCSS, layoutToFlexDirection } from './style-utils';
+import { fillToCSS, strokeToCSS, layoutToFlexDirection } from './style-utils';
 import { usePenTheme } from './pen-theme-context';
 import { DropZone } from '../dnd/drop-zone';
 import { SortableNode } from '../dnd/sortable-node';

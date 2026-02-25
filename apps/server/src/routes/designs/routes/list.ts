@@ -90,7 +90,7 @@ export function createListHandler() {
           });
           return;
         }
-      } catch (error) {
+      } catch (_error) {
         // Directory doesn't exist - return empty list
         res.json({ success: true, files: [] });
         return;

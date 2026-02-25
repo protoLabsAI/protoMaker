@@ -287,6 +287,7 @@ export class QuarantineService {
     }
 
     // Check for control characters (except newlines \n, carriage returns \r, tabs \t)
+    // eslint-disable-next-line no-control-regex
     const controlCharPattern = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
     if (controlCharPattern.test(sanitizedTitle)) {
       violations.push({

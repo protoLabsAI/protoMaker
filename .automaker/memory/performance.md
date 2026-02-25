@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 19
-  referenced: 11
-  successfulFeatures: 11
+  referenced: 10
+  successfulFeatures: 10
 ---
 # performance
 
@@ -234,20 +234,3 @@ usageStats:
 - **Rejected:** Array with .includes() - adequate but degrades with many groups; Record - more verbose with no performance gain
 - **Trade-offs:** Better render performance and cleaner code vs. Set is less familiar and less serializable if state persistence added later
 - **Breaking if changed:** Switching to array search would degrade UX responsiveness with large component libraries; Set choice matters for performance-critical render path
-
-#### [Pattern] Exponential backoff with 2^(attempt-1) * 2s formula (2s, 4s, 8s delays) for transient failures (2026-02-25)
-- **Problem solved:** Git push and PR creation can fail transiently due to network blips or GitHub API rate limits; retry strategy must balance speed vs not overwhelming service
-- **Why this works:** Exponential backoff prevents thundering herd; starting fast (2s) provides quick recovery for brief network hiccups while escalating (4s, 8s) backs off from rapid-fire retries on persistent issues
-- **Trade-offs:** Fast initial retry but caps out at 8s—good for network blips but inadequate for sustained outages lasting >10s; simple formula vs more sophisticated jitter/deadline logic
-
-### Check interval set to 5 minutes, balancing stuck build detection speed against GitHub API rate limit constraints (2026-02-25)
-- **Context:** Scheduler can run checks more frequently (1 min) for faster detection, or less frequently (15+ min) to reduce API usage.
-- **Why:** 5 minutes provides reasonable responsiveness (10-15 min max delay for stuck build detection) while staying well within GitHub's API rate limits for typical deployments. Conservative approach avoids rate limit surprises.
-- **Rejected:** 1-minute interval (faster but risks hitting rate limits with multiple runners), 15+ minute interval (safer but stuck builds stay stuck longer)
-- **Trade-offs:** Slower detection than ideal, but safe operation. Stuck builds may remain stuck 5-10 minutes longer than minimum possible.
-- **Breaking if changed:** If interval is reduced to 1-minute without monitoring API usage, could hit GitHub rate limits and cause health checks to fail.
-
-#### [Pattern] OG images optimized to 9-12KB per image (25x smaller than 300KB estimate) through SVG-based composition + PNG optimization, not raster artwork. This pattern works because social preview images are simple graphics, not photographs. (2026-02-25)
-- **Problem solved:** Five images total to ~50KB instead of 1.5MB. Achieved through programmatic graphic design (logo, text overlays, colored backgrounds) rather than complex artwork.
-- **Why this works:** Social preview images have specific constraints: simple layouts, text-heavy, small display size (typically 120-200px in feeds). Vector/simple graphics compress exponentially better than photos. Reduced payload speeds social crawler fetches and improves page load.
-- **Trade-offs:** Constrains design to simple graphics/layouts but achieves extreme file size efficiency and fast regeneration

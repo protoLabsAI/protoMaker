@@ -120,7 +120,7 @@ export function strokeToCSS(
  */
 export function sizeToCSS(
   size: number | 'fill_container' | 'fit_content' | undefined,
-  isFlex: boolean
+  _isFlex: boolean
 ): { size?: string; flex?: string } {
   if (size === undefined) {
     return {};

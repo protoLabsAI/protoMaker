@@ -6,13 +6,6 @@ import type { PenTextNode } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { Input } from '@protolabs-ai/ui/atoms';
 import { Textarea } from '@protolabs-ai/ui/atoms';
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
 
 interface TypographySectionProps {
