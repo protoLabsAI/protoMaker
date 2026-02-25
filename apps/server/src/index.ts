@@ -201,6 +201,7 @@ import { LinearIntakeBridge } from './services/linear-intake-bridge.js';
 import { createDeployRoutes } from './routes/deploy/index.js';
 import { createIntegrityRoutes } from './routes/integrity.js';
 import { createAnalyticsRoutes } from './routes/analytics.js';
+import { createQuarantineRoutes } from './routes/quarantine.js';
 import { createAlertsRoutes } from './routes/alerts/index.js';
 import { createEngineRoutes } from './routes/engine/index.js';
 import { EventStreamBuffer } from './lib/event-stream-buffer.js';
@@ -1508,6 +1509,7 @@ app.use('/api/deploy', createDeployRoutes(autoModeService));
 app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes());
+app.use('/api/quarantine', createQuarantineRoutes());
 
 // Lead Engineer routes (production-phase nerve center)
 const { createLeadEngineerRoutes } = await import('./routes/lead-engineer/index.js');

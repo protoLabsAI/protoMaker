@@ -175,6 +175,7 @@ import { setupTools } from './tools/setup-tools.js';
 import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
 import { calendarTools } from './tools/calendar-tools.js';
+import { quarantineTools } from './tools/quarantine-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -193,6 +194,7 @@ const tools: Tool[] = [
   ...utilityTools,
   ...schedulerTools,
   ...calendarTools,
+  ...quarantineTools,
 ];
 
 // Tool implementations
@@ -1598,6 +1600,52 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
       return { success: true, ...results };
     }
+
+    // Quarantine Management
+    case 'list_quarantine_entries':
+      return apiCall('/quarantine/list', {
+        projectPath: args.projectPath,
+        result: args.result,
+      });
+
+    case 'approve_quarantine_entry':
+      return apiCall('/quarantine/approve', {
+        projectPath: args.projectPath,
+        quarantineId: args.quarantineId,
+        reviewedBy: args.reviewedBy,
+      });
+
+    case 'reject_quarantine_entry':
+      return apiCall('/quarantine/reject', {
+        projectPath: args.projectPath,
+        quarantineId: args.quarantineId,
+        reviewedBy: args.reviewedBy,
+        reason: args.reason,
+      });
+
+    case 'get_trust_tier': {
+      const tierResult = (await apiCall('/quarantine/trust-tiers/list', {})) as {
+        success?: boolean;
+        records?: Array<{ githubUsername: string; tier: number }>;
+      };
+      if (tierResult.success && tierResult.records) {
+        const record = tierResult.records.find((r) => r.githubUsername === args.githubUsername);
+        return {
+          success: true,
+          githubUsername: args.githubUsername,
+          tier: record ? record.tier : 0,
+        };
+      }
+      return { success: false, error: 'Failed to get trust tier' };
+    }
+
+    case 'set_trust_tier':
+      return apiCall('/quarantine/trust-tiers/set', {
+        githubUsername: args.githubUsername,
+        tier: args.tier,
+        grantedBy: args.grantedBy,
+        reason: args.reason,
+      });
 
     default:
       throw new Error(`Unknown tool: ${name}`);
