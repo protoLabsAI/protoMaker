@@ -90,8 +90,8 @@ groups:
         execErrState: Alerting
         for: 2m
         annotations:
-          summary: "Automaker server is down or unreachable"
-          description: "The Automaker server health check has been failing for more than 2 minutes. Service may be unavailable."
+          summary: 'Automaker server is down or unreachable'
+          description: 'The Automaker server health check has been failing for more than 2 minutes. Service may be unavailable.'
         labels:
           severity: critical
           component: backend
@@ -149,8 +149,8 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: "Memory usage is above 80%"
-          description: "Host memory usage has been above 80% for more than 5 minutes. Current value: {{ $values.B.Value }}%"
+          summary: 'Memory usage is above 80%'
+          description: 'Host memory usage has been above 80% for more than 5 minutes. Current value: {{ $values.B.Value }}%'
         labels:
           severity: warning
           component: host
@@ -208,8 +208,8 @@ groups:
         execErrState: Error
         for: 1m
         annotations:
-          summary: "Disk usage is above 90%"
-          description: "Root filesystem usage has exceeded 90%. Current value: {{ $values.B.Value }}%. Free up space immediately."
+          summary: 'Disk usage is above 90%'
+          description: 'Root filesystem usage has exceeded 90%. Current value: {{ $values.B.Value }}%. Free up space immediately.'
         labels:
           severity: critical
           component: host
@@ -267,8 +267,8 @@ groups:
         execErrState: Error
         for: 1m
         annotations:
-          summary: "Agent API costs exceeded $5 in the last hour"
-          description: "Agent execution costs have spiked to ${{ $values.B.Value }} in the last hour. Review agent activity and cost tracking."
+          summary: 'Agent API costs exceeded $5 in the last hour'
+          description: 'Agent execution costs have spiked to ${{ $values.B.Value }} in the last hour. Review agent activity and cost tracking.'
         labels:
           severity: warning
           component: agent
@@ -326,8 +326,8 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: "No successful deployments in the last 24 hours"
-          description: "There have been no successful deployments in the last 24 hours. Check CI/CD pipeline and deployment logs."
+          summary: 'No successful deployments in the last 24 hours'
+          description: 'There have been no successful deployments in the last 24 hours. Check CI/CD pipeline and deployment logs.'
         labels:
           severity: warning
           component: deployment

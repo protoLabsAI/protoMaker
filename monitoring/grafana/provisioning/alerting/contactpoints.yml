@@ -42,5 +42,5 @@ contactPoints:
         type: email
         settings:
           # Fallback email contact point (configured via grafana.ini smtp settings)
-          addresses: "admin@localhost"
+          addresses: 'admin@localhost'
         disableResolveMessage: false
