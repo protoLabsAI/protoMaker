@@ -511,6 +511,36 @@ class ExecuteProcessor implements StateProcessor {
       };
     }
 
+    // Guard: if the feature's branch already has an open PR, skip execution and advance to REVIEW.
+    // Prevents the state machine from launching a duplicate agent when the feature was already
+    // submitted (e.g., blocked at SPEC_REVIEW gate, then requeued by dep-unblocking).
+    if (ctx.feature.branchName) {
+      try {
+        const { stdout: prJson } = await execAsync(
+          `gh pr list --head "${ctx.feature.branchName}" --state open --json number,headRefName --limit 1`,
+          { cwd: ctx.projectPath, timeout: 10000 }
+        );
+        const prs: { number: number }[] = JSON.parse(prJson || '[]');
+        if (prs.length > 0) {
+          ctx.prNumber = prs[0].number;
+          logger.info(
+            `[EXECUTE] Feature ${ctx.feature.id} already has open PR #${ctx.prNumber} — skipping execution, transitioning to REVIEW`
+          );
+          await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+            status: 'review',
+            prNumber: ctx.prNumber,
+          });
+          return {
+            nextState: 'REVIEW',
+            shouldContinue: true,
+            reason: `Existing open PR #${ctx.prNumber} found — skipping re-execution`,
+          };
+        }
+      } catch (err) {
+        logger.warn('[EXECUTE] Could not check for existing PR (non-fatal):', err);
+      }
+    }
+
     // Shape prior context via ContextFidelityService (if available)
     if (
       this.serviceContext.contextFidelityService &&

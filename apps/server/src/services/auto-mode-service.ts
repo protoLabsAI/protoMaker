@@ -5114,6 +5114,23 @@ Format your response as a structured markdown document.`;
     // Used to identify orphaned features (features with branchNames but no worktrees)
     const worktreeBranches = await this.getAllWorktreeBranches(projectPath);
 
+    // Fetch all open PRs once — guards against re-executing features that already have open PRs.
+    // Prevents the SPEC_REVIEW gate (or dep-unblocking) from launching duplicate agents.
+    const openPrBranches = new Map<string, number>(); // branch → PR number
+    try {
+      const { stdout: prJson } = await execAsync(
+        'gh pr list --state open --json number,headRefName --limit 200',
+        { cwd: projectPath, timeout: 15000 }
+      );
+      const prs: { number: number; headRefName: string }[] = JSON.parse(prJson || '[]');
+      for (const pr of prs) openPrBranches.set(pr.headRefName, pr.number);
+      logger.debug(
+        `[loadPendingFeatures] Found ${openPrBranches.size} open PR(s) — these branches are excluded from re-execution`
+      );
+    } catch (err) {
+      logger.warn('[loadPendingFeatures] Could not fetch open PRs (non-fatal):', err);
+    }
+
     try {
       const entries = await secureFs.readdir(featuresDir, {
         withFileTypes: true,
@@ -5162,20 +5179,49 @@ Format your response as a structured markdown document.`;
       for (const feature of blockedWithDeps) {
         const satisfied = areDependenciesSatisfied(feature, allFeatures);
         if (satisfied) {
-          logger.info(
-            `[loadPendingFeatures] Unblocking feature ${feature.id} — all dependencies now satisfied`
-          );
-          feature.status = 'backlog';
-          try {
-            await this.featureLoader.update(projectPath, feature.id, { status: 'backlog' });
-            this.events.emit('feature:status-changed', {
-              projectPath,
-              featureId: feature.id,
-              previousStatus: 'blocked',
-              newStatus: 'backlog',
-            });
-          } catch (error) {
-            logger.error(`[loadPendingFeatures] Failed to unblock feature ${feature.id}:`, error);
+          // Guard: if deps are satisfied but feature already has an open PR, sync to 'review'
+          // rather than 'backlog' — this prevents duplicate agent launches after SPEC_REVIEW gate
+          const existingPr = feature.branchName
+            ? openPrBranches.get(feature.branchName)
+            : undefined;
+          if (existingPr) {
+            logger.info(
+              `[loadPendingFeatures] Feature ${feature.id} deps satisfied but has open PR #${existingPr} — syncing to review`
+            );
+            feature.status = 'review';
+            try {
+              await this.featureLoader.update(projectPath, feature.id, {
+                status: 'review',
+                prNumber: existingPr,
+              });
+              this.events.emit('feature:status-changed', {
+                projectPath,
+                featureId: feature.id,
+                previousStatus: 'blocked',
+                newStatus: 'review',
+              });
+            } catch (error) {
+              logger.error(
+                `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
+                error
+              );
+            }
+          } else {
+            logger.info(
+              `[loadPendingFeatures] Unblocking feature ${feature.id} — all dependencies now satisfied`
+            );
+            feature.status = 'backlog';
+            try {
+              await this.featureLoader.update(projectPath, feature.id, { status: 'backlog' });
+              this.events.emit('feature:status-changed', {
+                projectPath,
+                featureId: feature.id,
+                previousStatus: 'blocked',
+                newStatus: 'backlog',
+              });
+            } catch (error) {
+              logger.error(`[loadPendingFeatures] Failed to unblock feature ${feature.id}:`, error);
+            }
           }
         }
       }
@@ -5218,6 +5264,37 @@ Format your response as a structured markdown document.`;
             );
             continue;
           }
+
+          // Guard: if feature already has an open PR, sync it to 'review' and skip execution.
+          // Prevents duplicate agent launches when SPEC_REVIEW gate or dep-unblocking races
+          // with an existing in-flight PR.
+          const existingPr = feature.branchName
+            ? openPrBranches.get(feature.branchName)
+            : undefined;
+          if (existingPr) {
+            logger.info(
+              `[loadPendingFeatures] ⏭ Feature ${feature.id} has open PR #${existingPr} — syncing to review, skipping execution`
+            );
+            try {
+              await this.featureLoader.update(projectPath, feature.id, {
+                status: 'review',
+                prNumber: existingPr,
+              });
+              this.events.emit('feature:status-changed', {
+                projectPath,
+                featureId: feature.id,
+                previousStatus: feature.status,
+                newStatus: 'review',
+              });
+            } catch (error) {
+              logger.error(
+                `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
+                error
+              );
+            }
+            continue;
+          }
+
           // Filter by branchName:
           // - If branchName is null (main worktree), include features with:
           //   - branchName === null (unassigned), OR
