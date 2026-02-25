@@ -8,38 +8,44 @@
 
 import { Router } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
-import { readdir, readFile } from 'node:fs/promises';
-import { join, normalize, relative, basename } from 'node:path';
+import { readdir, readFile, realpath } from 'node:fs/promises';
+import { join, basename, extname, resolve } from 'node:path';
 
 const logger = createLogger('DocsRoutes');
 
-// Docs directory relative to project root
-const DOCS_DIR = 'docs/internal';
-
 /**
- * Validate that the requested path is within docs/internal/
- * Prevents path traversal attacks (e.g., ../../etc/passwd)
+ * Validate that the requested path is within docs/internal/ and is a .md file.
+ * Uses realpath to resolve symlinks and prevent symlink traversal attacks.
  */
-function isPathSafe(requestedPath: string): boolean {
-  const normalizedPath = normalize(requestedPath);
-  const relativePath = relative(DOCS_DIR, join(DOCS_DIR, normalizedPath));
+async function isPathSafe(docsDir: string, requestedPath: string): Promise<boolean> {
+  // Must be a .md file
+  if (extname(requestedPath) !== '.md') {
+    return false;
+  }
 
-  // Path is safe if it doesn't start with '..' (which would indicate going up directories)
-  return !relativePath.startsWith('..') && !normalizedPath.includes('..');
+  try {
+    const resolvedDocsDir = await realpath(docsDir);
+    const targetPath = join(docsDir, requestedPath);
+    const resolvedTarget = await realpath(targetPath);
+    return resolvedTarget.startsWith(resolvedDocsDir + '/') || resolvedTarget === resolvedDocsDir;
+  } catch {
+    // realpath fails if the file doesn't exist — fall back to static check
+    const normalized = resolve(docsDir, requestedPath);
+    const resolvedDocsDir = resolve(docsDir);
+    return normalized.startsWith(resolvedDocsDir + '/');
+  }
 }
 
 /**
- * Extract title from markdown content
- * Looks for first H1 heading (# Title) or derives from filename
+ * Extract title from markdown content.
+ * Looks for first H1 heading (# Title) or derives from filename.
  */
 function extractTitle(content: string, filename: string): string {
-  // Look for first H1 heading
   const h1Match = content.match(/^#\s+(.+)$/m);
   if (h1Match) {
     return h1Match[1].trim();
   }
 
-  // Derive from filename: "brand.md" -> "Brand"
   const nameWithoutExt = basename(filename, '.md');
   return nameWithoutExt
     .split('-')
@@ -48,43 +54,35 @@ function extractTitle(content: string, filename: string): string {
 }
 
 /**
- * Generate slug from filename
- * "brand.md" -> "brand"
- * "design-system.md" -> "design-system"
+ * Generate slug from filename: "brand.md" -> "brand"
  */
 function generateSlug(filename: string): string {
   return basename(filename, '.md');
 }
 
-export function createDocsRoutes(): Router {
+export function createDocsRoutes(repoRoot: string): Router {
+  const docsDir = join(repoRoot, 'docs/internal');
   const router = Router();
 
   /**
    * GET /api/docs/list
    * Returns array of all .md files in docs/internal/
    */
-  router.get('/list', async (req, res) => {
+  router.get('/list', async (_req, res) => {
     try {
-      const files = await readdir(DOCS_DIR);
+      const files = await readdir(docsDir);
       const mdFiles = files.filter((file) => file.endsWith('.md'));
 
-      // Read each file to extract title
       const docsData = await Promise.all(
         mdFiles.map(async (file) => {
           try {
-            const filePath = join(DOCS_DIR, file);
+            const filePath = join(docsDir, file);
             const content = await readFile(filePath, 'utf-8');
             const title = extractTitle(content, file);
             const slug = generateSlug(file);
-
-            return {
-              path: file,
-              title,
-              slug,
-            };
+            return { path: file, title, slug };
           } catch (error) {
             logger.error(`Failed to read file ${file}:`, error);
-            // Return basic info if we can't read the file
             return {
               path: file,
               title: generateSlug(file)
@@ -97,10 +95,7 @@ export function createDocsRoutes(): Router {
         })
       );
 
-      res.json({
-        success: true,
-        docs: docsData,
-      });
+      res.json({ success: true, docs: docsData });
     } catch (error) {
       logger.error('Failed to list docs:', error);
       res.status(500).json({
@@ -123,25 +118,19 @@ export function createDocsRoutes(): Router {
         return;
       }
 
-      // Validate path to prevent directory traversal
-      if (!isPathSafe(path)) {
+      if (!(await isPathSafe(docsDir, path))) {
         res.status(400).json({
-          error: 'Invalid path: path traversal detected',
-          message: 'Path must be within docs/internal directory',
+          error: 'Invalid path',
+          message: 'Path must be a .md file within docs/internal',
         });
         return;
       }
 
-      const filePath = join(DOCS_DIR, path);
+      const filePath = join(docsDir, path);
       const content = await readFile(filePath, 'utf-8');
       const title = extractTitle(content, path);
 
-      res.json({
-        success: true,
-        path,
-        title,
-        content,
-      });
+      res.json({ success: true, path, title, content });
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
         res.status(404).json({

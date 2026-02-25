@@ -1515,7 +1515,7 @@ app.use(
 );
 app.use('/api/issues', createIssuesRoutes(events));
 app.use('/api/deploy', createDeployRoutes(autoModeService));
-app.use('/api/docs', createDocsRoutes());
+app.use('/api/docs', createDocsRoutes(REPO_ROOT));
 app.use('/api/integrity', createIntegrityRoutes(integrityWatchdogService));
 app.use('/api/escalation', createEscalationRoutes(escalationRouter));
 app.use('/api/analytics', createAnalyticsRoutes());
