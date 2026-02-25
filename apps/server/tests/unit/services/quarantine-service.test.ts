@@ -113,7 +113,9 @@ describe('QuarantineService', () => {
       expect(outcome.approved).toBe(false);
       expect(outcome.entry.result).toBe('failed');
       expect(outcome.entry.stage).toBe('content');
-      expect(outcome.entry.violations.some((v) => v.stage === 'content' && v.severity === 'block')).toBe(true);
+      expect(
+        outcome.entry.violations.some((v) => v.stage === 'content' && v.severity === 'block')
+      ).toBe(true);
     });
 
     it('should detect various prompt injection patterns', async () => {
@@ -153,7 +155,9 @@ describe('QuarantineService', () => {
       expect(outcome.approved).toBe(false);
       expect(outcome.entry.result).toBe('failed');
       expect(outcome.entry.stage).toBe('security');
-      expect(outcome.entry.violations.some((v) => v.stage === 'security' && v.severity === 'block')).toBe(true);
+      expect(
+        outcome.entry.violations.some((v) => v.stage === 'security' && v.severity === 'block')
+      ).toBe(true);
     });
 
     it('should detect absolute path outside project', async () => {
