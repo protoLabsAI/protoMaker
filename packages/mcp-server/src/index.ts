@@ -725,9 +725,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       const summary = {
         total: features.length,
         backlog: features.filter((f) => f.status === 'backlog').length,
-        inProgress: features.filter((f) => f.status === 'in-progress').length,
+        inProgress: features.filter((f) => f.status === 'in_progress').length,
         review: features.filter((f) => f.status === 'review').length,
+        blocked: features.filter((f) => f.status === 'blocked').length,
         done: features.filter((f) => f.status === 'done').length,
+        verified: features.filter((f) => f.status === 'verified').length,
       };
       return summary;
     }
