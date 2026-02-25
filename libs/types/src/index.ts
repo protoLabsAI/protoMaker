@@ -51,6 +51,9 @@ export type {
   JsonRpcResponse,
 } from './codex-app-server.js';
 
+// Auto-mode types (execution state persistence)
+export type { ExecutionState } from './auto-mode.js';
+
 // Feature types
 export type {
   Feature,

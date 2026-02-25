@@ -41,6 +41,7 @@ import type {
   ExecutionContext,
   ActionProposal,
   EventType,
+  ExecutionState,
 } from '@protolabs-ai/types';
 import {
   DEFAULT_PHASE_MODELS,
@@ -133,6 +134,7 @@ import {
   type LoopState,
   type AutoModeLoopConfig,
 } from './auto-mode/auto-loop-coordinator.js';
+import { FeatureStateManager } from './auto-mode/feature-state-manager.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -356,18 +358,32 @@ interface AutoModeConfig {
 }
 
 /**
- * Execution state for recovery after server restart
- * Tracks which features were running and auto-loop configuration
+ * Generate a unique key for worktree-scoped auto loop state
+ * @param projectPath - The project path
+ * @param branchName - The branch name, or null for main worktree
  */
-interface ExecutionState {
-  version: 1;
-  autoLoopWasRunning: boolean;
-  maxConcurrency: number;
-  projectPath: string;
-  branchName: string | null; // null = main worktree
-  runningFeatureIds: string[];
-  savedAt: string;
+function getWorktreeAutoLoopKey(projectPath: string, branchName: string | null): string {
+  const normalizedBranch = branchName === 'main' ? null : branchName;
+  return `${projectPath}::${normalizedBranch ?? '__main__'}`;
 }
+
+/**
+ * Per-worktree autoloop state for multi-project/worktree support
+ */
+interface ProjectAutoLoopState {
+  abortController: AbortController;
+  config: AutoModeConfig;
+  isRunning: boolean;
+  consecutiveFailures: { timestamp: number; error: string }[];
+  pausedDueToFailures: boolean;
+  hasEmittedIdleEvent: boolean;
+  branchName: string | null; // null = main worktree
+  cooldownTimer: NodeJS.Timeout | null; // Timer for auto-resume after cooldown
+  startingFeatures: Set<string>; // Track features being started to prevent race conditions
+  humanBlockedCount: number; // Count of features blocked by human-assigned dependencies
+}
+
+// ExecutionState is defined in libs/types/src/auto-mode.ts and imported from @protolabs-ai/types.
 
 // Default empty execution state
 const DEFAULT_EXECUTION_STATE: ExecutionState = {
@@ -410,6 +426,8 @@ export class AutoModeService {
   private hasEmittedIdleEvent = false;
   // Recovery service for automatic failure recovery
   private recoveryService: RecoveryService;
+  // Feature state manager for persist-before-emit status updates
+  private featureStateManager!: FeatureStateManager;
   // Authority service for policy-gated feature mutations (optional)
   private authorityService: AuthorityService | null = null;
   // Data integrity watchdog service for monitoring feature count (optional)
@@ -437,6 +455,7 @@ export class AutoModeService {
     this.concurrencyManager = new ConcurrencyManager();
     this.settingsService = settingsService ?? null;
     this.recoveryService = getRecoveryService(events);
+    this.featureStateManager = new FeatureStateManager(this.events, this.featureLoader);
 
     // Stop running agents when their feature reaches a terminal state.
     // This prevents zombie agents from continuing to run (and consume API budget)
@@ -4871,107 +4890,10 @@ Format your response as a structured markdown document.`;
     featureId: string,
     status: string
   ): Promise<void> {
-    // Features are stored in .automaker directory
-    const featureDir = getFeatureDir(projectPath, featureId);
-    const featurePath = path.join(featureDir, 'feature.json');
-
-    try {
-      // Use recovery-enabled read for corrupted file handling
-      const result = await readJsonWithRecovery<Feature | null>(featurePath, null, {
-        maxBackups: DEFAULT_BACKUP_COUNT,
-        autoRestore: true,
-      });
-
-      logRecoveryWarning(result, `Feature ${featureId}`, logger);
-
-      const feature = result.data;
-      if (!feature) {
-        logger.warn(`Feature ${featureId} not found or could not be recovered`);
-        return;
-      }
-
-      // Capture previous status before updating for event emission
-      const previousStatus = feature.status;
-
-      feature.status = status;
-      feature.updatedAt = new Date().toISOString();
-      // Set justFinishedAt timestamp when moving to waiting_approval (agent just completed)
-      // Badge will show for 2 minutes after this timestamp
-      if (status === 'waiting_approval') {
-        feature.justFinishedAt = new Date().toISOString();
-      } else {
-        // Clear the timestamp when moving to other statuses
-        feature.justFinishedAt = undefined;
-      }
-      // Set lastFailureTime when feature fails (for auto-retry cooldown)
-      if (status === 'failed' || status === 'blocked') {
-        feature.lastFailureTime = new Date().toISOString();
-      }
-
-      // Use atomic write with backup support
-      await atomicWriteJson(featurePath, feature, { backupCount: DEFAULT_BACKUP_COUNT });
-
-      // Emit feature:status-changed event for all status transitions
-      this.events.emit('feature:status-changed', {
-        projectPath,
-        featureId,
-        previousStatus,
-        newStatus: status,
-      });
-
-      // Emit feature:completed event when reaching terminal success states
-      // This allows Lead Engineer and other services to detect completion
-      if (status === 'verified' || status === 'done') {
-        this.events.emit('feature:completed', {
-          projectPath,
-          featureId,
-          featureTitle: feature.title,
-          status,
-        });
-      }
-
-      // Emit feature:error event when reaching error states
-      if (status === 'failed' || status === 'blocked') {
-        this.events.emit('feature:error', {
-          projectPath,
-          featureId,
-          error: feature.error || 'Feature execution failed',
-          status,
-        });
-      }
-
-      // Create notifications for important status changes
-      const notificationService = getNotificationService();
-      if (status === 'waiting_approval') {
-        await notificationService.createNotification({
-          type: 'feature_waiting_approval',
-          title: 'Feature Ready for Review',
-          message: `"${feature.title || featureId}" is ready for your review and approval.`,
-          featureId,
-          projectPath,
-        });
-      } else if (status === 'verified') {
-        await notificationService.createNotification({
-          type: 'feature_verified',
-          title: 'Feature Verified',
-          message: `"${feature.title || featureId}" has been verified and is complete.`,
-          featureId,
-          projectPath,
-        });
-      }
-
-      // Sync completed/verified features to app_spec.txt
-      if (status === 'verified' || status === 'completed') {
-        try {
-          await this.featureLoader.syncFeatureToAppSpec(projectPath, feature);
-        } catch (syncError) {
-          // Log but don't fail the status update if sync fails
-          logger.warn(`Failed to sync feature ${featureId} to app_spec.txt:`, syncError);
-        }
-      }
-    } catch (error) {
-      logger.error(`Failed to update feature status for ${featureId}:`, error);
-    }
+    // Delegate to FeatureStateManager which guarantees persist-before-emit ordering:
+    // writes to disk first, then emits events (prevents stale reads on client refresh
+    // after server restart triggered by status-change events).
+    await this.featureStateManager.updateFeatureStatus(projectPath, featureId, status);
   }
 
   private isFeatureFinished(feature: Feature): boolean {
