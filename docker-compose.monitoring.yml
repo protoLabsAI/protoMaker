@@ -26,6 +26,33 @@ services:
       retries: 3
       start_period: 40s
 
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: automaker-loki
+    restart: unless-stopped
+    ports:
+      - '3100:3100'
+    volumes:
+      - ./monitoring/loki/local-config.yml:/etc/loki/local-config.yml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yml
+    networks:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: automaker-promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - monitoring
+
   grafana:
     image: grafana/grafana:latest
     container_name: automaker-grafana
@@ -45,6 +72,8 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+      loki:
+        condition: service_started
     healthcheck:
       test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/api/health']
       interval: 30s
@@ -84,5 +113,7 @@ networks:
 volumes:
   prometheus-data:
     name: automaker-prometheus-data
+  loki-data:
+    name: automaker-loki-data
   grafana-data:
     name: automaker-grafana-data
