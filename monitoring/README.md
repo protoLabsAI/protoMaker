@@ -39,6 +39,7 @@ docker ps | grep automaker
 ```
 
 You should see 4 containers:
+
 - automaker-prometheus
 - automaker-loki
 - automaker-promtail
@@ -63,6 +64,7 @@ Should return `ready`.
 ### 4. Search by Container Name
 
 Query examples:
+
 ```logql
 # All logs from server container
 {container_name="automaker-server"}
@@ -92,6 +94,7 @@ Promtail automatically adds these labels to all Docker container logs:
 ## Retention
 
 Loki is configured with:
+
 - **Retention period**: 7 days
 - **Compaction interval**: 10 minutes
 - **Automatic cleanup**: Enabled
@@ -103,6 +106,7 @@ This keeps disk usage manageable while retaining recent logs for debugging.
 ### Promtail not collecting logs
 
 Check Promtail has access to Docker socket:
+
 ```bash
 docker exec automaker-promtail ls -la /var/run/docker.sock
 ```
@@ -116,9 +120,10 @@ docker exec automaker-promtail ls -la /var/run/docker.sock
 ### High disk usage
 
 Adjust retention in `monitoring/loki/local-config.yml`:
+
 ```yaml
 limits_config:
-  retention_period: 168h  # Change to 72h for 3 days, etc.
+  retention_period: 168h # Change to 72h for 3 days, etc.
 ```
 
 ## Configuration Files
