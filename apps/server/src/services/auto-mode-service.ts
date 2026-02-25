@@ -92,6 +92,8 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
+import { TypedEventBus } from './auto-mode/typed-event-bus.js';
+import { ConcurrencyManager } from './auto-mode/concurrency-manager.js';
 import { ensureCleanWorktree } from '../lib/worktree-guard.js';
 import {
   agentCostTotal,
@@ -413,6 +415,8 @@ const COOLDOWN_PERIOD_MS = 300000; // 5 minutes cooldown before auto-resume
 
 export class AutoModeService {
   private events: EventEmitter;
+  private typedEventBus: TypedEventBus;
+  private concurrencyManager: ConcurrencyManager;
   private runningFeatures = new Map<string, RunningFeature>();
   private autoLoop: AutoLoopState | null = null;
   private featureLoader = new FeatureLoader();
@@ -446,9 +450,6 @@ export class AutoModeService {
   // Track which projects have already been checked for interrupted features this server lifecycle.
   // Prevents the UI from re-triggering resumeInterruptedFeatures on every board mount.
   private resumeCheckedProjects = new Set<string>();
-  // Rate-limiting for auto_mode_progress events (per feature)
-  private lastProgressEventTime = new Map<string, number>();
-  private readonly PROGRESS_EVENT_MIN_INTERVAL_MS = 100; // Max 1 event per 100ms per feature
   // Memory management thresholds (configurable via env vars)
   private readonly HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD = parseFloat(
     process.env.HEAP_STOP_THRESHOLD || '0.8'
@@ -459,6 +460,8 @@ export class AutoModeService {
 
   constructor(events: EventEmitter, settingsService?: SettingsService) {
     this.events = events;
+    this.typedEventBus = new TypedEventBus(events);
+    this.concurrencyManager = new ConcurrencyManager();
     this.settingsService = settingsService ?? null;
     this.recoveryService = getRecoveryService(events);
 
@@ -1359,48 +1362,24 @@ export class AutoModeService {
   }
 
   /**
-   * Get count of running features for a specific project
+   * Get count of running features for a specific project.
+   * Delegates to ConcurrencyManager for lease-based tracking.
    */
   private getRunningCountForProject(projectPath: string): number {
-    let count = 0;
-    for (const [, feature] of this.runningFeatures) {
-      if (feature.projectPath === projectPath) {
-        count++;
-      }
-    }
-    return count;
+    return this.concurrencyManager.getRunningCountForProject(projectPath);
   }
 
   /**
-   * Get count of running features for a specific worktree
+   * Get count of running features for a specific worktree.
+   * Delegates to ConcurrencyManager for lease-based tracking.
    * @param projectPath - The project path
-   * @param branchName - The branch name, or null for main worktree (features without branchName or matching primary branch)
+   * @param branchName - The branch name, or null for main worktree (counts all running features for project)
    */
   private async getRunningCountForWorktree(
     projectPath: string,
     branchName: string | null
   ): Promise<number> {
-    let count = 0;
-    for (const [, feature] of this.runningFeatures) {
-      if (feature.projectPath !== projectPath) continue;
-
-      if (branchName === null) {
-        // Main worktree auto-loop: count ALL running features for this project.
-        // Features start with branchName null but get assigned feature-specific branches
-        // (e.g., feature/concurrency-auto-mode-lane) when their worktree is created.
-        // The old logic only matched null/primary-branch, missing all features that had
-        // migrated to their own worktrees - causing the count to return 0 when 9+ agents
-        // were actually running, which broke concurrency enforcement.
-        count++;
-      } else {
-        // Feature worktree: exact match
-        const featureBranch = feature.branchName ?? null;
-        if (featureBranch === branchName) {
-          count++;
-        }
-      }
-    }
-    return count;
+    return this.concurrencyManager.getRunningCountForWorktree(projectPath, branchName);
   }
 
   /**
@@ -1727,15 +1706,17 @@ export class AutoModeService {
       recoveryContext?: string;
     }
   ): Promise<void> {
-    if (this.runningFeatures.has(featureId)) {
-      const existing = this.runningFeatures.get(featureId);
+    // Lease-based concurrency: acquire() returns false if the feature is already running
+    // (nested call, e.g. resumeInterruptedFeatures → resumeFeature → executeFeature).
+    // Nested calls increment the lease count rather than throwing a false-positive error.
+    const isNewAcquire = this.concurrencyManager.acquire(featureId, projectPath, null, null);
+    if (!isNewAcquire) {
+      const existing = this.concurrencyManager.get(featureId);
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
-      logger.warn(
-        `Feature ${featureId} is already running (runtime: ${runtime}s). Skipping duplicate execution.`
+      logger.info(
+        `Feature ${featureId} is already running (runtime: ${runtime}s). Nested acquire — lease incremented, skipping duplicate execution.`
       );
-      throw new Error(
-        `Feature ${featureId} is already running (${runtime}s). If this is stale, restart the server or stop the feature first.`
-      );
+      return;
     }
 
     // Add to running features immediately to prevent duplicate execution race condition
@@ -1792,6 +1773,7 @@ export class AutoModeService {
           `Refusing to execute feature ${featureId} — already in terminal status "${feature.status}". ` +
             `Removing from running features.`
         );
+        this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
         return;
       }
@@ -1801,6 +1783,7 @@ export class AutoModeService {
 
       // Update branchName immediately after loading
       tempRunningFeature.branchName = feature.branchName ?? null;
+      this.concurrencyManager.updateBranchName(featureId, feature.branchName ?? null);
 
       // Check if feature has existing context - if so, resume instead of starting fresh
       // Skip this check if we're already being called with a continuation prompt (from resumeFeature)
@@ -1821,6 +1804,7 @@ export class AutoModeService {
 
           // Recursively call executeFeature with the continuation prompt
           // Remove from running features temporarily, it will be added back
+          this.concurrencyManager.release(featureId);
           this.runningFeatures.delete(featureId);
           return this.executeFeature(
             projectPath,
@@ -1840,6 +1824,7 @@ export class AutoModeService {
             `Feature ${featureId} has existing context, resuming instead of starting fresh`
           );
           // Remove from running features temporarily, resumeFeature will add it back
+          this.concurrencyManager.release(featureId);
           this.runningFeatures.delete(featureId);
           return this.resumeFeature(projectPath, featureId, useWorktrees);
         }
@@ -1925,6 +1910,7 @@ export class AutoModeService {
             const decision = await this.authorityService.submitProposal(proposal, projectPath);
             if (decision.verdict !== 'allow') {
               logger.info(`Authority denied feature start: ${decision.reason}`);
+              this.concurrencyManager.release(featureId);
               this.runningFeatures.delete(featureId);
               this.emitAutoModeEvent('auto_mode_feature_skipped', {
                 featureId,
@@ -2417,6 +2403,7 @@ export class AutoModeService {
           logger.warn(
             `Loop detected for ${featureId} (${error.loopSignature}). Retrying with recovery context.`
           );
+          this.concurrencyManager.release(featureId);
           this.runningFeatures.delete(featureId);
           const currentRetryCount = tempRunningFeature.retryCount;
           const retryTimer = setTimeout(() => {
@@ -2513,6 +2500,7 @@ export class AutoModeService {
           });
 
           // Remove from running features and retry with escalated turns using backoff
+          this.concurrencyManager.release(featureId);
           this.runningFeatures.delete(featureId);
 
           // Capture values for closure before setTimeout
@@ -2584,6 +2572,7 @@ export class AutoModeService {
           }
 
           // Remove from running features so retry can start
+          this.concurrencyManager.release(featureId);
           this.runningFeatures.delete(featureId);
 
           // Capture values for closure before setImmediate
@@ -2661,6 +2650,7 @@ export class AutoModeService {
       // (delegated executions may have created a new entry)
       const current = this.runningFeatures.get(featureId);
       if (current === tempRunningFeature) {
+        this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
         activeAgentsCount.set(this.runningFeatures.size);
       }
@@ -2844,6 +2834,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
     // Remove from running features immediately to allow resume
     // The abort signal will still propagate to stop any ongoing execution
+    this.concurrencyManager.release(featureId);
     this.runningFeatures.delete(featureId);
     activeAgentsCount.set(this.runningFeatures.size);
 
@@ -3347,6 +3338,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       retryCount: 0,
       previousErrors: [],
     };
+    this.concurrencyManager.acquire(featureId, projectPath, null, feature.branchName ?? null);
     this.runningFeatures.set(featureId, pipelineRunningFeature);
     activeAgentsCount.set(this.runningFeatures.size);
 
@@ -3601,6 +3593,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       // Only delete if the current entry is still the one we created
       const current = this.runningFeatures.get(featureId);
       if (current === pipelineRunningFeature) {
+        this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
         activeAgentsCount.set(this.runningFeatures.size);
       }
@@ -3765,6 +3758,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       retryCount: 0,
       previousErrors: [],
     };
+    this.concurrencyManager.acquire(featureId, projectPath, worktreePath, branchName);
     this.runningFeatures.set(featureId, followUpRunningFeature);
     activeAgentsCount.set(this.runningFeatures.size);
 
@@ -4025,6 +4019,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       // Only delete if the current entry is still the one we created
       const current = this.runningFeatures.get(featureId);
       if (current === followUpRunningFeature) {
+        this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
         activeAgentsCount.set(this.runningFeatures.size);
       }
@@ -6943,25 +6938,7 @@ After generating the revised spec, output:
    * Rate-limits auto_mode_progress events to max 1 per 100ms per feature.
    */
   private emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void {
-    // Rate-limit auto_mode_progress events to prevent WebSocket overload
-    if (eventType === 'auto_mode_progress') {
-      const featureId = (data.featureId as string) || '';
-      const now = Date.now();
-      const lastTime = this.lastProgressEventTime.get(featureId) || 0;
-
-      // Drop event if too soon since last progress event for this feature
-      if (now - lastTime < this.PROGRESS_EVENT_MIN_INTERVAL_MS) {
-        return;
-      }
-
-      this.lastProgressEventTime.set(featureId, now);
-    }
-
-    // Wrap the event in auto-mode:event format expected by the client
-    this.events.emit('auto-mode:event', {
-      type: eventType,
-      ...data,
-    });
+    this.typedEventBus.emitAutoModeEvent(eventType, data);
   }
 
   /**
