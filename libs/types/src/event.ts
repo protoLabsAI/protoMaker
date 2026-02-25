@@ -30,6 +30,7 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'feature:pr-merged'
+  | 'feature:unblocked'
   | 'project:analysis-started'
   | 'project:analysis-progress'
   | 'project:analysis-completed'

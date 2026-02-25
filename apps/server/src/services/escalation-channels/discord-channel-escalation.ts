@@ -142,7 +142,11 @@ export class DiscordChannelEscalation implements EscalationChannel {
     }
 
     // Infrastructure issues → #infra
-    if (source === EscalationSource.agent_failure || source === EscalationSource.health_check) {
+    if (
+      source === EscalationSource.agent_failure ||
+      source === EscalationSource.health_check ||
+      source === EscalationSource.human_blocked_dependency
+    ) {
       return this.config.infraChannel;
     }
 
@@ -279,6 +283,12 @@ export class DiscordChannelEscalation implements EscalationChannel {
         items.push('- Review the comment or message requiring attention');
         items.push('- Respond to the human mention');
         items.push('- Take appropriate action based on request');
+        break;
+
+      case EscalationSource.human_blocked_dependency:
+        items.push('- Review the blocking dependencies assigned to humans');
+        items.push('- Contact the blocking assignees to expedite their work');
+        items.push('- Consider reassigning or adjusting priorities');
         break;
 
       default:

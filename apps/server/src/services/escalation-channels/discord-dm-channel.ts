@@ -13,7 +13,7 @@
  */
 
 import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@protolabs-ai/types';
-import { EscalationSeverity as Severity } from '@protolabs-ai/types';
+import { EscalationSeverity as Severity, EscalationSource } from '@protolabs-ai/types';
 import { createLogger } from '@protolabs-ai/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -100,10 +100,23 @@ export class DiscordDMChannel implements EscalationChannel {
 
   /**
    * Check if this channel can handle the signal
-   * Only handles emergency and critical severity
+   * Handles emergency and critical severity, plus medium severity for human_blocked_dependency
    */
   canHandle(signal: EscalationSignal): boolean {
-    return signal.severity === Severity.emergency || signal.severity === Severity.critical;
+    // Always handle emergency and critical
+    if (signal.severity === Severity.emergency || signal.severity === Severity.critical) {
+      return true;
+    }
+
+    // Also handle medium severity human_blocked_dependency signals
+    if (
+      signal.severity === Severity.medium &&
+      signal.source === EscalationSource.human_blocked_dependency
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -116,8 +129,25 @@ export class DiscordDMChannel implements EscalationChannel {
 
     const message = this.formatMessage(signal);
 
-    // Send to all configured recipients
-    const sendPromises = this.config.recipients.map(async (username) => {
+    // Determine recipients based on signal source
+    let recipients: string[];
+    if (signal.source === EscalationSource.human_blocked_dependency) {
+      // Extract blocking assignees from signal context
+      recipients = this.extractBlockingAssignees(signal);
+      if (recipients.length === 0) {
+        logger.warn(
+          `No blocking assignees found in human_blocked_dependency signal: ${signal.deduplicationKey}`
+        );
+        // Fall back to configured recipients
+        recipients = this.config.recipients;
+      }
+    } else {
+      // Use configured recipients for other signals
+      recipients = this.config.recipients;
+    }
+
+    // Send to all recipients
+    const sendPromises = recipients.map(async (username) => {
       try {
         const success = await this.discordBot.sendDM(username, message);
         if (!success) {
@@ -139,6 +169,27 @@ export class DiscordDMChannel implements EscalationChannel {
       signalDeduplicationKey: signal.deduplicationKey,
       messageId: '', // Would need to capture from sendDM response
     });
+  }
+
+  /**
+   * Extract blocking assignees from human_blocked_dependency signal context
+   */
+  private extractBlockingAssignees(signal: EscalationSignal): string[] {
+    const ctx = signal.context;
+    const assignees: string[] = [];
+
+    // Extract from humanBlockerDetails string format: "featureId (assigned to username)"
+    if (typeof ctx.humanBlockerDetails === 'string') {
+      const matches = ctx.humanBlockerDetails.matchAll(/assigned to (\w+)/g);
+      for (const match of matches) {
+        if (match[1] && match[1] !== 'unknown') {
+          assignees.push(match[1]);
+        }
+      }
+    }
+
+    // Deduplicate assignees
+    return Array.from(new Set(assignees));
   }
 
   /**

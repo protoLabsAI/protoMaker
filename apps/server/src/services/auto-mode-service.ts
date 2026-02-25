@@ -39,6 +39,7 @@ import type {
   PlanningMode,
   ExecutionContext,
   ActionProposal,
+  EventType,
 } from '@protolabs-ai/types';
 import {
   DEFAULT_PHASE_MODELS,
@@ -465,7 +466,11 @@ export class AutoModeService {
     // after a feature is marked done/verified externally (MCP, manual update, epic merge).
     this.events.subscribe((type, payload) => {
       if (type === 'feature:status-changed') {
-        const data = payload as { featureId?: string; newStatus?: string };
+        const data = payload as {
+          featureId?: string;
+          newStatus?: string;
+          projectPath?: string;
+        };
         if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
           if (this.runningFeatures.has(data.featureId)) {
             logger.info(
@@ -473,6 +478,9 @@ export class AutoModeService {
             );
             void this.stopFeature(data.featureId);
           }
+
+          // Auto-unblock: Check if any features were waiting on this as a human-blocked dependency
+          void this.handleFeatureCompletion(data.featureId, data.projectPath);
         }
       }
     });
@@ -838,6 +846,85 @@ export class AutoModeService {
    */
   private recordSuccess(): void {
     this.consecutiveFailures = [];
+  }
+
+  /**
+   * Handle auto-unblock: when a feature is completed, check if any features were
+   * waiting on it as a human-blocked dependency and auto-transition them to backlog
+   */
+  private async handleFeatureCompletion(
+    completedFeatureId: string,
+    projectPath?: string
+  ): Promise<void> {
+    if (!projectPath) {
+      logger.debug(
+        `No projectPath provided for completed feature ${completedFeatureId}, skipping auto-unblock`
+      );
+      return;
+    }
+
+    try {
+      // Load all features for this project
+      const allFeatures = await this.featureLoader.getAll(projectPath);
+      if (!allFeatures || allFeatures.length === 0) {
+        return;
+      }
+
+      // Find features that were human-blocked by this completed feature
+      const unblockedFeatures: Array<{ featureId: string; featureTitle: string }> = [];
+
+      for (const feature of allFeatures) {
+        // Skip if not human-blocked
+        if (feature.status !== 'human-blocked') {
+          continue;
+        }
+
+        // Check if this feature was blocked by the completed feature
+        const blockingInfo = getBlockingInfo(feature, allFeatures);
+        if (blockingInfo.humanBlockers.includes(completedFeatureId)) {
+          // Re-check blocking after removing the completed feature
+          // to see if the feature is still blocked
+          const updatedBlockingInfo = getBlockingInfo(
+            feature,
+            allFeatures.filter((f: Feature) => f.id !== completedFeatureId)
+          );
+
+          // If no longer blocked, transition to backlog
+          if (updatedBlockingInfo.humanBlockers.length === 0) {
+            logger.info(
+              `Auto-unblocking feature ${feature.id} (was blocked by completed feature ${completedFeatureId})`
+            );
+
+            // Transition to backlog
+            await this.updateFeatureStatus(projectPath, feature.id, 'backlog');
+
+            unblockedFeatures.push({
+              featureId: feature.id,
+              featureTitle: feature.title || feature.description || feature.id,
+            });
+          }
+        }
+      }
+
+      // Emit feature:unblocked event for each unblocked feature
+      if (unblockedFeatures.length > 0) {
+        for (const unblocked of unblockedFeatures) {
+          this.events.emit('feature:unblocked' as EventType, {
+            featureId: unblocked.featureId,
+            featureTitle: unblocked.featureTitle,
+            completedDependencyId: completedFeatureId,
+            projectPath,
+            timestamp: new Date().toISOString(),
+          });
+
+          logger.info(
+            `Feature ${unblocked.featureId} auto-unblocked and moved to backlog (dependency ${completedFeatureId} completed)`
+          );
+        }
+      }
+    } catch (error) {
+      logger.error(`Error in auto-unblock for completed feature ${completedFeatureId}:`, error);
+    }
   }
 
   private async resolveMaxConcurrency(
