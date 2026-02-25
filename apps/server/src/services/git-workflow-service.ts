@@ -26,6 +26,49 @@ const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const logger = createLogger('GitWorkflow');
 
+/**
+ * Retry helper with exponential backoff.
+ * Retries up to 3 times with delays of 2s, 4s, 8s.
+ * @param operation - The async operation to retry
+ * @param operationName - Name for logging
+ * @returns Result of the operation
+ */
+async function retryWithExponentialBackoff<T>(
+  operation: () => Promise<T>,
+  operationName: string
+): Promise<T> {
+  const maxRetries = 3;
+  const baseDelay = 2000; // 2 seconds
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxRetries) {
+        // Final failure after all retries
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(
+          `${operationName} failed after ${maxRetries} retries: ${errorMessage}`
+        );
+        throw error;
+      }
+
+      // Calculate exponential delay: 2s, 4s, 8s
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn(
+        `${operationName} failed (attempt ${attempt}/${maxRetries}), retrying in ${delay / 1000}s: ${errorMessage}`
+      );
+
+      // Wait before retry
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  // TypeScript satisfaction (unreachable)
+  throw new Error('Unreachable');
+}
+
 // Extended PATH for finding git and gh CLI (same as worktree routes)
 const pathSeparator = process.platform === 'win32' ? ';' : ':';
 const additionalPaths: string[] = [];
@@ -306,12 +349,17 @@ export class GitWorkflowService {
       });
       const hash = hashOutput.trim().substring(0, 8);
 
-      // Push to remote
+      // Push to remote with retry logic
       try {
-        await execAsync(`git push origin ${branchName}`, {
-          cwd: workDir,
-          env: execEnv,
-        });
+        await retryWithExponentialBackoff(
+          async () => {
+            await execAsync(`git push origin ${branchName}`, {
+              cwd: workDir,
+              env: execEnv,
+            });
+          },
+          `Push agent progress for ${branchName}`
+        );
         logger.info(
           `Saved agent progress for feature ${feature.id}: commit ${hash}, pushed to ${branchName}`
         );
@@ -1171,23 +1219,26 @@ export class GitWorkflowService {
 
   /**
    * Push the current branch to remote.
+   * Uses exponential backoff retry (3 attempts with 2s/4s/8s delays).
    * @returns true if push succeeded
    */
   private async pushToRemote(workDir: string, branchName: string): Promise<boolean> {
-    try {
-      await execAsync(`git push -u origin ${branchName}`, {
-        cwd: workDir,
-        env: execEnv,
-      });
-      return true;
-    } catch {
-      // Try with --set-upstream
-      await execAsync(`git push --set-upstream origin ${branchName}`, {
-        cwd: workDir,
-        env: execEnv,
-      });
-      return true;
-    }
+    return await retryWithExponentialBackoff(async () => {
+      try {
+        await execAsync(`git push -u origin ${branchName}`, {
+          cwd: workDir,
+          env: execEnv,
+        });
+        return true;
+      } catch {
+        // Try with --set-upstream
+        await execAsync(`git push --set-upstream origin ${branchName}`, {
+          cwd: workDir,
+          env: execEnv,
+        });
+        return true;
+      }
+    }, `Push branch ${branchName}`);
   }
 
   /**
@@ -1299,19 +1350,30 @@ export class GitWorkflowService {
     prCmd += ` --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"')}"`;
 
     try {
-      const { stdout: prOutput } = await execAsync(prCmd, {
-        cwd: workDir,
-        env: execEnv,
-      });
-      const prUrl = prOutput.trim();
+      // Use retry logic for PR creation
+      const { prUrl, prNumber, prCreatedAt } = await retryWithExponentialBackoff(
+        async () => {
+          const { stdout: prOutput } = await execAsync(prCmd, {
+            cwd: workDir,
+            env: execEnv,
+          });
+          const prUrl = prOutput.trim();
 
-      // Extract PR number and store metadata
-      let prNumber: number | undefined;
-      const prCreatedAt = new Date().toISOString();
-      const prMatch = prUrl.match(/\/pull\/(\d+)/);
-      if (prMatch) {
-        prNumber = parseInt(prMatch[1], 10);
+          // Extract PR number
+          let prNumber: number | undefined;
+          const prCreatedAt = new Date().toISOString();
+          const prMatch = prUrl.match(/\/pull\/(\d+)/);
+          if (prMatch) {
+            prNumber = parseInt(prMatch[1], 10);
+          }
 
+          return { prUrl, prNumber, prCreatedAt };
+        },
+        `Create PR for ${branchName}`
+      );
+
+      // Store metadata after successful creation
+      if (prNumber) {
         await updateWorktreePRInfo(projectPath, branchName, {
           number: prNumber,
           url: prUrl,
