@@ -284,6 +284,10 @@ export class SignalIntakeService {
         ...(signal.source === 'linear' && signal.channelContext?.issueId
           ? { linearIssueId: signal.channelContext.issueId as string }
           : {}),
+        // Store GitHub issue number for auto-close on PR merge
+        ...(signal.source === 'github' && signal.channelContext?.issueNumber
+          ? { githubIssueNumber: signal.channelContext.issueNumber as number }
+          : {}),
       });
 
       // Trigger PM Agent pipeline
