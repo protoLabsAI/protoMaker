@@ -16,6 +16,7 @@ import type {
   TrajectoryStoreService,
   TrajectoryStateTransition,
 } from './trajectory-store-service.js';
+import type { SettingsService } from './settings-service.js';
 
 // ────────────────────────── Budget / timing constants ──────────────────────────
 
@@ -40,6 +41,7 @@ export interface ProcessorServiceContext {
   contextFidelityService?: ContextFidelityService;
   knowledgeStoreService?: KnowledgeStoreService;
   trajectoryStoreService?: TrajectoryStoreService;
+  settingsService?: SettingsService;
 }
 
 // ────────────────────────── Feature State Machine Types ──────────────────────────

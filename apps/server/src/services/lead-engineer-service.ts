@@ -291,6 +291,7 @@ export class LeadEngineerService {
         contextFidelityService: this.contextFidelityService,
         knowledgeStoreService: this.knowledgeStoreService,
         trajectoryStoreService: this.trajectoryStoreService,
+        settingsService: this.settingsService,
       };
 
       const workflowSettings = await getWorkflowSettings(

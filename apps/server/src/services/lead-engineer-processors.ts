@@ -273,7 +273,11 @@ Keep it focused and actionable. If the feature description is too vague or uncle
     }
 
     // Check if antagonistic review is enabled in workflow settings
-    const workflowSettings = await getWorkflowSettings(ctx.projectPath);
+    const workflowSettings = await getWorkflowSettings(
+      ctx.projectPath,
+      this.serviceContext.settingsService,
+      '[PlanProcessor]'
+    );
     if (workflowSettings.pipeline.antagonisticPlanReview === false) {
       return null; // Disabled by settings
     }

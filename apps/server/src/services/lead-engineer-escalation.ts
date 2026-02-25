@@ -88,7 +88,7 @@ export class EscalateProcessor implements StateProcessor {
     if (this.serviceContext.trajectoryStoreService && ctx.startedAt) {
       const completedAt = new Date().toISOString();
       const durationMs = new Date(completedAt).getTime() - new Date(ctx.startedAt).getTime();
-      this.serviceContext.trajectoryStoreService.save({
+      void this.serviceContext.trajectoryStoreService.save({
         feature: ctx.feature,
         projectPath: ctx.projectPath,
         outcome: 'escalated',
