@@ -426,6 +426,16 @@ export interface Feature {
    */
   lastTraceId?: string;
 
+  /**
+   * Git workflow error details when git operations (commit, push, PR) fail.
+   * The feature status remains unchanged (e.g., verified), but this field
+   * surfaces the failure in the UI for visibility and debugging.
+   */
+  gitWorkflowError?: {
+    message: string;
+    timestamp: string; // ISO 8601 timestamp when the error occurred
+  };
+
   // Hivemind fields
   /** Domain this feature belongs to (e.g. "frontend", "server") for mesh routing */
   domain?: string;
