@@ -388,6 +388,10 @@ const events: EventEmitter = createEventEmitter();
 // Note: settingsService is created first so it can be injected into other services
 const settingsService = new SettingsService(DATA_DIR);
 const featureLoader = new FeatureLoader();
+
+// Trust Tier Service for quarantine pipeline
+import { TrustTierService } from './services/trust-tier-service.js';
+const trustTierService = new TrustTierService(DATA_DIR);
 const agentService = new AgentService(DATA_DIR, events, settingsService, undefined, featureLoader);
 const metricsService = new MetricsService(featureLoader);
 
@@ -1402,6 +1406,7 @@ app.use(
   '/api/features',
   createFeaturesRoutes(
     featureLoader,
+    trustTierService,
     settingsService,
     events,
     authorityService,

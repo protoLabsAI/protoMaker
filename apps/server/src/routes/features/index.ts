@@ -21,9 +21,11 @@ import { createHealthHandler } from './routes/health.js';
 import { createAssignAgentHandler } from './routes/assign-agent.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
 import type { RoleRegistryService } from '../../services/role-registry-service.js';
+import type { TrustTierService } from '../../services/trust-tier-service.js';
 
 export function createFeaturesRoutes(
   featureLoader: FeatureLoader,
+  trustTierService: TrustTierService,
   settingsService?: SettingsService,
   events?: EventEmitter,
   authorityService?: AuthorityService,
@@ -37,7 +39,7 @@ export function createFeaturesRoutes(
   router.post(
     '/create',
     validatePathParams('projectPath'),
-    createCreateHandler(featureLoader, events)
+    createCreateHandler(featureLoader, trustTierService, events)
   );
   router.post(
     '/update',
