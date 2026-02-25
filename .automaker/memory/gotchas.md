@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 484
-  referenced: 232
-  successfulFeatures: 232
+  loaded: 464
+  referenced: 229
+  successfulFeatures: 229
 ---
 # gotchas
 
@@ -452,13 +452,3 @@ usageStats:
 - **Situation:** Added MultiEdit, LS, Task, Skill to both TOOL_PRESETS.fullAccess and TOOL_PRESETS.chat. Same 4 tools in 2 places.
 - **Root cause:** Current structure duplicates tool lists. Different access levels need different tools, but no shared base.
 - **How to avoid:** Duplication is explicit (easy to understand locally) but fragile (easy to forget one preset). Base approach would reduce duplication but add indirection.
-
-#### [Gotcha] HUSKY=0 environment variable used during git commit bypasses pre-commit hooks, allowing code with linting/formatting violations to be committed during recovery (2026-02-25)
-- **Situation:** Agent-generated code may not pass pre-commit hooks (linting, formatting); recovery would fail if hooks are enforced
-- **Root cause:** Prioritizes recovery over perfection. Assumes human code review will catch linting/formatting issues. Hooks would block recovery on code style issues that aren't blocking the feature logic.
-- **How to avoid:** Recovery succeeds more often but code quality gates are bypassed. Human review becomes critical gating point for code quality instead of CI.
-
-#### [Gotcha] Git worktree + shared node_modules causes dual package resolution: TypeScript loads @protolabs-ai/types from both worktree's libs/types/dist AND main repo's libs/types/dist simultaneously (same PackageID, different real paths). This creates conflicting type definitions. (2026-02-25)
-- **Situation:** Developing type changes to workspace packages (GlobalSettings) within git worktrees while main repo's node_modules is shared between worktree and main branch
-- **Root cause:** TypeScript deduplicates modules by PackageID but stores real paths separately. When worktree has different source code than main repo's dist, both versions get loaded, causing type conflicts
-- **How to avoid:** Solution (node_modules override + copy dist to main) is local dev-only and not committed, so CI/clean builds don't need it. Trade-off: dev environment diverges slightly from CI environment. Clean monorepo build is your safety net.

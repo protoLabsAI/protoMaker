@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 166
-  referenced: 75
-  successfulFeatures: 75
+  loaded: 164
+  referenced: 74
+  successfulFeatures: 74
 ---
 # api
 
@@ -698,20 +698,3 @@ usageStats:
 - **Rejected:** Always return 404 for both cases - hides validation failures, makes debugging harder. Return 403 for traversal - semantically wrong, 403 is for permission denied, not request validation.
 - **Trade-offs:** More precise semantics vs simpler implementation (could return 404 for everything). Precision helps with monitoring and client-side error recovery.
 - **Breaking if changed:** If changed to always 404, clients cannot distinguish attacks from legitimate missing files. Monitoring/alerting on 400s helps detect traversal attempts.
-
-### PR staleness requires BOTH conditions to be true: commit age > TTL AND last activity age > TTL. Not OR. (2026-02-25)
-- **Context:** Determining when a PR should be considered 'stale' for ownership purposes in multi-instance coordination
-- **Why:** Prevents false positives: A PR with old commits might still be under active discussion (code review, conversation). Single-condition check would incorrectly mark actively-reviewed PRs as stale, breaking the ownership model.
-- **Rejected:** Single OR condition (commit > TTL OR activity > TTL) would be simpler logic but would incorrectly age out PRs during active review without new commits
-- **Trade-offs:** More conservative staleness detection (fewer false positives) but requires more inactivity proof. Safer default for distributed ownership coordination.
-- **Breaking if changed:** If changed to OR, actively-reviewed PRs get incorrectly marked stale, potentially causing instances to re-claim and re-stamp ownership during code review.
-
-#### [Pattern] check-pr-status gracefully degrades on parsing failures: returns safe defaults (isOwnedByThisInstance: false, isStale: false) if watermark parsing fails or gh pr view fails (2026-02-25)
-- **Problem solved:** Parsing PR ownership from GitHub API response in distributed system where not all PRs may have ownership watermark (e.g., old PRs, PRs from other tools)
-- **Why this works:** Prevents cascading failures. PR status check should not fail because watermark is missing or malformed. Safe defaults (not owned = instance can ignore it) prevent worse states.
-- **Trade-offs:** Silently handles missing/corrupt watermarks vs explicit error reporting. Forgives old PRs but could hide bugs if watermark format corrupts.
-
-#### [Gotcha] Service `.initialize()` methods have specific parameter type requirements that are not enforced by parameter order alone (2026-02-25)
-- **Situation:** `integrationService.initialize()` 4th parameter expects `ceremonyService` but code was passing `projectService` - both are service objects
-- **Root cause:** Similar-looking parameters (different services) can accidentally match at call site without type system catching it if signatures aren't strict
-- **How to avoid:** Static verification requires checking each service's `.initialize()` signature; runtime errors only surface in integration tests
