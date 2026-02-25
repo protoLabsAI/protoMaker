@@ -28,8 +28,7 @@ export function PropertyInspector({ node }: PropertyInspectorProps) {
 
   const isTextNode = node.type === 'text';
   const isContainerNode = node.type === 'frame' || node.type === 'group';
-  const hasStroke =
-    'strokes' in node && Array.isArray(node.strokes) && node.strokes.length > 0;
+  const hasStroke = 'strokes' in node && Array.isArray(node.strokes) && node.strokes.length > 0;
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
