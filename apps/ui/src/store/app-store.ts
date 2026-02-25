@@ -146,6 +146,9 @@ export interface AppState {
   lastProjectDir: string;
   /** Recently accessed folders for quick access */
   recentFolders: string[];
+
+  // User Identity (for board assignment)
+  userIdentity: string | null;
 }
 
 export interface AppActions {
@@ -304,6 +307,9 @@ export interface AppActions {
   setRecentFolders: (folders: string[]) => void;
   addRecentFolder: (folder: string) => void;
 
+  // User Identity actions
+  setUserIdentity: (identity: string | null) => void;
+
   // Reset
   reset: () => void;
 }
@@ -362,6 +368,7 @@ const initialState: AppState = {
   // UI State (previously in localStorage, now synced via API)
   lastProjectDir: '',
   recentFolders: [],
+  userIdentity: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1278,6 +1285,9 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     const updated = [folder, ...filtered].slice(0, 10);
     set({ recentFolders: updated });
   },
+
+  // User Identity actions
+  setUserIdentity: (identity) => set({ userIdentity: identity }),
 
   // Reset
   reset: () => set(initialState),

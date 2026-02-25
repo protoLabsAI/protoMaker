@@ -9,6 +9,7 @@ import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useIsTablet } from '@/hooks/use-media-query';
+import { useUserIdentity } from '@/hooks/use-user-identity';
 import { AutoModeSettingsPopover } from './dialogs/auto-mode-settings-popover';
 import { WorktreeSettingsPopover } from './dialogs/worktree-settings-popover';
 import { PlanSettingsPopover } from './dialogs/plan-settings-popover';
@@ -18,6 +19,16 @@ import { BoardControls } from './board-controls';
 import { ViewToggle, type ViewMode } from './components';
 import { HeaderMobileMenu } from './header-mobile-menu';
 import { formatCostUsd } from '@/lib/format';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabs-ai/ui/atoms';
 
 export type { ViewMode };
 
@@ -138,6 +149,11 @@ export function BoardHeader({
 
   const isTablet = useIsTablet();
 
+  // User identity for "My Tasks" filter
+  const { userIdentity, saveIdentity } = useUserIdentity();
+  const [showIdentityDialog, setShowIdentityDialog] = useState(false);
+  const [identityInput, setIdentityInput] = useState('');
+
   return (
     <div className="flex items-center justify-between gap-5 p-4 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="flex items-center gap-4">
@@ -167,10 +183,9 @@ export function BoardHeader({
             <button
               type="button"
               onClick={() => {
-                if (!boardUsername) {
-                  const name = window.prompt('Enter your username for "My Tasks" filter:');
-                  if (name) onBoardUsernameChange(name);
-                  else return;
+                if (!userIdentity) {
+                  setShowIdentityDialog(true);
+                  return;
                 }
                 onAssigneeFilterChange('my-tasks');
               }}
@@ -179,7 +194,7 @@ export function BoardHeader({
                   ? 'bg-brand-500/20 text-brand-400'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title={boardUsername ? `My Tasks (${boardUsername})` : 'My Tasks'}
+              title={userIdentity ? `My Tasks (${userIdentity})` : 'My Tasks'}
             >
               <User className="w-3.5 h-3.5" />
               Mine
@@ -329,6 +344,61 @@ export function BoardHeader({
           </div>
         )}
       </div>
+
+      {/* User Identity Dialog */}
+      <Dialog open={showIdentityDialog} onOpenChange={setShowIdentityDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Your Name</DialogTitle>
+            <DialogDescription>
+              Please enter your name to filter tasks assigned to you. This will be saved for future use.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={identityInput}
+            onChange={(e) => setIdentityInput(e.target.value)}
+            placeholder="Your name"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && identityInput.trim()) {
+                saveIdentity(identityInput.trim()).then((success) => {
+                  if (success) {
+                    setShowIdentityDialog(false);
+                    setIdentityInput('');
+                    onAssigneeFilterChange('my-tasks');
+                  }
+                });
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowIdentityDialog(false);
+                setIdentityInput('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (identityInput.trim()) {
+                  saveIdentity(identityInput.trim()).then((success) => {
+                    if (success) {
+                      setShowIdentityDialog(false);
+                      setIdentityInput('');
+                      onAssigneeFilterChange('my-tasks');
+                    }
+                  });
+                }
+              }}
+              disabled={!identityInput.trim()}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

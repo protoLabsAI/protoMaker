@@ -2572,6 +2572,21 @@ export class HttpApiClient implements ElectronAPI {
       error?: string;
     }> => this.put('/api/settings/workflow', { projectPath, workflow }),
 
+    // User identity (name for board assignment)
+    getUserIdentity: (): Promise<{
+      success: boolean;
+      identity?: string;
+      error?: string;
+    }> => this.get('/api/user/identity'),
+
+    setUserIdentity: (
+      identity: string
+    ): Promise<{
+      success: boolean;
+      identity?: string;
+      error?: string;
+    }> => this.post('/api/user/identity', { identity }),
+
     // Filesystem agents discovery (read-only)
     discoverAgents: (
       projectPath?: string,
