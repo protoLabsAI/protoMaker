@@ -51,6 +51,9 @@ export type {
   JsonRpcResponse,
 } from './codex-app-server.js';
 
+// Auto-mode types (lease tracking, auto-loop lifecycle, execution state persistence)
+export type { RunningFeatureLease, AutoLoopState, ExecutionState } from './auto-mode.js';
+
 // Feature types
 export type {
   Feature,
@@ -829,8 +832,6 @@ export type {
   RetrievalMode,
 } from './knowledge.js';
 
-// Auto-mode service types (ConcurrencyManager lease tracking, auto-loop lifecycle)
-export type { RunningFeatureLease, AutoLoopState } from './auto-mode.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {

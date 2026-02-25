@@ -2,7 +2,7 @@
  * Auto-mode shared types
  *
  * Shared type definitions for the auto-mode service decomposition.
- * These types are used by ConcurrencyManager and related services.
+ * These types are used by ConcurrencyManager, FeatureStateManager, and related services.
  */
 
 /**
@@ -65,4 +65,26 @@ export interface AutoLoopState {
    * When this reaches the threshold (3) the loop is automatically paused.
    */
   failureCount: number;
+}
+
+/**
+ * Execution state for recovery after server restart.
+ * Written to .automaker/execution-state.json when auto-mode starts a feature.
+ * Read by ReconciliationService on startup to restore in-flight features.
+ */
+export interface ExecutionState {
+  /** Schema version, always 1 */
+  version: 1;
+  /** Whether the auto loop was running when this state was saved */
+  autoLoopWasRunning: boolean;
+  /** Maximum concurrent features setting */
+  maxConcurrency: number;
+  /** Project path this state belongs to */
+  projectPath: string;
+  /** Branch name for worktree-based execution (null = main worktree) */
+  branchName: string | null;
+  /** Feature IDs that were actively running when state was saved */
+  runningFeatureIds: string[];
+  /** ISO 8601 timestamp when state was saved */
+  savedAt: string;
 }
