@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-Complete catalog of MCP tools exposed by the protoLabs server. See `packages/mcp-server/src/index.ts` for the full definitions.
+Complete catalog of **135 MCP tools** exposed by the protoLabs server. See `packages/mcp-server/src/index.ts` for the full definitions.
 
 For installation and configuration, see [Claude Plugin Setup](./claude-plugin.md). For commands and examples, see [Plugin Commands](./plugin-commands.md).
 
