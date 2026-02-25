@@ -40,3 +40,36 @@ jobs:
 
       - name: Run npm audit
         run: npm audit --audit-level=critical
+
+      - name: Validate Dockerfile dependencies
+        run: |
+          echo "Checking Dockerfile npm script references..."
+          SCRIPTS=$(grep -oP 'npm run \K[\w:-]+' Dockerfile | sort -u)
+          MISSING=""
+          for script in $SCRIPTS; do
+            if ! node -e "const p=require('./package.json'); if(!p.scripts['$script']) process.exit(1)" 2>/dev/null; then
+              MISSING="$MISSING $script"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "ERROR: Dockerfile references missing npm scripts:$MISSING"
+            exit 1
+          fi
+          echo "All Dockerfile script references valid: $SCRIPTS"
+
+          echo "Checking Dockerfile COPY sources exist..."
+          # Validate that all libs referenced in Dockerfile package.json COPYs exist
+          LIBS_COPIED=$(grep -oP 'COPY libs/\K[^/]+' Dockerfile | sort -u)
+          LIBS_ACTUAL=$(ls -d libs/*/package.json 2>/dev/null | xargs -I{} dirname {} | xargs -I{} basename {} | sort -u)
+          MISSING_LIBS=""
+          for lib in $LIBS_ACTUAL; do
+            if ! echo "$LIBS_COPIED" | grep -q "^${lib}$"; then
+              MISSING_LIBS="$MISSING_LIBS $lib"
+            fi
+          done
+          if [ -n "$MISSING_LIBS" ]; then
+            echo "WARNING: libs not in Dockerfile base COPY:$MISSING_LIBS"
+            echo "Add COPY libs/<name>/package*.json entries to Dockerfile base stage"
+            exit 1
+          fi
+          echo "All libs have Dockerfile COPY entries"
