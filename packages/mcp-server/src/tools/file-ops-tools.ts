@@ -30,8 +30,7 @@ export const copyFileTool: Tool = {
 
 export const moveFileTool: Tool = {
   name: 'move_file',
-  description:
-    'Move or rename a file or directory. Validates paths to prevent traversal attacks.',
+  description: 'Move or rename a file or directory. Validates paths to prevent traversal attacks.',
   inputSchema: {
     type: 'object',
     properties: {
