@@ -14,7 +14,13 @@
  *   - Example: ELECTRON_EXEC_PATH=/tmp/test-app/protoLabs.studio.app/Contents/MacOS/protoLabs.studio
  */
 
-import { test as base, _electron, expect, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test as base,
+  _electron,
+  expect,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -220,11 +226,7 @@ test.describe('Smoke Test: Platform-Specific Checks', () => {
     if (process.env.CI) {
       // In CI, verify against the runner OS
       const expectedPlatform =
-        process.platform === 'darwin'
-          ? 'darwin'
-          : process.platform === 'win32'
-            ? 'win32'
-            : 'linux';
+        process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux';
       expect(platform).toBe(expectedPlatform);
     } else {
       // Local test, just verify it's a valid platform
