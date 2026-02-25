@@ -449,6 +449,24 @@ LinearSyncService moves issue to "Done" + adds comment
 
 **Git workflow: Graphite-first.** Use `gt` over `gh` for all branch and PR operations.
 
+**Three-branch strategy** — All agent PRs target `dev`. Promotion flow: `feature/* → dev → staging → main`.
+
+- `dev` — Active development. All agent PRs land here. Default `prBaseBranch`.
+- `staging` — Integration / QA. Promoted from `dev` via PR. Auto-deploys to staging env.
+- `main` — Stable release. **Only PRs from `staging` are allowed** — enforced by `promotion-check` CI. Any PR from another branch fails the `source-branch` required check.
+
+When reviewing or creating PRs: feature branches target `dev`, not `main`. If you see a feature PR targeting `main`, rebase it to target `dev` instead.
+
+**Promotion commands:**
+
+```bash
+# dev → staging
+gh pr create --base staging --head dev --title "chore: promote dev to staging"
+
+# staging → main (use template — enforced by CI)
+gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+```
+
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 
 **Worktree safety** — NEVER `cd` into worktree directories. Always use `git -C <worktree-path>` or absolute paths.

@@ -74,11 +74,13 @@ If recovery fails, the feature is marked `blocked` with a `statusChangeReason` p
 
 ## When Creating PRs Manually
 
-If you create a PR directly (not through auto-mode), include the watermark manually:
+If you create a PR directly (not through auto-mode), include the watermark manually.
+
+**Target `dev` — not `main`.** The three-branch strategy enforces that only PRs from `staging` can reach `main`. Agent PRs always target `dev`.
 
 ```bash
 INSTANCE_ID="$(cat data/settings.json | jq -r '.instanceId // "local"')"
-gh pr create --title "..." --body "$(cat <<EOF
+gh pr create --base dev --title "..." --body "$(cat <<EOF
 ## Summary
 ...
 

@@ -130,6 +130,26 @@ Key fields available on every feature:
 - `failureCount?, retryCount?` — failure tracking
 - `complexity?: 'small' | 'medium' | 'large' | 'architectural'`
 
+## Git Workflow — Three-Branch Strategy
+
+All agent PRs target **`dev`** by default. The promotion flow is:
+
+```
+feature/* ──▶ dev ──▶ staging ──▶ main
+```
+
+- **`dev`**: Active development. All agent-generated PRs land here.
+- **`staging`**: Integration / QA environment. Promoted from `dev` via PR. Auto-deploys.
+- **`main`**: Stable release only. PRs to `main` **must** come from `staging` — enforced by CI (`promotion-check`). Any PR to `main` from another branch will fail the `source-branch` required check.
+
+**Never open a PR directly from a feature branch to `main`.** If you need to create a PR manually, target `dev`:
+
+```bash
+gh pr create --base dev --head feature/your-branch --title "..." --body "..."
+```
+
+The `gitWorkflow.prBaseBranch` setting is `"dev"` — auto-mode and the git workflow service read this automatically.
+
 ## Dev Server
 
 NEVER start, stop, or restart the dev server. It's managed externally.
