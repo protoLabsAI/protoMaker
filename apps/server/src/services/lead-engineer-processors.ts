@@ -57,7 +57,7 @@ export class IntakeProcessor implements StateProcessor {
         });
         return {
           nextState: 'ESCALATE',
-          shouldContinue: false,
+          shouldContinue: true,
           reason: ctx.escalationReason,
         };
       }
@@ -78,9 +78,10 @@ export class IntakeProcessor implements StateProcessor {
     // Determine if PLAN phase is needed
     ctx.planRequired = this.requiresPlan(feature);
 
-    // Mark feature as in_progress on the board
+    // Mark feature as in_progress on the board and persist complexity
     await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
       status: 'in_progress',
+      complexity: ctx.feature.complexity,
     });
     logger.info('[INTAKE] Feature status updated to in_progress');
 
@@ -162,9 +163,16 @@ export class PlanProcessor implements StateProcessor {
   async process(ctx: StateContext): Promise<StateTransitionResult> {
     const { feature } = ctx;
 
-    logger.info('[PLAN] Generating implementation plan via simpleQuery (haiku)', {
+    // Use appropriate model for plan generation based on complexity:
+    // architectural -> opus, large -> sonnet, default -> haiku
+    const complexity = feature.complexity || 'medium';
+    const planModel =
+      complexity === 'architectural' ? 'opus' : complexity === 'large' ? 'sonnet' : 'haiku';
+
+    logger.info(`[PLAN] Generating implementation plan via simpleQuery (${planModel})`, {
       featureId: feature.id,
       title: feature.title,
+      complexity,
     });
 
     try {
@@ -182,7 +190,7 @@ Produce a plan with:
 4. Risk areas or edge cases
 
 Keep it focused and actionable. If the feature description is too vague or unclear to plan, respond with "UNCLEAR:" followed by what's missing.`,
-        model: resolveModelString('haiku'),
+        model: resolveModelString(planModel),
         cwd: ctx.projectPath,
         systemPrompt:
           'You are a senior software engineer creating implementation plans. Be concise and specific.',
@@ -215,7 +223,7 @@ Keep it focused and actionable. If the feature description is too vague or uncle
       ctx.escalationReason = `Plan rejected after ${ctx.planRetryCount} retries: ${gateResult.reason}`;
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }

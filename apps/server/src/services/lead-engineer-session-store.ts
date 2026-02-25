@@ -125,8 +125,9 @@ export class LeadEngineerSessionStore {
   async isProjectCompleted(projectPath: string): Promise<boolean> {
     try {
       const features = await this.deps.featureLoader.getAll(projectPath);
-      if (features.length === 0) return true;
-      return features.every((f) => f.status === 'done' || f.status === 'verified');
+      return (
+        features.length > 0 && features.every((f) => f.status === 'done' || f.status === 'verified')
+      );
     } catch {
       return false;
     }

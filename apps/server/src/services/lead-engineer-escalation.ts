@@ -84,7 +84,7 @@ export class EscalateProcessor implements StateProcessor {
       failureCategory: failureAnalysis.category,
     });
 
-    // Fire-and-forget trajectory save (non-blocking)
+    // Fire-and-forget trajectory save (non-blocking, errors handled internally by TrajectoryStoreService)
     if (this.serviceContext.trajectoryStoreService && ctx.startedAt) {
       const completedAt = new Date().toISOString();
       const durationMs = new Date(completedAt).getTime() - new Date(ctx.startedAt).getTime();

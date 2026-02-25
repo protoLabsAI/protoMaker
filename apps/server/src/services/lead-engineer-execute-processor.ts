@@ -49,7 +49,7 @@ export class ExecuteProcessor implements StateProcessor {
       ctx.escalationReason = `Budget exceeded: $${totalCost.toFixed(2)}`;
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }
@@ -59,7 +59,7 @@ export class ExecuteProcessor implements StateProcessor {
       ctx.escalationReason = `Max retries exceeded (${this.MAX_RETRIES})`;
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }
@@ -69,25 +69,31 @@ export class ExecuteProcessor implements StateProcessor {
     // submitted (e.g., blocked at SPEC_REVIEW gate, then requeued by dep-unblocking).
     if (ctx.feature.branchName) {
       try {
-        const { stdout: prJson } = await execAsync(
-          `gh pr list --head "${ctx.feature.branchName}" --state open --json number,headRefName --limit 1`,
-          { cwd: ctx.projectPath, timeout: 10000 }
-        );
-        const prs: { number: number }[] = JSON.parse(prJson || '[]');
-        if (prs.length > 0) {
-          ctx.prNumber = prs[0].number;
-          logger.info(
-            `[EXECUTE] Feature ${ctx.feature.id} already has open PR #${ctx.prNumber} — skipping execution, transitioning to REVIEW`
+        // Validate branch name to prevent shell injection
+        const branchName = ctx.feature.branchName;
+        if (!/^[\w./-]+$/.test(branchName)) {
+          logger.warn('[EXECUTE] Invalid branch name, skipping PR check:', branchName);
+        } else {
+          const { stdout: prJson } = await execAsync(
+            `gh pr list --head "${branchName}" --state open --json number,headRefName --limit 1`,
+            { cwd: ctx.projectPath, timeout: 10000 }
           );
-          await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
-            status: 'review',
-            prNumber: ctx.prNumber,
-          });
-          return {
-            nextState: 'REVIEW',
-            shouldContinue: true,
-            reason: `Existing open PR #${ctx.prNumber} found — skipping re-execution`,
-          };
+          const prs: { number: number }[] = JSON.parse(prJson || '[]');
+          if (prs.length > 0) {
+            ctx.prNumber = prs[0].number;
+            logger.info(
+              `[EXECUTE] Feature ${ctx.feature.id} already has open PR #${ctx.prNumber} — skipping execution, transitioning to REVIEW`
+            );
+            await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+              status: 'review',
+              prNumber: ctx.prNumber,
+            });
+            return {
+              nextState: 'REVIEW',
+              shouldContinue: true,
+              reason: `Existing open PR #${ctx.prNumber} found — skipping re-execution`,
+            };
+          }
         }
       } catch (err) {
         logger.warn('[EXECUTE] Could not check for existing PR (non-fatal):', err);
@@ -248,16 +254,26 @@ export class ExecuteProcessor implements StateProcessor {
         resolve({ success: false, error: 'Execution timed out after 30 minutes' });
       }, EXECUTE_TIMEOUT_MS);
 
-      // Subscribe to completion events for this feature
+      // Subscribe to completion events for this feature (filter by both featureId and projectPath)
       unsubscribe = this.serviceContext.events.subscribe((type: EventType, payload: unknown) => {
         const p = payload as Record<string, unknown> | null;
         if (p?.featureId !== ctx.feature.id) return;
+        if (p?.projectPath && p.projectPath !== ctx.projectPath) return;
 
-        if (type === 'feature:completed' || type === 'feature:stopped') {
+        if (type === 'feature:completed') {
           clearTimeout(timeout);
           if (!timedOut) {
             if (unsubscribe) unsubscribe();
             resolve({ success: true });
+          }
+        } else if (type === 'feature:stopped') {
+          clearTimeout(timeout);
+          if (!timedOut) {
+            if (unsubscribe) unsubscribe();
+            resolve({
+              success: false,
+              error: 'Agent was stopped before completion',
+            });
           }
         } else if (type === 'feature:error') {
           clearTimeout(timeout);

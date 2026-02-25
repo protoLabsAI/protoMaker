@@ -16,7 +16,6 @@ import type {
   LeadRuleLogEntry,
   WorkflowSettings,
 } from '@protolabs-ai/types';
-import { evaluateRules } from './lead-engineer-rules.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -340,13 +339,14 @@ export class ActionExecutor {
     payload: unknown,
     maxRuleLogEntries: number
   ): void {
-    const actions = evaluateRules(rules, session.worldState, eventType, payload);
-    if (actions.length === 0) return;
+    // Evaluate each rule once, collecting actions and building the rule log in a single pass
+    const allActions: LeadRuleAction[] = [];
 
     for (const rule of rules) {
       if (!rule.triggers.includes(eventType)) continue;
       const ruleActions = rule.evaluate(session.worldState, eventType, payload);
       if (ruleActions.length > 0) {
+        allActions.push(...ruleActions);
         const entry: LeadRuleLogEntry = {
           timestamp: new Date().toISOString(),
           ruleName: rule.name,
@@ -363,11 +363,13 @@ export class ActionExecutor {
       }
     }
 
+    if (allActions.length === 0) return;
+
     if (session.ruleLog.length > maxRuleLogEntries) {
       session.ruleLog = session.ruleLog.slice(-maxRuleLogEntries);
     }
 
-    for (const action of actions) {
+    for (const action of allActions) {
       this.executeAction(session, action).catch((err) => {
         logger.error(`Action execution failed (${action.type}):`, err);
       });

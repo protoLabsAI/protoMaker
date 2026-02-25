@@ -55,6 +55,7 @@ export type FeatureProcessingState =
   | 'REVIEW'
   | 'MERGE'
   | 'DEPLOY'
+  | 'DONE'
   | 'ESCALATE';
 
 /**

@@ -171,7 +171,10 @@ export class FeatureStateMachine {
       const processor = this.processors.get(currentState);
       if (!processor) {
         logger.error(`No processor found for state: ${currentState}`);
-        break;
+        ctx.escalationReason = `No processor registered for state: ${currentState}`;
+        currentState = 'ESCALATE';
+        transitionCount++;
+        continue;
       }
 
       try {
@@ -319,6 +322,18 @@ export class FeatureStateMachine {
       });
       currentState = 'ESCALATE';
       ctx.escalationReason = 'Max state transitions exceeded';
+
+      // Run the ESCALATE processor so the feature is properly blocked and signaled
+      const escalateProcessor = this.processors.get('ESCALATE');
+      if (escalateProcessor) {
+        try {
+          await escalateProcessor.enter(ctx);
+          await escalateProcessor.process(ctx);
+          await escalateProcessor.exit(ctx);
+        } catch (err) {
+          logger.error('ESCALATE processor failed after max transitions:', err);
+        }
+      }
     }
 
     // Clean up checkpoint on terminal states

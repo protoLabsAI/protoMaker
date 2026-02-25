@@ -195,9 +195,14 @@ export class WorldStateBuilder {
               state.boardCounts[oldStatus] = Math.max(0, (state.boardCounts[oldStatus] || 0) - 1);
             }
             state.boardCounts[newStatus] = (state.boardCounts[newStatus] || 0) + 1;
-            if (newStatus === 'done' || newStatus === 'verified') {
+
+            const wasCompleted = oldStatus === 'done' || oldStatus === 'verified';
+            const isCompleted = newStatus === 'done' || newStatus === 'verified';
+            if (isCompleted && !wasCompleted) {
               state.metrics.completedFeatures++;
               state.features[featureId].completedAt = now;
+            } else if (!isCompleted && wasCompleted) {
+              state.metrics.completedFeatures = Math.max(0, state.metrics.completedFeatures - 1);
             }
           }
         }
@@ -206,8 +211,14 @@ export class WorldStateBuilder {
 
       case 'feature:started': {
         if (featureId && state.features[featureId]) {
+          const oldStatus = state.features[featureId].status;
           state.features[featureId].status = 'in_progress';
           state.features[featureId].startedAt = now;
+          // Update board counts to reflect the status change
+          if (oldStatus && oldStatus !== 'in_progress') {
+            state.boardCounts[oldStatus] = Math.max(0, (state.boardCounts[oldStatus] || 0) - 1);
+          }
+          state.boardCounts['in_progress'] = (state.boardCounts['in_progress'] || 0) + 1;
           state.agents.push({ featureId, startTime: now });
         }
         break;

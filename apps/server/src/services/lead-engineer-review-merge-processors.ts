@@ -25,6 +25,18 @@ import {
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
 
+/**
+ * Validate and sanitize a PR number to prevent shell injection.
+ * Returns the validated integer or throws if invalid.
+ */
+function sanitizePrNumber(prNumber: unknown): number {
+  const parsed = parseInt(String(prNumber), 10);
+  if (isNaN(parsed) || parsed <= 0) {
+    throw new Error(`Invalid PR number: ${String(prNumber)}`);
+  }
+  return parsed;
+}
+
 // ────────────────────────── ReviewProcessor ──────────────────────────
 
 /**
@@ -54,7 +66,19 @@ export class ReviewProcessor implements StateProcessor {
       ctx.escalationReason = 'No PR number found after execution';
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    // Validate PR number before any shell interpolation
+    try {
+      ctx.prNumber = sanitizePrNumber(ctx.prNumber);
+    } catch {
+      ctx.escalationReason = `Invalid PR number: ${ctx.prNumber}`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }
@@ -97,18 +121,18 @@ export class ReviewProcessor implements StateProcessor {
         ctx.escalationReason = `Max remediation cycles exceeded (${MAX_TOTAL_REMEDIATION_CYCLES})`;
         return {
           nextState: 'ESCALATE',
-          shouldContinue: false,
+          shouldContinue: true,
           reason: ctx.escalationReason,
         };
       }
 
-      // Check iteration budget
+      // Check iteration budget (use >= for consistent boundary semantics)
       const trackedPR = this.getTrackedPR(ctx);
-      if (trackedPR && trackedPR.iterationCount > MAX_PR_ITERATIONS) {
+      if (trackedPR && trackedPR.iterationCount >= MAX_PR_ITERATIONS) {
         ctx.escalationReason = `Max PR iterations exceeded (${MAX_PR_ITERATIONS})`;
         return {
           nextState: 'ESCALATE',
-          shouldContinue: false,
+          shouldContinue: true,
           reason: ctx.escalationReason,
         };
       }
@@ -134,6 +158,16 @@ export class ReviewProcessor implements StateProcessor {
         shouldContinue: true,
         reason: 'Changes requested, remediating',
         context: { remediation: true },
+      };
+    }
+
+    // CLI/API error — escalate instead of polling forever
+    if (reviewState === 'error') {
+      ctx.escalationReason = `Unable to determine PR review state for PR #${ctx.prNumber}`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: true,
+        reason: ctx.escalationReason,
       };
     }
 
@@ -180,8 +214,8 @@ export class ReviewProcessor implements StateProcessor {
 
       return 'pending';
     } catch (err) {
-      logger.warn(`[REVIEW] gh CLI fallback failed for PR #${ctx.prNumber}:`, err);
-      return 'pending';
+      logger.error(`[REVIEW] gh CLI fallback failed for PR #${ctx.prNumber}:`, err);
+      return 'error';
     }
   }
 
@@ -213,7 +247,19 @@ export class MergeProcessor implements StateProcessor {
       ctx.escalationReason = 'No PR number available for merge';
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    // Validate PR number before any shell interpolation
+    try {
+      ctx.prNumber = sanitizePrNumber(ctx.prNumber);
+    } catch {
+      ctx.escalationReason = `Invalid PR number: ${ctx.prNumber}`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }
@@ -222,7 +268,7 @@ export class MergeProcessor implements StateProcessor {
       ctx.escalationReason = `Merge failed after ${MAX_MERGE_RETRIES} retries for PR #${ctx.prNumber}`;
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }
@@ -295,7 +341,7 @@ export class MergeProcessor implements StateProcessor {
       ctx.escalationReason = `Merge failed: ${errMsg}`;
       return {
         nextState: 'ESCALATE',
-        shouldContinue: false,
+        shouldContinue: true,
         reason: ctx.escalationReason,
       };
     }

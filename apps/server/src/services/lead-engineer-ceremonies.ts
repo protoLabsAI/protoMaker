@@ -62,12 +62,16 @@ export class CeremonyOrchestrator {
     session.flowState = 'idle';
     stopSession(session.projectPath);
 
-    await removeSession(session.projectPath);
-
-    this.deps.events.emit('lead-engineer:stopped', {
-      projectPath: session.projectPath,
-      projectSlug: session.projectSlug,
-    });
+    try {
+      await removeSession(session.projectPath);
+    } catch (err) {
+      logger.error(`Failed to remove session for ${session.projectSlug}:`, err);
+    } finally {
+      this.deps.events.emit('lead-engineer:stopped', {
+        projectPath: session.projectPath,
+        projectSlug: session.projectSlug,
+      });
+    }
 
     logger.info(`Project ${session.projectSlug} completed. Lead Engineer session ended.`);
   }
