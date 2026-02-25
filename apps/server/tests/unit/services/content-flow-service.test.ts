@@ -207,7 +207,11 @@ describe('ContentFlowService', () => {
       const mockFlow = {
         stream: vi.fn().mockResolvedValue({
           async *[Symbol.asyncIterator]() {
-            yield { research_review: { researchReview: { percentage: 85, passed: true, verdict: 'Good' } } };
+            yield {
+              research_review: {
+                researchReview: { percentage: 85, passed: true, verdict: 'Good' },
+              },
+            };
             // Hang to keep the flow in review state
             await new Promise(() => {});
           },
@@ -309,9 +313,9 @@ describe('ContentFlowService', () => {
         throw new Error('Model initialization failed');
       });
 
-      await expect(
-        contentFlowService.startFlow('/test/path', 'Test Topic')
-      ).rejects.toThrow('Model initialization failed');
+      await expect(contentFlowService.startFlow('/test/path', 'Test Topic')).rejects.toThrow(
+        'Model initialization failed'
+      );
     });
   });
 
@@ -325,7 +329,7 @@ describe('ContentFlowService', () => {
         }),
         getState: vi.fn().mockResolvedValue({
           next: ['research_hitl'],
-          values: {}
+          values: {},
         }),
       };
 

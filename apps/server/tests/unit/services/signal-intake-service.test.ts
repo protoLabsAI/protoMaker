@@ -171,10 +171,7 @@ describe('SignalIntakeService', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Verify ops routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:idea-injected',
-        expect.any(Object)
-      );
+      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
 
       expect(mockEmitter.emit).toHaveBeenCalledWith(
         'signal:routed',
@@ -250,10 +247,7 @@ describe('SignalIntakeService', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Verify ops routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:idea-injected',
-        expect.any(Object)
-      );
+      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
 
       expect(mockEmitter.emit).toHaveBeenCalledWith(
         'signal:routed',
