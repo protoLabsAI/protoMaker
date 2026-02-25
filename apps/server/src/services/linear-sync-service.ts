@@ -189,11 +189,20 @@ export class LinearSyncService {
     return true;
   }
 
+  protected markSyncing(featureId: string): void {
+    this.syncingFeatures.add(featureId);
+    this.lastSyncTimes.set(featureId, Date.now());
+  }
+
+  protected unmarkSyncing(featureId: string): void {
+    this.syncingFeatures.delete(featureId);
+  }
+
   async isProjectSyncEnabled(projectPath: string): Promise<boolean> {
     if (!this.settingsService) return false;
     try {
       const settings = await this.settingsService.getProjectSettings(projectPath);
-      const linear = settings.integrations?.linear;
+      const linear = settings?.integrations?.linear;
       if (!linear?.enabled) return false;
       const hasToken = !!(
         linear.agentToken ||
@@ -360,11 +369,8 @@ export class LinearSyncService {
     const svc = this;
     return {
       shouldSync: (id) => svc.shouldSync(id),
-      markSyncing: (id) => {
-        svc.syncingFeatures.add(id);
-        svc.lastSyncTimes.set(id, Date.now());
-      },
-      unmarkSyncing: (id) => svc.syncingFeatures.delete(id),
+      markSyncing: (id) => svc.markSyncing(id),
+      unmarkSyncing: (id) => svc.unmarkSyncing(id),
       isProjectSyncEnabled: (path) => svc.isProjectSyncEnabled(path),
       getSyncMetadata: (id) => svc.getSyncMetadata(id),
       updateSyncMetadata: (m) => svc.updateSyncMetadata(m),
