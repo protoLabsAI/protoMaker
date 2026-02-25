@@ -2,6 +2,7 @@
  * Calendar Events Hook
  *
  * Fetches calendar events for a given month/year from the backend API.
+ * Provides mutation functions for creating, updating, and deleting events.
  * Uses the apiFetch pattern consistent with the rest of the codebase.
  */
 
@@ -13,6 +14,35 @@ interface CalendarListResponse {
   success: boolean;
   events: CalendarEvent[];
   error?: string;
+}
+
+interface CalendarMutationResponse {
+  success: boolean;
+  event?: CalendarEvent;
+  error?: string;
+}
+
+interface CalendarDeleteResponse {
+  success: boolean;
+  error?: string;
+}
+
+/** Fields for creating a new custom calendar event */
+export interface CreateEventInput {
+  title: string;
+  date: string;
+  endDate?: string;
+  description?: string;
+  color?: string;
+}
+
+/** Fields for updating an existing calendar event */
+export interface UpdateEventInput {
+  title?: string;
+  date?: string;
+  endDate?: string;
+  description?: string;
+  color?: string;
 }
 
 interface UseCalendarEventsOptions {
@@ -29,8 +59,12 @@ interface UseCalendarEventsOptions {
 interface UseCalendarEventsResult {
   events: CalendarEvent[];
   isLoading: boolean;
+  isMutating: boolean;
   error: string | null;
   refetch: () => void;
+  createEvent: (input: CreateEventInput) => Promise<CalendarEvent | null>;
+  updateEvent: (id: string, updates: UpdateEventInput) => Promise<CalendarEvent | null>;
+  deleteEvent: (id: string) => Promise<boolean>;
 }
 
 /**
@@ -55,6 +89,7 @@ function getMonthDateRange(month: number, year: number): { startDate: string; en
 
 /**
  * Fetch calendar events for a given month from the backend.
+ * Provides CRUD mutation functions that automatically refetch after success.
  */
 export function useCalendarEvents({
   projectPath,
@@ -64,6 +99,7 @@ export function useCalendarEvents({
 }: UseCalendarEventsOptions): UseCalendarEventsResult {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMutating, setIsMutating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fetchIdRef = useRef(0);
 
@@ -112,5 +148,89 @@ export function useCalendarEvents({
     fetchEvents();
   }, [fetchEvents]);
 
-  return { events, isLoading, error, refetch: fetchEvents };
+  const createEvent = useCallback(
+    async (input: CreateEventInput): Promise<CalendarEvent | null> => {
+      if (!projectPath) return null;
+
+      setIsMutating(true);
+      try {
+        const result = await apiPost<CalendarMutationResponse>('/api/calendar/create', {
+          projectPath,
+          title: input.title,
+          date: input.date,
+          endDate: input.endDate,
+          type: 'custom',
+          description: input.description,
+          color: input.color,
+        });
+
+        if (result.success && result.event) {
+          await fetchEvents();
+          return result.event;
+        }
+        throw new Error(result.error ?? 'Failed to create event');
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [projectPath, fetchEvents],
+  );
+
+  const updateEvent = useCallback(
+    async (id: string, updates: UpdateEventInput): Promise<CalendarEvent | null> => {
+      if (!projectPath) return null;
+
+      setIsMutating(true);
+      try {
+        const result = await apiPost<CalendarMutationResponse>('/api/calendar/update', {
+          projectPath,
+          id,
+          ...updates,
+        });
+
+        if (result.success && result.event) {
+          await fetchEvents();
+          return result.event;
+        }
+        throw new Error(result.error ?? 'Failed to update event');
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [projectPath, fetchEvents],
+  );
+
+  const deleteEvent = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!projectPath) return false;
+
+      setIsMutating(true);
+      try {
+        const result = await apiPost<CalendarDeleteResponse>('/api/calendar/delete', {
+          projectPath,
+          id,
+        });
+
+        if (result.success) {
+          await fetchEvents();
+          return true;
+        }
+        throw new Error(result.error ?? 'Failed to delete event');
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [projectPath, fetchEvents],
+  );
+
+  return {
+    events,
+    isLoading,
+    isMutating,
+    error,
+    refetch: fetchEvents,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+  };
 }
