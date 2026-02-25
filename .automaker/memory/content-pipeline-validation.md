@@ -1,3 +1,14 @@
+---
+tags: []
+summary: "relevantTo: []"
+relevantTo: []
+importance: 0.5
+relatedFiles: []
+usageStats:
+  loaded: 4
+  referenced: 1
+  successfulFeatures: 1
+---
 # Content Pipeline Validation Report
 
 **Date**: 2026-02-24
