@@ -1715,9 +1715,7 @@ export class AutoModeService {
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
       // Undo the lease increment before throwing — we're not going to execute
       this.concurrencyManager.release(featureId);
-      throw new Error(
-        `Feature ${featureId} is already running (runtime: ${runtime}s)`
-      );
+      throw new Error(`Feature ${featureId} is already running (runtime: ${runtime}s)`);
     }
 
     // Add to running features immediately to prevent duplicate execution race condition
