@@ -33,6 +33,7 @@ interface UseNavigationProps {
     context: string;
     memory: string;
     notes: string;
+    docs: string;
     board: string;
     graph: string;
     agent: string;
@@ -133,6 +134,12 @@ export function useNavigation({
         label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
+      },
+      {
+        id: 'docs',
+        label: 'Docs',
+        icon: BookOpen,
+        shortcut: shortcuts.docs,
       },
     ];
 
