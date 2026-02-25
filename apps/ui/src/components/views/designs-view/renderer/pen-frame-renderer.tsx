@@ -6,6 +6,7 @@ import type { PenFrame } from '@protolabs-ai/types';
 import { PenNodeRenderer } from './pen-node-renderer';
 import { fillToCSS, strokeToCSS, paddingToCSS, layoutToFlexDirection } from './style-utils';
 import { usePenTheme } from './pen-theme-context';
+import { DropZone } from '../dnd/drop-zone';
 import type { CSSProperties } from 'react';
 
 interface PenFrameRendererProps {
@@ -93,8 +94,11 @@ export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFra
     style.transform = `matrix(${t.a}, ${t.b}, ${t.c}, ${t.d}, ${t.tx}, ${t.ty})`;
   }
 
+  // Check if this frame is a valid drop target (has layout)
+  const isValidDropTarget = node.layoutMode !== 'none';
+
   // Render children recursively
-  return (
+  const frameContent = (
     <div
       style={{ ...style, ...externalStyle }}
       data-node-id={node.id}
@@ -106,4 +110,15 @@ export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFra
       ))}
     </div>
   );
+
+  // Wrap with DropZone if this frame accepts drops
+  if (isValidDropTarget) {
+    return (
+      <DropZone frameId={node.id} isValidTarget={isValidDropTarget}>
+        {frameContent}
+      </DropZone>
+    );
+  }
+
+  return frameContent;
 }

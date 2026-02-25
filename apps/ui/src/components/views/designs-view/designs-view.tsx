@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useDesignsStore } from '@/store/designs-store';
 import { Spinner } from '@protolabs-ai/ui/atoms';
@@ -7,6 +7,10 @@ import { DesignsCanvas } from './designs-canvas';
 import { PropertyInspector } from './inspector/property-inspector';
 import { ComponentLibrary } from './library';
 import { FileText, Package } from 'lucide-react';
+import { DndProvider, DragOverlayContent } from './dnd';
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragData } from './dnd';
+import type { PenNode } from '@protolabs-ai/types';
 
 export function DesignsView() {
   const { currentProject } = useAppStore();
@@ -17,13 +21,61 @@ export function DesignsView() {
     isDirty,
     isLibraryVisible,
     toggleLibraryVisibility,
+    createRefNode,
     reset,
   } = useDesignsStore();
+
+  const [activeNode, setActiveNode] = useState<PenNode | null>(null);
 
   // Reset store when project changes or component unmounts
   useEffect(() => {
     return () => reset();
   }, [currentProject?.path, reset]);
+
+  // Handle drag start to show overlay
+  const handleDragStart = (event: DragStartEvent) => {
+    const dragData = event.active.data.current as DragData | undefined;
+    if (dragData?.type === 'component' && selectedDocument) {
+      try {
+        const parsed = JSON.parse(selectedDocument.content);
+        const findNode = (nodes: PenNode[]): PenNode | null => {
+          for (const node of nodes) {
+            if (node.id === dragData.componentId) return node;
+            if ('children' in node && node.children) {
+              const found = findNode(node.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const node = findNode(parsed.children || []);
+        setActiveNode(node);
+      } catch (error) {
+        console.error('Failed to parse document:', error);
+      }
+    }
+  };
+
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    setActiveNode(null);
+
+    if (!over) return;
+
+    const dragData = active.data.current as DragData | undefined;
+    const dropData = over.data.current as { type: string; frameId: string } | undefined;
+
+    // Check if we're dropping a component onto a frame
+    if (dragData?.type === 'component' && dropData?.type === 'frame') {
+      const componentId = dragData.componentId;
+      const frameId = dropData.frameId;
+
+      // Create the ref node in the target frame
+      createRefNode(frameId, componentId);
+    }
+  };
 
   // Warn user about unsaved changes when navigating away
   useEffect(() => {
@@ -53,24 +105,37 @@ export function DesignsView() {
     );
   }
 
-  return (
-    <div className="flex h-full flex-col">
-      {/* Toolbar */}
-      <div className="border-b border-border bg-muted/30 px-4 py-2 flex items-center gap-2">
-        <button
-          onClick={toggleLibraryVisibility}
-          className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            isLibraryVisible ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-          }`}
-          title={isLibraryVisible ? 'Hide component library' : 'Show component library'}
-        >
-          <Package className="h-4 w-4" />
-          Components
-        </button>
-      </div>
+  // Prepare drag overlay
+  let parsedDocument = null;
+  try {
+    parsedDocument = selectedDocument ? JSON.parse(selectedDocument.content) : null;
+  } catch (error) {
+    console.error('Failed to parse document:', error);
+  }
 
-      {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
+  return (
+    <DndProvider
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      dragOverlay={<DragOverlayContent node={activeNode} document={parsedDocument} />}
+    >
+      <div className="flex h-full flex-col">
+        {/* Toolbar */}
+        <div className="border-b border-border bg-muted/30 px-4 py-2 flex items-center gap-2">
+          <button
+            onClick={toggleLibraryVisibility}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              isLibraryVisible ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+            }`}
+            title={isLibraryVisible ? 'Hide component library' : 'Show component library'}
+          >
+            <Package className="h-4 w-4" />
+            Components
+          </button>
+        </div>
+
+        {/* Main content area */}
+        <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar - File tree */}
         <div className="w-64 border-r border-border bg-background overflow-y-auto">
           <DesignsTree projectPath={currentProject.path} />
@@ -120,6 +185,7 @@ export function DesignsView() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </DndProvider>
   );
 }

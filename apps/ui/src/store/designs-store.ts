@@ -66,6 +66,7 @@ export interface DesignsActions {
   // Document update actions
   updateNode: (nodeId: string, updates: Partial<PenNode>) => void;
   updateDocument: (content: string, addToHistory?: boolean) => void;
+  createRefNode: (targetFrameId: string, componentId: string) => void;
 
   // History actions
   undo: () => void;
@@ -209,6 +210,60 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
         selectedDocument: { ...state.selectedDocument!, content },
         isDirty: true,
       });
+    }
+  },
+
+  // Create ref node (for drag-and-drop component instantiation)
+  createRefNode: (targetFrameId, componentId) => {
+    const state = get();
+    const { selectedDocument } = state;
+
+    if (!selectedDocument) return;
+
+    try {
+      const parsed = JSON.parse(selectedDocument.content);
+
+      // Find and update the target frame recursively
+      const findAndAddRef = (nodes: PenNode[]): boolean => {
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i];
+          if (node.id === targetFrameId && node.type === 'frame') {
+            // Create new ref node
+            const refNode = {
+              id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+              name: 'Instance',
+              type: 'ref',
+              componentId,
+              children: [],
+            };
+
+            // Add to frame's children
+            if (!node.children) {
+              node.children = [];
+            }
+            node.children.push(refNode);
+
+            return true;
+          }
+
+          // Recursively search children
+          if ('children' in node && node.children) {
+            if (findAndAddRef(node.children)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      const success = findAndAddRef(parsed.children || []);
+
+      if (success) {
+        const newContent = JSON.stringify(parsed, null, 2);
+        get().updateDocument(newContent, true);
+      }
+    } catch (error) {
+      console.error('Failed to create ref node:', error);
     }
   },
 
