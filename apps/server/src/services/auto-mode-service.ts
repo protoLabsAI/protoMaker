@@ -124,6 +124,7 @@ import { RecoveryService, getRecoveryService } from './recovery-service.js';
 import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
+import { checkAndRecoverUncommittedWork } from './worktree-recovery-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 
@@ -2138,6 +2139,62 @@ export class AutoModeService {
           providerId: modelResult.providerId,
         }
       );
+
+      // Post-agent hook: detect and recover uncommitted work
+      // Runs immediately after agent exits (before pipeline/git workflow steps)
+      // so that stranded work is committed and a PR is created if the agent
+      // completed implementation but failed to run its own git workflow step.
+      if (worktreePath) {
+        const recoveryResult = await checkAndRecoverUncommittedWork(feature, workDir);
+        if (recoveryResult.detected) {
+          if (recoveryResult.recovered) {
+            // Recovery committed, pushed, and created a PR.
+            // Update feature status to 'review' and emit completion so
+            // lead-engineer-service waitForCompletion resolves.
+            logger.info(
+              `[PostAgentHook] Recovered uncommitted work for ${featureId}: PR at ${recoveryResult.prUrl}`
+            );
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'review',
+              prUrl: recoveryResult.prUrl,
+              ...(recoveryResult.prNumber !== undefined && {
+                prNumber: recoveryResult.prNumber,
+              }),
+              ...(recoveryResult.prCreatedAt && { prCreatedAt: recoveryResult.prCreatedAt }),
+            });
+            this.emitAutoModeEvent('auto_mode_git_workflow', {
+              featureId,
+              pushed: true,
+              prUrl: recoveryResult.prUrl,
+              prNumber: recoveryResult.prNumber,
+              projectPath,
+            });
+            this.events.emit('feature:completed', {
+              projectPath,
+              featureId,
+              featureTitle: feature.title,
+              status: 'review',
+            });
+            return;
+          } else {
+            // Recovery failed — mark as blocked and surface error to waitForCompletion
+            const reason = `git workflow failed — uncommitted work in worktree at ${workDir}: ${recoveryResult.error ?? 'unknown'}`;
+            logger.warn(
+              `[PostAgentHook] Recovery failed for ${featureId}: ${recoveryResult.error}`
+            );
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: reason,
+            });
+            this.events.emit('feature:error', {
+              projectPath,
+              featureId,
+              error: reason,
+            });
+            return;
+          }
+        }
+      }
 
       // Check for pipeline steps and execute them
       const pipelineConfig = await pipelineService.getPipelineConfig(projectPath);
