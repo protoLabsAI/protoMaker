@@ -208,6 +208,27 @@ export class ExecuteProcessor implements StateProcessor {
     const result = await this.waitForCompletion(ctx);
 
     if (!result.success) {
+      // Check if the post-agent recovery hook blocked this feature.
+      // Blocked features should escalate rather than retry — the work is stranded
+      // and retrying the agent won't resolve a git/network failure.
+      const currentFeature = await this.serviceContext.featureLoader
+        .get(ctx.projectPath, ctx.feature.id)
+        .catch(() => null);
+      if (currentFeature?.status === 'blocked') {
+        ctx.escalationReason =
+          currentFeature.statusChangeReason ||
+          'Post-agent recovery failed — uncommitted work stranded in worktree';
+        logger.warn('[EXECUTE] Feature blocked by post-agent recovery hook, escalating', {
+          featureId: ctx.feature.id,
+          reason: ctx.escalationReason,
+        });
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: false,
+          reason: ctx.escalationReason,
+        };
+      }
+
       ctx.retryCount++;
       logger.warn('[EXECUTE] Execution failed, will retry', {
         retryCount: ctx.retryCount,
