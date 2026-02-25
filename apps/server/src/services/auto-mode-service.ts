@@ -953,6 +953,7 @@ export class AutoModeService {
       branchName,
       cooldownTimer: null,
       startingFeatures: new Set(),
+      humanBlockedCount: 0,
     };
 
     // CRITICAL: Set state immediately BEFORE any async operations to prevent TOCTOU race
@@ -4226,6 +4227,7 @@ Format your response as a structured markdown document.`;
     runningCount: number;
     maxConcurrency: number;
     branchName: string | null;
+    humanBlockedCount: number;
   } {
     const worktreeKey = getWorktreeAutoLoopKey(projectPath, branchName);
     const projectState = this.autoLoopsByProject.get(worktreeKey);
@@ -4252,6 +4254,7 @@ Format your response as a structured markdown document.`;
       runningCount: runningFeatures.length,
       maxConcurrency: projectState?.config.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
       branchName,
+      humanBlockedCount: projectState?.humanBlockedCount ?? 0,
     };
   }
 
