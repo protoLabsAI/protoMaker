@@ -134,7 +134,7 @@ Key fields available on every feature:
 
 All agent PRs target **`dev`** by default. The promotion flow is:
 
-```
+```text
 feature/* ──▶ dev ──▶ staging ──▶ main
 ```
 
