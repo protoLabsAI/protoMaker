@@ -8,7 +8,15 @@
 /**
  * Feature domain categories for trajectory matching
  */
-export type TrajectoryDomain = 'frontend' | 'backend' | 'devops' | 'fullstack' | 'infrastructure' | 'testing' | 'documentation' | 'other';
+export type TrajectoryDomain =
+  | 'frontend'
+  | 'backend'
+  | 'devops'
+  | 'fullstack'
+  | 'infrastructure'
+  | 'testing'
+  | 'documentation'
+  | 'other';
 
 /**
  * Verified trajectory record stored after each execution attempt.
