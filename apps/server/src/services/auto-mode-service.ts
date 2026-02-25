@@ -2237,13 +2237,15 @@ export class AutoModeService {
         } catch (gitError) {
           logger.warn(`Git workflow failed for ${featureId}:`, gitError);
           // Don't fail the feature - git workflow is best-effort
-          // Store the error on the feature for UI visibility
-          await this.featureLoader.update(projectPath, featureId, {
-            gitWorkflowError: {
-              message: gitError instanceof Error ? gitError.message : String(gitError),
-              timestamp: new Date().toISOString(),
-            },
-          });
+          // Store the error on the feature for UI visibility (non-blocking)
+          this.featureLoader
+            .update(projectPath, featureId, {
+              gitWorkflowError: {
+                message: gitError instanceof Error ? gitError.message : String(gitError),
+                timestamp: new Date().toISOString(),
+              },
+            })
+            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
         }
       }
 
@@ -3157,13 +3159,15 @@ Complete the pipeline step instructions above. Review the previous work and appl
             message: `⚠️ Git workflow failed: ${error instanceof Error ? error.message : String(error)}`,
             projectPath,
           });
-          // Store the error on the feature for UI visibility
-          await this.featureLoader.update(projectPath, featureId, {
-            gitWorkflowError: {
-              message: error instanceof Error ? error.message : String(error),
-              timestamp: new Date().toISOString(),
-            },
-          });
+          // Store the error on the feature for UI visibility (non-blocking)
+          this.featureLoader
+            .update(projectPath, featureId, {
+              gitWorkflowError: {
+                message: error instanceof Error ? error.message : String(error),
+                timestamp: new Date().toISOString(),
+              },
+            })
+            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
         }
       }
 
@@ -3424,13 +3428,15 @@ Complete the pipeline step instructions above. Review the previous work and appl
           }
         } catch (gitError) {
           logger.warn(`Git workflow failed for ${featureId}:`, gitError);
-          // Store the error on the feature for UI visibility
-          await this.featureLoader.update(projectPath, featureId, {
-            gitWorkflowError: {
-              message: gitError instanceof Error ? gitError.message : String(gitError),
-              timestamp: new Date().toISOString(),
-            },
-          });
+          // Store the error on the feature for UI visibility (non-blocking)
+          this.featureLoader
+            .update(projectPath, featureId, {
+              gitWorkflowError: {
+                message: gitError instanceof Error ? gitError.message : String(gitError),
+                timestamp: new Date().toISOString(),
+              },
+            })
+            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
         }
       }
 
@@ -3867,13 +3873,15 @@ Address the follow-up instructions above. Review the previous work and make the 
           }
         } catch (gitError) {
           logger.warn(`Git workflow failed for ${featureId}:`, gitError);
-          // Store the error on the feature for UI visibility
-          await this.featureLoader.update(projectPath, featureId, {
-            gitWorkflowError: {
-              message: gitError instanceof Error ? gitError.message : String(gitError),
-              timestamp: new Date().toISOString(),
-            },
-          });
+          // Store the error on the feature for UI visibility (non-blocking)
+          this.featureLoader
+            .update(projectPath, featureId, {
+              gitWorkflowError: {
+                message: gitError instanceof Error ? gitError.message : String(gitError),
+                timestamp: new Date().toISOString(),
+              },
+            })
+            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
         }
       }
 
