@@ -47,6 +47,8 @@ import {
   isClaudeModel,
   stripProviderPrefix,
   normalizeFeatureStatus,
+  EscalationSource,
+  EscalationSeverity,
 } from '@protolabs-ai/types';
 import {
   buildPromptWithImages,
@@ -69,7 +71,11 @@ import {
   resolvePhaseModel,
   DEFAULT_MODELS,
 } from '@protolabs-ai/model-resolver';
-import { resolveDependencies, areDependenciesSatisfied } from '@protolabs-ai/dependency-resolver';
+import {
+  resolveDependencies,
+  areDependenciesSatisfied,
+  getBlockingInfo,
+} from '@protolabs-ai/dependency-resolver';
 import {
   getFeatureDir,
   getAutomakerDir,
@@ -370,6 +376,7 @@ interface ProjectAutoLoopState {
   branchName: string | null; // null = main worktree
   cooldownTimer: NodeJS.Timeout | null; // Timer for auto-resume after cooldown
   startingFeatures: Set<string>; // Track features being started to prevent race conditions
+  humanBlockedCount: number; // Count of features blocked by human-assigned dependencies
 }
 
 /**
@@ -5282,6 +5289,109 @@ Format your response as a structured markdown document.`;
         logger.info(
           `[loadPendingFeatures] ${blockedFeatures.length} features blocked by dependencies: ${blockedFeatures.map((b) => `${b.feature.id} (${b.reason})`).join('; ')}`
         );
+      }
+
+      // ── Human-blocked dependency detection and escalation ──
+      // Categorize blocked features by whether they're blocked by human-assigned dependencies
+      const humanBlockedFeatures: Array<{ feature: Feature; humanBlockers: string[] }> = [];
+      const agentBlockedFeatures: Array<{ feature: Feature; agentBlockers: string[] }> = [];
+
+      for (const blocked of blockedFeatures) {
+        const blockingInfo = getBlockingInfo(blocked.feature, allFeatures);
+
+        if (blockingInfo.humanBlockers.length > 0) {
+          humanBlockedFeatures.push({
+            feature: blocked.feature,
+            humanBlockers: blockingInfo.humanBlockers,
+          });
+
+          // Get human blocker details for logging and escalation
+          const humanBlockerDetails = blockingInfo.humanBlockers
+            .map((blockerId) => {
+              const blocker = allFeatures.find((f) => f.id === blockerId);
+              return blocker
+                ? `${blockerId} (assigned to ${blocker.assignee || 'unknown'})`
+                : blockerId;
+            })
+            .join(', ');
+
+          // Log distinctly: '[loadPendingFeatures] Feature X human-blocked by Y (assigned to josh)'
+          logger.warn(
+            `[loadPendingFeatures] Feature ${blocked.feature.id} human-blocked by ${humanBlockerDetails}`
+          );
+
+          // Emit escalation signal for each human-blocked feature (medium severity)
+          if (this.events) {
+            this.events.emit('escalation:signal-received', {
+              source: EscalationSource.human_blocked_dependency,
+              severity: EscalationSeverity.medium,
+              type: 'feature_human_blocked',
+              context: {
+                featureId: blocked.feature.id,
+                featureTitle: blocked.feature.title || blocked.feature.description,
+                humanBlockers: blockingInfo.humanBlockers,
+                humanBlockerDetails,
+                projectPath,
+                branchName,
+              },
+              deduplicationKey: `human-blocked-${blocked.feature.id}-${blockingInfo.humanBlockers.join('-')}`,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        } else if (blockingInfo.agentBlockers.length > 0) {
+          agentBlockedFeatures.push({
+            feature: blocked.feature,
+            agentBlockers: blockingInfo.agentBlockers,
+          });
+        }
+      }
+
+      // Update project state with human-blocked count
+      const worktreeKey = getWorktreeAutoLoopKey(projectPath, branchName);
+      const projectState = this.autoLoopsByProject.get(worktreeKey);
+      if (projectState) {
+        projectState.humanBlockedCount = humanBlockedFeatures.length;
+      }
+
+      // Log summary of human-blocked vs agent-blocked features
+      if (humanBlockedFeatures.length > 0 || agentBlockedFeatures.length > 0) {
+        logger.info(
+          `[loadPendingFeatures] Blocked feature breakdown: ${humanBlockedFeatures.length} human-blocked, ${agentBlockedFeatures.length} agent-blocked`
+        );
+      }
+
+      // ── Pipeline stall detection: ALL remaining features are human-blocked (code red) ──
+      // If we have blocked features and ALL of them are human-blocked (no agent-blocked, no ready),
+      // this means the entire pipeline is stalled waiting on human work
+      const totalPendingCount = orderedFeatures.length;
+      const allFeaturesHumanBlocked =
+        humanBlockedFeatures.length > 0 &&
+        humanBlockedFeatures.length === totalPendingCount &&
+        readyFeatures.length === 0;
+
+      if (allFeaturesHumanBlocked) {
+        logger.error(
+          `[loadPendingFeatures] 🚨 PIPELINE STALLED: All ${totalPendingCount} remaining features are human-blocked. No agent work can proceed.`
+        );
+
+        // Emit critical escalation signal
+        if (this.events) {
+          this.events.emit('escalation:signal-received', {
+            source: EscalationSource.human_blocked_dependency,
+            severity: EscalationSeverity.critical,
+            type: 'pipeline_stalled_human_blocked',
+            context: {
+              totalFeatures: totalPendingCount,
+              humanBlockedCount: humanBlockedFeatures.length,
+              humanBlockedFeatureIds: humanBlockedFeatures.map((hb) => hb.feature.id),
+              projectPath,
+              branchName,
+              message: `All ${totalPendingCount} remaining features are blocked by human-assigned dependencies. Pipeline is stalled.`,
+            },
+            deduplicationKey: `pipeline-stalled-${projectPath}-${branchName ?? 'main'}`,
+            timestamp: new Date().toISOString(),
+          });
+        }
       }
 
       // Sort by priority (lower number = higher priority, picked up first)
