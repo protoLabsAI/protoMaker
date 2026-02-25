@@ -31,24 +31,24 @@ export interface SanitizationResult {
  */
 const HOMOGLYPH_MAP: Record<string, string> = {
   // Cyrillic to Latin
-  'а': 'a', // Cyrillic а
-  'е': 'e', // Cyrillic е
-  'о': 'o', // Cyrillic о
-  'р': 'p', // Cyrillic р
-  'с': 'c', // Cyrillic с
-  'у': 'y', // Cyrillic у
-  'х': 'x', // Cyrillic х
-  'А': 'A', // Cyrillic А
-  'В': 'B', // Cyrillic В
-  'Е': 'E', // Cyrillic Е
-  'К': 'K', // Cyrillic К
-  'М': 'M', // Cyrillic М
-  'Н': 'H', // Cyrillic Н
-  'О': 'O', // Cyrillic О
-  'Р': 'P', // Cyrillic Р
-  'С': 'C', // Cyrillic С
-  'Т': 'T', // Cyrillic Т
-  'Х': 'X', // Cyrillic Х
+  а: 'a', // Cyrillic а
+  е: 'e', // Cyrillic е
+  о: 'o', // Cyrillic о
+  р: 'p', // Cyrillic р
+  с: 'c', // Cyrillic с
+  у: 'y', // Cyrillic у
+  х: 'x', // Cyrillic х
+  А: 'A', // Cyrillic А
+  В: 'B', // Cyrillic В
+  Е: 'E', // Cyrillic Е
+  К: 'K', // Cyrillic К
+  М: 'M', // Cyrillic М
+  Н: 'H', // Cyrillic Н
+  О: 'O', // Cyrillic О
+  Р: 'P', // Cyrillic Р
+  С: 'C', // Cyrillic С
+  Т: 'T', // Cyrillic Т
+  Х: 'X', // Cyrillic Х
 };
 
 /**
@@ -76,10 +76,7 @@ export function normalizeUnicode(text: string): string {
   normalized = normalized.replace(/[\u202A-\u202E\u2066-\u2069]/g, '');
 
   // Step 4: Replace homoglyph lookalikes
-  normalized = normalized.replace(
-    /[аеорсуxхАВЕКМНОРСТХ]/g,
-    (char) => HOMOGLYPH_MAP[char] || char
-  );
+  normalized = normalized.replace(/[аеорсуxхАВЕКМНОРСТХ]/g, (char) => HOMOGLYPH_MAP[char] || char);
 
   return normalized;
 }
@@ -120,7 +117,10 @@ export function sanitizeMarkdownForLLM(text: string): SanitizationResult {
         severity: 'warn',
         position: {
           start: text.split('\n').slice(0, index).join('\n').length,
-          end: text.split('\n').slice(0, index + 1).join('\n').length,
+          end: text
+            .split('\n')
+            .slice(0, index + 1)
+            .join('\n').length,
         },
       });
     }
@@ -208,10 +208,7 @@ export function detectPromptInjection(text: string): SanitizationViolation[] {
 /**
  * Validate file paths in text to prevent path traversal and unauthorized access
  */
-export function validateFilePaths(
-  text: string,
-  projectRoot: string
-): SanitizationViolation[] {
+export function validateFilePaths(text: string, projectRoot: string): SanitizationViolation[] {
   const violations: SanitizationViolation[] = [];
 
   // Normalize project root for comparison
@@ -219,7 +216,8 @@ export function validateFilePaths(
 
   // Pattern to match file paths (Unix and Windows style)
   // Matches: /absolute/path, ./relative/path, ../parent/path, C:\Windows\path
-  const pathPattern = /(?:^|\s)([\/\\][\w\/\\.\\-]+|\.{1,2}[\/\\][\w\/\\.\\-]+|[a-zA-Z]:[\/\\][\w\/\\.\\-]+)/g;
+  const pathPattern =
+    /(?:^|\s)([\/\\][\w\/\\.\\-]+|\.{1,2}[\/\\][\w\/\\.\\-]+|[a-zA-Z]:[\/\\][\w\/\\.\\-]+)/g;
 
   let match;
   while ((match = pathPattern.exec(text)) !== null) {
