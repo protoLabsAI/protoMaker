@@ -68,7 +68,11 @@ describe('ralph-loop-service.ts', () => {
     vi.mocked(secureFs.appendFile).mockResolvedValue(undefined);
     vi.mocked(secureFs.readFile).mockResolvedValue('{}');
     vi.mocked(atomicWriteJson).mockResolvedValue(undefined);
-    vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: null, recovered: false, source: 'default' });
+    vi.mocked(readJsonWithRecovery).mockResolvedValue({
+      data: null,
+      recovered: false,
+      source: 'default',
+    });
 
     // Mock exec for criterion checks
     vi.mocked(exec).mockImplementation(((_cmd: any, _opts: any, callback: any) => {
@@ -154,17 +158,21 @@ describe('ralph-loop-service.ts', () => {
 
       await service.startLoop(projectPath, featureId);
 
-      await expect(
-        service.startLoop(projectPath, featureId)
-      ).rejects.toThrow(`Ralph loop already running for feature ${featureId}`);
+      await expect(service.startLoop(projectPath, featureId)).rejects.toThrow(
+        `Ralph loop already running for feature ${featureId}`
+      );
     });
 
     it('should throw error if feature not found', async () => {
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: null, recovered: false, source: 'default' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: null,
+        recovered: false,
+        source: 'default',
+      });
 
-      await expect(
-        service.startLoop(projectPath, featureId)
-      ).rejects.toThrow(`Feature not found: ${featureId}`);
+      await expect(service.startLoop(projectPath, featureId)).rejects.toThrow(
+        `Feature not found: ${featureId}`
+      );
     });
 
     it('should merge config with defaults', async () => {
@@ -236,9 +244,9 @@ describe('ralph-loop-service.ts', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify verification completed event was emitted
-      const verificationCalls = vi.mocked(mockEvents.emit).mock.calls.filter(
-        (call) => call[0] === 'ralph:verification_completed'
-      );
+      const verificationCalls = vi
+        .mocked(mockEvents.emit)
+        .mock.calls.filter((call) => call[0] === 'ralph:verification_completed');
 
       expect(verificationCalls.length).toBeGreaterThan(0);
 
@@ -283,9 +291,9 @@ describe('ralph-loop-service.ts', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify verification completed event shows failure
-      const verificationCalls = vi.mocked(mockEvents.emit).mock.calls.filter(
-        (call) => call[0] === 'ralph:verification_completed'
-      );
+      const verificationCalls = vi
+        .mocked(mockEvents.emit)
+        .mock.calls.filter((call) => call[0] === 'ralph:verification_completed');
 
       expect(verificationCalls.length).toBeGreaterThan(0);
       const verificationPayload = verificationCalls[0][1] as any;
@@ -332,9 +340,9 @@ describe('ralph-loop-service.ts', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Verify verification completed
-      const verificationCalls = vi.mocked(mockEvents.emit).mock.calls.filter(
-        (call) => call[0] === 'ralph:verification_completed'
-      );
+      const verificationCalls = vi
+        .mocked(mockEvents.emit)
+        .mock.calls.filter((call) => call[0] === 'ralph:verification_completed');
 
       expect(verificationCalls.length).toBeGreaterThan(0);
 
@@ -431,9 +439,9 @@ describe('ralph-loop-service.ts', () => {
       }
 
       // Verify max iterations event was emitted or loop completed
-      const maxIterationsCalls = vi.mocked(mockEvents.emit).mock.calls.filter(
-        (call) => call[0] === 'ralph:max_iterations'
-      );
+      const maxIterationsCalls = vi
+        .mocked(mockEvents.emit)
+        .mock.calls.filter((call) => call[0] === 'ralph:max_iterations');
 
       // The loop should have completed (either max iterations or stopped)
       expect(service.isLoopRunning(featureId)).toBe(false);
@@ -528,9 +536,9 @@ describe('ralph-loop-service.ts', () => {
       expect(service.isLoopRunning(featureId)).toBe(false);
 
       // Verify stopped event was emitted
-      const stoppedCalls = vi.mocked(mockEvents.emit).mock.calls.filter(
-        (call) => call[0] === 'ralph:stopped'
-      );
+      const stoppedCalls = vi
+        .mocked(mockEvents.emit)
+        .mock.calls.filter((call) => call[0] === 'ralph:stopped');
 
       expect(stoppedCalls.length).toBe(1);
     });
@@ -612,9 +620,9 @@ describe('ralph-loop-service.ts', () => {
       expect(resumedState?.status).toBe('running');
 
       // Verify resumed event was emitted
-      const resumedCalls = vi.mocked(mockEvents.emit).mock.calls.filter(
-        (call) => call[0] === 'ralph:resumed'
-      );
+      const resumedCalls = vi
+        .mocked(mockEvents.emit)
+        .mock.calls.filter((call) => call[0] === 'ralph:resumed');
       expect(resumedCalls.length).toBe(1);
 
       // Cleanup

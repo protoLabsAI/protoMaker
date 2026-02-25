@@ -57,7 +57,11 @@ describe('calendar-service.ts', () => {
 
     // Mock file system - by default, calendar.json doesn't exist
     vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-    vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: [], recovered: false, source: 'default' });
+    vi.mocked(readJsonWithRecovery).mockResolvedValue({
+      data: [],
+      recovered: false,
+      source: 'default',
+    });
     vi.mocked(atomicWriteJson).mockResolvedValue(undefined);
   });
 
@@ -76,7 +80,11 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: customEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: customEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       // Setup features with due dates
       const features: Feature[] = [
@@ -113,7 +121,7 @@ describe('calendar-service.ts', () => {
           },
         },
       });
-      vi.mocked(LinearMCPClient).mockImplementation(function() {
+      vi.mocked(LinearMCPClient).mockImplementation(function () {
         return {
           listProjectMilestones: mockListMilestones,
         } as any;
@@ -125,16 +133,16 @@ describe('calendar-service.ts', () => {
       expect(events).toHaveLength(3);
 
       // Check custom event
-      expect(events.find(e => e.id === 'custom-1')).toBeDefined();
+      expect(events.find((e) => e.id === 'custom-1')).toBeDefined();
 
       // Check feature event
-      const featureEvent = events.find(e => e.id === 'feature-feature-1');
+      const featureEvent = events.find((e) => e.id === 'feature-feature-1');
       expect(featureEvent).toBeDefined();
       expect(featureEvent?.type).toBe('feature');
       expect(featureEvent?.date).toBe('2026-03-05');
 
       // Check milestone event
-      const milestoneEvent = events.find(e => e.id === 'milestone-milestone-1');
+      const milestoneEvent = events.find((e) => e.id === 'milestone-milestone-1');
       expect(milestoneEvent).toBeDefined();
       expect(milestoneEvent?.type).toBe('milestone');
       expect(milestoneEvent?.date).toBe('2026-03-10');
@@ -167,7 +175,11 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: customEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: customEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const events = await service.listEvents(projectPath, {
         startDate: '2026-03-01',
@@ -191,7 +203,11 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: customEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: customEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const features: Feature[] = [
         {
@@ -214,7 +230,11 @@ describe('calendar-service.ts', () => {
 
     it('should handle empty calendar file', async () => {
       vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: [], recovered: false, source: 'default' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [],
+        recovered: false,
+        source: 'default',
+      });
 
       const events = await service.listEvents(projectPath);
 
@@ -238,7 +258,7 @@ describe('calendar-service.ts', () => {
           },
         },
       });
-      vi.mocked(LinearMCPClient).mockImplementation(function() {
+      vi.mocked(LinearMCPClient).mockImplementation(function () {
         return {
           listProjectMilestones: vi.fn().mockRejectedValue(new Error('Linear error')),
         } as any;
@@ -255,7 +275,11 @@ describe('calendar-service.ts', () => {
     it('should persist event to correct path', async () => {
       const existingEvents: CalendarEvent[] = [];
       vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const newEventData = {
         title: 'New Event',
@@ -298,13 +322,17 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       await service.createEvent(projectPath, {
         title: 'New Event',
         date: '2026-03-15',
         type: 'custom',
-          projectPath,
+        projectPath,
       });
 
       // Should write both events
@@ -323,13 +351,17 @@ describe('calendar-service.ts', () => {
     it('should create new event if sourceId does not exist', async () => {
       const existingEvents: CalendarEvent[] = [];
       vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const result = await service.upsertBySourceId(projectPath, 'google-123', {
         title: 'Google Event',
         date: '2026-03-15',
         type: 'google',
-          projectPath,
+        projectPath,
       });
 
       expect(result.created).toBe(true);
@@ -352,13 +384,17 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const result = await service.upsertBySourceId(projectPath, 'google-123', {
         title: 'Updated Title',
         date: '2026-03-15',
         type: 'google',
-          projectPath,
+        projectPath,
       });
 
       expect(result.created).toBe(false);
@@ -384,13 +420,17 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const result = await service.upsertBySourceId(projectPath, 'google-123', {
         title: 'Updated Title',
         date: '2026-03-15',
         type: 'google',
-          projectPath,
+        projectPath,
       });
 
       expect(result.event.createdAt).toBe(originalCreatedAt);
@@ -411,7 +451,11 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       const updated = await service.updateEvent(projectPath, 'event-1', {
         title: 'Updated Title',
@@ -424,7 +468,11 @@ describe('calendar-service.ts', () => {
 
     it('should throw error if event not found', async () => {
       vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: [], recovered: false, source: 'default' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [],
+        recovered: false,
+        source: 'default',
+      });
 
       await expect(
         service.updateEvent(projectPath, 'nonexistent', { title: 'New Title' })
@@ -455,16 +503,18 @@ describe('calendar-service.ts', () => {
         },
       ];
       vi.mocked(secureFs.access).mockResolvedValue(undefined);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: existingEvents, recovered: false, source: 'main' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: existingEvents,
+        recovered: false,
+        source: 'main',
+      });
 
       await service.deleteEvent(projectPath, 'event-1');
 
       // Should write only event-2
       expect(atomicWriteJson).toHaveBeenCalledWith(
         expect.any(String),
-        expect.arrayContaining([
-          expect.objectContaining({ id: 'event-2' }),
-        ]),
+        expect.arrayContaining([expect.objectContaining({ id: 'event-2' })]),
         expect.any(Object)
       );
 
@@ -475,11 +525,15 @@ describe('calendar-service.ts', () => {
 
     it('should throw error if event not found', async () => {
       vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({ data: [], recovered: false, source: 'default' });
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [],
+        recovered: false,
+        source: 'default',
+      });
 
-      await expect(
-        service.deleteEvent(projectPath, 'nonexistent')
-      ).rejects.toThrow('Calendar event nonexistent not found');
+      await expect(service.deleteEvent(projectPath, 'nonexistent')).rejects.toThrow(
+        'Calendar event nonexistent not found'
+      );
     });
   });
 });
