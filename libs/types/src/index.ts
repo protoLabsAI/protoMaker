@@ -65,6 +65,16 @@ export type {
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 
+// Quarantine types
+export type {
+  TrustTier,
+  QuarantineStage,
+  QuarantineResult,
+  SanitizationViolation,
+  QuarantineEntry,
+  TrustTierRecord,
+} from './quarantine.js';
+
 // Feature store interface (pluggable storage abstraction)
 export type { FeatureStore } from './feature-store.js';
 

@@ -421,6 +421,18 @@ export interface Feature {
   domain?: string;
   /** Instance ID that has claimed this feature for execution */
   claimedBy?: string;
+
+  // Quarantine fields
+  /** Source of this feature submission */
+  source?: 'internal' | 'ui' | 'api' | 'mcp' | 'github_issue' | 'github_discussion';
+  /** Trust tier of the submitter (0=anonymous, 1=github_user, 2=contributor, 3=maintainer, 4=system) */
+  trustTier?: import('./quarantine.js').TrustTier;
+  /** Current quarantine processing status */
+  quarantineStatus?: 'pending' | 'passed' | 'failed' | 'bypassed';
+  /** Links to QuarantineEntry record */
+  quarantineId?: string;
+  /** Reason for quarantine failure (if quarantineStatus === 'failed') */
+  quarantineFailureReason?: string;
 }
 
 /**
