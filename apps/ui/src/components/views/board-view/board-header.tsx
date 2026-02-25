@@ -351,7 +351,8 @@ export function BoardHeader({
           <DialogHeader>
             <DialogTitle>Enter Your Name</DialogTitle>
             <DialogDescription>
-              Please enter your name to filter tasks assigned to you. This will be saved for future use.
+              Please enter your name to filter tasks assigned to you. This will be saved for future
+              use.
             </DialogDescription>
           </DialogHeader>
           <Input

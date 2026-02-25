@@ -47,28 +47,31 @@ export function useUserIdentity() {
   }, [userIdentity, setUserIdentity]);
 
   // Save identity to API and cache
-  const saveIdentity = useCallback(async (identity: string): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const httpClient = getHttpApiClient();
-      const response = await httpClient.settings.setUserIdentity(identity);
+  const saveIdentity = useCallback(
+    async (identity: string): Promise<boolean> => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const httpClient = getHttpApiClient();
+        const response = await httpClient.settings.setUserIdentity(identity);
 
-      if (response.success && response.identity) {
-        setUserIdentity(response.identity);
-        return true;
+        if (response.success && response.identity) {
+          setUserIdentity(response.identity);
+          return true;
+        }
+
+        setError(response.error || 'Failed to save identity');
+        return false;
+      } catch (err) {
+        logger.error('Failed to save user identity:', err);
+        setError(err instanceof Error ? err.message : 'Failed to save identity');
+        return false;
+      } finally {
+        setIsLoading(false);
       }
-
-      setError(response.error || 'Failed to save identity');
-      return false;
-    } catch (err) {
-      logger.error('Failed to save user identity:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save identity');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [setUserIdentity]);
+    },
+    [setUserIdentity]
+  );
 
   return {
     userIdentity,
