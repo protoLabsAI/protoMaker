@@ -5,7 +5,7 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 45
+  loaded: 48
   referenced: 24
   successfulFeatures: 24
 ---
@@ -931,3 +931,36 @@ usageStats:
 - **Situation:** Updated model aliases (opus 4-5 → 4-6, sonnet 4-5 → 4-6), then had to update 13 test assertions to match new IDs
 - **Root cause:** Tests are tightly coupled to implementation constants. They verify behavior, not contracts.
 - **How to avoid:** String assertions are simple but brittle. Could use parameterized tests or test against a config file instead.
+### 90-second timeout configured specifically to account for multi-stage installation + launch + server startup sequence: ~10s installation + ~10s app launch + ~60s server startup with port scanning + ~10s test buffer (2026-02-25)
+- **Context:** Electron app smoke tests must wait for multiple async operations before validation can begin
+- **Why:** Arbitrary timeout (30s, 60s) would be unreliable. Analyzed each component's typical duration to set reliable threshold without unnecessary flakiness
+- **Rejected:** Using standard Playwright timeout (30s) which would frequently timeout on server startup phase
+- **Trade-offs:** Longer tests (slower feedback loop) vs more reliable CI that doesn't fail on transient delays
+- **Breaking if changed:** Reducing timeout below 90s causes intermittent failures on slower CI runners when server startup takes 60+ seconds
+
+#### [Gotcha] Installation smoke tests cannot run in parallel (workers: 1) because platform-specific scripts modify shared system directories (DMG mount points, Program Files, /tmp) (2026-02-25)
+- **Situation:** Attempted parallel test execution caused conflicts when multiple tests tried to mount same DMG or install to same directory
+- **Root cause:** Unlike unit tests, smoke tests have real side effects on the OS. Installation tests are inherently sequential operations competing for shared resources
+- **How to avoid:** Sequential execution adds ~2 minutes to test suite runtime but eliminates flaky race conditions and resource conflicts
+
+#### [Gotcha] TypeScript type checker (tsc --noEmit) reports JSX namespace and import style errors but Vite build succeeds. Pre-existing node_modules type definition conflicts don't affect build output (2026-02-25)
+- **Situation:** Running isolated type checking for validation appeared to fail, but actual build succeeded without errors
+- **Root cause:** Vite uses esbuild which has different type checking behavior and doesn't enforce the same strict type constraints as tsc. Type definition conflicts in node_modules are cosmetic for esbuild
+- **How to avoid:** Build succeeds despite type checker warnings, but developers running 'tsc --noEmit' locally see spurious errors. IDE TypeScript checking may show warnings that aren't actual failures
+
+#### [Pattern] Platform-specific installation scripts (bash for macOS/Linux, PowerShell for Windows) replicate realistic user installation flow rather than direct binary extraction (2026-02-25)
+- **Problem solved:** Could have simplified to: extract DMG/exe/AppImage and run binary directly, but this bypasses installer-specific code paths
+- **Why this works:** Smoke tests should catch installer-specific bugs (broken mount scripts, invalid NSIS configuration, missing permissions) before release
+- **Trade-offs:** Slightly more complex test setup (platform-specific scripts) but catches entire category of installer bugs that generic extraction would miss
+
+#### [Pattern] Mock mode isolation via AUTOMAKER_MOCK_AGENT=true environment variable allows smoke tests to run without API connectivity or credentials (2026-02-25)
+- **Problem solved:** Smoke tests run in CI on GitHub runners without access to external services
+- **Why this works:** Test reliability depends on not hitting external dependencies. Mock mode allows testing app startup, window rendering, and state persistence without API infrastructure
+- **Trade-offs:** Tests verify app can launch and setup flow completes, but don't verify API integration
+
+### Artifact retention: 30 days for builds, 7 days for test results (not symmetric). Different retention for different artifact types (2026-02-25)
+- **Context:** Could use uniform retention (14 days, 30 days, etc) for simplicity
+- **Why:** Builds are expensive to recreate and needed for emergency rollbacks. Test results are primarily for debugging the most recent failures. After 7 days, test logs are stale (new code landed)
+- **Rejected:** Uniform 14-day retention (wastes storage on old test logs, might not keep builds long enough)
+- **Trade-offs:** Slightly higher complexity in CI configuration, but optimizes storage costs for artifact pattern
+- **Breaking if changed:** Shortening build retention to 7 days causes problems when needing to rebuild patch on 10-day-old code
