@@ -155,7 +155,11 @@ export function startTransaction(_options: {
   op: string;
   name: string;
   data?: Record<string, any>;
-}): { finish: () => void; setStatus: (status: string) => void; setAttribute: (key: string, value: unknown) => void } {
+}): {
+  finish: () => void;
+  setStatus: (status: string) => void;
+  setAttribute: (key: string, value: unknown) => void;
+} {
   return { finish: () => {}, setStatus: () => {}, setAttribute: () => {} };
 }
 
