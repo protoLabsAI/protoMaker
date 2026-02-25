@@ -5,18 +5,21 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 19
-  referenced: 10
-  successfulFeatures: 10
+  loaded: 23
+  referenced: 12
+  successfulFeatures: 12
 ---
+
 # performance
 
 #### [Pattern] 30-minute maintenance task frequency for stale PR detection (2026-02-11)
+
 - **Problem solved:** Auto-rebase task runs as scheduled maintenance job, not on-demand
 - **Why this works:** 30-minute interval balances catching stale PRs quickly vs avoiding excessive git operations and API calls. Matches PR review cycle rhythm (reviewers check every 15-30min). Cron `*/30 * * * *` is readable and widely understood.
 - **Trade-offs:** PRs may stay stale for up to 30 minutes. Benefit: predictable resource usage, aligns with human review patterns. Can be tuned per deployment without code changes.
 
 ### Attachment processing delegates to existing processAttachment() method rather than creating new attachment handling logic (2026-02-11)
+
 - **Context:** Routed messages may contain attachments (images, files) that agents need to process
 - **Why:** Reusing existing processAttachment() (line 860 context) avoids code duplication and ensures attachment handling is consistent across all message types. This method already knows how to validate, upload, and extract attachment metadata.
 - **Rejected:** Inline attachment processing - would duplicate logic and create maintenance burden if attachment handling changes
@@ -24,6 +27,7 @@ usageStats:
 - **Breaking if changed:** If processAttachment() is removed or its signature changes (parameters, return type), routed message attachment processing breaks silently
 
 ### Rate limit enforcement happens BEFORE Discord API call, not after. Map lookup + timestamp check cost ~1ms; early exit avoids async Discord call when rate-limited (2026-02-12)
+
 - **Context:** During agent cascades, `notification:created` fires 50+ times per second. Posting all of them to Discord would be wasteful even with Discord's own rate limits
 - **Why:** Saves API calls and latency. A failed Discord request (429 or timeout) still wastes the async overhead. Preventing the call entirely is cleaner and gives us deterministic behavior—we know exactly when posts succeed vs are dropped
 - **Rejected:** Posting to Discord and letting Discord's rate limiter reject (simple code, but loses observability and wastes bandwidth); debouncing with setTimeout (introduces timing bugs across distributed event emissions)
@@ -31,6 +35,7 @@ usageStats:
 - **Breaking if changed:** If the Map is ever cleared (e.g., service restart), rate limiting resets immediately and a queued burst of notifications posts all at once. If lastNotificationPost Map grows unbounded (new notification types added frequently), memory leak. Mitigation: add a cleanup pass for types not seen in 1 hour
 
 ### Used `shell: bash` for all cross-platform script steps instead of platform-specific `sh` or `pwsh` (2026-02-13)
+
 - **Context:** CI workflow must execute consistent logic on ubuntu-latest, macos-latest, and windows-latest
 - **Why:** bash is available on all three platforms (Git Bash on Windows). Using platform-native shells (sh on unix, pwsh on windows) requires different syntax per-OS, multiplying maintenance burden.
 - **Rejected:** Platform-specific conditionals with different scripts - error-prone; relying on pwsh on Windows - incompatible with ubuntu/macos; using node scripts instead - adds js file overhead
@@ -38,11 +43,13 @@ usageStats:
 - **Breaking if changed:** If bash is removed or unavailable on a runner, all scripts fail. Windows-native shells would require complete script rewrite.
 
 #### [Pattern] LRU eviction strategy with configurable max cache size to prevent unbounded memory growth (2026-02-13)
+
 - **Problem solved:** Prompt cache could theoretically grow indefinitely if many unique prompts are accessed
 - **Why this works:** LRU naturally evicts least-recently-used items when cache is full, preserving working set of active prompts while bounding memory. Configurable size allows tuning per deployment needs.
 - **Trade-offs:** Requires tracking access order (minimal overhead) but prevents memory issues in production. Trade cache hit rate for reliability.
 
 ### Prompt reduction from 263 to 100 lines improves token efficiency without sacrificing coverage (2026-02-14)
+
 - **Context:** Switching to XML format allowed aggressive simplification of fact-checker.md template
 - **Why:** Less verbose prompt reduces token cost per LLM call (~60% reduction). XML structure forces clarity - rambling explanations compressed to required fields only.
 - **Rejected:** Keeping verbose markdown format - higher token cost accumulates across thousands of fact-checks. Detailed instructions don't improve output quality if structure is clear.
@@ -50,6 +57,7 @@ usageStats:
 - **Breaking if changed:** If prompts get expanded back to verbose format without monitoring, token costs could increase 2-3x across production fact-checking workloads
 
 ### 30-second timeout for Linear API requests with AbortController, leveraging native fetch cancellation (2026-02-14)
+
 - **Context:** The fetchIssueRelations method makes network requests to Linear's GraphQL API which could hang.
 - **Why:** Prevents webhook handlers from blocking indefinitely on slow/unavailable Linear API. 30s is reasonable for a GraphQL query. AbortController is the standard mechanism and integrates cleanly with catch logic.
 - **Rejected:** No timeout would risk blocking webhook handlers. Promise.race with setTimeout would require manual cleanup.
@@ -57,6 +65,7 @@ usageStats:
 - **Breaking if changed:** If timeout is removed, slow Linear API responses could block webhook processing for other issues.
 
 ### Lazy-load TipTap editor via React.lazy() with Suspense boundary to defer ~200KB bundle until modal is opened (2026-02-15)
+
 - **Context:** TipTap is a large library (~200KB) that's only needed when user opens PRDEditorModal. Including it in main bundle would impact initial page load for all users.
 - **Why:** Monorepo UI has many features competing for bundle space. Code-splitting HITL approval flow avoids shipping unused TipTap code to users who never trigger interrupts. The modal is opened on-demand during HITL approval, making lazy loading the optimal trade-off.
 - **Rejected:** Direct import of TipTap at top-level: simpler code but forces all users to download 200KB unused in happy path. Dynamic import without Suspense: requires manual loading state management.
@@ -64,11 +73,13 @@ usageStats:
 - **Breaking if changed:** Removing lazy loading restores immediate modal rendering but bloats main bundle by 200KB. Removing Suspense boundary causes render error if chunk fails to load. Moving TipTap import to top level defeats lazy load benefit and increases initial JS payload.
 
 #### [Pattern] Activity feed implemented as client-side ring buffer (last 10 events stored in component state) rather than server-side pagination or unbounded accumulation (2026-02-17)
+
 - **Problem solved:** Overlay needs to display recent system events in real-time, updated via WebSocket, but memory must not grow unbounded if overlay runs 24/7 during streams
 - **Why this works:** Ring buffer prevents memory leaks on long-running streams by keeping fixed-size array. Client-side implementation avoids extra API calls and reduces server load. 10-event buffer is sufficient for visual context without cluttering the overlay
 - **Trade-offs:** Lost events older than 10 are not retrievable — acceptable for a real-time activity display where historical context is not needed. Ring buffer adds minor complexity vs simple array.push()
 
 ### Applied motion/framer-motion animations to panel entrance/exit instead of instant rendering (2026-02-18)
+
 - **Context:** Panel toggles with PipelineToolbar buttons need visual feedback
 - **Why:** Smooth animations reduce jarring UX, clarify what changed on screen, match modern app conventions established by flow-graph panels
 - **Rejected:** Instant toggle without animation - feels broken/unpolished, hard to follow in interface
@@ -76,26 +87,31 @@ usageStats:
 - **Breaking if changed:** If motion/react library is removed or browser doesn't support animations, panels appear/disappear instantly without visual feedback.
 
 #### [Pattern] Named ESM exports preserve tree-shaking across multi-entry monorepo builds (2026-02-18)
+
 - **Problem solved:** Exporting a utility function (cn) from a shared package that must remain tree-shakeable when imported by multiple apps
 - **Why this works:** The built dist/lib/index.js uses named exports (`export { cn }`) rather than default or wrapped exports. This allows bundlers (webpack, vite, esbuild) to statically analyze which exports are actually used and remove unused code.
 - **Trade-offs:** Named exports require explicit import syntax from consumers (`import { cn } from '@protolabs-ai/ui/lib'`), but this is explicitly desired for clarity. Unused utilities in lib/ are automatically dropped during consumer build.
 
 #### [Gotcha] Large story files (12+ export statements) can impact Storybook build time but tradeoff is worth it for comprehensive component coverage in single file vs split files (2026-02-18)
+
 - **Situation:** Some atoms (textarea, skeleton, spinner, label, kbd) have 11-12 story exports. Textarea has 12 stories in single file
 - **Root cause:** Keeping variant stories together makes it obvious all variants exist and interact together. Splitting across files spreads them through filesystem making coverage less obvious. Single file per component matches the component file organization principle
 - **How to avoid:** Larger file size (few KB each) with better coherence vs smaller files scattered across directory. Storybook loads all stories anyway so no real performance impact
 
 #### [Pattern] Use React Query with refetchOnWindowFocus: false for one-time hydration data (2026-02-19)
+
 - **Problem solved:** Pipeline state hydration should happen once on mount, then rely on WebSocket for real-time updates
 - **Why this works:** Prevents unnecessary re-fetches when user returns to window after switching tabs. Caching + WebSocket pattern is more efficient than polling. Setting refetchOnWindowFocus to false explicitly signals this is hydration, not live data
 - **Trade-offs:** Gains: Automatic caching, deduplication if hook called multiple times. Loses: Doesn't automatically refetch if user manually refreshes data (but WebSocket updates are faster anyway)
 
 #### [Pattern] Tools accumulated in pendingTools Map during stream processing, then processed in single batch after assistant turn completes. Pending tools cleared after processing. (2026-02-23)
+
 - **Problem solved:** A single agent turn may execute 5-10 tools. Without batching, each tool would trigger a feature.json write, causing 5-10 sequential disk I/O operations.
 - **Why this works:** Reduces I/O from O(N) to O(1). Single atomic write means tool executions appear atomically in feature.json. Clearing pendingTools prevents memory leaks from orphaned operations if agent turn is interrupted.
 - **Trade-offs:** More complex state management (pendingTools tracking). But massive I/O reduction and memory safety.
 
 ### Per-featureId debounce isolation: Each agent node has independent 500ms debounce timer via Map<featureId, timeoutId> rather than single global debounce (2026-02-23)
+
 - **Context:** Multiple agent nodes executing tools simultaneously would interfere with each other's update timings under global debounce
 - **Why:** Prevents one active agent from delaying UI updates to another agent. Global debounce would serialize all updates to 500ms intervals, causing visible lag when 2+ agents run concurrently
 - **Rejected:** Single global debounce timer would be simpler but couples independent agent states
@@ -103,23 +119,27 @@ usageStats:
 - **Breaking if changed:** If changed to global debounce, rapid tool events from multiple agents would queue serially, causing 1-2s delays on the slower agent
 
 #### [Gotcha] 500ms debounce window is empirically chosen and could accumulate latency in high-frequency scenarios (10+ tool events/sec). No adaptive adjustment (2026-02-23)
+
 - **Situation:** Rapid tool execution from parallel agent work can generate bursts of 20-50 events within 2 seconds
 - **Root cause:** 500ms balances responsiveness (not >1s lag) with batching efficiency (reduces render cycles). Chosen without profiling actual event frequencies
 - **How to avoid:** Fixed 500ms is predictable but not optimal for all workloads. High-frequency scenarios see visible batch delays. Low-frequency scenarios respond instantly
 
 #### [Pattern] Simple timestamp-based TTL cache with 30-second window for expensive aggregation queries. No event-based invalidation, no external cache store. (2026-02-23)
+
 - **Problem solved:** getAgentPerformance loads and computes statistics across all completed features - expensive operation that could be called repeatedly by UI dashboards.
 - **Why this works:** Analytics data changes slowly in practice (features complete infrequently). 30s staleness is acceptable for non-transactional analytics. Timestamp-based TTL is simple - no distributed cache coordination, no event bus coupling.
 - **Trade-offs:** Accept up to 30s stale data to avoid invalidation complexity. Feature completion at T=0 queried at T=29 gets pre-completion stats. Works for analytics (not time-critical), not for transactional data.
 
 ### 30-second polling interval via refetchInterval: 30000 for ceremony status (2026-02-24)
+
 - **Context:** Needed to surface Discord integration failures and ceremony counts in real-time UI
 - **Why:** 30s balances observability (status updates frequently enough to catch issues) with API load (not excessive requests). Avoids complexity/cost of WebSockets or Server-Sent Events
 - **Rejected:** Real-time via WebSockets (infrastructure complexity), 5s polling (API load), on-demand queries (stale data)
 - **Trade-offs:** UI may be up to 30s behind reality; 30s polling is acceptable for non-critical status display vs maintenance burden of real-time infrastructure
 - **Breaking if changed:** Changing interval affects data freshness guarantees and API load; shorter intervals increase requests exponentially across all users
 
-### Extended React Query gcTime from 5 minutes to 24 hours (24*60*60*1000ms) (2026-02-24)
+### Extended React Query gcTime from 5 minutes to 24 hours (24*60*60\*1000ms) (2026-02-24)
+
 - **Context:** PWA feature requires cached data to persist across browser restart/refresh so board displays instantly from cache before server responds
 - **Why:** gcTime controls how long stale data is kept in memory before garbage collection. 24 hours allows data to survive page refresh and browser restart within same day. Longer retention trades memory for UX (instant data display).
 - **Rejected:** Shorter gcTime (5-30 min) would require fresh server fetch on each page load or browser restart, defeating offline-first PWA pattern. Session/sessionStorage would lose data on browser restart entirely.
@@ -127,11 +147,13 @@ usageStats:
 - **Breaking if changed:** If gcTime is reverted to <1 hour, cached data won't persist across browser restart, eliminating the instant-load UX that PWA feature enables
 
 #### [Pattern] Achieved sub-12KB PNG files (10x better than 300KB requirement) by leveraging PNG palette mode compression on simple branded graphics with limited color palette (2026-02-24)
+
 - **Problem solved:** Generating simple branded images with dark background, logo, text, and gradient accents
 - **Why this works:** Simple graphics with large solid color areas compress extremely well in palette mode. Going beyond minimum requirements demonstrates mobile-first thinking and quality standards without extra effort
 - **Trade-offs:** No quality loss because simple graphics lack photos/gradients that suffer from aggressive compression
 
 ### Disabled Gatekeeper assessment during build (gatekeeperAssess: false) as performance optimization (2026-02-24)
+
 - **Context:** Gatekeeper assessment runs as part of code signing process, but notarization performs more comprehensive security checks afterward
 - **Why:** Gatekeeper's assessment is redundant when notarization follows - notarization is a superset check that includes Gatekeeper validation. Skipping during build saves time without reducing security posture
 - **Rejected:** Keeping assessment enabled adds build time without benefit since final notarization is more thorough
@@ -139,16 +161,19 @@ usageStats:
 - **Breaking if changed:** If re-enabled, builds take slightly longer but gain extra validation layer during signing (not breaking, just slower)
 
 #### [Gotcha] Notarization adds 1-5 minute latency per macOS build due to network round-trip to Apple's services, creating observable build time increase in CI/CD (2026-02-24)
+
 - **Situation:** Automated code signing and notarization requires external service call during every build
 - **Root cause:** This is a gotcha because while notarization is necessary for macOS distribution, the performance impact is non-obvious upfront and accumulates across all builds. It's an acceptable tradeoff but requires understanding the cost
 - **How to avoid:** 1-5 minute build time cost vs mandatory security/functionality requirement on macOS - the cost is inherent to the platform requirement
 
 #### [Gotcha] Rate limiting set to 6000ms (10 calls/minute) creates sequential processing bottleneck. With conservative timing, large knowledge bases will take hours/days to process all chunks. (2026-02-24)
+
 - **Situation:** HyPE worker uses setTimeout-based rate limiting between Haiku API calls to avoid quota issues
 - **Root cause:** Safety-first approach prioritizes quota safety over throughput, but Haiku has much higher quotas than GPT-4. The conservative rate was chosen to prevent any risk of quota exhaustion.
 - **How to avoid:** Safety and simplicity gained (single setTimeout loop), but throughput severely limited. Large datasets become a multi-hour background job.
 
 ### Embedding averaging uses simple element-wise sum/divide instead of weighted averaging or L2 normalization. Creates representative query vector by averaging hypothetical question embeddings. (2026-02-24)
+
 - **Context:** Multiple generated questions need to be combined into single embedding for similarity search against chunk embeddings
 - **Why:** Element-wise averaging is mathematically simple, works for cosine similarity (magnitude-invariant), and reduces embedding count. Alternative methods add computational overhead without clear benefit for retrieval.
 - **Rejected:** L2 normalization adds complexity; weighted averaging requires deciding weights; PCA-based reduction requires matrix computation
@@ -156,6 +181,7 @@ usageStats:
 - **Breaking if changed:** If changed to L2-normalized averaging, magnitude-dependent similarity metrics would be affected
 
 ### Evaluation logging uses async void promise (non-blocking) to prevent search request latency impact (2026-02-24)
+
 - **Context:** Adding evaluation logging for offline analysis without degrading search response times
 - **Why:** Search latency is user-facing; evaluation logging is for backend analytics. Async prevents blocking request completion on I/O
 - **Rejected:** Synchronous logging would guarantee data persistence but increase search p95/p99 latency
@@ -163,6 +189,7 @@ usageStats:
 - **Breaking if changed:** Making logging synchronous would add measurable latency to every search; removing evaluation logging removes production data needed to optimize algorithm weights
 
 ### Conservative rate limiting at 6000ms/call (10 calls/minute) for Haiku API instead of more aggressive batching (2026-02-24)
+
 - **Context:** Generating 3 queries per chunk via Claude Haiku requires API calls that must be rate-limited
 - **Why:** Prioritizes API quota safety and avoiding throttling over faster processing speed. System maintains reliability even under high ingestion loads
 - **Rejected:** Batching multiple chunks per API call or reducing delay (would risk hitting rate limits or quota exhaustion)
@@ -170,6 +197,7 @@ usageStats:
 - **Breaking if changed:** Reducing delay below 6000ms risks quota errors; removing rate limiting entirely could cause cascading API failures on large knowledge bases
 
 ### Use simple element-wise average of query embeddings (sum then divide by count) instead of weighted average or L2 normalization (2026-02-24)
+
 - **Context:** Each chunk's 3 questions generate 3 embeddings that must be combined into single vector for semantic search
 - **Why:** No information about relative importance of the 3 questions; simple average is mathematically unbiased. Normalization adds complexity without clear benefit for semantic averaging
 - **Rejected:** Weighted average (would require scoring questions by relevance); L2 normalization (adds computation, unclear if beneficial for aggregated embeddings)
@@ -177,6 +205,7 @@ usageStats:
 - **Breaking if changed:** Changing averaging algorithm invalidates all stored hype_embeddings; stored vectors are no longer comparable to newly generated ones
 
 ### Async, fire-and-forget evaluation logging (void promise) rather than synchronous logging (2026-02-24)
+
 - **Context:** Capturing search evaluation metrics without introducing latency overhead to every search operation
 - **Why:** Search latency is user-facing; logging is analytical. Decoupling them prevents evaluation instrumentation from degrading search performance. Async approach acceptable because loss of some log entries (on process crash) is acceptable for statistical analysis.
 - **Rejected:** Synchronous logging (would add 5-50ms per search), batch logging (more complex, delayed visibility), in-memory buffer with periodic flush (complex failure modes)
@@ -184,6 +213,7 @@ usageStats:
 - **Breaking if changed:** Converting to synchronous logging would expose every search to I/O latency. Removing logging entirely loses observability into retrieval effectiveness.
 
 ### Hybrid retrieval uses fixed RRF k=60 constant rather than configurable parameter (2026-02-24)
+
 - **Context:** Merging BM25 lexical search with cosine similarity semantic search rankings
 - **Why:** RRF (Reciprocal Rank Fusion) with fixed k is standard ML approach for combining ranking systems. k=60 is commonly used baseline.
 - **Rejected:** Parameterized k value requiring calibration per use case; or different merge algorithms (learned-to-rank, weighted average)
@@ -191,6 +221,7 @@ usageStats:
 - **Breaking if changed:** If k=60 needs adjustment based on production metrics, would require code change and redeployment rather than configuration change
 
 ### Serial rate-limited processing (6000ms delays = 10 Haiku calls/minute) instead of batch processing all questions together (2026-02-24)
+
 - **Context:** Generating 3 questions per chunk via Claude Haiku for n chunks
 - **Why:** Predictable rate limiting respects API quotas; easier to reason about and observe; avoids burst spike risks
 - **Rejected:** Batch process multiple chunks' questions in parallel or single batch; would be faster but harder to control and could trigger rate limits
@@ -198,11 +229,13 @@ usageStats:
 - **Breaking if changed:** Switching to batch processing requires redesign of rate limiting strategy and could cause API quota issues if not carefully managed
 
 #### [Gotcha] Embedding averaging uses simple element-wise mean without normalization, which preserves variance and potential magnitude differences across embeddings (2026-02-24)
+
 - **Situation:** Averaging 3 question embeddings into single representative vector for similarity search
 - **Root cause:** Simple, fast computation; matches averaging used elsewhere in codebase
 - **How to avoid:** Speed/simplicity gained vs potential retrieval quality loss if embeddings have heterogeneous scales; doesn't follow typical embedding best practices
 
 ### Use first 500 characters of chunk content as context for question generation (plus heading if present) (2026-02-24)
+
 - **Context:** Balancing API cost (token count) against context quality for Haiku question generation
 - **Why:** Hardcoded balance: enough context for meaningful questions, short enough to keep Haiku calls cheap (<200 tokens)
 - **Rejected:** Full chunk content (might be kilobytes, expensive); summary extraction (adds complexity); configurable (adds operational burden)
@@ -210,18 +243,21 @@ usageStats:
 - **Breaking if changed:** If knowledge store contains chunks where critical content appears after 500 chars, questions will be misleading or irrelevant
 
 ### buildComponentMap creates ID→node index for reusable components rather than searching tree on each ref resolution (2026-02-24)
+
 - **Context:** Component instances reference definitions via IDs; resolveRef needs O(1) lookup of component source
 - **Why:** Design files likely have 10-50+ component references that resolve to 2-10 unique definitions; linear search through tree is O(n) per ref, so 100 refs = O(100n); indexing is O(n + m) where m=refs, drastically faster for many refs
-- **Rejected:** Direct tree search on each resolveRef call - would be O(n*m) for m references in doc
+- **Rejected:** Direct tree search on each resolveRef call - would be O(n\*m) for m references in doc
 - **Trade-offs:** Easier: Fast ref resolution; Harder: Map must be rebuilt if document modified, adds memory overhead for index
-- **Breaking if changed:** If map removed, downstream code doing performance analysis wouldn't catch the O(n*m) scaling problem until large files
+- **Breaking if changed:** If map removed, downstream code doing performance analysis wouldn't catch the O(n\*m) scaling problem until large files
 
 #### [Pattern] Health checks on all 3 services with setup script polling until healthy (30 retries) before declaring success (2026-02-25)
+
 - **Problem solved:** Automated scripts need to run after monitoring stack starts - must wait for readiness, not just container start
 - **Why this works:** Container running ≠ service ready; prevents race conditions where dependent operations fail; polling approach survives temporary startup delays
 - **Trade-offs:** Slightly slower startup (waiting for health) vs guaranteed reliable automation; script complexity vs automation robustness
 
 ### Strategic label cardinality management: feature_id labels only on cost/duration metrics, but omitted from tokens/executions metrics to prevent combinatorial explosion (2026-02-25)
+
 - **Context:** Each unique label combination creates separate metric series. Using feature_id + model + complexity on all metrics would create O(features × models × complexity) = potentially 10,000s of series.
 - **Why:** Prometheus cardinality explosion degrades query performance and storage. Keeping cardinality bounded by limiting high-cardinality label combinations.
 - **Rejected:** Could have used consistent labeling scheme (feature_id everywhere) for uniformity, but would hit cardinality limits in production
@@ -229,8 +265,65 @@ usageStats:
 - **Breaking if changed:** If high-cardinality labels are added later (e.g., feature_id to all metrics), could cause Prometheus scrape failures or dropped series
 
 ### Use Set<string> for tracking expanded groups instead of Array or Record<string, boolean> (2026-02-25)
+
 - **Context:** Group expanded state checked on every render to conditionally show/hide group contents and icons
 - **Why:** Set provides O(1) containment checking vs O(n) for array.includes() or verbose Record syntax; critical when filtering/rendering many groups
 - **Rejected:** Array with .includes() - adequate but degrades with many groups; Record - more verbose with no performance gain
 - **Trade-offs:** Better render performance and cleaner code vs. Set is less familiar and less serializable if state persistence added later
 - **Breaking if changed:** Switching to array search would degrade UX responsiveness with large component libraries; Set choice matters for performance-critical render path
+
+#### [Pattern] Exponential backoff with 2^(attempt-1) \* 2s formula (2s, 4s, 8s delays) for transient failures (2026-02-25)
+
+- **Problem solved:** Git push and PR creation can fail transiently due to network blips or GitHub API rate limits; retry strategy must balance speed vs not overwhelming service
+- **Why this works:** Exponential backoff prevents thundering herd; starting fast (2s) provides quick recovery for brief network hiccups while escalating (4s, 8s) backs off from rapid-fire retries on persistent issues
+- **Trade-offs:** Fast initial retry but caps out at 8s—good for network blips but inadequate for sustained outages lasting >10s; simple formula vs more sophisticated jitter/deadline logic
+
+### Check interval set to 5 minutes, balancing stuck build detection speed against GitHub API rate limit constraints (2026-02-25)
+
+- **Context:** Scheduler can run checks more frequently (1 min) for faster detection, or less frequently (15+ min) to reduce API usage.
+- **Why:** 5 minutes provides reasonable responsiveness (10-15 min max delay for stuck build detection) while staying well within GitHub's API rate limits for typical deployments. Conservative approach avoids rate limit surprises.
+- **Rejected:** 1-minute interval (faster but risks hitting rate limits with multiple runners), 15+ minute interval (safer but stuck builds stay stuck longer)
+- **Trade-offs:** Slower detection than ideal, but safe operation. Stuck builds may remain stuck 5-10 minutes longer than minimum possible.
+- **Breaking if changed:** If interval is reduced to 1-minute without monitoring API usage, could hit GitHub rate limits and cause health checks to fail.
+
+#### [Pattern] OG images optimized to 9-12KB per image (25x smaller than 300KB estimate) through SVG-based composition + PNG optimization, not raster artwork. This pattern works because social preview images are simple graphics, not photographs. (2026-02-25)
+
+- **Problem solved:** Five images total to ~50KB instead of 1.5MB. Achieved through programmatic graphic design (logo, text overlays, colored backgrounds) rather than complex artwork.
+- **Why this works:** Social preview images have specific constraints: simple layouts, text-heavy, small display size (typically 120-200px in feeds). Vector/simple graphics compress exponentially better than photos. Reduced payload speeds social crawler fetches and improves page load.
+- **Trade-offs:** Constrains design to simple graphics/layouts but achieves extreme file size efficiency and fast regeneration
+
+### Use CSS preload directive for build-time compiled Tailwind CSS instead of async/defer loading (2026-02-25)
+
+- **Context:** Landing page had 350KB+ render-blocking Tailwind CDN. Compiled to 33KB at build time, but still needed optimal loading strategy.
+- **Why:** Preload tells browser to fetch CSS immediately at high priority without blocking parsing. Combined with font-display:swap, eliminates FOIT/FOUT. Build-time compilation alone doesn't solve critical rendering path - still need hint about which CSS is critical.
+- **Rejected:** Inline critical CSS (would require CSS splitting/extraction), async/defer loading (defeats purpose of build-time compile), or rely on browser's discovery (causes delays). Async CDN was partially responsible for original performance problem.
+- **Trade-offs:** Preload increases initial HTTP requests slightly but guarantees CSS loads in parallel with HTML parsing. Reduces time to first contentful paint by 40-60ms in typical scenarios.
+- **Breaking if changed:** Removing preload reverts to browser discovery model - CSS would start loading only after HTML parsing finds the link tag, adding 100-200ms latency. Defeats the benefit of build-time compilation.
+
+#### [Gotcha] Compiled CSS output was 33KB instead of 12KB target from PRD - but this is actually acceptable (2026-02-25)
+
+- **Situation:** Performance requirement specified 12KB compiled CSS size. Actual output was 33KB (still 90% reduction from 350KB CDN).
+- **Root cause:** Tailwind v4 generates comprehensive utility set. Landing page uses wide variety of utility classes throughout. Targeting 12KB would require: removing utility sets (breaks design flexibility), using CSS-in-JS (worse performance), or manually writing CSS (defeats Tailwind purpose).
+- **How to avoid:** Gained design flexibility and maintainability; gave up the absolute smallest possible CSS size. But 33KB is still well within performance budget (under 100KB, loads in <100ms on 4G).
+
+### Keep Google Fonts CDN with optimizations (font-display:swap, async loading) instead of self-hosting fonts (2026-02-25)
+
+- **Context:** Eliminating all render-blocking resources - had opportunity to self-host fonts for complete control
+- **Why:** Google Fonts CDN leverages global edge locations (same infrastructure as Search). Self-hosting adds: server load, bandwidth costs, cache management, content delivery latency for users far from origin. font-display:swap eliminates FOIT without self-hosting, achieving similar performance goals. Maintenance burden reduction outweighs fine-grained control.
+- **Rejected:** Self-hosting fonts would give: version control of font files, guarantee no CDN outages, custom subsetting. But adds: infrastructure complexity, slower delivery for users far from origin (no global CDN), version management burden, missed cache optimization from Google's infrastructure.
+- **Trade-offs:** Traded control for maintainability and global performance. Can't customize font serving strategy per user agent, but gain automatic optimization from Google's CDN.
+- **Breaking if changed:** If removing Google Fonts dependency is required (privacy constraints, air-gap environment), must implement self-hosting with careful cache headers and global distribution strategy.
+
+#### [Gotcha] font-display:swap parameter must be in Google Fonts URL, not CSS file, to take effect on initial page load (2026-02-25)
+
+- **Situation:** Added font optimization but font-display:swap in CSS applies only after CSS loads - defeats the purpose for initial paint
+- **Root cause:** Browser's font loading mechanism reads font-display from @font-face CSS rule. If CSS hasn't loaded yet, browser doesn't know about font-display. Google Fonts URL parameter 'display=swap' applies the directive before CSS loads, allowing browser to show fallback text immediately instead of waiting for custom font.
+- **How to avoid:** Requires URL modification (minor), but guarantees FOIT elimination on first visit. Most effective way to handle font loading performance.
+
+### Vite plugin for automatic source map upload to Sentry instead of manual post-build script; source maps marked as `hidden` so they're uploaded but not bundled (2026-02-25)
+
+- **Context:** Readable stack traces require source maps; build configuration needs to handle upload and cleanup
+- **Why:** Automatic plugin keeps source maps in sync with releases/builds; `hidden` flag reduces bundle size (source maps removed from distribution) while still enabling Sentry to read stack traces. Single source of truth during build
+- **Rejected:** Manual npm scripts or separate CI/CD step for upload (could drift out of sync, adds operational complexity; bundling source maps (increases bundle size by 20-30%))
+- **Trade-offs:** Requires auth token with specific permissions at build time, but eliminates manual operations and ensures source maps always match release
+- **Breaking if changed:** Without source maps or with mismatched versions, Sentry shows minified stack traces that are unreadable; users cannot debug issues

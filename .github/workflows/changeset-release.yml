@@ -63,6 +63,10 @@ jobs:
         if: steps.changesets.outputs.published == 'true'
         run: npm run stats:generate
 
+      - name: Build site CSS
+        if: steps.changesets.outputs.published == 'true'
+        run: npx tailwindcss -i ./site/src/input.css -o ./site/styles.css --minify
+
       - name: Commit site data
         if: steps.changesets.outputs.published == 'true'
         run: |

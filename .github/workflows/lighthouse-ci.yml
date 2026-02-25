@@ -1,0 +1,44 @@
+name: Lighthouse CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/lighthouse-ci.yml'
+      - 'lighthouserc.json'
+  pull_request:
+    paths:
+      - 'site/**'
+      - '.github/workflows/lighthouse-ci.yml'
+      - 'lighthouserc.json'
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install -D @lhci/cli@0.13.x
+          npm install -D tailwindcss
+
+      - name: Build CSS
+        run: npx tailwindcss -i ./site/src/input.css -o ./site/styles.css --minify
+
+      - name: Run Lighthouse CI
+        run: npx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}

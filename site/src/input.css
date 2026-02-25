@@ -1,0 +1,278 @@
+@import 'tailwindcss';
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #09090b;
+    color: #fafafa;
+    font-family: 'Geist', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(135deg, #a78bfa 0%, #818cf8 50%, #6366f1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow {
+    box-shadow: 0 0 80px rgba(167, 139, 250, 0.08);
+  }
+
+  .input-glow:focus {
+    box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.3);
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid #a78bfa;
+    outline-offset: 2px;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 100;
+    padding: 8px 16px;
+    background: #a78bfa;
+    color: #fff;
+    border-radius: 0 0 8px 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: top 0.2s;
+  }
+
+  .skip-link:focus {
+    top: 0;
+  }
+
+  /* Shared mockup panel styles */
+  .mockup-panel {
+    background: #111113;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: 'Geist Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .mockup-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .mockup-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .mockup-body {
+    padding: 16px;
+    color: #a1a1aa;
+  }
+
+  .mockup-body .prompt {
+    color: #a78bfa;
+  }
+
+  .mockup-body .cmd {
+    color: #e4e4e7;
+  }
+
+  .mockup-body .success {
+    color: #4ade80;
+  }
+
+  .mockup-body .warn {
+    color: #facc15;
+  }
+
+  .mockup-body .dim {
+    color: #52525b;
+  }
+
+  .mockup-body .info {
+    color: #60a5fa;
+  }
+
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: #a78bfa;
+    vertical-align: text-bottom;
+    animation: blink 1.2s step-end infinite;
+  }
+
+  /* Badge styles */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-purple {
+    background: rgba(167, 139, 250, 0.15);
+    color: #a78bfa;
+  }
+
+  .badge-green {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+  }
+
+  .badge-yellow {
+    background: rgba(250, 204, 21, 0.15);
+    color: #facc15;
+  }
+
+  .badge-blue {
+    background: rgba(96, 165, 250, 0.15);
+    color: #60a5fa;
+  }
+
+  .badge-red {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+  }
+
+  /* Check icon */
+  .check-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(74, 222, 128, 0.2);
+    color: #4ade80;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+
+  /* Scroll-triggered fade-in */
+  .fade-section {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s ease-out,
+      transform 0.7s ease-out;
+  }
+
+  .fade-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Hero animations (immediate, not scroll-triggered) */
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.8s ease-out forwards;
+  }
+
+  .animate-delay-1 {
+    animation-delay: 0.15s;
+    opacity: 0;
+  }
+
+  .animate-delay-2 {
+    animation-delay: 0.3s;
+    opacity: 0;
+  }
+
+  .animate-delay-3 {
+    animation-delay: 0.45s;
+    opacity: 0;
+  }
+
+  .animate-delay-4 {
+    animation-delay: 0.6s;
+    opacity: 0;
+  }
+
+  /* Architecture diagram */
+  .arch-box {
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-family: 'Geist Mono', monospace;
+    color: #e4e4e7;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .arch-box-accent {
+    border-color: rgba(167, 139, 250, 0.3);
+    background: rgba(167, 139, 250, 0.08);
+  }
+
+  .arch-arrow {
+    color: #a78bfa;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Separator line for mockups */
+  .mockup-sep {
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    margin: 8px 0;
+  }
+
+  /* Score bar */
+  .score-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: #222225;
+  }
+
+  .score-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+
+  /* Dependency line */
+  .dep-line {
+    width: 2px;
+    background: rgba(167, 139, 250, 0.3);
+  }
+}
