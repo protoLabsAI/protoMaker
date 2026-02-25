@@ -124,9 +124,9 @@ export class LeadEngineerService {
       }
       this.onEvent(type, payload);
     });
-    await this.sessionStore.restore((projectPath, projectSlug, maxConcurrency) =>
-      this.start(projectPath, projectSlug, { maxConcurrency })
-    );
+    await this.sessionStore.restore(async (projectPath, projectSlug, maxConcurrency) => {
+      await this.start(projectPath, projectSlug, { maxConcurrency });
+    });
     logger.info('LeadEngineerService initialized');
   }
 
