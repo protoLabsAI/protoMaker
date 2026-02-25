@@ -27,6 +27,7 @@ COPY libs/prompts/package*.json ./libs/prompts/
 COPY libs/platform/package*.json ./libs/platform/
 COPY libs/model-resolver/package*.json ./libs/model-resolver/
 COPY libs/dependency-resolver/package*.json ./libs/dependency-resolver/
+COPY libs/error-tracking/package*.json ./libs/error-tracking/
 COPY libs/git-utils/package*.json ./libs/git-utils/
 COPY libs/spec-parser/package*.json ./libs/spec-parser/
 COPY libs/flows/package*.json ./libs/flows/
