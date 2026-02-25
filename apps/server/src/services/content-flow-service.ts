@@ -711,6 +711,36 @@ export class ContentFlowService {
       const fallbackPath = path.join(contentDir, 'content.md');
       await fs.writeFile(fallbackPath, finalState.assembledContent, 'utf-8');
       logger.info(`Saved assembled content fallback to ${fallbackPath}`);
+      contentWritten = true;
+    }
+
+    // Additional fallback: if no content was written but research results exist,
+    // save them as a draft for validation/debugging purposes
+    if (!contentWritten) {
+      const researchResults = finalState.researchResults as
+        | Array<{
+            query: string;
+            findings: { facts: string[]; examples: string[]; references: string[] };
+          }>
+        | undefined;
+      if (researchResults && researchResults.length > 0) {
+        const draftContent =
+          `# Research Results (Draft - Quality Gates Not Passed)\n\n` +
+          `This content did not pass quality review gates but is saved for validation.\n\n` +
+          researchResults
+            .map(
+              (r) =>
+                `## Query: ${r.query}\n\n` +
+                `### Facts\n${r.findings.facts.map((f) => `- ${f}`).join('\n')}\n\n` +
+                `### Examples\n${r.findings.examples.map((e) => `- ${e}`).join('\n')}\n\n` +
+                `### References\n${r.findings.references.map((ref) => `- ${ref}`).join('\n')}\n`
+            )
+            .join('\n\n');
+
+        const draftPath = path.join(contentDir, 'content.md');
+        await fs.writeFile(draftPath, draftContent, 'utf-8');
+        logger.info(`Saved research results draft to ${draftPath}`);
+      }
     }
 
     // Save metadata including review scores and trace ID

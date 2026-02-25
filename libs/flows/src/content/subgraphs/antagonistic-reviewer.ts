@@ -452,7 +452,7 @@ function parseDimensionScores(output: string, expectedDimensions: string[]): Dim
 
   for (const dimension of expectedDimensions) {
     // Match pattern: **DimensionName:** X/10
-    const scoreRegex = new RegExp(`\\*\\*${dimension}[:\\s]*\\*\\*[\\s]*(\\d+)/10`, 'i');
+    const scoreRegex = new RegExp(`\\*\\*${dimension}\\*\\*:\\s*(\\d+)/10`, 'i');
     const evidenceRegex = new RegExp(`Evidence:[\\s]*([^\\n]+)`, 'i');
     const suggestionRegex = new RegExp(`Suggestion:[\\s]*([^\\n]+)`, 'i');
 
@@ -461,7 +461,7 @@ function parseDimensionScores(output: string, expectedDimensions: string[]): Dim
 
     // Find the section for this dimension
     const dimensionSectionRegex = new RegExp(
-      `\\*\\*${dimension}[:\\s]*\\*\\*[\\s]*\\d+/10[\\s\\S]*?(?=\\*\\*|##|$)`,
+      `\\*\\*${dimension}\\*\\*:\\s*\\d+/10[\\s\\S]*?(?=\\*\\*|##|$)`,
       'i'
     );
     const sectionMatch = output.match(dimensionSectionRegex);
