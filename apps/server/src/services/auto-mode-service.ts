@@ -3086,6 +3086,65 @@ Complete the pipeline step instructions above. Review the previous work and appl
 
       await this.updateFeatureStatus(projectPath, featureId, finalStatus);
 
+      // Run git workflow (commit, push, PR) if enabled
+      let gitWorkflowResult: Awaited<
+        ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
+      > = null;
+      if (this.settingsService) {
+        try {
+          const settings = await this.settingsService.getGlobalSettings();
+
+          // Look up epic branch name if feature belongs to an epic
+          let epicBranchName: string | undefined;
+          if (feature.epicId && !feature.isEpic) {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            epicBranchName = epicFeature?.branchName;
+            if (epicBranchName) {
+              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
+            }
+          }
+
+          gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
+            projectPath,
+            featureId,
+            feature,
+            pipelineWorkDir,
+            settings,
+            epicBranchName,
+            this.events
+          );
+          if (gitWorkflowResult) {
+            // Check if git workflow encountered conflicts
+            if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
+              this.emitAutoModeEvent('auto_mode_progress', {
+                featureId,
+                featureName: feature.title,
+                message: `⚠️ Git workflow warning: ${gitWorkflowResult.error}`,
+                projectPath,
+              });
+            }
+
+            this.emitAutoModeEvent('auto_mode_git_workflow', {
+              featureId,
+              committed: gitWorkflowResult.commitHash,
+              pushed: gitWorkflowResult.pushed,
+              prUrl: gitWorkflowResult.prUrl,
+              prNumber: gitWorkflowResult.prNumber,
+              error: gitWorkflowResult.error,
+              projectPath,
+            });
+          }
+        } catch (error) {
+          logger.error('Error running post-completion git workflow:', error);
+          this.emitAutoModeEvent('auto_mode_progress', {
+            featureId,
+            featureName: feature.title,
+            message: `⚠️ Git workflow failed: ${error instanceof Error ? error.message : String(error)}`,
+            projectPath,
+          });
+        }
+      }
+
       this.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
