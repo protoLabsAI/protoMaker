@@ -2622,7 +2622,7 @@ You can use the Read tool to view these images at any time during implementation
   /**
    * Get the planning prompt prefix based on feature's planning mode.
    */
-  private async getPlanningPromptPrefix(feature: Feature): Promise<string> {
+  async getPlanningPromptPrefix(feature: Feature): Promise<string> {
     const mode = feature.planningMode || 'skip';
 
     if (mode === 'skip') {
