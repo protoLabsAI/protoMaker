@@ -88,8 +88,10 @@ import {
   isTerminalPasswordRequired,
 } from './routes/terminal/index.js';
 import { createSettingsRoutes } from './routes/settings/index.js';
+import { createUserRoutes } from './routes/user-routes.js';
 import { AgentService } from './services/agent-service.js';
 import { FeatureLoader } from './services/feature-loader.js';
+import { UserIdentityService } from './services/user-identity-service.js';
 import { AutoModeService } from './services/auto-mode-service.js';
 import { getTerminalService } from './services/terminal-service.js';
 import { SettingsService } from './services/settings-service.js';
@@ -387,6 +389,7 @@ const events: EventEmitter = createEventEmitter();
 // Create services
 // Note: settingsService is created first so it can be injected into other services
 const settingsService = new SettingsService(DATA_DIR);
+const userIdentityService = new UserIdentityService(settingsService);
 const featureLoader = new FeatureLoader();
 const agentService = new AgentService(DATA_DIR, events, settingsService, undefined, featureLoader);
 const metricsService = new MetricsService(featureLoader);
@@ -1424,6 +1427,7 @@ app.use('/api/workspace', createWorkspaceRoutes());
 app.use('/api/templates', createTemplatesRoutes());
 app.use('/api/terminal', createTerminalRoutes());
 app.use('/api/settings', createSettingsRoutes(settingsService, events));
+app.use('/api/user', createUserRoutes(userIdentityService));
 app.use('/api/claude', createClaudeRoutes(claudeUsageService));
 app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheService));
 app.use('/api/github', createGitHubRoutes(events, settingsService));

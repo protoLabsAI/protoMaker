@@ -1633,6 +1633,9 @@ export interface GlobalSettings {
   /** User profile for agent personalization — replaces hardcoded values in persona prompts */
   userProfile?: UserProfile;
 
+  /** User's name for assignment and display purposes (resolved from settings, env, or git) */
+  userName?: string;
+
   /** Per-persona system prompt overrides, keyed by template name (e.g., 'ava', 'frank') */
   personaOverrides?: Record<string, CustomPrompt>;
 }
