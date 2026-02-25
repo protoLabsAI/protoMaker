@@ -176,6 +176,7 @@ import { utilityTools } from './tools/utility-tools.js';
 import { schedulerTools } from './tools/scheduler-tools.js';
 import { calendarTools } from './tools/calendar-tools.js';
 import { quarantineTools } from './tools/quarantine-tools.js';
+import { fileOpsTools } from './tools/file-ops-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -195,6 +196,7 @@ const tools: Tool[] = [
   ...schedulerTools,
   ...calendarTools,
   ...quarantineTools,
+  ...fileOpsTools,
 ];
 
 // Tool implementations
@@ -1646,6 +1648,27 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         tier: args.tier,
         grantedBy: args.grantedBy,
         reason: args.reason,
+      });
+
+    // File Operations
+    case 'copy_file':
+      return apiCall('/fs/copy', {
+        sourcePath: args.sourcePath,
+        destinationPath: args.destinationPath,
+        overwrite: args.overwrite,
+      });
+
+    case 'move_file':
+      return apiCall('/fs/move', {
+        sourcePath: args.sourcePath,
+        destinationPath: args.destinationPath,
+      });
+
+    case 'browse_project_files':
+      return apiCall('/fs/browse-project-files', {
+        projectPath: args.projectPath,
+        relativePath: args.relativePath,
+        showHidden: args.showHidden,
       });
 
     default:

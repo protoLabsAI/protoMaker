@@ -19,6 +19,9 @@ import { createBrowseHandler } from './routes/browse.js';
 import { createImageHandler } from './routes/image.js';
 import { createSaveBoardBackgroundHandler } from './routes/save-board-background.js';
 import { createDeleteBoardBackgroundHandler } from './routes/delete-board-background.js';
+import { createCopyHandler } from './routes/copy.js';
+import { createMoveHandler } from './routes/move.js';
+import { createBrowseProjectFilesHandler } from './routes/browse-project-files.js';
 
 export function createFsRoutes(_events: EventEmitter): Router {
   const router = Router();
@@ -37,6 +40,9 @@ export function createFsRoutes(_events: EventEmitter): Router {
   router.get('/image', createImageHandler());
   router.post('/save-board-background', createSaveBoardBackgroundHandler());
   router.post('/delete-board-background', createDeleteBoardBackgroundHandler());
+  router.post('/copy', createCopyHandler());
+  router.post('/move', createMoveHandler());
+  router.post('/browse-project-files', createBrowseProjectFilesHandler());
 
   return router;
 }
