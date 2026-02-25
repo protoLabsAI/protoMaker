@@ -50,7 +50,7 @@ type SmokeTestFixtures = {
  * Unlike the dev fixtures, this uses the packaged app with bundled server.
  */
 const test = base.extend<SmokeTestFixtures>({
-  userDataDir: async ({}, use) => {
+  userDataDir: async (_, use) => {
     // Create a temporary user data directory for isolated testing
     const tempDir = path.join(os.tmpdir(), `protolabs-smoke-test-${Date.now()}`);
     fs.mkdirSync(tempDir, { recursive: true });
@@ -59,7 +59,6 @@ const test = base.extend<SmokeTestFixtures>({
     fs.rmSync(tempDir, { recursive: true, force: true });
   },
 
-  // eslint-disable-next-line no-empty-pattern
   electronApp: async ({ userDataDir }, use) => {
     console.log(`Launching Electron from: ${ELECTRON_EXEC_PATH}`);
     console.log(`User data directory: ${userDataDir}`);
