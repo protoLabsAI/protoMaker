@@ -1547,6 +1547,13 @@ export class AutoModeService {
   }
 
   /**
+   * Exposed for unit tests — delegates to ExecutionService.
+   */
+  getPlanningPromptPrefix(feature: Feature): Promise<string> {
+    return this.executionService.getPlanningPromptPrefix(feature);
+  }
+
+  /**
    * Execute a single feature
    * @param projectPath - The main project path
    * @param featureId - The feature ID to execute
