@@ -119,6 +119,7 @@ export class CeremonyService {
     epicDelivery: 0,
     contentBrief: 0,
     projectRetro: 0,
+    postProjectDocs: 0,
     discordPostFailures: 0,
   };
   private lastCeremonyAt: string | null = null;
@@ -171,6 +172,8 @@ export class CeremonyService {
         }
       } else if (type === 'project:completed') {
         this.handleProjectCompleted(payload as ProjectCompletedPayload);
+        // Also trigger post-project docs ceremony
+        this.handlePostProjectDocs(payload as ProjectCompletedPayload);
       } else if (type === 'authority:pm-review-approved') {
         this.handleReviewCompleted(
           payload as {
@@ -869,6 +872,159 @@ ${dataSummary}`;
     } catch (error) {
       this.activeReflection = null;
       logger.error('Failed to generate project retrospective:', error);
+    }
+  }
+
+  /**
+   * Handle post-project docs ceremony
+   * Spawns a doc-update agent to identify and update affected documentation
+   */
+  private async handlePostProjectDocs(payload: ProjectCompletedPayload): Promise<void> {
+    const { projectPath, projectTitle, projectSlug } = payload;
+
+    // Check if ceremonies are enabled
+    const ceremonySettings = await this.getCeremonySettings(projectPath);
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enablePostProjectDocs) {
+      logger.debug('Post-project docs ceremony disabled, skipping');
+      return;
+    }
+
+    try {
+      logger.info(`Starting post-project docs ceremony for ${projectTitle}`);
+
+      // Load all features for this project
+      const allFeatures = await this.featureLoader!.getAll(projectPath);
+      const projectFeatures = allFeatures.filter((f) => f.projectSlug === projectSlug);
+
+      // Get features with PRs (merged)
+      const mergedFeatures = projectFeatures.filter((f) => f.status === 'done' && f.prUrl);
+
+      if (mergedFeatures.length === 0) {
+        logger.info('No merged PRs found for project, skipping docs update');
+        return;
+      }
+
+      // Build PR summary for context
+      const prSummaries = mergedFeatures
+        .map((f) => {
+          const parts = [`- **${f.title}**`];
+          if (f.prUrl) parts.push(`[PR](${f.prUrl})`);
+          if (f.description) parts.push(`\n  ${f.description}`);
+          return parts.join(' ');
+        })
+        .join('\n');
+
+      // Load project data
+      const project = await this.projectService!.getProject(projectPath, projectSlug);
+      const projectPRD = project?.prd || null;
+
+      // Build PRD summary
+      let prdSummary = 'No PRD available';
+      if (projectPRD) {
+        const parts: string[] = [];
+        if (projectPRD.situation) parts.push(`**Situation:** ${projectPRD.situation}`);
+        if (projectPRD.problem) parts.push(`**Problem:** ${projectPRD.problem}`);
+        if (projectPRD.approach) parts.push(`**Approach:** ${projectPRD.approach}`);
+        if (projectPRD.results) parts.push(`**Results:** ${projectPRD.results}`);
+        prdSummary = parts.join('\n\n');
+      }
+
+      // Get ceremony model (default: haiku for quick doc updates)
+      const model = ceremonySettings.retroModel?.model || 'haiku';
+
+      // Prepare doc update prompt
+      const docUpdatePrompt = `You are reviewing a completed project and need to update documentation.
+
+## Project: ${projectTitle}
+
+### Project PRD
+${prdSummary}
+
+### Merged PRs (${mergedFeatures.length})
+${prSummaries}
+
+## Your Task
+
+1. **Identify affected docs**: Search the \`docs/\` directory for files that reference:
+   - Components, services, or files modified in these PRs
+   - Features mentioned in the PR titles
+   - Architecture or patterns that changed
+
+2. **Update documentation**: For each affected doc file:
+   - Update outdated information
+   - Add sections for new features
+   - Update examples and code snippets
+   - Ensure consistency
+
+3. **Create a PR**: After updating docs, create a single PR with:
+   - Branch name: \`docs/${projectSlug}-post-project\`
+   - Title: "docs: post-project updates for ${projectTitle}"
+   - Description: "Updates documentation for ${mergedFeatures.length} merged features from ${projectTitle} project"
+
+Use the available tools to search, read, edit files, and create the PR.`;
+
+      logger.info(
+        `Spawning doc-update agent for ${projectTitle} using model: ${model} (${mergedFeatures.length} PRs)`
+      );
+
+      // Run the doc update agent with full tool access
+      const result = await simpleQuery({
+        prompt: docUpdatePrompt,
+        model,
+        cwd: projectPath,
+        maxTurns: 30, // Allow enough turns to search, update multiple docs, and create PR
+        allowedTools: undefined, // Allow all tools (Read, Edit, Write, Bash for git/gh commands, Grep, Glob)
+      });
+
+      // Log result
+      if (result.text) {
+        logger.info(`Doc update agent completed: ${result.text.substring(0, 200)}...`);
+      }
+
+      // Record ceremony
+      this.recordCeremony('post_project_docs', projectPath, true, {
+        projectSlug,
+        title: `Post-Project Docs: ${projectTitle}`,
+        summary: `Agent processed ${mergedFeatures.length} PRs for documentation updates`,
+      });
+
+      // Emit success event
+      if (this.emitter) {
+        this.emitter.emit('ceremony:post-project-docs:complete', {
+          projectPath,
+          projectSlug,
+          projectTitle,
+          featureCount: mergedFeatures.length,
+          success: true,
+        });
+      }
+
+      // Update counters
+      this.ceremonyCounts.postProjectDocs++;
+      this.lastCeremonyAt = new Date().toISOString();
+
+      logger.info(
+        `Post-project docs ceremony completed for ${projectTitle} (${mergedFeatures.length} PRs)`
+      );
+    } catch (error) {
+      logger.error('Failed to process post-project docs ceremony:', error);
+
+      // Record failure
+      this.recordCeremony('post_project_docs', projectPath, false, {
+        projectSlug,
+        title: `Post-Project Docs: ${projectTitle}`,
+        summary: `Failed: ${error instanceof Error ? error.message : String(error)}`,
+      });
+
+      // Emit failure event (fire-and-forget, don't block project completion)
+      if (this.emitter) {
+        this.emitter.emit('ceremony:post-project-docs:failed', {
+          projectPath,
+          projectSlug,
+          projectTitle,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 

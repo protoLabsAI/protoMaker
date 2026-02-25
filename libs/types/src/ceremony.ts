@@ -71,7 +71,8 @@ export type CeremonyAuditType =
   | 'milestone_retro'
   | 'epic_delivery'
   | 'content_brief'
-  | 'project_retro';
+  | 'project_retro'
+  | 'post_project_docs';
 
 /**
  * CeremonyDeliveryStatus - Delivery state of a ceremony event

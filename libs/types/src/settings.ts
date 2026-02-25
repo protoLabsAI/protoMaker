@@ -951,6 +951,8 @@ export interface CeremonySettings {
   contentBriefChannelId?: string;
   /** Enable Linear project updates for daily standups and milestone completions (default: false) */
   enableLinearProjectUpdates?: boolean;
+  /** Enable automated documentation updates after project completion (default: true) */
+  enablePostProjectDocs?: boolean;
   /** Model configuration for generating retrospectives */
   retroModel?: PhaseModelEntry;
 }
@@ -970,6 +972,7 @@ export const DEFAULT_CEREMONY_SETTINGS: CeremonySettings = {
   enableEpicDelivery: true,
   enableProjectRetros: true,
   enableContentBriefs: true,
+  enablePostProjectDocs: true,
 };
 
 /**
