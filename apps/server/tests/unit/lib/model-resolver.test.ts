@@ -35,7 +35,7 @@ describe('model-resolver.ts', () => {
 
     it("should resolve 'opus' alias to full model string", () => {
       const result = resolveModelString('opus');
-      expect(result).toBe('claude-opus-4-5-20251101');
+      expect(result).toBe('claude-opus-4-6');
     });
 
     it('should pass through unknown models unchanged (may be provider models)', () => {
@@ -110,7 +110,7 @@ describe('model-resolver.ts', () => {
   describe('getEffectiveModel', () => {
     it('should prioritize explicit model over session and default', () => {
       const result = getEffectiveModel('opus', 'haiku', 'gpt-5.2');
-      expect(result).toBe('claude-opus-4-5-20251101');
+      expect(result).toBe('claude-opus-4-6');
     });
 
     it('should use session model when explicit is not provided', () => {
