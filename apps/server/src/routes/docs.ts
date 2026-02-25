@@ -43,7 +43,7 @@ function extractTitle(content: string, filename: string): string {
   const nameWithoutExt = basename(filename, '.md');
   return nameWithoutExt
     .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 
@@ -66,7 +66,7 @@ export function createDocsRoutes(): Router {
   router.get('/list', async (req, res) => {
     try {
       const files = await readdir(DOCS_DIR);
-      const mdFiles = files.filter(file => file.endsWith('.md'));
+      const mdFiles = files.filter((file) => file.endsWith('.md'));
 
       // Read each file to extract title
       const docsData = await Promise.all(
@@ -87,9 +87,10 @@ export function createDocsRoutes(): Router {
             // Return basic info if we can't read the file
             return {
               path: file,
-              title: generateSlug(file).split('-').map(w =>
-                w.charAt(0).toUpperCase() + w.slice(1)
-              ).join(' '),
+              title: generateSlug(file)
+                .split('-')
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' '),
               slug: generateSlug(file),
             };
           }
@@ -126,7 +127,7 @@ export function createDocsRoutes(): Router {
       if (!isPathSafe(path)) {
         res.status(400).json({
           error: 'Invalid path: path traversal detected',
-          message: 'Path must be within docs/internal directory'
+          message: 'Path must be within docs/internal directory',
         });
         return;
       }
