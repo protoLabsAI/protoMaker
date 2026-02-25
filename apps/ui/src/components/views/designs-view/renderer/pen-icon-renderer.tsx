@@ -55,7 +55,12 @@ export function PenIconRenderer({ node }: PenIconRendererProps) {
   if (node.fontFamily.toLowerCase() === 'lucide') {
     // Map character (icon name) to Lucide component
     const iconName = node.character;
-    const IconComponent = (LucideIcons as Record<string, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>>)[iconName];
+    const IconComponent = (
+      LucideIcons as Record<
+        string,
+        React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
+      >
+    )[iconName];
 
     if (IconComponent) {
       // Calculate stroke width from strokes if present
@@ -66,11 +71,7 @@ export function PenIconRenderer({ node }: PenIconRendererProps) {
 
       return (
         <div style={style} data-node-id={node.id} data-node-type="icon-font">
-          <IconComponent
-            size={node.fontSize}
-            color={iconColor}
-            strokeWidth={strokeWidth}
-          />
+          <IconComponent size={node.fontSize} color={iconColor} strokeWidth={strokeWidth} />
         </div>
       );
     }
@@ -78,9 +79,7 @@ export function PenIconRenderer({ node }: PenIconRendererProps) {
     // Fallback if icon not found
     return (
       <div style={style} data-node-id={node.id} data-node-type="icon-font">
-        <span style={{ fontSize: `${node.fontSize}px`, color: iconColor }}>
-          [{iconName}]
-        </span>
+        <span style={{ fontSize: `${node.fontSize}px`, color: iconColor }}>[{iconName}]</span>
       </div>
     );
   }

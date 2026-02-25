@@ -43,7 +43,8 @@ export function PenTextRenderer({ node }: PenTextRendererProps) {
 
   // Line height
   if (node.lineHeight !== undefined) {
-    style.lineHeight = typeof node.lineHeight === 'number' ? `${node.lineHeight}px` : node.lineHeight;
+    style.lineHeight =
+      typeof node.lineHeight === 'number' ? `${node.lineHeight}px` : node.lineHeight;
   }
 
   // Letter spacing

@@ -72,11 +72,5 @@ export function PenShapeRenderer({ node }: PenShapeRendererProps) {
     style.borderRadius = '50%';
   }
 
-  return (
-    <div
-      style={style}
-      data-node-id={node.id}
-      data-node-type={node.type.toLowerCase()}
-    />
-  );
+  return <div style={style} data-node-id={node.id} data-node-type={node.type.toLowerCase()} />;
 }
