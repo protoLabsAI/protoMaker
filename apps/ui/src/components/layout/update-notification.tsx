@@ -8,7 +8,14 @@ import { toast } from 'sonner';
 const logger = createLogger('UpdateNotification');
 
 interface UpdateState {
-  status: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+  status:
+    | 'idle'
+    | 'checking'
+    | 'available'
+    | 'not-available'
+    | 'downloading'
+    | 'downloaded'
+    | 'error';
   info?: {
     version: string;
     releaseDate?: string;
