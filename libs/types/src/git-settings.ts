@@ -50,7 +50,7 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   autoMergePR: true,
   prMergeStrategy: 'squash',
   waitForCI: true,
-  prBaseBranch: 'main',
+  prBaseBranch: 'dev',
 };
 
 /**

@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - main
+      - staging
+      - dev
   schedule:
     # Run weekly on Mondays at 9 AM UTC (security audit)
     - cron: '0 9 * * 1'
