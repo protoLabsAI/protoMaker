@@ -9,16 +9,16 @@
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08": {
       "id": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
       "name": "Notes",
-      "content": "<h2>Sprint Plan — Feb 21-22</h2><h3>Today (Saturday) — Functionality + Tooling</h3><ul><li><p>Event Observability &amp; Budget Tracking (M5)</p></li></ul><h3>Today (cont.) — MCP &amp; Plugin Polish</h3><ul><li><p>Dial in MCP tools — verify all tools working, clean up stale ones</p></li><li><p>Plugin polish — hooks, commands, agent templates up to date</p></li><li><p>Plugin update + reinstall after any changes</p></li></ul><h3>Tomorrow (Sunday) — Content Pipeline</h3><ul><li><p>Content pipeline end-to-end review</p></li><li><p>Jon / Cindi flow testing — create_content, HITL gates, export</p></li><li><p>Content scheduling &amp; distribution automation</p></li><li><p>First real content pieces through the pipeline</p></li></ul><p></p><h2>Setup Google Cloud</h2><p>The real work happens in Google Cloud Console (separate from Admin Console):</p><p>1. Go to <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"notes-link\" href=\"http://console.cloud.google.com\">console.cloud.google.com</a></p><p>2. Create a new project (e.g. \"protoLabs Studio\")</p><p>3. APIs &amp; Services → Library → Enable these 3:</p><p>- Gmail API</p><p>- Google Calendar API</p><p>- Cloud Pub/Sub API (for webhook push notifications)</p><p>4. APIs &amp; Services → Credentials → Create OAuth 2.0 Client ID:</p><p>- Application type: Web application</p><p>- Authorized redirect URI: <a target=\"_blank\" rel=\"noopener noreferrer nofollow\" class=\"notes-link\" href=\"http://localhost:3008/api/auth/google/callback\">http://localhost:3008/api/auth/google/callback</a></p><p>(for local dev)</p><p>- Save the Client ID and Client Secret</p><p>5. OAuth consent screen → Set to Internal (since you have Workspace, this</p><p>skips Google review)</p><p>Once you have the Client ID + Secret, drop them in Discord or let me know —</p><p>we'll wire them into the Google Workspace MCP server</p><p>(taylorwilsdon/google_workspace_mcp) which has 100+ tools for Calendar + Gmail</p><p>out of the box.</p>",
+      "content": "<h2>Sprint Plan — Feb 21-22</h2><h3>Today (Saturday) — Functionality + Tooling</h3><ul><li><p>Event Observability &amp; Budget Tracking (M5)</p></li></ul><h3>Today (cont.) — MCP &amp; Plugin Polish</h3><ul><li><p>Dial in MCP tools — verify all tools working, clean up stale ones</p></li><li><p>Plugin polish — hooks, commands, agent templates up to date</p></li><li><p>Plugin update + reinstall after any changes</p></li></ul><h3>Tomorrow (Sunday) — Content Pipeline</h3><ul><li><p>Content pipeline end-to-end review</p></li><li><p>Jon / Cindi flow testing — create_content, HITL gates, export</p></li><li><p>Content scheduling &amp; distribution automation</p></li><li><p>First real content pieces through the pipeline</p></li></ul>",
       "permissions": {
         "agentRead": true,
         "agentWrite": true
       },
       "metadata": {
         "createdAt": 1771448161228,
-        "updatedAt": 1771893027314,
-        "wordCount": 225,
-        "characterCount": 1392
+        "updatedAt": 1772059100855,
+        "wordCount": 85,
+        "characterCount": 542
       }
     },
     "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f": {
