@@ -55,6 +55,9 @@ import { createGraphiteSyncHandler } from './routes/graphite-sync.js';
 import { createGraphiteRestackHandler } from './routes/graphite-restack.js';
 import { createHealthHandler } from './routes/health.js';
 import { createPruneHandler } from './routes/prune.js';
+import { createCherryPickHandler } from './routes/cherry-pick.js';
+import { createAbortOperationHandler } from './routes/abort-operation.js';
+import { createContinueOperationHandler } from './routes/continue-operation.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
@@ -197,6 +200,19 @@ export function createWorktreeRoutes(
     validatePathParams('worktreePath'),
     requireGitRepoOnly,
     createGraphiteRestackHandler()
+  );
+
+  // Cherry-pick and rebase operations
+  router.post('/cherry-pick', validatePathParams('worktreePath'), createCherryPickHandler());
+  router.post(
+    '/abort-operation',
+    validatePathParams('worktreePath'),
+    createAbortOperationHandler()
+  );
+  router.post(
+    '/continue-operation',
+    validatePathParams('worktreePath'),
+    createContinueOperationHandler()
   );
 
   // Worktree health and recovery routes

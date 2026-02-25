@@ -813,6 +813,35 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         draft: args.draft,
       });
 
+    case 'worktree_cherry_pick':
+      return apiCall('/worktree/cherry-pick', {
+        worktreePath: args.worktreePath,
+        commits: args.commits,
+      });
+
+    case 'worktree_abort_operation':
+      return apiCall('/worktree/abort-operation', {
+        worktreePath: args.worktreePath,
+      });
+
+    case 'worktree_continue_operation':
+      return apiCall('/worktree/continue-operation', {
+        worktreePath: args.worktreePath,
+      });
+
+    case 'get_pr_review_comments':
+      return apiCall('/github/pr-review-comments', {
+        projectPath: args.projectPath,
+        prNumber: args.prNumber,
+        includeResolved: args.includeResolved ?? false,
+      });
+
+    case 'resolve_pr_comment':
+      return apiCall('/github/resolve-pr-comment', {
+        projectPath: args.projectPath,
+        threadId: args.threadId,
+      });
+
     // Observability
     case 'get_detailed_health':
       return apiCall('/health/detailed', {}, 'GET');

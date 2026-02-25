@@ -23,6 +23,8 @@ import { createResolvePRThreadsHandler } from './routes/resolve-pr-threads.js';
 import { createWebhookHandler } from './routes/webhook.js';
 import { createMergePRHandler } from './routes/merge-pr.js';
 import { createCheckPRStatusHandler } from './routes/check-pr-status.js';
+import { createPRReviewCommentsHandler } from './routes/pr-review-comments.js';
+import { createResolvePRCommentHandler } from './routes/resolve-pr-comment.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createGitHubRoutes(
@@ -82,6 +84,18 @@ export function createGitHubRoutes(
   // PR merge operations
   router.post('/merge-pr', validatePathParams('projectPath'), createMergePRHandler());
   router.post('/check-pr-status', validatePathParams('projectPath'), createCheckPRStatusHandler());
+
+  // PR review comment operations
+  router.post(
+    '/pr-review-comments',
+    validatePathParams('projectPath'),
+    createPRReviewCommentsHandler()
+  );
+  router.post(
+    '/resolve-pr-comment',
+    validatePathParams('projectPath'),
+    createResolvePRCommentHandler()
+  );
 
   return router;
 }

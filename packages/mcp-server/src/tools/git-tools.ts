@@ -180,4 +180,96 @@ export const gitTools: Tool[] = [
       required: ['worktreePath'],
     },
   },
+  {
+    name: 'worktree_cherry_pick',
+    description:
+      'Cherry-picks one or more commits into a worktree. Commit hashes must be valid hex strings (4-40 chars).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worktreePath: {
+          type: 'string',
+          description: 'Absolute path to the worktree directory',
+        },
+        commits: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of commit hashes to cherry-pick (applied in order)',
+        },
+      },
+      required: ['worktreePath', 'commits'],
+    },
+  },
+  {
+    name: 'worktree_abort_operation',
+    description:
+      'Aborts an in-progress rebase, merge, or cherry-pick operation in a worktree. Detects the operation type automatically.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worktreePath: {
+          type: 'string',
+          description: 'Absolute path to the worktree directory',
+        },
+      },
+      required: ['worktreePath'],
+    },
+  },
+  {
+    name: 'worktree_continue_operation',
+    description:
+      'Continues an in-progress rebase, merge, or cherry-pick after conflict resolution in a worktree.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        worktreePath: {
+          type: 'string',
+          description: 'Absolute path to the worktree directory',
+        },
+      },
+      required: ['worktreePath'],
+    },
+  },
+  {
+    name: 'get_pr_review_comments',
+    description:
+      'List inline code review comment threads on a PR via GitHub GraphQL API. Returns thread IDs, file paths, line numbers, and comment bodies.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        prNumber: {
+          type: 'number',
+          description: 'PR number to fetch review comments for',
+        },
+        includeResolved: {
+          type: 'boolean',
+          description: 'Whether to include already-resolved threads (default: false)',
+        },
+      },
+      required: ['projectPath', 'prNumber'],
+    },
+  },
+  {
+    name: 'resolve_pr_comment',
+    description:
+      'Resolve a single PR review thread by thread ID via GitHub GraphQL resolveReviewThread mutation.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        threadId: {
+          type: 'string',
+          description: 'GitHub review thread node ID (from get_pr_review_comments)',
+        },
+      },
+      required: ['projectPath', 'threadId'],
+    },
+  },
 ];
