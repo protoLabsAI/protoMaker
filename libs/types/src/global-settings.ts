@@ -557,9 +557,24 @@ export interface GlobalSettings {
   // Hivemind Configuration
   /**
    * Unique identifier for this Automaker instance in a hivemind mesh.
-   * Defaults to os.hostname() at runtime if not set.
+   * Also used for PR ownership watermarking to prevent multi-instance conflicts.
+   * Defaults to os.hostname() at runtime if not set. Auto-generated UUID on first call.
    */
   instanceId?: string;
+
+  /**
+   * Team or organization identifier for grouping instances.
+   * Used in PR ownership watermarks to identify which org created a PR.
+   * Example: "proto-labs-ai"
+   */
+  teamId?: string;
+
+  /**
+   * Hours after which PR ownership is considered stale when both last commit age
+   * and last activity age exceed this threshold. Stale PRs can be taken over by
+   * other instances. Defaults to 24.
+   */
+  prOwnershipStaleTtlHours?: number;
 
   /**
    * Maintenance scheduler settings.
