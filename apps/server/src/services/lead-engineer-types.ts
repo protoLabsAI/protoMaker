@@ -1,0 +1,136 @@
+/**
+ * Lead Engineer — Shared Types, Interfaces, and Constants
+ *
+ * All types shared across the lead-engineer subsystem files.
+ */
+
+import type { Feature, ExecuteOptions, AgentRole } from '@protolabs-ai/types';
+import type { EventEmitter } from '../lib/events.js';
+import type { FeatureLoader } from './feature-loader.js';
+import type { AutoModeService } from './auto-mode-service.js';
+import type { PRFeedbackService } from './pr-feedback-service.js';
+import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
+import type { ContextFidelityService } from './context-fidelity-service.js';
+import type { KnowledgeStoreService } from './knowledge-store-service.js';
+import type {
+  TrajectoryStoreService,
+  TrajectoryStateTransition,
+} from './trajectory-store-service.js';
+
+// ────────────────────────── Budget / timing constants ──────────────────────────
+
+export const EXECUTE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+export const MAX_PR_ITERATIONS = 2;
+export const MAX_TOTAL_REMEDIATION_CYCLES = 4;
+export const MERGE_RETRY_DELAY_MS = 60 * 1000; // 60 seconds
+export const REVIEW_POLL_DELAY_MS = 30 * 1000; // 30 seconds
+
+// ────────────────────────── Service Context ──────────────────────────
+
+/**
+ * Service context injected into state processors.
+ * Provides access to real services without circular dependencies.
+ */
+export interface ProcessorServiceContext {
+  events: EventEmitter;
+  featureLoader: FeatureLoader;
+  autoModeService: AutoModeService;
+  prFeedbackService?: PRFeedbackService;
+  checkpointService?: PipelineCheckpointService;
+  contextFidelityService?: ContextFidelityService;
+  knowledgeStoreService?: KnowledgeStoreService;
+  trajectoryStoreService?: TrajectoryStoreService;
+}
+
+// ────────────────────────── Feature State Machine Types ──────────────────────────
+
+/**
+ * Feature processing states for the state machine.
+ * Each feature flows through these states from INTAKE to completion or ESCALATE.
+ */
+export type FeatureProcessingState =
+  | 'INTAKE'
+  | 'PLAN'
+  | 'EXECUTE'
+  | 'REVIEW'
+  | 'MERGE'
+  | 'DEPLOY'
+  | 'ESCALATE';
+
+/**
+ * State transition result
+ */
+export interface StateTransitionResult {
+  /** Next state to transition to (null = terminal state) */
+  nextState: FeatureProcessingState | null;
+  /** Whether processing should continue */
+  shouldContinue: boolean;
+  /** Optional reason for the transition */
+  reason?: string;
+  /** Optional data to pass to next state */
+  context?: Record<string, unknown>;
+}
+
+/**
+ * State processor context - data available to all states
+ */
+export interface StateContext {
+  feature: Feature;
+  projectPath: string;
+  options: ExecuteOptions;
+  retryCount: number;
+  planRequired: boolean;
+  assignedPersona?: AgentRole;
+  planOutput?: string;
+  prNumber?: number;
+  ciStatus?: 'pending' | 'passing' | 'failing';
+  remediationAttempts: number;
+  mergeRetryCount: number;
+  planRetryCount: number;
+  escalationReason?: string;
+  reviewFeedback?: string;
+  siblingReflections?: string[];
+  /** ISO 8601 timestamp when processing started */
+  startedAt?: string;
+  /** State transitions for trajectory recording */
+  stateTransitions?: TrajectoryStateTransition[];
+}
+
+/**
+ * State processor interface - each state implements this
+ */
+export interface StateProcessor {
+  /** Called when entering this state */
+  enter(ctx: StateContext): Promise<void>;
+  /** Process the state and determine next transition */
+  process(ctx: StateContext): Promise<StateTransitionResult>;
+  /** Called when exiting this state */
+  exit(ctx: StateContext): Promise<void>;
+}
+
+/**
+ * A goal gate validator: pure function that checks preconditions
+ * before or postconditions after a state transition.
+ */
+export interface GoalGateValidator {
+  /** Unique gate identifier */
+  gateId: string;
+  /** Human-readable description */
+  description: string;
+  /** Evaluate the gate. Returns { passed, reason } */
+  evaluate: (ctx: StateContext) => { passed: boolean; reason: string };
+  /** State to retry from on failure (optional — defaults to ESCALATE) */
+  retryTarget?: FeatureProcessingState;
+}
+
+// ────────────────────────── Session Persistence ──────────────────────────
+
+/**
+ * Persisted session data (subset of LeadEngineerSession)
+ */
+export interface PersistedSessionData {
+  projectPath: string;
+  projectSlug: string;
+  maxConcurrency: number;
+  startedAt: string;
+}
