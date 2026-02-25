@@ -61,7 +61,11 @@ export interface DesignsActions {
   // Document update actions
   updateNode: (nodeId: string, updates: Partial<PenNode>) => void;
   updateDocument: (content: string, addToHistory?: boolean) => void;
-  createRefNode: (targetFrameId: string, componentId: string, position?: { x: number; y: number }) => void;
+  createRefNode: (
+    targetFrameId: string,
+    componentId: string,
+    position?: { x: number; y: number }
+  ) => void;
 
   // History actions
   undo: () => void;

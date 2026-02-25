@@ -77,7 +77,9 @@ export function DesignsView() {
             {/* Canvas header */}
             {selectedFilePath && (
               <div className="border-b border-border bg-muted/30 px-4 py-3">
-                <h2 className="text-sm font-medium truncate">{selectedFilePath.split('/').pop()}</h2>
+                <h2 className="text-sm font-medium truncate">
+                  {selectedFilePath.split('/').pop()}
+                </h2>
               </div>
             )}
 
