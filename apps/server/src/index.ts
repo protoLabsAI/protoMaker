@@ -20,6 +20,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
+// Initialize Sentry EARLY (must be before other imports that might throw errors)
+import { setupSentry } from './lib/sentry-setup.js';
+setupSentry();
+
 import { execSync } from 'node:child_process';
 import { access, unlink, writeFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
@@ -383,6 +387,9 @@ app.use(
   })
 );
 app.use(cookieParser());
+
+// Note: Sentry v8 automatically instruments Express - no manual handlers needed
+// Sentry is initialized in sentry-setup.ts
 
 // Create shared event emitter for streaming
 const events: EventEmitter = createEventEmitter();
@@ -1563,6 +1570,8 @@ if (knowledgeStoreService) {
 // Designs routes (.pen file management)
 app.use('/api/designs', createDesignsRoutes());
 logger.info('Designs routes mounted at /api/designs');
+
+// Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 
 // Create HTTP server
 const server = createServer(app);

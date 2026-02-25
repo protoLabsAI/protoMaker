@@ -24,6 +24,25 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
+// Initialize Sentry for Electron main process EARLY (before other imports)
+// This must come before any code that might throw errors
+import { init as initSentryMain } from '@sentry/electron/main';
+
+// Initialize immediately with environment variables (settings loaded later)
+if (process.env.SENTRY_DSN_ELECTRON && process.env.SENTRY_ENABLED !== 'false') {
+  try {
+    initSentryMain({
+      dsn: process.env.SENTRY_DSN_ELECTRON,
+      environment: process.env.NODE_ENV || 'production',
+      tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.1'),
+      sendDefaultPii: false,
+    });
+  } catch (error) {
+    // Never let Sentry initialization crash the app
+    console.error('[Sentry] Failed to initialize Electron main process:', error);
+  }
+}
+
 /**
  * Electron main process (TypeScript)
  *

@@ -7,6 +7,7 @@ import electron from 'vite-plugin-electron/simple';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { fileURLToPath } from 'url';
 import { VitePWA } from 'vite-plugin-pwa';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -124,6 +125,29 @@ export default defineConfig(({ command }) => {
             }),
           ]
         : []),
+      // Sentry plugin must be LAST - uploads source maps after build
+      // Only in production builds when SENTRY_AUTH_TOKEN is available
+      ...(command === 'build' &&
+      process.env.SENTRY_AUTH_TOKEN &&
+      process.env.SENTRY_ORG &&
+      process.env.SENTRY_PROJECT_ELECTRON
+        ? [
+            sentryVitePlugin({
+              org: process.env.SENTRY_ORG,
+              project: process.env.SENTRY_PROJECT_ELECTRON,
+              authToken: process.env.SENTRY_AUTH_TOKEN,
+              sourcemaps: {
+                assets: './dist/**',
+                ignore: ['node_modules'],
+              },
+              release: {
+                name: `automaker-electron@${appVersion}`,
+              },
+              // Disable telemetry
+              telemetry: false,
+            }),
+          ]
+        : []),
     ],
     resolve: {
       alias: {
@@ -153,6 +177,8 @@ export default defineConfig(({ command }) => {
     },
     build: {
       outDir: 'dist',
+      // Generate source maps for Sentry (hidden - not exposed publicly)
+      sourcemap: 'hidden',
       rollupOptions: {
         external: [
           'child_process',

@@ -519,6 +519,29 @@ export type { WebhookSettings } from './webhook.js';
 export { DEFAULT_WEBHOOK_SETTINGS } from './webhook.js';
 
 // ============================================================================
+// Error Tracking Settings - Sentry Integration
+// ============================================================================
+
+/**
+ * ErrorTrackingSettings - Configuration for Sentry error tracking and monitoring
+ *
+ * Controls error reporting, performance monitoring, and privacy settings.
+ * Users must explicitly opt-in (enabled: true) before any data is sent to Sentry.
+ */
+export interface ErrorTrackingSettings {
+  /** Whether error tracking is enabled (user opt-in required, default: false) */
+  enabled: boolean;
+  /** Sentry DSN (Data Source Name) - optional override for environment variable */
+  dsn?: string;
+  /** Environment name for grouping errors (development, staging, production) */
+  environment?: 'development' | 'staging' | 'production';
+  /** Sample rate for performance tracing (0.0 - 1.0, default: 0.1) */
+  tracesSampleRate?: number;
+  /** Sample rate for profiling (0.0 - 1.0, default: 0.1) */
+  profilesSampleRate?: number;
+}
+
+// ============================================================================
 // Voice Activation Settings - Offline wake word + speech-to-text
 // ============================================================================
 
@@ -1569,6 +1592,14 @@ export interface GlobalSettings {
    * @see VoiceSettings
    */
   voice?: VoiceSettings;
+
+  /**
+   * Error tracking and monitoring settings with Sentry integration.
+   * Tracks production errors, performance metrics, and provides stack traces.
+   * Privacy-first: requires explicit user opt-in, scrubs PII before transmission.
+   * @see ErrorTrackingSettings
+   */
+  errorTracking?: ErrorTrackingSettings;
 
   /**
    * Trust boundary configuration for PRD approval gates.
