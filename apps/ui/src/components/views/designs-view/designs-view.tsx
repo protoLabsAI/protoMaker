@@ -22,6 +22,8 @@ export function DesignsView() {
     isLibraryVisible,
     toggleLibraryVisibility,
     createRefNode,
+    reorderChildren,
+    moveNode,
     reset,
   } = useDesignsStore();
 
@@ -67,13 +69,77 @@ export function DesignsView() {
     const dragData = active.data.current as DragData | undefined;
     const dropData = over.data.current as { type: string; frameId: string } | undefined;
 
-    // Check if we're dropping a component onto a frame
+    // Handle component instantiation (drag from library)
     if (dragData?.type === 'component' && dropData?.type === 'frame') {
       const componentId = dragData.componentId;
       const frameId = dropData.frameId;
-
-      // Create the ref node in the target frame
       createRefNode(frameId, componentId);
+      return;
+    }
+
+    // Handle sortable reordering (drag within or between frames)
+    // When using @dnd-kit/sortable, active.id and over.id are the node IDs
+    if (active.id !== over.id && selectedDocument) {
+      try {
+        const parsed = JSON.parse(selectedDocument.content);
+
+        // Find the parent frame for each node
+        const findParentFrame = (
+          nodes: PenNode[],
+          targetId: string,
+          parentId?: string
+        ): string | null => {
+          for (const node of nodes) {
+            if (node.id === targetId) return parentId ?? null;
+            if ('children' in node && node.children) {
+              const found = findParentFrame(node.children, targetId, node.id);
+              if (found !== null) return found;
+            }
+          }
+          return null;
+        };
+
+        // Find indices within parent
+        const findIndexInFrame = (nodes: PenNode[], frameId: string, childId: string): number => {
+          for (const node of nodes) {
+            if (node.id === frameId && 'children' in node && node.children) {
+              return node.children.findIndex((child) => child.id === childId);
+            }
+            if ('children' in node && node.children) {
+              const index = findIndexInFrame(node.children, frameId, childId);
+              if (index !== -1) return index;
+            }
+          }
+          return -1;
+        };
+
+        const activeId = String(active.id);
+        const overId = String(over.id);
+        const activeParent = findParentFrame(parsed.children || [], activeId);
+        const overParent = findParentFrame(parsed.children || [], overId);
+
+        if (!activeParent || !overParent) return;
+
+        // Same frame: reorder children
+        if (activeParent === overParent) {
+          const fromIndex = findIndexInFrame(parsed.children || [], activeParent, activeId);
+          const toIndex = findIndexInFrame(parsed.children || [], activeParent, overId);
+
+          if (fromIndex !== -1 && toIndex !== -1) {
+            reorderChildren(activeParent, fromIndex, toIndex);
+          }
+        } else {
+          // Cross-frame: move node
+          const sourceIndex = findIndexInFrame(parsed.children || [], activeParent, activeId);
+          const targetIndex = findIndexInFrame(parsed.children || [], overParent, overId);
+
+          if (sourceIndex !== -1 && targetIndex !== -1) {
+            moveNode(activeId, activeParent, overParent, targetIndex);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to handle drag end:', error);
+      }
     }
   };
 

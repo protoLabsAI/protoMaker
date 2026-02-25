@@ -7,6 +7,8 @@ import { PenNodeRenderer } from './pen-node-renderer';
 import { fillToCSS, strokeToCSS, paddingToCSS, layoutToFlexDirection } from './style-utils';
 import { usePenTheme } from './pen-theme-context';
 import { DropZone } from '../dnd/drop-zone';
+import { SortableNode } from '../dnd/sortable-node';
+import { SortableItem } from '../dnd/sortable-item';
 import type { CSSProperties } from 'react';
 
 interface PenFrameRendererProps {
@@ -97,6 +99,9 @@ export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFra
   // Check if this frame is a valid drop target (has layout)
   const isValidDropTarget = node.layoutMode !== 'none';
 
+  // Determine if children should be sortable (frame has layout mode)
+  const isSortable = node.layoutMode !== 'none';
+
   // Render children recursively
   const frameContent = (
     <div
@@ -105,9 +110,17 @@ export function PenFrameRenderer({ node, onClick, style: externalStyle }: PenFra
       data-node-type="frame"
       onClick={onClick}
     >
-      {node.children?.map((child) => (
-        <PenNodeRenderer key={child.id} node={child} />
-      ))}
+      <SortableNode frame={node}>
+        {node.children?.map((child) =>
+          isSortable ? (
+            <SortableItem key={child.id} id={child.id}>
+              <PenNodeRenderer node={child} />
+            </SortableItem>
+          ) : (
+            <PenNodeRenderer key={child.id} node={child} />
+          )
+        )}
+      </SortableNode>
     </div>
   );
 
