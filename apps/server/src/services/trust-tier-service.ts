@@ -150,6 +150,6 @@ export class TrustTierService {
    * Save trust tier storage to disk atomically
    */
   private async saveStorage(storage: TrustTierStorage): Promise<void> {
-    await atomicWriteJson(this.filePath, storage, { indent: 2 });
+    await atomicWriteJson(this.filePath, storage, { indent: 2, createDirs: true });
   }
 }

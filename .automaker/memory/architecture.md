@@ -3631,3 +3631,25 @@ usageStats:
 - **Rejected:** Keeping dynamic imports for consistency with legacy patterns - but this added unnecessary indirection
 - **Trade-offs:** Single static import per class is simpler but removes ability to lazy-load per-call; startup time slightly improved
 - **Breaking if changed:** Code that relied on lazy-loading behavior (e.g., optional features loaded only on demand) would be affected
+
+### Optional dependency injection via setter on LeadEngineerService (setAgentFactory) rather than constructor injection (2026-02-26)
+- **Context:** GtmReviewProcessor needs agentFactoryService to create Cindi agent, but this should be optional - service works without it by falling back to standard ReviewProcessor
+- **Why:** Setter-based injection allows graceful degradation and runtime toggling. Constructor injection would require updating all instantiation sites and force all tests to provide a mock. Enables feature to be optional without architectural changes.
+- **Rejected:** Constructor injection - more strict, fails fast, but breaks all existing callers and prevents runtime toggling of the feature
+- **Trade-offs:** Less compile-time safety (no failure if agentFactoryService is never set) vs ability to deploy feature independently; easier testing vs less obvious dependency
+- **Breaking if changed:** If refactored to constructor injection, all LeadEngineerService instantiation sites must be updated and optional behavior is lost
+
+#### [Pattern] Feature type discrimination (featureType === 'content') as router to conditionally register state processor at runtime (2026-02-26)
+- **Problem solved:** Different feature types (code vs content) need different REVIEW processors, but FeatureStateMachine is shared for both
+- **Why this works:** Avoids conditional logic inside base ReviewProcessor; enables feature-specific processors without modifying core state machine. Clean separation of concerns.
+- **Trade-offs:** More files/code but better encapsulation; requires featureType to be reliable contract between domain and routing logic
+
+#### [Pattern] Agent Factory Service with named templates (createFromTemplate('cindi', ...)) as abstraction layer for agent construction (2026-02-26)
+- **Problem solved:** GtmReviewProcessor needs to create Cindi agent but shouldn't hard-code agent construction logic
+- **Why this works:** Decouples processor from agent instantiation details; enables agents to be registered/updated without processor changes; single source of truth for template configuration
+- **Trade-offs:** One more indirection/service dependency vs ability to manage agents as registry; requires runtime template lookup vs simpler direct construction
+
+#### [Pattern] State context as inter-state data carrier - feedback from failed review (score < 75) stored in ctx.reviewFeedback for EXECUTE phase visibility (2026-02-26)
+- **Problem solved:** When Cindi score is low, human needs to see the feedback in next phase (EXECUTE), but phases are decoupled
+- **Why this works:** StateContext is the shared mutable state across transitions; passing feedback via context avoids creating new return type for ReviewProcessor and keeps each processor focused on its output
+- **Trade-offs:** Implicit data flow via context (easier short-term) vs explicit contracts; less coupling vs harder to trace data flow
