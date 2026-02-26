@@ -1,0 +1,87 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
+name: Auto Release
+
+# Fires when a staging→main PR is merged. Cuts a version bump commit, pushes a
+# v* tag, and creates a GitHub Release. The tag push triggers build-electron.yml.
+#
+# NOTE: To allow the v* tag push to trigger build-electron.yml, this workflow
+# must use a PAT (stored as GH_PAT secret) rather than the default GITHUB_TOKEN.
+# GitHub blocks cross-workflow event chains when using GITHUB_TOKEN to prevent
+# infinite loops. If GH_PAT is not set, the tag push will succeed but
+# build-electron.yml will not fire automatically.
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions: read-all
+
+jobs:
+  release:
+    runs-on: self-hosted
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'staging' &&
+      github.repository == 'proto-labs-ai/protoMaker'
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          # Use a PAT so that the v* tag push triggers build-electron.yml.
+          # Falls back to GITHUB_TOKEN if GH_PAT is not configured (tag push
+          # will succeed but won't trigger downstream workflows).
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          skip-native-rebuild: 'true'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Clean stale changesets
+        # Remove any leftover changeset files that reference renamed/deleted packages,
+        # which would cause changeset:version to fail.
+        run: find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -delete
+
+      - name: Generate changeset
+        # Analyzes conventional commits since the last tag and writes
+        # .changeset/release-{id}.md with the bump type and summary.
+        run: npm run release:prepare
+
+      - name: Apply version bump
+        # Bumps all @protolabs-ai/* packages in lockstep and writes CHANGELOG.md.
+        run: npm run changeset:version
+
+      - name: Get new version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git add -A
+          git commit -m "chore: release v${{ steps.version.outputs.version }}"
+
+      - name: Push commit and tag
+        run: |
+          git push origin main
+          git tag -a "v${{ steps.version.outputs.version }}" -m "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

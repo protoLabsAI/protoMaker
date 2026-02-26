@@ -13,7 +13,9 @@ concurrency:
 jobs:
   release:
     runs-on: self-hosted
-    if: github.repository == 'proto-labs-ai/protoMaker'
+    if: >-
+      github.repository == 'proto-labs-ai/protoMaker' &&
+      !startsWith(github.event.head_commit.message, 'chore: release v')
     timeout-minutes: 15
     permissions:
       contents: write

@@ -102,16 +102,47 @@ If a project needs agents to target a different base, override in project settin
 }
 ```
 
+## Promotion Merge Strategy
+
+The merge strategy depends on the target branch:
+
+| Promotion           | Strategy            | Why                                  |
+| ------------------- | ------------------- | ------------------------------------ |
+| `feature/*` → `dev` | squash ✅           | Branch is discarded after merge      |
+| `dev` → `staging`   | **merge commit** ✅ | Preserves DAG — staging lives on     |
+| `staging` → `main`  | **merge commit** ✅ | Preserves DAG — no back-merge needed |
+
+### Why merge commits for all promotions
+
+Squash merges create a synthetic commit (S) with no DAG parent on the source branch. The next promotion sees S as a new diff relative to the old common ancestor and produces conflicts.
+
+```
+# Squash (BREAKS next promotion):
+dev:     A → B → C → D
+                       ← squash → staging: A → S   (S has no parent on dev)
+dev:     A → B → C → D → E → F
+                       ← merge: finds A as base, sees S vs B+C+D+E+F → CONFLICT
+
+# Merge commit (CORRECT):
+dev:     A → B → C → D
+                       ← merge commit → staging: A → B → C → D → M1
+dev:     A → B → C → D → E → F
+                       ← merge: finds D as base, sees only E+F → CLEAN
+```
+
+The same logic applies to `staging → main`. The `non_fast_forward` branch protection rule has been removed from `main`, so merge commits are now allowed for all promotions.
+
 ## Promotion Commands
 
 ```bash
 # Promote dev → staging
-gh pr create --base staging --head dev --title "chore: promote dev to staging" \
-  --body "Promoting dev to staging for user testing."
+gh pr create --base staging --head dev --title "chore: promote dev → staging"
+gh pr merge <number> --auto --merge
 
-# Promote staging → main (use the template)
+# Promote staging → main
 gh pr create --base main --head staging \
   --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+gh pr merge <number> --auto --merge
 ```
 
 ## Common Questions
@@ -122,8 +153,8 @@ No. Hotfixes should be cut from `dev`, merged to `dev`, then promoted through th
 **What about the Changesets version bump PR?**
 The `changeset-release.yml` creates a version bump PR that targets `main` using the GitHub Actions bot token. This is a known exception — the bot is a trusted actor and the PR goes through the same required status checks.
 
-**Do I need to rebase dev before promoting?**
-Yes — make sure `dev` is up to date with `main` before opening a `dev → staging` PR to avoid drift.
+**What if dev → staging shows conflicts?**
+A previous promotion used `--squash`. To recover: create a new branch from `dev`, `git merge origin/staging` (take `--ours` for all conflicts), push, open a new PR with `--merge`.
 
-**What if CI fails on the staging promote PR?**
-Fix the failure on `dev`, push the fix, then the open PR to `staging` will re-run CI automatically.
+**What if staging → main shows conflicts?**
+A previous promotion used `--squash`. To recover: create a new branch from `staging`, `git merge origin/main` (take `--ours` for all conflicts), use `chore/promote-staging-main-*` naming (allowed by `promotion-check.yml`), open a new PR with `--merge`.
