@@ -22,6 +22,7 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { LinearIntegrationConfig, ProjectIntegrations } from '@protolabs-ai/types';
 import type { Feature } from '@protolabs-ai/types';
 import type { CeremonyService } from './ceremony-service.js';
+import { LinearMCPClient } from './linear-mcp-client.js';
 
 const logger = createLogger('Integrations');
 
@@ -243,11 +244,17 @@ export class IntegrationService {
 
     // Linear: Create issue when feature is created
     if (integrations.linear?.enabled && integrations.linear.syncOnFeatureCreate) {
+      let teamId: string | undefined;
+      try {
+        teamId = await this.getLinearClient(projectPath).getTeamId();
+      } catch {
+        logger.warn('[Integration] No Linear teamId configured, skipping issue creation');
+      }
       await this.emitLinearEvent({
         projectPath,
         featureId,
         feature,
-        teamId: integrations.linear.teamId,
+        teamId,
         projectId: integrations.linear.projectId,
         priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
         labelName: integrations.linear.labelName,
@@ -285,12 +292,18 @@ export class IntegrationService {
 
     // Linear: Update issue status and add comment
     if (integrations.linear?.enabled) {
+      let teamId: string | undefined;
+      try {
+        teamId = await this.getLinearClient(projectPath).getTeamId();
+      } catch {
+        logger.warn('[Integration] No Linear teamId configured, skipping status update');
+      }
       if (integrations.linear.syncOnStatusChange) {
         await this.emitLinearEvent({
           projectPath,
           featureId,
           feature,
-          teamId: integrations.linear.teamId,
+          teamId,
           projectId: integrations.linear.projectId,
           action: 'update',
         });
@@ -301,7 +314,7 @@ export class IntegrationService {
           projectPath,
           featureId,
           feature,
-          teamId: integrations.linear.teamId,
+          teamId,
           projectId: integrations.linear.projectId,
           action: 'comment',
         });
@@ -386,6 +399,13 @@ export class IntegrationService {
         content: '🎉 Auto-mode completed all features in backlog!',
       });
     }
+  }
+
+  /**
+   * Create a LinearMCPClient for the given project path.
+   */
+  private getLinearClient(projectPath: string): LinearMCPClient {
+    return new LinearMCPClient(this.settingsService!, projectPath);
   }
 
   /**
@@ -708,11 +728,17 @@ export class IntegrationService {
 
     // Linear: Create issue with PRD content + review verdict
     if (integrations.linear?.enabled) {
+      let teamId: string | undefined;
+      try {
+        teamId = await this.getLinearClient(projectPath).getTeamId();
+      } catch {
+        logger.warn('[Integration] No Linear teamId configured, skipping issue creation');
+      }
       await this.emitLinearEvent({
         projectPath,
         featureId,
         feature,
-        teamId: integrations.linear.teamId,
+        teamId,
         projectId: integrations.linear.projectId,
         priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
         labelName: integrations.linear.labelName,
@@ -788,11 +814,13 @@ export class IntegrationService {
       throw new Error(`Feature ${featureId} not found`);
     }
 
+    const teamId = await this.getLinearClient(projectPath).getTeamId();
+
     await this.emitLinearEvent({
       projectPath,
       featureId,
       feature,
-      teamId: integrations.linear.teamId,
+      teamId,
       projectId: integrations.linear.projectId,
       priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
       labelName: integrations.linear.labelName,

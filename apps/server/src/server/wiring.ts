@@ -123,15 +123,15 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
       const workflowSettings = await getWorkflowSettings(p.projectPath, settingsService, '[Retro]');
       if (!workflowSettings.retro.enabled) return;
 
-      const projectSettings = await settingsService.getProjectSettings(p.projectPath);
-      const teamId = projectSettings.integrations?.linear?.teamId;
-      if (!teamId) {
+      const { LinearMCPClient } = await import('../services/linear-mcp-client.js');
+      const linearClient = new LinearMCPClient(settingsService, p.projectPath);
+      let teamId: string;
+      try {
+        teamId = await linearClient.getTeamId();
+      } catch {
         logger.warn('[Retro] No Linear teamId configured, skipping issue creation');
         return;
       }
-
-      const { LinearMCPClient } = await import('../services/linear-mcp-client.js');
-      const linearClient = new LinearMCPClient(settingsService, p.projectPath);
       const result = await linearClient.createIssue({
         title: p.title,
         description: p.description,
@@ -163,16 +163,15 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
       const workflowSettings = await getWorkflowSettings(p.projectPath, settingsService, '[Bugs]');
       if (!workflowSettings.bugs.enabled || !workflowSettings.bugs.linearProjectId) return;
 
-      const projectSettings = await settingsService.getProjectSettings(p.projectPath);
-      const teamId =
-        workflowSettings.bugs.linearTeamId || projectSettings.integrations?.linear?.teamId;
-      if (!teamId) {
+      const { LinearMCPClient } = await import('../services/linear-mcp-client.js');
+      const linearClient = new LinearMCPClient(settingsService, p.projectPath);
+      let teamId: string;
+      try {
+        teamId = await linearClient.getTeamId();
+      } catch {
         logger.warn('[Bugs] No Linear teamId configured, skipping bug issue creation');
         return;
       }
-
-      const { LinearMCPClient } = await import('../services/linear-mcp-client.js');
-      const linearClient = new LinearMCPClient(settingsService, p.projectPath);
       const result = await linearClient.createIssue({
         title: p.title,
         description: p.description,

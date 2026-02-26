@@ -149,7 +149,10 @@ export interface WorkflowSettings {
     enabled: boolean;
     /** Linear project ID for the "Bugs" project */
     linearProjectId?: string;
-    /** Linear team ID (falls back to integrations.linear.teamId) */
+    /**
+     * @deprecated Use `integrations.linear.teamId` in project settings instead.
+     * Supported as a fallback by LinearMcpClient.getTeamId() for backwards compatibility.
+     */
     linearTeamId?: string;
     /** Also create GitHub issues (existing behavior, default: true) */
     createGithubIssues?: boolean;

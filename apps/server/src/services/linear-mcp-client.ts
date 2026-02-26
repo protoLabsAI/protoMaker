@@ -367,6 +367,27 @@ export class LinearMCPClient {
   }
 
   /**
+   * Get Linear team ID from project settings with fallback to workflow settings.
+   *
+   * Priority: integrations.linear.teamId > workflow.bugs.linearTeamId > throws
+   *
+   * @throws {Error} If no teamId is configured in either location
+   */
+  async getTeamId(): Promise<string> {
+    const settings = await this.settingsService.getProjectSettings(this.projectPath);
+
+    const teamId = settings.integrations?.linear?.teamId || settings.workflow?.bugs?.linearTeamId;
+
+    if (!teamId) {
+      throw new Error(
+        'No Linear teamId configured. Set integrations.linear.teamId in project settings.'
+      );
+    }
+
+    return teamId;
+  }
+
+  /**
    * Execute a GraphQL query against Linear API
    *
    * @param query - GraphQL query or mutation

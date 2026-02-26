@@ -38,17 +38,6 @@ export class ProjectLifecycleService {
     return new LinearMCPClient(this.settingsService, projectPath);
   }
 
-  private async getTeamId(projectPath: string): Promise<string> {
-    const settings = await this.settingsService.getProjectSettings(projectPath);
-    const teamId = settings.integrations?.linear?.teamId;
-    if (!teamId) {
-      throw new Error(
-        'Linear teamId not configured. Set integrations.linear.teamId in project settings.'
-      );
-    }
-    return teamId;
-  }
-
   /**
    * Initiate a project: dedup check + create Linear project + write idea doc
    */
@@ -58,7 +47,7 @@ export class ProjectLifecycleService {
     ideaDescription: string
   ): Promise<LifecycleInitiateResult> {
     const client = this.getLinearClient(projectPath);
-    const teamId = await this.getTeamId(projectPath);
+    const teamId = await client.getTeamId();
 
     // Search for duplicates
     const existingProjects = await client.searchProjects(title);
