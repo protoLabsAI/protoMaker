@@ -1,0 +1,156 @@
+# Deploy to protolabs (production) on push to main
+# Uses self-hosted runner inside CT 104 (protolabs) on pve01
+name: Deploy Main
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'designs/**'
+      - '.changeset/**'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, protolabs]
+    if: github.repository == 'proto-labs-ai/protoMaker'
+    timeout-minutes: 30
+    concurrency:
+      group: main-deploy
+      cancel-in-progress: false
+
+    defaults:
+      run:
+        working-directory: /opt/protomaker
+
+    steps:
+      - name: Pull latest main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git remote set-url origin "$REPO_URL" 2>/dev/null || true
+          git fetch origin main
+          git reset --hard origin/main
+          echo "Checked out: $(git rev-parse --short HEAD)"
+
+      - name: Disk space pre-check
+        run: |
+          docker image prune -f 2>/dev/null || true
+          AVAIL_KB=$(df -k /opt/protomaker | awk 'NR==2 {print $4}')
+          AVAIL_GB=$((AVAIL_KB / 1024 / 1024))
+          echo "Available disk space: ${AVAIL_GB}GB"
+          if [ "$AVAIL_GB" -lt 5 ]; then
+            echo "ERROR: Only ${AVAIL_GB}GB free — need at least 5GB"
+            docker system prune -f 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Tag rollback images
+        run: |
+          for svc in server ui; do
+            img=$(docker compose images -q "$svc" 2>/dev/null | head -1 || true)
+            if [ -n "$img" ]; then
+              docker tag "$img" "protomaker-${svc}:rollback"
+              echo "Tagged ${svc} as rollback"
+            else
+              echo "No existing ${svc} image (first deploy?)"
+            fi
+          done
+
+      - name: Rebuild images
+        run: docker compose build --no-cache
+
+      - name: Restart services
+        run: |
+          docker compose down
+          docker compose up -d
+
+      - name: Verify deployment
+        id: verify
+        run: |
+          retries=0
+          while [ $retries -lt 20 ]; do
+            if curl -sf http://localhost:3008/api/health > /dev/null 2>&1; then
+              echo "Server is healthy"
+              curl -sf http://localhost:3008/api/health
+              echo ""
+              break
+            fi
+            retries=$((retries + 1))
+            echo "Waiting for server... (${retries}/20)"
+            sleep 3
+          done
+          if [ $retries -eq 20 ]; then
+            echo "Server health check failed after 60s"
+            docker compose logs --tail=50 server
+            exit 1
+          fi
+
+          # UI check
+          if curl -sf http://localhost:3007/ > /dev/null 2>&1; then
+            echo "UI: OK"
+          else
+            echo "UI: WARN — not responding"
+          fi
+
+      - name: Smoke tests
+        run: |
+          export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
+          if [ -f ./scripts/smoke-test.sh ]; then
+            ./scripts/smoke-test.sh http://localhost:3008 || echo "Smoke tests failed (non-fatal for now)"
+          fi
+
+      - name: Rollback on failure
+        if: failure() && steps.verify.outcome == 'failure'
+        run: |
+          echo "Deploy failed — rolling back"
+          docker compose down
+
+          for svc in server ui; do
+            if docker image inspect "protomaker-${svc}:rollback" &>/dev/null; then
+              docker tag "protomaker-${svc}:rollback" "protomaker-${svc}:latest"
+              echo "Restored ${svc} from rollback"
+            fi
+          done
+
+          docker compose up -d
+
+          retries=0
+          while [ $retries -lt 15 ]; do
+            if curl -sf http://localhost:3008/api/health > /dev/null 2>&1; then
+              echo "Rollback successful"
+              break
+            fi
+            retries=$((retries + 1))
+            sleep 2
+          done
+          if [ $retries -eq 15 ]; then
+            echo "CRITICAL: Rollback also failed. Manual intervention required."
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          for svc in server ui; do
+            docker rmi "protomaker-${svc}:rollback" 2>/dev/null || true
+          done
+          docker image prune -f 2>/dev/null || true
+
+      - name: Summary
+        if: always()
+        run: |
+          VERSION=$(curl -sf http://localhost:3008/api/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
+          COMMIT="${{ github.sha }}"
+          echo "### Deploy Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${COMMIT:0:8}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target**: protolabs (CT 104 / 192.168.4.189)" >> $GITHUB_STEP_SUMMARY
