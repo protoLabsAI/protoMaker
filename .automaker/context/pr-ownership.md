@@ -27,6 +27,7 @@ Every PR created by Automaker contains a hidden HTML comment in the body:
 This is invisible in rendered GitHub markdown but parseable by `gh pr view --json body`.
 
 Utility functions in `apps/server/src/routes/github/utils/pr-ownership.ts`:
+
 - `buildPROwnershipWatermark(instanceId, teamId)` — creates the comment string
 - `parsePROwnershipWatermark(body)` — parses it back to `{ instanceId, teamId, createdAt }`
 - `isPRStale(lastCommitAgeHours, lastActivityAgeHours, staleTtlHours)` — true when **both** ages exceed TTL
@@ -48,12 +49,12 @@ Utility functions in `apps/server/src/routes/github/utils/pr-ownership.ts`:
 
 ## Nudge Rules — When to Act
 
-| Scenario | Action |
-|----------|--------|
-| `isOwnedByThisInstance: true` | Act freely (rebase, fix, comment, merge) |
-| `isOwnedByThisInstance: false`, `isStale: false` | **Skip** — another live instance owns this PR |
-| `isOwnedByThisInstance: false`, `isStale: true` | May act — original owner appears inactive |
-| `instanceId: null` | PR not created by Automaker — apply project policy |
+| Scenario                                         | Action                                             |
+| ------------------------------------------------ | -------------------------------------------------- |
+| `isOwnedByThisInstance: true`                    | Act freely (rebase, fix, comment, merge)           |
+| `isOwnedByThisInstance: false`, `isStale: false` | **Skip** — another live instance owns this PR      |
+| `isOwnedByThisInstance: false`, `isStale: true`  | May act — original owner appears inactive          |
+| `instanceId: null`                               | PR not created by Automaker — apply project policy |
 
 Stale = BOTH last commit AND last activity older than `prOwnershipStaleTtlHours` (default 24h).
 
@@ -63,7 +64,7 @@ After every agent exits (success or failure), `WorktreeRecoveryService` checks f
 
 ```
 detect uncommitted work
-  → format (prettier stdin pipe)
+  → format (npx prettier --ignore-path /dev/null --write)
   → selective stage (exclude .automaker/)
   → HUSKY=0 git commit
   → git push

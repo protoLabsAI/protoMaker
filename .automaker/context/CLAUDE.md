@@ -54,6 +54,7 @@ apps/server, apps/ui
 ## CRITICAL: Build Order
 
 If you modify ANY file in `libs/`:
+
 1. `npm run build:packages` FIRST
 2. Then `npm run build:server`
 
@@ -92,6 +93,7 @@ If a type exists, import it from `@protolabs-ai/types`. Do NOT recreate it.
 ## Server Service Pattern
 
 Services are classes in `apps/server/src/services/`:
+
 ```typescript
 import { createLogger } from '@protolabs-ai/utils';
 import { FeatureLoader } from './feature-loader.js';
@@ -122,6 +124,7 @@ npm run format:check        # Prettier check
 ## Feature Data Fields (Feature interface)
 
 Key fields available on every feature:
+
 - `executionHistory?: ExecutionRecord[]` — per-execution timing, cost, tokens
 - `costUsd?: number` — total cost
 - `createdAt?, completedAt?, startedAt?, reviewStartedAt?` — lifecycle timestamps
@@ -165,7 +168,8 @@ When implementing features, every PR created by Automaker contains a hidden owne
 This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark()`. You do not need to add it manually.
 
 **WorktreeRecoveryService** runs after every agent exit. If you leave uncommitted changes in the worktree, it will:
-1. Format changed files
+
+1. Format changed files with `npx prettier --ignore-path /dev/null --write <files>`
 2. Stage (excluding `.automaker/`)
 3. Commit with `HUSKY=0`
 4. Push and create a PR
@@ -173,3 +177,21 @@ This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark(
 If recovery fails, the feature is marked `blocked` with a `statusChangeReason`. The Lead Engineer will escalate rather than retry — retrying the agent won't resolve a git or network failure.
 
 **Implication**: Commit your work before exiting. The recovery service is a safety net, not a substitute for proper commits.
+
+## CRITICAL: Prettier Formatting — Always Pass `--ignore-path`
+
+Prettier 3.x respects `.gitignore` by default. Since `.worktrees/` is gitignored, running `npx prettier --write` (without `--ignore-path`) silently skips ALL files in `.worktrees/` — no formatting, no error. This causes CI format failures on every agent PR.
+
+**Always use this exact command when formatting manually:**
+
+```bash
+npx prettier --ignore-path /dev/null --write <files>
+```
+
+Or to check before committing:
+
+```bash
+npm run format:check
+```
+
+**Never use** `prettier --write` without `--ignore-path /dev/null` in a worktree context.
