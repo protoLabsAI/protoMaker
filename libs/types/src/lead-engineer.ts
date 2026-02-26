@@ -268,31 +268,6 @@ export interface PersonaAssignment {
 // ────────────────────────── Phase Handoffs ──────────────────────────
 
 /**
- * Structured handoff document written by the Lead Engineer at the end of
- * each feature lifecycle phase. Enables continuity across agent boundaries.
- */
-export interface PhaseHandoff {
-  /** The lifecycle phase this handoff covers */
-  phase: FeatureState;
-  /** High-level summary of work completed in this phase */
-  summary: string;
-  /** Key discoveries made during this phase */
-  discoveries: string[];
-  /** Files that were created or modified */
-  modifiedFiles: string[];
-  /** Open questions that need resolution in subsequent phases */
-  outstandingQuestions: string[];
-  /** Intentional scope limits — what was NOT done and why */
-  scopeLimits: string[];
-  /** Description of test coverage added or verified */
-  testCoverage: string;
-  /** Overall verdict for this phase handoff */
-  verdict: 'APPROVE' | 'WARN' | 'BLOCK';
-  /** ISO 8601 timestamp when the handoff was created */
-  createdAt: string;
-}
-
-/**
  * Lead Engineer Service interface
  * Core orchestration service for managing feature lifecycle
  */
@@ -345,4 +320,31 @@ export interface LeadEngineerService {
    * Update world state from current system state
    */
   refreshWorldState(projectPath: string): Promise<LeadWorldState>;
+}
+
+// ────────────────────────── Phase Handoff ──────────────────────────
+
+/**
+ * Structured document capturing the state at the end of each Lead Engineer phase.
+ * Stored at .automaker/features/{featureId}/handoff-{phase}.json
+ */
+export interface PhaseHandoff {
+  /** The phase that just completed */
+  phase: string;
+  /** Human-readable summary of what was accomplished */
+  summary: string;
+  /** New discoveries made during this phase */
+  discoveries: string[];
+  /** Files that were created or modified */
+  modifiedFiles: string[];
+  /** Questions that remain open or need clarification */
+  outstandingQuestions: string[];
+  /** Scope boundaries — things explicitly excluded */
+  scopeLimits: string[];
+  /** Test coverage status */
+  testCoverage: string;
+  /** Agent's confidence verdict for the phase output */
+  verdict: 'APPROVE' | 'WARN' | 'BLOCK';
+  /** ISO timestamp when this handoff was created */
+  createdAt: string;
 }

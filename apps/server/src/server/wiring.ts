@@ -67,6 +67,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
     graphiteSyncScheduler,
     eventStreamBuffer,
     factStoreService,
+    leadHandoffService,
   } = services;
 
   // Calendar service wiring
@@ -193,6 +194,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   leadEngineerService.setDiscordBot(discordBotService);
   leadEngineerService.setAgentFactory(agentFactoryService);
   leadEngineerService.setFactStoreService(factStoreService);
+  leadEngineerService.setHandoffService(leadHandoffService);
 
   // PR Feedback service wiring
   prFeedbackService.setAutoModeService(autoModeService);
