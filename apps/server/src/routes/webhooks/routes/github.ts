@@ -11,6 +11,7 @@ import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
+import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
 
 const logger = createLogger('webhooks/github');
 
@@ -22,6 +23,7 @@ interface GitHubPullRequestPayload {
     state: string;
     merged: boolean;
     merged_at: string | null;
+    merge_commit_sha: string | null;
     head: {
       ref: string; // branch name
     };
@@ -100,6 +102,7 @@ async function findFeatureByBranch(
 
 export function createGitHubWebhookHandler(events: EventEmitter, settingsService: SettingsService) {
   const featureLoader = new FeatureLoader();
+  const stagingPromotionService = new StagingPromotionService();
 
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -219,10 +222,12 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
       }
 
       const branchName = payload.pull_request.head.ref;
+      const baseBranch = payload.pull_request.base.ref;
+      const mergeCommitSha = payload.pull_request.merge_commit_sha ?? '';
       const prNumber = payload.pull_request.number;
       const prTitle = payload.pull_request.title;
 
-      logger.info(`PR #${prNumber} merged: ${prTitle} (branch: ${branchName})`);
+      logger.info(`PR #${prNumber} merged: ${prTitle} (branch: ${branchName} → ${baseBranch})`);
 
       // Get project path from settings or use current working directory
       // In a real implementation, you might want to match the repository to a project
@@ -253,41 +258,61 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         return;
       }
 
-      // Only transition if not already done (handles manual status changes and force-merges)
-      if (currentFeature.status === 'done') {
+      // Track whether the feature was already marked done before this event
+      const wasAlreadyDone = currentFeature.status === 'done';
+
+      if (wasAlreadyDone) {
         logger.info(
           `Feature "${feature.title}" is already in "done" status. PR #${prNumber} merge confirmed.`
         );
-        res.json({
-          success: true,
-          message: `Feature already marked as done`,
-          featureId: feature.featureId,
+      } else {
+        // Update feature status to done
+        await featureLoader.update(projectPath, feature.featureId, {
+          status: 'done',
         });
-        return;
+
+        logger.info(
+          `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
+        );
+
+        // Emit event for UI notification
+        events.emit('feature:pr-merged', {
+          featureId: feature.featureId,
+          title: feature.title,
+          prNumber,
+          prTitle,
+          branchName,
+          projectPath,
+        });
       }
 
-      // Update feature status to done
-      await featureLoader.update(projectPath, feature.featureId, {
-        status: 'done',
-      });
+      // Dev-merge detection: create a staging promotion candidate when the PR
+      // targets the dev branch and autoCandidateOnDevMerge is enabled.
+      if (baseBranch === 'dev') {
+        const shouldCreate = stagingPromotionService.detectDevMerge(
+          { id: feature.featureId, title: feature.title, branchName },
+          mergeCommitSha
+        );
 
-      logger.info(
-        `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
-      );
-
-      // Emit event for UI notification
-      events.emit('feature:pr-merged', {
-        featureId: feature.featureId,
-        title: feature.title,
-        prNumber,
-        prTitle,
-        branchName,
-        projectPath,
-      });
+        if (shouldCreate && settings.promotion?.autoCandidateOnDevMerge) {
+          const candidate = await stagingPromotionService.createCandidate(
+            projectPath,
+            feature.featureId,
+            mergeCommitSha,
+            feature.title,
+            branchName
+          );
+          logger.info(
+            `Staging promotion candidate created for feature "${feature.featureId}" (commit: ${candidate.commitSha})`
+          );
+        }
+      }
 
       res.json({
         success: true,
-        message: `Feature "${feature.title}" moved to done`,
+        message: wasAlreadyDone
+          ? `Feature already marked as done`
+          : `Feature "${feature.title}" moved to done`,
         featureId: feature.featureId,
       });
     } catch (error) {
