@@ -126,8 +126,10 @@ export class ArchivalService {
       // Check retention period — use completedAt, fall back to last status transition timestamp
       let completedAt = feature.completedAt ? new Date(feature.completedAt).getTime() : undefined;
       if (!completedAt) {
-        // Fall back to the timestamp of the last status transition to done/verified
-        const lastDoneTransition = feature.statusHistory?.filter((t) => t.to === 'done').pop();
+        // Fall back to the timestamp of the last status transition to done
+        const lastDoneTransition = feature.statusHistory
+          ?.filter((t) => t.to === 'done')
+          .pop();
         if (lastDoneTransition?.timestamp) {
           completedAt = new Date(lastDoneTransition.timestamp).getTime();
         }
