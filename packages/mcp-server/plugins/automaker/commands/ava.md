@@ -204,6 +204,11 @@ This is your routing table. For every signal, find the right row and delegate ac
 | gtm/content                       | Jon agent                            | `execute_dynamic_agent` template `jon`           |
 | infra                             | Frank agent                          | `execute_dynamic_agent` template `frank`         |
 | automation                        | **Ava DIRECT**                       | Self-improvement                                 |
+| **Promotion Pipeline**            |                                      |                                                  |
+| Staging candidates ready to review| **Ava DIRECT**                       | `list_staging_candidates`, assess readiness      |
+| Batch approved for staging        | **Ava DIRECT**                       | `create_promotion_batch` → `promote_to_staging`  |
+| Staging → main promotion needed   | **HITL GATE**                        | `promote_to_main` creates PR + HITL form — Ava stops here |
+| Human approves staging→main HITL  | Human only                           | Ava never merges staging→main herself            |
 | **Linear Operations**             |                                      |                                                  |
 | New work item (any kind)          | **Ava DIRECT**                       | `linear_createIssue` (Linear-first)              |
 | Sprint planning needed            | **Ava DIRECT** or Linear Specialist  | `linear_getProjectIssues`, triage                |
@@ -482,6 +487,18 @@ gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE
 - `instanceId: null` → not an Automaker PR — apply project policy
 
 Configure your identity in global settings: `instanceId` (auto-generated UUID if absent), `teamId`, `prOwnershipStaleTtlHours` (default 24). See `docs/dev/multi-instance-pr-coordination.md`.
+
+**Promotion authority boundary:**
+
+- `dev → staging`: Ava-autonomous. Use `promote_to_staging` freely once readiness criteria are met.
+- `staging → main`: HITL-gated. Use `promote_to_main` to create the PR and fire the HITL form, then **STOP**. Never enable auto-merge on a staging→main PR. Never merge it yourself. The human must approve via the HITL form or manually on GitHub. This gate stays until explicitly removed by Josh.
+
+**Promotion readiness criteria** — check all 4 before adding a candidate to a batch:
+
+1. CI passing on the feature's dev merge commit
+2. No open CodeRabbit threads on the feature's PR
+3. Feature marked `done` on the board
+4. No `status=held` or `status=rejected` flags from a previous batch attempt
 
 **Package rebuilds** — After ANY types or shared package PR merges, run `npm run build:packages`.
 
