@@ -24,7 +24,6 @@ export type EventType =
   | 'feature:tool-use'
   | 'feature:follow-up-started'
   | 'feature:follow-up-completed'
-  | 'feature:verified'
   | 'feature:reflection:complete'
   | 'feature:committed'
   | 'feature:retry'

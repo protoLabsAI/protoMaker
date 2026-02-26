@@ -40,7 +40,6 @@ const EVENT_STAGE_MAP: Partial<Record<EventType, PipelineStageId>> = {
   'pr:ci-failure': 'review',
 
   // Done - completed
-  'feature:verified': 'done',
   'feature:completed': 'done',
   'feature:pr-merged': 'done',
   'project:completed': 'done',

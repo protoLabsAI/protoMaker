@@ -405,7 +405,7 @@ export interface Feature {
    */
   createdAt?: string; // When the feature was first created
   updatedAt?: string | number; // Last modification timestamp (ISO 8601 or epoch ms)
-  completedAt?: string; // When the feature was marked as done or verified
+  completedAt?: string; // When the feature was marked as done
   /** Timestamp when agent just finished (for "just completed" badge, ISO 8601) */
   justFinishedAt?: string;
   /** Reason for the most recent status change (used in status transition history) */
@@ -504,7 +504,7 @@ export type FeatureStatus =
   | 'in_progress' // Being worked on (consolidates: running)
   | 'review' // PR created, under review
   | 'blocked' // Temporary halt (dependency/issue/failure - consolidates: failed)
-  | 'done' // PR merged, work complete (consolidates: completed, waiting_approval)
+  | 'done' // PR merged, work complete (consolidates: completed, waiting_approval, verified)
   | 'interrupted'; // Server shut down while feature was running
 
 /**
@@ -566,7 +566,7 @@ export function normalizeFeatureStatus(
       break;
     case 'completed':
     case 'waiting_approval':
-    case 'verified':
+    case 'verified': // Ralph terminal state — fold into done
       normalized = 'done';
       break;
     case 'failed':
