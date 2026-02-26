@@ -255,11 +255,14 @@ Keep it focused and actionable. If the feature description is too vague or uncle
     const planOutput = ctx.planOutput || '';
     const risks = planOutput
       .split('\n')
-      .filter((l) => /risk|edge case|caveat|warning|caution|concern|issue/i.test(l) && l.trim().length > 0)
+      .filter(
+        (l) => /risk|edge case|caveat|warning|caution|concern|issue/i.test(l) && l.trim().length > 0
+      )
       .map((l) => l.trim());
     void new LeadHandoffService().saveHandoff(ctx.projectPath, ctx.feature.id, {
       phase: FeatureState.PLAN,
-      summary: `Feature: ${ctx.feature.title ?? ctx.feature.id}\n\n${ctx.feature.description ?? ''}`.trim(),
+      summary:
+        `Feature: ${ctx.feature.title ?? ctx.feature.id}\n\n${ctx.feature.description ?? ''}`.trim(),
       discoveries: planOutput ? [planOutput.slice(0, 1500)] : [],
       modifiedFiles: [],
       outstandingQuestions: planOutput

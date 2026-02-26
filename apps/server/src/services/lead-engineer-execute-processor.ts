@@ -31,10 +31,7 @@ function parseModifiedFiles(output: string): string[] {
     if (t.startsWith('Modified:')) {
       const f = t.replace(/^Modified:\s*/, '').trim();
       if (f) files.push(f);
-    } else if (
-      /^[a-zA-Z0-9_./-]+\.(ts|tsx|js|jsx|py|go|css|json|md)/.test(t) &&
-      !t.includes(' ')
-    ) {
+    } else if (/^[a-zA-Z0-9_./-]+\.(ts|tsx|js|jsx|py|go|css|json|md)/.test(t) && !t.includes(' ')) {
       files.push(t);
     }
   }
@@ -243,7 +240,10 @@ export class ExecuteProcessor implements StateProcessor {
     try {
       const fs = await import('node:fs/promises');
       agentOutput = await fs
-        .readFile(path.join(getFeatureDir(ctx.projectPath, ctx.feature.id), 'agent-output.md'), 'utf-8')
+        .readFile(
+          path.join(getFeatureDir(ctx.projectPath, ctx.feature.id), 'agent-output.md'),
+          'utf-8'
+        )
         .catch(() => '');
     } catch {
       /* agent output not available */
