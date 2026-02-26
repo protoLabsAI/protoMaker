@@ -130,7 +130,7 @@ export class AgentService {
     workingDirectory?: string;
   }) {
     if (!this.sessions.has(sessionId)) {
-      const messages = await this.loadSession(sessionId);
+      let messages = await this.loadSession(sessionId);
       const metadata = await this.loadMetadata();
       const sessionMetadata = metadata[sessionId];
 
@@ -143,6 +143,14 @@ export class AgentService {
 
       // Load persisted queue
       const promptQueue = await this.loadQueueState(sessionId);
+
+      // Recover in-flight tool calls from a previously interrupted session
+      const persistedPendingTools = await this.loadPendingToolsState(sessionId);
+      if (persistedPendingTools.length > 0) {
+        messages = this.patchInterruptedTools(messages, persistedPendingTools);
+        await this.saveSession(sessionId, messages);
+        await this.clearPendingToolsState(sessionId);
+      }
 
       this.sessions.set(sessionId, {
         messages,
@@ -558,6 +566,9 @@ export class AgentService {
                   startTime: Date.now(),
                 });
 
+                // Persist pending tools for crash recovery
+                await this.savePendingToolsState(sessionId, session.pendingTools);
+
                 this.emitAgentEvent(sessionId, {
                   type: 'tool_use',
                   tool: toolUse,
@@ -574,7 +585,7 @@ export class AgentService {
           }
 
           // Process completed tools and persist to feature state if applicable
-          await this.processCompletedTools(session, true);
+          await this.processCompletedTools(sessionId, session, true);
 
           this.emitAgentEvent(sessionId, {
             type: 'complete',
@@ -605,7 +616,7 @@ export class AgentService {
           });
 
           // Process pending tools as failed
-          await this.processCompletedTools(session, false);
+          await this.processCompletedTools(sessionId, session, false);
 
           // Mark session as no longer running so the UI and queue stay in sync
           session.isRunning = false;
@@ -649,7 +660,7 @@ export class AgentService {
       };
     } catch (error) {
       if (isAbortError(error)) {
-        await this.processCompletedTools(session, false);
+        await this.processCompletedTools(sessionId, session, false);
         session.isRunning = false;
         session.abortController = null;
         return { success: false, aborted: true };
@@ -658,7 +669,7 @@ export class AgentService {
       this.logger.error('Error:', error);
 
       // Process pending tools as failed
-      await this.processCompletedTools(session, false);
+      await this.processCompletedTools(sessionId, session, false);
 
       session.isRunning = false;
       session.abortController = null;
@@ -1068,7 +1079,11 @@ export class AgentService {
   /**
    * Process completed tools and persist to feature state if applicable
    */
-  private async processCompletedTools(session: Session, success: boolean): Promise<void> {
+  private async processCompletedTools(
+    sessionId: string,
+    session: Session,
+    success: boolean
+  ): Promise<void> {
     if (!session.pendingTools || session.pendingTools.length === 0) {
       return;
     }
@@ -1122,7 +1137,66 @@ export class AgentService {
       }
     }
 
-    // Clear pending tools
+    // Clear pending tools (memory + disk)
     session.pendingTools = [];
+    await this.clearPendingToolsState(sessionId);
+  }
+
+  private async savePendingToolsState(
+    sessionId: string,
+    tools: Array<{ name: string; startTime: number }>
+  ): Promise<void> {
+    const pendingFile = path.join(this.stateDir, `${sessionId}-pending.json`);
+    try {
+      await secureFs.writeFile(pendingFile, JSON.stringify(tools, null, 2), 'utf-8');
+    } catch (error) {
+      this.logger.error('Failed to save pending tools state:', error);
+    }
+  }
+
+  private async loadPendingToolsState(
+    sessionId: string
+  ): Promise<Array<{ name: string; startTime: number }>> {
+    const pendingFile = path.join(this.stateDir, `${sessionId}-pending.json`);
+    try {
+      const data = (await secureFs.readFile(pendingFile, 'utf-8')) as string;
+      return JSON.parse(data);
+    } catch {
+      return [];
+    }
+  }
+
+  private async clearPendingToolsState(sessionId: string): Promise<void> {
+    const pendingFile = path.join(this.stateDir, `${sessionId}-pending.json`);
+    try {
+      await secureFs.unlink(pendingFile);
+    } catch {
+      // File may not exist
+    }
+  }
+
+  private patchInterruptedTools(
+    messages: Message[],
+    pendingTools: Array<{ name: string; startTime: number }>
+  ): Message[] {
+    const result = [...messages];
+
+    for (const tool of pendingTools) {
+      const syntheticContent = `[Interrupted] Tool call '${tool.name}' was in-flight when the session was interrupted and did not complete.`;
+
+      // Idempotency: skip if this exact error message already exists
+      const alreadyPatched = result.some((m) => m.isError && m.content === syntheticContent);
+      if (alreadyPatched) continue;
+
+      result.push({
+        id: this.generateId(),
+        role: 'assistant',
+        content: syntheticContent,
+        timestamp: new Date().toISOString(),
+        isError: true,
+      });
+    }
+
+    return result;
   }
 }
