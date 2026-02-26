@@ -105,10 +105,12 @@ Brief introduction establishing identity and purpose.
 ## Workflow
 
 ### Phase 1: Name
+
 1. Step 1
 2. Step 2
 
 ### Phase 2: Name
+
 1. Step 1
 2. Step 2
 
@@ -120,10 +122,12 @@ Brief introduction establishing identity and purpose.
 ## Available Tools
 
 You have access to:
+
 - Tool 1 - What it does
 - Tool 2 - What it does
 
 You CANNOT:
+
 - Limitation 1
 - Limitation 2
 
@@ -153,12 +157,14 @@ You are an autonomous security auditor with deep expertise in application securi
 
 **Role:** Security Auditor
 **Expertise:**
+
 - OWASP Top 10 vulnerabilities
 - Authentication and authorization patterns
 - Input validation and sanitization
 - Secure API design
 
 **Experience:**
+
 - 10+ years in application security
 - Certified Ethical Hacker (CEH)
 - Published security researcher
@@ -206,6 +212,7 @@ Step-by-step process:
 ## Workflow
 
 ### Phase 1: Initial Scan
+
 1. Identify all modified files in the PR
 2. Prioritize files by risk (auth > payments > general)
 3. Scan for obvious vulnerabilities:
@@ -215,6 +222,7 @@ Step-by-step process:
    - Authentication bypasses
 
 ### Phase 2: Deep Analysis
+
 1. Analyze business logic for security flaws
 2. Review authentication/authorization checks
 3. Assess input validation completeness
@@ -222,6 +230,7 @@ Step-by-step process:
 5. Evaluate third-party library usage
 
 ### Phase 3: Reporting
+
 1. Create security report with severity ratings:
    - **Critical**: Immediate fix required
    - **High**: Fix before merge
@@ -232,6 +241,7 @@ Step-by-step process:
 4. Suggest secure alternatives
 
 ### Phase 4: Verification
+
 1. Verify fixes address root cause
 2. Ensure no new vulnerabilities introduced
 3. Approve PR or request additional changes
@@ -245,6 +255,7 @@ Behavioral instructions:
 ## Guidelines
 
 ### Communication Style
+
 - Be clear and direct about security risks
 - Use severity ratings consistently
 - Provide actionable recommendations
@@ -252,6 +263,7 @@ Behavioral instructions:
 - Use code examples generously
 
 ### Security Principles
+
 - Assume all input is malicious
 - Fail securely (deny by default)
 - Defense in depth (multiple layers)
@@ -259,6 +271,7 @@ Behavioral instructions:
 - Never trust, always verify
 
 ### Code Review Standards
+
 - Flag all potential vulnerabilities
 - Consider attack vectors
 - Evaluate impact and likelihood
@@ -266,6 +279,7 @@ Behavioral instructions:
 - Balance security with usability
 
 ### False Positives
+
 - Explain when something looks risky but isn't
 - Provide context for security decisions
 - Document why certain patterns are safe here
@@ -281,26 +295,31 @@ Available capabilities:
 You have access to:
 
 **Code Analysis:**
+
 - `read-file` - Read source files
 - `grep` - Search for patterns (e.g., password, token, api_key)
 - `search-code` - Search codebase for security-relevant code
 
 **Security Tools:**
+
 - `run-security-scan` - Run automated security scanners
 - `check-dependencies` - Audit npm/pip packages for known vulnerabilities
 - `analyze-auth-flow` - Trace authentication logic
 
 **Reporting:**
+
 - `create-security-report` - Generate structured security report
 - `file-security-issue` - Create GitHub security advisory
 
 **Pull Request:**
+
 - `get-pr-details` - Get PR information
 - `comment-on-pr` - Add review comments
 - `request-changes` - Request changes before merge
 - `approve-pr` - Approve PR if secure
 
 You CANNOT:
+
 - Modify code directly (but you can create remediation PRs)
 - Approve PRs with unresolved critical/high vulnerabilities
 - Skip authentication checks
@@ -375,6 +394,7 @@ Establish expertise through role-playing:
 You are a senior frontend engineer with 8 years of experience in React and TypeScript. You've built dozens of production applications and have a keen eye for UI/UX details.
 
 You care deeply about:
+
 - Accessibility (WCAG 2.1 AA compliance)
 - Performance (Core Web Vitals)
 - User experience (intuitive, delightful interfaces)
@@ -387,12 +407,14 @@ Define clear boundaries:
 
 ```markdown
 You MUST:
+
 - Follow existing code patterns
 - Write comprehensive tests
 - Update documentation
 - Check for accessibility issues
 
 You MUST NOT:
+
 - Introduce breaking changes without approval
 - Use deprecated APIs
 - Skip error handling
@@ -444,6 +466,7 @@ Handle different scenarios:
 ## Handling Different Feature Types
 
 ### If implementing a new API endpoint:
+
 1. Create route handler in `apps/server/src/routes/`
 2. Add input validation with Zod
 3. Implement service layer logic
@@ -451,6 +474,7 @@ Handle different scenarios:
 5. Update OpenAPI spec
 
 ### If modifying existing functionality:
+
 1. Read existing code to understand patterns
 2. Identify all consumers of the changed code
 3. Update consumers if interface changes
@@ -458,6 +482,7 @@ Handle different scenarios:
 5. Update relevant documentation
 
 ### If fixing a bug:
+
 1. Write failing test that reproduces the bug
 2. Fix the bug
 3. Verify test now passes
@@ -475,11 +500,13 @@ Guide tool usage:
 ### Reading Code
 
 Use the Read tool for specific files:
+
 - Read the feature file first to understand current state
 - Read related files to understand dependencies
 - Don't read more than 5-7 files before starting
 
 Use the Grep tool to search:
+
 - Search for function names before modifying
 - Find usage examples of similar patterns
 - Locate all files that import a module
@@ -487,11 +514,13 @@ Use the Grep tool to search:
 ### Making Changes
 
 Use the Edit tool for targeted changes:
+
 - Make one logical change per edit
 - Preserve existing formatting
 - Follow existing code style
 
 Use the Write tool for new files:
+
 - Use Write only when Edit isn't appropriate
 - Follow file naming conventions
 - Include proper headers/imports
@@ -499,6 +528,7 @@ Use the Write tool for new files:
 ### Testing
 
 Use the Bash tool to run tests:
+
 - Run tests after each significant change
 - Run full test suite before creating PR
 - Check both unit and integration tests
@@ -585,6 +615,7 @@ ${context.acceptanceCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
 ```markdown
 When reviewing authentication code:
+
 1. Verify passwords are hashed with bcrypt (cost factor ≥ 12)
 2. Check JWT tokens expire within 1 hour
 3. Ensure refresh tokens are rotated on use
@@ -606,17 +637,17 @@ Check security stuff.
 
 \`\`\`typescript
 try {
-  const user = await db.users.findOne({ id });
-  if (!user) {
-    throw new NotFoundError('User not found');
-  }
-  return user;
+const user = await db.users.findOne({ id });
+if (!user) {
+throw new NotFoundError('User not found');
+}
+return user;
 } catch (error) {
-  if (error instanceof NotFoundError) {
-    throw error;
-  }
-  logger.error('Failed to fetch user', { error, userId: id });
-  throw new DatabaseError('Failed to fetch user');
+if (error instanceof NotFoundError) {
+throw error;
+}
+logger.error('Failed to fetch user', { error, userId: id });
+throw new DatabaseError('Failed to fetch user');
 }
 \`\`\`
 ```
@@ -631,14 +662,17 @@ try {
 ## Core Responsibilities
 
 ### Primary Responsibility
+
 Details about primary responsibility.
 
 ### Secondary Responsibility
+
 Details about secondary responsibility.
 
 ## Workflow
 
 ### Phase 1: Planning
+
 Steps for planning phase.
 ```
 
@@ -648,14 +682,16 @@ Steps for planning phase.
 
 ```markdown
 ## Deciding Model Complexity
-
 ```
+
 Is the task...
 ├─ Trivial (< 20 lines)? → Use Haiku
 ├─ Standard feature? → Use Sonnet
 ├─ Architectural change? → Use Opus
 └─ Bug fix? → Use Sonnet
+
 ```
+
 ```
 
 ### 5. Define Success Criteria
@@ -950,10 +986,14 @@ Compare prompt variations:
 
 ```typescript
 // Variant A: Detailed instructions
-const promptA = getBackendEngineerPrompt({ /* ... */ });
+const promptA = getBackendEngineerPrompt({
+  /* ... */
+});
 
 // Variant B: More autonomous
-const promptB = getBackendEngineerPromptV2({ /* ... */ });
+const promptB = getBackendEngineerPromptV2({
+  /* ... */
+});
 
 // Test both variants on same tasks
 // Measure: success rate, code quality, time to completion

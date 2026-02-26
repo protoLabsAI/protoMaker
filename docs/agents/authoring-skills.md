@@ -98,22 +98,22 @@ Skills use YAML frontmatter for metadata:
 
 ```yaml
 ---
-name: skill-name           # Required: kebab-case identifier
-emoji: 🚀                  # Optional: visual identifier
-description: Brief desc    # Required: when/why to use this skill
-requires:                  # Optional: prerequisites
-  bins: [git, npm]        # Required executables
-  files: [package.json]   # Required files
-  env: [API_KEY]          # Required environment variables
-metadata:                  # Tracking data
-  author: username        # Who created it
-  created: ISO-date       # Creation timestamp
-  updated: ISO-date       # Last update timestamp
-  usageCount: 0           # Times used
-  successRate: 0.95       # Success rate (0.0-1.0)
-  version: 1.0.0          # Semantic version
-  tags: [tag1, tag2]      # Categorization tags
-  source: learned         # learned | imported | built-in
+name: skill-name # Required: kebab-case identifier
+emoji: 🚀 # Optional: visual identifier
+description: Brief desc # Required: when/why to use this skill
+requires: # Optional: prerequisites
+  bins: [git, npm] # Required executables
+  files: [package.json] # Required files
+  env: [API_KEY] # Required environment variables
+metadata: # Tracking data
+  author: username # Who created it
+  created: ISO-date # Creation timestamp
+  updated: ISO-date # Last update timestamp
+  usageCount: 0 # Times used
+  successRate: 0.95 # Success rate (0.0-1.0)
+  version: 1.0.0 # Semantic version
+  tags: [tag1, tag2] # Categorization tags
+  source: learned # learned | imported | built-in
 ---
 ```
 
@@ -365,13 +365,13 @@ Skills track comprehensive metadata:
 
 ```typescript
 interface SkillMetadata {
-  author?: string;        // Creator
-  created: string;        // ISO timestamp
-  updated?: string;       // Last modified
-  usageCount: number;     // Times used
-  successRate: number;    // 0.0 - 1.0
-  version?: string;       // Semantic version
-  tags?: string[];        // Categorization
+  author?: string; // Creator
+  created: string; // ISO timestamp
+  updated?: string; // Last modified
+  usageCount: number; // Times used
+  successRate: number; // 0.0 - 1.0
+  version?: string; // Semantic version
+  tags?: string[]; // Categorization
   source?: 'learned' | 'imported' | 'built-in';
 }
 ```
@@ -410,6 +410,7 @@ tags: [code-quality, refactoring, maintainability]
 ```
 
 **Examples:**
+
 - `code-review-checklist` - Comprehensive PR review
 - `refactoring-guidelines` - When and how to refactor
 - `naming-conventions` - Variable/function naming standards
@@ -422,6 +423,7 @@ tags: [testing, tdd, quality]
 ```
 
 **Examples:**
+
 - `unit-testing-guide` - Writing effective unit tests
 - `integration-testing-patterns` - Testing service boundaries
 - `test-data-factories` - Creating test fixtures
@@ -434,6 +436,7 @@ tags: [git, commits, conventional-commits]
 ```
 
 **Examples:**
+
 - `conventional-commits` - Commit message standards
 - `branch-naming` - Feature branch conventions
 - `merge-conflict-resolution` - Resolving conflicts
@@ -446,6 +449,7 @@ tags: [debugging, troubleshooting, problem-solving]
 ```
 
 **Examples:**
+
 - `debugging-methodology` - Systematic bug investigation
 - `performance-profiling` - Identifying bottlenecks
 - `log-analysis` - Reading and analyzing logs
@@ -458,6 +462,7 @@ tags: [documentation, api, openapi]
 ```
 
 **Examples:**
+
 - `readme-template` - Project README structure
 - `api-docs-standards` - API documentation patterns
 - `code-comments` - When and how to comment code
@@ -530,7 +535,7 @@ requires:
 
 **Do:**
 
-````markdown
+```markdown
 # Example Usage
 
 \`\`\`bash
@@ -540,7 +545,7 @@ Implement JWT-based authentication with refresh tokens.
 
 Closes #123
 \`\`\`
-````
+```
 
 **Don't:**
 
@@ -708,11 +713,11 @@ metadata:
 
 \`\`\`typescript
 describe('MyService', () => {
-  it('does something specific', () => {
-    // Arrange - Set up test data
-    const input = { id: '123', name: 'test' };
-    const mockDep = vi.fn().mockResolvedValue({ ok: true });
-    const service = new MyService(mockDep);
+it('does something specific', () => {
+// Arrange - Set up test data
+const input = { id: '123', name: 'test' };
+const mockDep = vi.fn().mockResolvedValue({ ok: true });
+const service = new MyService(mockDep);
 
     // Act - Execute the code under test
     const result = await service.doThing(input);
@@ -720,13 +725,15 @@ describe('MyService', () => {
     // Assert - Verify the results
     expect(result.success).toBe(true);
     expect(mockDep).toHaveBeenCalledWith(input);
-  });
+
+});
 });
 \`\`\`
 
 ## Test Naming
 
 Use descriptive test names that explain:
+
 - **What** is being tested
 - **Under what conditions**
 - **What the expected outcome is**
@@ -737,12 +744,14 @@ Bad: `test user error`
 ## What to Test
 
 ✅ **Test:**
+
 - Public API behavior
 - Error handling
 - Edge cases
 - Business logic
 
 ❌ **Don't test:**
+
 - Implementation details
 - Private methods
 - Third-party library internals
