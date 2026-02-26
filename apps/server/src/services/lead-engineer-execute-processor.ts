@@ -10,7 +10,6 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabs-ai/utils';
 import { getFeatureDir } from '@protolabs-ai/platform';
-import { FeatureState } from '@protolabs-ai/types';
 import type { EventType } from '@protolabs-ai/types';
 import type {
   ProcessorServiceContext,
@@ -19,36 +18,9 @@ import type {
   StateTransitionResult,
 } from './lead-engineer-types.js';
 import { EXECUTE_TIMEOUT_MS } from './lead-engineer-types.js';
-import { LeadHandoffService } from './lead-handoff-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
-
-function parseModifiedFiles(output: string): string[] {
-  const files: string[] = [];
-  for (const line of output.split('\n')) {
-    const t = line.trim();
-    if (t.startsWith('Modified:')) {
-      const f = t.replace(/^Modified:\s*/, '').trim();
-      if (f) files.push(f);
-    } else if (/^[a-zA-Z0-9_./-]+\.(ts|tsx|js|jsx|py|go|css|json|md)/.test(t) && !t.includes(' ')) {
-      files.push(t);
-    }
-  }
-  return [...new Set(files)];
-}
-
-function parseQuestions(output: string): string[] {
-  return output
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.endsWith('?') && l.length > 3 && l.length < 300);
-}
-
-function parseVerdict(output: string): 'APPROVE' | 'WARN' | 'BLOCK' | null {
-  const m = output.match(/VERDICT:\s*(APPROVE|WARN|BLOCK)/i);
-  return m ? (m[1].toUpperCase() as 'APPROVE' | 'WARN' | 'BLOCK') : null;
-}
 
 /**
  * EXECUTE State: Agent runs in worktree. Monitor. On failure → retry with context or ESCALATE.
@@ -235,34 +207,7 @@ export class ExecuteProcessor implements StateProcessor {
     // Wait for agent completion via event listener
     const result = await this.waitForCompletion(ctx);
 
-    // Read agent output for handoff generation (fire-and-forget after)
-    let agentOutput = '';
-    try {
-      const fs = await import('node:fs/promises');
-      agentOutput = await fs
-        .readFile(
-          path.join(getFeatureDir(ctx.projectPath, ctx.feature.id), 'agent-output.md'),
-          'utf-8'
-        )
-        .catch(() => '');
-    } catch {
-      /* agent output not available */
-    }
-
     if (!result.success) {
-      // Save a BLOCK handoff on failure (fire-and-forget)
-      void new LeadHandoffService().saveHandoff(ctx.projectPath, ctx.feature.id, {
-        phase: FeatureState.EXECUTE,
-        summary: result.error || 'Agent execution failed',
-        discoveries: [],
-        modifiedFiles: parseModifiedFiles(agentOutput),
-        outstandingQuestions: parseQuestions(agentOutput),
-        scopeLimits: [],
-        testCoverage: 'n/a — execution failed',
-        verdict: 'BLOCK',
-        createdAt: new Date().toISOString(),
-      });
-
       // Check if the post-agent recovery hook blocked this feature.
       // Blocked features should escalate rather than retry — the work is stranded
       // and retrying the agent won't resolve a git/network failure.
@@ -303,21 +248,6 @@ export class ExecuteProcessor implements StateProcessor {
       ctx.feature = updated;
       if (updated.prNumber) ctx.prNumber = updated.prNumber;
     }
-
-    // Save EXECUTE handoff (fire-and-forget)
-    void new LeadHandoffService().saveHandoff(ctx.projectPath, ctx.feature.id, {
-      phase: FeatureState.EXECUTE,
-      summary: `Feature "${ctx.feature.title ?? ctx.feature.id}" executed successfully`,
-      discoveries: agentOutput ? [agentOutput.slice(0, 1500)] : [],
-      modifiedFiles: parseModifiedFiles(agentOutput),
-      outstandingQuestions: parseQuestions(agentOutput),
-      scopeLimits: [],
-      testCoverage: agentOutput.match(/\b(test|spec|coverage)\b/i)
-        ? 'Tests mentioned in agent output'
-        : 'No explicit test coverage mentioned',
-      verdict: parseVerdict(agentOutput) ?? 'APPROVE',
-      createdAt: new Date().toISOString(),
-    });
 
     return {
       nextState: 'REVIEW',

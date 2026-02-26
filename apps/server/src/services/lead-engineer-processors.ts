@@ -7,7 +7,6 @@
 
 import { createLogger } from '@protolabs-ai/utils';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
-import { FeatureState } from '@protolabs-ai/types';
 import type { AgentRole, Feature } from '@protolabs-ai/types';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
@@ -17,7 +16,6 @@ import type {
   StateProcessor,
   StateTransitionResult,
 } from './lead-engineer-types.js';
-import { LeadHandoffService } from './lead-handoff-service.js';
 
 const logger = createLogger('LeadEngineerService');
 
@@ -250,30 +248,6 @@ Keep it focused and actionable. If the feature description is too vague or uncle
       // Max retries exceeded — proceed anyway with a warning
       logger.warn('[PLAN] Proceeding despite review rejection (max retries exceeded)');
     }
-
-    // Save PLAN handoff (fire-and-forget)
-    const planOutput = ctx.planOutput || '';
-    const risks = planOutput
-      .split('\n')
-      .filter(
-        (l) => /risk|edge case|caveat|warning|caution|concern|issue/i.test(l) && l.trim().length > 0
-      )
-      .map((l) => l.trim());
-    void new LeadHandoffService().saveHandoff(ctx.projectPath, ctx.feature.id, {
-      phase: FeatureState.PLAN,
-      summary:
-        `Feature: ${ctx.feature.title ?? ctx.feature.id}\n\n${ctx.feature.description ?? ''}`.trim(),
-      discoveries: planOutput ? [planOutput.slice(0, 1500)] : [],
-      modifiedFiles: [],
-      outstandingQuestions: planOutput
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.endsWith('?') && l.length > 3 && l.length < 300),
-      scopeLimits: risks,
-      testCoverage: 'n/a — planning phase',
-      verdict: 'APPROVE',
-      createdAt: new Date().toISOString(),
-    });
 
     return {
       nextState: 'EXECUTE',

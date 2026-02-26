@@ -8,7 +8,6 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabs-ai/utils';
-import { FeatureState } from '@protolabs-ai/types';
 import type { EventType } from '@protolabs-ai/types';
 import type {
   ProcessorServiceContext,
@@ -22,7 +21,6 @@ import {
   MAX_TOTAL_REMEDIATION_CYCLES,
   MAX_PR_ITERATIONS,
 } from './lead-engineer-types.js';
-import { LeadHandoffService } from './lead-handoff-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -96,19 +94,6 @@ export class ReviewProcessor implements StateProcessor {
     });
 
     if (reviewState === 'approved') {
-      // Save REVIEW handoff (fire-and-forget)
-      void new LeadHandoffService().saveHandoff(ctx.projectPath, ctx.feature.id, {
-        phase: FeatureState.REVIEW,
-        summary: `PR #${ctx.prNumber} approved and CI passing — ready to merge`,
-        discoveries: ctx.reviewFeedback ? [ctx.reviewFeedback.slice(0, 1500)] : [],
-        modifiedFiles: [],
-        outstandingQuestions: [],
-        scopeLimits: [],
-        testCoverage: 'CI passing',
-        verdict: 'APPROVE',
-        createdAt: new Date().toISOString(),
-      });
-
       return {
         nextState: 'MERGE',
         shouldContinue: true,
