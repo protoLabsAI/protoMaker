@@ -4,6 +4,7 @@
 
 import type { Request, Response } from 'express';
 import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 
 interface BulkDeleteRequest {
@@ -17,7 +18,7 @@ interface BulkDeleteResult {
   error?: string;
 }
 
-export function createBulkDeleteHandler(featureLoader: FeatureLoader) {
+export function createBulkDeleteHandler(featureLoader: FeatureLoader, events?: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, featureIds } = req.body as BulkDeleteRequest;
@@ -38,8 +39,18 @@ export function createBulkDeleteHandler(featureLoader: FeatureLoader) {
         const batch = featureIds.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(
           batch.map(async (featureId) => {
+            // Fetch feature before deletion so the payload has linearIssueId
+            const feature = await featureLoader.get(projectPath, featureId);
             const success = await featureLoader.delete(projectPath, featureId);
             if (success) {
+              if (feature && events) {
+                events.emit('feature:deleted', {
+                  projectPath,
+                  featureId: feature.id,
+                  feature,
+                  timestamp: new Date().toISOString(),
+                });
+              }
               return { featureId, success: true };
             }
             return {

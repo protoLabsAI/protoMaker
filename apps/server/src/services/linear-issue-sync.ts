@@ -259,6 +259,130 @@ export class LinearIssueSync {
     }
   }
 
+  async onFeatureDeleted(payload: FeatureEventPayload): Promise<void> {
+    const { featureId, projectPath } = payload;
+    const feature = payload.feature;
+
+    // Guard: skip if feature has no linked Linear issue
+    if (!feature?.linearIssueId) return;
+
+    if (!this.guards.shouldSync(featureId)) return;
+
+    const syncEnabled = await this.guards.isProjectSyncEnabled(projectPath);
+    if (!syncEnabled) {
+      logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    if (!this.settingsService) {
+      logger.error('SettingsService not initialized');
+      return;
+    }
+
+    this.guards.markSyncing(featureId);
+    const startTime = Date.now();
+
+    try {
+      const settings = await this.settingsService.getProjectSettings(projectPath);
+      const teamId = settings.integrations?.linear?.teamId;
+
+      if (teamId) {
+        try {
+          const canceledStateId = await this.getWorkflowStateId(projectPath, teamId, 'Canceled');
+          const linearAccessToken = await this.resolveLinearToken(projectPath);
+
+          const mutation = `
+            mutation UpdateIssue($id: String!, $stateId: String!) {
+              issueUpdate(id: $id, input: { stateId: $stateId }) {
+                success
+                issue { id state { name } }
+              }
+            }
+          `;
+
+          const variables = { id: feature.linearIssueId, stateId: canceledStateId };
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+          try {
+            const response = await fetch('https://api.linear.app/graphql', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: this.formatLinearAuth(linearAccessToken),
+              },
+              body: JSON.stringify({ query: mutation, variables }),
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
+            }
+
+            const result = (await response.json()) as {
+              data?: {
+                issueUpdate?: {
+                  success: boolean;
+                  issue?: { id: string; state?: { name: string } };
+                };
+              };
+              errors?: Array<{ message: string }>;
+            };
+
+            if (result.errors) {
+              throw new Error(
+                `Linear GraphQL error: ${result.errors.map((e) => e.message).join(', ')}`
+              );
+            }
+
+            if (!result.data?.issueUpdate?.success) {
+              throw new Error('Failed to update Linear issue status');
+            }
+
+            logger.info(`Moved Linear issue ${feature.linearIssueId} to Canceled`);
+          } catch (err) {
+            clearTimeout(timeoutId);
+            throw err;
+          }
+        } catch (err) {
+          logger.warn(
+            `[LinearIssueSync] No 'Canceled' state found or failed to update issue ${feature.linearIssueId}; skipping state change`
+          );
+        }
+      } else {
+        logger.warn(
+          `[LinearIssueSync] No team ID configured for project ${projectPath}; skipping state change`
+        );
+      }
+
+      await this.addCommentToIssue(
+        projectPath,
+        feature.linearIssueId,
+        'Feature was deleted from the Automaker board.'
+      );
+
+      this.guards.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
+
+      logger.info(
+        `Successfully synced deletion for feature ${featureId} to Linear issue ${feature.linearIssueId}`
+      );
+    } catch (error) {
+      logger.error(`[LinearIssueSync] Failed to sync deletion for ${featureId}:`, error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.guards.recordOperation(
+        featureId,
+        'push',
+        'error',
+        Date.now() - startTime,
+        false,
+        errorMsg
+      );
+    } finally {
+      this.guards.unmarkSyncing(featureId);
+    }
+  }
+
   async onPRMerged(payload: FeatureEventPayload): Promise<void> {
     const { featureId, projectPath, prUrl, prNumber, mergedBy } = payload;
 

@@ -158,6 +158,8 @@ export class LinearSyncService {
       await this.issueSync.onFeatureCreated(payload as FeatureEventPayload);
     } else if (type === 'feature:status-changed') {
       await this.issueSync.onFeatureStatusChanged(payload as FeatureEventPayload);
+    } else if (type === 'feature:deleted') {
+      await this.issueSync.onFeatureDeleted(payload as FeatureEventPayload);
     } else if (type === 'feature:pr-merged') {
       await this.issueSync.onPRMerged(payload as FeatureEventPayload);
     } else if (type === 'project:scaffolded') {

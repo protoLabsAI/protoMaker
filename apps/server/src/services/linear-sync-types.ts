@@ -6,6 +6,7 @@
  * this single source of truth.
  */
 
+import type { Feature } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -82,6 +83,8 @@ export interface FeatureEventPayload {
   mergeCommitSha?: string;
   mergedBy?: string;
   error?: string;
+  /** Full feature object snapshot (required for feature:deleted, pre-deletion) */
+  feature?: Feature;
 }
 
 /** Project scaffolded event payload structure */
