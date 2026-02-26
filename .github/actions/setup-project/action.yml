@@ -73,6 +73,18 @@ runs:
       # Build shared packages (types, utils, platform, etc.) before apps can use them
       run: npm run build:packages
 
+    - name: Install native build tools
+      if: inputs.skip-native-rebuild != 'true' && runner.os == 'Linux'
+      shell: bash
+      # Ensure make/g++ are available for node-gyp native compilation.
+      # Some self-hosted runner containers (especially lightweight ones) omit
+      # build-essential. node-pty falls back to compiling from source when
+      # prebuilds are missing, which requires make.
+      run: |
+        if ! command -v make &>/dev/null; then
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends build-essential
+        fi
+
     - name: Rebuild native modules (root)
       if: inputs.skip-native-rebuild != 'true' && inputs.rebuild-node-pty-path == ''
       shell: bash
