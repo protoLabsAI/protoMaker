@@ -12,6 +12,7 @@ import * as BetterSqlite3 from 'better-sqlite3';
 import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '@protolabs-ai/utils';
 import { EmbeddingService } from './embedding-service.js';
+import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 
 const logger = createLogger('KnowledgeEmbeddingOrchestrator');
 
@@ -54,45 +55,69 @@ export class KnowledgeEmbeddingOrchestrator {
         return;
       }
 
+      // Langfuse span for embedding batch observability
+      const _spanStartTime = new Date();
+      const _langfuse = getLangfuseInstance();
+      const _spanTraceId = `knowledge-embedding-${Date.now()}`;
+      const _embeddingModel = 'all-MiniLM-L6-v2';
+      _langfuse.createTrace({
+        id: _spanTraceId,
+        name: 'knowledge:embedding_batch',
+        tags: ['knowledge-embedding'],
+      });
+      const _span = _langfuse.createSpan({
+        traceId: _spanTraceId,
+        name: 'knowledge:embedding_batch',
+        input: { chunk_count: chunksToEmbed.length, model: _embeddingModel },
+        startTime: _spanStartTime,
+      });
+
       logger.info(`Starting background embedding for ${chunksToEmbed.length} chunks`);
 
       // Process chunks one by one
       let processed = 0;
-      for (const chunk of chunksToEmbed) {
-        try {
-          // Combine heading and content
-          const text = chunk.heading ? `${chunk.heading} ${chunk.content}` : chunk.content;
+      try {
+        for (const chunk of chunksToEmbed) {
+          try {
+            // Combine heading and content
+            const text = chunk.heading ? `${chunk.heading} ${chunk.content}` : chunk.content;
 
-          // Generate embedding
-          const embedding = await this.embeddingService.embed(text);
+            // Generate embedding
+            const embedding = await this.embeddingService.embed(text);
 
-          // Convert Float32Array to Buffer for BLOB storage
-          const buffer = Buffer.from(embedding.buffer);
+            // Convert Float32Array to Buffer for BLOB storage
+            const buffer = Buffer.from(embedding.buffer);
 
-          // Insert or replace embedding in the embeddings table
-          db.prepare(
-            `INSERT OR REPLACE INTO embeddings (chunk_id, embedding, model, created_at)
+            // Insert or replace embedding in the embeddings table
+            db.prepare(
+              `INSERT OR REPLACE INTO embeddings (chunk_id, embedding, model, created_at)
              VALUES (?, ?, ?, datetime('now'))`
-          ).run(chunk.id, buffer, 'all-MiniLM-L6-v2');
+            ).run(chunk.id, buffer, _embeddingModel);
 
-          processed++;
+            processed++;
 
-          // Log progress every 10 chunks
-          if (processed % 10 === 0) {
-            logger.debug(`Embedded ${processed}/${chunksToEmbed.length} chunks`);
+            // Log progress every 10 chunks
+            if (processed % 10 === 0) {
+              logger.debug(`Embedded ${processed}/${chunksToEmbed.length} chunks`);
+            }
+          } catch (error) {
+            logger.warn(`Failed to embed chunk ${chunk.id}:`, error);
+            // Continue with next chunk
           }
-        } catch (error) {
-          logger.warn(`Failed to embed chunk ${chunk.id}:`, error);
-          // Continue with next chunk
         }
+
+        logger.info(
+          `Background embedding completed: ${processed}/${chunksToEmbed.length} chunks embedded`
+        );
+
+        // Start HyPE background worker after embeddings complete
+        void this.runBackgroundHype(db);
+      } finally {
+        _span?.end({
+          output: { processed_count: processed, total_count: chunksToEmbed.length },
+          metadata: { model: _embeddingModel, duration_ms: Date.now() - _spanStartTime.getTime() },
+        });
       }
-
-      logger.info(
-        `Background embedding completed: ${processed}/${chunksToEmbed.length} chunks embedded`
-      );
-
-      // Start HyPE background worker after embeddings complete
-      void this.runBackgroundHype(db);
     } catch (error) {
       logger.error('Background embedding failed:', error);
     }
