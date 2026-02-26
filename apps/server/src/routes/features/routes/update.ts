@@ -21,7 +21,7 @@ import { createLogger } from '@protolabs-ai/utils';
 const logger = createLogger('features/update');
 
 // Statuses that should trigger syncing to app_spec.txt
-const SYNC_TRIGGER_STATUSES: FeatureStatus[] = ['verified', 'done'];
+const SYNC_TRIGGER_STATUSES: FeatureStatus[] = ['done'];
 
 export function createUpdateHandler(
   featureLoader: FeatureLoader,
@@ -185,7 +185,7 @@ export function createUpdateHandler(
       if (
         newStatus &&
         previousStatus !== newStatus &&
-        (newStatus === 'done' || newStatus === 'verified' || newStatus === 'review') &&
+        (newStatus === 'done' || newStatus === 'review') &&
         events
       ) {
         events.emit('feature:status-changed', {
