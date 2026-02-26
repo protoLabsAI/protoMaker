@@ -9,7 +9,7 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabs-ai/utils';
-import { getFeatureDir } from '@protolabs-ai/platform';
+import { getAutomakerDir, getFeatureDir } from '@protolabs-ai/platform';
 import type { EventType } from '@protolabs-ai/types';
 import type {
   ProcessorServiceContext,
@@ -180,14 +180,54 @@ export class ExecuteProcessor implements StateProcessor {
         const reflections: string[] = [];
         const fs = await import('node:fs/promises');
         for (const sib of recent) {
+          // Try structured facts.json from trajectory directory first
+          let usedFacts = false;
           try {
-            const content = await fs.readFile(
-              path.join(getFeatureDir(ctx.projectPath, sib.id), 'reflection.md'),
-              'utf-8'
+            const factsPath = path.join(
+              getAutomakerDir(ctx.projectPath),
+              'trajectory',
+              sib.id,
+              'facts.json'
             );
-            if (content.trim()) reflections.push(content.trim());
+            const factsContent = await fs.readFile(factsPath, 'utf-8');
+            const parsed = JSON.parse(factsContent) as {
+              facts: Array<{ category: string; confidence: number; content: string }>;
+            };
+            const qualified = (parsed.facts ?? [])
+              .filter((f) => typeof f.confidence === 'number' && f.confidence >= 0.7)
+              .sort((a, b) => b.confidence - a.confidence)
+              .slice(0, 10);
+            if (qualified.length > 0) {
+              const byCategory = new Map<string, Array<{ confidence: number; content: string }>>();
+              for (const fact of qualified) {
+                const cat = fact.category || 'general';
+                if (!byCategory.has(cat)) byCategory.set(cat, []);
+                byCategory.get(cat)!.push({ confidence: fact.confidence, content: fact.content });
+              }
+              const lines: string[] = [];
+              for (const [cat, catFacts] of byCategory) {
+                lines.push(`#### ${cat}`);
+                for (const { confidence, content } of catFacts) {
+                  lines.push(`- [${Math.round(confidence * 100)}%] ${content}`);
+                }
+              }
+              reflections.push(lines.join('\n'));
+              usedFacts = true;
+            }
           } catch {
-            /* no reflection yet */
+            /* no facts.json — fall through to reflection.md */
+          }
+
+          if (!usedFacts) {
+            try {
+              const content = await fs.readFile(
+                path.join(getFeatureDir(ctx.projectPath, sib.id), 'reflection.md'),
+                'utf-8'
+              );
+              if (content.trim()) reflections.push(content.trim());
+            } catch {
+              /* no reflection yet */
+            }
           }
         }
         if (reflections.length > 0) {
