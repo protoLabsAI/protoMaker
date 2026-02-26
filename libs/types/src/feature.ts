@@ -197,6 +197,14 @@ export interface Feature {
    */
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
   /**
+   * Feature type — determines the execution path in auto-mode and LeadEngineer.
+   * - 'code' (default): Standard engineering feature executed by the code agent.
+   * - 'content': GTM content piece executed via the GTM execution path (GtmExecuteProcessor).
+   *   Content features are routed through leadEngineerService and must not be launched
+   *   with the standard code agent.
+   */
+  featureType?: 'code' | 'content';
+  /**
    * Marks this feature as foundational infrastructure (e.g., package scaffold,
    * directory structure, base types). Features that depend on a foundation feature
    * will NOT start until the foundation reaches 'done' (PR merged to main).
