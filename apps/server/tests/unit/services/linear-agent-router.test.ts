@@ -364,4 +364,67 @@ describe('LinearAgentRouter', () => {
       );
     });
   });
+
+  describe('session cleanup', () => {
+    it('removes session metadata when linear:agent-session:removed fires', () => {
+      let capturedSubscriber: ((type: string, payload: unknown) => void) | undefined;
+      const captureEvents = {
+        subscribe: vi.fn((cb: (type: string, payload: unknown) => void) => {
+          capturedSubscriber = cb;
+          return vi.fn();
+        }),
+        emit: vi.fn(),
+      };
+
+      const cleanupRouter = new LinearAgentRouter(
+        captureEvents as never,
+        mockRegistry as never,
+        createMockLinearAgentService() as never,
+        createMockSettingsService() as never,
+        '/test/project'
+      );
+
+      cleanupRouter.start();
+
+      // Inject a tracked session (simulates what handleSessionCreated does)
+      (cleanupRouter as any).sessionMeta.set('session-abc', {
+        routing: { resolvedAgent: 'ava', tier: 'explicit', reasoning: 'test' },
+        model: 'claude-sonnet-4-5-20250929',
+        issueContext: createIssueContext(),
+        turnCount: 1,
+      });
+
+      expect((cleanupRouter as any).sessionMeta.has('session-abc')).toBe(true);
+
+      // Fire the removed event
+      capturedSubscriber!('linear:agent-session:removed', { sessionId: 'session-abc' });
+
+      expect((cleanupRouter as any).sessionMeta.has('session-abc')).toBe(false);
+      expect((cleanupRouter as any).sessionMeta.size).toBe(0);
+    });
+
+    it('clears all session metadata when stop() is called', () => {
+      router.start();
+
+      // Inject multiple active sessions
+      (router as any).sessionMeta.set('session-1', {
+        routing: { resolvedAgent: 'ava', tier: 'explicit', reasoning: 'test' },
+        model: 'claude-sonnet-4-5-20250929',
+        issueContext: createIssueContext(),
+        turnCount: 1,
+      });
+      (router as any).sessionMeta.set('session-2', {
+        routing: { resolvedAgent: 'matt', tier: 'label', reasoning: 'label match' },
+        model: 'claude-haiku-4-5-20251001',
+        issueContext: createIssueContext(),
+        turnCount: 2,
+      });
+
+      expect((router as any).sessionMeta.size).toBe(2);
+
+      router.stop();
+
+      expect((router as any).sessionMeta.size).toBe(0);
+    });
+  });
 });
