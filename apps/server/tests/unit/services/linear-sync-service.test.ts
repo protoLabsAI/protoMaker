@@ -1618,6 +1618,7 @@ describe('LinearSyncService', () => {
             syncOnFeatureCreate: true,
             syncOnStatusChange: true,
             commentOnCompletion: true,
+            enableProjectUpdates: true,
           },
         },
       });

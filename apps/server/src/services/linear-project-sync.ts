@@ -84,6 +84,14 @@ export class LinearProjectSync {
       return;
     }
 
+    const enableSettings = await this.settingsService.getProjectSettings(projectPath);
+    if (!enableSettings.integrations?.linear?.enableProjectUpdates) {
+      logger.debug(
+        `Linear project updates disabled for project ${projectPath}, skipping scaffold sync`
+      );
+      return;
+    }
+
     const startTime = Date.now();
 
     try {
@@ -217,6 +225,14 @@ export class LinearProjectSync {
     const syncEnabled = await this.guards.isProjectSyncEnabled(projectPath);
     if (!syncEnabled) {
       logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    const syncSettings = await this.settingsService.getProjectSettings(projectPath);
+    if (!syncSettings.integrations?.linear?.enableProjectUpdates) {
+      logger.debug(
+        `Linear project updates disabled for project ${projectPath}, skipping status sync`
+      );
       return;
     }
 

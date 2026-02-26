@@ -108,7 +108,7 @@ export class LinearProjectUpdateService {
       const linearConfig = settings.integrations?.linear;
 
       if (!linearConfig?.enabled || !linearConfig.projectId) return false;
-      if (linearConfig.enableProjectUpdates === false) return false;
+      if (!linearConfig.enableProjectUpdates) return false;
 
       // Check for any valid token source
       const hasToken =
