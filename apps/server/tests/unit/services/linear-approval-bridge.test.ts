@@ -230,6 +230,87 @@ describe('LinearApprovalBridge', () => {
     expect(createdDescription).toContain('Backend');
   });
 
+  describe('changes-requested handling', () => {
+    it('blocks board feature when linear:changes-requested:detected fires', async () => {
+      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValueOnce({
+        id: 'feature-existing-456',
+        title: 'Existing feature',
+        status: 'in_progress',
+      } as any);
+
+      bridge.start();
+
+      events.emit('linear:changes-requested:detected', {
+        issueId: 'issue-cr-001',
+        identifier: 'ENG-100',
+        title: 'Feature needing changes',
+        approvalState: 'Changes Requested',
+        detectedAt: new Date().toISOString(),
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(featureLoader.findByLinearIssueId).toHaveBeenCalledWith(
+        expect.any(String),
+        'issue-cr-001'
+      );
+
+      expect(featureLoader.update).toHaveBeenCalledWith(
+        expect.any(String),
+        'feature-existing-456',
+        expect.objectContaining({
+          status: 'blocked',
+          statusChangeReason: 'Linear: Changes Requested',
+        })
+      );
+
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:blocked',
+        expect.objectContaining({
+          featureId: 'feature-existing-456',
+          reason: 'Linear: Changes Requested',
+          issueId: 'issue-cr-001',
+          identifier: 'ENG-100',
+          blockedAt: expect.any(String),
+        })
+      );
+    });
+
+    it('skips block when no board feature exists for Linear issue', async () => {
+      vi.mocked(featureLoader.findByLinearIssueId).mockResolvedValueOnce(null);
+
+      bridge.start();
+
+      events.emit('linear:changes-requested:detected', {
+        issueId: 'issue-no-feature',
+        title: 'Unknown issue',
+        approvalState: 'Changes Requested',
+        detectedAt: new Date().toISOString(),
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(featureLoader.update).not.toHaveBeenCalled();
+      expect(events.emit).not.toHaveBeenCalledWith('feature:blocked', expect.anything());
+    });
+
+    it('does not process changes-requested when stopped', async () => {
+      bridge.start();
+      bridge.stop();
+
+      events.emit('linear:changes-requested:detected', {
+        issueId: 'issue-stopped',
+        title: 'Should not process',
+        approvalState: 'Changes Requested',
+        detectedAt: new Date().toISOString(),
+      } as ApprovalContext);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(featureLoader.findByLinearIssueId).not.toHaveBeenCalled();
+    });
+  });
+
   describe('agent classification and assignment', () => {
     const mockClassify = vi.mocked(classifyFeature);
 
