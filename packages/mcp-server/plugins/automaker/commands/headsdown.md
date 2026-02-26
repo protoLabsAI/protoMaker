@@ -549,7 +549,6 @@ backlog -> in_progress -> review -> done
               v             v
            blocked <--------+
 
-           (verified = Ralph terminal state)
 ```
 
 ### Complexity Escalation

@@ -32,7 +32,6 @@ const SERVICE_PREFIXES: Record<string, string> = {
   'github:': 'github',
   'linear:': 'linear',
   'discord:': 'discord',
-  'ralph:': 'ralph',
   'signal:': 'signal-intake',
   'project:': 'projects',
   'lead-engineer:': 'lead-engineer',

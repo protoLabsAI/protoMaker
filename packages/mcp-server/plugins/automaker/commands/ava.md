@@ -52,13 +52,6 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__submit_prd
   - mcp__plugin_automaker_automaker__get_briefing
   - mcp__plugin_automaker_automaker__setup_lab
-  # Ralph loops
-  - mcp__plugin_automaker_automaker__start_ralph_loop
-  - mcp__plugin_automaker_automaker__stop_ralph_loop
-  - mcp__plugin_automaker_automaker__pause_ralph_loop
-  - mcp__plugin_automaker_automaker__resume_ralph_loop
-  - mcp__plugin_automaker_automaker__get_ralph_status
-  - mcp__plugin_automaker_automaker__list_running_ralph_loops
   # Skills
   - mcp__plugin_automaker_automaker__list_skills
   - mcp__plugin_automaker_automaker__get_skill

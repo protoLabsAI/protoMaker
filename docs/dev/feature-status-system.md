@@ -1,15 +1,13 @@
 # Feature Status System
 
-## Canonical 6-Status Flow
+## Canonical 5-Status Flow
 
-protoLabs uses a consolidated 6-status system for all features:
+protoLabs uses a consolidated 5-status system for all features:
 
 ```
 backlog → in_progress → review → done
              ↓           ↓
           blocked ← ← ← ┘
-
-          (verified = Ralph terminal state)
 ```
 
 ### Status Definitions
@@ -21,7 +19,6 @@ backlog → in_progress → review → done
 | **review**      | PR created, under review | After git workflow creates PR                 |
 | **blocked**     | Temporary halt           | Dependency issues, failures, or manual blocks |
 | **done**        | PR merged, work complete | After PR is merged to main                    |
-| **verified**    | Quality checks passed    | Ralph autonomous verification loops           |
 
 ### Legacy Status Migration
 
@@ -35,6 +32,7 @@ The system automatically normalizes legacy status values:
 | `completed`        | `done`           |
 | `waiting_approval` | `done`           |
 | `failed`           | `blocked`        |
+| `verified`         | `done`           |
 
 **Migration is automatic** - The feature-loader normalizes statuses on read, so no manual migration is required.
 
@@ -71,16 +69,15 @@ This ensures all features use canonical statuses throughout the system.
 
 ### UI Columns
 
-The UI displays 6 columns (excluding pipeline steps):
+The UI displays 5 columns (excluding pipeline steps):
 
 1. **Backlog** - Gray
 2. **In Progress** - Yellow
 3. **Review** - Blue
 4. **Blocked** - Red
 5. **Done** - Green
-6. **Verified** - Green (brighter)
 
-CSS variables: `--status-backlog`, `--status-in-progress`, `--status-review`, `--status-blocked`, `--status-done`, `--status-success` (verified)
+CSS variables: `--status-backlog`, `--status-in-progress`, `--status-review`, `--status-blocked`, `--status-done`
 
 ### Auto-Mode Selection
 
@@ -90,7 +87,7 @@ Auto-mode picks up features with `status === 'backlog'`:
 const isEligibleStatus = feature.status === 'backlog';
 ```
 
-Features in `review`, `done`, or `verified` are not eligible for auto-execution.
+Features in `review` or `done` are not eligible for auto-execution.
 
 ### Foundation Dependencies
 
@@ -108,8 +105,8 @@ This prevents the "18-PR cascade problem" where multiple agents scaffold the sam
 - Phase 1 of each milestone in project orchestration gets `isFoundation: true`
 - Can be set manually via MCP `create_feature` / `update_feature` tools
 
-**Statuses that satisfy a foundation dependency:** `done`, `completed`, `verified`
-**Statuses that satisfy a normal dependency:** `done`, `completed`, `verified`, `review`
+**Statuses that satisfy a foundation dependency:** `done`, `completed`
+**Statuses that satisfy a normal dependency:** `done`, `completed`, `review`
 
 ## Backwards Compatibility
 
@@ -122,10 +119,10 @@ Legacy statuses are fully supported:
 
 ## Testing
 
-Unit tests verify normalization for all 14 cases:
+Unit tests verify normalization for all cases:
 
-- 6 canonical statuses (passthrough)
-- 6 legacy statuses (migration)
+- 5 canonical statuses (passthrough)
+- Legacy statuses (migration)
 - Undefined status (default to backlog)
 - Unknown status (warn + default to backlog)
 
@@ -133,7 +130,7 @@ Additionally, tests verify telemetry callback invocation for metrics.
 
 ## Benefits
 
-1. **Single Source of Truth** - 6 canonical values, no overlapping semantics
+1. **Single Source of Truth** - 5 canonical values, no overlapping semantics
 2. **Clear Flow** - Unambiguous progression from backlog to done
 3. **Defensive** - Automatic normalization prevents invalid states
 4. **Backwards Compatible** - No migration required, works transparently
@@ -153,7 +150,7 @@ interface Feature {
 }
 ```
 
-When a git workflow step (commit, push, PR creation) fails, the error is persisted to `feature.json`. The feature status remains unchanged (e.g., stays `verified`). This makes git failures visible in the UI without disrupting the state machine.
+When a git workflow step (commit, push, PR creation) fails, the error is persisted to `feature.json`. The feature status remains unchanged. This makes git failures visible in the UI without disrupting the state machine.
 
 ## Status Change Events
 
@@ -162,7 +159,7 @@ When a git workflow step (commit, push, PR creation) fails, the error is persist
 | Event                    | When                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
 | `feature:status-changed` | Every status transition (carries `previousStatus` and `newStatus`) |
-| `feature:completed`      | Feature reaches `verified` or `done`                               |
+| `feature:completed`      | Feature reaches `done`                                             |
 | `feature:error`          | Feature reaches `failed` or `blocked`                              |
 
 These events drive downstream integrations: Langfuse scoring, ceremony triggers, UI real-time updates.

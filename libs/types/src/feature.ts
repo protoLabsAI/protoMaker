@@ -4,7 +4,6 @@
 
 import type { PlanningMode, ThinkingLevel, GitWorkflowSettings } from './settings.js';
 import type { ReasoningEffort } from './provider.js';
-import type { FeatureRalphConfig } from './ralph.js';
 import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
 import type { ReviewThreadFeedback, PendingFeedback } from './coderabbit.js';
@@ -183,8 +182,6 @@ export interface Feature {
   summary?: string;
   startedAt?: string;
   descriptionHistory?: DescriptionHistoryEntry[]; // History of description changes
-  // Ralph mode - persistent retry loops with external verification
-  ralphConfig?: FeatureRalphConfig;
   /** Override global git workflow settings for this specific feature */
   /** Per-feature git workflow settings (overrides global settings) */
   gitWorkflow?: Partial<GitWorkflowSettings>;
@@ -488,20 +485,19 @@ export interface Feature {
 }
 
 /**
- * Canonical feature status values (6 statuses)
+ * Canonical feature status values (5 statuses)
  * Strategic decision: Single source of truth for all feature states
  *
  * Flow: backlog → in_progress → review → done
  *                      ↓           ↓
  *                   blocked ← ← ← ┘
  *
- * (verified = Ralph terminal state, autonomous loops)
- *
  * @deprecated Legacy values (auto-migrated):
  * - pending, ready → backlog
  * - running → in_progress
  * - completed, waiting_approval → done
  * - failed → blocked
+ * - verified → done
  */
 export type FeatureStatus =
   | 'backlog' // Queued, ready to start (consolidates: pending, ready)
@@ -509,7 +505,6 @@ export type FeatureStatus =
   | 'review' // PR created, under review
   | 'blocked' // Temporary halt (dependency/issue/failure - consolidates: failed)
   | 'done' // PR merged, work complete (consolidates: completed, waiting_approval)
-  | 'verified' // Quality checks passed (Ralph autonomous loops)
   | 'interrupted'; // Server shut down while feature was running
 
 /**
@@ -553,7 +548,6 @@ export function normalizeFeatureStatus(
     'review',
     'blocked',
     'done',
-    'verified',
     'interrupted',
   ];
   if (canonical.includes(status as FeatureStatus)) {
@@ -572,6 +566,7 @@ export function normalizeFeatureStatus(
       break;
     case 'completed':
     case 'waiting_approval':
+    case 'verified':
       normalized = 'done';
       break;
     case 'failed':

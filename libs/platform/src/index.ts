@@ -48,11 +48,6 @@ export {
   getIdeationDraftsDir,
   getIdeationAnalysisPath,
   ensureIdeationDir,
-  // Ralph loop paths (persistent retry with external verification)
-  getRalphDir,
-  getRalphStatePath,
-  getRalphProgressPath,
-  ensureRalphDir,
 } from './paths.js';
 
 // Project orchestration paths (from paths.js - unique exports)

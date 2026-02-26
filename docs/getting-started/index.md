@@ -111,14 +111,13 @@ For the complete pipeline reference, see [Idea to Production](../dev/idea-to-pro
 
 Features are units of work on the Kanban board. Each has a status:
 
-| Status        | Meaning                             |
-| ------------- | ----------------------------------- |
-| `backlog`     | Queued, ready to start              |
-| `in_progress` | Being worked on by an agent         |
-| `review`      | PR created, under review            |
-| `blocked`     | Temporarily halted                  |
-| `done`        | PR merged, work complete            |
-| `verified`    | Quality checks passed (Ralph loops) |
+| Status        | Meaning                     |
+| ------------- | --------------------------- |
+| `backlog`     | Queued, ready to start      |
+| `in_progress` | Being worked on by an agent |
+| `review`      | PR created, under review    |
+| `blocked`     | Temporarily halted          |
+| `done`        | PR merged, work complete    |
 
 ### Agents
 

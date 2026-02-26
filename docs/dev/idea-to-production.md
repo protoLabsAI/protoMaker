@@ -257,7 +257,6 @@ backlog → in_progress → review → done
              ↓           ↓
           blocked ← ← ← ┘
 
-          (verified = Ralph terminal state)
 ```
 
 ### Pipeline phase to status mapping
@@ -280,7 +279,7 @@ Defined in `libs/dependency-resolver/src/resolver.ts`. Uses Kahn's algorithm wit
 
 **Foundation dependencies** (`isFoundation: true`) require the dependency to be `done` (merged to main).
 
-**Standard dependencies** allow `review`, `done`, or `verified` — work can start once the dependency has a PR up.
+**Standard dependencies** allow `review` or `done` — work can start once the dependency has a PR up.
 
 ## Linear integration
 

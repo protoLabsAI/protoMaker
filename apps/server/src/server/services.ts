@@ -27,7 +27,6 @@ import { getActionableItemService } from '../services/actionable-item-service.js
 import { ActionableItemBridgeService } from '../services/actionable-item-bridge-service.js';
 import { getEventHistoryService } from '../services/event-history-service.js';
 import { getBriefingCursorService } from '../services/briefing-cursor-service.js';
-import { RalphLoopService } from '../services/ralph-loop-service.js';
 import { getSchedulerService } from '../services/scheduler-service.js';
 import { getHealthMonitorService } from '../services/health-monitor-service.js';
 import { GraphiteSyncScheduler } from '../services/graphite-sync-scheduler.js';
@@ -164,9 +163,6 @@ export interface ServiceContainer {
 
   // Ava Gateway
   avaGatewayService: ReturnType<typeof getAvaGatewayService>;
-
-  // Ralph
-  ralphLoopService: RalphLoopService;
 
   // Integration registry
   integrationRegistryService: IntegrationRegistryService;
@@ -326,8 +322,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     healthMonitorService
   );
-  const ralphLoopService = new RalphLoopService(events, autoModeService, settingsService);
-
   // Role Registry (shared agent template registry)
   const roleRegistryService = new RoleRegistryService(events);
   try {
@@ -686,7 +680,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     knowledgeStoreService,
     escalationRouter,
     avaGatewayService,
-    ralphLoopService,
     integrationRegistryService,
     antagonisticReviewService,
     devServerService,

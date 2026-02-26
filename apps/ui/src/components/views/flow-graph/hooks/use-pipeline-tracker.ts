@@ -39,10 +39,7 @@ const EVENT_STAGE_MAP: Partial<Record<EventType, PipelineStageId>> = {
   'github:pr:checks-updated': 'review',
   'pr:ci-failure': 'review',
 
-  // Done - completed (includes verification)
-  'ralph:verification_started': 'done',
-  'ralph:verification_completed': 'done',
-  'ralph:verified': 'done',
+  // Done - completed
   'feature:verified': 'done',
   'feature:completed': 'done',
   'feature:pr-merged': 'done',

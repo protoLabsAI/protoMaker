@@ -142,17 +142,6 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 | ------------ | ------------------------------------------------ |
 | `submit_prd` | Submit a PRD through the CoS pipeline for review |
 
-## Ralph Loops (6 tools)
-
-| Tool                       | Description                                |
-| -------------------------- | ------------------------------------------ |
-| `start_ralph_loop`         | Start a Ralph autonomous verification loop |
-| `stop_ralph_loop`          | Stop a running Ralph loop                  |
-| `pause_ralph_loop`         | Pause a Ralph loop                         |
-| `resume_ralph_loop`        | Resume a paused Ralph loop                 |
-| `get_ralph_status`         | Get Ralph loop status for a project        |
-| `list_running_ralph_loops` | List all active Ralph loops                |
-
 ## GitHub Operations (4 tools)
 
 | Tool                 | Description                          |
