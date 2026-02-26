@@ -1748,26 +1748,33 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Promotion Pipeline
     case 'list_staging_candidates':
-      return apiCall('/promotion/candidates', { status: args.status }, 'GET');
+      return apiCall(
+        '/promotions/candidates',
+        { projectPath: args.projectPath, status: args.status },
+        'GET'
+      );
 
     case 'create_promotion_batch':
-      return apiCall('/promotion/batches/create', {
+      return apiCall('/promotions/batch', {
+        projectPath: args.projectPath,
         candidateIds: args.candidateIds,
         batchId: args.batchId,
       });
 
     case 'promote_to_staging':
-      return apiCall('/promotion/promote-to-staging', {
+      return apiCall('/promotions/promote-to-staging', {
+        projectPath: args.projectPath,
         batchId: args.batchId,
       });
 
     case 'promote_to_main':
-      return apiCall('/promotion/promote-to-main', {
+      return apiCall('/promotions/promote-to-main', {
+        projectPath: args.projectPath,
         batchId: args.batchId,
       });
 
-    case 'get_promotion_status':
-      return apiCall('/promotion/status', {}, 'GET');
+    case 'list_promotion_batches':
+      return apiCall('/promotions/batches', {}, 'GET');
 
     default:
       throw new Error(`Unknown tool: ${name}`);
