@@ -191,7 +191,7 @@ spec-parser, pen-parser, tools, flows, llm-providers, observability
 apps/server, apps/ui
 ```
 
-📚 [Full Architecture Documentation](https://protolabs.studio/docs/development/architecture)
+📚 [Full Architecture Documentation](https://protolabs.studio/docs/architecture)
 
 ## Documentation
 
