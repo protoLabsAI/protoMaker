@@ -6,7 +6,9 @@
  * prompt assembly, output capture, error classification, and event emission.
  */
 
-import { createLogger, classifyError } from '@protolabs-ai/utils';
+import * as fsp from 'fs/promises';
+import * as path from 'path';
+import { createLogger, classifyError, listSkills, type SkillsFsModule } from '@protolabs-ai/utils';
 import {
   simpleQuery,
   streamingQuery,
@@ -14,6 +16,18 @@ import {
 } from '../providers/simple-query-service.js';
 import type { AgentConfig } from './agent-factory-service.js';
 import type { EventEmitter } from '../lib/events.js';
+
+const fsModule: SkillsFsModule = {
+  readFile: (p, enc) => fsp.readFile(p, enc as BufferEncoding) as Promise<string>,
+  writeFile: (p, c) => fsp.writeFile(p, c),
+  readdir: (p) => fsp.readdir(p),
+  stat: (p) => fsp.stat(p),
+  mkdir: async (p, opts) => {
+    await fsp.mkdir(p, opts);
+  },
+  unlink: (p) => fsp.unlink(p),
+  access: (p) => fsp.access(p),
+};
 
 const logger = createLogger('DynamicAgentExecutor');
 
@@ -69,7 +83,7 @@ export class DynamicAgentExecutor {
   async execute(config: AgentConfig, options: ExecuteOptions): Promise<ExecutionResult> {
     const startTime = Date.now();
 
-    const systemPrompt = this.buildSystemPrompt(config, options.additionalSystemPrompt);
+    const systemPrompt = await this.buildSystemPrompt(config, options.additionalSystemPrompt);
     const allowedTools = this.resolveTools(config);
 
     logger.info(
@@ -175,7 +189,10 @@ export class DynamicAgentExecutor {
   /**
    * Build the system prompt from template config + optional additions.
    */
-  private buildSystemPrompt(config: AgentConfig, additional?: string): string | undefined {
+  private async buildSystemPrompt(
+    config: AgentConfig,
+    additional?: string
+  ): Promise<string | undefined> {
     const parts: string[] = [];
 
     // Template's inline system prompt
@@ -217,6 +234,31 @@ export class DynamicAgentExecutor {
 
     if (constraints.length > 0) {
       parts.push('## Restrictions\n' + constraints.join('\n'));
+    }
+
+    // Available skills block — metadata only, no content loaded
+    if (config.projectPath) {
+      try {
+        const skills = await listSkills(config.projectPath, fsModule);
+        if (skills.length > 0) {
+          const lines: string[] = ['<available_skills>'];
+          for (const skill of skills) {
+            const skillPath = path.join('.automaker', 'skills', `${skill.name}.md`);
+            lines.push('  <skill>');
+            lines.push(`    <name>${skill.name}</name>`);
+            lines.push(`    <description>${skill.description}</description>`);
+            lines.push(`    <path>${skillPath}</path>`);
+            lines.push('  </skill>');
+          }
+          lines.push(
+            '  <instruction>When your task matches a skill above, read the full skill file via read_file before proceeding. Skills contain proven patterns and techniques for this project.</instruction>'
+          );
+          lines.push('</available_skills>');
+          parts.push(lines.join('\n'));
+        }
+      } catch {
+        // Skills loading is non-critical; continue without them
+      }
     }
 
     return parts.length > 0 ? parts.join('\n\n') : undefined;
