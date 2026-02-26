@@ -36,7 +36,10 @@ Each runner registers independently with GitHub. They appear as separate runners
 
 - Node.js v20+ (install via nvm: `nvm install --lts`)
 - `git`, `gh` CLI, `docker` installed on the host
+- `build-essential` (provides `make`, `gcc`, `g++`) — required for node-gyp native module compilation: `sudo apt-get install -y build-essential python3-dev`
 - A GitHub registration token from **Settings → Actions → Runners → New self-hosted runner**
+
+> **Note:** If `make` is missing the CI `setup-project` action will attempt to install `build-essential` automatically via `apt-get`, but this requires the runner user to have passwordless `sudo` access. It is strongly recommended to pre-install `build-essential` on every runner host to avoid per-job package installation overhead.
 
 ### Install a single runner
 

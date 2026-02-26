@@ -50,6 +50,17 @@ runs:
       # Use --force to allow platform-specific dev dependencies like dmg-license on non-darwin platforms
       run: npm install --ignore-scripts --force
 
+    - name: Install build tools (Linux)
+      if: inputs.skip-native-rebuild != 'true' && runner.os == 'Linux'
+      shell: bash
+      # Ensure make, gcc, and python3 are present for node-gyp native rebuilds.
+      # Some self-hosted runners (e.g. Proxmox LXC) ship without build-essential.
+      run: |
+        if ! command -v make &>/dev/null; then
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends build-essential python3-dev
+        fi
+
     - name: Install Linux native bindings
       if: inputs.skip-native-rebuild != 'true'
       shell: bash
