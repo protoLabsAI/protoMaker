@@ -172,3 +172,6 @@ export type { LintResult, LintWarning, LintError, LintSummary } from './lint.js'
 // Content generation prompts
 export { getOutlinePlannerPrompt } from './content/outline-planner.js';
 export type { OutlinePlannerConfig } from './content/outline-planner.js';
+
+// Lead Engineer prompts
+export { buildPlanPrompt } from './lead-engineer-prompts.js';
