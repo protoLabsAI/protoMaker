@@ -225,15 +225,7 @@ test.describe('Smoke Test: Platform-Specific Checks', () => {
     if (process.env.CI) {
       // In CI, verify against the runner OS
       const expectedPlatform =
-<<<<<<< HEAD
         process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux';
-=======
-        process.platform === 'darwin'
-          ? 'darwin'
-          : process.platform === 'win32'
-            ? 'win32'
-            : 'linux';
->>>>>>> c489b22a (feat: desktop app smoke tests for macOS, Windows, and Linux platforms)
       expect(platform).toBe(expectedPlatform);
     } else {
       // Local test, just verify it's a valid platform
