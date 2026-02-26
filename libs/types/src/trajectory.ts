@@ -6,6 +6,41 @@
  */
 
 /**
+ * Category of a trajectory fact
+ */
+export type TrajectoryFactCategory =
+  | 'pattern'
+  | 'gotcha'
+  | 'constraint'
+  | 'performance'
+  | 'decision';
+
+/**
+ * Structured fact extracted from agent output after a successful execution.
+ *
+ * Stored at: .automaker/trajectory/{featureId}/facts.json
+ */
+export interface TrajectoryFact {
+  /** Unique identifier (UUID) */
+  id: string;
+
+  /** The fact content extracted from agent output */
+  content: string;
+
+  /** Category classifying the type of knowledge */
+  category: TrajectoryFactCategory;
+
+  /** Confidence score (0-1); facts below 0.7 are filtered out before storage */
+  confidence: number;
+
+  /** Feature ID this fact belongs to */
+  featureId: string;
+
+  /** ISO timestamp when this fact was created */
+  createdAt: string;
+}
+
+/**
  * Feature domain categories for trajectory matching
  */
 export type TrajectoryDomain =

@@ -13,6 +13,7 @@ import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { SettingsService } from './settings-service.js';
+import type { FactStoreService } from './fact-store-service.js';
 
 // ────────────────────────── Budget / timing constants ──────────────────────────
 
@@ -37,6 +38,7 @@ export interface ProcessorServiceContext {
   contextFidelityService?: ContextFidelityService;
   knowledgeStoreService?: KnowledgeStoreService;
   settingsService?: SettingsService;
+  factStoreService?: FactStoreService;
 }
 
 // ────────────────────────── Feature State Machine Types ──────────────────────────
