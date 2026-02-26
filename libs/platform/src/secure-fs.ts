@@ -13,8 +13,13 @@
 import fs from 'fs/promises';
 import fsSync, { type Dirent, type Stats } from 'fs';
 import path from 'path';
-import pLimit from 'p-limit';
+import { createRequire } from 'module';
+import type { Limit } from 'p-limit';
 import { validatePath } from './security.js';
+
+// p-limit@2.3.0 is CJS; use createRequire for proper ESM→CJS interop in NodeNext mode
+const _require = createRequire(import.meta.url);
+const pLimit = _require('p-limit') as (concurrency: number) => Limit;
 
 /**
  * Configuration for file operation throttling
