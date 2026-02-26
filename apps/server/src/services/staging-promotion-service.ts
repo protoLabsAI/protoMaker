@@ -38,9 +38,7 @@ export class StagingPromotionService {
       );
       return false;
     }
-    logger.info(
-      `detectDevMerge: feature "${feature.id}" merged to dev with commit ${commitSha}`
-    );
+    logger.info(`detectDevMerge: feature "${feature.id}" merged to dev with commit ${commitSha}`);
     return true;
   }
 
@@ -85,9 +83,7 @@ export class StagingPromotionService {
       logger.info(`Updated existing promotion candidate for feature ${featureId}`);
     } else {
       candidates.push(candidate);
-      logger.info(
-        `Created promotion candidate for feature ${featureId} with commit ${commitSha}`
-      );
+      logger.info(`Created promotion candidate for feature ${featureId} with commit ${commitSha}`);
     }
 
     await atomicWriteJson(filePath, candidates);
