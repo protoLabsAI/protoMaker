@@ -48,6 +48,13 @@ export function mapLinearStateToAutomaker(stateName: string): string {
     return 'done';
   } else if (normalized.includes('blocked')) {
     return 'blocked';
+  } else if (normalized.includes('cancel') || normalized.includes('duplicate')) {
+    // Terminal states — must not recycle into backlog
+    return 'done';
+  } else if (normalized.includes('triage')) {
+    // Intentionally backlog, but log explicitly (not silent fallback)
+    logger.info(`Linear state "${stateName}" mapped to backlog (triage)`);
+    return 'backlog';
   } else {
     logger.warn(`Unknown Linear state: ${stateName}, defaulting to backlog`);
     return 'backlog';

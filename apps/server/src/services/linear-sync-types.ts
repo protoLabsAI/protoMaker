@@ -134,6 +134,7 @@ export interface SyncGuards {
     conflictDetected: boolean,
     error?: string
   ): void;
+  addCommentToIssue(projectPath: string, issueId: string, body: string): Promise<void>;
   emitter: EventEmitter | null;
 }
 
