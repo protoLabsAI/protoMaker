@@ -118,7 +118,6 @@ Features are units of work on the Kanban board. Each has a status:
 | `review`      | PR created, under review            |
 | `blocked`     | Temporarily halted                  |
 | `done`        | PR merged, work complete            |
-| `verified`    | Quality checks passed (Ralph loops) |
 
 ### Agents
 

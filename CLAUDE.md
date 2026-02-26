@@ -281,8 +281,6 @@ Automaker uses a canonical **6-status system** for all features:
 backlog → in_progress → review → done
              ↓           ↓
           blocked ← ← ← ┘
-
-          (verified = Ralph terminal state)
 ```
 
 **Status Definitions:**
@@ -291,8 +289,7 @@ backlog → in_progress → review → done
 - `in_progress` - Being worked on (consolidates: running)
 - `review` - PR created, under review
 - `blocked` - Temporary halt (consolidates: failed)
-- `done` - PR merged, work complete (consolidates: completed, waiting_approval)
-- `verified` - Quality checks passed (Ralph autonomous loops)
+- `done` - PR merged, work complete (consolidates: completed, waiting_approval, verified)
 
 **Migration:** Legacy statuses are automatically normalized on read by `FeatureLoader`. No manual migration required. See `docs/feature-status-system.md` for details.
 
