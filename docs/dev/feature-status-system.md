@@ -31,6 +31,7 @@ The system automatically normalizes legacy status values:
 | `running`          | `in_progress`    |
 | `completed`        | `done`           |
 | `waiting_approval` | `done`           |
+| `verified`         | `done`           |
 | `failed`           | `blocked`        |
 | `verified`         | `done`           |
 
@@ -122,7 +123,7 @@ Legacy statuses are fully supported:
 Unit tests verify normalization for all cases:
 
 - 5 canonical statuses (passthrough)
-- Legacy statuses (migration)
+- 7 legacy statuses (migration, including `verified` → `done`)
 - Undefined status (default to backlog)
 - Unknown status (warn + default to backlog)
 
