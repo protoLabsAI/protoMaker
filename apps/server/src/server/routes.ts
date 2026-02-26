@@ -55,7 +55,6 @@ import { createHITLFormRoutes } from '../routes/hitl-forms/index.js';
 import { createActionableItemsRoutes } from '../routes/actionable-items/index.js';
 import { createEventHistoryRoutes } from '../routes/event-history/index.js';
 import { createBriefingRoutes } from '../routes/briefing/index.js';
-import { createRalphRoutes } from '../routes/ralph/index.js';
 import { createSkillsRoutes } from '../routes/skills/index.js';
 import { createSchedulerRoutes } from '../routes/scheduler/index.js';
 import { createIntegrationRoutes } from '../routes/integrations/index.js';
@@ -123,7 +122,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     notificationService,
     hitlFormService,
     actionableItemService,
-    ralphLoopService,
     eventHistoryService,
     briefingCursorService,
     projectService,
@@ -327,7 +325,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/actionable-items',
     createActionableItemsRoutes(actionableItemService, settingsService)
   );
-  app.use('/api/ralph', createRalphRoutes(ralphLoopService));
   app.use('/api/skills', createSkillsRoutes());
   app.use('/api/event-history', createEventHistoryRoutes(eventHistoryService, settingsService));
   app.use(

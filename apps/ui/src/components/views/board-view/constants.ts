@@ -53,11 +53,6 @@ export const EMPTY_STATE_CONFIGS: Record<string, EmptyStateConfig> = {
     description: 'Features with merged PRs will appear here.',
     icon: 'check',
   },
-  verified: {
-    title: 'No Verified Features',
-    description: 'Features verified by Ralph will appear here.',
-    icon: 'check',
-  },
   // Legacy column (deprecated, but kept for backwards compatibility)
   waiting_approval: {
     title: 'No Items Awaiting Approval',
@@ -116,11 +111,6 @@ const END_COLUMNS: Column[] = [
     id: 'done',
     title: 'Done',
     colorClass: 'bg-[var(--status-done)]',
-  },
-  {
-    id: 'verified',
-    title: 'Verified',
-    colorClass: 'bg-[var(--status-success)]',
   },
 ];
 

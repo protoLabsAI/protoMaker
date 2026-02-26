@@ -600,39 +600,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         milestones: args.milestones,
       });
 
-    // Ralph Mode
-    case 'start_ralph_loop':
-      return apiCall('/ralph/start', {
-        projectPath: args.projectPath,
-        featureId: args.featureId,
-        config: args.config,
-      });
-
-    case 'stop_ralph_loop':
-      return apiCall('/ralph/stop', {
-        featureId: args.featureId,
-      });
-
-    case 'pause_ralph_loop':
-      return apiCall('/ralph/pause', {
-        featureId: args.featureId,
-      });
-
-    case 'resume_ralph_loop':
-      return apiCall('/ralph/resume', {
-        projectPath: args.projectPath,
-        featureId: args.featureId,
-      });
-
-    case 'get_ralph_status':
-      return apiCall('/ralph/status', {
-        projectPath: args.projectPath,
-        featureId: args.featureId,
-      });
-
-    case 'list_running_ralph_loops':
-      return apiCall('/ralph/list-running', {});
-
     // Utilities
     case 'setup_lab':
       return apiCall('/setup/project', {
