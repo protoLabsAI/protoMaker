@@ -370,9 +370,12 @@ export class LinearSyncService {
       // Automaker wins — push current Automaker state back to Linear
       if (this.featureLoader) {
         const feature = await this.featureLoader.get(projectPath, featureId);
-        const linearIssueId = feature?.linearIssueId;
-        if (feature && linearIssueId) {
-          await this.issueSync.updateIssueStatus(projectPath, linearIssueId, feature.status);
+        if (feature?.linearIssueId) {
+          await this.issueSync.updateIssueStatus(
+            projectPath,
+            feature.linearIssueId,
+            feature.status
+          );
           logger.info(
             `Conflict resolved for feature ${featureId}: Automaker state pushed to Linear`
           );
@@ -514,8 +517,10 @@ export class LinearSyncService {
     // Capture emitter reference for use in the getter closure.
     // Arrow functions below capture `this` lexically from the class method.
     const emitter = this.emitter;
-    // Use `self` so both `emitter` and `hitlFormService` getters stay live
-    // after setter injection (hitlFormService is set after initialize()).
+    // Use `self` so the hitlFormService getter stays live after setter injection
+    // (hitlFormService is injected after initialize()). Object literal getters
+    // bind `this` to the returned object, so we need a closure over the class instance.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     return {
       shouldSync: (id) => this.shouldSync(id),
