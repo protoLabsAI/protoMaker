@@ -83,10 +83,8 @@ async function main() {
 
   // Only emit signal when the session had enough exchanges to be worth evaluating
   if (userMessageCount >= 10) {
-    const toolsList =
-      toolsUsed.size > 0 ? [...toolsUsed].join(', ') : 'none recorded';
-    const filesList =
-      filesModified.size > 0 ? [...filesModified].join(', ') : 'none recorded';
+    const toolsList = toolsUsed.size > 0 ? [...toolsUsed].join(', ') : 'none recorded';
+    const filesList = filesModified.size > 0 ? [...filesModified].join(', ') : 'none recorded';
 
     process.stdout.write(
       `Session had ${userMessageCount} exchanges. Consider evaluating for extractable patterns: what worked, what failed, edge cases found. Save insights to .automaker/memory/patterns.md or gotchas.md.\n` +
