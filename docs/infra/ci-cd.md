@@ -4,16 +4,18 @@ protoLabs uses GitHub Actions for continuous integration and delivery. All workf
 
 ## Workflows Overview
 
-| Workflow                 | Trigger                   | Runner      | Purpose                 |
-| ------------------------ | ------------------------- | ----------- | ----------------------- |
-| `checks.yml`             | PR, push to main, weekly  | self-hosted | Format, lint, audit     |
-| `test.yml`               | PR, push to main          | self-hosted | Unit tests              |
-| `e2e-tests.yml`          | Push to main, manual      | self-hosted | End-to-end tests        |
-| `pr-check.yml`           | PR, push to main          | self-hosted | Build verification      |
-| `release.yml`            | Release published         | matrix      | Multi-platform builds   |
-| `deploy-staging.yml`     | Push to main, manual      | self-hosted | Auto-deploy staging     |
-| `generate-changelog.yml` | Release published, manual | self-hosted | AI changelog generation |
-| `linear-sync.yml`        | PR merged to main         | self-hosted | Linear issue sync       |
+| Workflow                 | Trigger                           | Runner      | Purpose                               |
+| ------------------------ | --------------------------------- | ----------- | ------------------------------------- |
+| `checks.yml`             | PR, push to main, weekly          | self-hosted | Format, lint, audit                   |
+| `test.yml`               | PR, push to main                  | self-hosted | Unit tests                            |
+| `e2e-tests.yml`          | Push to main, manual              | self-hosted | End-to-end tests                      |
+| `pr-check.yml`           | PR, push to main                  | self-hosted | Build verification                    |
+| `deploy-staging.yml`     | Push to staging, manual           | self-hosted | Auto-deploy staging                   |
+| `auto-release.yml`       | staging→main PR merged            | self-hosted | Version bump + tag + GitHub Release   |
+| `build-electron.yml`     | `v*` tag push                     | matrix      | Multi-platform Electron builds        |
+| `changeset-release.yml`  | Push to main (commit-msg guarded) | self-hosted | Changeset version PR (non-auto paths) |
+| `generate-changelog.yml` | Release published, manual         | self-hosted | AI changelog generation               |
+| `linear-sync.yml`        | PR merged to main                 | self-hosted | Linear issue sync                     |
 
 > **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
 
@@ -185,55 +187,53 @@ jobs:
 - Still validates the build process
 - Catches TypeScript errors, missing imports, etc.
 
-## Release Build (`release.yml`)
+## Auto Release (`auto-release.yml`)
 
-Builds Electron apps for all platforms when a release is published.
+Automatically cuts a version bump and GitHub Release whenever a `staging→main` PR is merged. The resulting `v*` tag triggers `build-electron.yml`.
 
-```yaml
-name: Release Build
+### Release Flow
 
-on:
-  release:
-    types: [published]
-
-jobs:
-  build:
-    strategy:
-      matrix:
-        os: [self-hosted, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: version
-        run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
-      - run: node apps/ui/scripts/update-version.mjs "${{ steps.version.outputs.version }}"
-      - uses: ./.github/actions/setup-project
-      # Platform-specific builds
-      - run: npm run build:electron:mac --workspace=apps/ui
-        if: matrix.os == 'macos-latest'
-      - run: npm run build:electron:win --workspace=apps/ui
-        if: matrix.os == 'windows-latest'
-      - run: npm run build:electron:linux --workspace=apps/ui
-        if: matrix.os == 'self-hosted'
+```
+staging → main PR merged
+    ↓
+auto-release.yml
+    ├── clean stale changesets (find .changeset -name '*.md' ! -name 'README.md' -delete)
+    ├── npm run release:prepare  (analyze commits since last tag → bump type)
+    ├── npm run changeset:version  (bump @protolabs-ai/* in lockstep, write CHANGELOG)
+    ├── git commit "chore: release vX.Y.Z" → pushed to main
+    └── git tag vX.Y.Z → pushed via GH_PAT
+                ↓
+        build-electron.yml fires (macOS, Linux, Windows in parallel)
+        → artifacts uploaded to GitHub Release
 ```
 
-> **Note:** Linux builds use `self-hosted` (not `ubuntu-latest`) since GitHub-hosted runner minutes are exhausted.
+### Token Requirement
 
-### Release Artifacts
+`auto-release.yml` uses `secrets.GH_PAT` (falls back to `GITHUB_TOKEN`) for the checkout and tag push. A PAT is required because GitHub's loop-prevention policy blocks `GITHUB_TOKEN`-triggered pushes from firing downstream workflow runs — without it, the `v*` tag won't trigger `build-electron.yml`.
 
-| Platform | Formats                     |
-| -------- | --------------------------- |
-| macOS    | `.dmg`, `.zip`              |
-| Windows  | `.exe`                      |
-| Linux    | `.AppImage`, `.deb`, `.rpm` |
+### Guard on `changeset-release.yml`
 
-### Creating a Release
+When `auto-release.yml` pushes the `chore: release vX.Y.Z` commit to main, `changeset-release.yml` would normally fire (it triggers on push to main). A commit-message guard prevents the double-release:
 
-1. Create and push a tag: `git tag v1.0.0 && git push origin v1.0.0`
-2. Create a GitHub Release from the tag
-3. The workflow builds and uploads artifacts
+```yaml
+if: >-
+  github.repository == 'proto-labs-ai/protoMaker' &&
+  !startsWith(github.event.head_commit.message, 'chore: release v')
+```
+
+## Electron Builds (`build-electron.yml`)
+
+Builds the Electron desktop app for all platforms on every `v*` tag push.
+
+| Platform | Runner           | Formats                     |
+| -------- | ---------------- | --------------------------- |
+| macOS    | `macos-latest`   | `.dmg`, `.zip`              |
+| Linux    | `self-hosted`    | `.AppImage`, `.deb`, `.rpm` |
+| Windows  | `windows-latest` | `.exe`                      |
+
+Each platform job builds independently, then `upload-release` waits for all three to finish before uploading artifacts to the GitHub Release.
+
+> **Note:** Linux uses `self-hosted` (not `ubuntu-latest`) — GitHub-hosted runner minutes are exhausted for large builds.
 
 ## Changelog Generation (`generate-changelog.yml`)
 
@@ -269,7 +269,7 @@ Automatically syncs Linear issues when PRs merge to main.
 
 ## Deploy Staging (`deploy-staging.yml`)
 
-Auto-deploys to the staging server when code merges to `main`. Includes agent draining, rollback support, and smoke tests.
+Auto-deploys to the staging server when code is pushed to the `staging` branch (i.e., when a `dev→staging` PR merges). Staging always runs staging-branch code — **not** main. Includes agent draining, rollback support, and smoke tests.
 
 ### Deployment Pipeline
 
@@ -348,12 +348,13 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 
 ## Secrets
 
-| Secret                   | Purpose                                     |
-| ------------------------ | ------------------------------------------- |
-| `GITHUB_TOKEN`           | Auto-provided, used for releases            |
-| `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments) |
-| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)         |
-| `LINEAR_API_TOKEN`       | Linear issue sync on PR merge               |
+| Secret                   | Purpose                                                                    |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `GITHUB_TOKEN`           | Auto-provided, used for releases                                           |
+| `GH_PAT`                 | PAT for `auto-release.yml` tag push (enables `build-electron.yml` trigger) |
+| `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments)                                |
+| `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)                                        |
+| `LINEAR_API_TOKEN`       | Linear issue sync on PR merge                                              |
 
 ## Self-Hosted Runner Capabilities
 
