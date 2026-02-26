@@ -38,7 +38,6 @@ import { createSettingsRoutes } from '../routes/settings/index.js';
 import { createUserRoutes } from '../routes/user-routes.js';
 import { createSpecRegenerationRoutes } from '../routes/app-spec/index.js';
 import { createClaudeRoutes } from '../routes/claude/index.js';
-import { createCodexRoutes } from '../routes/codex/index.js';
 import { createGitHubRoutes } from '../routes/github/index.js';
 import { createContextRoutes } from '../routes/context/index.js';
 import { createContentRoutes } from '../routes/content/index.js';
@@ -68,8 +67,6 @@ import { createWebhooksRoutes } from '../routes/webhooks/index.js';
 import { createLinearRoutes } from '../routes/linear/index.js';
 import { createDiscordRoutes } from '../routes/discord/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
-import { createTwitchRoutes } from '../routes/twitch.js';
-import { createVoiceRoutes } from '../routes/voice/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
 import { createDesignsRoutes } from '../routes/designs/index.js';
 import { createPromotionsRoutes } from '../routes/promotions/index.js';
@@ -108,8 +105,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     autoModeService,
     worktreeLifecycleService,
     claudeUsageService,
-    codexUsageService,
-    codexModelCacheService,
     mcpTestService,
     integrationRegistryService,
     leadEngineerService,
@@ -141,8 +136,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     beadsService,
     calendarService,
     googleCalendarSyncService,
-    twitchService,
-    voiceService,
     knowledgeStoreService,
     integrityWatchdogService,
     featureHealthService,
@@ -180,8 +173,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       req.path === '/health' ||
       req.path.startsWith('/health/') ||
       req.path.startsWith('/setup/') ||
-      req.path === '/settings/status' ||
-      req.path === '/copilotkit/info',
+      req.path === '/settings/status',
     message: { error: 'Too many requests, please try again later' },
   });
   app.use('/api', apiLimiter);
@@ -236,8 +228,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       featureLoader,
       autoModeService,
       roleRegistryService,
-      repoRoot,
-      twitchService
+      repoRoot
     )
   );
   app.get(
@@ -280,7 +271,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/settings', createSettingsRoutes(settingsService, events));
   app.use('/api/user', createUserRoutes(userIdentityService));
   app.use('/api/claude', createClaudeRoutes(claudeUsageService));
-  app.use('/api/codex', createCodexRoutes(codexUsageService, codexModelCacheService));
   app.use('/api/github', createGitHubRoutes(events, settingsService));
   app.use('/api/context', createContextRoutes(settingsService));
   app.use('/api/content', createContentRoutes(settingsService));
@@ -389,9 +379,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/chat', createChatRoutes());
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
-  app.use('/api/twitch', createTwitchRoutes(twitchService, events, featureLoader));
-  app.use('/api/voice', createVoiceRoutes(voiceService, events));
-
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));

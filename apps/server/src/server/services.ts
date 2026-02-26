@@ -13,9 +13,6 @@ import { AutoModeService } from '../services/auto-mode-service.js';
 import { getTerminalService } from '../services/terminal-service.js';
 import { SettingsService } from '../services/settings-service.js';
 import { ClaudeUsageService } from '../services/claude-usage-service.js';
-import { CodexUsageService } from '../services/codex-usage-service.js';
-import { CodexAppServerService } from '../services/codex-app-server-service.js';
-import { CodexModelCacheService } from '../services/codex-model-cache-service.js';
 import { contentFlowService } from '../services/content-flow-service.js';
 import { calendarService } from '../services/calendar-service.js';
 import { GoogleCalendarSyncService } from '../services/google-calendar-sync-service.js';
@@ -81,8 +78,6 @@ import { PromptGitHubSyncService } from '../services/prompt-github-sync-service.
 import { TrustTierService } from '../services/trust-tier-service.js';
 import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
-import { VoiceService } from '../services/voice-service.js';
-import { TwitchService } from '../services/twitch/twitch-service.js';
 import { KnowledgeStoreService } from '../services/knowledge-store-service.js';
 import { DocsUpdateDetector } from '../services/docs-update-detector.js';
 import { HeadsdownService } from '../services/headsdown-service.js';
@@ -148,11 +143,8 @@ export interface ServiceContainer {
   autoModeService: AutoModeService;
   hitlFormService: HITLFormService;
 
-  // Codex & Claude usage
+  // Claude usage
   claudeUsageService: ClaudeUsageService;
-  codexAppServerService: CodexAppServerService;
-  codexModelCacheService: CodexModelCacheService;
-  codexUsageService: CodexUsageService;
   mcpTestService: MCPTestService;
 
   // Feature health
@@ -163,10 +155,6 @@ export interface ServiceContainer {
   beadsService: BeadsService;
   discordService: ReturnType<typeof getDiscordService>;
   discordBotService: DiscordBotService;
-
-  // Voice & Twitch
-  voiceService: VoiceService;
-  twitchService: TwitchService;
 
   // Knowledge
   knowledgeStoreService: KnowledgeStoreService;
@@ -314,24 +302,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     },
   });
   const claudeUsageService = new ClaudeUsageService();
-  const codexAppServerService = new CodexAppServerService();
-  const codexModelCacheService = new CodexModelCacheService(dataDir, codexAppServerService);
-  const codexUsageService = new CodexUsageService(codexAppServerService);
   const mcpTestService = new MCPTestService(settingsService);
   const featureHealthService = new FeatureHealthService(featureLoader, autoModeService);
   const beadsService = new BeadsService('bd', events);
   const discordService = getDiscordService();
-
-  // Voice Service for local speech-to-text (lazy — no model loaded at startup)
-  const voiceService = new VoiceService(events, settingsService, join(dataDir, 'models'));
-
-  // Twitch Service for chat integration (only loads if TWITCH_ENABLED=true)
-  const twitchSettings = {
-    enabled: process.env.TWITCH_ENABLED === 'true',
-    channelName: process.env.TWITCH_CHANNEL_NAME,
-    botUsername: process.env.TWITCH_BOT_USERNAME,
-  };
-  const twitchService = new TwitchService(twitchSettings, repoRoot);
 
   // Knowledge Store Service for chunked retrieval
   const knowledgeStoreService = new KnowledgeStoreService();
@@ -703,17 +677,12 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     autoModeService,
     hitlFormService,
     claudeUsageService,
-    codexAppServerService,
-    codexModelCacheService,
-    codexUsageService,
     mcpTestService,
     featureHealthService,
     healthMonitorService,
     beadsService,
     discordService,
     discordBotService,
-    voiceService,
-    twitchService,
     knowledgeStoreService,
     escalationRouter,
     avaGatewayService,
