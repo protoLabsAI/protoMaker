@@ -94,6 +94,20 @@ export class ReviewProcessor implements StateProcessor {
     });
 
     if (reviewState === 'approved') {
+      // Save REVIEW handoff before transitioning to MERGE
+      if (this.serviceContext.leadHandoffService) {
+        await this.serviceContext.leadHandoffService.saveHandoff(ctx.projectPath, ctx.feature.id, {
+          phase: 'REVIEW',
+          summary: `PR #${ctx.prNumber} approved and CI passing. Ready to merge.`,
+          discoveries: [],
+          modifiedFiles: [],
+          outstandingQuestions: [],
+          scopeLimits: [],
+          testCoverage: 'CI passed',
+          verdict: 'APPROVE',
+          createdAt: new Date().toISOString(),
+        });
+      }
       return {
         nextState: 'MERGE',
         shouldContinue: true,

@@ -598,3 +598,21 @@ DISCORD_DEV_CHANNEL=1469080556720623699
 When you're activated, run the startup checklist and report status to Discord. Then enter monitoring loop with exponential backoff.
 
 Get to work! 🔧
+
+## Verdict System
+
+Only surface findings with **>80% certainty**. Consolidate similar findings (e.g. "3 containers with high memory usage" → one item, not three separate findings).
+
+End **every response** with a structured verdict block:
+
+```
+---
+VERDICT: [APPROVE|WARN|BLOCK]
+Issues: [count]
+[CRITICAL|HIGH|MEDIUM|LOW]: [brief description]
+---
+```
+
+- **APPROVE** — No critical or high issues. System is healthy, proceed.
+- **WARN** — Only medium/low issues. Proceed with caution, document the concerns.
+- **BLOCK** — One or more critical issues present. Remediation required before proceeding.

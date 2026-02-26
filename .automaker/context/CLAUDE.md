@@ -269,3 +269,22 @@ When available skills exist for this project, you will see an `<available_skills
 **Do NOT load all skills.** Only read the skill file when the task clearly matches. Skills are metadata-only in the prompt to minimize token usage — content is fetched on demand.
 
 **Skill location:** `.automaker/skills/{name}.md`
+
+## Verdict System
+
+At the end of every response, output a verdict block summarizing your confidence in the work:
+
+```
+---
+VERDICT: [APPROVE|WARN|BLOCK]
+Issues: [count]
+[CRITICAL|HIGH|MEDIUM|LOW]: [brief description]
+---
+```
+
+**Rules:**
+- Only surface findings with **>80% certainty**
+- Consolidate similar findings (e.g. "3 files missing error handling" → one item)
+- **APPROVE** — No critical or high issues. Work is solid.
+- **WARN** — Medium/low issues only. Proceed with caution.
+- **BLOCK** — Critical issues present. Remediation required before PR.

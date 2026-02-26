@@ -14,6 +14,7 @@ import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { FactStoreService } from './fact-store-service.js';
+import type { LeadHandoffService } from './lead-handoff-service.js';
 
 // ────────────────────────── Budget / timing constants ──────────────────────────
 
@@ -39,6 +40,7 @@ export interface ProcessorServiceContext {
   knowledgeStoreService?: KnowledgeStoreService;
   settingsService?: SettingsService;
   factStoreService?: FactStoreService;
+  leadHandoffService?: LeadHandoffService;
 }
 
 // ────────────────────────── Feature State Machine Types ──────────────────────────

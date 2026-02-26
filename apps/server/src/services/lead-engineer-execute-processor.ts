@@ -308,6 +308,45 @@ export class ExecuteProcessor implements StateProcessor {
       if (updated.prNumber) ctx.prNumber = updated.prNumber;
     }
 
+    // Save EXECUTE handoff — parse modified files and questions from agent output
+    if (this.serviceContext.leadHandoffService) {
+      try {
+        const fs = await import('node:fs/promises');
+        const outputPath = path.join(
+          getFeatureDir(ctx.projectPath, ctx.feature.id),
+          'agent-output.md'
+        );
+        const agentOutput = await fs.readFile(outputPath, 'utf-8').catch(() => '');
+        const modifiedFiles = (
+          agentOutput.match(/^(?:Modified:|Create[d]?:|\+\+\+\s+)\s*(\S+\.tsx?)/gm) || []
+        )
+          .map((l) => l.replace(/^(?:Modified:|Create[d]?:|\+\+\+\s+)\s*/, '').trim())
+          .slice(0, 20);
+        const questions = agentOutput
+          .split('\n')
+          .filter((l) => l.trim().endsWith('?'))
+          .slice(0, 5);
+        const verdictMatch = agentOutput.match(/VERDICT:\s*(APPROVE|WARN|BLOCK)/);
+        const verdict = (verdictMatch?.[1] as 'APPROVE' | 'WARN' | 'BLOCK') ?? 'APPROVE';
+
+        await this.serviceContext.leadHandoffService.saveHandoff(ctx.projectPath, ctx.feature.id, {
+          phase: 'EXECUTE',
+          summary: `Agent completed execution. PR: ${ctx.prNumber ? `#${ctx.prNumber}` : 'pending'}`,
+          discoveries: [],
+          modifiedFiles,
+          outstandingQuestions: questions,
+          scopeLimits: [],
+          testCoverage: agentOutput.toLowerCase().includes('test')
+            ? 'Tests mentioned in output'
+            : 'Unknown',
+          verdict,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        logger.warn('[EXECUTE] Failed to save handoff (non-fatal):', err);
+      }
+    }
+
     return {
       nextState: 'REVIEW',
       shouldContinue: true,

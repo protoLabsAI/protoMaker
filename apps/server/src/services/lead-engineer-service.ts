@@ -304,6 +304,7 @@ export class LeadEngineerService {
         knowledgeStoreService: this.knowledgeStoreService,
         settingsService: this.settingsService,
         factStoreService: this.factStoreService,
+        leadHandoffService: this.handoffService,
       };
 
       const workflowSettings = await getWorkflowSettings(

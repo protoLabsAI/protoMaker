@@ -83,6 +83,7 @@ import { HeadsdownService } from '../services/headsdown-service.js';
 import { PRDService } from '../services/prd-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
+import { LeadHandoffService } from '../services/lead-handoff-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -216,6 +217,7 @@ export interface ServiceContainer {
   leadEngineerService: LeadEngineerService;
   pipelineCheckpointService: PipelineCheckpointService;
   factStoreService: FactStoreService;
+  leadHandoffService: LeadHandoffService;
 
   // PR & worktree lifecycle
   approvalBridge: LinearApprovalBridge;
@@ -489,6 +491,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Fact Store Service — extracts and persists structured facts from agent output
   const factStoreService = new FactStoreService();
 
+  // Lead Handoff Service — stores phase transition snapshots for LE continuity
+  const leadHandoffService = new LeadHandoffService();
+
   // Lead Engineer Service — production-phase nerve center
   const leadEngineerService = new LeadEngineerService(
     events,
@@ -716,6 +721,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     leadEngineerService,
     pipelineCheckpointService,
     factStoreService,
+    leadHandoffService,
     approvalBridge,
     intakeBridge,
     prFeedbackService,

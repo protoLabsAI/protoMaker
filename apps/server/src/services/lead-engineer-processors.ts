@@ -249,6 +249,21 @@ Keep it focused and actionable. If the feature description is too vague or uncle
       logger.warn('[PLAN] Proceeding despite review rejection (max retries exceeded)');
     }
 
+    // Save PLAN handoff before transitioning to EXECUTE
+    if (this.serviceContext.leadHandoffService && ctx.planOutput) {
+      await this.serviceContext.leadHandoffService.saveHandoff(ctx.projectPath, ctx.feature.id, {
+        phase: 'PLAN',
+        summary: ctx.planOutput.slice(0, 500),
+        discoveries: [],
+        modifiedFiles: [],
+        outstandingQuestions: [],
+        scopeLimits: [],
+        testCoverage: 'N/A — plan phase',
+        verdict: reviewResult && !reviewResult.approved ? 'WARN' : 'APPROVE',
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     return {
       nextState: 'EXECUTE',
       shouldContinue: true,
