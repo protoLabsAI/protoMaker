@@ -26,8 +26,6 @@ describe('normalizeFeatureStatus', () => {
     it('should return done unchanged', () => {
       expect(normalizeFeatureStatus('done')).toBe('done');
     });
-
-
   });
 
   describe('legacy status migrations', () => {
