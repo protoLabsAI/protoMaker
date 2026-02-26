@@ -101,15 +101,16 @@ sudo systemctl start protomaker
 
 ### CI/CD Workflows
 
-| File                                   | Purpose                                |
-| -------------------------------------- | -------------------------------------- |
-| `.github/workflows/test.yml`           | Unit tests (Vitest)                    |
-| `.github/workflows/e2e-tests.yml`      | E2E tests (Playwright)                 |
-| `.github/workflows/pr-check.yml`       | Build verification                     |
-| `.github/workflows/format-check.yml`   | Prettier formatting                    |
-| `.github/workflows/security-audit.yml` | npm audit                              |
-| `.github/workflows/release.yml`        | Multi-platform Electron builds         |
-| `.github/workflows/deploy-staging.yml` | Auto-deploy to staging on push to main |
+| File                                   | Purpose                                            |
+| -------------------------------------- | -------------------------------------------------- |
+| `.github/workflows/test.yml`           | Unit tests (Vitest)                                |
+| `.github/workflows/e2e-tests.yml`      | E2E tests (Playwright)                             |
+| `.github/workflows/pr-check.yml`       | Build verification                                 |
+| `.github/workflows/format-check.yml`   | Prettier formatting                                |
+| `.github/workflows/security-audit.yml` | npm audit                                          |
+| `.github/workflows/auto-release.yml`   | Version bump + tag + GitHub Release (staging→main) |
+| `.github/workflows/build-electron.yml` | Multi-platform Electron builds (v\* tag)           |
+| `.github/workflows/deploy-staging.yml` | Auto-deploy to staging on push to staging          |
 
 ### Scripts
 

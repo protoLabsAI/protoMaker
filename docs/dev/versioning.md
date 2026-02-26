@@ -89,20 +89,23 @@ npx changeset add --empty  # Creates an empty changeset (for chore/docs changes)
 
 ### Automated Pipeline (CI)
 
-The full release flow is automated via `changeset-release.yml`:
+The full release flow is automated via `auto-release.yml`, triggered automatically when a `staging→main` PR merges:
 
 ```
-PR merged → changesets/action creates "Version Packages" PR
-  → Merge Version PR → npm publish + GitHub Release + site changelog refresh
+staging → main PR merged
+    ↓
+auto-release.yml
+    ├── clean stale changesets
+    ├── npm run release:prepare  (analyze commits since last tag → minor/patch/major)
+    ├── npm run changeset:version  (bump all @protolabs-ai/* in lockstep, write CHANGELOG)
+    ├── git commit "chore: release vX.Y.Z" → pushed to main
+    └── git tag vX.Y.Z → pushed (triggers build-electron.yml)
+                ↓
+        build-electron.yml (macOS + Linux + Windows Electron builds)
+        → artifacts uploaded to GitHub Release
 ```
 
-1. **Prepare a changeset** — run `npm run release:prepare` to auto-generate a changeset from conventional commits since the last tag, or use `npx changeset` for interactive mode
-2. **Commit the changeset file** with your PR (or as a standalone PR)
-3. **CI opens a "Version Packages" PR** showing pending version bumps and changelog entries
-4. **Merge the Version Packages PR** — CI automatically:
-   - Publishes all packages to npm (`changeset publish`)
-   - Creates a GitHub Release with `--generate-notes` (triggers Electron builds via `release.yml`)
-   - Regenerates site data (`npm run stats:generate`) and commits to main
+No manual changeset creation or "Version Packages" PR is required for normal releases — `release:prepare` analyzes conventional commits automatically. `changeset-release.yml` remains active for non-standard release paths but is guarded against double-firing by checking for the `chore: release v` commit message prefix.
 
 ### Manual
 
@@ -119,7 +122,7 @@ npm run changeset:publish
 
 ### Prerequisites
 
-- `NPM_TOKEN` secret must be set in GitHub repo settings (Settings → Secrets → Actions)
+- `GH_PAT` secret must be set in GitHub repo settings — required for `auto-release.yml` to push tags that trigger `build-electron.yml` (falls back to `GITHUB_TOKEN` but won't fire Electron builds)
 - A baseline git tag (e.g., `v0.2.0`) must exist for `release:prepare` to analyze commits
 
 ## Roadmap
