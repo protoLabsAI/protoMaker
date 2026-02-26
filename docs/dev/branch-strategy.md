@@ -106,52 +106,42 @@ If a project needs agents to target a different base, override in project settin
 
 The merge strategy depends on the target branch:
 
-| Promotion           | Strategy               | Why                                                       |
-| ------------------- | ---------------------- | --------------------------------------------------------- |
-| `feature/*` → `dev` | squash ✅              | Branch is discarded after merge                           |
-| `dev` → `staging`   | **merge commit** ✅    | Preserves DAG — staging lives on                          |
-| `staging` → `main`  | squash ✅ + back-merge | `main` has `non_fast_forward` rule blocking merge commits |
+| Promotion           | Strategy            | Why                                  |
+| ------------------- | ------------------- | ------------------------------------ |
+| `feature/*` → `dev` | squash ✅           | Branch is discarded after merge      |
+| `dev` → `staging`   | **merge commit** ✅ | Preserves DAG — staging lives on     |
+| `staging` → `main`  | **merge commit** ✅ | Preserves DAG — no back-merge needed |
 
-### dev → staging: always merge commit
+### Why merge commits for all promotions
+
+Squash merges create a synthetic commit (S) with no DAG parent on the source branch. The next promotion sees S as a new diff relative to the old common ancestor and produces conflicts.
 
 ```
-# What happens with squash (BREAKS next promotion):
+# Squash (BREAKS next promotion):
 dev:     A → B → C → D
                        ← squash → staging: A → S   (S has no parent on dev)
 dev:     A → B → C → D → E → F
                        ← merge: finds A as base, sees S vs B+C+D+E+F → CONFLICT
 
-# What happens with merge commit (CORRECT):
+# Merge commit (CORRECT):
 dev:     A → B → C → D
                        ← merge commit → staging: A → B → C → D → M1
 dev:     A → B → C → D → E → F
                        ← merge: finds D as base, sees only E+F → CLEAN
 ```
 
-### staging → main: squash + back-merge
-
-`main` has a `non_fast_forward` branch protection rule that blocks merge commits. Squash is the only option. To prevent the next promotion from conflicting, **always back-merge `main` into `staging` immediately after**:
-
-```
-staging→main squash → main: A → B → C → S1
-back-merge main→staging   → staging: A → B → C → S1 → M  (S1 now in staging's history)
-next promotion             → finds S1 as base, only new commits are new → CLEAN
-```
+The same logic applies to `staging → main`. The `non_fast_forward` branch protection rule has been removed from `main`, so merge commits are now allowed for all promotions.
 
 ## Promotion Commands
 
 ```bash
-# Promote dev → staging (ALWAYS --merge)
+# Promote dev → staging
 gh pr create --base staging --head dev --title "chore: promote dev → staging"
 gh pr merge <number> --auto --merge
 
-# Promote staging → main (squash — enforced by non_fast_forward rule on main)
+# Promote staging → main
 gh pr create --base main --head staging \
   --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
-gh pr merge <number> --auto --squash
-
-# After staging→main merges: back-merge main into staging to prevent next conflict
-gh pr create --base staging --head main --title "chore: sync staging with main after promotion"
 gh pr merge <number> --auto --merge
 ```
 
@@ -167,4 +157,4 @@ The `changeset-release.yml` creates a version bump PR that targets `main` using 
 A previous promotion used `--squash`. To recover: create a new branch from `dev`, `git merge origin/staging` (take `--ours` for all conflicts), push, open a new PR with `--merge`.
 
 **What if staging → main shows conflicts?**
-A previous promotion didn't back-merge. To recover: create a new branch from `staging`, `git merge origin/main` (take `--ours` for all conflicts), post `source-branch` status manually, squash merge, then back-merge main into staging.
+A previous promotion used `--squash`. To recover: create a new branch from `staging`, `git merge origin/main` (take `--ours` for all conflicts), use `chore/promote-staging-main-*` naming (allowed by `promotion-check.yml`), open a new PR with `--merge`.

@@ -463,24 +463,20 @@ When reviewing or creating PRs: feature branches target `dev`, not `main`. If yo
 **Promotion commands:**
 
 ```bash
-# dev → staging (ALWAYS --merge — main has non_fast_forward rule so staging must use merge)
+# dev → staging
 gh pr create --base staging --head dev --title "chore: promote dev → staging"
 gh pr merge <number> --auto --merge
 
-# staging → main (squash — non_fast_forward rule on main blocks merge commits)
+# staging → main
 gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
-gh pr merge <number> --auto --squash
-
-# REQUIRED after staging→main merges: back-merge main into staging to prevent next conflict
-gh pr create --base staging --head main --title "chore: sync staging with main after promotion"
 gh pr merge <number> --auto --merge
 ```
 
 > **Merge strategy rules**:
 >
 > - `feature/*` → `dev`: squash ✅ (branch discarded)
-> - `dev` → `staging`: **merge commit** ✅ (staging lives on, preserves DAG)
-> - `staging` → `main`: squash + **back-merge** (`main` has `non_fast_forward` rule blocking merge commits — squash is the only option, back-merge re-syncs staging so next promotion is clean)
+> - `dev` → `staging`: **merge commit** ✅ (preserves DAG — staging lives on)
+> - `staging` → `main`: **merge commit** ✅ (preserves DAG — `non_fast_forward` rule removed)
 
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 
