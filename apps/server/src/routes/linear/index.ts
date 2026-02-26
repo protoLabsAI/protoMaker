@@ -19,7 +19,8 @@ import type { FeatureLoader } from '../../services/feature-loader.js';
 export function createLinearRoutes(
   settingsService: SettingsService,
   events: EventEmitter,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureLoader,
+  repoRoot: string
 ): Router {
   const router = Router();
 
@@ -27,7 +28,7 @@ export function createLinearRoutes(
   router.use('/oauth', createOAuthRoutes(settingsService));
 
   // Webhook for AgentSessionEvent, Issue, and Project events
-  router.post('/webhook', createWebhookHandler(settingsService, events, featureLoader));
+  router.post('/webhook', createWebhookHandler(settingsService, events, featureLoader, repoRoot));
 
   // Sync status and metrics
   router.get('/sync-status', getSyncStatus);

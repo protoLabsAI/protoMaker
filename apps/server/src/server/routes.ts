@@ -215,7 +215,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
   // Linear agent routes (OAuth + webhook)
-  app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader));
+  app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader, repoRoot));
   // Google Calendar OAuth + sync (unauthenticated — browser-initiated redirect flow)
   app.use(
     '/api/google-calendar',

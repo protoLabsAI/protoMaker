@@ -14,7 +14,6 @@
 
 import type { RequestHandler, Request, Response } from 'express';
 import { createHmac } from 'node:crypto';
-import { execSync } from 'node:child_process';
 import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -204,7 +203,8 @@ function verifyWebhookSignature(
 export function createWebhookHandler(
   settingsService: SettingsService,
   events: EventEmitter,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureLoader,
+  repoRoot: string
 ): RequestHandler {
   return async (req: Request, res: Response) => {
     const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET;
@@ -237,7 +237,7 @@ export function createWebhookHandler(
 
     // Process asynchronously after responding
     try {
-      await processWebhookEvent(payload, settingsService, events, featureLoader);
+      await processWebhookEvent(payload, settingsService, events, featureLoader, repoRoot);
     } catch (error) {
       logger.error('Failed to process webhook event', {
         error: error instanceof Error ? error.message : String(error),
@@ -258,7 +258,8 @@ async function processWebhookEvent(
     | LinearCommentWebhookPayload,
   settingsService: SettingsService,
   events: EventEmitter,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureLoader,
+  repoRoot: string
 ): Promise<void> {
   const { action, type, data } = payload;
 
@@ -277,7 +278,8 @@ async function processWebhookEvent(
         action,
         events,
         featureLoader,
-        settingsService
+        settingsService,
+        repoRoot
       );
       break;
     case 'Project':
@@ -340,7 +342,8 @@ async function handleIssueEvent(
   action: LinearWebhookAction,
   events: EventEmitter,
   featureLoader: FeatureLoader,
-  settingsService: SettingsService
+  settingsService: SettingsService,
+  repoRoot: string
 ): Promise<void> {
   const { data } = payload;
 
@@ -360,7 +363,7 @@ async function handleIssueEvent(
       });
       break;
     case 'update':
-      await handleIssueUpdated(data, events, featureLoader, settingsService);
+      await handleIssueUpdated(data, events, featureLoader, settingsService, repoRoot);
       break;
     case 'remove':
       logger.info(`Issue removed: ${data.id}`);
@@ -378,7 +381,8 @@ async function handleIssueUpdated(
   data: LinearIssueWebhookPayload['data'],
   events: EventEmitter,
   _featureLoader: FeatureLoader,
-  settingsService: SettingsService
+  settingsService: SettingsService,
+  repoRoot: string
 ): Promise<void> {
   logger.info(`Issue updated: ${data.id}`, {
     title: data.title,
@@ -391,18 +395,7 @@ async function handleIssueUpdated(
   const stateName = data.state?.name || 'Unknown';
 
   // Resolve projectPath: check linearTeamRoutes mapping first, then fallback
-  const defaultPath =
-    process.env.AUTOMAKER_PROJECT_PATH ||
-    (() => {
-      try {
-        return execSync('git rev-parse --show-toplevel', {
-          encoding: 'utf-8',
-          timeout: 5000,
-        }).trim();
-      } catch {
-        return process.cwd();
-      }
-    })();
+  const defaultPath = process.env.AUTOMAKER_PROJECT_PATH || repoRoot;
 
   let projectPath = defaultPath;
   if (data.team?.id) {
