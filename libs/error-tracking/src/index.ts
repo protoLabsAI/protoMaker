@@ -52,6 +52,7 @@ export {
   captureException,
   captureMessage,
   startSpan,
+  startTransaction,
   addBreadcrumb,
   flush,
   close,
