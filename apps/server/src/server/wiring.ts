@@ -191,6 +191,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
   leadEngineerService.setPRFeedbackService(prFeedbackService);
   leadEngineerService.setDiscordBot(discordBotService);
+  leadEngineerService.setAgentFactory(agentFactoryService);
 
   // PR Feedback service wiring
   prFeedbackService.setAutoModeService(autoModeService);
