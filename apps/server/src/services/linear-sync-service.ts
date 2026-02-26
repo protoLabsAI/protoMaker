@@ -370,12 +370,9 @@ export class LinearSyncService {
       // Automaker wins — push current Automaker state back to Linear
       if (this.featureLoader) {
         const feature = await this.featureLoader.get(projectPath, featureId);
-        if (feature?.linearIssueId) {
-          await this.issueSync.updateIssueStatus(
-            projectPath,
-            feature.linearIssueId,
-            feature.status
-          );
+        const linearIssueId = feature?.linearIssueId;
+        if (feature && linearIssueId) {
+          await this.issueSync.updateIssueStatus(projectPath, linearIssueId, feature.status);
           logger.info(
             `Conflict resolved for feature ${featureId}: Automaker state pushed to Linear`
           );
