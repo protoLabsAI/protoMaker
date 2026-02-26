@@ -49,8 +49,8 @@ jobs:
           # Pull latest code (update remote URL in case token changed)
           cd "$DEPLOY_DIR"
           git remote set-url origin "$REPO_URL"
-          git fetch origin main
-          git reset --hard origin/main
+          git fetch origin staging
+          git reset --hard origin/staging
 
           # Copy .env from persistent staging config
           # Uses dedicated .env.staging (not dev .env) to prevent accidental breakage
