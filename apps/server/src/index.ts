@@ -807,6 +807,9 @@ leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
 
 await leadEngineerService.initialize();
 
+// Wire agent factory for GTM content feature review routing
+leadEngineerService.setAgentFactory(agentFactoryService);
+
 // Wire Lead Engineer service into auto-mode for delegated feature execution
 autoModeService.setLeadEngineerService(leadEngineerService);
 
