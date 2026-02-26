@@ -51,19 +51,27 @@ export class FeatureLoader implements FeatureStore {
    * Defensive: ensures all features use the 6-status system
    */
   private normalizeFeature(feature: Feature): Feature {
-    if (!feature.status) {
-      return { ...feature, status: 'backlog' };
+    let normalized = feature;
+
+    // Normalize status
+    if (!normalized.status) {
+      normalized = { ...normalized, status: 'backlog' };
+    } else {
+      const normalizedStatus = normalizeFeatureStatus(normalized.status, (from, to) => {
+        logger.debug(`Normalizing feature ${feature.id} status: ${from} → ${to}`);
+      });
+
+      if (normalizedStatus !== normalized.status) {
+        normalized = { ...normalized, status: normalizedStatus };
+      }
     }
 
-    const normalizedStatus = normalizeFeatureStatus(feature.status, (from, to) => {
-      logger.debug(`Normalizing feature ${feature.id} status: ${from} → ${to}`);
-    });
-
-    if (normalizedStatus !== feature.status) {
-      return { ...feature, status: normalizedStatus };
+    // Normalize featureType — default to 'code' for all existing features
+    if (!normalized.featureType) {
+      normalized = { ...normalized, featureType: 'code' };
     }
 
-    return feature;
+    return normalized;
   }
 
   /**

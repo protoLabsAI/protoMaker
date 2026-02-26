@@ -465,6 +465,26 @@ export interface Feature {
    * Set when this feature is added to a promotion batch targeting staging/main.
    */
   promotionBatchId?: string;
+
+  // GTM Content Track fields
+  /**
+   * Type of feature: 'code' for engineering work, 'content' for GTM/marketing content.
+   * Defaults to 'code' for all existing features.
+   */
+  featureType?: 'code' | 'content';
+  /**
+   * Content configuration for GTM content features (only relevant when featureType === 'content').
+   */
+  contentConfig?: {
+    /** Topic or subject of the content piece */
+    topic?: string;
+    /** Format of the content */
+    format?: 'blog' | 'docs' | 'social' | 'announcement';
+    /** Target audience for the content */
+    targetAudience?: string;
+    /** Team member assigned to create this content */
+    assignedRole?: 'jon' | 'cindi';
+  };
 }
 
 /**
