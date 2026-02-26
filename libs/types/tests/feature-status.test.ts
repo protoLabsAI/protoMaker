@@ -26,9 +26,14 @@ describe('normalizeFeatureStatus', () => {
     it('should return done unchanged', () => {
       expect(normalizeFeatureStatus('done')).toBe('done');
     });
+
+
   });
 
   describe('legacy status migrations', () => {
+    it('should migrate verified to done', () => {
+      expect(normalizeFeatureStatus('verified')).toBe('done');
+    });
     it('should migrate pending to backlog', () => {
       expect(normalizeFeatureStatus('pending')).toBe('backlog');
     });
