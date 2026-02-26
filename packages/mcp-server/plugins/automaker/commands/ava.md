@@ -372,16 +372,16 @@ After the monitoring checklist, work the Beads queue. This is your primary work 
 6. Loop back to step 1
 ```
 
-**Signal detection**: When you discover work during monitoring, create a bead immediately:
+**Signal detection**: When you discover work during monitoring, route it correctly immediately:
 
-- Bug found → `bd create "Fix: description" -p 1 -l bug -a Ava`
-- Automation opportunity → `bd create "Automate: description" -p 2 -l automation -a Ava`
-- Strategic insight → `bd create "Evaluate: description" -p 2 -l strategic -a Ava`
-- Customer need from Discord → `bd create "Customer: description" -p 2 -l customer -a Ava`
+- Bug or improvement found → `linear_createIssue` (NOT Beads — Linear is the dev team's intake)
+- Automation opportunity (Ava's own workflow) → `bd create "Automate: description" -p 2 -l automation -a Ava`
+- Strategic insight requiring Ava follow-up → `bd create "Evaluate: description" -p 2 -l strategic -a Ava`
+- Operational reminder (rebase after X merges, follow up after CI) → `bd create "description" -p 3 -l task -a Ava`
 
 **Assignee convention**: ALWAYS use `-a Ava` when creating beads. Query your work with `bd list -a Ava`. This separates your tasks from Jon's and other agents'.
 
-**Separation**: Beads = ALL work streams, any execution surface. Automaker board = code features only, always agent execution. Never mix.
+**Separation**: Beads = Ava's operational task list (reminders, workflow setup, follow-ups, self-improvement). NOT a bug tracker. Code bugs and product improvements belong in Linear. Automaker board = code features being executed by agents. Never mix these three.
 
 ## Context7 — Live Library Docs
 
