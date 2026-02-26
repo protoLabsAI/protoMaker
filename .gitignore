@@ -43,7 +43,9 @@ docs/.vitepress/cache/
 .automaker/knowledge.db
 .automaker/knowledge.db-shm
 .automaker/knowledge.db-wal
+.automaker/knowledge-eval.jsonl
 .automaker/ceremony-log.jsonl
+.automaker/quarantine/
 
 # Instance-specific — each machine starts fresh
 .automaker/projects/
