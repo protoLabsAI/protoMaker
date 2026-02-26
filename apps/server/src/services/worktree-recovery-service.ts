@@ -122,7 +122,7 @@ export async function checkAndRecoverUncommittedWork(
     }
 
     // Step 2: Stage changed files (exclude .automaker/ except memory/)
-    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
       cwd: worktreePath,
       env: execEnv,
     });
