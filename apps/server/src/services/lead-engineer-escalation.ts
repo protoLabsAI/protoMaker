@@ -84,30 +84,6 @@ export class EscalateProcessor implements StateProcessor {
       failureCategory: failureAnalysis.category,
     });
 
-    // Fire-and-forget trajectory save (non-blocking, errors handled internally by TrajectoryStoreService)
-    if (this.serviceContext.trajectoryStoreService && ctx.startedAt) {
-      const completedAt = new Date().toISOString();
-      const durationMs = new Date(completedAt).getTime() - new Date(ctx.startedAt).getTime();
-      void this.serviceContext.trajectoryStoreService.save({
-        feature: ctx.feature,
-        projectPath: ctx.projectPath,
-        outcome: 'escalated',
-        stateTransitions: ctx.stateTransitions || [],
-        startedAt: ctx.startedAt,
-        completedAt,
-        durationMs,
-        costUsd: ctx.feature.costUsd || 0,
-        model: ctx.options.model || 'sonnet',
-        prNumber: ctx.prNumber,
-        failureAnalysis: {
-          reason: ctx.escalationReason || 'Unknown escalation reason',
-          retryCount: ctx.retryCount,
-          remediationAttempts: ctx.remediationAttempts,
-          reviewFeedback: ctx.reviewFeedback,
-        },
-      });
-    }
-
     return {
       nextState: null,
       shouldContinue: false,

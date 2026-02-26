@@ -23,7 +23,6 @@ import type { PRFeedbackService } from './pr-feedback-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
-import type { TrajectoryStoreService } from './trajectory-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
 import { DEFAULT_RULES } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
@@ -61,7 +60,6 @@ export class LeadEngineerService {
   private checkpointService?: PipelineCheckpointService;
   private contextFidelityService?: ContextFidelityService;
   private knowledgeStoreService?: KnowledgeStoreService;
-  private trajectoryStoreService?: TrajectoryStoreService;
   private agentFactoryService?: AgentFactoryService;
   private handoffService?: LeadHandoffService;
 
@@ -95,9 +93,6 @@ export class LeadEngineerService {
   }
   setKnowledgeStoreService(s: KnowledgeStoreService): void {
     this.knowledgeStoreService = s;
-  }
-  setTrajectoryStoreService(s: TrajectoryStoreService): void {
-    this.trajectoryStoreService = s;
   }
   setDiscordBot(b: { sendToChannel(c: string, m: string): Promise<boolean> }): void {
     this.discordBotService = b;
@@ -302,7 +297,6 @@ export class LeadEngineerService {
         checkpointService: this.checkpointService,
         contextFidelityService: this.contextFidelityService,
         knowledgeStoreService: this.knowledgeStoreService,
-        trajectoryStoreService: this.trajectoryStoreService,
         settingsService: this.settingsService,
       };
 

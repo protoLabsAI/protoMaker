@@ -144,7 +144,6 @@ export class FeatureStateMachine {
       mergeRetryCount: 0,
       planRetryCount: 0,
       startedAt: new Date().toISOString(),
-      stateTransitions: [],
       ...resumeFromCheckpoint?.restoredContext,
     };
 
@@ -256,14 +255,6 @@ export class FeatureStateMachine {
         }
 
         completedStates.push(currentState);
-
-        // Track state transition for trajectory
-        ctx.stateTransitions?.push({
-          from: completedStates.length > 1 ? completedStates[completedStates.length - 2] : null,
-          to: currentState,
-          timestamp: new Date().toISOString(),
-          reason: result.reason,
-        });
 
         logger.info('State transition', {
           from: currentState,

@@ -33,7 +33,6 @@ export async function runStartup(
     prFeedbackService,
     leadEngineerService,
     worktreeLifecycleService,
-    codexModelCacheService,
     agentService,
     knowledgeStoreService,
     dataDir,
@@ -279,9 +278,4 @@ export async function runStartup(
   } catch (err) {
     logger.warn('[AUTO-START] Failed to check auto-mode always-on setting:', err);
   }
-
-  // Bootstrap Codex model cache in background (don't block server startup)
-  void codexModelCacheService.getModels().catch((err) => {
-    logger.error('Failed to bootstrap Codex model cache:', err);
-  });
 }

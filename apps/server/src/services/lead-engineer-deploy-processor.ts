@@ -60,24 +60,6 @@ export class DeployProcessor implements StateProcessor {
       remediationAttempts: ctx.remediationAttempts,
     });
 
-    // Fire-and-forget trajectory save (non-blocking, errors handled internally by TrajectoryStoreService)
-    if (this.serviceContext.trajectoryStoreService && ctx.startedAt) {
-      const completedAt = new Date().toISOString();
-      const durationMs = new Date(completedAt).getTime() - new Date(ctx.startedAt).getTime();
-      void this.serviceContext.trajectoryStoreService.save({
-        feature: ctx.feature,
-        projectPath: ctx.projectPath,
-        outcome: 'success',
-        stateTransitions: ctx.stateTransitions || [],
-        startedAt: ctx.startedAt,
-        completedAt,
-        durationMs,
-        costUsd: finalCost,
-        model: ctx.options.model || 'sonnet',
-        prNumber: ctx.prNumber,
-      });
-    }
-
     // Fire-and-forget reflection (non-blocking)
     void this.generateReflection(ctx);
 

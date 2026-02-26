@@ -35,7 +35,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     actionableItemBridge,
     linearAgentRouter,
     agentDiscordRouter,
-    twitchService,
     dataDir,
   } = services;
 
@@ -74,7 +73,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   actionableItemBridge.shutdown();
   linearAgentRouter.stop();
   agentDiscordRouter.stop();
-  await twitchService.disconnect(); // Gracefully disconnect from Twitch chat
   await shutdownLangfuse();
   await shutdownOTEL();
 
