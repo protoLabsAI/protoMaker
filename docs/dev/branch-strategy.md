@@ -104,43 +104,54 @@ If a project needs agents to target a different base, override in project settin
 
 ## Promotion Merge Strategy
 
-> **Critical rule: promotion PRs must use `--merge` (merge commit), never `--squash`.**
+The merge strategy depends on the target branch:
 
-Squash-merging a promotion PR creates a synthetic commit with no DAG relationship to the source branch's commits. The next promotion will find that synthetic commit as a conflict — even though the code is identical — because git can't recognize what's already been integrated.
+| Promotion           | Strategy               | Why                                                       |
+| ------------------- | ---------------------- | --------------------------------------------------------- |
+| `feature/*` → `dev` | squash ✅              | Branch is discarded after merge                           |
+| `dev` → `staging`   | **merge commit** ✅    | Preserves DAG — staging lives on                          |
+| `staging` → `main`  | squash ✅ + back-merge | `main` has `non_fast_forward` rule blocking merge commits |
+
+### dev → staging: always merge commit
 
 ```
-# What happens with squash (WRONG):
+# What happens with squash (BREAKS next promotion):
 dev:     A → B → C → D
                        ← squash → staging: A → S   (S has no parent on dev)
 dev:     A → B → C → D → E → F
-                       ← merge: git finds A as base, sees S vs B+C+D+E+F → CONFLICT
+                       ← merge: finds A as base, sees S vs B+C+D+E+F → CONFLICT
 
 # What happens with merge commit (CORRECT):
 dev:     A → B → C → D
                        ← merge commit → staging: A → B → C → D → M1
 dev:     A → B → C → D → E → F
-                       ← merge: git finds D as base, sees only E+F as new → CLEAN
+                       ← merge: finds D as base, sees only E+F → CLEAN
 ```
 
-**Rule of thumb:**
+### staging → main: squash + back-merge
 
-- Feature PRs (`feature/*` → `dev`): squash ✅ (branch is discarded)
-- Promotion PRs (`dev` → `staging`, `staging` → `main`): merge commit ✅ (branch lives on)
+`main` has a `non_fast_forward` branch protection rule that blocks merge commits. Squash is the only option. To prevent the next promotion from conflicting, **always back-merge `main` into `staging` immediately after**:
+
+```
+staging→main squash → main: A → B → C → S1
+back-merge main→staging   → staging: A → B → C → S1 → M  (S1 now in staging's history)
+next promotion             → finds S1 as base, only new commits are new → CLEAN
+```
 
 ## Promotion Commands
 
 ```bash
 # Promote dev → staging (ALWAYS --merge)
-gh pr create --base staging --head dev --title "chore: promote dev → staging" \
-  --body "Promoting dev to staging for user testing."
-gh pr merge <number> --merge   # NOT --squash
+gh pr create --base staging --head dev --title "chore: promote dev → staging"
+gh pr merge <number> --auto --merge
 
-# Promote staging → main (ALWAYS --merge, use the template)
+# Promote staging → main (squash — enforced by non_fast_forward rule on main)
 gh pr create --base main --head staging \
   --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
-gh pr merge <number> --merge   # NOT --squash
+gh pr merge <number> --auto --squash
 
-# Enable auto-merge with merge strategy
+# After staging→main merges: back-merge main into staging to prevent next conflict
+gh pr create --base staging --head main --title "chore: sync staging with main after promotion"
 gh pr merge <number> --auto --merge
 ```
 
@@ -152,11 +163,8 @@ No. Hotfixes should be cut from `dev`, merged to `dev`, then promoted through th
 **What about the Changesets version bump PR?**
 The `changeset-release.yml` creates a version bump PR that targets `main` using the GitHub Actions bot token. This is a known exception — the bot is a trusted actor and the PR goes through the same required status checks.
 
-**Do I need to rebase dev before promoting?**
-Yes — make sure `dev` is up to date with `main` before opening a `dev → staging` PR to avoid drift.
-
-**What if CI fails on the staging promote PR?**
-Fix the failure on `dev`, push the fix, then the open PR to `staging` will re-run CI automatically.
-
 **What if dev → staging shows conflicts?**
-This means a previous promotion used `--squash`. To recover: create a new branch from `dev`, `git merge origin/staging` (take dev's version for all conflicts), push, and open a new PR. Going forward, always use `--merge`.
+A previous promotion used `--squash`. To recover: create a new branch from `dev`, `git merge origin/staging` (take `--ours` for all conflicts), push, open a new PR with `--merge`.
+
+**What if staging → main shows conflicts?**
+A previous promotion didn't back-merge. To recover: create a new branch from `staging`, `git merge origin/main` (take `--ours` for all conflicts), post `source-branch` status manually, squash merge, then back-merge main into staging.

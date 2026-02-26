@@ -463,16 +463,24 @@ When reviewing or creating PRs: feature branches target `dev`, not `main`. If yo
 **Promotion commands:**
 
 ```bash
-# dev → staging (ALWAYS --merge, never --squash)
+# dev → staging (ALWAYS --merge — main has non_fast_forward rule so staging must use merge)
 gh pr create --base staging --head dev --title "chore: promote dev → staging"
 gh pr merge <number> --auto --merge
 
-# staging → main (ALWAYS --merge, use template — enforced by CI)
+# staging → main (squash — non_fast_forward rule on main blocks merge commits)
 gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+gh pr merge <number> --auto --squash
+
+# REQUIRED after staging→main merges: back-merge main into staging to prevent next conflict
+gh pr create --base staging --head main --title "chore: sync staging with main after promotion"
 gh pr merge <number> --auto --merge
 ```
 
-> **Merge strategy rule**: Promotion PRs must use `--merge` (merge commit), NEVER `--squash` or `--rebase`. Both create new commit SHAs, breaking git's DAG — the next promotion shows conflicts even though the code is identical. Feature PRs to `dev` may squash (branch discarded). Promotion PRs must merge (branches live on).
+> **Merge strategy rules**:
+>
+> - `feature/*` → `dev`: squash ✅ (branch discarded)
+> - `dev` → `staging`: **merge commit** ✅ (staging lives on, preserves DAG)
+> - `staging` → `main`: squash + **back-merge** (`main` has `non_fast_forward` rule blocking merge commits — squash is the only option, back-merge re-syncs staging so next promotion is clean)
 
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 
