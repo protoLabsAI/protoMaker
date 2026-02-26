@@ -648,7 +648,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setCheckpointService(pipelineCheckpointService);
   autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
   leadEngineerService.setContextFidelityService(contextFidelityService);
-  autoModeService.setContextFidelityService(contextFidelityService);
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
   await leadEngineerService.initialize();
 
