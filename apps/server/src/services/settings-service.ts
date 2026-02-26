@@ -107,6 +107,7 @@ async function writeSettingsJson(filePath: string, data: unknown): Promise<void>
  */
 export class SettingsService {
   private dataDir: string;
+  private instanceIdInitPromise: Promise<string> | null = null;
 
   /**
    * Create a new SettingsService instance
@@ -678,6 +679,33 @@ export class SettingsService {
   async hasGlobalSettings(): Promise<boolean> {
     const settingsPath = getGlobalSettingsPath(this.dataDir);
     return fileExists(settingsPath);
+  }
+
+  /**
+   * Get or generate a stable instance ID for this Automaker installation.
+   *
+   * Returns the configured `instanceId` from settings if set.
+   * On first call without a configured value, generates a UUID, persists it
+   * to settings, and returns it. Subsequent calls return the persisted UUID.
+   *
+   * @returns Promise resolving to the instance ID string
+   */
+  async getInstanceId(): Promise<string> {
+    const settings = await this.getGlobalSettings();
+    if (settings.instanceId) {
+      return settings.instanceId;
+    }
+    // Guard against concurrent callers both racing through the !instanceId branch
+    if (!this.instanceIdInitPromise) {
+      this.instanceIdInitPromise = (async () => {
+        const { randomUUID } = await import('crypto');
+        const generatedId = randomUUID();
+        await this.updateGlobalSettings({ instanceId: generatedId });
+        logger.info(`Generated and persisted new instance ID: ${generatedId}`);
+        return generatedId;
+      })();
+    }
+    return this.instanceIdInitPromise;
   }
 
   // ============================================================================

@@ -83,7 +83,11 @@ export function createGitHubRoutes(
 
   // PR merge operations
   router.post('/merge-pr', validatePathParams('projectPath'), createMergePRHandler());
-  router.post('/check-pr-status', validatePathParams('projectPath'), createCheckPRStatusHandler());
+  router.post(
+    '/check-pr-status',
+    validatePathParams('projectPath'),
+    createCheckPRStatusHandler(settingsService)
+  );
 
   // PR review comment operations
   router.post(
