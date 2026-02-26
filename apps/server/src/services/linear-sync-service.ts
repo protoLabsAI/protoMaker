@@ -13,6 +13,7 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
+import type { EventPayloadMap } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -162,6 +163,8 @@ export class LinearSyncService {
       await this.issueSync.onFeatureDeleted(payload as FeatureEventPayload);
     } else if (type === 'feature:pr-merged') {
       await this.issueSync.onPRMerged(payload as FeatureEventPayload);
+    } else if (type === 'feature:updated') {
+      await this.issueSync.onFeatureUpdated(payload as EventPayloadMap['feature:updated']);
     } else if (type === 'project:scaffolded') {
       await this.projectSync.handleProjectScaffolded(payload as ProjectScaffoldedPayload);
     } else if (type === 'project:status-changed') {

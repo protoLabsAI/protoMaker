@@ -9,12 +9,13 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature, EventPayloadMap } from '@protolabs-ai/types';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import { LinearMCPClient } from './linear-mcp-client.js';
 import { mapAutomakerStatusToLinear } from './linear-state-mapper.js';
+import { DEBOUNCE_WINDOW_MS } from './linear-sync-types.js';
 import type { SyncMetadata, SyncGuards, FeatureEventPayload } from './linear-sync-types.js';
 
 const logger = createLogger('LinearIssueSync');
@@ -464,6 +465,110 @@ export class LinearIssueSync {
       );
     } catch (error) {
       logger.error(`Failed to sync PR merge for feature ${featureId}:`, error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.guards.recordOperation(
+        featureId,
+        'push',
+        'error',
+        Date.now() - startTime,
+        false,
+        errorMsg
+      );
+
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'error',
+        errorMessage: errorMsg,
+        syncCount: 0,
+      };
+      this.guards.updateSyncMetadata(metadata);
+
+      if (this.guards.emitter) {
+        this.guards.emitter.emit('linear:sync:error', {
+          featureId,
+          direction: 'push',
+          error: errorMsg,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } finally {
+      this.guards.unmarkSyncing(featureId);
+    }
+  }
+
+  async onFeatureUpdated(payload: EventPayloadMap['feature:updated']): Promise<void> {
+    const { featureId, projectPath } = payload;
+
+    // Guard: skip if last sync was from Linear within debounce window (ping-pong prevention)
+    const lastMetadata = this.guards.getSyncMetadata(featureId);
+    if (lastMetadata?.syncSource === 'linear') {
+      const timeSinceLastSync = Date.now() - (lastMetadata.lastSyncTimestamp || 0);
+      if (timeSinceLastSync < DEBOUNCE_WINDOW_MS) {
+        logger.debug(
+          `Skipping feature:updated sync for ${featureId}: last sync was from Linear within debounce window`
+        );
+        return;
+      }
+    }
+
+    if (!this.guards.shouldSync(featureId)) return;
+
+    const syncEnabled = await this.guards.isProjectSyncEnabled(projectPath);
+    if (!syncEnabled) {
+      logger.debug(`Linear sync not enabled for project ${projectPath}`);
+      return;
+    }
+
+    if (!this.featureLoader) {
+      logger.error('FeatureLoader not initialized');
+      return;
+    }
+
+    const feature = await this.featureLoader.get(projectPath, featureId);
+    if (!feature) {
+      logger.error(`Feature ${featureId} not found`);
+      return;
+    }
+
+    if (!feature.linearIssueId) {
+      logger.debug(`Feature ${featureId} has no Linear issue ID, skipping update sync`);
+      return;
+    }
+
+    this.guards.markSyncing(featureId);
+    const startTime = Date.now();
+
+    try {
+      await this.updateLinearIssue(projectPath, feature.linearIssueId, feature);
+
+      const existingMetadata = this.guards.getSyncMetadata(featureId);
+      const metadata: SyncMetadata = {
+        featureId,
+        lastSyncTimestamp: Date.now(),
+        lastSyncStatus: 'success',
+        linearIssueId: feature.linearIssueId,
+        syncCount: (existingMetadata?.syncCount || 0) + 1,
+        syncSource: 'automaker',
+        syncDirection: 'push',
+      };
+      this.guards.updateSyncMetadata(metadata);
+      this.guards.recordOperation(featureId, 'push', 'success', Date.now() - startTime, false);
+
+      if (this.guards.emitter) {
+        this.guards.emitter.emit('linear:sync:completed', {
+          featureId,
+          direction: 'push',
+          conflictDetected: false,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      logger.info(
+        `Successfully synced feature update for ${featureId} to Linear issue ${feature.linearIssueId}`
+      );
+    } catch (error) {
+      logger.error(`Failed to sync feature update for feature ${featureId}:`, error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       this.guards.recordOperation(
         featureId,
