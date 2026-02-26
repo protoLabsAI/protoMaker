@@ -464,11 +464,19 @@ When reviewing or creating PRs: feature branches target `dev`, not `main`. If yo
 
 ```bash
 # dev → staging
-gh pr create --base staging --head dev --title "chore: promote dev to staging"
+gh pr create --base staging --head dev --title "chore: promote dev → staging"
+gh pr merge <number> --auto --merge
 
-# staging → main (use template — enforced by CI)
+# staging → main
 gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+gh pr merge <number> --auto --merge
 ```
+
+> **Merge strategy rules**:
+>
+> - `feature/*` → `dev`: squash ✅ (branch discarded)
+> - `dev` → `staging`: **merge commit** ✅ (preserves DAG — staging lives on)
+> - `staging` → `main`: **merge commit** ✅ (preserves DAG — `non_fast_forward` rule removed)
 
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 
