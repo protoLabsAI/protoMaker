@@ -24,6 +24,7 @@ import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js
 import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { TrajectoryStoreService } from './trajectory-store-service.js';
+import type { LeadHandoffService } from './lead-handoff-service.js';
 import { DEFAULT_RULES } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { FeatureStateMachine } from './lead-engineer-state-machine.js';
@@ -62,6 +63,7 @@ export class LeadEngineerService {
   private knowledgeStoreService?: KnowledgeStoreService;
   private trajectoryStoreService?: TrajectoryStoreService;
   private agentFactoryService?: AgentFactoryService;
+  private handoffService?: LeadHandoffService;
 
   private worldStateBuilder: WorldStateBuilder;
   private sessionStore: LeadEngineerSessionStore;
@@ -108,6 +110,9 @@ export class LeadEngineerService {
   }
   setAgentFactory(s: AgentFactoryService): void {
     this.agentFactoryService = s;
+  }
+  setHandoffService(s: LeadHandoffService): void {
+    this.handoffService = s;
   }
 
   async initialize(): Promise<void> {

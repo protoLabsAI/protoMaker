@@ -178,6 +178,16 @@ If recovery fails, the feature is marked `blocked` with a `statusChangeReason`. 
 
 **Implication**: Commit your work before exiting. The recovery service is a safety net, not a substitute for proper commits.
 
+## Agent Memory Files
+
+If you read or update any file in `.automaker/memory/`, commit those changes in the same commit as your code changes. The `WorktreeRecoveryService` excludes `.automaker/` from auto-staging — memory drift is never automatically recovered. Stage memory files explicitly:
+
+```bash
+git add .automaker/memory/
+git add <your code files>
+HUSKY=0 git commit -m "feat: ..."
+```
+
 ## CRITICAL: Prettier Formatting — Always Pass `--ignore-path`
 
 Prettier 3.x respects `.gitignore` by default. Since `.worktrees/` is gitignored, running `npx prettier --write` (without `--ignore-path`) silently skips ALL files in `.worktrees/` — no formatting, no error. This causes CI format failures on every agent PR.

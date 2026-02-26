@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 487
-  referenced: 232
-  successfulFeatures: 232
+  loaded: 491
+  referenced: 233
+  successfulFeatures: 233
 ---
 # gotchas
 
@@ -462,3 +462,8 @@ usageStats:
 - **Situation:** Developing type changes to workspace packages (GlobalSettings) within git worktrees while main repo's node_modules is shared between worktree and main branch
 - **Root cause:** TypeScript deduplicates modules by PackageID but stores real paths separately. When worktree has different source code than main repo's dist, both versions get loaded, causing type conflicts
 - **How to avoid:** Solution (node_modules override + copy dist to main) is local dev-only and not committed, so CI/clean builds don't need it. Trade-off: dev environment diverges slightly from CI environment. Clean monorepo build is your safety net.
+
+#### [Gotcha] Score parsing (SCORE: N regex) has no type-safe contract with Cindi template output format - relies on undocumented promise that Cindi prompt emits this format (2026-02-26)
+- **Situation:** GtmReviewProcessor.buildReviewPrompt() expects Cindi to output 'SCORE: N' but there's no enforcement that the template actually does this
+- **Root cause:** LLM outputs are inherently unstructured; parsing strings is simplest immediate approach but creates hidden dependency
+- **How to avoid:** Simple regex parsing vs brittleness; no executor changes needed vs fails silently if template format changes

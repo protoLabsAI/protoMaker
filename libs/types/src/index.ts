@@ -770,6 +770,7 @@ export type {
   EscalationTrigger,
   PersonaAssignment,
   LeadEngineerService,
+  PhaseHandoff,
 } from './lead-engineer.js';
 
 // Twitch integration types (chat suggestions)
