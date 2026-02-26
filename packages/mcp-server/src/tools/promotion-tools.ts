@@ -46,7 +46,8 @@ export const promotionTools: Tool[] = [
         candidateIds: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Array of featureId values from list_staging_candidates to include in this batch.',
+          description:
+            'Array of featureId values from list_staging_candidates to include in this batch.',
         },
         batchId: {
           type: 'string',
