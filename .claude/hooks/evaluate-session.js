@@ -144,12 +144,19 @@ function extractPatterns(ctx, sessionId) {
   const patterns = [];
 
   // Label context for the issue title (key file names)
-  const mainFiles = filesModified.slice(0, 3).map((f) => path.basename(f)).join(', ');
+  const mainFiles = filesModified
+    .slice(0, 3)
+    .map((f) => path.basename(f))
+    .join(', ');
   const fileCtx = mainFiles ? ` (${mainFiles})` : '';
 
   // ─ Bug ──────────────────────────────────────────────────────────────────
   const bugDefs = [
-    { regex: /\b(bug|broken|crash(?:es|ed)?|fail(?:s|ed|ing)?|exception|race condition|memory leak)\b/gi, weight: 1.0 },
+    {
+      regex:
+        /\b(bug|broken|crash(?:es|ed)?|fail(?:s|ed|ing)?|exception|race condition|memory leak)\b/gi,
+      weight: 1.0,
+    },
     { regex: /\b(fix(?:ed|ing)?|patch(?:ed|ing)?|workaround|hotfix)\b/gi, weight: 0.8 },
     { regex: /\b(unexpected|incorrect|wrong(?:ly)?|shouldn'?t)\b/gi, weight: 0.7 },
   ];
@@ -170,7 +177,10 @@ function extractPatterns(ctx, sessionId) {
 
   // ─ Improvement ──────────────────────────────────────────────────────────
   const improveDefs = [
-    { regex: /\b(improve|optimiz(?:e|ed|ing)|refactor(?:ed|ing)?|enhance|performance)\b/gi, weight: 1.0 },
+    {
+      regex: /\b(improve|optimiz(?:e|ed|ing)|refactor(?:ed|ing)?|enhance|performance)\b/gi,
+      weight: 1.0,
+    },
     { regex: /\b(technical debt|code smell|duplicate|repetit(?:ive|ion))\b/gi, weight: 0.9 },
     { regex: /\b(could be|should be|better if|consider|opportunity)\b/gi, weight: 0.6 },
   ];
