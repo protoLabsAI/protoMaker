@@ -61,6 +61,17 @@ export class FeatureStateManager {
 
       feature.status = status;
       feature.updatedAt = new Date().toISOString();
+
+      // Clear stale pipeline gate metadata when reaching terminal states.
+      // Without this, completed features keep awaitingGate=true forever and the
+      // health service repeatedly knocks them back to blocked on every sweep.
+      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'review']);
+      if (TERMINAL_STATUSES.has(status) && feature.pipelineState) {
+        feature.pipelineState.awaitingGate = false;
+        feature.pipelineState.awaitingGatePhase = undefined;
+        feature.pipelineState.gateWaitingSince = undefined;
+      }
+
       // Set justFinishedAt timestamp when moving to waiting_approval (agent just completed)
       // Badge will show for 2 minutes after this timestamp
       if (status === 'waiting_approval') {

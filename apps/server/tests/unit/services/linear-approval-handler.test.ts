@@ -18,6 +18,7 @@ describe('LinearApprovalHandler', () => {
         integrations: {
           linear: {
             approvalStates: ['Approved', 'Ready for Planning'],
+            intakeTriggerStates: ['Todo'],
           },
         },
       }),
@@ -85,7 +86,7 @@ describe('LinearApprovalHandler', () => {
     });
 
     it('should emit linear:intake:triggered for intake trigger states', async () => {
-      await handler.onIssueStateChange('issue-intake', 'In Progress', '/test', {
+      await handler.onIssueStateChange('issue-intake', 'Todo', '/test', {
         title: 'Intake Issue',
         description: 'Transfer this to the board',
       });
@@ -95,7 +96,7 @@ describe('LinearApprovalHandler', () => {
         expect.objectContaining({
           issueId: 'issue-intake',
           title: 'Intake Issue',
-          approvalState: 'In Progress',
+          approvalState: 'Todo',
         })
       );
     });

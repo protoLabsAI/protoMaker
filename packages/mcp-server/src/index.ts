@@ -179,6 +179,8 @@ import { quarantineTools } from './tools/quarantine-tools.js';
 import { fileOpsTools } from './tools/file-ops-tools.js';
 import { gitOpsTools } from './tools/git-ops-tools.js';
 import { worktreeGitTools } from './tools/worktree-git-tools.js';
+import { promotionTools } from './tools/promotion-tools.js';
+import { leadEngineerTools } from './tools/lead-engineer-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -201,6 +203,8 @@ const tools: Tool[] = [
   ...quarantineTools,
   ...fileOpsTools,
   ...worktreeGitTools,
+  ...promotionTools,
+  ...leadEngineerTools,
 ];
 
 // Tool implementations
@@ -1743,6 +1747,77 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         relativePath: args.relativePath,
         showHidden: args.showHidden,
       });
+
+    // Promotion Pipeline
+    case 'list_staging_candidates':
+      return apiCall(
+        '/promotions/candidates',
+        { projectPath: args.projectPath, status: args.status },
+        'GET'
+      );
+
+    case 'create_promotion_batch':
+      return apiCall('/promotions/batch', {
+        projectPath: args.projectPath,
+        candidateIds: args.candidateIds,
+        batchId: args.batchId,
+      });
+
+    case 'promote_to_staging':
+      return apiCall('/promotions/promote-to-staging', {
+        projectPath: args.projectPath,
+        batchId: args.batchId,
+      });
+
+    case 'promote_to_main':
+      return apiCall('/promotions/promote-to-main', {
+        projectPath: args.projectPath,
+        batchId: args.batchId,
+      });
+
+    case 'list_promotion_batches':
+      return apiCall('/promotions/batches', {}, 'GET');
+
+    // Lead Engineer Handoffs
+    case 'get_feature_handoff': {
+      const fsModule = await import('fs/promises');
+      const pathModule = await import('path');
+
+      const projectPath = args.projectPath as string;
+      const featureId = args.featureId as string;
+      const handoffDir = pathModule.join(projectPath, '.automaker', 'features', featureId);
+
+      let files: string[] = [];
+      try {
+        const entries = await fsModule.readdir(handoffDir);
+        files = entries.filter((f: string) => f.startsWith('handoff-') && f.endsWith('.json'));
+      } catch {
+        return { success: true, handoff: null, message: 'No handoffs found for this feature' };
+      }
+
+      if (files.length === 0) {
+        return { success: true, handoff: null, message: 'No handoffs found for this feature' };
+      }
+
+      // Find the latest handoff by createdAt
+      let latest: Record<string, unknown> | null = null;
+      for (const file of files) {
+        try {
+          const content = await fsModule.readFile(pathModule.join(handoffDir, file), 'utf-8');
+          const handoff = JSON.parse(content) as Record<string, unknown>;
+          if (
+            !latest ||
+            new Date(handoff.createdAt as string) > new Date(latest.createdAt as string)
+          ) {
+            latest = handoff;
+          }
+        } catch {
+          // Skip corrupt files
+        }
+      }
+
+      return { success: true, handoff: latest };
+    }
 
     default:
       throw new Error(`Unknown tool: ${name}`);

@@ -87,7 +87,7 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
 
           // Create commit
           logger.debug(`Running: git commit`);
-          await execFileAsync('git', ['commit', '-m', message], {
+          await execFileAsync('git', ['commit', '--no-verify', '-m', message], {
             cwd: worktreePath,
             env: execEnv,
           });

@@ -102,6 +102,7 @@ const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
 export const execEnv = {
   ...process.env,
   PATH: extendedPath,
+  HUSKY: '0', // Disable husky hooks in worktrees — agents handle formatting themselves
 };
 
 // ============================================================================

@@ -22,7 +22,7 @@ import {
   FeatureTextFilePath as DescriptionTextFilePath,
   ImagePreviewMap,
 } from '@/components/views/board-view/components/description-image-dropzone';
-import { Play, Cpu, FolderKanban, Settings2 } from 'lucide-react';
+import { Play, Cpu, FolderKanban, Settings2, FileCode, FileType } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -77,6 +77,8 @@ const getDefaultWorkMode = (
   return useWorktrees ? 'auto' : 'current';
 };
 
+type ContentFormat = 'blog' | 'docs' | 'social' | 'announcement';
+
 type FeatureData = {
   title: string;
   category: string;
@@ -95,6 +97,13 @@ type FeatureData = {
   dependencies?: string[];
   childDependencies?: string[]; // Feature IDs that should depend on this feature
   workMode: WorkMode;
+  featureType?: 'code' | 'content';
+  contentConfig?: {
+    topic?: string;
+    format?: ContentFormat;
+    targetAudience?: string;
+    assignedRole?: 'jon' | 'cindi';
+  };
 };
 
 interface AddFeatureDialogProps {
@@ -186,6 +195,13 @@ export function AddFeatureDialog({
   // Dependency selection state (not in spawn mode)
   const [parentDependencies, setParentDependencies] = useState<string[]>([]);
   const [childDependencies, setChildDependencies] = useState<string[]>([]);
+
+  // Feature type state
+  const [featureType, setFeatureType] = useState<'code' | 'content'>('code');
+  const [contentTopic, setContentTopic] = useState('');
+  const [contentFormat, setContentFormat] = useState<ContentFormat | ''>('');
+  const [contentTargetAudience, setContentTargetAudience] = useState('');
+  const [contentAssignedRole, setContentAssignedRole] = useState<'jon' | 'cindi' | ''>('');
 
   // Get defaults from store
   const { defaultPlanningMode, defaultRequirePlanApproval, defaultFeatureModel } = useAppStore();
@@ -322,6 +338,16 @@ export function AddFeatureDialog({
       dependencies: finalDependencies,
       childDependencies: childDependencies.length > 0 ? childDependencies : undefined,
       workMode,
+      featureType,
+      contentConfig:
+        featureType === 'content'
+          ? {
+              topic: contentTopic.trim() || undefined,
+              format: contentFormat || undefined,
+              targetAudience: contentTargetAudience.trim() || undefined,
+              assignedRole: contentAssignedRole || undefined,
+            }
+          : undefined,
     };
   };
 
@@ -347,6 +373,11 @@ export function AddFeatureDialog({
     setDescriptionHistory([]);
     setParentDependencies([]);
     setChildDependencies([]);
+    setFeatureType('code');
+    setContentTopic('');
+    setContentFormat('');
+    setContentTargetAudience('');
+    setContentAssignedRole('');
     onOpenChange(false);
   };
 
@@ -489,6 +520,120 @@ export function AddFeatureDialog({
                 });
               }}
             />
+          </div>
+
+          {/* Feature Type Section */}
+          <div className={cardClass}>
+            <div className={sectionHeaderClass}>
+              <FileType className="w-4 h-4 text-muted-foreground" />
+              <span>Feature Type</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFeatureType('code')}
+                data-testid="feature-type-code"
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors',
+                  featureType === 'code'
+                    ? 'bg-primary/10 border-primary/50 text-primary'
+                    : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
+                )}
+              >
+                <FileCode className="w-4 h-4" />
+                Code
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeatureType('content')}
+                data-testid="feature-type-content"
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-sm font-medium transition-colors',
+                  featureType === 'content'
+                    ? 'bg-violet-500/10 border-violet-500/50 text-violet-400'
+                    : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
+                )}
+              >
+                <FileType className="w-4 h-4" />
+                Content
+              </button>
+            </div>
+
+            {/* Content-specific fields */}
+            {featureType === 'content' && (
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Topic</Label>
+                  <Input
+                    value={contentTopic}
+                    onChange={(e) => setContentTopic(e.target.value)}
+                    placeholder="e.g., Product launch announcement"
+                    data-testid="content-topic-input"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Format</Label>
+                    <select
+                      value={contentFormat}
+                      onChange={(e) => setContentFormat(e.target.value as ContentFormat | '')}
+                      data-testid="content-format-select"
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="">Select format...</option>
+                      <option value="blog">Blog</option>
+                      <option value="docs">Docs</option>
+                      <option value="social">Social</option>
+                      <option value="announcement">Announcement</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Assigned Role</Label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setContentAssignedRole(contentAssignedRole === 'jon' ? '' : 'jon')
+                        }
+                        data-testid="content-role-jon"
+                        className={cn(
+                          'flex-1 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors',
+                          contentAssignedRole === 'jon'
+                            ? 'bg-blue-500/10 border-blue-500/50 text-blue-400'
+                            : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
+                        )}
+                      >
+                        Jon
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setContentAssignedRole(contentAssignedRole === 'cindi' ? '' : 'cindi')
+                        }
+                        data-testid="content-role-cindi"
+                        className={cn(
+                          'flex-1 px-3 py-1.5 rounded-md border text-sm font-medium transition-colors',
+                          contentAssignedRole === 'cindi'
+                            ? 'bg-blue-500/10 border-blue-500/50 text-blue-400'
+                            : 'border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
+                        )}
+                      >
+                        Cindi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Target Audience</Label>
+                  <Input
+                    value={contentTargetAudience}
+                    onChange={(e) => setContentTargetAudience(e.target.value)}
+                    placeholder="e.g., Developers, Enterprise teams"
+                    data-testid="content-audience-input"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* AI & Execution Section */}

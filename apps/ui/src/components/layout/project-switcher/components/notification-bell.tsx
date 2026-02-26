@@ -84,9 +84,9 @@ export function NotificationBell({ projectPath }: NotificationBellProps) {
       handleMarkAsRead(notification.id);
       setPopoverOpen(false);
 
-      // Navigate to the relevant view based on notification type
+      // Navigate to the inbox for further action
       if (notification.featureId) {
-        navigate({ to: '/board' });
+        navigate({ to: '/inbox' });
       }
     },
     [handleMarkAsRead, setPopoverOpen, navigate]
@@ -94,7 +94,7 @@ export function NotificationBell({ projectPath }: NotificationBellProps) {
 
   const handleViewAll = useCallback(() => {
     setPopoverOpen(false);
-    navigate({ to: '/notifications' });
+    navigate({ to: '/inbox' });
   }, [setPopoverOpen, navigate]);
 
   const getNotificationIcon = (type: string) => {

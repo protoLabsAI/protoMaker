@@ -5,9 +5,9 @@ relevantTo: [seo]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 0
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 2
+  referenced: 1
+  successfulFeatures: 1
 ---
 # seo
 

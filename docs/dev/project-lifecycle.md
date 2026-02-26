@@ -35,6 +35,27 @@ Project (Linear project)
 - Features within a milestone can run in parallel if their dependencies allow
 - Epic features aggregate child feature PRs into a single branch targeting main
 
+### Choosing `maxConcurrency`
+
+Set `maxConcurrency` based on the **widest parallel band** in your dependency graph — adding more slots than that just leaves agents idle.
+
+**Linear chain** (most projects): each phase depends on the previous one, so only one agent can run at a time regardless of concurrency. Set `maxConcurrency: 2` — one active agent, one slot to pick up the next unlocked feature the moment a PR merges.
+
+```
+Phase 1 → Phase 2 → Phase 3   (only 1 runs at a time, 2nd slot is standby)
+```
+
+**Wide fan-out** (e.g. multiple independent UI components): phases can run in parallel. Set `maxConcurrency` equal to the number of simultaneously-unblocked features.
+
+```
+Phase 1 → Phase 2a   (2a and 2b unblock together)
+        → Phase 2b   → use maxConcurrency: 3
+```
+
+**Mixed milestones**: use the widest fan-out across all milestones. A value of 2–3 covers most real projects without risking the 13-agent crash threshold.
+
+**System constraint**: Do not exceed 6 concurrent agents in production (Opus ~6GB each, Sonnet ~4GB). Setting `maxConcurrency` above your dependency width doesn't increase throughput — it just pre-warms slots.
+
 ### Relationship to the pipeline
 
 The project lifecycle operates at the **project level**. The [9-phase pipeline](./idea-to-production.md) operates at the **feature level**. They connect at these points:

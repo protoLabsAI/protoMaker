@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 49
+  loaded: 54
   referenced: 25
   successfulFeatures: 25
 ---
@@ -3572,3 +3572,84 @@ usageStats:
 - **Rejected:** Inline all architecture/contributing details (creates unmaintainable 3000+ line README). Separate architecture doc without README overview (users don't know it exists)
 - **Trade-offs:** Users must click for details instead of finding everything in one place. But enables maintainability and caters to scanning vs deep reading behaviors
 - **Breaking if changed:** Without external documentation structure, README becomes dumping ground for all complexity. Architecture details require dedicated documentation with proper structure and versioning
+
+
+### Recovery happens synchronously immediately after agent completes, not async/background. State transitions reflect recovery status before any downstream processing. (2026-02-25)
+- **Context:** Post-agent workflow needs to detect uncommitted work and recover or signal failure to prevent infinite retry loops in ExecuteProcessor
+- **Why:** Immediate synchronous recovery ensures feature state is authoritative after agent completion. Downstream services (lead-engineer-service) can rely on state reflecting actual recovery status without eventual consistency windows.
+- **Rejected:** Async background recovery with background job - would create window where ExecuteProcessor doesn't know if recovery succeeded or failed, requiring different escalation logic
+- **Trade-offs:** Request latency increased by recovery time, but state consistency guarantees are strong. Alternative async approach would be faster but require eventual consistency handling.
+- **Breaking if changed:** If moved to async, ExecuteProcessor's blocked-state check becomes unreliable; retries would resume on git failures because state doesn't reflect recovery status yet
+
+#### [Pattern] Feature.status='blocked' used as circuit breaker to prevent ExecuteProcessor retries when git/network failures occur, instead of throwing exceptions (2026-02-25)
+- **Problem solved:** ExecuteProcessor would retry indefinitely on transient failures if not told to escalate instead. Need to distinguish git failures (don't retry) from agent failures (might retry).
+- **Why this works:** State is more expressive than exceptions for long-running workflows: the 'blocked' state encodes 'this failure is infrastructure-related, escalate instead of retrying'. State persists across request boundaries and is queryable.
+- **Trade-offs:** Adds state coupling (ExecuteProcessor must know about 'blocked' status) but enables clean separation: recovery service doesn't know about retry logic, retry logic doesn't know about recovery details
+
+#### [Pattern] Service returns structured result; caller owns state updates and event emission. worktree-recovery-service returns data without touching feature state; auto-mode-service handles state transitions. (2026-02-25)
+- **Problem solved:** Need to decouple pure git recovery logic from business state machine while ensuring consistent state updates
+- **Why this works:** Enables unit testing git logic independently (mock-based, fast, deterministic) while keeping state machine transitions observable and testable separately. Caller coordination point is explicit.
+- **Trade-offs:** Adds layer of indirection and requires caller to handle result-to-state mapping, but gains testability and separation of concerns. Risk if caller forgets to update state.
+
+### Prettier formatting failures are non-fatal during recovery; code still commits and pushes even if prettier fails, while git operation failures (commit, push) are fatal (2026-02-25)
+- **Context:** Recovery pipeline: prettier → git add → git commit → git push. Need to distinguish which failures should abort vs continue
+- **Why:** Hierarchical failure criticality: git operations are infrastructure-critical (if they fail, recovery objectively failed), formatting is aesthetic (code is still functional). Non-fatal prettier failure signals 'imperfect recovery, needs review' rather than 'recovery impossible'.
+- **Rejected:** Fail hard on any error - would require code to pass formatting before recovery succeeds, making recovery fragile. Continue silently on git failures - would hide actual failures.
+- **Trade-offs:** Code pushed without formatting guarantees, but recovery succeeds more often. Relies on PR review to catch formatting issues. More forgiving to agent code quality.
+- **Breaking if changed:** If prettier failures become fatal, recovery requires agent code to be pre-formatted. If git failures become non-fatal, feature could be marked recovered when push actually failed.
+
+#### [Pattern] Early return paths in auto-mode-service: if recovered→update to review+emit completed; if detected-but-failed→update to blocked+emit error. Prevents further processing on recovery outcomes. (2026-02-25)
+- **Problem solved:** After recovery attempt, different states require different downstream behaviors. Can't use same path for both success and failure.
+- **Why this works:** Guard clause pattern ensures each recovery state has dedicated handling. Prevents silent failures where recovery fails but feature continues as if nothing happened. Each path is explicit: recovered features skip to review, blocked features escalate.
+- **Trade-offs:** More explicit code paths but less concise. Clearer intent: each path represents a distinct feature state with distinct downstream implications.
+
+### Ownership metadata stamped as invisible HTML comment in PR body: `<!-- automaker:owner instance=X team=Y created=Z -->`. Not plain text. (2026-02-25)
+- **Context:** Embedding instance/team/timestamp metadata in PR body for multi-instance coordination while keeping PR display clean
+- **Why:** HTML comments are invisible in rendered markdown but easily parseable as plain text. Metadata doesn't clutter the PR display or get confused with PR description content.
+- **Rejected:** Plain text format (readable but clutters PR), custom markdown formatting (might conflict with user content), separate metadata store (adds external dependency and consistency issues)
+- **Trade-offs:** Human-invisible but mechanically parseable. Metadata lives in PR body (survives API calls, no separate DB needed) but requires correct parsing logic.
+- **Breaking if changed:** If format changes (tag name, field order, delimiter), parsing logic breaks. Requires coordinated rollout when changing format.
+
+#### [Gotcha] Complex dynamic import type inference (`InstanceType<Awaited<typeof import(...)>>`) hiding redundant re-imports of already-imported classes (2026-02-25)
+- **Situation:** ProjectPlanningService was dynamically imported with a complex generic type, even though the class could be imported statically
+- **Root cause:** Dynamic imports were likely initially added for tree-shaking or lazy-loading, but singleton services that are always needed don't benefit from this complexity
+- **How to avoid:** Static imports are simpler to read but remove potential for lazy-loading; dynamic imports offer lazy-loading but add significant type inference overhead
+
+#### [Pattern] Type casting as a refactoring signal: `as unknown as ServiceContainer` cast was removed when underlying structural issues were fixed (2026-02-25)
+- **Problem solved:** Original code had `return {...} as unknown as ServiceContainer` indicating the object shape didn't match the interface
+- **Why this works:** Type casts bypass type safety; when a cast becomes necessary, it signals the structure is wrong rather than the types being incompatible
+- **Trade-offs:** Requires identifying and removing structural mismatches (harder upfront) but eliminates hidden type debt
+
+#### [Pattern] Singleton services imported separately, then `.initialize()` called with dependency container in a two-phase pattern (2026-02-25)
+- **Problem solved:** Services like `linearSyncService` and `changelogService` are imported from singletons module, then initialized with event emitters and cross-service references
+- **Why this works:** Avoids circular dependency issues (singletons are initialized elsewhere); allows services to wire event hooks after all services exist
+- **Trade-offs:** Requires coordination: singletons must be initialized first, then `.initialize()` called in services.ts; reduces single-point-of-construction clarity
+
+### Removed redundant dynamic imports when classes were already statically available, consolidating to single source of truth per class (2026-02-25)
+- **Context:** Multiple `await import()` calls for same classes (ContextFidelityService, ProjectPlanningService, etc.) when static imports already existed
+- **Why:** Reduces import overhead, simplifies type inference, single source of truth - static imports are evaluated once at module load
+- **Rejected:** Keeping dynamic imports for consistency with legacy patterns - but this added unnecessary indirection
+- **Trade-offs:** Single static import per class is simpler but removes ability to lazy-load per-call; startup time slightly improved
+- **Breaking if changed:** Code that relied on lazy-loading behavior (e.g., optional features loaded only on demand) would be affected
+
+### Optional dependency injection via setter on LeadEngineerService (setAgentFactory) rather than constructor injection (2026-02-26)
+- **Context:** GtmReviewProcessor needs agentFactoryService to create Cindi agent, but this should be optional - service works without it by falling back to standard ReviewProcessor
+- **Why:** Setter-based injection allows graceful degradation and runtime toggling. Constructor injection would require updating all instantiation sites and force all tests to provide a mock. Enables feature to be optional without architectural changes.
+- **Rejected:** Constructor injection - more strict, fails fast, but breaks all existing callers and prevents runtime toggling of the feature
+- **Trade-offs:** Less compile-time safety (no failure if agentFactoryService is never set) vs ability to deploy feature independently; easier testing vs less obvious dependency
+- **Breaking if changed:** If refactored to constructor injection, all LeadEngineerService instantiation sites must be updated and optional behavior is lost
+
+#### [Pattern] Feature type discrimination (featureType === 'content') as router to conditionally register state processor at runtime (2026-02-26)
+- **Problem solved:** Different feature types (code vs content) need different REVIEW processors, but FeatureStateMachine is shared for both
+- **Why this works:** Avoids conditional logic inside base ReviewProcessor; enables feature-specific processors without modifying core state machine. Clean separation of concerns.
+- **Trade-offs:** More files/code but better encapsulation; requires featureType to be reliable contract between domain and routing logic
+
+#### [Pattern] Agent Factory Service with named templates (createFromTemplate('cindi', ...)) as abstraction layer for agent construction (2026-02-26)
+- **Problem solved:** GtmReviewProcessor needs to create Cindi agent but shouldn't hard-code agent construction logic
+- **Why this works:** Decouples processor from agent instantiation details; enables agents to be registered/updated without processor changes; single source of truth for template configuration
+- **Trade-offs:** One more indirection/service dependency vs ability to manage agents as registry; requires runtime template lookup vs simpler direct construction
+
+#### [Pattern] State context as inter-state data carrier - feedback from failed review (score < 75) stored in ctx.reviewFeedback for EXECUTE phase visibility (2026-02-26)
+- **Problem solved:** When Cindi score is low, human needs to see the feedback in next phase (EXECUTE), but phases are decoupled
+- **Why this works:** StateContext is the shared mutable state across transitions; passing feedback via context avoids creating new return type for ReviewProcessor and keeps each processor focused on its output
+- **Trade-offs:** Implicit data flow via context (easier short-term) vs explicit contracts; less coupling vs harder to trace data flow

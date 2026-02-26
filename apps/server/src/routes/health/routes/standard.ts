@@ -10,7 +10,6 @@ import type { AgentService } from '../../../services/agent-service.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { RoleRegistryService } from '../../../services/role-registry-service.js';
-import type { TwitchService } from '../../../services/twitch/twitch-service.js';
 
 interface StandardHealthResponse {
   status: 'ok' | 'degraded';
@@ -32,10 +31,6 @@ interface StandardHealthResponse {
     templateCount: number;
     roles: string[];
   };
-  twitch?: {
-    connected: boolean;
-    channel: string | null;
-  };
 }
 
 export function createStandardHandler(
@@ -43,8 +38,7 @@ export function createStandardHandler(
   featureLoader: FeatureLoader,
   autoModeService: AutoModeService,
   roleRegistryService: RoleRegistryService,
-  projectPath: string,
-  twitchService?: TwitchService
+  projectPath: string
 ) {
   return async (_req: Request, res: Response): Promise<void> => {
     const startTime = Date.now();
@@ -73,9 +67,6 @@ export function createStandardHandler(
       const allTemplates = roleRegistryService.list();
       const roles = [...new Set(allTemplates.map((t) => t.role))];
 
-      // Get Twitch connection status
-      const twitchStatus = twitchService?.getStatus();
-
       const response: StandardHealthResponse = {
         status: 'ok',
         uptime: process.uptime(),
@@ -96,7 +87,6 @@ export function createStandardHandler(
           templateCount: allTemplates.length,
           roles,
         },
-        ...(twitchStatus && { twitch: twitchStatus }),
       };
 
       const duration = Date.now() - startTime;

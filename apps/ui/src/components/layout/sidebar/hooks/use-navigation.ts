@@ -10,11 +10,9 @@ import {
   GitPullRequest,
   Brain,
   Network,
-  Bell,
   Inbox,
   Settings,
   NotebookPen,
-  PartyPopper,
   Palette,
   CalendarDays,
 } from 'lucide-react';
@@ -223,7 +221,8 @@ export function useNavigation({
       });
     }
 
-    // Add Notifications and Project Settings as a standalone section (no label for visual separation)
+    // Add Inbox and Project Settings as a standalone section (no label for visual separation)
+    const inboxCount = (unreadNotificationsCount ?? 0) + (unreadCeremonyCount ?? 0);
     sections.push({
       label: '',
       items: [
@@ -231,19 +230,7 @@ export function useNavigation({
           id: 'inbox',
           label: 'Inbox',
           icon: Inbox,
-        },
-        {
-          id: 'ceremonies',
-          label: 'Ceremonies',
-          icon: PartyPopper,
-          count: unreadCeremonyCount,
-        },
-        {
-          id: 'notifications',
-          label: 'Notifications',
-          icon: Bell,
-          shortcut: shortcuts.notifications,
-          count: unreadNotificationsCount,
+          count: inboxCount || undefined,
         },
         {
           id: 'project-settings',

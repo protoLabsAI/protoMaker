@@ -97,6 +97,7 @@ const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
 const execEnv = {
   ...process.env,
   PATH: extendedPath,
+  HUSKY: '0', // Disable husky hooks in worktrees — agents handle formatting themselves
 };
 
 /**
@@ -306,7 +307,7 @@ export class GitWorkflowService {
       );
 
       // Stage all changes (same pattern as commitChanges)
-      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
         cwd: workDir,
         env: execEnv,
       });
@@ -323,10 +324,13 @@ export class GitWorkflowService {
             `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
             { cwd: workDir, env: execEnv }
           );
-          await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
-            cwd: workDir,
-            env: execEnv,
-          });
+          await execAsync(
+            "git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'",
+            {
+              cwd: workDir,
+              env: execEnv,
+            }
+          );
         }
       } catch {
         // Non-fatal: formatting failure shouldn't block progress save
@@ -964,7 +968,7 @@ export class GitWorkflowService {
     const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
 
     // Stage all changes - include .automaker/memory/ but exclude other .automaker/ files
-    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
       cwd: workDir,
       env: execEnv,
     });
@@ -978,14 +982,14 @@ export class GitWorkflowService {
       const files = stagedFiles.trim().split('\n').filter(Boolean);
       if (files.length > 0) {
         await execAsync(
-          `npx prettier --ignore-path .prettierignore --write ${files.map((f) => `"${f}"`).join(' ')}`,
+          `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
           {
             cwd: workDir,
             env: execEnv,
           }
         );
         // Re-stage after formatting
-        await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+        await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
           cwd: workDir,
           env: execEnv,
         });
@@ -1187,7 +1191,7 @@ export class GitWorkflowService {
 
       // Format them
       await execAsync(
-        `npx prettier --ignore-path .prettierignore --write ${files.map((f) => `"${f}"`).join(' ')}`,
+        `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
         { cwd: workDir, env: execEnv }
       );
 
@@ -1199,7 +1203,7 @@ export class GitWorkflowService {
       if (!status.trim()) return; // No formatting changes needed
 
       // Stage and amend
-      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
         cwd: workDir,
         env: execEnv,
       });

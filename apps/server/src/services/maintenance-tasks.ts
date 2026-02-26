@@ -232,6 +232,19 @@ export async function registerMaintenanceTasks(
     logger.info('Registered Graphite sync maintenance task');
   }
 
+  // Daily at 4:30am: Auto-delete closed Linear issues past retention window
+  await scheduler.registerTask(
+    'maintenance:linear-issue-cleanup',
+    'Linear Closed Issue Cleanup',
+    '30 4 * * *', // Daily at 4:30 AM
+    async () => {
+      const projectPaths = getKnownProjectPaths(autoModeService);
+      await cleanupClosedLinearIssues(events, settingsService, projectPaths);
+    }
+  );
+  taskCount++;
+  logger.info('Registered Linear closed issue cleanup maintenance task');
+
   logger.info(`Registered ${taskCount} maintenance tasks`);
 
   // Apply settings overrides from GlobalSettings.maintenance
@@ -1491,4 +1504,165 @@ export async function scanWorktreesForCrashRecovery(
     logger.error(`Crash recovery scan failed for ${projectPath}:`, error);
     // Don't throw - this is a non-blocking scan
   }
+}
+
+// ============================================================================
+// Linear Closed Issue Cleanup
+// ============================================================================
+
+const LINEAR_GRAPHQL_URL = 'https://api.linear.app/graphql';
+const LINEAR_DEFAULT_RETENTION_DAYS = 3;
+
+async function linearGql(
+  token: string,
+  query: string,
+  variables?: Record<string, unknown>
+): Promise<unknown> {
+  const response = await fetch(LINEAR_GRAPHQL_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: token,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!response.ok) {
+    throw new Error(`Linear API HTTP ${response.status}: ${response.statusText}`);
+  }
+  const result = (await response.json()) as { data?: unknown; errors?: { message: string }[] };
+  if (result.errors?.length) {
+    throw new Error(`Linear API error: ${result.errors.map((e) => e.message).join(', ')}`);
+  }
+  return result.data;
+}
+
+/**
+ * Delete closed (completed + cancelled) Linear issues older than retentionDays.
+ * Uses the workspace-level API token from env or project settings fallback.
+ */
+async function cleanupClosedLinearIssues(
+  events: EventEmitter,
+  settingsService?: SettingsService,
+  projectPaths?: string[]
+): Promise<void> {
+  // Resolve token: env first, then any configured project
+  let token = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN;
+  let retentionDays = LINEAR_DEFAULT_RETENTION_DAYS;
+
+  if (!token && settingsService && projectPaths?.length) {
+    for (const projectPath of projectPaths) {
+      try {
+        const settings = await settingsService.getProjectSettings(projectPath);
+        const linearCfg = settings.integrations?.linear;
+        if (linearCfg?.enabled && (linearCfg.agentToken || linearCfg.apiKey)) {
+          token = linearCfg.agentToken ?? linearCfg.apiKey;
+          if (linearCfg.closedIssueRetentionDays !== undefined) {
+            retentionDays = linearCfg.closedIssueRetentionDays;
+          }
+          break;
+        }
+      } catch {
+        // skip
+      }
+    }
+  } else if (settingsService && projectPaths?.length) {
+    // Token found from env — still check project settings for retention override
+    for (const projectPath of projectPaths) {
+      try {
+        const settings = await settingsService.getProjectSettings(projectPath);
+        const days = settings.integrations?.linear?.closedIssueRetentionDays;
+        if (days !== undefined) {
+          retentionDays = days;
+          break;
+        }
+      } catch {
+        // skip
+      }
+    }
+  }
+
+  if (!token) {
+    logger.debug('Linear cleanup skipped — no API token configured');
+    return;
+  }
+
+  if (retentionDays === 0) {
+    logger.info('Linear closed issue cleanup disabled (retentionDays=0)');
+    return;
+  }
+
+  const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+
+  logger.info(
+    `Cleaning up Linear issues closed before ${cutoffDate} (${retentionDays}d retention)`
+  );
+
+  // Query closed issues older than cutoff
+  const data = (await linearGql(
+    token,
+    `
+    {
+      issues(
+        filter: {
+          state: { type: { in: ["completed", "cancelled"] } }
+          updatedAt: { lt: "${cutoffDate}" }
+        }
+        first: 250
+        orderBy: updatedAt
+      ) {
+        nodes { id identifier updatedAt }
+        pageInfo { hasNextPage }
+      }
+    }
+  `
+  )) as {
+    issues: {
+      nodes: { id: string; identifier: string; updatedAt: string }[];
+      pageInfo: { hasNextPage: boolean };
+    };
+  };
+
+  const issues = data.issues.nodes;
+
+  if (issues.length === 0) {
+    logger.info('Linear cleanup: no closed issues past retention window');
+    return;
+  }
+
+  if (data.issues.pageInfo.hasNextPage) {
+    logger.warn(
+      `Linear cleanup: more than 250 closed issues found — will process first 250 this run`
+    );
+  }
+
+  logger.info(`Linear cleanup: deleting ${issues.length} closed issues`);
+
+  let deleted = 0;
+  const failed: string[] = [];
+
+  for (const issue of issues) {
+    try {
+      await linearGql(
+        token,
+        `
+        mutation { issueDelete(id: "${issue.id}") { success } }
+      `
+      );
+      deleted++;
+    } catch (error) {
+      failed.push(issue.identifier);
+      logger.warn(`Failed to delete Linear issue ${issue.identifier}:`, error);
+    }
+  }
+
+  logger.info(
+    `Linear cleanup complete: deleted ${deleted}/${issues.length}${failed.length ? `, failed: ${failed.join(', ')}` : ''}`
+  );
+
+  events.emit('maintenance:linear_cleanup_completed' as Parameters<typeof events.emit>[0], {
+    deleted,
+    failed: failed.length,
+    retentionDays,
+    cutoffDate,
+  });
 }

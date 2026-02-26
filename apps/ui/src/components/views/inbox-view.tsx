@@ -25,12 +25,14 @@ import {
   CircleDot,
   BellOff,
   Filter,
+  X,
 } from 'lucide-react';
 import type {
   ActionableItem,
   ActionableItemActionType,
   ActionableItemPriority,
 } from '@protolabs-ai/types';
+import type { Feature } from '@/store/types';
 import { getEffectivePriority } from '@protolabs-ai/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -131,6 +133,9 @@ export function InboxView() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState<string | null>(null);
+  const [approvalItem, setApprovalItem] = useState<ActionableItem | null>(null);
+  const [approvalFeature, setApprovalFeature] = useState<Feature | null>(null);
+  const [approvalLoading, setApprovalLoading] = useState(false);
 
   useLoadActionableItems(projectPath);
   useActionableItemEvents(projectPath);
@@ -158,6 +163,30 @@ export function InboxView() {
     });
   }, [items, categoryFilter, statusFilter]);
 
+  const handleGateAction = useCallback(
+    async (e: React.MouseEvent, item: ActionableItem, action: 'advance' | 'reject') => {
+      e.stopPropagation();
+      if (!projectPath) return;
+      const featureId = item.actionPayload?.featureId as string | undefined;
+      if (!featureId) return;
+      try {
+        const api = getHttpApiClient();
+        await api.engine.pipelineGateResolve(projectPath, featureId, action);
+        // Mark the item as acted and dismiss it
+        useActionableItemsStore.getState().dismissItem(item.id);
+        await api.actionableItems.dismiss(projectPath, item.id);
+        toast.success(
+          action === 'advance'
+            ? 'Gate advanced — pipeline continues'
+            : 'Gate rejected — feature blocked'
+        );
+      } catch {
+        toast.error('Failed to resolve gate');
+      }
+    },
+    [projectPath]
+  );
+
   const handleItemClick = useCallback(
     async (item: ActionableItem) => {
       if (!projectPath) return;
@@ -166,6 +195,25 @@ export function InboxView() {
       markAsRead(item.id);
       const api = getHttpApiClient();
       await api.actionableItems.markRead(projectPath, item.id);
+
+      // Open approval preview dialog
+      if (item.actionType === 'approval' && item.actionPayload?.featureId) {
+        try {
+          setApprovalLoading(true);
+          setApprovalItem(item);
+          const featureId = item.actionPayload.featureId as string;
+          const res = await api.features.get(projectPath, featureId);
+          if (res.success && res.feature) {
+            setApprovalFeature(res.feature);
+          }
+        } catch {
+          toast.error('Failed to load feature');
+          setApprovalItem(null);
+        } finally {
+          setApprovalLoading(false);
+        }
+        return; // Don't fall through to HITL form handling
+      }
 
       // Open HITL form if applicable
       if (item.actionType === 'hitl_form' && item.actionPayload?.formId) {
@@ -380,6 +428,30 @@ export function InboxView() {
                   </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Gate actions */}
+                    {item.actionType === 'gate' && item.status === 'pending' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-green-600 border-green-600/30 hover:bg-green-600/10"
+                          onClick={(e) => handleGateAction(e, item, 'advance')}
+                          title="Advance gate"
+                        >
+                          Advance
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-red-500 border-red-500/30 hover:bg-red-500/10"
+                          onClick={(e) => handleGateAction(e, item, 'reject')}
+                          title="Reject gate"
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+
                     {/* Snooze */}
                     {item.status === 'pending' && (
                       <div className="relative">
@@ -428,6 +500,115 @@ export function InboxView() {
           </div>
         )}
       </div>
+
+      {/* Approval Preview Dialog */}
+      {approvalItem && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => {
+            setApprovalItem(null);
+            setApprovalFeature(null);
+          }}
+        >
+          <div
+            className="bg-background border rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-yellow-500" />
+                <h2 className="font-semibold text-sm">Review &amp; Approve</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => {
+                  setApprovalItem(null);
+                  setApprovalFeature(null);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Feature title */}
+            {approvalFeature && (
+              <div className="px-6 py-3 border-b shrink-0 bg-muted/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">
+                  Feature
+                </p>
+                <p className="text-sm font-medium">{approvalFeature.title}</p>
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {approvalLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Spinner className="h-5 w-5" />
+                </div>
+              ) : approvalFeature?.description ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <pre className="whitespace-pre-wrap text-xs leading-relaxed font-sans text-foreground">
+                    {approvalFeature.description}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  {approvalItem.message || 'No additional details available.'}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setApprovalItem(null);
+                  setApprovalFeature(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                onClick={async () => {
+                  if (!projectPath || !approvalItem) return;
+                  dismissItem(approvalItem.id);
+                  const api = getHttpApiClient();
+                  await api.actionableItems.dismiss(projectPath, approvalItem.id);
+                  toast.success('Dismissed');
+                  setApprovalItem(null);
+                  setApprovalFeature(null);
+                }}
+              >
+                Dismiss
+              </Button>
+              <Button
+                size="sm"
+                className="bg-primary text-primary-foreground"
+                onClick={async () => {
+                  if (!projectPath || !approvalItem) return;
+                  useActionableItemsStore.getState().dismissItem(approvalItem.id);
+                  const api = getHttpApiClient();
+                  await api.actionableItems.dismiss(projectPath, approvalItem.id);
+                  toast.success('Approved — feature queued for execution');
+                  setApprovalItem(null);
+                  setApprovalFeature(null);
+                }}
+              >
+                Approve
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

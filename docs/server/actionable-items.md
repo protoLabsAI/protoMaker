@@ -105,6 +105,45 @@ Full-page inbox at the `/inbox` route with:
 - Bulk actions (dismiss all, mark all read)
 - Click-to-open for HITL form items
 
+#### Gate items
+
+Gate items (`actionType === 'gate'`, `status === 'pending'`) render inline **Advance** and **Reject** buttons directly on the card. Clicking either:
+
+1. Calls `POST /api/engine/pipeline/gate/resolve` with `{ projectPath, featureId, action: 'advance' | 'reject' }`
+2. Dismisses the ActionableItem
+3. Shows a success toast
+
+This avoids a separate modal for the common case — the action is binary and irreversible, so an inline confirm-by-clicking pattern is sufficient.
+
+#### Approval items
+
+Approval items (`actionType === 'approval'`) open a **preview modal** on click. The modal:
+
+1. Fetches the feature from `GET /api/features/:id` to display full spec context
+2. Renders the feature title and scrollable description
+3. Offers **Dismiss** (sets item status to dismissed) and **Approve** (calls `act` endpoint + dismisses)
+
+The fetch happens at click time (not eagerly) so stale feature data is never shown.
+
+### Sidebar badge aggregation
+
+The sidebar has a **single Inbox nav item** that aggregates all user-attention signals into one badge count. This is intentional — the entry point is `Inbox`, not individual signal types.
+
+**Pattern in `use-navigation.ts`:**
+
+```typescript
+const inboxCount = (unreadNotificationsCount ?? 0) + (unreadCeremonyCount ?? 0);
+// Future: + urgentActionableCount, + escalationCount, etc.
+```
+
+**Why a single entry point:**
+
+- Users don't mentally separate "notifications" from "ceremonies" from "gate approvals" — they think "what needs my attention?"
+- Adding new signal sources (escalations, etc.) only requires updating the count expression, not adding nav items
+- The `/inbox` page handles filtering by category once the user is inside
+
+**Notification bell** (`notification-bell.tsx`) in the project switcher also routes to `/inbox` on click, not to `/notifications`. This ensures there's exactly one surface for all attention items.
+
 ### Browser notifications (`use-browser-notifications.ts`)
 
 Mounted at the app root level. Two channels:

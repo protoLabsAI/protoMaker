@@ -83,8 +83,14 @@ describe('agent-service.ts', () => {
           timestamp: '2024-01-01T00:00:00Z',
         },
       ];
+      const enoentError: any = new Error('ENOENT');
+      enoentError.code = 'ENOENT';
 
-      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(existingMessages));
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(JSON.stringify(existingMessages)) // session file
+        .mockResolvedValueOnce('{}') // metadata file
+        .mockRejectedValueOnce(enoentError) // queue file
+        .mockRejectedValueOnce(enoentError); // pending tools file
 
       const result = await service.startConversation({
         sessionId: 'session-1',
@@ -123,9 +129,124 @@ describe('agent-service.ts', () => {
       });
 
       expect(result.success).toBe(true);
-      // First call reads session file, metadata file, and queue state file (3 calls)
+      // First call reads session file, metadata file, queue state file, and pending tools file (4 calls)
       // Second call should reuse in-memory session (no additional calls)
-      expect(fs.readFile).toHaveBeenCalledTimes(3);
+      expect(fs.readFile).toHaveBeenCalledTimes(4);
+    });
+
+    it('should pass through unchanged on clean resume (no pending tools)', async () => {
+      const enoentError: any = new Error('ENOENT');
+      enoentError.code = 'ENOENT';
+      const existingMessages = [
+        {
+          id: 'msg-1',
+          role: 'user',
+          content: 'Hello',
+          timestamp: '2024-01-01T00:00:00Z',
+        },
+      ];
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(JSON.stringify(existingMessages)) // session file
+        .mockResolvedValueOnce('{}') // metadata file
+        .mockRejectedValueOnce(enoentError) // queue file
+        .mockRejectedValueOnce(enoentError); // pending tools file (none)
+
+      const result = await service.startConversation({
+        sessionId: 'session-clean',
+        workingDirectory: '/test/dir',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.messages).toEqual(existingMessages);
+      // No writeFile since no patching needed
+      expect(fs.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('should inject synthetic error messages for pending tools on interrupted resume', async () => {
+      const enoentError: any = new Error('ENOENT');
+      enoentError.code = 'ENOENT';
+      const existingMessages = [
+        {
+          id: 'msg-1',
+          role: 'user',
+          content: 'Run a command',
+          timestamp: '2024-01-01T00:00:00Z',
+        },
+      ];
+      const pendingTools = [
+        { name: 'Bash', startTime: 1700000000000 },
+        { name: 'Read', startTime: 1700000001000 },
+      ];
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(JSON.stringify(existingMessages)) // session file
+        .mockResolvedValueOnce('{}') // metadata file
+        .mockRejectedValueOnce(enoentError) // queue file
+        .mockResolvedValueOnce(JSON.stringify(pendingTools)); // pending tools file
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
+
+      const result = await service.startConversation({
+        sessionId: 'session-interrupted',
+        workingDirectory: '/test/dir',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.messages.length).toBe(3); // original user msg + 2 synthetic errors
+
+      const errorMessages = result.messages.filter((m: any) => m.isError);
+      expect(errorMessages.length).toBe(2);
+      expect(errorMessages[0].role).toBe('assistant');
+      expect(errorMessages[0].content).toContain('[Interrupted]');
+      expect(errorMessages[0].content).toContain("'Bash'");
+      expect(errorMessages[1].content).toContain("'Read'");
+
+      // Should save patched messages to disk
+      expect(fs.writeFile).toHaveBeenCalled();
+      // Should clear pending tools file
+      expect(fs.unlink).toHaveBeenCalled();
+    });
+
+    it('should not duplicate synthetic errors on idempotent replay', async () => {
+      const enoentError: any = new Error('ENOENT');
+      enoentError.code = 'ENOENT';
+      const pendingTools = [{ name: 'Bash', startTime: 1700000000000 }];
+      const syntheticContent = `[Interrupted] Tool call 'Bash' was in-flight when the session was interrupted and did not complete.`;
+      const existingMessages = [
+        {
+          id: 'msg-1',
+          role: 'user',
+          content: 'Run a command',
+          timestamp: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'msg-2',
+          role: 'assistant',
+          content: syntheticContent,
+          timestamp: '2024-01-01T00:00:01Z',
+          isError: true,
+        },
+      ];
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(JSON.stringify(existingMessages)) // session (already patched)
+        .mockResolvedValueOnce('{}') // metadata
+        .mockRejectedValueOnce(enoentError) // queue
+        .mockResolvedValueOnce(JSON.stringify(pendingTools)); // pending tools (stale)
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
+
+      const result = await service.startConversation({
+        sessionId: 'session-idempotent',
+        workingDirectory: '/test/dir',
+      });
+
+      expect(result.success).toBe(true);
+      // Should NOT add duplicate error - still just 2 messages
+      expect(result.messages.length).toBe(2);
+      const errorMessages = result.messages.filter((m: any) => m.isError);
+      expect(errorMessages.length).toBe(1); // only the pre-existing one
     });
   });
 

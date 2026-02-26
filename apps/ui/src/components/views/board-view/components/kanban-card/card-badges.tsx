@@ -22,6 +22,7 @@ import {
   Loader2,
   FileText,
   XCircle,
+  FileType,
 } from 'lucide-react';
 import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
@@ -151,11 +152,20 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
   const hasAssignee = !!feature.assignee;
   const hasDueDate = !!feature.dueDate;
   const hasWorkItemState = !!feature.workItemState;
+  const isContent = feature.featureType === 'content';
   // costUsd is typed as unknown on the Feature interface; narrow with typeof guard
   const costUsd = typeof feature.costUsd === 'number' ? feature.costUsd : undefined;
   const hasCost = costUsd != null && costUsd > 0;
 
-  if (!hasError && !hasEpic && !hasAssignee && !hasDueDate && !hasCost && !hasWorkItemState) {
+  if (
+    !hasError &&
+    !hasEpic &&
+    !hasAssignee &&
+    !hasDueDate &&
+    !hasCost &&
+    !hasWorkItemState &&
+    !isContent
+  ) {
     return null;
   }
 
@@ -204,6 +214,17 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      )}
+
+      {/* Content type badge */}
+      {isContent && (
+        <div
+          className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium bg-violet-500/15 text-violet-400 border border-violet-500/30"
+          data-testid={`content-badge-${feature.id}`}
+        >
+          <FileType className="w-3 h-3" />
+          Content
+        </div>
       )}
 
       {/* Assignee badge */}

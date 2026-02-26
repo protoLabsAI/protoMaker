@@ -174,6 +174,9 @@ export class LinearAgentRouter {
         void this.handleSessionCreated(payload as LinearSessionEvent);
       } else if (type === 'linear:agent-session:prompted') {
         void this.handleSessionPrompted(payload as LinearSessionEvent);
+      } else if (type === 'linear:agent-session:removed') {
+        const { sessionId } = payload as { sessionId: string };
+        this.handleSessionRemoved(sessionId);
       }
     });
     this.isStarted = true;
@@ -183,6 +186,7 @@ export class LinearAgentRouter {
     if (!this.isStarted) return;
     logger.info('Stopping LinearAgentRouter');
     this.unsubscribe?.();
+    this.sessionMeta.clear();
     this.isStarted = false;
   }
 
@@ -374,6 +378,14 @@ export class LinearAgentRouter {
         )
         .catch((e) => logger.error('Failed to report error to Linear:', e));
     }
+  }
+
+  /**
+   * Handle session removal — clean up metadata to prevent unbounded map growth.
+   */
+  private handleSessionRemoved(sessionId: string): void {
+    this.sessionMeta.delete(sessionId);
+    logger.debug(`Cleaned up session metadata for ${sessionId}`);
   }
 
   // ─── Routing ──────────────────────────────────────────────────────

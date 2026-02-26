@@ -477,7 +477,7 @@ For the full reference, see [Multi-Instance PR Coordination](./multi-instance-pr
 
 `WorktreeRecoveryService` runs after every agent exit (success or failure). It detects uncommitted changes in the worktree and automatically:
 
-1. Formats changed files via prettier stdin pipe
+1. Formats changed files with `npx prettier --ignore-path /dev/null --write <files>`
 2. Stages selectively (excludes `.automaker/`)
 3. Commits with `HUSKY=0` to skip hooks
 4. Pushes the branch

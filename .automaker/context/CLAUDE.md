@@ -54,6 +54,7 @@ apps/server, apps/ui
 ## CRITICAL: Build Order
 
 If you modify ANY file in `libs/`:
+
 1. `npm run build:packages` FIRST
 2. Then `npm run build:server`
 
@@ -92,6 +93,7 @@ If a type exists, import it from `@protolabs-ai/types`. Do NOT recreate it.
 ## Server Service Pattern
 
 Services are classes in `apps/server/src/services/`:
+
 ```typescript
 import { createLogger } from '@protolabs-ai/utils';
 import { FeatureLoader } from './feature-loader.js';
@@ -122,6 +124,7 @@ npm run format:check        # Prettier check
 ## Feature Data Fields (Feature interface)
 
 Key fields available on every feature:
+
 - `executionHistory?: ExecutionRecord[]` — per-execution timing, cost, tokens
 - `costUsd?: number` — total cost
 - `createdAt?, completedAt?, startedAt?, reviewStartedAt?` — lifecycle timestamps
@@ -129,6 +132,26 @@ Key fields available on every feature:
 - `statusHistory?: StatusTransition[]` — all status changes
 - `failureCount?, retryCount?` — failure tracking
 - `complexity?: 'small' | 'medium' | 'large' | 'architectural'`
+
+## Git Workflow — Three-Branch Strategy
+
+All agent PRs target **`dev`** by default. The promotion flow is:
+
+```text
+feature/* ──▶ dev ──▶ staging ──▶ main
+```
+
+- **`dev`**: Active development. All agent-generated PRs land here.
+- **`staging`**: Integration / QA environment. Promoted from `dev` via PR. Auto-deploys.
+- **`main`**: Stable release only. PRs to `main` **must** come from `staging` — enforced by CI (`promotion-check`). Any PR to `main` from another branch will fail the `source-branch` required check.
+
+**Never open a PR directly from a feature branch to `main`.** If you need to create a PR manually, target `dev`:
+
+```bash
+gh pr create --base dev --head feature/your-branch --title "..." --body "..."
+```
+
+The `gitWorkflow.prBaseBranch` setting is `"dev"` — auto-mode and the git workflow service read this automatically.
 
 ## Dev Server
 
@@ -145,7 +168,8 @@ When implementing features, every PR created by Automaker contains a hidden owne
 This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark()`. You do not need to add it manually.
 
 **WorktreeRecoveryService** runs after every agent exit. If you leave uncommitted changes in the worktree, it will:
-1. Format changed files
+
+1. Format changed files with `npx prettier --ignore-path /dev/null --write <files>`
 2. Stage (excluding `.automaker/`)
 3. Commit with `HUSKY=0`
 4. Push and create a PR
@@ -153,3 +177,72 @@ This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark(
 If recovery fails, the feature is marked `blocked` with a `statusChangeReason`. The Lead Engineer will escalate rather than retry — retrying the agent won't resolve a git or network failure.
 
 **Implication**: Commit your work before exiting. The recovery service is a safety net, not a substitute for proper commits.
+
+## Agent Memory Files
+
+If you read or update any file in `.automaker/memory/`, commit those changes in the same commit as your code changes. The `WorktreeRecoveryService` excludes `.automaker/` from auto-staging — memory drift is never automatically recovered. Stage memory files explicitly:
+
+```bash
+git add .automaker/memory/
+git add <your code files>
+HUSKY=0 git commit -m "feat: ..."
+```
+
+## CRITICAL: Prettier Formatting — Always Pass `--ignore-path`
+
+Prettier 3.x respects `.gitignore` by default. Since `.worktrees/` is gitignored, running `npx prettier --write` (without `--ignore-path`) silently skips ALL files in `.worktrees/` — no formatting, no error. This causes CI format failures on every agent PR.
+
+**Always use this exact command when formatting manually:**
+
+```bash
+npx prettier --ignore-path /dev/null --write <files>
+```
+
+Or to check before committing:
+
+```bash
+npm run format:check
+```
+
+**Never use** `prettier --write` without `--ignore-path /dev/null` in a worktree context.
+
+## Verdict System (All Feature Agents)
+
+All feature agents (kai, matt, sam, frank, and any future agents) **must** follow the Verdict System pattern when surfacing findings from analysis, review, or audit tasks.
+
+### Confidence Threshold
+
+Only surface findings with **>80% certainty**. If you cannot confirm an issue with high confidence, omit it or note it as "unverified — needs further investigation."
+
+### Consolidation Rule
+
+Consolidate similar findings into a single item. Do not list the same class of problem multiple times.
+
+> Example: Instead of listing 3 separate "missing error handling" findings, report: `3 files missing error handling` as one item.
+
+### Verdict Block Format
+
+End **every response** that includes findings with a structured verdict block:
+
+```
+---
+VERDICT: [APPROVE|WARN|BLOCK]
+Issues: [count]
+[CRITICAL|HIGH|MEDIUM|LOW]: [brief description]
+---
+```
+
+**Verdict definitions:**
+
+- **APPROVE** — No critical or high issues found. Safe to proceed.
+- **WARN** — Only medium or low issues found. Proceed with caution; remediation recommended but not blocking.
+- **BLOCK** — One or more critical issues present. Remediation required before proceeding.
+
+**Severity definitions:**
+
+- **CRITICAL** — System failure, data loss, security breach, or major regression likely
+- **HIGH** — Major functional breakage or significant risk
+- **MEDIUM** — Degraded experience or moderate risk
+- **LOW** — Minor issue, style, or technical debt
+
+If no issues are found, emit: `VERDICT: APPROVE` with `Issues: 0`.

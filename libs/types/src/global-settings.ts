@@ -48,6 +48,7 @@ import type { EventHook } from './event-settings.js';
 import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
 import type { MaintenanceSettings, ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
+import type { PromotionConfig } from './promotion.js';
 
 // Re-export ModelAlias for convenience (settings.ts historically re-exported this)
 export type { ModelAlias };
@@ -557,24 +558,9 @@ export interface GlobalSettings {
   // Hivemind Configuration
   /**
    * Unique identifier for this Automaker instance in a hivemind mesh.
-   * Also used for PR ownership watermarking to prevent multi-instance conflicts.
-   * Auto-generated UUID on first call and persisted for subsequent calls.
+   * Defaults to os.hostname() at runtime if not set.
    */
   instanceId?: string;
-
-  /**
-   * Team or organization identifier for grouping instances.
-   * Used in PR ownership watermarks to identify which org created a PR.
-   * Example: "proto-labs-ai"
-   */
-  teamId?: string;
-
-  /**
-   * Hours after which PR ownership is considered stale when both last commit age
-   * and last activity age exceed this threshold. Stale PRs can be taken over by
-   * other instances. Defaults to 24.
-   */
-  prOwnershipStaleTtlHours?: number;
 
   /**
    * Maintenance scheduler settings.
@@ -596,6 +582,13 @@ export interface GlobalSettings {
 
   /** Per-persona system prompt overrides, keyed by template name (e.g., 'ava', 'frank') */
   personaOverrides?: Record<string, CustomPrompt>;
+
+  /**
+   * Promotion pipeline configuration for staging/production candidate tracking.
+   * Controls how features are detected as promotion candidates and batched for release.
+   * @see PromotionConfig in promotion.ts
+   */
+  promotion?: PromotionConfig;
 }
 
 /** Default global settings used when no settings file exists */

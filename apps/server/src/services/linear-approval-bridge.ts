@@ -54,6 +54,13 @@ export class LinearApprovalBridge {
             error: err instanceof Error ? err.message : String(err),
           });
         });
+      } else if (type === 'linear:changes-requested:detected') {
+        this.handleChangesRequested(payload as ApprovalContext).catch((err) => {
+          logger.error('Failed to process changes-requested', {
+            issueId: (payload as ApprovalContext).issueId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
       }
     });
 
@@ -199,5 +206,40 @@ export class LinearApprovalBridge {
     });
 
     logger.info(`Emitted authority:pm-review-approved for feature ${feature.id}`);
+  }
+
+  private async handleChangesRequested(context: ApprovalContext): Promise<void> {
+    if (!this.running) return;
+
+    const { issueId, identifier } = context;
+
+    logger.info(`Processing changes-requested for issue ${issueId}`, {
+      identifier,
+      approvalState: context.approvalState,
+    });
+
+    const projectPath = process.cwd();
+
+    const feature = await this.featureLoader.findByLinearIssueId(projectPath, issueId);
+    if (!feature) {
+      logger.warn(`No board feature found for Linear issue ${issueId}, skipping block`);
+      return;
+    }
+
+    await this.featureLoader.update(projectPath, feature.id, {
+      status: 'blocked',
+      statusChangeReason: 'Linear: Changes Requested',
+    });
+
+    logger.info(`Blocked feature ${feature.id} for Linear issue ${issueId}`);
+
+    this.events.emit('feature:blocked', {
+      featureId: feature.id,
+      projectPath,
+      reason: 'Linear: Changes Requested',
+      issueId,
+      identifier,
+      blockedAt: new Date().toISOString(),
+    });
   }
 }

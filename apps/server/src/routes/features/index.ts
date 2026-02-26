@@ -54,9 +54,13 @@ export function createFeaturesRoutes(
   router.post(
     '/bulk-delete',
     validatePathParams('projectPath'),
-    createBulkDeleteHandler(featureLoader)
+    createBulkDeleteHandler(featureLoader, events)
   );
-  router.post('/delete', validatePathParams('projectPath'), createDeleteHandler(featureLoader));
+  router.post(
+    '/delete',
+    validatePathParams('projectPath'),
+    createDeleteHandler(featureLoader, events)
+  );
   router.post('/agent-output', createAgentOutputHandler(featureLoader));
   router.post('/raw-output', createRawOutputHandler(featureLoader));
   router.post('/generate-title', createGenerateTitleHandler(settingsService));

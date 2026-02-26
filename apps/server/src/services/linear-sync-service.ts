@@ -158,6 +158,8 @@ export class LinearSyncService {
       await this.issueSync.onFeatureCreated(payload as FeatureEventPayload);
     } else if (type === 'feature:status-changed') {
       await this.issueSync.onFeatureStatusChanged(payload as FeatureEventPayload);
+    } else if (type === 'feature:deleted') {
+      await this.issueSync.onFeatureDeleted(payload as FeatureEventPayload);
     } else if (type === 'feature:pr-merged') {
       await this.issueSync.onPRMerged(payload as FeatureEventPayload);
     } else if (type === 'project:scaffolded') {
@@ -407,6 +409,8 @@ export class LinearSyncService {
       updateSyncMetadata: (m) => this.updateSyncMetadata(m),
       recordOperation: (id, dir, status, ms, conflict, err) =>
         this.recordOperation(id, dir, status, ms, conflict, err),
+      addCommentToIssue: (projectPath, issueId, body) =>
+        this.issueSync.addCommentToIssue(projectPath, issueId, body),
       get emitter() {
         return emitter;
       },

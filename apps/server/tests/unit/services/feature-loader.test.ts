@@ -248,10 +248,11 @@ describe('feature-loader.ts', () => {
 
       const result = await loader.get(testProjectPath, 'feature-123');
 
-      // Feature loader normalizes features to include default status when missing
+      // Feature loader normalizes features to include default status and featureType when missing
       expect(result).toEqual({
         ...featureData,
         status: 'backlog',
+        featureType: 'code',
       });
     });
 

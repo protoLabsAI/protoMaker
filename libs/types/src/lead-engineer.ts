@@ -265,6 +265,33 @@ export interface PersonaAssignment {
   maxConcurrency?: number;
 }
 
+// ────────────────────────── Phase Handoffs ──────────────────────────
+
+/**
+ * Structured handoff document written by the Lead Engineer at the end of
+ * each feature lifecycle phase. Enables continuity across agent boundaries.
+ */
+export interface PhaseHandoff {
+  /** The lifecycle phase this handoff covers */
+  phase: FeatureState;
+  /** High-level summary of work completed in this phase */
+  summary: string;
+  /** Key discoveries made during this phase */
+  discoveries: string[];
+  /** Files that were created or modified */
+  modifiedFiles: string[];
+  /** Open questions that need resolution in subsequent phases */
+  outstandingQuestions: string[];
+  /** Intentional scope limits — what was NOT done and why */
+  scopeLimits: string[];
+  /** Description of test coverage added or verified */
+  testCoverage: string;
+  /** Overall verdict for this phase handoff */
+  verdict: 'APPROVE' | 'WARN' | 'BLOCK';
+  /** ISO 8601 timestamp when the handoff was created */
+  createdAt: string;
+}
+
 /**
  * Lead Engineer Service interface
  * Core orchestration service for managing feature lifecycle

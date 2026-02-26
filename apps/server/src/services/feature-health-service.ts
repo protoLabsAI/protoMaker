@@ -240,8 +240,12 @@ export class FeatureHealthService {
     const GATE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
     const now = Date.now();
     const issues: HealthIssue[] = [];
+    // Never move terminal-status features to blocked — stale gate metadata on
+    // completed features is harmless and must not undo already-shipped work.
+    const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'review']);
 
     for (const feature of features) {
+      if (TERMINAL_STATUSES.has(feature.status ?? '')) continue;
       const ps = feature.pipelineState;
       if (!ps?.awaitingGate) continue;
 

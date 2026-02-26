@@ -58,15 +58,28 @@ export async function ensureCleanWorktree(
       );
       logger.debug(`Uncommitted changes:\n${statusOutput}`);
 
-      // Stage all changes - exclude .automaker/ except memory/ (matches git-workflow-service pattern)
-      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/'", {
+      // Stage all changes - exclude .automaker/ except memory/ and skills/
+      const guardEnv = { ...process.env, HUSKY: '0' };
+      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
         cwd: worktreePath,
+        env: guardEnv,
       });
 
-      // Commit with standard message
-      await execAsync('git commit -m "chore: auto-commit agent progress before verification"', {
+      // Skip commit if nothing was staged (e.g. only non-committable files changed)
+      const { stdout: cachedDiff } = await execAsync('git diff --cached --name-only', {
         cwd: worktreePath,
+        env: guardEnv,
       });
+      if (!cachedDiff.trim()) {
+        logger.info(`Nothing staged after add for feature ${featureId}, skipping commit`);
+        return result;
+      }
+
+      // Commit with --no-verify to bypass husky hooks in the worktree
+      await execAsync(
+        'git commit --no-verify -m "chore: auto-commit agent progress before verification"',
+        { cwd: worktreePath, env: guardEnv }
+      );
 
       result.committed = true;
       logger.info(`Successfully auto-committed changes for feature ${featureId}`);

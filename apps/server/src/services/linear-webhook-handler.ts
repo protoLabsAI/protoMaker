@@ -183,6 +183,22 @@ export class LinearWebhookHandler {
 
         await this.featureLoader.update(projectPath, featureId, featureUpdates);
 
+        // Post cancellation comment to Linear when moving to terminal state
+        const lowerStateName = newStateName.toLowerCase();
+        if (
+          featureUpdates.status === 'done' &&
+          (lowerStateName.includes('cancel') || lowerStateName.includes('duplicate')) &&
+          feature.linearIssueId
+        ) {
+          await this.guards
+            .addCommentToIssue(
+              projectPath,
+              feature.linearIssueId,
+              `🚫 Automaker: issue marked **done** because it was moved to **${newStateName}** in Linear.`
+            )
+            .catch((err) => logger.warn('Failed to post cancellation comment to Linear:', err));
+        }
+
         const updatedMetadata: SyncMetadata = {
           featureId,
           lastSyncTimestamp: Date.now(),

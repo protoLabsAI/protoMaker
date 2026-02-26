@@ -16,7 +16,7 @@ const logger = createLogger('linear:approval');
 
 const DEFAULT_APPROVAL_STATES = ['Approved', 'Ready for Planning'];
 const DEFAULT_CHANGES_REQUESTED_STATES = ['Changes Requested'];
-const DEFAULT_INTAKE_TRIGGER_STATES = ['In Progress'];
+const DEFAULT_INTAKE_TRIGGER_STATES = ['Todo'];
 
 export interface ApprovalContext {
   /** Linear issue ID */

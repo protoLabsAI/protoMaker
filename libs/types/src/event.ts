@@ -30,6 +30,7 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'feature:pr-merged'
+  | 'feature:blocked'
   | 'feature:unblocked'
   | 'project:analysis-started'
   | 'project:analysis-progress'
@@ -271,6 +272,7 @@ export type EventType =
   | 'settings:workflow-changed'
   // Feature lifecycle events
   | 'feature:status-changed'
+  | 'feature:deleted'
   // Issue management events (failure-to-issue pipeline)
   | 'feature:permanently-blocked'
   | 'issue:created'

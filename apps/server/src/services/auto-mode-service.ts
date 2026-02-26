@@ -1114,6 +1114,17 @@ export class AutoModeService {
             continue;
           }
 
+          // Guard: content features (featureType === 'content') must route through
+          // leadEngineerService to the GTM execution path. They must NOT be launched
+          // with the standard code agent. If leadEngineerService is not available, skip them.
+          if (nextFeature.featureType === 'content' && !this.leadEngineerService) {
+            logger.warn(
+              `[AutoLoop] Skipping content feature ${nextFeature.id} ("${nextFeature.title}") — LeadEngineerService required for GTM execution path`
+            );
+            await this.sleep(2000);
+            continue;
+          }
+
           // Mark feature as starting BEFORE calling executeFeature to prevent race conditions
           projectState.startingFeatures.add(nextFeature.id);
 
@@ -1132,8 +1143,10 @@ export class AutoModeService {
             }
           }, 30000);
 
-          // Start feature execution in background
-          // Delegate to Lead Engineer if available, otherwise use legacy executeFeature
+          // Start feature execution in background.
+          // Content features (featureType === 'content') always route through leadEngineerService
+          // to the GTM execution path (guarded above — leadEngineerService is non-null here).
+          // Code features use leadEngineerService if available, otherwise fall back to executeFeature.
           const featureModelResult = await this.getModelForFeature(nextFeature, projectPath);
           const executionPromise = this.leadEngineerService
             ? this.leadEngineerService.process(projectPath, nextFeature.id, {
@@ -1460,6 +1473,18 @@ export class AutoModeService {
         if (nextFeature) {
           // Reset idle event flag since we're doing work again
           this.hasEmittedIdleEvent = false;
+
+          // Guard: content features (featureType === 'content') require leadEngineerService
+          // for the GTM execution path and must not run via the legacy code agent.
+          // Skip them here — they will be picked up by runAutoLoopForProject.
+          if (nextFeature.featureType === 'content') {
+            logger.warn(
+              `[AutoLoop] Skipping content feature ${nextFeature.id} in legacy loop — GTM execution requires per-project auto mode`
+            );
+            await this.sleep(2000);
+            continue;
+          }
+
           // Start feature execution in background
           this.executeFeature(
             this.config!.projectPath,

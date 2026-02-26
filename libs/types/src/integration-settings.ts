@@ -125,8 +125,12 @@ export interface LinearIntegrationConfig {
   approvalStates?: string[];
   /** Workflow state names that indicate changes requested (default: ['Changes Requested']) */
   changesRequestedStates?: string[];
-  /** Workflow state names that trigger intake transfer to Automaker board (default: ['In Progress']) */
+  /** Workflow state names that trigger intake transfer to Automaker board (default: ['Todo']) */
   intakeTriggerStates?: string[];
+
+  // Closed issue cleanup
+  /** Automatically delete completed/cancelled issues older than this many days (default: 3). Set 0 to disable. */
+  closedIssueRetentionDays?: number;
 
   // API key fallback (personal API token, no OAuth required)
   /** Personal Linear API key (fallback when OAuth is not configured) */
