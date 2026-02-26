@@ -195,3 +195,44 @@ npm run format:check
 ```
 
 **Never use** `prettier --write` without `--ignore-path /dev/null` in a worktree context.
+
+## Verdict System (All Feature Agents)
+
+All feature agents (kai, matt, sam, frank, and any future agents) **must** follow the Verdict System pattern when surfacing findings from analysis, review, or audit tasks.
+
+### Confidence Threshold
+
+Only surface findings with **>80% certainty**. If you cannot confirm an issue with high confidence, omit it or note it as "unverified — needs further investigation."
+
+### Consolidation Rule
+
+Consolidate similar findings into a single item. Do not list the same class of problem multiple times.
+
+> Example: Instead of listing 3 separate "missing error handling" findings, report: `3 files missing error handling` as one item.
+
+### Verdict Block Format
+
+End **every response** that includes findings with a structured verdict block:
+
+```
+---
+VERDICT: [APPROVE|WARN|BLOCK]
+Issues: [count]
+[CRITICAL|HIGH|MEDIUM|LOW]: [brief description]
+---
+```
+
+**Verdict definitions:**
+
+- **APPROVE** — No critical or high issues found. Safe to proceed.
+- **WARN** — Only medium or low issues found. Proceed with caution; remediation recommended but not blocking.
+- **BLOCK** — One or more critical issues present. Remediation required before proceeding.
+
+**Severity definitions:**
+
+- **CRITICAL** — System failure, data loss, security breach, or major regression likely
+- **HIGH** — Major functional breakage or significant risk
+- **MEDIUM** — Degraded experience or moderate risk
+- **LOW** — Minor issue, style, or technical debt
+
+If no issues are found, emit: `VERDICT: APPROVE` with `Issues: 0`.
