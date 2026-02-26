@@ -31,6 +31,7 @@ import { WorldStateBuilder } from './lead-engineer-world-state.js';
 import { ActionExecutor } from './lead-engineer-action-executor.js';
 import { CeremonyOrchestrator } from './lead-engineer-ceremonies.js';
 import { LeadEngineerSessionStore } from './lead-engineer-session-store.js';
+import { GtmExecuteProcessor } from './lead-engineer-gtm-execute-processor.js';
 import type { FeatureProcessingState, StateContext } from './lead-engineer-types.js';
 
 export type { FeatureProcessingState, StateContext };
@@ -299,13 +300,19 @@ export class LeadEngineerService {
         this.settingsService,
         '[LeadEngineer]'
       );
+      const isContentFeature = feature.featureType === 'content';
       const stateMachine = new FeatureStateMachine(serviceContext, {
         checkpointService: workflowSettings.pipeline.checkpointEnabled
           ? this.checkpointService
           : undefined,
         events: this.events,
-        goalGatesEnabled: workflowSettings.pipeline.goalGatesEnabled,
+        // Content features bypass PR-centric goal gates (no PR is created)
+        goalGatesEnabled: isContentFeature ? false : workflowSettings.pipeline.goalGatesEnabled,
       });
+      if (isContentFeature) {
+        stateMachine.registerProcessor('EXECUTE', new GtmExecuteProcessor());
+        logger.info(`[LeadEngineer] Content feature ${featureId} routed to GtmExecuteProcessor`);
+      }
       const result = await stateMachine.processFeature(
         feature,
         projectPath,
