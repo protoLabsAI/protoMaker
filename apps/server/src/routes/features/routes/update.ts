@@ -196,6 +196,24 @@ export function createUpdateHandler(
         });
       }
 
+      // Emit feature:updated when title or description changed so LinearSyncService
+      // can propagate the changes to the linked Linear issue.
+      if (events) {
+        const titleChanged = updates.title !== undefined && currentFeature?.title !== updated.title;
+        const descriptionChanged =
+          updates.description !== undefined && currentFeature?.description !== updated.description;
+        if (titleChanged || descriptionChanged) {
+          events.emit('feature:updated', {
+            featureId,
+            projectPath,
+            previousTitle: currentFeature?.title,
+            newTitle: updated.title,
+            previousDescription: currentFeature?.description,
+            newDescription: updated.description,
+          });
+        }
+      }
+
       res.json({ success: true, feature: updated });
     } catch (error) {
       logError(error, 'Update feature failed');

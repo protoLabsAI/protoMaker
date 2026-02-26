@@ -260,6 +260,7 @@ export type EventType =
   // Feature lifecycle events
   | 'feature:status-changed'
   | 'feature:deleted'
+  | 'feature:updated'
   // Issue management events (failure-to-issue pipeline)
   | 'feature:permanently-blocked'
   | 'issue:created'
@@ -542,6 +543,14 @@ export interface EventPayloadMap {
     oldStatus?: string;
     newStatus?: string;
     projectPath?: string;
+  };
+  'feature:updated': {
+    featureId: string;
+    projectPath: string;
+    previousTitle?: string;
+    newTitle?: string;
+    previousDescription?: string;
+    newDescription?: string;
   };
 
   // Auto-mode events
