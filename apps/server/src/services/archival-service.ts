@@ -129,9 +129,7 @@ export class ArchivalService {
       let completedAt = feature.completedAt ? new Date(feature.completedAt).getTime() : undefined;
       if (!completedAt) {
         // Fall back to the timestamp of the last status transition to done/verified
-        const lastDoneTransition = feature.statusHistory
-          ?.filter((t) => t.to === 'done')
-          .pop();
+        const lastDoneTransition = feature.statusHistory?.filter((t) => t.to === 'done').pop();
         if (lastDoneTransition?.timestamp) {
           completedAt = new Date(lastDoneTransition.timestamp).getTime();
         }

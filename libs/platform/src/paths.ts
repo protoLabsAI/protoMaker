@@ -684,4 +684,3 @@ export async function ensureMilestoneDir(
   await secureFs.mkdir(milestoneDir, { recursive: true });
   return milestoneDir;
 }
-
