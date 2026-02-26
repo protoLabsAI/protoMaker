@@ -21,11 +21,12 @@ export const getConflicts: RequestHandler = (_req, res) => {
  * POST /api/linear/resolve-conflict
  * Resolve a sync conflict for a specific feature
  *
- * Body: { featureId: string, strategy: 'accept-linear' | 'accept-automaker' | 'manual' }
+ * Body: { featureId: string, projectPath: string, strategy: 'accept-linear' | 'accept-automaker' }
  */
-export const resolveConflict: RequestHandler = (req, res) => {
-  const { featureId, strategy } = req.body as {
+export const resolveConflict: RequestHandler = async (req, res) => {
+  const { featureId, projectPath, strategy } = req.body as {
     featureId?: string;
+    projectPath?: string;
     strategy?: string;
   };
 
@@ -34,7 +35,12 @@ export const resolveConflict: RequestHandler = (req, res) => {
     return;
   }
 
-  const validStrategies = ['accept-linear', 'accept-automaker', 'manual'];
+  if (!projectPath) {
+    res.status(400).json({ success: false, error: 'projectPath is required' });
+    return;
+  }
+
+  const validStrategies = ['accept-linear', 'accept-automaker'];
   if (!strategy || !validStrategies.includes(strategy)) {
     res.status(400).json({
       success: false,
@@ -43,9 +49,10 @@ export const resolveConflict: RequestHandler = (req, res) => {
     return;
   }
 
-  const resolved = linearSyncService.resolveConflict(
+  const resolved = await linearSyncService.resolveConflict(
+    projectPath,
     featureId,
-    strategy as 'accept-linear' | 'accept-automaker' | 'manual'
+    strategy as 'accept-linear' | 'accept-automaker'
   );
 
   if (!resolved) {

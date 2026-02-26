@@ -627,6 +627,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Initialize Linear Sync Service — bidirectional sync between features/projects and Linear
   linearSyncService.initialize(events, settingsService, featureLoader, projectService);
+  linearSyncService.setHITLFormService(hitlFormService);
   linearSyncService.start();
 
   // Initialize Ceremony Service
