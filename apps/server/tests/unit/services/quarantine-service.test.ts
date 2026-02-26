@@ -13,8 +13,9 @@ describe('QuarantineService', () => {
   let quarantineService: QuarantineService;
 
   beforeEach(async () => {
-    testProjectDir = path.join(os.tmpdir(), `quarantine-test-${Date.now()}`);
-    testDataDir = path.join(os.tmpdir(), `trust-tier-test-${Date.now()}`);
+    const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    testProjectDir = path.join(os.tmpdir(), `quarantine-test-${uid}`);
+    testDataDir = path.join(os.tmpdir(), `trust-tier-test-${uid}`);
     await fs.mkdir(testProjectDir, { recursive: true });
     await fs.mkdir(testDataDir, { recursive: true });
     trustTierService = new TrustTierService(testDataDir);
