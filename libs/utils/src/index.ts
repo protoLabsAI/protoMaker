@@ -172,6 +172,9 @@ export {
   type SkillsLoadResult,
 } from './skills-loader.js';
 
+// Skill list loader
+export { loadSkillList, type SkillEntry } from './skill-loader.js';
+
 // Memory chunking
 export { chunkMarkdownFile, type MemoryChunk } from './memory-chunker.js';
 
