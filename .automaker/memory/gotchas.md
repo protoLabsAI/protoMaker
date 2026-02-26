@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 494
-  referenced: 235
-  successfulFeatures: 235
+  loaded: 508
+  referenced: 233
+  successfulFeatures: 233
 ---
 # gotchas
 
@@ -467,19 +467,3 @@ usageStats:
 - **Situation:** GtmReviewProcessor.buildReviewPrompt() expects Cindi to output 'SCORE: N' but there's no enforcement that the template actually does this
 - **Root cause:** LLM outputs are inherently unstructured; parsing strings is simplest immediate approach but creates hidden dependency
 - **How to avoid:** Simple regex parsing vs brittleness; no executor changes needed vs fails silently if template format changes
-
-
-#### [Gotcha] 200-line constraint forced content prioritization that wouldn't normally be made. Initial drafts exceeded limit by 20-60% (259/209/324 lines). Required multiple targeted structural trims, not just deletions. (2026-02-26)
-- **Situation:** Acceptance criteria specified 100-200 lines per file. Discovered that 'comprehensive documentation' and 'agent-readable patterns' have inverse relationships.
-- **Root cause:** Agents don't extract patterns from 300-line reference manuals - they read first 100 lines and miss critical context. Line limit forces focus on the most failure-preventing patterns vs. nice-to-have alternatives.
-- **How to avoid:** Easier: agents find critical patterns in bounded reading. Harder: must cut valuable context like 'why this works,' alternative approaches, historical reasoning.
-
-#### [Pattern] Anti-Patterns Summary table (what NOT to do) is more effective for agent behavior conditioning than positive examples alone. Each file explicitly catalogs observed failure modes based on session history, not inferred from success patterns. (2026-02-26)
-- **Problem solved:** Worktree-patterns.md includes: 'NEVER cd into worktree' (broken CWD), 'NEVER git add -A' (captures stale .automaker/), 'NEVER direct API calls' (bypass MCP plugin). These are documented failure modes, not inferred negatives.
-- **Why this works:** Agents don't generalize well from positive examples. Previous sessions show repeated identical mistakes (e.g., CWD death trap in session 70, 71, 72). Explicit 'what NOT to do' prevents repetition more effectively than documenting 'how to do it right.'
-- **Trade-offs:** Easier: agents avoid known failure modes. Harder: requires cataloging failures, which is emotionally/organizationally uncomfortable.
-
-#### [Gotcha] Command syntax must be copy-paste-perfect because agents treat examples as executable templates, not learning material. 'git -C <path>' vs 'cd && command' is safety-critical (not stylistic) - first is safe, second causes unrecoverable CWD death trap. (2026-02-26)
-- **Situation:** Worktree-patterns.md explicitly forbids 'cd /worktree' because deleted worktree breaks all Bash spawning for the entire session (ENOENT on posix_spawn). This isn't a recoverable error - it kills the session.
-- **Root cause:** Agents copy-paste code examples verbatim. They don't read for understanding - they extract runnable syntax. Wrong syntax choice = catastrophic failure with no recovery.
-- **How to avoid:** Easier: agents follow safe patterns by default. Harder: requires explaining WHY certain syntax matters (takes precious line budget).

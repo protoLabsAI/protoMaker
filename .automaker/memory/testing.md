@@ -6,8 +6,8 @@ importance: 0.7
 relatedFiles: []
 usageStats:
   loaded: 52
-  referenced: 26
-  successfulFeatures: 26
+  referenced: 25
+  successfulFeatures: 25
 ---
 # testing
 
@@ -964,14 +964,3 @@ usageStats:
 - **Rejected:** Uniform 14-day retention (wastes storage on old test logs, might not keep builds long enough)
 - **Trade-offs:** Slightly higher complexity in CI configuration, but optimizes storage costs for artifact pattern
 - **Breaking if changed:** Shortening build retention to 7 days causes problems when needing to rebuild patch on 10-day-old code
-
-
-#### [Pattern] To validate that test failures are pre-existing and not introduced by dead code removal, stash all changes, run test suite on base code, and restore changes. Confirms failure isolation without full re-run. (2026-02-26)
-- **Problem solved:** 1 test failure detected after changes; need to confirm it's not caused by deletion
-- **Why this works:** Stash+pop isolates changes cleanly without checkout operations that could modify state. Running tests twice (base + modified) proves causality. Faster than re-running full suite multiple times.
-- **Trade-offs:** Two test runs take longer upfront but provide definitive proof. Skipping verification risks shipping broken tests.
-
-#### [Pattern] Run `npx tsc --noEmit` before full build (`npm run build:server`) to catch type errors early. tsc catches transitive dependencies (startup.ts, shutdown.ts) that full build would discover later but slower. (2026-02-26)
-- **Problem solved:** TypeScript compilation caught that startup.ts and shutdown.ts both referenced deleted services, which full build would also catch but with longer feedback loop
-- **Why this works:** Type checking is faster than full build. Catching type errors first allows fixing before Webpack/bundler runs. tsc also searches imports more thoroughly than a fresh build might.
-- **Trade-offs:** tsc adds ~30s upfront but saves time overall by failing fast. Full build with type errors wastes time in later stages.

@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 50
+  loaded: 54
   referenced: 25
   successfulFeatures: 25
 ---
@@ -3653,47 +3653,3 @@ usageStats:
 - **Problem solved:** When Cindi score is low, human needs to see the feedback in next phase (EXECUTE), but phases are decoupled
 - **Why this works:** StateContext is the shared mutable state across transitions; passing feedback via context avoids creating new return type for ReviewProcessor and keeps each processor focused on its output
 - **Trade-offs:** Implicit data flow via context (easier short-term) vs explicit contracts; less coupling vs harder to trace data flow
-
-#### [Pattern] Skill library files (.automaker/skills/*.md) are runtime-loaded into agent context on every execution, not static reference documentation. They function as learned experience injection to condition agent behavior without code changes. (2026-02-26)
-- **Problem solved:** Created monorepo-patterns.md, worktree-patterns.md, mcp-integration-patterns.md as git-tracked files that will be pulled into agent prompts automatically
-- **Why this works:** Agents learn faster from documented patterns than from fine-tuning or prompt engineering. Patterns discovered in previous sessions (e.g., CWD death trap, prettier worktree formatting bug, git-workflow-service --no-verify misuse) are immediately available to future agents without deployment.
-- **Trade-offs:** Easier: document patterns as discovered, agents benefit immediately next session. Harder: requires discipline to extract generalizable lessons from implementation logs and maintain accuracy.
-
-### Use inline references ('see [section](...) above') instead of repeating content (e.g., MCP tool schema). Trades immediate clarity for DRY and file size efficiency. Assumes coherent document structure + reader context. (2026-02-26)
-- **Context:** MCP tool inputSchema defined once in mcp-integration-patterns.md. Later examples reference it instead of repeating full JSON schema.
-- **Why:** Space budget (200 lines) is tight. DRY prevents sync issues if schema changes. Agents read documents as cohesive units (not isolated sections).
-- **Rejected:** Repeat examples in each section (wastes space, creates maintenance burden if schema drifts)
-- **Trade-offs:** Easier: single source of truth, compact. Harder: requires reader to navigate between sections, assumes complete document reading.
-- **Breaking if changed:** If someone extracts a single section from context, references break. Pattern only works if document is read as a whole or accessed via proper section links.
-
-#### [Pattern] Dead service removal requires systematic search across 8+ distributed registration points: service instantiation (services.ts), route mounting (routes.ts), service teardown (shutdown.ts), initialization (startup.ts), health checks, rate limiter configs, optional parameters in handlers, and type definitions. Single-point searches fail. (2026-02-26)
-- **Problem solved:** Removing 5 orphaned systems (CopilotKit, Trajectory, Codex, Voice, Twitch) from monolithic server
-- **Why this works:** Monolithic Express servers scatter service concerns across configuration files. Services register themselves implicitly through multiple integration points, not centrally.
-- **Trade-offs:** Systematic search is slower but catches all references. Partial removal leaves orphaned config that causes type errors or dead code.
-
-#### [Gotcha] Optional service parameters in route handlers (e.g., `twitchService?: TwitchService`) persist as orphaned references even when the service is removed from services.ts. TypeScript allows undefined optional params, so code compiles but leaves dead imports. (2026-02-26)
-- **Situation:** Health route handler had `twitchService` as optional parameter. Service was deleted but parameter remained, importing a non-existent type.
-- **Root cause:** Route handlers defensively accept services as optional to support partial initialization or dependency injection. When a service is removed, handlers are forgotten because they're not in the main service config.
-- **How to avoid:** Catching optional parameters requires grepping for `: ServiceType` patterns across route handlers. Worth the search cost to eliminate dead references.
-
-#### [Pattern] Type-only fields in context objects (e.g., `stateTransitions: StateTransition[]` only used for trajectory tracing) can be safely removed entirely when their consumer system is deleted. Complete removal is valid if no other code path populates or reads the field. (2026-02-26)
-- **Problem solved:** StateContext had a stateTransitions field that only TrajectoryStoreService consumed. When trajectory was deleted, the field had zero consumers.
-- **Why this works:** Partial removal (keeping the field but not populating it) leaves dead code that future developers may try to use. Complete removal forces the decision: either restore trajectory or accept that state transitions aren't tracked.
-- **Trade-offs:** Complete removal is cleaner but requires confidence that no hidden code path depends on the field. Partial removal is safer but accumulates dead code.
-
-#### [Gotcha] Rate limiter skip lists (`rateLimiter.skip` or similar config) contain route paths that may reference deleted services. Paths like `/copilotkit/info` appear in config files, not in active route definitions, so they're easy to miss during service removal. (2026-02-26)
-- **Situation:** CopilotKitThreadService route wasn't mounted in routes.ts (service was never activated), but `/copilotkit/info` still appeared in rate limiter skip list
-- **Root cause:** Rate limiter configuration is often a separate concern. Routes are added then removed, but skip lists accumulate over time and aren't cleaned up when routes are deleted.
-- **How to avoid:** Cleanup requires an additional grep pass for `rateLimiter.skip` or similar. Worth the effort to prevent confusion about which routes are active.
-
-#### [Gotcha] Fire-and-forget async operations (e.g., `trajectoryStoreService.saveTransition(...).catch(...)`) in processors can be safely removed without risk of breaking blocking logic, but you must verify they're truly fire-and-forget (no `await`, no return value dependency). (2026-02-26)
-- **Situation:** TrajectoryStoreService had save calls in deploy-processor and escalation processors, marked as fire-and-forget (no await, no error handling beyond catch). Safe to remove entirely.
-- **Root cause:** Fire-and-forget operations don't block the main flow, so their removal doesn't risk race conditions or missing side effects that the main logic depends on. But non-fire-and-forget async operations may have hidden dependencies.
-- **How to avoid:** Removing fire-and-forget calls reduces processor complexity but loses potential observability. Worth the trade if no one depends on the side effect.
-
-### Pure server-side dead code removal (no API endpoint changes) does not require Playwright UI verification. Playwright is for browser behavior; removed services with no UI exposure don't need UI test coverage. (2026-02-26)
-- **Context:** Feature removed 5 server-side systems with no new routes or UI endpoints added. Playwright acceptance criteria did not apply.
-- **Why:** Playwright tests verify user-facing behavior. Removing internal services doesn't change visible behavior unless the routes themselves are removed. Removed routes can't be tested in the browser (they return 404).
-- **Rejected:** Assumption that all code changes require Playwright verification. UI tests are for features that affect browser state.
-- **Trade-offs:** Skipping Playwright is faster but requires confidence that no hidden routes depend on the removed systems. Full build + test suite provides sufficient verification for dead code removal.
-- **Breaking if changed:** If removed systems were actually exposed as routes (e.g., GET /api/trajectory), Playwright tests would have caught their removal. Dead code removal by definition should NOT break any routes.
