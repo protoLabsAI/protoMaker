@@ -714,6 +714,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     muteDoneSound: settings.muteDoneSound ?? false,
     serverLogLevel: settings.serverLogLevel ?? 'info',
     enableRequestLogging: settings.enableRequestLogging ?? true,
+    featureFlags: settings.featureFlags ?? { calendar: true, designs: true },
     keyboardShortcuts: {
       ...current.keyboardShortcuts,
       ...(settings.keyboardShortcuts as unknown as Partial<typeof current.keyboardShortcuts>),
@@ -846,6 +847,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     muteDoneSound: state.muteDoneSound,
     serverLogLevel: state.serverLogLevel,
     enableRequestLogging: state.enableRequestLogging,
+    featureFlags: state.featureFlags,
     skipSandboxWarning: aiState.skipSandboxWarning,
     keyboardShortcuts: state.keyboardShortcuts,
     mcpServers: state.mcpServers,

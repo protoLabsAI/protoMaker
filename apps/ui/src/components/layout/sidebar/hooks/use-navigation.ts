@@ -46,6 +46,8 @@ interface UseNavigationProps {
   hideSpecEditor: boolean;
   hideContext: boolean;
   hideTerminal: boolean;
+  hideCalendar: boolean;
+  hideDesigns: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -69,6 +71,8 @@ export function useNavigation({
   hideSpecEditor,
   hideContext,
   hideTerminal,
+  hideCalendar,
+  hideDesigns,
   currentProject,
   projects,
   projectHistory,
@@ -153,7 +157,7 @@ export function useNavigation({
       return true;
     });
 
-    // Build project items - Terminal is conditionally included
+    // Build project items - Terminal, Calendar, Designs are conditionally included
     const projectItems: NavItem[] = [
       {
         id: 'analytics',
@@ -166,17 +170,23 @@ export function useNavigation({
         icon: LayoutGrid,
         shortcut: shortcuts.board,
       },
-      {
+    ];
+
+    if (!hideDesigns) {
+      projectItems.push({
         id: 'designs',
         label: 'Designs',
         icon: Palette,
-      },
-      {
+      });
+    }
+
+    if (!hideCalendar) {
+      projectItems.push({
         id: 'calendar',
         label: 'Calendar',
         icon: CalendarDays,
-      },
-    ];
+      });
+    }
 
     // Add Terminal to Project section if not hidden
     if (!hideTerminal) {

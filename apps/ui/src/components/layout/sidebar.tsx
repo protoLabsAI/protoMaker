@@ -57,6 +57,7 @@ export function Sidebar() {
     moveProjectToTrash,
     specCreatingForProject,
     setSpecCreatingForProject,
+    featureFlags,
   } = useAppStore();
 
   const isCompact = useIsCompact();
@@ -254,6 +255,8 @@ export function Sidebar() {
     hideSpecEditor,
     hideContext,
     hideTerminal,
+    hideCalendar: !featureFlags.calendar,
+    hideDesigns: !featureFlags.designs,
     currentProject,
     projects,
     projectHistory,
