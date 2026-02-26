@@ -128,6 +128,7 @@ import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import { graphiteService } from './graphite-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
+import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import {
   AutoLoopCoordinator,
@@ -274,6 +275,8 @@ export class AutoModeService {
   private leadEngineerService: LeadEngineerService | null = null;
   // Knowledge Store service for learning deduplication (optional)
   private knowledgeStoreService: KnowledgeStoreService | null = null;
+  // Context Fidelity service for shaping prior agent output on retries (optional)
+  private contextFidelityService: ContextFidelityService | null = null;
   // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
   private pipelineCheckpointService: PipelineCheckpointService | null = null;
   // ExecutionService handles feature execution logic
@@ -385,6 +388,15 @@ export class AutoModeService {
    */
   setKnowledgeStoreService(service: KnowledgeStoreService): void {
     this.knowledgeStoreService = service;
+  }
+
+  /**
+   * Wire up the Context Fidelity service for shaping prior agent output on retries.
+   * When set, auto-mode retry paths will compact the previous agent output before
+   * passing it to the next agent, matching what Lead Engineer already does.
+   */
+  setContextFidelityService(service: ContextFidelityService): void {
+    this.contextFidelityService = service;
   }
 
   /**
@@ -2455,6 +2467,11 @@ export class AutoModeService {
       // No previous context
     }
 
+    // Shape prior context to compact form (matching Lead Engineer retry pattern)
+    if (previousContext && this.contextFidelityService) {
+      previousContext = await this.contextFidelityService.shape(previousContext, 'compact');
+    }
+
     // Load autoLoadClaudeMd setting to determine context loading strategy
     const autoLoadClaudeMd = await getAutoLoadClaudeMdSetting(
       projectPath,
@@ -4486,6 +4503,11 @@ You can use the Read tool to view these images at any time during implementation
       previousContext = (await secureFs.readFile(contextPath, 'utf-8')) as string;
     } catch {
       // No previous context, that's okay
+    }
+
+    // Shape prior context to compact form (matching Lead Engineer retry pattern)
+    if (previousContext && this.contextFidelityService) {
+      previousContext = await this.contextFidelityService.shape(previousContext, 'compact');
     }
 
     // Build continuation prompt with feedback

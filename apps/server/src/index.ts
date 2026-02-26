@@ -799,6 +799,7 @@ autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
 const { ContextFidelityService } = await import('./services/context-fidelity-service.js');
 const contextFidelityService = new ContextFidelityService();
 leadEngineerService.setContextFidelityService(contextFidelityService);
+autoModeService.setContextFidelityService(contextFidelityService);
 
 // Wire KnowledgeStoreService for FTS5-powered reflection search
 leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
@@ -1114,11 +1115,14 @@ specGenerationMonitor.startMonitoring();
   await agentService.initialize();
   logger.info('Agent service initialized');
 
-  // Initialize Knowledge Store Service for configured project paths
+  // Initialize Knowledge Store Service for all known projects
   if (knowledgeStoreService) {
     try {
       const settings = await settingsService.getGlobalSettings();
       const projectPaths = [
+        // All projects registered in the project list
+        ...(settings.projects?.map((p) => p.path) ?? []),
+        // Additionally, any autoModeAlwaysOn projects (may not be in project list)
         ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
       ];
       const uniquePaths = [...new Set(projectPaths)];
