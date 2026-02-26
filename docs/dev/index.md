@@ -31,6 +31,7 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 - **[Clean Code](./clean-code)** — Code quality standards and patterns
 - **[Testing Patterns](./testing-patterns)** — Test patterns and anti-patterns
 - **[Design Philosophy](./design-philosophy)** — UI design direction (Linear, Vercel, shadcn/ui)
+- **[tmux](./tmux)** — Terminal multiplexer setup, config, and key bindings reference
 
 ## Processes
 
