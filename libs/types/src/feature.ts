@@ -453,6 +453,18 @@ export interface Feature {
   quarantineId?: string;
   /** Reason for quarantine failure (if quarantineStatus === 'failed') */
   quarantineFailureReason?: string;
+
+  // Promotion tracking fields
+  /**
+   * ID of the PromotionCandidate record for this feature.
+   * Set when this feature is detected as a promotion candidate after merging to dev.
+   */
+  stagingCandidateId?: string;
+  /**
+   * ID of the PromotionBatch this feature has been included in.
+   * Set when this feature is added to a promotion batch targeting staging/main.
+   */
+  promotionBatchId?: string;
 }
 
 /**

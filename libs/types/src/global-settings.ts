@@ -48,6 +48,7 @@ import type { EventHook } from './event-settings.js';
 import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
 import type { MaintenanceSettings, ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
+import type { PromotionConfig } from './promotion.js';
 
 // Re-export ModelAlias for convenience (settings.ts historically re-exported this)
 export type { ModelAlias };
@@ -581,6 +582,13 @@ export interface GlobalSettings {
 
   /** Per-persona system prompt overrides, keyed by template name (e.g., 'ava', 'frank') */
   personaOverrides?: Record<string, CustomPrompt>;
+
+  /**
+   * Promotion pipeline configuration for staging/production candidate tracking.
+   * Controls how features are detected as promotion candidates and batched for release.
+   * @see PromotionConfig in promotion.ts
+   */
+  promotion?: PromotionConfig;
 }
 
 /** Default global settings used when no settings file exists */
