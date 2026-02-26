@@ -18,7 +18,7 @@ describe('LinearApprovalHandler', () => {
         integrations: {
           linear: {
             approvalStates: ['Approved', 'Ready for Planning'],
-            intakeTriggerStates: ['In Progress'],
+            intakeTriggerStates: ['Todo'],
           },
         },
       }),
