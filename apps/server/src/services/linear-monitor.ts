@@ -56,6 +56,9 @@ export class LinearMonitor {
   /** Last project update timestamp per project */
   private lastUpdateTimes = new Map<string, string>();
 
+  /** Last seen updatedAt per issue — prevents re-emitting unchanged issues on every poll cycle */
+  private lastSeenUpdatedAt = new Map<string, string>();
+
   /** Active polling intervals */
   private intervals = new Map<string, NodeJS.Timeout>();
 
@@ -104,6 +107,7 @@ export class LinearMonitor {
     }
     this.intervals.clear();
     this.lastUpdateTimes.clear();
+    this.lastSeenUpdatedAt.clear();
   }
 
   /**
@@ -144,11 +148,12 @@ export class LinearMonitor {
     const issues = await this.fetchIssues(projectId, labels);
 
     for (const issue of issues) {
-      // Emit event for engineer agents monitoring their role labels
-      this.events.emit('linear:issue:detected', {
-        issue,
-        projectId,
-      });
+      const lastSeen = this.lastSeenUpdatedAt.get(issue.id);
+      if (!lastSeen || new Date(issue.updatedAt) > new Date(lastSeen)) {
+        this.lastSeenUpdatedAt.set(issue.id, issue.updatedAt);
+        this.events.emit('linear:issue:detected', { issue, projectId });
+        logger.info(`Detected Linear issue: ${issue.identifier} (${issue.status})`);
+      }
     }
   }
 
