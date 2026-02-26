@@ -21,7 +21,7 @@ import { createLogger } from '@protolabs-ai/utils';
 const logger = createLogger('features/update');
 
 // Statuses that should trigger syncing to app_spec.txt
-const SYNC_TRIGGER_STATUSES: FeatureStatus[] = ['verified', 'done'];
+const SYNC_TRIGGER_STATUSES: FeatureStatus[] = ['done'];
 
 export function createUpdateHandler(
   featureLoader: FeatureLoader,
@@ -147,7 +147,7 @@ export function createUpdateHandler(
         preEnhancementDescription
       );
 
-      // Trigger sync to app_spec.txt when status changes to verified or completed
+      // Trigger sync to app_spec.txt when status changes to done
       if (newStatus && SYNC_TRIGGER_STATUSES.includes(newStatus) && previousStatus !== newStatus) {
         try {
           const synced = await featureLoader.syncFeatureToAppSpec(projectPath, updated);
@@ -180,12 +180,12 @@ export function createUpdateHandler(
       // Emit feature:status-changed so downstream services can react:
       // - CompletionDetectorService: cascade epic → milestone → project completion checks
       // - LedgerService: record metrics
-      // - AutoModeService: stop zombie agents on done/verified
+      // - AutoModeService: stop zombie agents on done
       // - PRFeedbackService: start tracking PRs on review
       if (
         newStatus &&
         previousStatus !== newStatus &&
-        (newStatus === 'done' || newStatus === 'verified' || newStatus === 'review') &&
+        (newStatus === 'done' || newStatus === 'review') &&
         events
       ) {
         events.emit('feature:status-changed', {
