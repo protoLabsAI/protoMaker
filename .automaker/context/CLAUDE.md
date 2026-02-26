@@ -246,3 +246,26 @@ Issues: [count]
 - **LOW** — Minor issue, style, or technical debt
 
 If no issues are found, emit: `VERDICT: APPROVE` with `Issues: 0`.
+
+## Skill System
+
+When available skills exist for this project, you will see an `<available_skills>` block in your system prompt listing each skill by name, description, and file path.
+
+**How to use skills:**
+
+1. Review the `<available_skills>` list at the start of your task
+2. If a skill name or description matches your current task, read the full skill file:
+   ```
+   read_file(".automaker/skills/{name}.md")
+   ```
+3. Follow the instructions in the skill file — they encode proven patterns for this project
+
+**When a skill applies:**
+
+- The skill name or description relates to what you are implementing
+- You are about to do something the skill explicitly covers (e.g., build order, PR creation, testing)
+- Following the skill avoids a known class of mistakes
+
+**Do NOT load all skills.** Only read the skill file when the task clearly matches. Skills are metadata-only in the prompt to minimize token usage — content is fetched on demand.
+
+**Skill location:** `.automaker/skills/{name}.md`
