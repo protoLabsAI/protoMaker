@@ -8,6 +8,16 @@ reviews:
     - '!.automaker/memory/**'
     - '!.automaker/projects/**'
     - '!data/**'
+  # Post a GitHub commit status check ("CodeRabbit") so it can be
+  # added as a required check in branch protection.
+  commit_status: true
   auto_review:
     enabled: true
     drafts: false
+    # Review PRs targeting dev and staging in addition to the default branch (main).
+    # - dev: granular inline review on every feature/epic PR (fast feedback, not required)
+    # - staging: required check on dev→staging promotion PRs
+    # - main: required check on staging→main final pass
+    base_branches:
+      - '^dev$'
+      - '^staging$'
