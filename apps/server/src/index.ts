@@ -193,6 +193,7 @@ import { createTwitchRoutes } from './routes/twitch.js';
 import { createVoiceRoutes } from './routes/voice/index.js';
 import { createKnowledgeRoutes } from './routes/knowledge/index.js';
 import { createDesignsRoutes } from './routes/designs/index.js';
+import { createPromotionsRoutes } from './routes/promotions/index.js';
 import { LinearAgentService } from './services/linear-agent-service.js';
 import { LinearAgentRouter } from './services/linear-agent-router.js';
 import { MAX_SYSTEM_CONCURRENCY } from '@protolabs-ai/types';
@@ -1572,6 +1573,10 @@ if (knowledgeStoreService) {
 // Designs routes (.pen file management)
 app.use('/api/designs', createDesignsRoutes());
 logger.info('Designs routes mounted at /api/designs');
+
+// Promotion orchestration routes
+app.use('/api/promotions', createPromotionsRoutes());
+logger.info('Promotion routes mounted at /api/promotions');
 
 // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 
