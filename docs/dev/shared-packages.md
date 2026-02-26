@@ -104,7 +104,7 @@ if (isValidEnhancementMode('improve')) {
 
 ### @protolabs-ai/platform
 
-**Use when:** You need to work with AutoMaker's directory structure or spawn processes.
+**Use when:** You need to work with AutoMaker's directory structure, spawn processes, or detect/launch code editors.
 
 **Import for:**
 
@@ -114,11 +114,29 @@ if (isValidEnhancementMode('improve')) {
 - `ensureprotoLabsDir(projectPath)` - Create .automaker if needed
 - `spawnJSONLProcess()` - Spawn process with JSONL output
 - `initAllowedPaths()` - Security path validation
+- `detectAllEditors()` - Detect all installed editors on the system (cached 5 min)
+- `detectDefaultEditor()` - Get the highest-priority installed editor
+- `openInEditor(path, editorCommand?)` - Open a path in the specified (or default) editor
+- `openInFileManager(path)` - Open a path in the platform file manager
+- `openInTerminal(path)` - Open a terminal in the specified directory
+- `clearEditorCache()` - Invalidate the editor detection cache
+- `commandExists(cmd)` - Check if a CLI command is in PATH
+
+**Supported editors** (in priority order): Cursor, VS Code, VS Code Insiders, Kiro, Zed, Sublime Text, Windsurf, Trae (ByteDance), Rider, WebStorm, Xcode, Android Studio, Antigravity. Falls back to Finder/Explorer/xdg-open.
+
+**Adding a new editor:** Add an entry to `SUPPORTED_EDITORS` in `libs/platform/src/editor.ts`, add an icon component to `apps/ui/src/components/icons/editor-icons.tsx`, and register it in `getEditorIcon()`.
 
 **Example:**
 
 ```typescript
 import { getFeatureDir, ensureprotoLabsDir } from '@protolabs-ai/platform';
+import { detectAllEditors, openInEditor } from '@protolabs-ai/platform';
+
+// Detect all installed editors
+const editors = await detectAllEditors();
+
+// Open a path in the user's preferred editor
+await openInEditor('/path/to/project', 'cursor');
 ```
 
 **Never import from:** `lib/automaker-paths`, `lib/subprocess-manager`, `lib/security`

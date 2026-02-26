@@ -175,7 +175,7 @@ export function getEditorIcon(command: string): IconComponent {
     cursor: CursorIcon,
     code: VSCodeIcon,
     'code-insiders': VSCodeInsidersIcon,
-    kido: KiroIcon,
+    kiro: KiroIcon,
     zed: ZedIcon,
     subl: SublimeTextIcon,
     windsurf: WindsurfIcon,
