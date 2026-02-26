@@ -821,6 +821,14 @@ export type {
   RetrievalMode,
 } from './knowledge.js';
 
+// Trajectory types (execution learning flywheel)
+export type {
+  TrajectoryFact,
+  TrajectoryFactCategory,
+  VerifiedTrajectory,
+  TrajectoryDomain,
+} from './trajectory.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

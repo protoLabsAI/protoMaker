@@ -242,6 +242,25 @@ export class ExecuteProcessor implements StateProcessor {
       };
     }
 
+    // Fire-and-forget: extract structured facts from agent output
+    if (this.serviceContext.factStoreService) {
+      try {
+        const fs = await import('node:fs/promises');
+        const outputPath = path.join(
+          getFeatureDir(ctx.projectPath, ctx.feature.id),
+          'agent-output.md'
+        );
+        const agentOutput = await fs.readFile(outputPath, 'utf-8').catch(() => '');
+        this.serviceContext.factStoreService.extractAndSave(
+          ctx.projectPath,
+          ctx.feature.id,
+          agentOutput
+        );
+      } catch (err) {
+        logger.warn('[EXECUTE] Failed to trigger fact extraction (non-fatal):', err);
+      }
+    }
+
     // Reload feature to capture updated costUsd, prNumber, etc.
     const updated = await this.serviceContext.featureLoader.get(ctx.projectPath, ctx.feature.id);
     if (updated) {
