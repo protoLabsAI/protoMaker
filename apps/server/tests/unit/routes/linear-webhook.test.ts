@@ -99,7 +99,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -124,7 +125,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -147,7 +149,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -177,7 +180,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -211,7 +215,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -241,7 +246,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -278,7 +284,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -312,7 +319,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -346,7 +354,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -389,7 +398,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -430,7 +440,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -463,7 +474,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -503,7 +515,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -540,7 +553,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -579,7 +593,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
@@ -617,7 +632,8 @@ describe('Linear Webhook Handler', () => {
       const handler = createWebhookHandler(
         settingsService as SettingsService,
         events,
-        featureLoader as FeatureLoader
+        featureLoader as FeatureLoader,
+        '/test/repo'
       );
 
       await handler(req, res, vi.fn());
