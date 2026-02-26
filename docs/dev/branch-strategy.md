@@ -104,16 +104,46 @@ If a project needs agents to target a different base, override in project settin
 }
 ```
 
+## Promotion Merge Strategy
+
+> **Critical rule: promotion PRs must use `--merge` (merge commit), never `--squash`.**
+
+Squash-merging a promotion PR creates a synthetic commit with no DAG relationship to the source branch's commits. The next promotion will find that synthetic commit as a conflict — even though the code is identical — because git can't recognize what's already been integrated.
+
+```
+# What happens with squash (WRONG):
+dev:     A → B → C → D
+                       ← squash → staging: A → S   (S has no parent on dev)
+dev:     A → B → C → D → E → F
+                       ← merge: git finds A as base, sees S vs B+C+D+E+F → CONFLICT
+
+# What happens with merge commit (CORRECT):
+dev:     A → B → C → D
+                       ← merge commit → staging: A → B → C → D → M1
+dev:     A → B → C → D → E → F
+                       ← merge: git finds D as base, sees only E+F as new → CLEAN
+```
+
+**Rule of thumb:**
+
+- Feature PRs (`feature/*` → `dev`): squash ✅ (branch is discarded)
+- Promotion PRs (`dev` → `staging`, `staging` → `main`): merge commit ✅ (branch lives on)
+
 ## Promotion Commands
 
 ```bash
-# Promote dev → staging
-gh pr create --base staging --head dev --title "chore: promote dev to staging" \
+# Promote dev → staging (ALWAYS --merge)
+gh pr create --base staging --head dev --title "chore: promote dev → staging" \
   --body "Promoting dev to staging for user testing."
+gh pr merge <number> --merge   # NOT --squash
 
-# Promote staging → main (use the template)
+# Promote staging → main (ALWAYS --merge, use the template)
 gh pr create --base main --head staging \
   --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+gh pr merge <number> --merge   # NOT --squash
+
+# Enable auto-merge with merge strategy
+gh pr merge <number> --auto --merge
 ```
 
 ## Common Questions
@@ -129,3 +159,6 @@ Yes — make sure `dev` is up to date with `main` before opening a `dev → stag
 
 **What if CI fails on the staging promote PR?**
 Fix the failure on `dev`, push the fix, then the open PR to `staging` will re-run CI automatically.
+
+**What if dev → staging shows conflicts?**
+This means a previous promotion used `--squash`. To recover: create a new branch from `dev`, `git merge origin/staging` (take dev's version for all conflicts), push, and open a new PR. Going forward, always use `--merge`.
