@@ -181,6 +181,141 @@ export class LinearWebhookHandler {
           }
         }
 
+        if (conflictDetected) {
+          const settings = this.settingsService
+            ? await this.settingsService.getProjectSettings(projectPath)
+            : null;
+          const resolution = settings?.integrations?.linear?.conflictResolution ?? 'automaker';
+
+          if (resolution === 'automaker') {
+            // Automaker wins — skip the Linear update entirely
+            logger.info(
+              `Conflict detected for ${featureId}: Automaker wins (per config), skipping Linear update`
+            );
+            const conflictMetadata: SyncMetadata = {
+              ...metadata,
+              featureId,
+              conflictDetected: true,
+              lastSyncTimestamp: Date.now(),
+              lastSyncStatus: 'success',
+              linearIssueId,
+              syncCount: (metadata?.syncCount || 0) + 1,
+              lastLinearState: newStateName,
+            };
+            this.guards.updateSyncMetadata(conflictMetadata);
+            this.guards.recordOperation(featureId, 'pull', 'success', Date.now() - startTime, true);
+            return;
+          }
+
+          if (resolution === 'manual') {
+            // Suspend sync and surface to user via HITL form
+            // Guard: only create one form per feature (dedup during burst webhooks)
+            if (!this.guards.hitlFormService) {
+              logger.warn(
+                `Conflict detected for ${featureId}: resolution='manual' but HITLFormService not available — defaulting to automaker wins`
+              );
+              const conflictMetadata: SyncMetadata = {
+                ...metadata,
+                featureId,
+                conflictDetected: true,
+                lastSyncTimestamp: Date.now(),
+                lastSyncStatus: 'success',
+                linearIssueId,
+                syncCount: (metadata?.syncCount || 0) + 1,
+                lastLinearState: newStateName,
+              };
+              this.guards.updateSyncMetadata(conflictMetadata);
+              this.guards.recordOperation(
+                featureId,
+                'pull',
+                'success',
+                Date.now() - startTime,
+                true
+              );
+              return;
+            }
+
+            let hitlFormId: string | undefined;
+            try {
+              const form = this.guards.hitlFormService.create({
+                title: `Linear Sync Conflict — ${feature.title ?? featureId}`,
+                description: [
+                  `Both Linear and Automaker changed this feature since the last sync.`,
+                  `Linear state: **${String(featureUpdates.status ?? newStateName)}**`,
+                  `Automaker state: **${feature.status}**`,
+                  `Choose which state should win.`,
+                ].join('\n'),
+                callerType: 'api',
+                featureId,
+                projectPath,
+                steps: [
+                  {
+                    title: 'Resolve Conflict',
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        choice: {
+                          type: 'string',
+                          enum: ['accept-linear', 'accept-automaker'],
+                          title: 'Which state should win?',
+                          enumNames: [
+                            `Accept Linear (${String(featureUpdates.status ?? newStateName)})`,
+                            `Keep Automaker (${feature.status})`,
+                          ],
+                        },
+                      },
+                      required: ['choice'],
+                    },
+                  },
+                ],
+                ttlSeconds: 86400, // 24 hours
+              });
+              hitlFormId = form.id;
+            } catch (formError) {
+              logger.error(`Failed to create HITL form for conflict on ${featureId}:`, formError);
+            }
+
+            // Cache the Linear state updates for later application on accept-linear
+            const conflictMetadata: SyncMetadata = {
+              ...metadata,
+              featureId,
+              conflictDetected: true,
+              lastSyncTimestamp: Date.now(),
+              lastSyncStatus: 'pending',
+              linearIssueId,
+              syncCount: (metadata?.syncCount || 0) + 1,
+              lastLinearState: newStateName,
+              pendingLinearState: featureUpdates as Record<string, unknown>,
+              pendingHitlFormId: hitlFormId,
+            };
+            this.guards.updateSyncMetadata(conflictMetadata);
+
+            // Emit conflict event for observability
+            if (this.guards.emitter) {
+              this.guards.emitter.emit('linear:sync:conflict', {
+                featureId,
+                projectPath,
+                linearState: String(featureUpdates.status ?? newStateName),
+                automakerStatus: feature.status,
+                hitlFormId,
+                timestamp: new Date().toISOString(),
+              });
+            }
+
+            // Suspend future syncs for this feature until human resolves
+            this.guards.suspendForManualResolution(featureId);
+            this.guards.recordOperation(featureId, 'pull', 'success', Date.now() - startTime, true);
+
+            logger.info(
+              `Conflict detected for ${featureId}: HITL form created (formId=${hitlFormId ?? 'none'}), sync suspended`
+            );
+            return;
+          }
+
+          // resolution === 'linear': fall through and apply Linear state (current behavior)
+          logger.info(`Conflict detected for ${featureId}: Linear wins (per config)`);
+        }
+
         await this.featureLoader.update(projectPath, featureId, featureUpdates);
 
         // Post cancellation comment to Linear when moving to terminal state

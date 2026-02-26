@@ -1782,7 +1782,7 @@ describe('LinearSyncService', () => {
       expect(conflicts[0].featureId).toBe('feat-1');
     });
 
-    it('should resolve a conflict and clear the flag', () => {
+    it('should resolve a conflict and clear the flag', async () => {
       service.updateSyncMetadata({
         featureId: 'feat-1',
         lastSyncTimestamp: Date.now(),
@@ -1791,7 +1791,7 @@ describe('LinearSyncService', () => {
         conflictDetected: true,
       });
 
-      const resolved = service.resolveConflict('feat-1', 'accept-linear');
+      const resolved = await service.resolveConflict('/test/path', 'feat-1', 'accept-linear');
       expect(resolved).toBe(true);
 
       const metadata = service.getSyncMetadata('feat-1');
@@ -1799,11 +1799,13 @@ describe('LinearSyncService', () => {
       expect(metadata?.lastSyncStatus).toBe('success');
     });
 
-    it('should return false when resolving non-existent conflict', () => {
-      expect(service.resolveConflict('nonexistent', 'manual')).toBe(false);
+    it('should return false when resolving non-existent conflict', async () => {
+      expect(await service.resolveConflict('/test/path', 'nonexistent', 'accept-linear')).toBe(
+        false
+      );
     });
 
-    it('should return false when feature has no conflict', () => {
+    it('should return false when feature has no conflict', async () => {
       service.updateSyncMetadata({
         featureId: 'feat-1',
         lastSyncTimestamp: Date.now(),
@@ -1812,7 +1814,7 @@ describe('LinearSyncService', () => {
         conflictDetected: false,
       });
 
-      expect(service.resolveConflict('feat-1', 'accept-automaker')).toBe(false);
+      expect(await service.resolveConflict('/test/path', 'feat-1', 'accept-automaker')).toBe(false);
     });
   });
 });

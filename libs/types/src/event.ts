@@ -130,6 +130,7 @@ export type EventType =
   | 'linear:sync:started'
   | 'linear:sync:completed'
   | 'linear:sync:error'
+  | 'linear:sync:conflict'
   | 'linear:issue:updated'
   | 'linear:approval:detected'
   | 'linear:approval:bridged'
@@ -593,6 +594,20 @@ export interface EventPayloadMap {
   };
   'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
   'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
+
+  // Linear sync conflict event (manual resolution required)
+  'linear:sync:conflict': {
+    featureId: string;
+    projectPath: string;
+    /** The Linear status that would have been applied */
+    linearState: string;
+    /** The current Automaker status */
+    automakerStatus: string;
+    /** HITL form ID, set when the form was created successfully */
+    hitlFormId?: string;
+    /** ISO-8601 timestamp */
+    timestamp: string;
+  };
 
   // HITL form events
   'hitl:form-requested': {

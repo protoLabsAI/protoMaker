@@ -18,6 +18,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
+import type { HITLFormService } from './hitl-form-service.js';
 import { LinearIssueSync } from './linear-issue-sync.js';
 import { LinearProjectSync } from './linear-project-sync.js';
 import { LinearWebhookHandler } from './linear-webhook-handler.js';
@@ -47,12 +48,15 @@ export class LinearSyncService {
   // ---- injected dependencies ----
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
+  private featureLoader: FeatureLoader | null = null;
+  private hitlFormService: HITLFormService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   // ---- guard state ----
   private syncingFeatures: Set<string> = new Set();
   private lastSyncTimes: Map<string, number> = new Map();
   private syncState: Map<string, SyncMetadata> = new Map();
+  private pendingManualResolution: Set<string> = new Set();
   private running = false;
 
   // ---- metrics ----
@@ -87,6 +91,7 @@ export class LinearSyncService {
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
+    this.featureLoader = featureLoader;
 
     const guards = this.buildGuards();
 
@@ -100,6 +105,16 @@ export class LinearSyncService {
     });
 
     logger.info('LinearSyncService initialized');
+  }
+
+  /**
+   * Inject HITLFormService after initialization (setter injection pattern).
+   * Must be called after initialize(). Guards use a live getter so no
+   * re-initialization of sub-services is needed.
+   */
+  setHITLFormService(service: HITLFormService): void {
+    this.hitlFormService = service;
+    logger.info('HITLFormService injected into LinearSyncService');
   }
 
   start(): void {
@@ -129,8 +144,11 @@ export class LinearSyncService {
     }
     this.emitter = null;
     this.settingsService = null;
+    this.featureLoader = null;
+    this.hitlFormService = null;
     this.lastSyncTimes.clear();
     this.syncState.clear();
+    this.pendingManualResolution.clear();
     this.activityLog = [];
     this.metrics = {
       totalOperations: 0,
@@ -175,7 +193,52 @@ export class LinearSyncService {
       this.commentService.handlePrdReady(
         payload as { projectPath?: string; featureId?: string; prd?: string }
       );
+    } else if (type === 'hitl:form-responded') {
+      await this.onHITLFormResponded(
+        payload as {
+          formId: string;
+          featureId?: string;
+          projectPath?: string;
+          cancelled: boolean;
+          response?: Record<string, unknown>[];
+        }
+      );
     }
+  }
+
+  private async onHITLFormResponded(payload: {
+    formId: string;
+    featureId?: string;
+    projectPath?: string;
+    cancelled: boolean;
+    response?: Record<string, unknown>[];
+  }): Promise<void> {
+    const { featureId, projectPath, cancelled, response } = payload;
+
+    // Only handle forms for features we've suspended for manual resolution
+    if (!featureId || !this.pendingManualResolution.has(featureId)) return;
+    if (!projectPath) {
+      logger.warn(`HITL form response for ${featureId} missing projectPath — cannot resolve`);
+      this.releaseManualResolution(featureId);
+      return;
+    }
+
+    if (cancelled) {
+      logger.info(`HITL conflict form cancelled for feature ${featureId} — releasing suspension`);
+      this.releaseManualResolution(featureId);
+      return;
+    }
+
+    const choice = response?.[0]?.choice as string | undefined;
+    if (choice !== 'accept-linear' && choice !== 'accept-automaker') {
+      logger.warn(
+        `HITL form response for ${featureId} has invalid choice "${choice ?? 'undefined'}" — releasing suspension`
+      );
+      this.releaseManualResolution(featureId);
+      return;
+    }
+
+    await this.resolveConflict(projectPath, featureId, choice);
   }
 
   // -------------------------------------------------------------------------
@@ -191,12 +254,28 @@ export class LinearSyncService {
       logger.debug(`Sync skipped for ${featureId}: already syncing`);
       return false;
     }
+    if (this.pendingManualResolution.has(featureId)) {
+      logger.debug(`Sync suspended for ${featureId} — awaiting manual conflict resolution`);
+      return false;
+    }
     const lastSync = this.lastSyncTimes.get(featureId);
     if (lastSync && Date.now() - lastSync < DEBOUNCE_WINDOW_MS) {
       logger.debug(`Sync skipped for ${featureId}: debounce window active`);
       return false;
     }
     return true;
+  }
+
+  /** Suspend future syncs for a feature pending manual conflict resolution */
+  suspendForManualResolution(featureId: string): void {
+    this.pendingManualResolution.add(featureId);
+    logger.info(`Sync suspended for feature ${featureId} — awaiting manual conflict resolution`);
+  }
+
+  /** Release a feature from manual resolution suspension */
+  releaseManualResolution(featureId: string): void {
+    this.pendingManualResolution.delete(featureId);
+    logger.info(`Sync suspension released for feature ${featureId}`);
   }
 
   protected markSyncing(featureId: string): void {
@@ -271,15 +350,53 @@ export class LinearSyncService {
     return [...this.syncState.values()].filter((m) => m.conflictDetected).map((m) => ({ ...m }));
   }
 
-  resolveConflict(
+  async resolveConflict(
+    projectPath: string,
     featureId: string,
-    strategy: 'accept-linear' | 'accept-automaker' | 'manual'
-  ): boolean {
+    strategy: 'accept-linear' | 'accept-automaker'
+  ): Promise<boolean> {
     const metadata = this.syncState.get(featureId);
     if (!metadata?.conflictDetected) return false;
-    metadata.conflictDetected = false;
-    metadata.lastSyncStatus = 'success';
-    this.syncState.set(featureId, metadata);
+
+    if (strategy === 'accept-linear') {
+      // Apply the cached Linear state that was held pending manual resolution
+      if (metadata.pendingLinearState && this.featureLoader) {
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (feature) {
+          await this.featureLoader.update(projectPath, featureId, metadata.pendingLinearState);
+          logger.info(`Conflict resolved for feature ${featureId}: Linear state applied`);
+        } else {
+          logger.warn(`Conflict resolution for ${featureId}: feature not found, skipping update`);
+        }
+      }
+    } else if (strategy === 'accept-automaker') {
+      // Automaker wins — push current Automaker state back to Linear
+      if (this.featureLoader) {
+        const feature = await this.featureLoader.get(projectPath, featureId);
+        if (feature?.linearIssueId && feature.status) {
+          await this.issueSync.updateIssueStatus(
+            projectPath,
+            feature.linearIssueId,
+            feature.status
+          );
+          logger.info(
+            `Conflict resolved for feature ${featureId}: Automaker state pushed to Linear`
+          );
+        }
+      }
+    }
+
+    // Clear conflict state and release suspension
+    const updatedMetadata: SyncMetadata = {
+      ...metadata,
+      conflictDetected: false,
+      lastSyncStatus: 'success',
+      pendingLinearState: undefined,
+      pendingHitlFormId: undefined,
+    };
+    this.syncState.set(featureId, updatedMetadata);
+    this.releaseManualResolution(featureId);
+
     logger.info(`Conflict resolved for feature ${featureId} using strategy: ${strategy}`);
     return true;
   }
@@ -403,6 +520,11 @@ export class LinearSyncService {
     // Capture emitter reference for use in the getter closure.
     // Arrow functions below capture `this` lexically from the class method.
     const emitter = this.emitter;
+    // Use `self` so the hitlFormService getter stays live after setter injection
+    // (hitlFormService is injected after initialize()). Object literal getters
+    // bind `this` to the returned object, so we need a closure over the class instance.
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
     return {
       shouldSync: (id) => this.shouldSync(id),
       markSyncing: (id) => this.markSyncing(id),
@@ -414,6 +536,11 @@ export class LinearSyncService {
         this.recordOperation(id, dir, status, ms, conflict, err),
       addCommentToIssue: (projectPath, issueId, body) =>
         this.issueSync.addCommentToIssue(projectPath, issueId, body),
+      suspendForManualResolution: (id) => this.suspendForManualResolution(id),
+      releaseManualResolution: (id) => this.releaseManualResolution(id),
+      get hitlFormService() {
+        return self.hitlFormService ?? undefined;
+      },
       get emitter() {
         return emitter;
       },
