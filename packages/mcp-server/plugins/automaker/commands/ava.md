@@ -463,12 +463,16 @@ When reviewing or creating PRs: feature branches target `dev`, not `main`. If yo
 **Promotion commands:**
 
 ```bash
-# dev → staging
-gh pr create --base staging --head dev --title "chore: promote dev to staging"
+# dev → staging (ALWAYS --merge, never --squash)
+gh pr create --base staging --head dev --title "chore: promote dev → staging"
+gh pr merge <number> --auto --merge
 
-# staging → main (use template — enforced by CI)
+# staging → main (ALWAYS --merge, use template — enforced by CI)
 gh pr create --base main --head staging --template .github/PULL_REQUEST_TEMPLATE/promote-to-main.md
+gh pr merge <number> --auto --merge
 ```
+
+> **Merge strategy rule**: Promotion PRs must use `--merge` (merge commit), NEVER `--squash` or `--rebase`. Both create new commit SHAs, breaking git's DAG — the next promotion shows conflicts even though the code is identical. Feature PRs to `dev` may squash (branch discarded). Promotion PRs must merge (branches live on).
 
 **Beads** (`bd` CLI) — Your operational brain and primary work queue.
 

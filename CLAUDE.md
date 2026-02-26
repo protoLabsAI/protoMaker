@@ -35,6 +35,7 @@ See `docs/dev/branch-strategy.md` for the full strategy.
 
 - Never push directly to `main` or `staging`. Always use a PR.
 - Agent feature PRs target `dev` by default (`prBaseBranch: 'dev'` in `DEFAULT_GIT_WORKFLOW_SETTINGS`).
+- **Promotion PRs (`dev→staging`, `staging→main`) must use `--merge`, NEVER `--squash`.** Squash creates a synthetic commit with no DAG relationship to the source branch — the next promotion will conflict even though the code is identical. Feature PRs to `dev` may squash (branch is discarded). Promotion PRs must merge (branches live on).
 - Before committing, run `git status` and verify only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
 - `.automaker/memory/` files are updated by agents during autonomous work. Include memory changes in your commits alongside related code changes — don't leave them as unstaged drift.
 
