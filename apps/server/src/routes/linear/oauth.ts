@@ -21,6 +21,98 @@ import type { SettingsService } from '../../services/settings-service.js';
 
 const logger = createLogger('linear:oauth');
 
+/** Refresh buffer: refresh token if it expires within 60 seconds */
+const REFRESH_BUFFER_MS = 60 * 1000;
+
+/**
+ * Refresh the Linear OAuth access token if it is expired or about to expire.
+ *
+ * Checks tokenExpiresAt against now + 60s buffer. If a refresh is needed,
+ * POSTs to the Linear token endpoint with grant_type=refresh_token and stores
+ * the new accessToken, refreshToken, and tokenExpiresAt in project settings.
+ *
+ * @throws {Error} If no refresh token is available or the refresh request fails
+ */
+export async function refreshLinearToken(
+  settingsService: SettingsService,
+  projectPath: string
+): Promise<void> {
+  const settings = await settingsService.getProjectSettings(projectPath);
+  const linear = settings.integrations?.linear;
+
+  if (!linear?.agentToken) {
+    return; // No OAuth token to refresh
+  }
+
+  // Only refresh tokens that have expiry tracking (OAuth tokens)
+  // Tokens without tokenExpiresAt (e.g. personal API tokens) are skipped
+  if (!linear.tokenExpiresAt) {
+    return;
+  }
+
+  // Check if token needs refreshing (expires within buffer window)
+  const expiresAt = new Date(linear.tokenExpiresAt).getTime();
+  const needsRefresh = expiresAt < Date.now() + REFRESH_BUFFER_MS;
+
+  if (!needsRefresh) {
+    return; // Token is still valid
+  }
+
+  if (!linear.refreshToken) {
+    throw new Error(
+      'Linear OAuth token is expired and no refresh token is available. Re-authenticate.'
+    );
+  }
+
+  const clientId = process.env.LINEAR_CLIENT_ID;
+  const clientSecret = process.env.LINEAR_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('LINEAR_CLIENT_ID and LINEAR_CLIENT_SECRET must be set to refresh OAuth token');
+  }
+
+  logger.info('Refreshing Linear OAuth token', { projectPath });
+
+  const tokenResponse = await fetch('https://api.linear.app/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: linear.refreshToken,
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text();
+    logger.error('Linear token refresh failed', { status: tokenResponse.status, error: errorText });
+    throw new Error(
+      `Linear OAuth token refresh failed (${tokenResponse.status}): token may be revoked. Re-authenticate.`
+    );
+  }
+
+  const tokenData = (await tokenResponse.json()) as {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_token?: string;
+  };
+
+  await settingsService.updateProjectSettings(projectPath, {
+    integrations: {
+      linear: {
+        ...linear,
+        agentToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token ?? linear.refreshToken,
+        tokenExpiresAt: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+      },
+    },
+  });
+
+  logger.info('Linear OAuth token refreshed successfully', { projectPath });
+}
+
 /** Scopes needed for agent functionality */
 const AGENT_SCOPES = [
   'read',
