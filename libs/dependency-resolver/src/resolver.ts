@@ -56,12 +56,17 @@ export function resolveDependencies(features: Feature[]): DependencyResolutionRe
 
         // Check if dependency is incomplete (blocking)
         const depFeature = featureMap.get(depId)!;
-        if (
-          depFeature.status !== 'completed' &&
-          depFeature.status !== 'verified' &&
-          depFeature.status !== 'done' &&
-          depFeature.status !== 'review'
-        ) {
+        // Foundation deps require 'done' (merged) — 'review' is NOT sufficient.
+        // Non-foundation deps can proceed when dep is in 'review'.
+        const isComplete = depFeature.isFoundation
+          ? depFeature.status === 'completed' ||
+            depFeature.status === 'verified' ||
+            depFeature.status === 'done'
+          : depFeature.status === 'completed' ||
+            depFeature.status === 'verified' ||
+            depFeature.status === 'done' ||
+            depFeature.status === 'review';
+        if (!isComplete) {
           if (!blockedFeatures.has(feature.id)) {
             blockedFeatures.set(feature.id, []);
           }
@@ -219,11 +224,17 @@ export function areDependenciesSatisfied(
       return dep.status === 'done' || dep.status === 'completed' || dep.status === 'verified';
     }
 
-    // Default: require 'completed', 'verified', or 'done' (PR merged)
+    // Default: require 'completed', 'verified', 'done', or 'review'
     // 'done' = PR merged, final state
     // 'completed' = agent finished, no PR workflow
     // 'verified' = manually verified by user
-    return dep.status === 'completed' || dep.status === 'verified' || dep.status === 'done';
+    // 'review' = PR created and under review — sufficient for non-foundation deps
+    return (
+      dep.status === 'completed' ||
+      dep.status === 'verified' ||
+      dep.status === 'done' ||
+      dep.status === 'review'
+    );
   });
 }
 
@@ -248,7 +259,13 @@ export function getBlockingDependencies(feature: Feature, allFeatures: Feature[]
       return dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified';
     }
 
-    return dep.status !== 'completed' && dep.status !== 'verified' && dep.status !== 'done';
+    // Non-foundation deps: 'review' is sufficient (dep has a PR, downstream can start)
+    return (
+      dep.status !== 'completed' &&
+      dep.status !== 'verified' &&
+      dep.status !== 'done' &&
+      dep.status !== 'review'
+    );
   });
 }
 
@@ -299,7 +316,13 @@ export function getBlockingDependenciesFromMap(
       continue;
     }
 
-    if (dep.status !== 'completed' && dep.status !== 'verified' && dep.status !== 'done') {
+    // Non-foundation deps: 'review' is sufficient (dep has a PR, downstream can start)
+    if (
+      dep.status !== 'completed' &&
+      dep.status !== 'verified' &&
+      dep.status !== 'done' &&
+      dep.status !== 'review'
+    ) {
       blockingDependencies.push(depId);
     }
   }
@@ -352,7 +375,12 @@ export function getBlockingInfo(feature: Feature, allFeatures: Feature[]): Block
     if (dep.isFoundation) {
       isBlocking = dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified';
     } else {
-      isBlocking = dep.status !== 'completed' && dep.status !== 'verified' && dep.status !== 'done';
+      // Non-foundation deps: 'review' is sufficient (dep has a PR, downstream can start)
+      isBlocking =
+        dep.status !== 'completed' &&
+        dep.status !== 'verified' &&
+        dep.status !== 'done' &&
+        dep.status !== 'review';
     }
 
     if (isBlocking) {

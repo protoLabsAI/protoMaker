@@ -25,6 +25,7 @@ export interface LeadFeatureSnapshot {
   dependencies?: string[];
   epicId?: string;
   isEpic?: boolean;
+  isFoundation?: boolean;
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
   startedAt?: string;
   completedAt?: string;
