@@ -7,6 +7,7 @@
 
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
 import { createLogger } from '@protolabs-ai/utils';
 import type {
   Feature,
@@ -456,7 +457,7 @@ export class GitWorkflowService {
         commitHash = await graphiteService.commit(workDir, commitMessage);
       } else {
         // Use standard git commit
-        commitHash = await this.commitChanges(workDir, feature);
+        commitHash = await this.commitChanges(workDir, feature, projectPath);
       }
 
       if (!commitHash) {
@@ -471,7 +472,7 @@ export class GitWorkflowService {
         logger.info(
           `No uncommitted changes but found unpushed commits for feature ${featureId}, continuing pipeline`
         );
-        await this.formatAndAmendLastCommit(workDir);
+        await this.formatAndAmendLastCommit(workDir, projectPath);
         commitHash = unpushedHash;
       }
       result.commitHash = commitHash;
@@ -951,7 +952,11 @@ export class GitWorkflowService {
    * Commit all changes in the working directory.
    * @returns Commit hash (short) if changes were committed, null if no changes
    */
-  private async commitChanges(workDir: string, feature: Feature): Promise<string | null> {
+  private async commitChanges(
+    workDir: string,
+    feature: Feature,
+    projectPath: string
+  ): Promise<string | null> {
     // Check for changes - include untracked files explicitly
     const { stdout: status } = await execAsync('git status --porcelain --untracked-files=all', {
       cwd: workDir,
@@ -985,13 +990,11 @@ export class GitWorkflowService {
       );
       const files = stagedFiles.trim().split('\n').filter(Boolean);
       if (files.length > 0) {
-        await execAsync(
-          `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
-          {
-            cwd: workDir,
-            env: execEnv,
-          }
-        );
+        const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
+        await execAsync(`node "${prettierBin}" --write ${files.map((f) => `"${f}"`).join(' ')}`, {
+          cwd: workDir,
+          env: execEnv,
+        });
         // Re-stage after formatting
         await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir, env: execEnv });
         await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
@@ -1183,7 +1186,7 @@ export class GitWorkflowService {
    * Run prettier on all changed files and amend the last commit.
    * Used when the agent committed without formatting.
    */
-  private async formatAndAmendLastCommit(workDir: string): Promise<void> {
+  private async formatAndAmendLastCommit(workDir: string, projectPath: string): Promise<void> {
     try {
       // Get files changed in the last commit
       const { stdout: changedFiles } = await execAsync(
@@ -1193,11 +1196,12 @@ export class GitWorkflowService {
       const files = changedFiles.trim().split('\n').filter(Boolean);
       if (files.length === 0) return;
 
-      // Format them
-      await execAsync(
-        `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
-        { cwd: workDir, env: execEnv }
-      );
+      // Format them using the workspace Prettier binary (worktrees have no node_modules)
+      const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
+      await execAsync(`node "${prettierBin}" --write ${files.map((f) => `"${f}"`).join(' ')}`, {
+        cwd: workDir,
+        env: execEnv,
+      });
 
       // Check if formatting actually changed anything
       const { stdout: status } = await execAsync('git status --porcelain', {
