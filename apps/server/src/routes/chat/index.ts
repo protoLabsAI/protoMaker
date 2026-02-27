@@ -11,7 +11,7 @@ import { streamText, type ModelMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createLogger } from '@protolabs-ai/utils';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
-import { selectPersona, buildPersonaPrompt, type NotesContext } from './personas.js';
+import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
 
 const logger = createLogger('ChatRoutes');
 
@@ -90,17 +90,8 @@ export function createChatRoutes(): Router {
 
       const aiModel = resolveAISDKModel(modelAlias);
 
-      // Build system prompt — use persona if notes context is provided
-      let systemPrompt = system;
-      if (!systemPrompt && context?.view === 'notes') {
-        const persona = selectPersona(context.activeTabName);
-        systemPrompt = buildPersonaPrompt(persona, context);
-        logger.info(`Chat persona: ${persona} (tab: "${context.activeTabName}")`);
-      }
-      if (!systemPrompt) {
-        systemPrompt =
-          'You are a helpful AI assistant integrated into protoLabs Studio, an autonomous AI development platform. Be concise and technical.';
-      }
+      // Build Ava system prompt — optionally enriched with notes context
+      const systemPrompt = system ?? buildAvaSystemPrompt(context);
 
       logger.info(`Chat request: ${messages.length} messages, model=${modelAlias}`);
 
