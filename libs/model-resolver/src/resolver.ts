@@ -33,6 +33,22 @@ const CODEX_MODEL_PREFIXES = ['codex-', 'gpt-'];
 const OPENAI_O_SERIES_PATTERN = /^o\d/;
 const OPENAI_O_SERIES_ALLOWED_MODELS = new Set<string>();
 
+/** Groq model aliases - short aliases that map to full Groq model IDs */
+const GROQ_MODEL_ALIASES: Record<string, string> = {
+  'llama-3.3-70b': 'llama-3.3-70b-versatile',
+  mixtral: 'mixtral-8x7b-32768',
+  'llama-3.1-8b': 'llama-3.1-8b-instant',
+};
+
+/** Known Groq model IDs (full form) */
+const GROQ_MODEL_IDS = new Set([
+  'llama-3.3-70b-versatile',
+  'llama-3.1-70b-versatile',
+  'llama-3.1-8b-instant',
+  'mixtral-8x7b-32768',
+  'gemma2-9b-it',
+]);
+
 /**
  * Resolve a model key/alias to a full model string
  *
@@ -94,6 +110,21 @@ export function resolveModelString(
     CODEX_MODEL_PREFIXES.some((prefix) => canonicalKey.startsWith(prefix)) ||
     (OPENAI_O_SERIES_PATTERN.test(canonicalKey) && OPENAI_O_SERIES_ALLOWED_MODELS.has(canonicalKey))
   ) {
+    return canonicalKey;
+  }
+
+  // Groq model aliases (e.g., 'llama-3.3-70b' → 'llama-3.3-70b-versatile')
+  if (canonicalKey in GROQ_MODEL_ALIASES) {
+    return GROQ_MODEL_ALIASES[canonicalKey];
+  }
+
+  // Known Groq model IDs - pass through unchanged
+  if (GROQ_MODEL_IDS.has(canonicalKey)) {
+    return canonicalKey;
+  }
+
+  // Groq model with explicit groq/ prefix - pass through
+  if (canonicalKey.startsWith('groq/')) {
     return canonicalKey;
   }
 
