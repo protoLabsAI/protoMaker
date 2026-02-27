@@ -8,6 +8,7 @@ import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
 import type { ReviewThreadFeedback, PendingFeedback } from './coderabbit.js';
 import type { PipelineState } from './pipeline-phase.js';
+import type { SignalChannel, SignalMetadata } from './signal-channel.js';
 
 /**
  * A single entry in the description history
@@ -122,28 +123,6 @@ export interface RemediationHistoryEntry {
   error?: string;
   /** Summary of changes made during this remediation */
   changesSummary?: string;
-}
-
-/**
- * Channel through which a signal was received by the signal intake service.
- */
-export type SignalChannel = 'linear' | 'discord' | 'github' | 'mcp';
-
-/**
- * Metadata extracted from a signal's channelContext at feature creation time.
- * Preserves provenance information about where the feature originated.
- */
-export interface SignalMetadata {
-  /** Linear or GitHub issue ID */
-  issueId?: string;
-  /** GitHub issue URL */
-  issueUrl?: string;
-  /** Discord channel ID */
-  channelId?: string;
-  /** Discord channel name */
-  channelName?: string;
-  /** Discord message ID */
-  messageId?: string;
 }
 
 export interface Feature {
