@@ -200,7 +200,7 @@ export class GroqProvider extends BaseProvider {
         name: 'Gemma 2 9B IT',
         modelString: 'gemma2-9b-it',
         provider: 'groq',
-        description: "Google Gemma 2 9B - instruction-tuned model",
+        description: 'Google Gemma 2 9B - instruction-tuned model',
         contextWindow: 8192,
         maxOutputTokens: 8192,
         supportsVision: false,
