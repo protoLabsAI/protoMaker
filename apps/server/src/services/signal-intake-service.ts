@@ -8,11 +8,18 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
+import type { HITLFormRequestInput } from '@protolabs-ai/types';
+import type { SignalIntent } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('SignalIntake');
+
+/** Minimal interface for HITL form creation (avoids tight coupling to HITLFormService) */
+interface HITLFormCreator {
+  create(input: HITLFormRequestInput): { id: string };
+}
 
 interface SignalPayload {
   source: string;
@@ -63,6 +70,7 @@ export class SignalIntakeService {
     mcp: 0,
   };
   private lastSignalAt: string | null = null;
+  private hitlFormService: HITLFormCreator | null = null;
 
   constructor(
     private events: EventEmitter,
@@ -72,6 +80,15 @@ export class SignalIntakeService {
   ) {
     this.registerListener();
     logger.info(`Signal intake service initialized for ${defaultProjectPath}`);
+  }
+
+  /**
+   * Wire in a HITL form creator for interrupt signal handling.
+   * When set, interrupt-intent signals bypass the PM pipeline and create a HITL form directly.
+   */
+  setHITLFormService(service: HITLFormCreator): void {
+    this.hitlFormService = service;
+    logger.info('HITLFormService wired into SignalIntakeService');
   }
 
   private registerListener(): void {
@@ -199,6 +216,100 @@ export class SignalIntakeService {
     return { category: 'ops', reason: 'Default classification: Ops' };
   }
 
+  /**
+   * Classify the intent behind an incoming signal.
+   *
+   * Inspects the signal source and channelContext trigger metadata to determine
+   * what kind of action the signal is requesting. This is distinct from ops/gtm
+   * routing (which decides team ownership) — intent classifies the nature of the
+   * signal itself for fine-grained handling within each route.
+   *
+   * Intent taxonomy:
+   *   work_order     - Concrete task or feature request ready for implementation.
+   *   idea           - Vague concept needing PM refinement before becoming actionable.
+   *   feedback       - Commentary on existing work; not a new task.
+   *   conversational - Casual message or question; does not create a work item.
+   *   interrupt      - Urgent signal requiring immediate human attention; bypasses PM pipeline.
+   */
+  classifySignalIntent(signal: SignalPayload): SignalIntent {
+    const source = signal.source;
+    const channelContext = signal.channelContext || {};
+    const labels = (channelContext.labels as string[] | undefined) ?? [];
+    const channelName = ((channelContext.channelName as string | undefined) ?? '').toLowerCase();
+    const trigger = ((channelContext.trigger as string | undefined) ?? '').toLowerCase();
+
+    // MCP sources: intent is explicit in the source name
+    if (source === 'mcp:create_feature') {
+      return 'work_order';
+    }
+    if (source === 'mcp:process_idea') {
+      return 'idea';
+    }
+
+    // Interrupt signals: urgent/alert keywords in channel or trigger metadata
+    const interruptKeywords = [
+      'interrupt',
+      'urgent',
+      'alert',
+      'outage',
+      'incident',
+      'down',
+      'critical',
+    ];
+    if (
+      interruptKeywords.some((kw) => channelName.includes(kw)) ||
+      interruptKeywords.some((kw) => trigger.includes(kw)) ||
+      labels.some((l) => interruptKeywords.some((kw) => l.toLowerCase().includes(kw)))
+    ) {
+      return 'interrupt';
+    }
+
+    // GitHub issues are always work orders
+    if (source === 'github') {
+      return 'work_order';
+    }
+
+    // Linear: classify by label
+    if (source === 'linear') {
+      const feedbackLabels = ['feedback', 'question', 'discussion'];
+      if (labels.some((l) => feedbackLabels.some((fl) => l.toLowerCase().includes(fl)))) {
+        return 'feedback';
+      }
+      const ideaLabels = ['idea', 'explore', 'research', 'proposal'];
+      if (labels.some((l) => ideaLabels.some((il) => l.toLowerCase().includes(il)))) {
+        return 'idea';
+      }
+      // Default Linear signals are concrete work orders
+      return 'work_order';
+    }
+
+    // Discord: classify by channel name
+    if (source === 'discord') {
+      const feedbackChannels = ['feedback', 'questions', 'support'];
+      if (feedbackChannels.some((ch) => channelName.includes(ch))) {
+        return 'feedback';
+      }
+      const ideaChannels = ['ideas', 'suggestions', 'brainstorm'];
+      if (ideaChannels.some((ch) => channelName.includes(ch))) {
+        return 'idea';
+      }
+      const convChannels = ['general', 'random', 'chat', 'social', 'off-topic'];
+      if (convChannels.some((ch) => channelName.includes(ch))) {
+        return 'conversational';
+      }
+      // Default Discord messages in dev/ops channels are work orders
+      return 'work_order';
+    }
+
+    // UI content creation → idea by default (goes through PM for refinement)
+    if (source === 'ui:content') {
+      return 'idea';
+    }
+
+    // Default: treat as a work order
+    return 'work_order';
+  }
+
   private async handleSignal(signal: SignalPayload): Promise<void> {
     // Deduplicate by source + unique identifier.
     // For integration sources (Linear, GitHub), use author.id which is the issue/event ID.
@@ -232,14 +343,80 @@ export class SignalIntakeService {
       // Classify signal as Ops or GTM
       const classification = await this.classifySignal(signal);
 
+      // Classify signal intent (nature of the request, independent of ops/gtm routing)
+      const intent = this.classifySignalIntent(signal);
+
       logger.info(
-        `Processing signal from ${signal.source}: "${title}" (${classification.category} - ${classification.reason})`
+        `Processing signal from ${signal.source}: "${title}" (${classification.category} - ${classification.reason}, intent: ${intent})`
       );
 
-      // GTM signals: route to GTM Authority Agent for content creation
       const projectPath = signal.channelContext?.projectPath || this.defaultProjectPath;
+
+      // Interrupt intent: bypass PM pipeline and create a HITL form directly for human triage
+      if (intent === 'interrupt') {
+        logger.info(`Interrupt signal received: "${title}" — creating HITL form for human triage`);
+
+        let hitlFormId: string | undefined;
+        if (this.hitlFormService) {
+          const form = this.hitlFormService.create({
+            title: `Interrupt: ${title}`,
+            description: `An urgent signal was received from ${signal.source} and requires immediate human attention.\n\n${description}`,
+            callerType: 'api',
+            projectPath,
+            steps: [
+              {
+                title: 'Triage',
+                description: 'Review the interrupt signal and decide how to respond.',
+                schema: {
+                  type: 'object',
+                  required: ['action'],
+                  properties: {
+                    action: {
+                      type: 'string',
+                      title: 'Action',
+                      enum: ['create_feature', 'acknowledge', 'escalate', 'dismiss'],
+                      enumNames: [
+                        'Create a feature for this',
+                        'Acknowledge and monitor',
+                        'Escalate to team',
+                        'Dismiss (false alarm)',
+                      ],
+                    },
+                    notes: {
+                      type: 'string',
+                      title: 'Notes',
+                      description: 'Optional notes for the team',
+                    },
+                  },
+                },
+              },
+            ],
+          });
+          hitlFormId = form.id;
+        } else {
+          logger.warn(
+            'HITLFormService not wired into SignalIntakeService — interrupt signal will not create a form. Call setHITLFormService() during service initialization.'
+          );
+        }
+
+        this.events.emit('signal:routed', {
+          projectPath,
+          featureId: undefined,
+          title,
+          description,
+          category: classification.category,
+          reason: 'interrupt intent bypasses PM pipeline',
+          source: signal.source,
+          timestamp: signal.timestamp,
+          intent,
+          hitlFormId,
+        });
+        return;
+      }
+
+      // GTM signals: route to GTM Authority Agent for content creation
       if (classification.category === 'gtm') {
-        logger.info(`GTM signal routed: "${title}" (source: ${signal.source})`);
+        logger.info(`GTM signal routed: "${title}" (source: ${signal.source}, intent: ${intent})`);
 
         // Create feature with idea state before emitting to ensure featureId is available
         const gtmFeature = await this.featureLoader.create(projectPath, {
@@ -268,6 +445,7 @@ export class SignalIntakeService {
           reason: classification.reason,
           source: signal.source,
           timestamp: signal.timestamp,
+          intent,
         });
         return;
       }
@@ -278,9 +456,23 @@ export class SignalIntakeService {
         const linearIssueId = signal.channelContext.issueId as string;
         const existing = await this.featureLoader.findByLinearIssueId(projectPath, linearIssueId);
         if (existing) {
-          logger.info(
-            `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
-          );
+          if (existing.status === 'in_progress' || existing.status === 'blocked') {
+            // Active feature found — route signal content as a follow-up to the running agent
+            logger.info(
+              `Routing Linear signal to active feature ${existing.id} (${existing.status}) for issue ${linearIssueId}`
+            );
+            this.events.emit('linear:comment:followup', {
+              featureId: existing.id,
+              projectPath,
+              commentBody: signal.content,
+              userName: signal.author.name,
+              issueId: linearIssueId,
+            });
+          } else {
+            logger.info(
+              `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
+            );
+          }
           return;
         }
       }
@@ -325,10 +517,11 @@ export class SignalIntakeService {
         reason: classification.reason,
         source: signal.source,
         timestamp: signal.timestamp,
+        intent,
       });
 
       logger.info(
-        `Ops signal routed to Lead Engineer: "${title}" → feature ${feature.id} (source: ${signal.source})`
+        `Ops signal routed to Lead Engineer: "${title}" → feature ${feature.id} (source: ${signal.source}, intent: ${intent})`
       );
     } catch (error) {
       logger.error(`Failed to process signal from ${signal.source}:`, error);
