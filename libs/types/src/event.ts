@@ -95,6 +95,7 @@ export type EventType =
   | 'webhook:github:issue'
   | 'webhook:github:pull_request'
   | 'webhook:github:push'
+  | 'webhook:github:issue_comment'
   // PR review events
   | 'pr:review-submitted'
   // Integration events
