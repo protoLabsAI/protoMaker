@@ -67,15 +67,44 @@ function getLanguageExtension(fileName: string): Extension | null {
 
 const BINARY_EXTENSIONS = new Set([
   // Images
-  'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'webp', 'tiff', 'tif', 'avif', 'svg',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'bmp',
+  'ico',
+  'webp',
+  'tiff',
+  'tif',
+  'avif',
+  'svg',
   // Archives
-  'zip', 'tar', 'gz', 'bz2', 'rar', '7z',
+  'zip',
+  'tar',
+  'gz',
+  'bz2',
+  'rar',
+  '7z',
   // Fonts
-  'ttf', 'otf', 'woff', 'woff2', 'eot',
+  'ttf',
+  'otf',
+  'woff',
+  'woff2',
+  'eot',
   // Native binaries
-  'exe', 'dll', 'so', 'dylib', 'bin',
+  'exe',
+  'dll',
+  'so',
+  'dylib',
+  'bin',
   // Office / PDF
-  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
 ]);
 
 function isBinaryExtension(fileName: string): boolean {
@@ -146,8 +175,7 @@ export function CodeEditor({ tab }: CodeEditorProps) {
   // ── Font theme ────────────────────────────────────────────────────────────
   const fontTheme = useMemo(() => {
     const family =
-      fileEditorFontFamily ||
-      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
+      fileEditorFontFamily || 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace';
     const size = `${fileEditorFontSize}px`;
     return EditorView.theme({
       '&': { fontSize: size },
