@@ -289,7 +289,13 @@ async function processWebhookEvent(
       await handleProjectUpdateEvent(payload as LinearProjectUpdateWebhookPayload, action, events);
       break;
     case 'Comment':
-      await handleCommentEvent(payload as LinearCommentWebhookPayload, action, events);
+      await handleCommentEvent(
+        payload as LinearCommentWebhookPayload,
+        action,
+        events,
+        featureLoader,
+        repoRoot
+      );
       break;
     default:
       logger.debug(`Unhandled event type: ${type}`);
@@ -703,13 +709,15 @@ async function handleProjectUpdateEvent(
 async function handleCommentEvent(
   payload: LinearCommentWebhookPayload,
   action: LinearWebhookAction,
-  events: EventEmitter
+  events: EventEmitter,
+  featureLoader: FeatureLoader,
+  repoRoot: string
 ): Promise<void> {
   const { data } = payload;
 
   switch (action) {
     case 'create':
-      await handleCommentCreated(data, events);
+      await handleCommentCreated(data, events, featureLoader, repoRoot);
       break;
     case 'update':
       logger.debug(`Comment updated: ${data.id}`);
@@ -724,11 +732,16 @@ async function handleCommentEvent(
 
 /**
  * Handle new comment creation
- * Routes comment to LinearSyncService for parsing and routing
+ * Routes comment to LinearSyncService for parsing and routing.
+ * When the comment is on an issue with an in_progress or blocked feature,
+ * the linear:comment:created event handles agent routing — escalation is skipped.
+ * Falls back to escalation signal only when no active feature is found.
  */
 async function handleCommentCreated(
   data: LinearCommentWebhookPayload['data'],
-  events: EventEmitter
+  events: EventEmitter,
+  featureLoader: FeatureLoader,
+  repoRoot: string
 ): Promise<void> {
   logger.info(`Comment created: ${data.id}`, {
     issueId: data.issueId,
@@ -736,7 +749,7 @@ async function handleCommentCreated(
     bodyPreview: data.body?.substring(0, 100),
   });
 
-  // Emit comment event for LinearSyncService to handle
+  // Emit comment event for LinearCommentService to handle routing
   events.emit('linear:comment:created', {
     commentId: data.id,
     issueId: data.issueId,
@@ -747,6 +760,25 @@ async function handleCommentCreated(
 
   // Check if this is a human response to an agent elicitation
   if (data.issueId && data.user) {
+    // Look up the feature for this Linear issue
+    const projectPath = process.env.AUTOMAKER_PROJECT_PATH || repoRoot;
+    const feature = await featureLoader.findByLinearIssueId(projectPath, data.issueId);
+
+    if (feature && (feature.status === 'in_progress' || feature.status === 'blocked')) {
+      // Active feature found — LinearCommentService already handles routing this comment
+      // to the running agent via linear:comment:followup → followUpFeature().
+      // Skip the escalation signal to avoid the dead-end path.
+      logger.info(
+        `Linear comment routed to active feature ${feature.id} (status: ${feature.status})`,
+        {
+          issueId: data.issueId,
+          commentId: data.id,
+        }
+      );
+      return;
+    }
+
+    // No active feature found — fall back to escalation signal
     events.emit('escalation:signal-received', {
       source: 'agent_needs_input',
       severity: 'medium',
