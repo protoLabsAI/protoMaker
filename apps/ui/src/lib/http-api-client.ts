@@ -19,6 +19,7 @@
  *   system-client.ts    — mcp, pipeline, metrics, integrations, system, analytics, lifecycle
  *   engine-client.ts    — engine
  *   hitl-client.ts      — notifications, hitlForms, actionableItems, eventHistory
+ *   ava-client.ts       — ava (getConfig, updateConfig)
  */
 
 import { createLogger } from '@protolabs-ai/utils/logger';
@@ -80,18 +81,21 @@ import { withContentClient } from './clients/content-client';
 import { withSystemClient } from './clients/system-client';
 import { withEngineClient } from './clients/engine-client';
 import { withHitlClient } from './clients/hitl-client';
+import { withAvaClient } from './clients/ava-client';
 import { initApiKey } from './clients/auth';
 
 const logger = createLogger('HttpClient');
 
 // Compose all domain mixins into the final client class
-const ComposedHttpClient = withEngineClient(
-  withSystemClient(
-    withHitlClient(
-      withContentClient(
-        withSettingsClient(
-          withSetupClient(
-            withGitClient(withAgentClient(withFeaturesClient(withFilesystemClient(BaseHttpClient))))
+const ComposedHttpClient = withAvaClient(
+  withEngineClient(
+    withSystemClient(
+      withHitlClient(
+        withContentClient(
+          withSettingsClient(
+            withSetupClient(
+              withGitClient(withAgentClient(withFeaturesClient(withFilesystemClient(BaseHttpClient))))
+            )
           )
         )
       )
