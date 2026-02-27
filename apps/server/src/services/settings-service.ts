@@ -980,7 +980,6 @@ export class SettingsService {
             : false,
         theme: (appState.theme as GlobalSettings['theme']) || 'dark',
         sidebarOpen: appState.sidebarOpen !== undefined ? (appState.sidebarOpen as boolean) : true,
-        chatHistoryOpen: (appState.chatHistoryOpen as boolean) || false,
         maxConcurrency: (appState.maxConcurrency as number) || DEFAULT_MAX_CONCURRENCY,
         defaultSkipTests:
           appState.defaultSkipTests !== undefined ? (appState.defaultSkipTests as boolean) : true,
