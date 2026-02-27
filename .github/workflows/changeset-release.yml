@@ -40,7 +40,7 @@ jobs:
 
       - name: Create release PR or publish
         id: changesets
-        uses: changesets/action@3de3850952bec538fbe1c0ec8c9c99a97336f3bc # v1
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
         with:
           title: 'chore: version packages'
           commit: 'chore: version packages'
