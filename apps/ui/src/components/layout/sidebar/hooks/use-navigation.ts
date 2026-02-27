@@ -15,6 +15,7 @@ import {
   NotebookPen,
   Palette,
   CalendarDays,
+  FolderOpen,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -174,6 +175,11 @@ export function useNavigation({
         label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
+      },
+      {
+        id: 'file-editor',
+        label: 'File Editor',
+        icon: FolderOpen,
       },
     ];
 

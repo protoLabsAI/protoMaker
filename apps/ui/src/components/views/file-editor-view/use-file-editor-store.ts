@@ -1,7 +1,8 @@
 /**
  * File Editor Store
  *
- * Manages open file tabs, content, and loading state for the file editor view.
+ * Manages open file tabs, content, loading state, and tree navigation
+ * for the file editor view.
  * Font family/size settings live in app-store.ts and are persisted there.
  */
 
@@ -10,43 +11,15 @@ import { apiPost } from '@/lib/api-fetch';
 
 const BINARY_EXTENSIONS = new Set([
   // Images
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'bmp',
-  'ico',
-  'webp',
-  'tiff',
-  'tif',
-  'avif',
+  'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'webp', 'tiff', 'tif', 'avif',
   // Archives
-  'zip',
-  'tar',
-  'gz',
-  'bz2',
-  'rar',
-  '7z',
+  'zip', 'tar', 'gz', 'bz2', 'rar', '7z',
   // Fonts
-  'ttf',
-  'otf',
-  'woff',
-  'woff2',
-  'eot',
+  'ttf', 'otf', 'woff', 'woff2', 'eot',
   // Native binaries
-  'exe',
-  'dll',
-  'so',
-  'dylib',
-  'bin',
+  'exe', 'dll', 'so', 'dylib', 'bin',
   // Office / PDFs
-  'pdf',
-  'doc',
-  'docx',
-  'xls',
-  'xlsx',
-  'ppt',
-  'pptx',
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
 ]);
 
 function isBinaryFile(filePath: string): boolean {
@@ -76,7 +49,7 @@ export interface FileEditorTab {
   savedContent: string;
   /** True while fetching file content from the server */
   isLoading: boolean;
-  /** True if the file is a binary format that can't be edited */
+  /** True if the file is a binary format that cannot be edited */
   isBinary: boolean;
   /** Error message if loading failed */
   error?: string;
@@ -85,6 +58,10 @@ export interface FileEditorTab {
 interface FileEditorStoreState {
   tabs: FileEditorTab[];
   activeTabId: string | null;
+  /** Set of relative directory paths that are expanded in the file tree */
+  expandedDirs: string[];
+  /** Path scoping the file browser — null means the main project root */
+  selectedWorktreePath: string | null;
 }
 
 interface FileEditorStoreActions {
@@ -98,6 +75,10 @@ interface FileEditorStoreActions {
   markTabSaved: (tabId: string) => void;
   /** Reorder tabs after a drag-and-drop */
   reorderTabs: (activeId: string, overId: string) => void;
+  /** Toggle expansion of a directory in the file tree */
+  toggleDir: (relativePath: string) => void;
+  /** Scope the file browser to a worktree path (null = main repo) */
+  setSelectedWorktreePath: (path: string | null) => void;
 }
 
 export type FileEditorStore = FileEditorStoreState & FileEditorStoreActions;
@@ -105,11 +86,12 @@ export type FileEditorStore = FileEditorStoreState & FileEditorStoreActions;
 export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
   tabs: [],
   activeTabId: null,
+  expandedDirs: [],
+  selectedWorktreePath: null,
 
   openFile: async (filePath: string) => {
     const { tabs } = get();
 
-    // Switch to already-open tab
     const existing = tabs.find((t) => t.filePath === filePath);
     if (existing) {
       set({ activeTabId: existing.id });
@@ -181,12 +163,7 @@ export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
 
     let nextActiveId: string | null = activeTabId;
     if (activeTabId === tabId) {
-      if (remaining.length === 0) {
-        nextActiveId = null;
-      } else {
-        // Prefer the tab to the left, else the first remaining tab
-        nextActiveId = remaining[Math.max(0, idx - 1)].id;
-      }
+      nextActiveId = remaining.length === 0 ? null : remaining[Math.max(0, idx - 1)].id;
     }
 
     set({ tabs: remaining, activeTabId: nextActiveId });
@@ -216,5 +193,20 @@ export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
     const [moved] = reordered.splice(fromIdx, 1);
     reordered.splice(toIdx, 0, moved);
     set({ tabs: reordered });
+  },
+
+  toggleDir: (relativePath: string) => {
+    set((state) => {
+      const isExpanded = state.expandedDirs.includes(relativePath);
+      return {
+        expandedDirs: isExpanded
+          ? state.expandedDirs.filter((p) => p !== relativePath)
+          : [...state.expandedDirs, relativePath],
+      };
+    });
+  },
+
+  setSelectedWorktreePath: (path: string | null) => {
+    set({ selectedWorktreePath: path });
   },
 }));
