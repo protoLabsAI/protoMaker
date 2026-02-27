@@ -295,10 +295,7 @@ import { CursorProvider } from './cursor-provider.js';
 import { CodexProvider } from './codex-provider.js';
 import { OpencodeProvider } from './opencode-provider.js';
 import { GroqProvider, isGroqModel } from './groq-provider.js';
-import {
-  OpenAICompatibleProvider,
-  isOpenAICompatibleModel,
-} from './openai-compatible-provider.js';
+import { OpenAICompatibleProvider, isOpenAICompatibleModel } from './openai-compatible-provider.js';
 
 // Register Claude provider
 registerProvider('claude', {

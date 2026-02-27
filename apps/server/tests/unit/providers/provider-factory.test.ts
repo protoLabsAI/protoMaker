@@ -172,9 +172,9 @@ describe('provider-factory.ts', () => {
       expect(hasClaudeProvider).toBe(true);
     });
 
-    it('should return exactly 5 providers', () => {
+    it('should return exactly 6 providers', () => {
       const providers = ProviderFactory.getAllProviders();
-      expect(providers).toHaveLength(5);
+      expect(providers).toHaveLength(6);
     });
 
     it('should include CursorProvider', () => {
@@ -213,7 +213,8 @@ describe('provider-factory.ts', () => {
       expect(keys).toContain('codex');
       expect(keys).toContain('opencode');
       expect(keys).toContain('groq');
-      expect(keys).toHaveLength(5);
+      expect(keys).toContain('openai-compatible');
+      expect(keys).toHaveLength(6);
     });
 
     it('should include cursor status', async () => {

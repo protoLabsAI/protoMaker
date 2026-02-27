@@ -155,7 +155,9 @@ export function createUpdateOpenAICompatibleProviderHandler(settingsService: Set
 
       await settingsService.updateGlobalSettings({ openaiCompatibleProviders: updatedProviders });
 
-      logger.info(`Updated OpenAI-compatible provider: ${updatedProvider.name} (${updatedProvider.id})`);
+      logger.info(
+        `Updated OpenAI-compatible provider: ${updatedProvider.name} (${updatedProvider.id})`
+      );
 
       res.json({ success: true, provider: updatedProvider });
     } catch (error) {
@@ -205,7 +207,9 @@ export function createDeleteOpenAICompatibleProviderHandler(settingsService: Set
 
       await settingsService.updateGlobalSettings({ openaiCompatibleProviders: updatedProviders });
 
-      logger.info(`Deleted OpenAI-compatible provider: ${removedProvider.name} (${removedProvider.id})`);
+      logger.info(
+        `Deleted OpenAI-compatible provider: ${removedProvider.name} (${removedProvider.id})`
+      );
 
       res.json({ success: true });
     } catch (error) {
