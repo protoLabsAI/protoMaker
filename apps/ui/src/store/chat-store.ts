@@ -18,6 +18,7 @@ export interface ChatSession {
   id: string;
   title: string;
   modelAlias: string;
+  projectId: string;
   messages: UIMessage[];
   createdAt: number; // epoch ms (serializable)
   updatedAt: number;
@@ -35,7 +36,7 @@ interface ChatStoreState {
 }
 
 interface ChatActions {
-  createSession: (modelAlias?: string) => ChatSession;
+  createSession: (modelAlias?: string, projectId?: string) => ChatSession;
   deleteSession: (id: string) => void;
   switchSession: (id: string) => void;
   saveMessages: (id: string, messages: UIMessage[]) => void;
@@ -45,6 +46,7 @@ interface ChatActions {
   toggleHistory: () => void;
   setChatModalOpen: (open: boolean) => void;
   getCurrentSession: () => ChatSession | null;
+  getSessionsForProject: (projectId: string) => ChatSession[];
 }
 
 // ============================================================================
@@ -83,12 +85,13 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       historyOpen: false,
       chatModalOpen: false,
 
-      createSession: (modelAlias = 'sonnet') => {
+      createSession: (modelAlias = 'sonnet', projectId = 'default') => {
         const now = Date.now();
         const session: ChatSession = {
           id: generateId(),
           title: 'New chat',
           modelAlias,
+          projectId,
           messages: [],
           createdAt: now,
           updatedAt: now,
@@ -153,10 +156,25 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
         const state = get();
         return state.sessions.find((s) => s.id === state.currentSessionId) ?? null;
       },
+
+      getSessionsForProject: (projectId) => {
+        return get().sessions.filter((s) => s.projectId === projectId);
+      },
     }),
     {
       name: 'ava-chat-sessions',
-      version: 1,
+      version: 2,
+      migrate: (persistedState, version) => {
+        const state = persistedState as ChatStoreState;
+        if (version < 2) {
+          // Set projectId: 'default' on all existing sessions missing it
+          state.sessions = state.sessions.map((s) => ({
+            ...s,
+            projectId: s.projectId ?? 'default',
+          }));
+        }
+        return state;
+      },
       // Only persist sessions and currentSessionId, not UI state
       partialize: (state) => ({
         sessions: state.sessions,
