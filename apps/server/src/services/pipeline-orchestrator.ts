@@ -547,9 +547,41 @@ export class PipelineOrchestrator {
           logger.error('Error handling gtm-signal for pipeline:', err);
         });
       }
+
+      if (type === ('pipeline:phase-sync' as EventType)) {
+        this.handlePhaseSync(payload as Record<string, unknown>).catch((err) => {
+          logger.error('Error handling pipeline:phase-sync:', err);
+        });
+      }
     }) as EventCallback);
 
     this.unsubscribe = subscription.unsubscribe;
+  }
+
+  /**
+   * Handle a phase-sync event from the Lead Engineer state machine.
+   * Called when the LE transitions to REVIEW, MERGE, DEPLOY, or DONE.
+   * Advances the 9-phase pipeline model to stay in sync with actual progress.
+   */
+  private async handlePhaseSync(payload: Record<string, unknown>): Promise<void> {
+    const featureId = payload.featureId as string | undefined;
+    const projectPath = payload.projectPath as string | undefined;
+
+    if (!featureId || !projectPath) {
+      logger.warn('pipeline:phase-sync: missing featureId or projectPath, ignoring');
+      return;
+    }
+
+    const feature = await this.featureLoader.get(projectPath, featureId);
+    if (!feature?.pipelineState) {
+      logger.debug(`pipeline:phase-sync: feature ${featureId} has no pipeline state, skipping`);
+      return;
+    }
+
+    logger.info(
+      `pipeline:phase-sync: advancing pipeline for feature ${featureId} (LE→${payload.toState})`
+    );
+    await this.advancePhase(projectPath, featureId);
   }
 
   private async handleIdeaInjected(payload: Record<string, unknown>): Promise<void> {
