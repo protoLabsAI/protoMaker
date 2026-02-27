@@ -535,11 +535,9 @@ export class PipelineOrchestrator {
   }
 
   private async handleGtmSignal(payload: Record<string, unknown>): Promise<void> {
-    const featureId = payload.featureId as string | undefined;
-    const projectPath = payload.projectPath as string | undefined;
+    const featureId = payload.featureId as string;
+    const projectPath = payload.projectPath as string;
     const title = payload.title as string | undefined;
-
-    if (!featureId || !projectPath) return;
 
     const feature = await this.featureLoader.get(projectPath, featureId);
     if (feature && !feature.pipelineState) {

@@ -712,6 +712,75 @@ describe('SignalIntakeService', () => {
     });
   });
 
+  describe('GTM signal → feature creation → pipeline initiation path', () => {
+    it('should create a feature with workItemState idea before emitting authority:gtm-signal-received', async () => {
+      const createdFeature = {
+        id: 'gtm-feature-456',
+        title: '[linear] Marketing campaign needed',
+        status: 'backlog',
+        workItemState: 'idea',
+      };
+      vi.mocked(mockFeatureLoader.create).mockResolvedValue(createdFeature as Feature);
+
+      const signal = createTestSignal({
+        source: 'linear',
+        content: 'Marketing campaign needed',
+        channelContext: {
+          labels: ['marketing'],
+        },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Feature should be created with workItemState: 'idea'
+      expect(mockFeatureLoader.create).toHaveBeenCalledWith(
+        '/test/path',
+        expect.objectContaining({
+          workItemState: 'idea',
+          status: 'backlog',
+        })
+      );
+
+      // authority:gtm-signal-received must include featureId and projectPath
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        'authority:gtm-signal-received',
+        expect.objectContaining({
+          featureId: 'gtm-feature-456',
+          projectPath: '/test/path',
+        })
+      );
+    });
+
+    it('should include featureId in signal:routed event for GTM signals', async () => {
+      const createdFeature = {
+        id: 'gtm-feature-789',
+        title: '[ui:content] Blog post idea',
+        status: 'backlog',
+        workItemState: 'idea',
+      };
+      vi.mocked(mockFeatureLoader.create).mockResolvedValue(createdFeature as Feature);
+
+      const signal = createTestSignal({
+        source: 'ui:content',
+        content: 'Blog post idea',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        'signal:routed',
+        expect.objectContaining({
+          featureId: 'gtm-feature-789',
+          category: 'gtm',
+        })
+      );
+    });
+  });
+
   describe('submitSignal public API', () => {
     it('should allow manual signal submission via public API', () => {
       const emitSpy = vi.spyOn(mockEmitter, 'emit');
