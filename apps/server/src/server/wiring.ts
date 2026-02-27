@@ -10,6 +10,10 @@ import { DiscordDMChannel } from '../services/escalation-channels/discord-dm-cha
 import { codeRabbitResolverService } from '../services/coderabbit-resolver-service.js';
 import { eventHookService } from '../services/event-hook-service.js';
 import { registerMaintenanceTasks } from '../services/maintenance-tasks.js';
+import {
+  DiscordChannelHandler,
+  UIChannelHandler,
+} from '../services/channel-handlers/discord-channel-handler.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -227,6 +231,55 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   // Discord Bot Service initialization
   discordBotService.setRoleRegistry(roleRegistryService);
   void discordBotService.initialize();
+
+  // Signal-aware channel router: wire gate resolver and subscribe to gate-waiting events
+  const discordChannelHandler = new DiscordChannelHandler(discordBotService);
+  const uiChannelHandler = new UIChannelHandler();
+
+  discordBotService.setGateResolver(
+    async (featureId: string, projectPath: string, action: 'advance' | 'reject') => {
+      await pipelineOrchestrator.resolveGate(projectPath, featureId, action, 'user');
+    }
+  );
+
+  events.subscribe(async (type, payload) => {
+    if (type !== 'pipeline:gate-waiting') return;
+    const p = payload as {
+      featureId: string;
+      projectPath: string;
+      phase?: string;
+      gateMode?: string;
+    };
+
+    try {
+      const feature = await featureLoader.get(p.projectPath, p.featureId);
+      // signalMetadata was added to Feature in this branch; cast to access safely
+      const featureRecord = feature as (Record<string, unknown> & typeof feature) | null;
+      const signalMeta = featureRecord?.['signalMetadata'] as Record<string, unknown> | undefined;
+      const channelId =
+        typeof signalMeta?.channelId === 'string' ? signalMeta.channelId : undefined;
+
+      if (channelId) {
+        await discordChannelHandler.requestApproval({
+          featureId: p.featureId,
+          projectPath: p.projectPath,
+          featureTitle: feature?.title,
+          channelId,
+          phase: p.phase,
+        });
+      } else {
+        await uiChannelHandler.requestApproval({
+          featureId: p.featureId,
+          projectPath: p.projectPath,
+          featureTitle: feature?.title,
+          channelId: '',
+          phase: p.phase,
+        });
+      }
+    } catch (error) {
+      logger.error(`Failed to handle pipeline:gate-waiting for feature ${p.featureId}:`, error);
+    }
+  });
 
   // Wire Discord bot service to Ava Gateway
   avaGatewayService.setDiscordBot(discordBotService);

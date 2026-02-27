@@ -463,6 +463,13 @@ export interface Feature {
    */
   promotionBatchId?: string;
 
+  /**
+   * Metadata about the signal that originated this feature.
+   * For Discord-sourced features, includes channelId, userId, etc.
+   * Used by channel handlers to route gate holds and HITL forms back to the originating channel.
+   */
+  signalMetadata?: Record<string, unknown>;
+
   // GTM Content Track fields
   /**
    * Type of feature: 'code' for engineering work, 'content' for GTM/marketing content.
