@@ -117,7 +117,7 @@ Frontend engineering specialist. Implements UI components, design systems, themi
 **Reports to:** AVA
 **Exposure:** CLI, Discord
 **Capabilities:** Bash, Edit, Commit, PR
-**Tags:** implementation, ai-agents, langgraph, llm-providers, observability, flows
+**Tags:** implementation, ai-agents, langgraph, observability, flows
 
 ### Description
 

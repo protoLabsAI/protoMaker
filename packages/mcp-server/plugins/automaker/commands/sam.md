@@ -88,7 +88,7 @@ Application code must work identically whether Langfuse is available or not. Eve
 
 ### Provider agnosticism
 
-No service should import `@langchain/anthropic` directly. Everything goes through `@protolabs-ai/llm-providers`. When we add a new model provider, zero application code changes.
+No service should import `@langchain/anthropic` directly. Provider configuration should be managed through the observability layer. When we add a new model provider, zero application code changes.
 
 ### Reducers define correctness
 
@@ -115,20 +115,6 @@ LangGraph state graph primitives for multi-agent coordination.
 - `createCoordinatorGraph` — Reference coordinator with Send() fan-out
 
 **Docs:** `docs/dev/flows.md`
-
-### @protolabs-ai/llm-providers (`libs/llm-providers/`)
-
-Multi-provider LLM abstraction with Zod-validated configuration.
-
-**Key exports:**
-
-- `ProviderFactory` — Singleton factory for provider management
-- `BaseLLMProvider` — Canonical base class for new providers
-- `AnthropicProvider`, `OllamaProvider`, etc. — Provider implementations
-- `validateProviderConfig`, `validateLLMProvidersConfig` — Zod validation
-- `ANTHROPIC_MODELS`, `getModelIdForTier` — Default model configs
-
-**Docs:** `docs/dev/llm-providers-package.md`
 
 ### @protolabs-ai/observability (`libs/observability/`)
 
@@ -180,7 +166,6 @@ Langfuse-based tracing, prompt management, and cost tracking.
 ```
 libs/
   flows/              # @protolabs-ai/flows — LangGraph primitives
-  llm-providers/      # @protolabs-ai/llm-providers — Multi-provider abstraction
   observability/      # @protolabs-ai/observability — Langfuse tracing
   types/              # @protolabs-ai/types — Shared type definitions
   utils/              # @protolabs-ai/utils — Logging, errors

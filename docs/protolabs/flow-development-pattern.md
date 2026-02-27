@@ -129,7 +129,6 @@ Swap mocks for real models, add Langfuse tracing, configure fallbacks.
 
 ```typescript
 import { LangfuseClient, executeTrackedPrompt } from '@protolabs-ai/observability';
-import { ProviderFactory } from '@protolabs-ai/llm-providers';
 
 const langfuse = new LangfuseClient();
 const smartModel = ProviderFactory.create('anthropic', {
@@ -175,7 +174,6 @@ Workers should return error objects, never crash. The aggregator handles partial
 | Package                       | Role                                 | Key Exports                                                              |
 | ----------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
 | `@protolabs-ai/flows`         | State graphs, reducers, builders     | `GraphBuilder`, `createStateAnnotation`, `appendReducer`, `wrapSubgraph` |
-| `@protolabs-ai/llm-providers` | Multi-provider LLM abstraction       | `ProviderFactory`, `BaseLLMProvider`                                     |
 | `@protolabs-ai/observability` | Langfuse tracing + prompt versioning | `LangfuseClient`, `executeTrackedPrompt`                                 |
 
 ## Existing Implementations

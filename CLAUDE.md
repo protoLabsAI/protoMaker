@@ -128,7 +128,7 @@ Packages can only depend on packages above them:
 ```
 @protolabs-ai/types (no dependencies)
     ↓
-@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/llm-providers, @protolabs-ai/observability
+@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/observability
     ↓
 @protolabs-ai/git-utils, @protolabs-ai/ui
     ↓

@@ -39,7 +39,6 @@ const LOCAL_PACKAGES = [
   '@protolabs-ai/dependency-resolver',
   '@protolabs-ai/spec-parser',
   '@protolabs-ai/flows',
-  '@protolabs-ai/llm-providers',
   '@protolabs-ai/observability',
   '@protolabs-ai/git-utils',
   '@protolabs-ai/error-tracking',

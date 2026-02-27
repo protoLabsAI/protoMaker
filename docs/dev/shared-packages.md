@@ -18,7 +18,6 @@ libs/
 ├── spec-parser/        # XML/markdown spec parsing
 ├── git-utils/          # Git operations
 ├── flows/              # LangGraph state graph primitives
-├── llm-providers/      # Multi-provider LLM abstraction
 └── observability/      # Langfuse tracing and prompt management
 ```
 
@@ -266,26 +265,6 @@ import { GraphBuilder, appendReducer, createBinaryRouter } from '@protolabs-ai/f
 
 **Full documentation:** [Flows Package](./flows)
 
-### @protolabs-ai/llm-providers
-
-**Use when:** You need multi-provider LLM abstraction, provider configuration, or model management.
-
-**Import for:**
-
-- `ProviderFactory` - Singleton factory for provider management
-- `BaseLLMProvider` - Base class for new providers
-- `AnthropicProvider`, `OllamaProvider`, etc. - Provider implementations
-- `validateProviderConfig`, `validateLLMProvidersConfig` - Zod validation
-- `ANTHROPIC_MODELS`, `getModelIdForTier` - Default model configs
-
-**Example:**
-
-```typescript
-import { ProviderFactory, AnthropicProvider } from '@protolabs-ai/llm-providers';
-```
-
-**Full documentation:** [LLM Providers Package](./llm-providers-package)
-
 ### @protolabs-ai/observability
 
 **Use when:** You need Langfuse tracing, prompt versioning, or cost tracking.
@@ -491,7 +470,6 @@ Understanding the dependency chain helps prevent circular dependencies:
 @protolabs-ai/dependency-resolver
 @protolabs-ai/spec-parser
 @protolabs-ai/observability
-@protolabs-ai/llm-providers
 @protolabs-ai/flows
 @protolabs-ai/tools
     ↓
@@ -548,7 +526,6 @@ import { Feature } from '../../../src/services/feature-loader';
 - Dependency Ordering → `@protolabs-ai/dependency-resolver`
 - Git Operations → `@protolabs-ai/git-utils`
 - LangGraph Flows → `@protolabs-ai/flows`
-- LLM Providers → `@protolabs-ai/llm-providers`
 - Tracing/Observability → `@protolabs-ai/observability`
 - Tool Definitions → `@protolabs-ai/tools`
 

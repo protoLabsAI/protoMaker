@@ -76,7 +76,7 @@ When a feature enters the Lead Engineer's INTAKE state, it must be assigned to t
 ```
 Files in apps/ui/, libs/ui/, component references      → Matt (frontend)
 Files in apps/server/src/routes/, services/             → Kai (backend)
-Files in libs/flows/, libs/llm-providers/, observability → Sam (agent infra)
+Files in libs/flows/, libs/observability/ → Sam (agent infra)
 Files in scripts/, docker-compose*, .github/, Dockerfile → Frank (devops)
 Mixed or unclear                                        → Kai (default)
 ```

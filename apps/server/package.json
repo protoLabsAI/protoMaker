@@ -41,7 +41,6 @@
     "@protolabs-ai/error-tracking": "^0.6.0",
     "@protolabs-ai/flows": "^0.6.0",
     "@protolabs-ai/git-utils": "^0.6.0",
-    "@protolabs-ai/llm-providers": "^0.6.0",
     "@protolabs-ai/model-resolver": "^0.6.0",
     "@protolabs-ai/observability": "^0.6.0",
     "@protolabs-ai/platform": "^0.6.0",
