@@ -5,7 +5,7 @@ relevantTo: [seo]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 2
+  loaded: 3
   referenced: 1
   successfulFeatures: 1
 ---
