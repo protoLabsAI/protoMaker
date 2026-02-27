@@ -802,6 +802,12 @@ export type {
   IntegrationSummary,
 } from './integration.js';
 
+// Signal provenance types (originating channel tracking & routing)
+export type { SignalChannel, SignalMetadata } from './signal-channel.js';
+
+// Channel Router types (HITL routing interface)
+export type { ChannelHandler } from './channel-router.js';
+
 // HITL Form types (human-in-the-loop structured input)
 export type {
   HITLFormCallerType,

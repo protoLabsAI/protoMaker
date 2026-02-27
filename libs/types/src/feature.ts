@@ -8,6 +8,7 @@ import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
 import type { ReviewThreadFeedback, PendingFeedback } from './coderabbit.js';
 import type { PipelineState } from './pipeline-phase.js';
+import type { SignalChannel, SignalMetadata } from './signal-channel.js';
 
 /**
  * A single entry in the description history
@@ -438,6 +439,17 @@ export interface Feature {
   domain?: string;
   /** Instance ID that has claimed this feature for execution */
   claimedBy?: string;
+
+  // Signal provenance — tracks which channel originated this feature
+  /**
+   * The channel that originated this feature (e.g. 'linear', 'discord', 'github', 'ui').
+   * Used by ChannelRouter to route approvals, forms, and notifications back to the right channel.
+   */
+  sourceChannel?: SignalChannel;
+  /**
+   * Full metadata about the originating signal, including IDs for routing replies.
+   */
+  signalMetadata?: SignalMetadata;
 
   // Quarantine fields
   /** Source of this feature submission */

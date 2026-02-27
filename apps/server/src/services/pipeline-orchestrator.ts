@@ -23,6 +23,7 @@ import {
 } from '@protolabs-ai/types';
 import { createLogger } from '@protolabs-ai/utils';
 import type { PhaseProcessor } from './authority-agents/agent-utils.js';
+import type { ChannelRouter } from './channel-router.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
@@ -98,6 +99,8 @@ export class PipelineOrchestrator {
   private phaseStartTimes = new Map<string, number>();
   /** Registered phase processors by role */
   private processors = new Map<string, PhaseProcessor>();
+  /** Optional channel router for routing gate-hold notifications */
+  private channelRouter: ChannelRouter | null = null;
   /** Completed pipelines today (for analytics) */
   private completedToday: Array<{ featureId: string; completedAt: number; durationMs: number }> =
     [];
@@ -129,6 +132,16 @@ export class PipelineOrchestrator {
     if (processors.gtm) this.processors.set('gtm', processors.gtm);
     if (processors.projm) this.processors.set('projm', processors.projm);
     logger.info(`Phase processors registered: ${Array.from(this.processors.keys()).join(', ')}`);
+  }
+
+  /**
+   * Wire in the channel router for gate-hold approval routing.
+   * When set, gate holds will call channelRouter.getHandler(feature).requestApproval()
+   * in addition to emitting the pipeline:gate-waiting event.
+   */
+  setChannelRouter(channelRouter: ChannelRouter): void {
+    this.channelRouter = channelRouter;
+    logger.info('ChannelRouter wired into PipelineOrchestrator');
   }
 
   /**
@@ -326,6 +339,20 @@ export class PipelineOrchestrator {
       // Emit feature:verify-pending when VERIFY gate holds so consumers can act on it
       if (nextPhase === 'VERIFY') {
         this.events.emit('feature:verify-pending', { featureId, projectPath });
+      }
+
+      // Route approval request through the originating channel
+      if (this.channelRouter) {
+        const gateContext = `phase=${nextPhase}, gateMode=${gateMode}`;
+        this.channelRouter
+          .getHandler(feature)
+          .requestApproval(feature, gateContext)
+          .catch((err: unknown) => {
+            logger.error(
+              `Failed to route approval request for feature ${featureId} at gate ${nextPhase}:`,
+              err
+            );
+          });
       }
 
       logger.info(
