@@ -18,6 +18,7 @@ import {
   Pencil,
   FilePlus,
   MoreVertical,
+  ArrowLeft,
 } from 'lucide-react';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
@@ -32,6 +33,8 @@ import { Input } from '@protolabs-ai/ui/atoms';
 import { Label } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Markdown } from '@protolabs-ai/ui/molecules';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { isMarkdownFilename } from '@/lib/image-utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +44,8 @@ import {
 
 const logger = createLogger('MemoryView');
 
+const FILE_LIST_BASE_CLASSES = 'border-r border-border flex flex-col overflow-hidden';
+
 interface MemoryFile {
   name: string;
   content?: string;
@@ -49,6 +54,7 @@ interface MemoryFile {
 
 export function MemoryView() {
   const { currentProject } = useAppStore();
+  const isMobile = useIsMobile();
   const [memoryFiles, setMemoryFiles] = useState<MemoryFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<MemoryFile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,11 +80,6 @@ export function MemoryView() {
     return `${currentProject.path}/.automaker/memory`;
   }, [currentProject]);
 
-  const isMarkdownFile = (filename: string): boolean => {
-    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-    return ext === '.md' || ext === '.markdown';
-  };
-
   // Load memory files
   const loadMemoryFiles = useCallback(async () => {
     const memoryPath = getMemoryPath();
@@ -95,7 +96,7 @@ export function MemoryView() {
       const result = await api.readdir(memoryPath);
       if (result.success && result.entries) {
         const files: MemoryFile[] = result.entries
-          .filter((entry) => entry.isFile && isMarkdownFile(entry.name))
+          .filter((entry) => entry.isFile && isMarkdownFilename(entry.name))
           .map((entry) => ({
             name: entry.name,
             path: `${memoryPath}/${entry.name}`,
@@ -381,7 +382,12 @@ export function MemoryView() {
       {/* Main content area with file list and editor */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - File List */}
-        <div className="w-64 border-r border-border flex flex-col overflow-hidden">
+        <div
+          className={cn(
+            FILE_LIST_BASE_CLASSES,
+            isMobile ? (selectedFile ? 'hidden' : 'w-full') : 'w-64'
+          )}
+        >
           <div className="p-3 border-b border-border">
             <h2 className="text-sm font-semibold text-muted-foreground">
               Memory Files ({memoryFiles.length})
@@ -419,7 +425,10 @@ export function MemoryView() {
                       <DropdownMenuTrigger asChild>
                         <button
                           onClick={(e) => e.stopPropagation()}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-opacity"
+                          className={cn(
+                            'p-1 hover:bg-accent rounded transition-opacity',
+                            isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          )}
                           data-testid={`memory-file-menu-${file.name}`}
                         >
                           <MoreVertical className="w-4 h-4" />
@@ -455,31 +464,48 @@ export function MemoryView() {
         </div>
 
         {/* Right Panel - Editor/Preview */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div
+          className={cn(
+            'flex-1 flex flex-col overflow-hidden',
+            isMobile && !selectedFile && 'hidden'
+          )}
+        >
           {selectedFile ? (
             <>
               {/* File toolbar */}
               <div className="flex items-center justify-between p-3 border-b border-border bg-card">
                 <div className="flex items-center gap-2 min-w-0">
+                  {isMobile && (
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="p-1 -ml-1"
+                      aria-label="Back to file list"
+                      title="Back to file list"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                  )}
                   <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-sm font-medium truncate">{selectedFile.name}</span>
                 </div>
-                <div className="flex gap-2">
+                <div className={cn('flex gap-2', isMobile && 'gap-1')}>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setIsPreviewMode(!isPreviewMode)}
+                    aria-label={isPreviewMode ? 'Edit' : 'Preview'}
+                    title={isPreviewMode ? 'Edit' : 'Preview'}
                     data-testid="toggle-preview-mode"
                   >
                     {isPreviewMode ? (
                       <>
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit
+                        <Pencil className="w-4 h-4" />
+                        {!isMobile && <span className="ml-2">Edit</span>}
                       </>
                     ) : (
                       <>
-                        <Eye className="w-4 h-4 mr-2" />
-                        Preview
+                        <Eye className="w-4 h-4" />
+                        {!isMobile && <span className="ml-2">Preview</span>}
                       </>
                     )}
                   </Button>
@@ -487,20 +513,54 @@ export function MemoryView() {
                     size="sm"
                     onClick={saveFile}
                     disabled={!hasChanges || isSaving}
+                    aria-label={isSaving ? 'Saving' : hasChanges ? 'Save' : 'Saved'}
+                    title={isSaving ? 'Saving' : hasChanges ? 'Save' : 'Saved'}
                     data-testid="save-memory-file"
                   >
-                    <Save className="w-4 h-4 mr-2" />
-                    {isSaving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
+                    <Save className="w-4 h-4" />
+                    {!isMobile && (
+                      <span className="ml-2">
+                        {isSaving ? 'Saving...' : hasChanges ? 'Save' : 'Saved'}
+                      </span>
+                    )}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsDeleteDialogOpen(true)}
-                    className="text-red-500 hover:text-red-400 hover:border-red-500/50"
-                    data-testid="delete-memory-file"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  {!isMobile && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      className="text-red-500 hover:text-red-400 hover:border-red-500/50"
+                      aria-label="Delete file"
+                      title="Delete file"
+                      data-testid="delete-memory-file"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {isMobile && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          aria-label="More actions"
+                          title="More actions"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => setIsDeleteDialogOpen(true)}
+                          className="text-red-500 focus:text-red-500"
+                          data-testid="delete-memory-file"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </div>
 
