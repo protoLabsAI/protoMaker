@@ -599,6 +599,9 @@ export class ExecutionService {
       tempRunningFeature.model = modelResult.model;
       tempRunningFeature.provider = provider;
 
+      // Persist the resolved model to the feature JSON so the UI can display it
+      await this.featureLoader.update(projectPath, featureId, { model: modelResult.model });
+
       // Sync and restack the branch before agent execution
       // This keeps the branch fresh and reduces merge conflicts
       if (branchName && useWorktrees) {
