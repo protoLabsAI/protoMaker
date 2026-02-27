@@ -7,11 +7,30 @@
  */
 
 import { exec } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { promisify } from 'util';
 import { createLogger } from '@protolabs-ai/utils';
 
 const execAsync = promisify(exec);
 const logger = createLogger('WorktreeGuard');
+
+/**
+ * Builds a git add command that stages all changes except .automaker/,
+ * then re-includes .automaker/memory/ and .automaker/skills/ only if those
+ * directories exist in the working tree. This prevents a fatal pathspec error
+ * when a directory is absent (e.g. in a fresh worktree).
+ */
+function buildGitAddCommand(workDir: string): string {
+  const parts = ["git add -A -- ':!.automaker/'"];
+  if (existsSync(join(workDir, '.automaker/memory'))) {
+    parts.push("'.automaker/memory/'");
+  }
+  if (existsSync(join(workDir, '.automaker/skills'))) {
+    parts.push("'.automaker/skills/'");
+  }
+  return parts.join(' ');
+}
 
 /**
  * Result of worktree cleanup operation
@@ -58,9 +77,9 @@ export async function ensureCleanWorktree(
       );
       logger.debug(`Uncommitted changes:\n${statusOutput}`);
 
-      // Stage all changes - exclude .automaker/ except memory/ and skills/
+      // Stage all changes - exclude .automaker/ except memory/ and skills/ (if they exist).
       const guardEnv = { ...process.env, HUSKY: '0' };
-      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
+      await execAsync(buildGitAddCommand(worktreePath), {
         cwd: worktreePath,
         env: guardEnv,
       });

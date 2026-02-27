@@ -6,6 +6,8 @@
  */
 
 import { exec, execFile } from 'child_process';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { promisify } from 'util';
 import path from 'path';
 import { createLogger } from '@protolabs-ai/utils';
@@ -26,6 +28,23 @@ import type { EventEmitter } from '../lib/events.js';
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const logger = createLogger('GitWorkflow');
+
+/**
+ * Builds a git add command that stages all changes except .automaker/,
+ * then re-includes .automaker/memory/ and .automaker/skills/ only if those
+ * directories exist in the working tree. This prevents a fatal pathspec error
+ * when a directory is absent (e.g. in a fresh worktree).
+ */
+function buildGitAddCommand(workDir: string): string {
+  const parts = ["git add -A -- ':!.automaker/'"];
+  if (existsSync(join(workDir, '.automaker/memory'))) {
+    parts.push("'.automaker/memory/'");
+  }
+  if (existsSync(join(workDir, '.automaker/skills'))) {
+    parts.push("'.automaker/skills/'");
+  }
+  return parts.join(' ');
+}
 
 /**
  * Retry helper with exponential backoff.
@@ -307,14 +326,8 @@ export class GitWorkflowService {
         `Saving agent progress for feature ${feature.id} (${status.trim().split('\n').length} files changed)`
       );
 
-      // Stage all changes (same pattern as commitChanges).
-      // Split into two calls: a single combined exclude+include pathspec silently stages
-      // nothing when the include paths have no changes (they restrict the -A match set).
-      await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir, env: execEnv });
-      await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
-        cwd: workDir,
-        env: execEnv,
-      }).catch(() => {});
+      // Stage all changes - exclude .automaker/ except memory/ and skills/ (if they exist).
+      await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
 
       // Format staged files before committing
       try {
@@ -328,11 +341,7 @@ export class GitWorkflowService {
             `npx prettier --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
             { cwd: workDir, env: execEnv }
           );
-          await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir, env: execEnv });
-          await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
-            cwd: workDir,
-            env: execEnv,
-          }).catch(() => {});
+          await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
         }
       } catch {
         // Non-fatal: formatting failure shouldn't block progress save
@@ -973,14 +982,8 @@ export class GitWorkflowService {
     const title = feature.title || extractTitleFromDescription(feature.description);
     const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
 
-    // Stage all changes - include .automaker/memory/ and skills/ but exclude other .automaker/.
-    // Split into two calls: a single combined exclude+include pathspec silently stages
-    // nothing when the include paths have no changes (they restrict the -A match set).
-    await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir, env: execEnv });
-    await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
-      cwd: workDir,
-      env: execEnv,
-    }).catch(() => {});
+    // Stage all changes - exclude .automaker/ except memory/ and skills/ (if they exist).
+    await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
 
     // Auto-format staged files before committing (matches CI prettier behavior)
     try {
@@ -996,11 +999,7 @@ export class GitWorkflowService {
           env: execEnv,
         });
         // Re-stage after formatting
-        await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir, env: execEnv });
-        await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
-          cwd: workDir,
-          env: execEnv,
-        }).catch(() => {});
+        await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
         logger.debug(`Auto-formatted ${files.length} staged files`);
       }
     } catch (fmtError) {
@@ -1211,11 +1210,7 @@ export class GitWorkflowService {
       if (!status.trim()) return; // No formatting changes needed
 
       // Stage and amend
-      await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir, env: execEnv });
-      await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
-        cwd: workDir,
-        env: execEnv,
-      }).catch(() => {});
+      await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
       await execAsync('git commit --no-verify --amend --no-edit', { cwd: workDir, env: execEnv });
       logger.info(`Formatted and amended last commit (${files.length} files checked)`);
     } catch (error) {
