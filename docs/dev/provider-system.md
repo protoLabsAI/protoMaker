@@ -57,26 +57,26 @@ const groq = ProviderFactory.getProviderByName('groq');
 
 Key static methods:
 
-| Method | Purpose |
-| ------ | ------- |
-| `getProviderForModel(modelId)` | Resolve provider + wrap with tracing |
+| Method                             | Purpose                                       |
+| ---------------------------------- | --------------------------------------------- |
+| `getProviderForModel(modelId)`     | Resolve provider + wrap with tracing          |
 | `getProviderForModelName(modelId)` | Resolve provider name only (no instantiation) |
-| `getProviderByName(name)` | Lookup by registered name or alias |
-| `getAllProviders()` | Instantiate all registered providers |
-| `checkAllProviders()` | Return installation status for every provider |
-| `getAllAvailableModels()` | Aggregate models from all providers |
+| `getProviderByName(name)`          | Lookup by registered name or alias            |
+| `getAllProviders()`                | Instantiate all registered providers          |
+| `checkAllProviders()`              | Return installation status for every provider |
+| `getAllAvailableModels()`          | Aggregate models from all providers           |
 
 ## Model routing
 
 Model routing uses a **priority-ordered registry**. When a model ID arrives, `ProviderFactory` iterates registered providers from highest to lowest priority and calls each provider's `canHandleModel()` function:
 
-| Priority | Provider | `canHandleModel` rule |
-| -------- | -------- | --------------------- |
-| 10 | Cursor | `isCursorModel(model)` |
-| 5 | Codex | `isCodexModel(model)` |
-| 4 | Groq | `isGroqModel(model)` |
-| 3 | OpenCode | `isOpencodeModel(model)` |
-| 0 | Claude | starts with `claude-` or contains `opus / sonnet / haiku` |
+| Priority | Provider | `canHandleModel` rule                                     |
+| -------- | -------- | --------------------------------------------------------- |
+| 10       | Cursor   | `isCursorModel(model)`                                    |
+| 5        | Codex    | `isCodexModel(model)`                                     |
+| 4        | Groq     | `isGroqModel(model)`                                      |
+| 3        | OpenCode | `isOpencodeModel(model)`                                  |
+| 0        | Claude   | starts with `claude-` or contains `opus / sonnet / haiku` |
 
 If no provider matches, routing falls back to Claude.
 
@@ -98,14 +98,14 @@ Providers that expose an Anthropic-compatible API (i.e. accept the same request 
 
 Supported out-of-the-box templates:
 
-| Template | Base URL | Notes |
-| -------- | -------- | ----- |
-| Direct Anthropic | `https://api.anthropic.com` | Standard Anthropic API |
-| OpenRouter | `https://openrouter.ai/api` | 300+ models via proxy |
-| z.AI GLM | `https://api.z.ai/api/anthropic` | GLM coding models |
-| MiniMax | `https://api.minimax.io/anthropic` | MiniMax M2.1 |
-| MiniMax (China) | `https://api.minimaxi.com/anthropic` | MiniMax for China region |
-| Custom | User-supplied URL | Any Claude-protocol endpoint |
+| Template         | Base URL                             | Notes                        |
+| ---------------- | ------------------------------------ | ---------------------------- |
+| Direct Anthropic | `https://api.anthropic.com`          | Standard Anthropic API       |
+| OpenRouter       | `https://openrouter.ai/api`          | 300+ models via proxy        |
+| z.AI GLM         | `https://api.z.ai/api/anthropic`     | GLM coding models            |
+| MiniMax          | `https://api.minimax.io/anthropic`   | MiniMax M2.1                 |
+| MiniMax (China)  | `https://api.minimaxi.com/anthropic` | MiniMax for China region     |
+| Custom           | User-supplied URL                    | Any Claude-protocol endpoint |
 
 See [configuring OpenAI-compatible endpoints](#configuring-openai-compatible-endpoints) below.
 
@@ -141,13 +141,13 @@ Uses the Groq SDK for fast LLM inference.
 
 Available Groq models:
 
-| Model ID | Display name | Context | Notes |
-| -------- | ------------ | ------- | ----- |
-| `llama-3.3-70b-versatile` | Llama 3.3 70B Versatile | 128K | **Default — recommended** |
-| `llama-3.1-70b-versatile` | Llama 3.1 70B Versatile | 128K | High performance |
-| `llama-3.1-8b-instant` | Llama 3.1 8B Instant | 128K | Ultra-fast |
-| `mixtral-8x7b-32768` | Mixtral 8x7B | 32K | Large context window |
-| `gemma2-9b-it` | Gemma 2 9B IT | 8K | No tool support |
+| Model ID                  | Display name            | Context | Notes                     |
+| ------------------------- | ----------------------- | ------- | ------------------------- |
+| `llama-3.3-70b-versatile` | Llama 3.3 70B Versatile | 128K    | **Default — recommended** |
+| `llama-3.1-70b-versatile` | Llama 3.1 70B Versatile | 128K    | High performance          |
+| `llama-3.1-8b-instant`    | Llama 3.1 8B Instant    | 128K    | Ultra-fast                |
+| `mixtral-8x7b-32768`      | Mixtral 8x7B            | 32K     | Large context window      |
+| `gemma2-9b-it`            | Gemma 2 9B IT           | 8K      | No tool support           |
 
 A model string is recognized as Groq when it either matches a known model ID above or starts with `groq/`.
 
@@ -203,9 +203,7 @@ For fully custom Claude-compatible endpoints:
   "apiKeySource": "inline",
   "apiKey": "your-key",
   "useAuthToken": false,
-  "models": [
-    { "id": "my-model", "displayName": "My Model", "mapsToClaudeModel": "sonnet" }
-  ]
+  "models": [{ "id": "my-model", "displayName": "My Model", "mapsToClaudeModel": "sonnet" }]
 }
 ```
 
@@ -217,29 +215,29 @@ Every workflow phase (enhancement, spec generation, agent execution, etc.) has i
 
 ```typescript
 interface PhaseModelEntry {
-  model: string;          // model ID or alias (haiku | sonnet | opus)
-  providerId?: string;    // UUID of a ClaudeCompatibleProvider (undefined = native Anthropic)
+  model: string; // model ID or alias (haiku | sonnet | opus)
+  providerId?: string; // UUID of a ClaudeCompatibleProvider (undefined = native Anthropic)
   thinkingLevel?: 'none' | 'low' | 'medium' | 'high';
 }
 ```
 
 ### Available phase keys
 
-| Phase key | Default model | Purpose |
-| --------- | ------------- | ------- |
-| `enhancementModel` | sonnet | Feature description enhancement |
-| `fileDescriptionModel` | haiku | File context description |
-| `imageDescriptionModel` | sonnet | Image analysis |
-| `validationModel` | haiku | Issue/PR validation |
-| `specGenerationModel` | opus | App spec generation |
-| `featureGenerationModel` | sonnet | Feature generation from spec |
-| `backlogPlanningModel` | opus | Backlog planning |
-| `projectAnalysisModel` | sonnet | Project analysis |
-| `suggestionsModel` | sonnet | Action suggestions |
-| `memoryExtractionModel` | haiku | Memory extraction |
-| `commitMessageModel` | haiku | Commit message generation |
-| `ceremonyModel` | opus | Sprint ceremonies |
-| `agentExecutionModel` | sonnet | Auto-mode agent execution |
+| Phase key                | Default model | Purpose                         |
+| ------------------------ | ------------- | ------------------------------- |
+| `enhancementModel`       | sonnet        | Feature description enhancement |
+| `fileDescriptionModel`   | haiku         | File context description        |
+| `imageDescriptionModel`  | sonnet        | Image analysis                  |
+| `validationModel`        | haiku         | Issue/PR validation             |
+| `specGenerationModel`    | opus          | App spec generation             |
+| `featureGenerationModel` | sonnet        | Feature generation from spec    |
+| `backlogPlanningModel`   | opus          | Backlog planning                |
+| `projectAnalysisModel`   | sonnet        | Project analysis                |
+| `suggestionsModel`       | sonnet        | Action suggestions              |
+| `memoryExtractionModel`  | haiku         | Memory extraction               |
+| `commitMessageModel`     | haiku         | Commit message generation       |
+| `ceremonyModel`          | opus          | Sprint ceremonies               |
+| `agentExecutionModel`    | sonnet        | Auto-mode agent execution       |
 
 ### Groq and OpenAI-compatible providers as phase models
 
@@ -332,7 +330,7 @@ import { MyProvider, isMyProviderModel } from './my-provider.js';
 registerProvider('myprovider', {
   factory: () => new MyProvider(),
   canHandleModel: (model) => isMyProviderModel(model),
-  priority: 6,  // pick a number in the priority table
+  priority: 6, // pick a number in the priority table
 });
 ```
 
