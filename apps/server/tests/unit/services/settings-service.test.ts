@@ -21,8 +21,9 @@ describe('settings-service.ts', () => {
   let settingsService: SettingsService;
 
   beforeEach(async () => {
-    testDataDir = path.join(os.tmpdir(), `settings-test-${Date.now()}`);
-    testProjectDir = path.join(os.tmpdir(), `project-test-${Date.now()}`);
+    const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    testDataDir = path.join(os.tmpdir(), `settings-test-${uid}`);
+    testProjectDir = path.join(os.tmpdir(), `project-test-${uid}`);
     await fs.mkdir(testDataDir, { recursive: true });
     await fs.mkdir(testProjectDir, { recursive: true });
     settingsService = new SettingsService(testDataDir);
