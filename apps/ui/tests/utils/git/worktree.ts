@@ -354,8 +354,6 @@ export async function setupProjectWithPath(page: Page, projectPath: string): Pro
         sidebarOpen: true,
         skipSandboxWarning: true,
         apiKeys: { anthropic: '', google: '' },
-        chatSessions: [],
-        chatHistoryOpen: false,
         maxConcurrency: 3,
         useWorktrees: true, // Enable worktree feature for tests
         currentWorktreeByProject: {
@@ -410,8 +408,6 @@ export async function setupProjectWithPathNoWorktrees(
         sidebarOpen: true,
         skipSandboxWarning: true,
         apiKeys: { anthropic: '', google: '' },
-        chatSessions: [],
-        chatHistoryOpen: false,
         maxConcurrency: 3,
         useWorktrees: false, // Worktree feature DISABLED
         currentWorktreeByProject: {},
@@ -465,8 +461,6 @@ export async function setupProjectWithStaleWorktree(
         sidebarOpen: true,
         skipSandboxWarning: true,
         apiKeys: { anthropic: '', google: '' },
-        chatSessions: [],
-        chatHistoryOpen: false,
         maxConcurrency: 3,
         useWorktrees: true, // Enable worktree feature for tests
         currentWorktreeByProject: {
