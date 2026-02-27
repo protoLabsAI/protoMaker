@@ -159,7 +159,7 @@ export async function checkAndRecoverUncommittedWork(
       );
 
     const { stdout: prOutput } = await execAsync(
-      `gh pr create --base main --head "${branchName}" --title "${prTitle}" --body "${prBody.replace(/\n/g, '\\n')}"`,
+      `gh pr create --base dev --head "${branchName}" --title "${prTitle}" --body "${prBody.replace(/\n/g, '\\n')}"`,
       { cwd: worktreePath, env: execEnv }
     );
 
