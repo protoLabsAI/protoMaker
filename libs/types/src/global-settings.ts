@@ -141,6 +141,8 @@ export interface Credentials {
     google: string;
     /** OpenAI API key (for compatibility or alternative providers) */
     openai: string;
+    /** Groq API key for fast LLM inference */
+    groq?: string;
   };
   /** Webhook secrets for external integrations */
   webhookSecrets?: {

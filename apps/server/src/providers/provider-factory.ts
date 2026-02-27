@@ -294,6 +294,7 @@ import { ClaudeProvider } from './claude-provider.js';
 import { CursorProvider } from './cursor-provider.js';
 import { CodexProvider } from './codex-provider.js';
 import { OpencodeProvider } from './opencode-provider.js';
+import { GroqProvider, isGroqModel } from './groq-provider.js';
 
 // Register Claude provider
 registerProvider('claude', {
@@ -327,4 +328,11 @@ registerProvider('opencode', {
   factory: () => new OpencodeProvider(),
   canHandleModel: (model: string) => isOpencodeModel(model),
   priority: 3, // Between codex (5) and claude (0)
+});
+
+// Register Groq provider
+registerProvider('groq', {
+  factory: () => new GroqProvider(),
+  canHandleModel: (model: string) => isGroqModel(model),
+  priority: 4, // Between codex (5) and opencode (3)
 });
