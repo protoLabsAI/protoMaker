@@ -103,6 +103,10 @@ export interface AppState {
   // Editor Configuration
   defaultEditorCommand: string | null; // Default editor for "Open In" action
 
+  // File Editor (in-app code editor) settings
+  fileEditorFontFamily: string; // Monospace font family for the built-in code editor
+  fileEditorFontSize: number; // Font size (px) for the built-in code editor
+
   // Skills Configuration
   enableSkills: boolean; // Enable Skills functionality (loads from .claude/skills/ directories)
   skillsSources: Array<'user' | 'project'>; // Which directories to load Skills from
@@ -257,6 +261,10 @@ export interface AppActions {
   // Editor Configuration actions
   setDefaultEditorCommand: (command: string | null) => void;
 
+  // File Editor font settings
+  setFileEditorFontFamily: (fontFamily: string) => void;
+  setFileEditorFontSize: (fontSize: number) => void;
+
   // Prompt Customization actions
   setPromptCustomization: (customization: PromptCustomization) => Promise<void>;
 
@@ -351,6 +359,21 @@ const initialState: AppState = {
   enableRequestLogging: true, // Default to enabled for HTTP request logging
   mcpServers: [], // No MCP servers configured by default
   defaultEditorCommand: null, // Auto-detect: Cursor > VS Code > first available
+  fileEditorFontFamily: (() => {
+    try {
+      return localStorage.getItem('file-editor:fontFamily') ?? '';
+    } catch {
+      return '';
+    }
+  })(),
+  fileEditorFontSize: (() => {
+    try {
+      const stored = localStorage.getItem('file-editor:fontSize');
+      return stored ? parseInt(stored, 10) : 14;
+    } catch {
+      return 14;
+    }
+  })(),
   enableSkills: true, // Skills enabled by default
   skillsSources: ['user', 'project'] as Array<'user' | 'project'>, // Load from both sources by default
   enableSubagents: true, // Subagents enabled by default
@@ -1159,6 +1182,25 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // Editor Configuration actions
   setDefaultEditorCommand: (command) => set({ defaultEditorCommand: command }),
+
+  // File Editor font settings
+  setFileEditorFontFamily: (fontFamily) => {
+    try {
+      localStorage.setItem('file-editor:fontFamily', fontFamily);
+    } catch {
+      // ignore storage errors
+    }
+    set({ fileEditorFontFamily: fontFamily });
+  },
+  setFileEditorFontSize: (fontSize) => {
+    try {
+      localStorage.setItem('file-editor:fontSize', String(fontSize));
+    } catch {
+      // ignore storage errors
+    }
+    set({ fileEditorFontSize: fontSize });
+  },
+
   // Prompt Customization actions
   setPromptCustomization: async (customization) => {
     set({ promptCustomization: customization });
