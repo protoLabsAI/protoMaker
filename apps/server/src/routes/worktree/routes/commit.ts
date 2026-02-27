@@ -47,7 +47,7 @@ export function createCommitHandler() {
       }
 
       // Stage all changes
-      await execAsync("git add -A -- ':!.automaker/'", { cwd: worktreePath });
+      await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: worktreePath });
 
       // Sanitize commit message to prevent injection
       const sanitizedMessage = sanitizeCommitMessage(message);

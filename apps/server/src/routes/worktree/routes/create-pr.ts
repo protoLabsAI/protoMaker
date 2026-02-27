@@ -83,7 +83,10 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
         try {
           // Stage all changes
           logger.debug(`Running: git add -A (excluding .automaker/)`);
-          await execAsync("git add -A -- ':!.automaker/'", { cwd: worktreePath, env: execEnv });
+          await execAsync("git add -A -- ':(exclude).automaker/'", {
+            cwd: worktreePath,
+            env: execEnv,
+          });
 
           // Create commit
           logger.debug(`Running: git commit`);
