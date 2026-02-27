@@ -28,23 +28,22 @@ Comprehensive agent documentation in [`docs/agents/`](./agents/):
 
 DevOps documentation in [`docs/infra/`](./infra/):
 
-| Document                                               | Description                                        |
-| ------------------------------------------------------ | -------------------------------------------------- |
-| [Architecture](./infra/architecture.md)                | System diagrams, multi-instance topology           |
-| [Docker](./infra/docker.md)                            | Dockerfile architecture, multi-stage builds        |
-| [Docker Compose](./infra/docker-compose.md)            | Compose variants, volumes, environment             |
-| [Deployment](./infra/deployment.md)                    | Deployment options (local, Docker, systemd)        |
-| [High-Concurrency](./infra/staging-deployment.md)      | High-concurrency deployment for many agents        |
-| [Secrets](./infra/secrets.md)                          | Infisical setup, MCP secret injection              |
-| [Networking](./infra/networking.md)                    | Ports, nginx, CORS, WebSocket, reverse proxy       |
-| [Security](./infra/security.md)                        | Container security, credential management          |
-| [CI/CD](./infra/ci-cd.md)                              | GitHub Actions workflows                           |
-| [Runners](./infra/runners.md)                          | Self-hosted runner setup, memory limits, cleanup   |
-| [Monitoring](./infra/monitoring.md)                    | Health checks, logging, observability              |
-| [Backup & Recovery](./infra/backup-recovery.md)        | Volume backups, restore procedures                 |
-| [systemd](./infra/systemd.md)                          | systemd service configuration                      |
-| [Troubleshooting](./infra/troubleshooting.md)          | Common issues and solutions                        |
-| [Headless Monitor](./infra/ava-headless-quickstart.md) | Autonomous monitoring setup (local/staging/Docker) |
+| Document                                          | Description                                      |
+| ------------------------------------------------- | ------------------------------------------------ |
+| [Architecture](./infra/architecture.md)           | System diagrams, multi-instance topology         |
+| [Docker](./infra/docker.md)                       | Dockerfile architecture, multi-stage builds      |
+| [Docker Compose](./infra/docker-compose.md)       | Compose variants, volumes, environment           |
+| [Deployment](./infra/deployment.md)               | Deployment options (local, Docker, systemd)      |
+| [High-Concurrency](./infra/staging-deployment.md) | High-concurrency deployment for many agents      |
+| [Secrets](./infra/secrets.md)                     | Infisical setup, MCP secret injection            |
+| [Networking](./infra/networking.md)               | Ports, nginx, CORS, WebSocket, reverse proxy     |
+| [Security](./infra/security.md)                   | Container security, credential management        |
+| [CI/CD](./infra/ci-cd.md)                         | GitHub Actions workflows                         |
+| [Runners](./infra/runners.md)                     | Self-hosted runner setup, memory limits, cleanup |
+| [Monitoring](./infra/monitoring.md)               | Health checks, logging, observability            |
+| [Backup & Recovery](./infra/backup-recovery.md)   | Volume backups, restore procedures               |
+| [systemd](./infra/systemd.md)                     | systemd service configuration                    |
+| [Troubleshooting](./infra/troubleshooting.md)     | Common issues and solutions                      |
 
 ## Integrations
 
@@ -76,33 +75,32 @@ DevOps documentation in [`docs/infra/`](./infra/):
 
 ## Development
 
-| Document                                                  | Description                                          |
-| --------------------------------------------------------- | ---------------------------------------------------- |
-| [Overview](./dev/index.md)                                | Development guide overview                           |
-| [Idea to Production](./dev/idea-to-production.md)         | The canonical 9-phase pipeline reference             |
-| [Project Lifecycle](./dev/project-lifecycle.md)           | Linear-driven project state machine                  |
-| [PR Remediation Loop](./dev/pr-remediation-loop.md)       | Autonomous PR review feedback handling               |
-| [Feature Status System](./dev/feature-status-system.md)   | 6-status feature lifecycle                           |
-| [Issue Management](./dev/issue-management.md)             | Automated failure-to-issue pipeline                  |
-| [Shared Packages](./dev/shared-packages.md)               | Monorepo package architecture                        |
-| [Flows Package](./dev/flows.md)                           | LangGraph state graph primitives and patterns        |
-| [LLM Providers Package](./dev/llm-providers-package.md)   | Multi-provider LLM abstraction layer                 |
-| [Observability Package](./dev/observability-package.md)   | Langfuse tracing, prompt management, cost tracking   |
-| [Langfuse Integration](./dev/langfuse-integration.md)     | Server-side tracing, scoring, MCP tools              |
-| [Langfuse Prompts](./dev/langfuse-prompts.md)             | Three-layer prompt resolution, webhook sync          |
-| [Content Pipeline](./dev/content-pipeline.md)             | Content generation pipeline (blog, docs, training)   |
-| [Antagonistic Review](./dev/antagonistic-review.md)       | Multi-perspective review with G-Eval scoring         |
-| [CopilotKit Integration](./dev/copilotkit-integration.md) | AI chat sidebar and HITL approval flows              |
-| [Design Philosophy](./dev/design-philosophy.md)           | UI design direction (Linear, Vercel, shadcn/ui)      |
-| [Frontend Philosophy](./dev/frontend-philosophy.md)       | Gold standard frontend decisions                     |
-| [UI Architecture](./dev/ui-architecture.md)               | Frontend structure and patterns                      |
-| [UI Standards](./dev/ui-standards.md)                     | Component library, forbidden patterns, enforcement   |
-| [Hivemind Interfaces](./dev/hivemind-interfaces.md)       | Service abstractions for multi-instance architecture |
-| [Testing Patterns](./dev/testing-patterns.md)             | Test patterns and anti-patterns                      |
-| [Clean Code](./dev/clean-code.md)                         | Code quality standards and patterns                  |
-| [Release](./dev/release.md)                               | Release process and Electron builds                  |
-| [Terminal](./dev/terminal.md)                             | Terminal feature documentation                       |
-| [Docs Standard](./dev/docs-standard.md)                   | IA rules, content guidelines, maintenance            |
+| Document                                                | Description                                          |
+| ------------------------------------------------------- | ---------------------------------------------------- |
+| [Overview](./dev/index.md)                              | Development guide overview                           |
+| [Idea to Production](./dev/idea-to-production.md)       | The canonical 9-phase pipeline reference             |
+| [Project Lifecycle](./dev/project-lifecycle.md)         | Linear-driven project state machine                  |
+| [PR Remediation Loop](./dev/pr-remediation-loop.md)     | Autonomous PR review feedback handling               |
+| [Feature Status System](./dev/feature-status-system.md) | 6-status feature lifecycle                           |
+| [Issue Management](./dev/issue-management.md)           | Automated failure-to-issue pipeline                  |
+| [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture                        |
+| [Flows Package](./dev/flows.md)                         | LangGraph state graph primitives and patterns        |
+| [LLM Providers Package](./dev/llm-providers-package.md) | Multi-provider LLM abstraction layer                 |
+| [Observability Package](./dev/observability-package.md) | Langfuse tracing, prompt management, cost tracking   |
+| [Langfuse Integration](./dev/langfuse-integration.md)   | Server-side tracing, scoring, MCP tools              |
+| [Langfuse Prompts](./dev/langfuse-prompts.md)           | Three-layer prompt resolution, webhook sync          |
+| [Content Pipeline](./dev/content-pipeline.md)           | Content generation pipeline (blog, docs, training)   |
+| [Antagonistic Review](./dev/antagonistic-review.md)     | Multi-perspective review with G-Eval scoring         |
+| [Design Philosophy](./dev/design-philosophy.md)         | UI design direction (Linear, Vercel, shadcn/ui)      |
+| [Frontend Philosophy](./dev/frontend-philosophy.md)     | Gold standard frontend decisions                     |
+| [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns                      |
+| [UI Standards](./dev/ui-standards.md)                   | Component library, forbidden patterns, enforcement   |
+| [Hivemind Interfaces](./dev/hivemind-interfaces.md)     | Service abstractions for multi-instance architecture |
+| [Testing Patterns](./dev/testing-patterns.md)           | Test patterns and anti-patterns                      |
+| [Clean Code](./dev/clean-code.md)                       | Code quality standards and patterns                  |
+| [Release](./dev/release.md)                             | Release process and Electron builds                  |
+| [Terminal](./dev/terminal.md)                           | Terminal feature documentation                       |
+| [Docs Standard](./dev/docs-standard.md)                 | IA rules, content guidelines, maintenance            |
 
 ## protoLabs
 

@@ -566,7 +566,7 @@ export function normalizeFeatureStatus(
       break;
     case 'completed':
     case 'waiting_approval':
-    case 'verified': // Ralph terminal state — fold into done
+    case 'verified': // Legacy terminal state — fold into done
       normalized = 'done';
       break;
     case 'failed':

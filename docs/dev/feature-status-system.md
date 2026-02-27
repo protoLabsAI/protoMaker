@@ -1,8 +1,8 @@
 # Feature Status System
 
-## Canonical 5-Status Flow
+## Canonical Status Flow
 
-protoLabs uses a consolidated 5-status system for all features:
+protoLabs uses a consolidated status system for all features:
 
 ```
 backlog → in_progress → review → done
@@ -10,15 +10,18 @@ backlog → in_progress → review → done
           blocked ← ← ← ┘
 ```
 
+`interrupted` is an exceptional state (server shutdown mid-execution) — it sits outside the normal flow and is treated the same as `blocked` for recovery purposes.
+
 ### Status Definitions
 
-| Status          | Description              | When Used                                     |
-| --------------- | ------------------------ | --------------------------------------------- |
-| **backlog**     | Queued, ready to start   | Initial state for new features                |
-| **in_progress** | Being worked on          | Agent is actively implementing                |
-| **review**      | PR created, under review | After git workflow creates PR                 |
-| **blocked**     | Temporary halt           | Dependency issues, failures, or manual blocks |
-| **done**        | PR merged, work complete | After PR is merged to main                    |
+| Status          | Description              | When Used                                        |
+| --------------- | ------------------------ | ------------------------------------------------ |
+| **backlog**     | Queued, ready to start   | Initial state for new features                   |
+| **in_progress** | Being worked on          | Agent is actively implementing                   |
+| **review**      | PR created, under review | After git workflow creates PR                    |
+| **blocked**     | Temporary halt           | Dependency issues, failures, or manual blocks    |
+| **done**        | PR merged, work complete | After PR is merged to main                       |
+| **interrupted** | Server shutdown mid-run  | Exceptional: set when server stops mid-execution |
 
 ### Legacy Status Migration
 
@@ -33,7 +36,6 @@ The system automatically normalizes legacy status values:
 | `waiting_approval` | `done`           |
 | `verified`         | `done`           |
 | `failed`           | `blocked`        |
-| `verified`         | `done`           |
 
 **Migration is automatic** - The feature-loader normalizes statuses on read, so no manual migration is required.
 
@@ -122,8 +124,8 @@ Legacy statuses are fully supported:
 
 Unit tests verify normalization for all cases:
 
-- 5 canonical statuses (passthrough)
-- 7 legacy statuses (migration, including `verified` → `done`)
+- 6 canonical statuses (passthrough: backlog, in_progress, review, blocked, done, interrupted)
+- 7 legacy statuses (migration: pending, ready, running, completed, waiting_approval, verified, failed)
 - Undefined status (default to backlog)
 - Unknown status (warn + default to backlog)
 
