@@ -84,6 +84,7 @@ import { PRDService } from '../services/prd-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
+import { ChannelRouter } from '../services/channel-router.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -183,6 +184,9 @@ export interface ServiceContainer {
   eventHistoryService: ReturnType<typeof getEventHistoryService>;
   eventStreamBuffer: EventStreamBuffer;
   briefingCursorService: ReturnType<typeof getBriefingCursorService>;
+
+  // Channel router (signal-aware HITL routing)
+  channelRouter: ChannelRouter;
 
   // Signal & pipeline
   signalIntakeService: SignalIntakeService;
@@ -402,6 +406,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Briefing Cursor Service
   const briefingCursorService = getBriefingCursorService(dataDir);
+
+  // Channel Router — resolves the correct HITL handler from feature.sourceChannel
+  const channelRouter = new ChannelRouter(events);
 
   // Signal Intake Service — bridges external signals to PM Agent pipeline
   const signalIntakeService = new SignalIntakeService(
@@ -701,6 +708,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     eventHistoryService,
     eventStreamBuffer,
     briefingCursorService,
+    channelRouter,
     signalIntakeService,
     pipelineOrchestrator,
     pipelineService,

@@ -65,8 +65,12 @@ export type {
   StatusTransition,
   ExecutionRecord,
   RemediationHistoryEntry,
+  SignalChannel,
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
+
+// Channel router types (signal-aware HITL routing)
+export type { ChannelHandler } from './channel-router.js';
 
 // Quarantine types
 export type {

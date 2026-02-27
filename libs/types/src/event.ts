@@ -31,6 +31,7 @@ export type EventType =
   | 'feature:pr-merged'
   | 'feature:blocked'
   | 'feature:unblocked'
+  | 'feature:verify-pending'
   | 'project:analysis-started'
   | 'project:analysis-progress'
   | 'project:analysis-completed'
@@ -536,6 +537,12 @@ export interface EventPayloadMap {
     featureId: string;
     featureTitle?: string;
     prNumber?: number;
+    projectPath?: string;
+  };
+  'feature:verify-pending': {
+    featureId: string;
+    featureTitle?: string;
+    context?: string;
     projectPath?: string;
   };
   'feature:status-changed': {
