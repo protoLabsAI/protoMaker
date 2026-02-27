@@ -103,7 +103,7 @@ Feature lands on the board. The Lead Engineer:
 4. Assigns persona agent based on domain detection:
    - Files in `apps/ui/`, `libs/ui/`, component references -> **Matt**
    - Files in `apps/server/src/routes/`, `apps/server/src/services/` -> **Kai**
-   - Files in `libs/flows/`, `libs/llm-providers/`, `libs/observability/` -> **Sam**
+   - Files in `libs/flows/`, `libs/observability/` -> **Sam**
    - Files in `scripts/`, `docker-compose*`, `.github/`, Dockerfile -> **Frank**
    - Mixed or unclear -> **Kai** (default backend, most common)
 5. Sets up worktree

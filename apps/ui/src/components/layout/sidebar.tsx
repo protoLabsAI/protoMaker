@@ -258,6 +258,7 @@ export function Sidebar() {
     hideCalendar: !featureFlags.calendar,
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,
+    hideFileEditor: !featureFlags.fileEditor,
     currentProject,
     projects,
     projectHistory,

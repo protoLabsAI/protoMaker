@@ -38,14 +38,40 @@ export function HITLFormDialog() {
 
   const isSingleStep = activeForm && activeForm.steps.length === 1;
 
+  // On mount, fetch pending forms from server and queue any not already in the store
+  useEffect(() => {
+    const api = getHttpApiClient();
+    api.hitlForms.list().then((result) => {
+      if (!result.success || !result.forms) return;
+      const { addPendingForm, openForm } = useHITLFormStore.getState();
+      for (const form of result.forms) {
+        addPendingForm(form);
+      }
+      // Auto-open first pending form if no dialog is currently open
+      const state = useHITLFormStore.getState();
+      if (!state.isDialogOpen && state.pendingForms.length > 0) {
+        openForm(state.pendingForms[0]);
+      }
+    });
+  }, []);
+
   // Subscribe to WS events to add pending forms and auto-open
   useEffect(() => {
     const api = getHttpApiClient();
     const { addPendingForm, openForm, removePendingForm } = useHITLFormStore.getState();
 
     const unsubRequested = api.hitlForms.onFormRequested(async (payload: unknown) => {
-      // Fetch full form data
       const { formId } = payload as { formId: string };
+      // Dedup guard: if form is already pending, just auto-open if not displayed
+      const currentState = useHITLFormStore.getState();
+      const existingForm = currentState.pendingForms.find((f) => f.id === formId);
+      if (existingForm) {
+        if (!currentState.isDialogOpen) {
+          openForm(existingForm);
+        }
+        return;
+      }
+      // Fetch full form data
       const result = await api.hitlForms.get(formId);
       if (result.success && result.form) {
         addPendingForm(result.form);

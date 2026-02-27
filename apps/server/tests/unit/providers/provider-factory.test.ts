@@ -4,6 +4,7 @@ import { ClaudeProvider } from '@/providers/claude-provider.js';
 import { CursorProvider } from '@/providers/cursor-provider.js';
 import { CodexProvider } from '@/providers/codex-provider.js';
 import { OpencodeProvider } from '@/providers/opencode-provider.js';
+import { GroqProvider } from '@/providers/groq-provider.js';
 
 describe('provider-factory.ts', () => {
   let consoleSpy: any;
@@ -11,6 +12,7 @@ describe('provider-factory.ts', () => {
   let detectCursorSpy: any;
   let detectCodexSpy: any;
   let detectOpencodeSpy: any;
+  let detectGroqSpy: any;
 
   beforeEach(() => {
     consoleSpy = {
@@ -30,6 +32,9 @@ describe('provider-factory.ts', () => {
     detectOpencodeSpy = vi
       .spyOn(OpencodeProvider.prototype, 'detectInstallation')
       .mockResolvedValue({ installed: true });
+    detectGroqSpy = vi
+      .spyOn(GroqProvider.prototype, 'detectInstallation')
+      .mockResolvedValue({ installed: true });
   });
 
   afterEach(() => {
@@ -38,6 +43,7 @@ describe('provider-factory.ts', () => {
     detectCursorSpy.mockRestore();
     detectCodexSpy.mockRestore();
     detectOpencodeSpy.mockRestore();
+    detectGroqSpy.mockRestore();
   });
 
   describe('getProviderForModel', () => {
@@ -166,9 +172,9 @@ describe('provider-factory.ts', () => {
       expect(hasClaudeProvider).toBe(true);
     });
 
-    it('should return exactly 4 providers', () => {
+    it('should return exactly 5 providers', () => {
       const providers = ProviderFactory.getAllProviders();
-      expect(providers).toHaveLength(4);
+      expect(providers).toHaveLength(5);
     });
 
     it('should include CursorProvider', () => {
@@ -206,7 +212,8 @@ describe('provider-factory.ts', () => {
       expect(keys).toContain('cursor');
       expect(keys).toContain('codex');
       expect(keys).toContain('opencode');
-      expect(keys).toHaveLength(4);
+      expect(keys).toContain('groq');
+      expect(keys).toHaveLength(5);
     });
 
     it('should include cursor status', async () => {

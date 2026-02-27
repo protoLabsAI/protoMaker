@@ -21,8 +21,6 @@ import type {
   BoardViewMode,
   ApiKeys,
   KeyboardShortcuts,
-  ChatMessage,
-  ChatSession,
   Feature,
   ProjectAnalysis,
 } from './types';
@@ -73,11 +71,6 @@ export interface AppState {
   // API Keys
   apiKeys: ApiKeys;
 
-  // Chat Sessions
-  chatSessions: ChatSession[];
-  currentChatSession: ChatSession | null;
-  chatHistoryOpen: boolean;
-
   // Kanban Card Display Settings
   boardViewMode: BoardViewMode; // Whether to show kanban or dependency graph view
 
@@ -107,6 +100,10 @@ export interface AppState {
 
   // Editor Configuration
   defaultEditorCommand: string | null; // Default editor for "Open In" action
+
+  // File Editor (in-app code editor) settings
+  fileEditorFontFamily: string; // Monospace font family for the built-in code editor
+  fileEditorFontSize: number; // Font size (px) for the built-in code editor
 
   // Skills Configuration
   enableSkills: boolean; // Enable Skills functionality (loads from .claude/skills/ directories)
@@ -225,17 +222,6 @@ export interface AppActions {
   // API Keys actions
   setApiKeys: (keys: Partial<ApiKeys>) => void;
 
-  // Chat Session actions
-  createChatSession: (title?: string) => ChatSession;
-  updateChatSession: (sessionId: string, updates: Partial<ChatSession>) => void;
-  addMessageToSession: (sessionId: string, message: ChatMessage) => void;
-  setCurrentChatSession: (session: ChatSession | null) => void;
-  archiveChatSession: (sessionId: string) => void;
-  unarchiveChatSession: (sessionId: string) => void;
-  deleteChatSession: (sessionId: string) => void;
-  setChatHistoryOpen: (open: boolean) => void;
-  toggleChatHistory: () => void;
-
   // Kanban Card Settings actions
   setBoardViewMode: (mode: BoardViewMode) => void;
 
@@ -264,6 +250,10 @@ export interface AppActions {
 
   // Editor Configuration actions
   setDefaultEditorCommand: (command: string | null) => void;
+
+  // File Editor font settings
+  setFileEditorFontFamily: (fontFamily: string) => void;
+  setFileEditorFontSize: (fontSize: number) => void;
 
   // Prompt Customization actions
   setPromptCustomization: (customization: PromptCustomization) => Promise<void>;
@@ -343,9 +333,6 @@ const initialState: AppState = {
     google: '',
     openai: '',
   },
-  chatSessions: [],
-  currentChatSession: null,
-  chatHistoryOpen: false,
   boardViewMode: 'kanban', // Default to kanban view
   defaultSkipTests: true, // Default to manual verification (tests disabled)
   enableDependencyBlocking: true, // Default to enabled (show dependency blocking UI)
@@ -360,6 +347,21 @@ const initialState: AppState = {
   featureFlags: DEFAULT_FEATURE_FLAGS, // All flags on in development by default
   mcpServers: [], // No MCP servers configured by default
   defaultEditorCommand: null, // Auto-detect: Cursor > VS Code > first available
+  fileEditorFontFamily: (() => {
+    try {
+      return localStorage.getItem('file-editor:fontFamily') ?? '';
+    } catch {
+      return '';
+    }
+  })(),
+  fileEditorFontSize: (() => {
+    try {
+      const stored = localStorage.getItem('file-editor:fontSize');
+      return stored ? parseInt(stored, 10) : 14;
+    } catch {
+      return 14;
+    }
+  })(),
   enableSkills: true, // Skills enabled by default
   skillsSources: ['user', 'project'] as Array<'user' | 'project'>, // Load from both sources by default
   enableSubagents: true, // Subagents enabled by default
@@ -986,108 +988,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // API Keys actions
   setApiKeys: (keys) => set({ apiKeys: { ...get().apiKeys, ...keys } }),
 
-  // Chat Session actions
-  createChatSession: (title) => {
-    const currentProject = get().currentProject;
-    if (!currentProject) {
-      throw new Error('No project selected');
-    }
-
-    const now = new Date();
-    const session: ChatSession = {
-      id: `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: title || `Chat ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
-      projectId: currentProject.id,
-      messages: [
-        {
-          id: 'welcome',
-          role: 'assistant',
-          content:
-            "Hello! I'm the Automaker Agent. I can help you build software autonomously. What would you like to create today?",
-          timestamp: now,
-        },
-      ],
-      createdAt: now,
-      updatedAt: now,
-      archived: false,
-    };
-
-    set({
-      chatSessions: [...get().chatSessions, session],
-      currentChatSession: session,
-    });
-
-    return session;
-  },
-
-  updateChatSession: (sessionId, updates) => {
-    set({
-      chatSessions: get().chatSessions.map((session) =>
-        session.id === sessionId ? { ...session, ...updates, updatedAt: new Date() } : session
-      ),
-    });
-
-    // Update current session if it's the one being updated
-    const currentSession = get().currentChatSession;
-    if (currentSession && currentSession.id === sessionId) {
-      set({
-        currentChatSession: {
-          ...currentSession,
-          ...updates,
-          updatedAt: new Date(),
-        },
-      });
-    }
-  },
-
-  addMessageToSession: (sessionId, message) => {
-    const sessions = get().chatSessions;
-    const sessionIndex = sessions.findIndex((s) => s.id === sessionId);
-
-    if (sessionIndex >= 0) {
-      const updatedSessions = [...sessions];
-      updatedSessions[sessionIndex] = {
-        ...updatedSessions[sessionIndex],
-        messages: [...updatedSessions[sessionIndex].messages, message],
-        updatedAt: new Date(),
-      };
-
-      set({ chatSessions: updatedSessions });
-
-      // Update current session if it's the one being updated
-      const currentSession = get().currentChatSession;
-      if (currentSession && currentSession.id === sessionId) {
-        set({
-          currentChatSession: updatedSessions[sessionIndex],
-        });
-      }
-    }
-  },
-
-  setCurrentChatSession: (session) => {
-    set({ currentChatSession: session });
-  },
-
-  archiveChatSession: (sessionId) => {
-    get().updateChatSession(sessionId, { archived: true });
-  },
-
-  unarchiveChatSession: (sessionId) => {
-    get().updateChatSession(sessionId, { archived: false });
-  },
-
-  deleteChatSession: (sessionId) => {
-    const currentSession = get().currentChatSession;
-    set({
-      chatSessions: get().chatSessions.filter((s) => s.id !== sessionId),
-      currentChatSession: currentSession?.id === sessionId ? null : currentSession,
-    });
-  },
-
-  setChatHistoryOpen: (open) => set({ chatHistoryOpen: open }),
-
-  toggleChatHistory: () => set({ chatHistoryOpen: !get().chatHistoryOpen }),
-
   // Kanban Card Settings actions
   setBoardViewMode: (mode) => set({ boardViewMode: mode }),
 
@@ -1172,6 +1072,25 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // Editor Configuration actions
   setDefaultEditorCommand: (command) => set({ defaultEditorCommand: command }),
+
+  // File Editor font settings
+  setFileEditorFontFamily: (fontFamily) => {
+    try {
+      localStorage.setItem('file-editor:fontFamily', fontFamily);
+    } catch {
+      // ignore storage errors
+    }
+    set({ fileEditorFontFamily: fontFamily });
+  },
+  setFileEditorFontSize: (fontSize) => {
+    try {
+      localStorage.setItem('file-editor:fontSize', String(fontSize));
+    } catch {
+      // ignore storage errors
+    }
+    set({ fileEditorFontSize: fontSize });
+  },
+
   // Prompt Customization actions
   setPromptCustomization: async (customization) => {
     set({ promptCustomization: customization });

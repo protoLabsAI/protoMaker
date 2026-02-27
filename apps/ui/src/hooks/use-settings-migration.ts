@@ -170,7 +170,6 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
       skipClaudeSetup: setupState.skipClaudeSetup as boolean,
       theme: state.theme as GlobalSettings['theme'],
       sidebarOpen: state.sidebarOpen as boolean,
-      chatHistoryOpen: state.chatHistoryOpen as boolean,
       maxConcurrency: state.maxConcurrency as number,
       defaultSkipTests: state.defaultSkipTests as boolean,
       enableDependencyBlocking: state.enableDependencyBlocking as boolean,
@@ -702,7 +701,6 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
   // Hydrate AppStore (only properties owned by AppState)
   useAppStore.setState({
     sidebarOpen: settings.sidebarOpen ?? true,
-    chatHistoryOpen: settings.chatHistoryOpen ?? false,
     defaultSkipTests: settings.defaultSkipTests ?? true,
     enableDependencyBlocking: settings.enableDependencyBlocking ?? true,
     skipVerificationInAutoMode: settings.skipVerificationInAutoMode ?? false,
@@ -714,7 +712,12 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     muteDoneSound: settings.muteDoneSound ?? false,
     serverLogLevel: settings.serverLogLevel ?? 'info',
     enableRequestLogging: settings.enableRequestLogging ?? true,
-    featureFlags: settings.featureFlags ?? { calendar: true, designs: true, docs: true },
+    featureFlags: settings.featureFlags ?? {
+      calendar: false,
+      designs: false,
+      docs: false,
+      fileEditor: false,
+    },
     keyboardShortcuts: {
       ...current.keyboardShortcuts,
       ...(settings.keyboardShortcuts as unknown as Partial<typeof current.keyboardShortcuts>),
@@ -838,7 +841,6 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     defaultTerminalId: terminalState.defaultTerminalId,
     // App store (remaining fields)
     sidebarOpen: state.sidebarOpen,
-    chatHistoryOpen: state.chatHistoryOpen,
     defaultSkipTests: state.defaultSkipTests,
     enableDependencyBlocking: state.enableDependencyBlocking,
     skipVerificationInAutoMode: state.skipVerificationInAutoMode,

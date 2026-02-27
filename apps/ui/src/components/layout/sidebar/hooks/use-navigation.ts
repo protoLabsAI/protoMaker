@@ -15,6 +15,7 @@ import {
   NotebookPen,
   Palette,
   CalendarDays,
+  FolderOpen,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -49,6 +50,7 @@ interface UseNavigationProps {
   hideCalendar: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
+  hideFileEditor: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -75,6 +77,7 @@ export function useNavigation({
   hideCalendar,
   hideDesigns,
   hideDocs,
+  hideFileEditor,
   currentProject,
   projects,
   projectHistory,
@@ -177,6 +180,14 @@ export function useNavigation({
       },
     ];
 
+    if (!hideFileEditor) {
+      projectItems.push({
+        id: 'file-editor',
+        label: 'File Editor',
+        icon: FolderOpen,
+      });
+    }
+
     if (!hideDesigns) {
       projectItems.push({
         id: 'designs',
@@ -265,6 +276,7 @@ export function useNavigation({
     hideCalendar,
     hideDesigns,
     hideDocs,
+    hideFileEditor,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,

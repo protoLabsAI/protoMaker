@@ -40,7 +40,7 @@ jobs:
         with:
           check-lockfile: 'true'
 
-      - name: Run build:electron (dir only - faster CI)
-        run: npm run build:electron:dir
+      - name: Build web app
+        run: npm run build
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'

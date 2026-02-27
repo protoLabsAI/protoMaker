@@ -474,4 +474,120 @@ describe('HITLFormService', () => {
       expect(service.listPending()).toHaveLength(0);
     });
   });
+
+  // ---------- reEmitPending() ----------
+
+  describe('reEmitPending', () => {
+    it('should re-emit hitl:form-requested for each pending form', () => {
+      const form1 = service.create(createValidInput({ title: 'Form 1' }));
+      const form2 = service.create(createValidInput({ title: 'Form 2' }));
+      vi.mocked(deps.events.emit).mockClear();
+
+      service.reEmitPending();
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(2);
+      const formIds = calls.map(([, payload]) => (payload as { formId: string }).formId);
+      expect(formIds).toContain(form1.id);
+      expect(formIds).toContain(form2.id);
+    });
+
+    it('should not emit for submitted forms', async () => {
+      const form = service.create(createValidInput());
+      await service.submit(form.id, [{}]);
+      vi.mocked(deps.events.emit).mockClear();
+
+      service.reEmitPending();
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should not emit for cancelled forms', async () => {
+      const form = service.create(createValidInput());
+      await service.cancel(form.id);
+      vi.mocked(deps.events.emit).mockClear();
+
+      service.reEmitPending();
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should not emit anything when no pending forms exist', () => {
+      vi.mocked(deps.events.emit).mockClear();
+
+      service.reEmitPending();
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(0);
+    });
+  });
+
+  // ---------- reminder timer ----------
+
+  describe('reminder timer', () => {
+    it('should re-emit hitl:form-requested at TTL/2 if still pending', () => {
+      const form = service.create(createValidInput({ ttlSeconds: 120 }));
+      vi.mocked(deps.events.emit).mockClear();
+
+      // Advance to TTL/2 (60 seconds)
+      vi.advanceTimersByTime(60 * 1000);
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(1);
+      expect((calls[0][1] as { formId: string }).formId).toBe(form.id);
+    });
+
+    it('should NOT re-emit at TTL/2 if form was submitted', async () => {
+      const form = service.create(createValidInput({ ttlSeconds: 120 }));
+      await service.submit(form.id, [{}]);
+      vi.mocked(deps.events.emit).mockClear();
+
+      // Advance past TTL/2
+      vi.advanceTimersByTime(60 * 1000);
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should NOT re-emit at TTL/2 if form was cancelled', async () => {
+      const form = service.create(createValidInput({ ttlSeconds: 120 }));
+      await service.cancel(form.id);
+      vi.mocked(deps.events.emit).mockClear();
+
+      vi.advanceTimersByTime(60 * 1000);
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('should clear all reminder timers on shutdown', () => {
+      service.create(createValidInput({ ttlSeconds: 120 }));
+      service.shutdown();
+      vi.mocked(deps.events.emit).mockClear();
+
+      // Advance past TTL/2 — no emit should fire after shutdown
+      vi.advanceTimersByTime(60 * 1000);
+
+      const calls = vi
+        .mocked(deps.events.emit)
+        .mock.calls.filter(([type]) => type === 'hitl:form-requested');
+      expect(calls).toHaveLength(0);
+    });
+  });
 });

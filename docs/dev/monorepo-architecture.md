@@ -22,7 +22,6 @@ automaker/
     ├── git-utils/    # Git operations & worktree management
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
-    ├── llm-providers/# Multi-provider LLM abstraction layer
     ├── observability/# Langfuse tracing, prompt versioning & cost tracking
     └── ui/           # Shared UI components (@protolabs-ai/ui) — atoms, molecules, theme
 ```
@@ -37,7 +36,7 @@ Packages follow a strict layered dependency hierarchy. Lower-level packages cann
 @protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform,
 @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver,
 @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools,
-@protolabs-ai/flows, @protolabs-ai/llm-providers, @protolabs-ai/observability
+@protolabs-ai/flows, @protolabs-ai/observability
     ↓
 @protolabs-ai/git-utils, @protolabs-ai/ui
     ↓
@@ -180,20 +179,6 @@ import {
   StateNode, // Node definition
   executeFlow, // Flow executor
 } from '@protolabs-ai/flows';
-```
-
-### @protolabs-ai/llm-providers
-
-Multi-provider LLM abstraction layer supporting Claude, OpenAI, and custom providers.
-
-**Key exports:**
-
-```typescript
-import {
-  LLMProvider, // Base provider interface
-  ClaudeProvider, // Claude implementation
-  createProvider, // Provider factory
-} from '@protolabs-ai/llm-providers';
 ```
 
 ### @protolabs-ai/observability

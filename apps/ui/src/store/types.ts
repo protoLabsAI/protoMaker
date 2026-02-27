@@ -313,25 +313,6 @@ export interface TextFileAttachment {
   size: number; // file size in bytes
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  images?: ImageAttachment[];
-  textFiles?: TextFileAttachment[];
-}
-
-export interface ChatSession {
-  id: string;
-  title: string;
-  projectId: string;
-  messages: ChatMessage[];
-  createdAt: Date;
-  updatedAt: Date;
-  archived: boolean;
-}
-
 // ---------------------------------------------------------------------------
 // Features
 // ---------------------------------------------------------------------------

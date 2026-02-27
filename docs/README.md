@@ -85,7 +85,6 @@ DevOps documentation in [`docs/infra/`](./infra/):
 | [Issue Management](./dev/issue-management.md)           | Automated failure-to-issue pipeline                  |
 | [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture                        |
 | [Flows Package](./dev/flows.md)                         | LangGraph state graph primitives and patterns        |
-| [LLM Providers Package](./dev/llm-providers-package.md) | Multi-provider LLM abstraction layer                 |
 | [Observability Package](./dev/observability-package.md) | Langfuse tracing, prompt management, cost tracking   |
 | [Langfuse Integration](./dev/langfuse-integration.md)   | Server-side tracing, scoring, MCP tools              |
 | [Langfuse Prompts](./dev/langfuse-prompts.md)           | Three-layer prompt resolution, webhook sync          |

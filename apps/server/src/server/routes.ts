@@ -373,7 +373,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/flows',
     createFlowsRoutes(antagonisticReviewService, projectPlanningService ?? undefined)
   );
-  app.use('/api/chat', createChatRoutes());
+  app.use('/api/chat', createChatRoutes(services));
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
   // Knowledge store routes (chunked retrieval)

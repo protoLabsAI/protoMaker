@@ -44,7 +44,7 @@ export function getThinkingTokenBudget(level: ThinkingLevel | undefined): number
 // ============================================================================
 
 /** ModelProvider - AI model provider for credentials and API key management */
-export type ModelProvider = 'claude' | 'cursor' | 'codex' | 'opencode';
+export type ModelProvider = 'claude' | 'cursor' | 'codex' | 'opencode' | 'groq';
 
 // ============================================================================
 // Deployment Environment - Runtime environment configuration

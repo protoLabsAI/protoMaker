@@ -43,9 +43,33 @@ See `docs/dev/branch-strategy.md` for the full strategy.
 
 - When continuing a previous session or autonomous loop, always check MCP server connectivity and board status FIRST before attempting any agent launches or API calls.
 
+## Blocked Feature Recovery
+
+When a feature blocks, check `statusChangeReason` immediately. Common patterns and fixes:
+
+**"uncommitted work in worktree" / commit failed:**
+The agent completed its work but the git workflow ran `git commit` without staging first. New files show as `??` (untracked) and modified files as ` M` in `git status`.
+
+Recovery:
+
+```bash
+git -C /path/to/.worktrees/<branch> add -A
+git -C /path/to/.worktrees/<branch> commit --no-verify -m "<feat/fix/refactor>: <title>"
+```
+
+Then use `create_pr_from_worktree` targeting `dev`, move feature to `review`, enable auto-merge on the PR.
+
+**Self-improvement rule:** When you observe a recurring failure pattern that blocks agents, you MUST immediately:
+
+1. File a P1 bug feature on the board describing the root cause and fix
+2. Add the pattern to `ops-lessons.md` in memory
+3. Add recovery steps here in CLAUDE.md
+
+Do not just recover and move on. The flywheel only improves if failures are captured.
+
 ## Project Overview
 
-Automaker is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees.
+protoMaker is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees. This repo is a fork of Automaker by protoLabs.studio — internal package names (`@protolabs-ai/*`), directory paths (`.automaker/`), and the internal codename "Automaker" are preserved in code and config.
 
 ## Brand Identity
 
@@ -128,7 +152,7 @@ Packages can only depend on packages above them:
 ```
 @protolabs-ai/types (no dependencies)
     ↓
-@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/llm-providers, @protolabs-ai/observability
+@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/observability
     ↓
 @protolabs-ai/git-utils, @protolabs-ai/ui
     ↓
@@ -345,6 +369,17 @@ mcp__automaker__create_feature({
 - `DISCORD_CHANNEL_AGENT_LOGS` - Channel ID for #agent-logs
 - `DISCORD_CHANNEL_CODE_REVIEW` - Channel ID for #code-review
 - `DISCORD_CHANNEL_INFRA` - Channel ID for #infra (health checks, Ava Gateway)
+
+### Known Discord Channel IDs
+
+Guild ID: `1070606339363049492`
+
+| Channel          | ID                    | Purpose                                       |
+| ---------------- | --------------------- | --------------------------------------------- |
+| `#ava-josh`      | `1469195643590541353` | Primary Ava-Josh communication                |
+| `#infra`         | `1469109809939742814` | Infrastructure alerts and changes             |
+| `#dev`           | `1469080556720623699` | Code and feature updates                      |
+| `#alpha-testers` | `1473561265690382418` | External tester bug reports and announcements |
 
 ## MCP Server & Claude Code Plugin
 

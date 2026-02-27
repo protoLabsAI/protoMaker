@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
 
     steps:
       - name: Checkout
@@ -96,7 +98,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Post release notes to Discord
-        if: ${{ secrets.DISCORD_DEV_WEBHOOK != '' }}
+        if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${VERSION}"
@@ -119,4 +121,3 @@ jobs:
             "$DISCORD_DEV_WEBHOOK" || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}

@@ -264,6 +264,20 @@ export class ActionExecutor {
         });
         break;
       }
+
+      case 'update_feature': {
+        try {
+          await this.deps.featureLoader.update(
+            session.projectPath,
+            action.featureId,
+            action.updates as Record<string, unknown>
+          );
+          logger.info(`Updated feature ${action.featureId}:`, action.updates);
+        } catch (err) {
+          logger.error(`Failed to update feature ${action.featureId}:`, err);
+        }
+        break;
+      }
     }
   }
 

@@ -753,6 +753,7 @@ export class ExecutionService {
             await this.featureLoader.update(projectPath, featureId, {
               status: 'blocked',
               statusChangeReason: reason,
+              failureCount: (feature.failureCount ?? 0) + 1,
             });
             this.events.emit('feature:error', {
               projectPath,

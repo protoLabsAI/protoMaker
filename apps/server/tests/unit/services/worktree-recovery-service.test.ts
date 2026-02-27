@@ -63,7 +63,7 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // npx prettier
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add -A
+      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -90,7 +90,7 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git diff HEAD (for prettier formatting)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add -A
+      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile) fails
       mockExecFile.mockRejectedValueOnce(new Error('nothing to commit, working tree clean'));
@@ -107,7 +107,7 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
       // git diff HEAD
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git add -A
+      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -128,7 +128,7 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // npx prettier fails (non-fatal)
       mockExec.mockRejectedValueOnce(new Error('prettier not found'));
-      // git add -A
+      // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });

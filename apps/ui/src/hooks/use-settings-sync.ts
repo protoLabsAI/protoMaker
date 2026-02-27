@@ -47,7 +47,6 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'terminalFontFamily', // Maps to terminalState.fontFamily
   'openTerminalMode', // Maps to terminalState.openTerminalMode
   'sidebarOpen',
-  'chatHistoryOpen',
   'maxConcurrency',
   'autoModeByWorktree', // Per-worktree auto mode settings (only maxConcurrency is persisted)
   'defaultSkipTests',
@@ -797,7 +796,6 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
     // Hydrate app store (only fields that remain in app-store)
     useAppStore.setState({
       sidebarOpen: serverSettings.sidebarOpen,
-      chatHistoryOpen: serverSettings.chatHistoryOpen,
       defaultSkipTests: serverSettings.defaultSkipTests,
       enableDependencyBlocking: serverSettings.enableDependencyBlocking,
       skipVerificationInAutoMode: serverSettings.skipVerificationInAutoMode,
@@ -826,7 +824,12 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       lastProjectDir: serverSettings.lastProjectDir ?? '',
       recentFolders: serverSettings.recentFolders ?? [],
       eventHooks: serverSettings.eventHooks ?? [],
-      featureFlags: serverSettings.featureFlags ?? { calendar: true, designs: true, docs: true },
+      featureFlags: serverSettings.featureFlags ?? {
+        calendar: false,
+        designs: false,
+        docs: false,
+        fileEditor: false,
+      },
     });
 
     // Also refresh setup wizard state

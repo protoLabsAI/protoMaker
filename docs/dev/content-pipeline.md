@@ -376,4 +376,3 @@ LANGFUSE_BASE_URL=https://cloud.langfuse.com  # optional, this is the default
 
 - [Flows Package](./flows.md) — LangGraph flow architecture and patterns
 - [Observability Package](./observability-package.md) — Langfuse tracing and cost tracking
-- [LLM Providers Package](./llm-providers-package.md) — Multi-provider LLM abstraction

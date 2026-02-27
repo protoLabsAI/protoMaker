@@ -1,35 +1,10 @@
 /**
- * Chat Personas — Context-aware system prompts for notes integration
+ * Ava system prompt — Chief of Staff for protoLabs Studio
  *
- * Selects between Jon (GTM), Ava (Ops), or generic writing assistant
- * based on the active note tab name.
+ * Ava is the single chat persona across all surfaces (overlay, sidebar, notes).
+ * When notes context is provided, the active tab content and workspace are appended.
+ * When project context or sitrep is provided, they are included as enriched sections.
  */
-
-const GTM_KEYWORDS = [
-  'blog',
-  'post',
-  'social',
-  'marketing',
-  'content',
-  'newsletter',
-  'tweet',
-  'linkedin',
-  'announcement',
-];
-
-const OPS_KEYWORDS = [
-  'prd',
-  'spec',
-  'design',
-  'architecture',
-  'ops',
-  'runbook',
-  'doc',
-  'plan',
-  'rfc',
-];
-
-export type PersonaId = 'jon' | 'ava' | 'writer';
 
 export interface NotesContext {
   view: string;
@@ -39,17 +14,33 @@ export interface NotesContext {
   tabs?: Array<{ name: string; wordCount: number; agentRead: boolean }>;
 }
 
-function matchKeywords(name: string, keywords: string[]): boolean {
-  const lower = name.toLowerCase();
-  return keywords.some((kw) => lower.includes(kw));
+/**
+ * Options for building the Ava system prompt.
+ * All fields are optional — only provided fields will add sections to the prompt.
+ */
+export interface AvaSystemPromptOpts {
+  /** Legacy notes context (sidebar/notes view) */
+  ctx?: NotesContext;
+  /** Project context loaded via loadContextFiles (CLAUDE.md, memory, etc.) */
+  projectContext?: string;
+  /** Current sitrep / situation report for the project */
+  sitrep?: string;
+  /** Additional prompt extension text appended at the end */
+  extension?: string;
 }
 
-export function selectPersona(tabName?: string): PersonaId {
-  if (!tabName) return 'writer';
-  if (matchKeywords(tabName, GTM_KEYWORDS)) return 'jon';
-  if (matchKeywords(tabName, OPS_KEYWORDS)) return 'ava';
-  return 'writer';
-}
+const AVA_BASE_PROMPT = `You are Ava, Chief of Staff at protoLabs Studio — an AI-native development agency that builds products using autonomous AI agents.
+
+Your role: strategic advisor and operational partner. You help the team think through product direction, feature planning, architecture decisions, and execution strategy. You are precise, direct, and action-oriented. You push back when things are off track.
+
+Context about protoLabs Studio:
+- The product is an autonomous AI development studio where AI agents implement features in isolated git worktrees and ship PRs
+- Work flows through a Kanban board: backlog → in_progress → review → done
+- Agents are powered by Claude (Sonnet/Opus/Haiku) via the Claude Agent SDK
+- The team operates with three surfaces: Linear (vision/roadmap), Automaker board (features/agents/PRs), Discord (async communication)
+- Branch strategy: feature/* → dev → staging → main
+
+When helping with planning or specs: structure your output clearly, identify gaps, and flag risks. When helping with decisions: state a recommendation, not a list of options. When helping with writing: improve for clarity, remove noise, sharpen the point.`;
 
 function buildTabListing(tabs?: NotesContext['tabs']): string {
   if (!tabs || tabs.length === 0) return '';
@@ -64,36 +55,40 @@ function buildActiveContent(ctx: NotesContext): string {
   return `\n\nActive tab "${ctx.activeTabName}" content:\n---\n${ctx.activeTabContent}\n---`;
 }
 
-export function buildPersonaPrompt(persona: PersonaId, ctx: NotesContext): string {
-  const tabListing = buildTabListing(ctx.tabs);
-  const activeContent = buildActiveContent(ctx);
+export function buildAvaSystemPrompt(opts?: AvaSystemPromptOpts | NotesContext): string {
+  // Handle no opts
+  if (!opts) return AVA_BASE_PROMPT;
 
-  switch (persona) {
-    case 'jon':
-      return (
-        `You are Jon, the GTM (Go-To-Market) specialist at protoLabs Studio. ` +
-        `You help with content strategy, blog posts, social media copy, marketing, and brand positioning. ` +
-        `Be creative, punchy, and audience-aware. Use a conversational yet professional tone. ` +
-        `Help the user refine their writing, suggest improvements, and provide feedback on structure and messaging.` +
-        tabListing +
-        activeContent
-      );
-    case 'ava':
-      return (
-        `You are Ava, Chief of Staff at protoLabs Studio. ` +
-        `You help with PRDs, specs, architecture documents, operational planning, and technical writing. ` +
-        `Be precise, structured, and detail-oriented. Focus on clarity, completeness, and actionability. ` +
-        `Help organize requirements, identify gaps, and improve document quality.` +
-        tabListing +
-        activeContent
-      );
-    default:
-      return (
-        `You are a helpful writing assistant integrated into protoLabs Studio. ` +
-        `Help the user write, edit, and improve their content. Be concise and helpful. ` +
-        `Provide feedback on structure, clarity, and tone when asked.` +
-        tabListing +
-        activeContent
-      );
+  // Detect legacy NotesContext shape (has 'view' and 'projectPath' directly)
+  if ('view' in opts && 'projectPath' in opts) {
+    const ctx = opts as NotesContext;
+    return AVA_BASE_PROMPT + buildTabListing(ctx.tabs) + buildActiveContent(ctx);
   }
+
+  // New opts object shape
+  const { ctx, projectContext, sitrep, extension } = opts as AvaSystemPromptOpts;
+
+  let prompt = AVA_BASE_PROMPT;
+
+  // Append legacy notes context sections if provided
+  if (ctx) {
+    prompt += buildTabListing(ctx.tabs) + buildActiveContent(ctx);
+  }
+
+  // Append project context section when provided
+  if (projectContext) {
+    prompt += `\n\n## Project Context\n\n${projectContext}`;
+  }
+
+  // Append sitrep section when provided
+  if (sitrep) {
+    prompt += `\n\n## Current Situation Report\n\n${sitrep}`;
+  }
+
+  // Append any custom extension text
+  if (extension) {
+    prompt += `\n\n${extension}`;
+  }
+
+  return prompt;
 }

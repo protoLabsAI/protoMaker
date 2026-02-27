@@ -12,7 +12,6 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 ## AI Agent Infrastructure
 
 - **[Flows](./flows)** — LangGraph state graph primitives, coordinator pattern, Send() fan-out
-- **[LLM Providers](./llm-providers-package)** — Multi-provider abstraction, factory pattern, health checks
 - **[Observability](./observability-package)** — Langfuse tracing, prompt versioning, cost tracking
 - **[Langfuse Integration](./langfuse-integration)** — Server-side tracing, agent scoring, API proxy routes
 - **[Langfuse Prompts](./langfuse-prompts)** — Three-layer prompt resolution, webhook sync, GitHub CI trigger
