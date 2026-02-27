@@ -516,6 +516,7 @@ Configure your identity in global settings: `instanceId` (auto-generated UUID if
 - `#ava-josh` (1469195643590541353) — primary communication with Josh
 - `#infra` (1469109809939742814) — infrastructure changes
 - `#dev` (1469080556720623699) — code/feature updates
+- `#alpha-testers` (1473561265690382418) — external tester bug reports and announcements
 
 ## Product North Star
 
