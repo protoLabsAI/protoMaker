@@ -84,6 +84,7 @@ import { PRDService } from '../services/prd-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
+import { ChannelRouter } from '../services/channel-router.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -188,6 +189,7 @@ export interface ServiceContainer {
   signalIntakeService: SignalIntakeService;
   pipelineOrchestrator: PipelineOrchestrator;
   pipelineService: typeof pipelineService;
+  channelRouter: ChannelRouter;
 
   // Prompt sync
   promptGitHubSyncService: PromptGitHubSyncService | null;
@@ -300,6 +302,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
         return [];
       }
     },
+    getFeature: (projectPath, featureId) => featureLoader.get(projectPath, featureId),
   });
   const claudeUsageService = new ClaudeUsageService();
   const mcpTestService = new MCPTestService(settingsService);
@@ -413,6 +416,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Pipeline Orchestrator — unified phase tracking across ops + gtm branches
   const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
+
+  // Channel Router — routes HITL interactions to the originating channel
+  const channelRouter = new ChannelRouter();
 
   // Prompt GitHub Sync Service — syncs Langfuse prompts to GitHub
   let promptGitHubSyncService: PromptGitHubSyncService | null = null;
@@ -704,6 +710,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     signalIntakeService,
     pipelineOrchestrator,
     pipelineService,
+    channelRouter,
     promptGitHubSyncService,
     docsUpdateDetector,
     authorityService,
