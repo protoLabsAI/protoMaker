@@ -240,8 +240,20 @@ export class SignalIntakeService {
       const projectPath = signal.channelContext?.projectPath || this.defaultProjectPath;
       if (classification.category === 'gtm') {
         logger.info(`GTM signal routed: "${title}" (source: ${signal.source})`);
+
+        // Create feature with idea state before emitting to ensure featureId is available
+        const gtmFeature = await this.featureLoader.create(projectPath, {
+          title: `[${signal.source}] ${title}`,
+          description,
+          status: 'backlog',
+          category: 'Signal Intake',
+          complexity: 'medium',
+          workItemState: 'idea',
+        });
+
         this.events.emit('authority:gtm-signal-received', {
           projectPath,
+          featureId: gtmFeature.id,
           title,
           description,
           source: signal.source,
@@ -249,6 +261,7 @@ export class SignalIntakeService {
         });
         this.events.emit('signal:routed', {
           projectPath,
+          featureId: gtmFeature.id,
           title,
           description,
           category: 'gtm',
