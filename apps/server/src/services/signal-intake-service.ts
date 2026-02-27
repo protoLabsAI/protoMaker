@@ -278,9 +278,23 @@ export class SignalIntakeService {
         const linearIssueId = signal.channelContext.issueId as string;
         const existing = await this.featureLoader.findByLinearIssueId(projectPath, linearIssueId);
         if (existing) {
-          logger.info(
-            `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
-          );
+          if (existing.status === 'in_progress' || existing.status === 'blocked') {
+            // Active feature found — route signal content as a follow-up to the running agent
+            logger.info(
+              `Routing Linear signal to active feature ${existing.id} (${existing.status}) for issue ${linearIssueId}`
+            );
+            this.events.emit('linear:comment:followup', {
+              featureId: existing.id,
+              projectPath,
+              commentBody: signal.content,
+              userName: signal.author.name,
+              issueId: linearIssueId,
+            });
+          } else {
+            logger.info(
+              `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
+            );
+          }
           return;
         }
       }
