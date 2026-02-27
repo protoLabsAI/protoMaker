@@ -1360,6 +1360,34 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         formId: args.formId,
       });
 
+    case 'list_pending_forms':
+      return apiCall('/hitl-forms/list', {
+        projectPath: args.projectPath,
+      });
+
+    case 'submit_form_response':
+      return apiCall('/hitl-forms/submit', {
+        formId: args.formId,
+        response: args.response,
+      });
+
+    case 'cancel_form':
+      return apiCall('/hitl-forms/cancel', {
+        formId: args.formId,
+      });
+
+    case 'list_actionable_items':
+      return apiCall('/actionable-items/list', {
+        projectPath: args.projectPath,
+        category: args.category,
+      });
+
+    case 'act_on_actionable_item':
+      return apiCall('/actionable-items/update-status', {
+        itemId: args.itemId,
+        action: args.action,
+      });
+
     // Idea Processing
     case 'process_idea':
       return apiCall('/authority/inject-idea', {
