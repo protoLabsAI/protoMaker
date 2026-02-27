@@ -11,15 +11,43 @@ import { apiPost } from '@/lib/api-fetch';
 
 const BINARY_EXTENSIONS = new Set([
   // Images
-  'png', 'jpg', 'jpeg', 'gif', 'bmp', 'ico', 'webp', 'tiff', 'tif', 'avif',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'bmp',
+  'ico',
+  'webp',
+  'tiff',
+  'tif',
+  'avif',
   // Archives
-  'zip', 'tar', 'gz', 'bz2', 'rar', '7z',
+  'zip',
+  'tar',
+  'gz',
+  'bz2',
+  'rar',
+  '7z',
   // Fonts
-  'ttf', 'otf', 'woff', 'woff2', 'eot',
+  'ttf',
+  'otf',
+  'woff',
+  'woff2',
+  'eot',
   // Native binaries
-  'exe', 'dll', 'so', 'dylib', 'bin',
+  'exe',
+  'dll',
+  'so',
+  'dylib',
+  'bin',
   // Office / PDFs
-  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
 ]);
 
 function isBinaryFile(filePath: string): boolean {

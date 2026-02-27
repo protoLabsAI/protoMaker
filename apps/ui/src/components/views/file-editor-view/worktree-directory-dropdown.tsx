@@ -42,10 +42,7 @@ export function WorktreeDirectoryDropdown() {
 
       <DropdownMenuContent align="start" className="w-56">
         {/* Main repository entry */}
-        <DropdownMenuItem
-          className="gap-2"
-          onClick={() => setSelectedWorktreePath(null)}
-        >
+        <DropdownMenuItem className="gap-2" onClick={() => setSelectedWorktreePath(null)}>
           <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium">Main Repo</span>
@@ -53,9 +50,7 @@ export function WorktreeDirectoryDropdown() {
               {currentProject.path.split('/').pop()}
             </span>
           </div>
-          {selectedWorktreePath === null && (
-            <span className="ml-auto text-xs text-primary">✓</span>
-          )}
+          {selectedWorktreePath === null && <span className="ml-auto text-xs text-primary">✓</span>}
         </DropdownMenuItem>
 
         {/* Worktree entries */}
@@ -72,9 +67,7 @@ export function WorktreeDirectoryDropdown() {
                 >
                   <GitBranch className="size-4 shrink-0 text-muted-foreground" />
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-medium truncate max-w-[160px]">
-                      {wt.branch}
-                    </span>
+                    <span className="text-sm font-medium truncate max-w-[160px]">{wt.branch}</span>
                     {wt.hasChanges && (
                       <span className="text-xs text-amber-500">
                         {wt.changedFilesCount ?? '?'} changed file(s)
