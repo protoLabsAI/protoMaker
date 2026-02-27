@@ -74,6 +74,8 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
     factStoreService,
     leadHandoffService,
     beadsService,
+    antagonisticReviewService,
+    emAgent,
   } = services;
 
   // Calendar service wiring
@@ -219,6 +221,10 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   leadEngineerService.setAgentFactory(agentFactoryService);
   leadEngineerService.setFactStoreService(factStoreService);
   leadEngineerService.setHandoffService(leadHandoffService);
+  leadEngineerService.setAntagonisticReviewService(antagonisticReviewService);
+
+  // EM Agent: yield lifecycle control to Lead Engineer when active
+  emAgent.setLeadEngineerService(leadEngineerService);
 
   // PR Feedback service wiring
   prFeedbackService.setAutoModeService(autoModeService);

@@ -33,7 +33,11 @@ import { ActionExecutor } from './lead-engineer-action-executor.js';
 import { CeremonyOrchestrator } from './lead-engineer-ceremonies.js';
 import { LeadEngineerSessionStore } from './lead-engineer-session-store.js';
 import { GtmExecuteProcessor } from './lead-engineer-gtm-execute-processor.js';
-import type { FeatureProcessingState, StateContext } from './lead-engineer-types.js';
+import type {
+  FeatureProcessingState,
+  StateContext,
+  IPlanReviewService,
+} from './lead-engineer-types.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
 import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
 
@@ -64,6 +68,7 @@ export class LeadEngineerService {
   private agentFactoryService?: AgentFactoryService;
   private handoffService?: LeadHandoffService;
   private factStoreService?: FactStoreService;
+  private antagonisticReviewService?: IPlanReviewService;
 
   private worldStateBuilder: WorldStateBuilder;
   private sessionStore: LeadEngineerSessionStore;
@@ -113,6 +118,18 @@ export class LeadEngineerService {
   }
   setFactStoreService(s: FactStoreService): void {
     this.factStoreService = s;
+  }
+  setAntagonisticReviewService(s: IPlanReviewService): void {
+    this.antagonisticReviewService = s;
+  }
+
+  /**
+   * Returns true when the Lead Engineer has an active (running) session for the given project.
+   * Used by EM Agent to skip execution when Lead Engineer owns the lifecycle.
+   */
+  isActive(projectPath: string): boolean {
+    const session = this.sessions.get(projectPath);
+    return session?.flowState === 'running';
   }
 
   async initialize(): Promise<void> {
@@ -305,6 +322,7 @@ export class LeadEngineerService {
         settingsService: this.settingsService,
         factStoreService: this.factStoreService,
         leadHandoffService: this.handoffService,
+        antagonisticReviewService: this.antagonisticReviewService,
       };
 
       const workflowSettings = await getWorkflowSettings(

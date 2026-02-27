@@ -27,6 +27,19 @@ export const REVIEW_POLL_DELAY_MS = 30 * 1000; // 30 seconds
 // ────────────────────────── Service Context ──────────────────────────
 
 /**
+ * Minimal interface for plan review — avoids circular imports with AntagonisticReviewService.
+ */
+export interface IPlanReviewService {
+  verifyPlan(params: {
+    featureTitle: string;
+    featureDescription: string;
+    complexity: string;
+    planOutput: string;
+    projectPath: string;
+  }): Promise<{ approved: boolean; reason?: string } | null>;
+}
+
+/**
  * Service context injected into state processors.
  * Provides access to real services without circular dependencies.
  */
@@ -41,6 +54,7 @@ export interface ProcessorServiceContext {
   settingsService?: SettingsService;
   factStoreService?: FactStoreService;
   leadHandoffService?: LeadHandoffService;
+  antagonisticReviewService?: IPlanReviewService;
 }
 
 // ────────────────────────── Feature State Machine Types ──────────────────────────
