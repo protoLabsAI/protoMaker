@@ -1,6 +1,6 @@
 {
   "name": "@protolabs-ai/llm-providers",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "type": "module",
   "description": "Multi-provider LLM abstraction layer for AutoMaker",
   "main": "dist/index.js",
@@ -42,8 +42,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabs-ai/types": "0.4.0",
-    "@protolabs-ai/utils": "0.4.0",
+    "@protolabs-ai/types": "^0.6.0",
+    "@protolabs-ai/utils": "^0.6.0",
     "@aws-sdk/client-bedrock-runtime": "^3.0.0",
     "@google/generative-ai": "^0.21.0",
     "@langchain/anthropic": "^0.3.14",
