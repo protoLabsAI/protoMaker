@@ -5,7 +5,8 @@
  * forms, notifications) back to the channel where the feature originated.
  */
 
-import type { Feature, SignalChannel } from './feature.js';
+import type { Feature } from './feature.js';
+import type { SignalChannel } from './signal-channel.js';
 import type { HITLFormRequestInput } from './hitl-form.js';
 
 /**

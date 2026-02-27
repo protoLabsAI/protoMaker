@@ -65,9 +65,11 @@ export type {
   StatusTransition,
   ExecutionRecord,
   RemediationHistoryEntry,
-  SignalChannel,
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
+
+// Signal channel types (provenance tracking)
+export type { SignalChannel, SignalMetadata } from './signal-channel.js';
 
 // Channel router types (signal-aware HITL routing)
 export type { ChannelHandler } from './channel-router.js';
