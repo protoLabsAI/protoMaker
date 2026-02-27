@@ -234,3 +234,26 @@ export function getTextFileMimeType(filename: string): string {
   }
   return 'text/plain';
 }
+
+/**
+ * Check if a filename has a markdown extension
+ *
+ * @param filename - The filename string to check
+ * @returns True if the filename has a .md or .markdown extension
+ */
+export const isMarkdownFilename = (filename: string): boolean => {
+  const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+  return ext === '.md' || ext === '.markdown';
+};
+
+/**
+ * Check if a filename has an image extension
+ *
+ * @param filename - The filename string to check
+ * @returns True if the filename has a common image extension
+ */
+export const isImageFilename = (filename: string): boolean => {
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp'];
+  const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+  return imageExtensions.includes(ext);
+};
