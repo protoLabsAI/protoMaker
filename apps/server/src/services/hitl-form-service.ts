@@ -54,6 +54,7 @@ export class HITLFormService {
     | ((projectPath: string, featureId: string) => Promise<Feature | null>)
     | null = null;
   private channelRouter: ChannelRouter | null = null;
+  private reminderTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   constructor(deps: HITLFormServiceDeps) {
     this.events = deps.events;
@@ -123,15 +124,7 @@ export class HITLFormService {
             await router.getHandler(feature).sendHITLForm(feature, input);
           } else {
             // Feature not found — fall back to UI event
-            this.events.emit('hitl:form-requested', {
-              formId: formCopy.id,
-              title: formCopy.title,
-              callerType: formCopy.callerType,
-              featureId: formCopy.featureId,
-              projectPath: formCopy.projectPath,
-              stepCount: formCopy.steps.length,
-              expiresAt: formCopy.expiresAt,
-            });
+            this.emitFormRequested(formCopy);
           }
         } catch (err) {
           logger.error(`Failed to route HITL form ${formCopy.id} to channel handler:`, err);
@@ -139,16 +132,20 @@ export class HITLFormService {
       })();
     } else {
       // UI channel (no replyChannel): emit hitl:form-requested for backward compatibility
-      this.events.emit('hitl:form-requested', {
-        formId: form.id,
-        title: form.title,
-        callerType: form.callerType,
-        featureId: form.featureId,
-        projectPath: form.projectPath,
-        stepCount: form.steps.length,
-        expiresAt: form.expiresAt,
-      });
+      this.emitFormRequested(form);
     }
+
+    // Schedule a TTL/2 reminder: re-emit if form is still pending at that point
+    const reminderMs = Math.floor((ttl / 2) * 1000);
+    const reminderTimer = setTimeout(() => {
+      this.reminderTimers.delete(form.id);
+      const current = this.forms.get(form.id);
+      if (current?.status === 'pending') {
+        this.emitFormRequested(current);
+        logger.info(`Reminder re-emitted for form ${form.id}`);
+      }
+    }, reminderMs);
+    this.reminderTimers.set(form.id, reminderTimer);
 
     logger.info(
       `Form created: ${form.id} (${form.title}) — ${form.steps.length} step(s), TTL ${ttl}s`
@@ -220,6 +217,7 @@ export class HITLFormService {
       throw new Error(`Expected ${form.steps.length} response(s), got ${response.length}`);
     }
 
+    this.clearReminderTimer(formId);
     form.status = 'submitted';
     form.respondedAt = new Date().toISOString();
     form.response = response;
@@ -256,6 +254,7 @@ export class HITLFormService {
       throw new Error(`Form ${formId} is not pending (status: ${form.status})`);
     }
 
+    this.clearReminderTimer(formId);
     form.status = 'cancelled';
     form.respondedAt = new Date().toISOString();
     this.persistForm(form);
@@ -284,8 +283,29 @@ export class HITLFormService {
       clearInterval(this.cleanupTimer);
       this.cleanupTimer = null;
     }
+    for (const timer of this.reminderTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.reminderTimers.clear();
     this.forms.clear();
     logger.info('HITLFormService shut down');
+  }
+
+  /**
+   * Re-emit hitl:form-requested for all pending forms.
+   * Called on WebSocket client connect so page refreshes restore the dialog queue.
+   */
+  reEmitPending(): void {
+    const pending = this.listPending();
+    for (const summary of pending) {
+      const form = this.forms.get(summary.id);
+      if (form) {
+        this.emitFormRequested(form);
+      }
+    }
+    if (pending.length > 0) {
+      logger.info(`Re-emitted ${pending.length} pending HITL form(s) to reconnecting client`);
+    }
   }
 
   // --- Disk persistence ---
@@ -357,6 +377,26 @@ export class HITLFormService {
 
   // --- Private methods ---
 
+  private emitFormRequested(form: HITLFormRequest): void {
+    this.events.emit('hitl:form-requested', {
+      formId: form.id,
+      title: form.title,
+      callerType: form.callerType,
+      featureId: form.featureId,
+      projectPath: form.projectPath,
+      stepCount: form.steps.length,
+      expiresAt: form.expiresAt,
+    });
+  }
+
+  private clearReminderTimer(formId: string): void {
+    const timer = this.reminderTimers.get(formId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.reminderTimers.delete(formId);
+    }
+  }
+
   private async routeResponse(form: HITLFormRequest): Promise<void> {
     try {
       switch (form.callerType) {
@@ -418,6 +458,7 @@ export class HITLFormService {
     for (const [id, form] of this.forms) {
       // Expire pending forms past TTL
       if (form.status === 'pending' && new Date(form.expiresAt) < now) {
+        this.clearReminderTimer(id);
         form.status = 'expired';
         expired++;
         if (form.projectPath) dirtyProjects.add(form.projectPath);
