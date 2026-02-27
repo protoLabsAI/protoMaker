@@ -10,6 +10,8 @@ import { DiscordDMChannel } from '../services/escalation-channels/discord-dm-cha
 import { codeRabbitResolverService } from '../services/coderabbit-resolver-service.js';
 import { eventHookService } from '../services/event-hook-service.js';
 import { registerMaintenanceTasks } from '../services/maintenance-tasks.js';
+import { linearSyncService } from '../services/linear-sync-service.js';
+import { LinearChannelHandler } from '../services/channel-handlers/linear-channel-handler.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -349,6 +351,14 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
 
   // Linear intake bridge start
   intakeBridge.start();
+
+  // Linear Channel Handler — gate approval via Linear comments (/approve / /reject)
+  const linearChannelHandler = new LinearChannelHandler(
+    linearSyncService.getCommentService(),
+    pipelineOrchestrator,
+    featureLoader
+  );
+  linearSyncService.setChannelHandler(linearChannelHandler);
 
   // Spec Generation Monitor start
   specGenerationMonitor.startMonitoring();

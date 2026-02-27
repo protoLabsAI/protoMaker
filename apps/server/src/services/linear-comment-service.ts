@@ -11,6 +11,7 @@ import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SyncGuards, CommentCreatedPayload } from './linear-sync-types.js';
+import type { LinearChannelHandler } from './channel-handlers/linear-channel-handler.js';
 
 const logger = createLogger('LinearCommentService');
 
@@ -18,6 +19,7 @@ export class LinearCommentService {
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
   private guards!: SyncGuards;
+  private channelHandler: LinearChannelHandler | null = null;
 
   initialize(
     settingsService: SettingsService,
@@ -27,6 +29,15 @@ export class LinearCommentService {
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
     this.guards = guards;
+  }
+
+  /**
+   * Inject LinearChannelHandler for gate resolution via /approve and /reject comments.
+   * Must be called after initialize(). Uses setter injection to avoid circular deps.
+   */
+  setChannelHandler(handler: LinearChannelHandler): void {
+    this.channelHandler = handler;
+    logger.info('LinearChannelHandler injected into LinearCommentService');
   }
 
   // -------------------------------------------------------------------------
@@ -84,6 +95,24 @@ export class LinearCommentService {
       });
 
       const commentLower = body.toLowerCase().trim();
+
+      // -----------------------------------------------------------------------
+      // Gate resolution: /approve and /reject commands take priority.
+      // Only fires when LinearChannelHandler has a pending approval for this
+      // feature — prevents hijacking unrelated approval workflows.
+      // -----------------------------------------------------------------------
+      if (this.channelHandler && this.channelHandler.hasPendingApproval(feature.id)) {
+        if (commentLower === '/approve' || commentLower.startsWith('/approve ')) {
+          logger.info(`/approve detected on issue ${issueId} for feature ${feature.id}`);
+          await this.channelHandler.tryResolveGate(feature.id, projectPath, 'advance');
+          return;
+        }
+        if (commentLower === '/reject' || commentLower.startsWith('/reject ')) {
+          logger.info(`/reject detected on issue ${issueId} for feature ${feature.id}`);
+          await this.channelHandler.tryResolveGate(feature.id, projectPath, 'reject');
+          return;
+        }
+      }
 
       if (this.isApprovalComment(commentLower)) {
         logger.info(`Approval comment detected on issue ${issueId}`);
