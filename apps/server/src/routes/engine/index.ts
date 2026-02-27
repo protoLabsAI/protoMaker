@@ -28,7 +28,7 @@ import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CompletionDetectorService } from '../../services/completion-detector-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@protolabs-ai/platform';
-import type { NotesWorkspace, PipelinePhase } from '@protolabs-ai/types';
+import type { GateResolutionSource, NotesWorkspace, PipelinePhase } from '@protolabs-ai/types';
 import { PIPELINE_PHASES } from '@protolabs-ai/types';
 
 const logger = createLogger('EngineRoutes');
@@ -596,10 +596,14 @@ export function createEngineRoutes(
    */
   router.post('/signal/approve-prd', async (req: Request, res: Response) => {
     try {
-      const { projectPath, featureId, decision } = (req.body ?? {}) as {
+      const { projectPath, featureId, decision, surface, identity, metadata } = (req.body ??
+        {}) as {
         projectPath?: string;
         featureId?: string;
         decision?: 'approve' | 'reject';
+        surface?: string;
+        identity?: string;
+        metadata?: Record<string, unknown>;
       };
 
       if (!projectPath || !featureId || !decision) {
@@ -618,12 +622,23 @@ export function createEngineRoutes(
         return;
       }
 
+      const resolutionSource: GateResolutionSource = {
+        surface: (surface as GateResolutionSource['surface']) ?? 'ui',
+        ...(identity !== undefined && { identity }),
+        ...(metadata !== undefined && { metadata }),
+      };
+
       if (decision === 'approve') {
         events.emit('ideation:prd-approved', { projectPath, featureId });
 
         // Also resolve the pipeline gate if the feature is awaiting one at SPEC_REVIEW
         if (pipelineOrchestrator) {
-          await pipelineOrchestrator.resolveGate(projectPath, featureId, 'advance', 'user');
+          await pipelineOrchestrator.resolveGate(
+            projectPath,
+            featureId,
+            'advance',
+            resolutionSource
+          );
         }
 
         logger.info(`PRD approved for feature ${featureId}`);
@@ -637,7 +652,12 @@ export function createEngineRoutes(
 
         // Also reject the pipeline gate if awaiting
         if (pipelineOrchestrator) {
-          await pipelineOrchestrator.resolveGate(projectPath, featureId, 'reject', 'user');
+          await pipelineOrchestrator.resolveGate(
+            projectPath,
+            featureId,
+            'reject',
+            resolutionSource
+          );
         }
 
         logger.info(`PRD rejected for feature ${featureId}, reset to idea state`);
@@ -858,10 +878,13 @@ export function createEngineRoutes(
    */
   router.post('/pipeline/gate/resolve', async (req: Request, res: Response) => {
     try {
-      const { projectPath, featureId, action } = (req.body ?? {}) as {
+      const { projectPath, featureId, action, surface, identity, metadata } = (req.body ?? {}) as {
         projectPath?: string;
         featureId?: string;
         action?: 'advance' | 'reject';
+        surface?: string;
+        identity?: string;
+        metadata?: Record<string, unknown>;
       };
 
       if (!projectPath || !featureId || !action) {
@@ -880,11 +903,17 @@ export function createEngineRoutes(
         return;
       }
 
+      const resolutionSource: GateResolutionSource = {
+        surface: (surface as GateResolutionSource['surface']) ?? 'ui',
+        ...(identity !== undefined && { identity }),
+        ...(metadata !== undefined && { metadata }),
+      };
+
       const resolved = await pipelineOrchestrator.resolveGate(
         projectPath,
         featureId,
         action,
-        'user'
+        resolutionSource
       );
       if (!resolved) {
         res.status(409).json({

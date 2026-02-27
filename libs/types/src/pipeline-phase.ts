@@ -46,6 +46,25 @@ export type PipelineBranch = 'ops' | 'gtm';
  */
 export type GateMode = 'auto' | 'manual' | 'review';
 
+/**
+ * Known signal ingestion channels (surfaces).
+ * Used in GateResolutionSource to track where a gate resolution originated.
+ */
+export type SignalChannel = 'ui' | 'mcp' | 'discord' | 'linear' | 'github' | 'webhook' | 'api';
+
+/**
+ * Richer provenance tracking for gate resolutions.
+ * Replaces the simple 'user' | 'system' string with structured identity info.
+ */
+export interface GateResolutionSource {
+  /** The surface (channel) that triggered the gate resolution */
+  surface: SignalChannel | 'system';
+  /** Optional identity (user ID, bot ID, webhook caller, etc.) */
+  identity?: string;
+  /** Optional metadata for observability */
+  metadata?: Record<string, unknown>;
+}
+
 /** Result of evaluating a phase gate */
 export interface PhaseGateResult {
   phase: PipelinePhase;

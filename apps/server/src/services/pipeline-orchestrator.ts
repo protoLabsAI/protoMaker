@@ -17,6 +17,7 @@ import {
   GTM_SKIP_PHASES,
   PIPELINE_PHASES,
   type GateMode,
+  type GateResolutionSource,
   type PipelineBranch,
   type PipelinePhase,
   type PipelineState,
@@ -336,18 +337,28 @@ export class PipelineOrchestrator {
 
   /**
    * Resolve a gate hold — called by user action or system automation.
+   *
+   * @param resolvedBy - Provenance of the resolution. Accepts a structured
+   *   GateResolutionSource or the legacy 'user' | 'system' strings (coerced
+   *   to { surface: 'ui' } and { surface: 'system' } respectively).
    */
   async resolveGate(
     projectPath: string,
     featureId: string,
     action: 'advance' | 'reject',
-    resolvedBy: 'user' | 'system' = 'user'
+    resolvedBy: GateResolutionSource | 'user' | 'system' = 'user'
   ): Promise<boolean> {
     const feature = await this.featureLoader.get(projectPath, featureId);
     if (!feature?.pipelineState?.awaitingGate) {
       logger.warn(`Cannot resolve gate: feature ${featureId} is not awaiting a gate`);
       return false;
     }
+
+    // Normalize legacy string values to GateResolutionSource
+    const resolutionSource: GateResolutionSource =
+      typeof resolvedBy === 'string'
+        ? { surface: resolvedBy === 'user' ? 'ui' : 'system' }
+        : resolvedBy;
 
     const { pipelineState } = feature;
     const { branch, currentPhase } = pipelineState;
@@ -360,7 +371,8 @@ export class PipelineOrchestrator {
       projectPath,
       phase: gatePhase ?? currentPhase,
       branch,
-      resolvedBy,
+      resolvedBy: resolutionSource.surface,
+      resolutionSource,
       action,
       timestamp: now,
       pipelineState,
@@ -385,7 +397,7 @@ export class PipelineOrchestrator {
         projectPath,
         featureId,
         gatePhase,
-        resolvedBy === 'user' ? 'user' : 'auto'
+        resolutionSource.surface === 'system' ? 'auto' : 'user'
       );
     }
 

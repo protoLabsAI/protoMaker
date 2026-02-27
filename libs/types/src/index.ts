@@ -772,6 +772,8 @@ export type {
   PhaseTransition,
   PipelineState,
   PipelineGateConfig,
+  SignalChannel,
+  GateResolutionSource,
 } from './pipeline-phase.js';
 export {
   PIPELINE_PHASES,
