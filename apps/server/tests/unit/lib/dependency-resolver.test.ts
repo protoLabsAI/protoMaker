@@ -16,6 +16,7 @@ function createFeature(
     dependencies?: string[];
     category?: string;
     description?: string;
+    isFoundation?: boolean;
   } = {}
 ): Feature {
   return {
@@ -25,6 +26,7 @@ function createFeature(
     status: options.status || 'backlog',
     priority: options.priority,
     dependencies: options.dependencies,
+    isFoundation: options.isFoundation,
   };
 }
 
@@ -324,9 +326,18 @@ describe('dependency-resolver.ts', () => {
       expect(areDependenciesSatisfied(allFeatures[3], allFeatures)).toBe(false);
     });
 
-    it('should return false when dependency is in review status', () => {
+    it('should return true when dependency is in review status (non-foundation)', () => {
       const allFeatures = [
         createFeature('f1', { status: 'review' }),
+        createFeature('f2', { status: 'backlog', dependencies: ['f1'] }),
+      ];
+
+      expect(areDependenciesSatisfied(allFeatures[1], allFeatures)).toBe(true);
+    });
+
+    it('should return false when foundation dependency is in review status', () => {
+      const allFeatures = [
+        createFeature('f1', { status: 'review', isFoundation: true }),
         createFeature('f2', { status: 'backlog', dependencies: ['f1'] }),
       ];
 
@@ -448,9 +459,19 @@ describe('dependency-resolver.ts', () => {
       expect(blocking).toContain('f4');
     });
 
-    it('should return blocking dependencies in review status', () => {
+    it('should not return non-foundation dependencies in review status as blocking', () => {
       const allFeatures = [
         createFeature('f1', { status: 'review' }),
+        createFeature('f2', { status: 'done' }),
+        createFeature('f3', { status: 'backlog', dependencies: ['f1', 'f2'] }),
+      ];
+
+      expect(getBlockingDependencies(allFeatures[2], allFeatures)).toEqual([]);
+    });
+
+    it('should return foundation dependencies in review status as blocking', () => {
+      const allFeatures = [
+        createFeature('f1', { status: 'review', isFoundation: true }),
         createFeature('f2', { status: 'done' }),
         createFeature('f3', { status: 'backlog', dependencies: ['f1', 'f2'] }),
       ];
