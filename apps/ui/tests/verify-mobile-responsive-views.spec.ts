@@ -32,18 +32,14 @@ async function navigateToMemory(page: Parameters<typeof navigateToContext>[0]): 
     await page.waitForLoadState('load');
     await waitForSplashScreenToDisappear(page, 3000);
 
-    // Check if we landed on logged-out or login page
+    // Check if we landed on logged-out or login page (synchronous URL check)
+    const currentUrl = page.url();
     const loggedOut = await page
       .getByRole('heading', { name: /logged out/i })
       .isVisible({ timeout: 2000 })
       .catch(() => false);
 
-    const onLogin = await page
-      .url()
-      .then((url) => url.includes('/login'))
-      .catch(() => false);
-
-    if (!loggedOut && !onLogin) {
+    if (!loggedOut && !currentUrl.includes('/login') && !currentUrl.includes('/logged-out')) {
       // Successfully reached the app
       break;
     }
