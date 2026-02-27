@@ -52,6 +52,7 @@ export class EMAuthorityAgent {
   private readonly auditService: AuditService;
   private readonly settingsService: SettingsService;
   private readonly hitlFormService: HITLFormService | null;
+  private leadEngineerService?: { isActive(projectPath: string): boolean };
 
   /** Agent state (agents, initialization, processing tracking, poll timers) */
   private readonly state: AgentState<EMCustomState>;
@@ -75,6 +76,10 @@ export class EMAuthorityAgent {
     this.state = createAgentState<EMCustomState>({
       pollTimers: new Map(),
     });
+  }
+
+  setLeadEngineerService(s: { isActive(projectPath: string): boolean }): void {
+    this.leadEngineerService = s;
   }
 
   /**
@@ -290,6 +295,11 @@ export class EMAuthorityAgent {
    * Scan for features in 'ready' state and process them.
    */
   private async scanForReadyFeatures(projectPath: string): Promise<void> {
+    // Skip when Lead Engineer owns the lifecycle for this project
+    if (this.leadEngineerService?.isActive(projectPath)) {
+      logger.debug(`[EMAgent] Lead Engineer is active for ${projectPath}, skipping EM scan`);
+      return;
+    }
     try {
       const features = await this.featureLoader.getAll(projectPath);
 

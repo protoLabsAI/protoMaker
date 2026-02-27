@@ -277,7 +277,9 @@ Keep it focused and actionable. If the feature description is too vague or uncle
 
   /**
    * Run antagonistic review on large/architectural plans.
-   * Returns null if review is skipped (small/medium features or disabled).
+   * Delegates to AntagonisticReviewService.verifyPlan() when available;
+   * falls back to inline simpleQuery() otherwise.
+   * Returns null if review is skipped (small/medium features, disabled, or failure).
    */
   private async antagonisticReview(
     ctx: StateContext
@@ -302,6 +304,18 @@ Keep it focused and actionable. If the feature description is too vague or uncle
       complexity,
     });
 
+    // Prefer AntagonisticReviewService.verifyPlan() when wired
+    if (this.serviceContext.antagonisticReviewService) {
+      return this.serviceContext.antagonisticReviewService.verifyPlan({
+        featureTitle: ctx.feature.title || 'Untitled',
+        featureDescription: ctx.feature.description || 'No description',
+        complexity,
+        planOutput: ctx.planOutput ?? '',
+        projectPath: ctx.projectPath,
+      });
+    }
+
+    // Fallback: inline simpleQuery() when AntagonisticReviewService is not available
     try {
       const result = await simpleQuery({
         prompt: `You are a critical code reviewer. Evaluate this implementation plan for a ${complexity}-complexity feature.

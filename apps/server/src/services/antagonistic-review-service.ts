@@ -18,6 +18,7 @@ import { AntagonisticReviewAdapter } from './antagonistic-review-adapter.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { simpleQuery } from '../providers/simple-query-service.js';
 
 const logger = createLogger('AntagonisticReview');
 
@@ -692,6 +693,67 @@ Be clear, concise, and actionable. This is the final PRD that will guide impleme
       concerns: concerns.length > 0 ? concerns : undefined,
       recommendations: recommendations.length > 0 ? recommendations : undefined,
     };
+  }
+
+  /**
+   * Verify an implementation plan using antagonistic review.
+   * Used by PlanProcessor to gate plan quality for large/architectural features.
+   *
+   * Returns { approved, reason } if a verdict was reached, or null if review was skipped/failed
+   * (callers should approve by default on null).
+   */
+  async verifyPlan(params: {
+    featureTitle: string;
+    featureDescription: string;
+    complexity: string;
+    planOutput: string;
+    projectPath: string;
+  }): Promise<{ approved: boolean; reason?: string } | null> {
+    const { featureTitle, featureDescription, complexity, planOutput, projectPath } = params;
+
+    logger.info('[verifyPlan] Running plan review', { featureTitle, complexity });
+
+    try {
+      const result = await simpleQuery({
+        prompt: `You are a critical code reviewer. Evaluate this implementation plan for a ${complexity}-complexity feature.
+
+**Feature:** ${featureTitle}
+**Description:** ${featureDescription}
+
+**Proposed Plan:**
+${planOutput}
+
+Review the plan for:
+1. Missing error handling or edge cases
+2. Architectural risks (circular dependencies, monolithic changes)
+3. Missing test strategy
+4. Files that should be modified but aren't mentioned
+5. Overly complex approach where simpler exists
+
+If the plan is solid, respond with: APPROVED
+If critical issues exist, respond with: REJECTED: [concise reason]
+Minor suggestions don't warrant rejection — only reject for issues that would cause implementation failure.`,
+        model: resolveModelString('haiku'),
+        cwd: projectPath,
+        systemPrompt:
+          'You are a senior architect reviewing implementation plans. Be critical but fair — only reject plans with genuine issues that would cause failure.',
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const response = result.text.trim();
+      if (response.startsWith('APPROVED')) {
+        logger.info('[verifyPlan] Plan approved');
+        return { approved: true };
+      }
+
+      const reason = response.startsWith('REJECTED:') ? response.slice(9).trim() : response;
+      logger.info('[verifyPlan] Plan rejected', { reason });
+      return { approved: false, reason };
+    } catch (err) {
+      logger.warn('[verifyPlan] Review failed, approving by default', err);
+      return null;
+    }
   }
 
   /**
