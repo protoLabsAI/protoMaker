@@ -800,6 +800,9 @@ export type {
   IntegrationSummary,
 } from './integration.js';
 
+// Signal channel types (provenance tracking)
+export type { SignalChannel, SignalMetadata } from './signal-channel.js';
+
 // HITL Form types (human-in-the-loop structured input)
 export type {
   HITLFormCallerType,

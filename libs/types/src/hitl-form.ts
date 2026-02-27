@@ -5,6 +5,8 @@
  * Supports single forms and multi-step wizards.
  */
 
+import type { SignalChannel, SignalMetadata } from './signal-channel.js';
+
 /** Who initiated the form request */
 export type HITLFormCallerType = 'agent' | 'flow' | 'api';
 
@@ -41,6 +43,10 @@ export interface HITLFormRequestInput {
   flowThreadId?: string;
   /** Time-to-live in seconds before auto-expiry (default: 3600) */
   ttlSeconds?: number;
+  /** Channel to send the form response back to (for cross-channel reply routing) */
+  replyChannel?: SignalChannel;
+  /** Metadata for routing the form response back to the originating channel */
+  replyMetadata?: SignalMetadata;
 }
 
 /** Full form request record (stored server-side) */
