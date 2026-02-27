@@ -633,6 +633,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
   leadEngineerService.setContextFidelityService(contextFidelityService);
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
+  leadEngineerService.setHITLFormService(hitlFormService);
   await leadEngineerService.initialize();
 
   // Wire pipelineOrchestrator processors

@@ -40,6 +40,7 @@ import type {
 } from './lead-engineer-types.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
 import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
+import type { HITLFormService } from './hitl-form-service.js';
 
 export type { FeatureProcessingState, StateContext };
 export type { ProcessorServiceContext } from './lead-engineer-types.js';
@@ -69,6 +70,7 @@ export class LeadEngineerService {
   private handoffService?: LeadHandoffService;
   private factStoreService?: FactStoreService;
   private antagonisticReviewService?: IPlanReviewService;
+  private hitlFormService?: HITLFormService;
 
   private worldStateBuilder: WorldStateBuilder;
   private sessionStore: LeadEngineerSessionStore;
@@ -121,6 +123,9 @@ export class LeadEngineerService {
   }
   setAntagonisticReviewService(s: IPlanReviewService): void {
     this.antagonisticReviewService = s;
+  }
+  setHITLFormService(s: HITLFormService): void {
+    this.hitlFormService = s;
   }
 
   /**
@@ -323,6 +328,7 @@ export class LeadEngineerService {
         factStoreService: this.factStoreService,
         leadHandoffService: this.handoffService,
         antagonisticReviewService: this.antagonisticReviewService,
+        hitlFormService: this.hitlFormService,
       };
 
       const workflowSettings = await getWorkflowSettings(
