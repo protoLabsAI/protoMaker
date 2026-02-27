@@ -18,6 +18,15 @@ import { createLogger } from '@protolabs-ai/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 
+interface AcknowledgmentCapable {
+  acknowledgeSignal(
+    deduplicationKey: string,
+    acknowledgedBy: string,
+    notes?: string,
+    clearDedup?: boolean
+  ): { success: boolean; error?: string };
+}
+
 const logger = createLogger('DiscordDMChannel');
 
 /**
@@ -59,7 +68,10 @@ export class DiscordDMChannel implements EscalationChannel {
   private config: Required<DiscordDMChannelConfig>;
   private discordBot: DiscordBotService;
   private events: EventEmitter;
+  private escalationRouter?: AcknowledgmentCapable;
   private acknowledgments = new Map<string, AcknowledgmentEntry>();
+  /** Tracks which deduplication keys a recipient is waiting to acknowledge */
+  private recipientPendingSignals = new Map<string, string[]>();
 
   /**
    * Rate limiting configuration
@@ -73,10 +85,12 @@ export class DiscordDMChannel implements EscalationChannel {
   constructor(
     discordBot: DiscordBotService,
     events: EventEmitter,
-    config?: Partial<DiscordDMChannelConfig>
+    config?: Partial<DiscordDMChannelConfig>,
+    escalationRouter?: AcknowledgmentCapable
   ) {
     this.discordBot = discordBot;
     this.events = events;
+    this.escalationRouter = escalationRouter;
     this.config = {
       ...DEFAULT_CONFIG,
       ...config,
@@ -155,6 +169,11 @@ export class DiscordDMChannel implements EscalationChannel {
           throw new Error(`Failed to send DM to ${username}`);
         }
         logger.info(`Escalation sent to ${username}: ${signal.deduplicationKey}`);
+
+        // Track which deduplication keys each recipient has pending
+        const pending = this.recipientPendingSignals.get(username) ?? [];
+        pending.push(signal.deduplicationKey);
+        this.recipientPendingSignals.set(username, pending);
       } catch (error) {
         logger.error(`Error sending DM to ${username}:`, error);
         throw error;
@@ -163,11 +182,10 @@ export class DiscordDMChannel implements EscalationChannel {
 
     await Promise.all(sendPromises);
 
-    // Track acknowledgment (we'd need message IDs from Discord to track reactions)
-    // For now, just track that we sent it
+    // Track acknowledgment
     this.acknowledgments.set(signal.deduplicationKey, {
       signalDeduplicationKey: signal.deduplicationKey,
-      messageId: '', // Would need to capture from sendDM response
+      messageId: '',
     });
   }
 
@@ -284,18 +302,48 @@ export class DiscordDMChannel implements EscalationChannel {
   }
 
   /**
-   * Setup listener for acknowledgment reactions
+   * Setup listener for acknowledgment via DM reply containing /ack or /acknowledge
    */
   private setupAcknowledgmentListener(): void {
-    // Listen for Discord reaction events
-    // Note: This would require the Discord bot service to emit reaction events
-    // For now, this is a placeholder for future reaction-based acknowledgment
-    // TODO: Add discord:reaction:added event type to @protolabs-ai/types when implementing
-    // this.events.subscribe((type, payload: any) => {
-    //   if (type === 'discord:reaction:added') {
-    //     this.handleReaction(payload);
-    //   }
-    // });
+    this.events.subscribe((type, payload) => {
+      if (type !== 'discord:dm:received') return;
+
+      const { username, content } = payload as { username: string; content: string };
+      const lower = content.toLowerCase().trim();
+
+      if (!lower.startsWith('/ack') && !lower.startsWith('/acknowledge')) return;
+
+      const pending = this.recipientPendingSignals.get(username);
+      if (!pending || pending.length === 0) {
+        logger.debug(`No pending escalation signals for ${username}`);
+        return;
+      }
+
+      if (!this.escalationRouter) {
+        logger.warn('No escalation router configured — cannot acknowledge signal');
+        return;
+      }
+
+      // Acknowledge all pending signals for this recipient
+      for (const deduplicationKey of pending) {
+        const ack = this.acknowledgments.get(deduplicationKey);
+        if (ack && !ack.acknowledgedBy) {
+          const result = this.escalationRouter.acknowledgeSignal(deduplicationKey, username);
+          if (result.success) {
+            ack.acknowledgedBy = username;
+            ack.acknowledgedAt = new Date().toISOString();
+            logger.info(`Escalation acknowledged by ${username} via DM: ${deduplicationKey}`);
+          } else {
+            logger.warn(
+              `Failed to acknowledge signal ${deduplicationKey} for ${username}: ${result.error}`
+            );
+          }
+        }
+      }
+
+      // Clear pending signals for this recipient after acknowledgment
+      this.recipientPendingSignals.delete(username);
+    });
   }
 
   /**

@@ -23,6 +23,16 @@ import type {
 import { createLogger } from '@protolabs-ai/utils';
 import { LinearMCPClient, type CreateIssueOptions } from '../linear-mcp-client.js';
 import type { SettingsService } from '../settings-service.js';
+import type { EventEmitter } from '../../lib/events.js';
+
+interface AcknowledgmentCapable {
+  acknowledgeSignal(
+    deduplicationKey: string,
+    acknowledgedBy: string,
+    notes?: string,
+    clearDedup?: boolean
+  ): { success: boolean; error?: string };
+}
 
 const logger = createLogger('LinearIssueChannel');
 
@@ -81,15 +91,60 @@ export class LinearIssueChannel implements EscalationChannel {
   private recentIssues: Map<string, RecentIssue> = new Map();
   private readonly DEDUPLICATION_WINDOW_MS = 60 * 60 * 1000; // 1 hour
   private readonly MAX_RECENT_ISSUES = 100;
+  /** Reverse lookup: Linear issue UUID -> deduplication key */
+  private issueIdToDeduplicationKey: Map<string, string> = new Map();
 
   constructor(
     private settingsService: SettingsService,
     private projectPath: string,
     private teamConfig?: TeamConfig,
-    linearClient?: LinearMCPClient
+    linearClient?: LinearMCPClient,
+    events?: EventEmitter,
+    escalationRouter?: AcknowledgmentCapable
   ) {
     this.linearClient = linearClient || new LinearMCPClient(settingsService, projectPath);
     this.cleanupOldIssues(); // Initial cleanup
+
+    if (events && escalationRouter) {
+      this.setupAckListener(events, escalationRouter);
+    }
+  }
+
+  /**
+   * Subscribe to linear:comment:created events and acknowledge signals when
+   * a comment containing /ack is posted on a tracked escalation issue.
+   */
+  private setupAckListener(events: EventEmitter, escalationRouter: AcknowledgmentCapable): void {
+    events.subscribe((type, payload) => {
+      if (type !== 'linear:comment:created') return;
+
+      const { issueId, body, user } = payload as {
+        issueId?: string;
+        body: string;
+        user?: { id: string; name: string };
+      };
+
+      if (!issueId) return;
+
+      const deduplicationKey = this.issueIdToDeduplicationKey.get(issueId);
+      if (!deduplicationKey) return;
+
+      const lower = body.toLowerCase().trim();
+      if (!lower.includes('/ack') && !lower.includes('/acknowledge')) return;
+
+      const acknowledgedBy = user?.name ?? 'unknown';
+      const result = escalationRouter.acknowledgeSignal(deduplicationKey, acknowledgedBy);
+
+      if (result.success) {
+        logger.info(
+          `Escalation acknowledged via Linear comment by ${acknowledgedBy}: ${deduplicationKey}`
+        );
+      } else {
+        logger.warn(
+          `Failed to acknowledge signal ${deduplicationKey} via Linear comment: ${result.error}`
+        );
+      }
+    });
   }
 
   /**
@@ -130,6 +185,9 @@ export class LinearIssueChannel implements EscalationChannel {
           timestamp: Date.now(),
           updateCount: 0,
         });
+
+        // Track reverse lookup for acknowledgment via comment
+        this.issueIdToDeduplicationKey.set(result.issueId, signal.deduplicationKey);
 
         // Cleanup old issues periodically
         if (this.recentIssues.size > this.MAX_RECENT_ISSUES) {
