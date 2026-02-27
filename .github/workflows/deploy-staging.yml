@@ -11,7 +11,7 @@ permissions: read-all
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, staging]
     if: github.repository == 'proto-labs-ai/protoMaker'
     timeout-minutes: 30
     concurrency:
