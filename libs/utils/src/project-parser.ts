@@ -574,6 +574,11 @@ export function phaseToFeatureDescription(phase: Phase, milestone?: Milestone): 
     description += `\n**Complexity:** ${phase.complexity}`;
   }
 
+  description +=
+    '\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. ' +
+    'If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, ' +
+    'update the relevant documentation in `docs/` to reflect those changes.';
+
   return description;
 }
 
