@@ -2939,7 +2939,7 @@ Address the follow-up instructions above. Review the previous work and make the 
         : `feat: Feature ${featureId}`;
 
       // Stage and commit
-      await execAsync("git add -A -- ':!.automaker/'", { cwd: workDir });
+      await execAsync("git add -A -- ':(exclude).automaker/'", { cwd: workDir });
       await execFileAsync('git', ['commit', '-m', commitMessage], {
         cwd: workDir,
       });

@@ -58,12 +58,18 @@ export async function ensureCleanWorktree(
       );
       logger.debug(`Uncommitted changes:\n${statusOutput}`);
 
-      // Stage all changes - exclude .automaker/ except memory/ and skills/
+      // Stage all changes - exclude .automaker/ except memory/ and skills/.
+      // Split into two calls: a single combined exclude+include pathspec silently stages
+      // nothing when the include paths have no changes (they restrict the -A match set).
       const guardEnv = { ...process.env, HUSKY: '0' };
-      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
+      await execAsync("git add -A -- ':(exclude).automaker/'", {
         cwd: worktreePath,
         env: guardEnv,
       });
+      await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
+        cwd: worktreePath,
+        env: guardEnv,
+      }).catch(() => {});
 
       // Skip commit if nothing was staged (e.g. only non-committable files changed)
       const { stdout: cachedDiff } = await execAsync('git diff --cached --name-only', {

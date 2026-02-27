@@ -121,11 +121,17 @@ export async function checkAndRecoverUncommittedWork(
       // Non-fatal: formatting failure should not block recovery
     }
 
-    // Step 2: Stage changed files (exclude .automaker/ except memory/)
-    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
+    // Step 2: Stage changed files (exclude .automaker/ except memory/ and skills/).
+    // Split into two calls: a single combined exclude+include pathspec silently stages
+    // nothing when the include paths have no changes (they restrict the -A match set).
+    await execAsync("git add -A -- ':(exclude).automaker/'", {
       cwd: worktreePath,
       env: execEnv,
     });
+    await execAsync("git add '.automaker/memory/' '.automaker/skills/'", {
+      cwd: worktreePath,
+      env: execEnv,
+    }).catch(() => {});
 
     // Step 3: Commit with HUSKY=0 / --no-verify to bypass hooks
     const commitTitle = (feature.title || 'feature implementation')
