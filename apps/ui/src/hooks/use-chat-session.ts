@@ -15,9 +15,18 @@ interface UseChatSessionOptions {
   defaultModel?: string;
   /** Extra body data sent with every chat request (e.g. notes context) */
   body?: Record<string, unknown>;
+  /** Absolute path of the current project, sent in transport body */
+  projectPath?: string;
+  /** Project ID used to scope sessions */
+  projectId?: string;
 }
 
-export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSessionOptions = {}) {
+export function useChatSession({
+  defaultModel = 'sonnet',
+  body,
+  projectPath,
+  projectId,
+}: UseChatSessionOptions = {}) {
   const {
     sessions,
     currentSessionId,
@@ -27,6 +36,7 @@ export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSession
     saveMessages,
     updateModel,
     getCurrentSession,
+    getSessionsForProject,
     historyOpen,
     toggleHistory,
     setHistoryOpen,
@@ -35,8 +45,20 @@ export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSession
   const currentSession = getCurrentSession();
   const modelAlias = currentSession?.modelAlias ?? defaultModel;
 
+  // Filter sessions by projectId when provided
+  const visibleSessions = useMemo(
+    () => (projectId ? getSessionsForProject(projectId) : sessions),
+    [projectId, getSessionsForProject, sessions]
+  );
+
   // Track session switch to avoid saving stale messages
   const activeSessionRef = useRef(currentSessionId);
+
+  // Merge projectPath into transport body
+  const transportBody = useMemo(
+    () => ({ ...body, ...(projectPath !== undefined ? { projectPath } : {}) }),
+    [body, projectPath]
+  );
 
   // AI SDK v6 requires transport instead of api/headers/body
   const transport = useMemo(
@@ -44,9 +66,9 @@ export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSession
       new DefaultChatTransport({
         api: '/api/chat',
         headers: { 'x-model-alias': modelAlias },
-        body,
+        body: transportBody,
       }),
-    [modelAlias, body]
+    [modelAlias, transportBody]
   );
 
   const { messages, sendMessage, stop, status, setMessages, error } = useChat({
@@ -77,10 +99,10 @@ export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSession
   }, [currentSessionId, getCurrentSession, setMessages]);
 
   const handleNewChat = useCallback(() => {
-    const session = createSession(modelAlias);
+    const session = createSession(modelAlias, projectId);
     setMessages([]);
     activeSessionRef.current = session.id;
-  }, [createSession, modelAlias, setMessages]);
+  }, [createSession, modelAlias, projectId, setMessages]);
 
   const handleSwitchSession = useCallback(
     (id: string) => {
@@ -109,16 +131,16 @@ export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSession
     [currentSessionId, updateModel]
   );
 
-  // Ensure there's always a session
+  // Ensure there's always a session (scoped to project when projectId provided)
   useEffect(() => {
-    if (!currentSessionId || !sessions.find((s) => s.id === currentSessionId)) {
-      if (sessions.length > 0) {
-        switchSession(sessions[0].id);
+    if (!currentSessionId || !visibleSessions.find((s) => s.id === currentSessionId)) {
+      if (visibleSessions.length > 0) {
+        switchSession(visibleSessions[0].id);
       } else {
-        createSession(defaultModel);
+        createSession(defaultModel, projectId);
       }
     }
-  }, [currentSessionId, sessions, switchSession, createSession, defaultModel]);
+  }, [currentSessionId, visibleSessions, switchSession, createSession, defaultModel, projectId]);
 
   return {
     // Chat state
@@ -130,7 +152,7 @@ export function useChatSession({ defaultModel = 'sonnet', body }: UseChatSession
     setMessages,
 
     // Session management
-    sessions,
+    sessions: visibleSessions,
     currentSessionId,
     currentSession,
     modelAlias,
