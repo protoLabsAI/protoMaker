@@ -3974,17 +3974,16 @@ Format your response as a structured markdown document.`;
             }
           } else {
             // Guard: if the feature was blocked due to a git commit / workflow failure,
-            // don't immediately re-enqueue it — that would recreate the retry storm.
-            // After MAX_GIT_COMMIT_RETRIES repeated failures, leave it blocked and require
-            // human intervention to fix the hook issue (e.g. .prettierignore, Husky config).
+            // don't re-enqueue it — that would recreate the retry storm. A git workflow
+            // failure is not a transient dependency issue, so satisfying deps doesn't fix it.
+            // Human intervention is required (e.g. fix .prettierignore, Husky config).
             const changeReason = feature.statusChangeReason ?? '';
             const isGitWorkflowBlock =
               changeReason.includes('git commit') || changeReason.includes('git workflow failed');
-            const MAX_GIT_COMMIT_RETRIES = 3;
-            if (isGitWorkflowBlock && (feature.failureCount ?? 0) >= MAX_GIT_COMMIT_RETRIES) {
+            if (isGitWorkflowBlock) {
               logger.warn(
                 `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
-                  `blocked after ${feature.failureCount} git commit failures. Requires human intervention.`
+                  `blocked after ${feature.failureCount ?? 0} git workflow failure(s). Requires human intervention.`
               );
               continue;
             }
