@@ -805,6 +805,9 @@ export type {
 // Signal provenance types (originating channel tracking & routing)
 export type { SignalChannel, SignalMetadata } from './signal-channel.js';
 
+// Signal intent types (intent classification for routing decisions)
+export type { SignalIntent } from './signal-intent.js';
+
 // Channel Router types (HITL routing interface)
 export type { ChannelHandler } from './channel-router.js';
 
