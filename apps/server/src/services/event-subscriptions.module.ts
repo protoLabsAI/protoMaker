@@ -1,0 +1,93 @@
+import { createLogger } from '@protolabs-ai/utils';
+
+import type { ServiceContainer } from '../server/services.js';
+
+const logger = createLogger('Server:Wiring');
+
+/**
+ * Wires event-driven subscriptions: retro/bug Linear issue sync.
+ *
+ * Note: linear:comment:followup subscription lives in linear-agent.module.ts.
+ */
+export function register(container: ServiceContainer): void {
+  const { events, settingsService } = container;
+
+  // Listen for retro improvements and create Linear issues when configured
+  events.subscribe(async (type, payload) => {
+    if (type !== 'retro:improvement:linear-sync') return;
+    try {
+      const p = payload as {
+        projectPath: string;
+        projectTitle: string;
+        title: string;
+        description: string;
+        priority: number;
+      };
+
+      const { getWorkflowSettings } = await import('../lib/settings-helpers.js');
+      const workflowSettings = await getWorkflowSettings(p.projectPath, settingsService, '[Retro]');
+      if (!workflowSettings.retro.enabled) return;
+
+      const { LinearMCPClient } = await import('./linear-mcp-client.js');
+      const linearClient = new LinearMCPClient(settingsService, p.projectPath);
+      let teamId: string;
+      try {
+        teamId = await linearClient.getTeamId();
+      } catch {
+        logger.warn('[Retro] No Linear teamId configured, skipping issue creation');
+        return;
+      }
+      const result = await linearClient.createIssue({
+        title: p.title,
+        description: p.description,
+        teamId,
+        projectId: workflowSettings.retro.improvementLinearProjectId,
+        priority: p.priority ?? 3,
+      });
+
+      logger.info(`[Retro] Created Linear issue ${result.identifier}: ${p.title}`);
+    } catch (error) {
+      logger.warn('[Retro] Failed to create Linear issue for improvement:', error);
+    }
+  });
+
+  // Listen for bug:linear-sync events and create Linear issues in the Bugs project
+  events.subscribe(async (type, payload) => {
+    if (type !== 'bug:linear-sync') return;
+    try {
+      const p = payload as {
+        projectPath: string;
+        title: string;
+        description: string;
+        priority: number;
+        failureCategory: string;
+        featureId: string;
+      };
+
+      const { getWorkflowSettings } = await import('../lib/settings-helpers.js');
+      const workflowSettings = await getWorkflowSettings(p.projectPath, settingsService, '[Bugs]');
+      if (!workflowSettings.bugs.enabled || !workflowSettings.bugs.linearProjectId) return;
+
+      const { LinearMCPClient } = await import('./linear-mcp-client.js');
+      const linearClient = new LinearMCPClient(settingsService, p.projectPath);
+      let teamId: string;
+      try {
+        teamId = await linearClient.getTeamId();
+      } catch {
+        logger.warn('[Bugs] No Linear teamId configured, skipping bug issue creation');
+        return;
+      }
+      const result = await linearClient.createIssue({
+        title: p.title,
+        description: p.description,
+        teamId,
+        projectId: workflowSettings.bugs.linearProjectId,
+        priority: p.priority ?? 3,
+      });
+
+      logger.info(`[Bugs] Created Linear issue ${result.identifier}: ${p.title}`);
+    } catch (error) {
+      logger.warn('[Bugs] Failed to create Linear issue for bug:', error);
+    }
+  });
+}
