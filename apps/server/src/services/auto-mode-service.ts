@@ -3951,6 +3951,22 @@ Format your response as a structured markdown document.`;
               );
             }
           } else {
+            // Guard: if the feature was blocked due to a git commit / workflow failure,
+            // don't immediately re-enqueue it — that would recreate the retry storm.
+            // After MAX_GIT_COMMIT_RETRIES repeated failures, leave it blocked and require
+            // human intervention to fix the hook issue (e.g. .prettierignore, Husky config).
+            const changeReason = feature.statusChangeReason ?? '';
+            const isGitWorkflowBlock =
+              changeReason.includes('git commit') || changeReason.includes('git workflow failed');
+            const MAX_GIT_COMMIT_RETRIES = 3;
+            if (isGitWorkflowBlock && (feature.failureCount ?? 0) >= MAX_GIT_COMMIT_RETRIES) {
+              logger.warn(
+                `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
+                  `blocked after ${feature.failureCount} git commit failures. Requires human intervention.`
+              );
+              continue;
+            }
+
             logger.info(
               `[loadPendingFeatures] Unblocking feature ${feature.id} — all dependencies now satisfied`
             );
