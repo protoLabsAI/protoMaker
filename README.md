@@ -24,7 +24,7 @@ You describe what you want built. AI agents implement it in isolated git branche
 
 ![protoLabs UI](https://i.imgur.com/jdwKydM.png)
 
-## 🚀 Get Started
+## Get Started
 
 ### Desktop App
 
@@ -69,45 +69,45 @@ npm run dev:electron        # Desktop app mode
 
 Requires **Node.js 22+** and an authenticated [Claude Code CLI](https://code.claude.com/docs/en/quickstart).
 
-## ✨ What It Does
+## What It Does
 
-### 🎯 Kanban Board
+### Kanban Board
 
 Describe features in natural language. AI agents claim cards, implement the work, and ship PRs.
 
 **Use Case**: "Add dark mode toggle to settings page" → Agent reads your theme system, implements the feature, adds tests, creates PR.
 
-### 🌳 Git Worktree Isolation
+### Git Worktree Isolation
 
 Each feature executes in its own git worktree. Main branch stays clean while agents work in parallel.
 
 **Use Case**: 3 agents working simultaneously on different features without conflicts. Each creates a clean PR from their isolated branch.
 
-### 📡 Real-Time Streaming
+### Real-Time Streaming
 
 Watch agents think and work. Send follow-up instructions mid-flight like "also add TypeScript types" or "use Tailwind instead".
 
 **Use Case**: Agent starts implementing a form → you see it's missing validation → send instruction → agent adjusts course without starting over.
 
-### ⚡ Auto-Mode
+### Auto-Mode
 
 Queue features, set dependencies, let agents process the backlog. Complex projects break into milestones with parallel execution.
 
 **Use Case**: Queue 10 features with dependencies (DB schema → API routes → frontend). Auto-mode executes in correct order, maximizing parallelism.
 
-### 👥 Agent Teams
+### Agent Teams
 
 Named specialists (frontend, backend, DevOps, docs) with domain-specific tools, context files, and prompt engineering.
 
 **Use Case**: Frontend agent knows React patterns, has access to component library docs. Backend agent knows your API conventions and database schema.
 
-### 🔗 Linear + Discord Integration
+### Linear + Discord Integration
 
 Plan in Linear, get notifications in Discord, review in GitHub. Full webhook integration keeps your tools in sync.
 
 **Use Case**: Create Linear issue → auto-syncs to protoLabs board → agent implements → PR notification in Discord → merge → Linear issue auto-closes.
 
-### 🔌 Claude Code Plugin
+### Claude Code Plugin
 
 120+ MCP tools for full control from Claude Code CLI. Manage boards, start agents, review status without leaving your terminal.
 
@@ -145,7 +145,7 @@ claude plugin install automaker
 
 [Full plugin docs](docs/integrations/claude-plugin.md)
 
-## 🏗️ Architecture
+## Architecture
 
 protoLabs Studio is a TypeScript monorepo with a React frontend and Express backend:
 
@@ -191,7 +191,7 @@ spec-parser, pen-parser, tools, flows, llm-providers, observability
 apps/server, apps/ui
 ```
 
-📚 [Full Architecture Documentation](https://protolabs.studio/docs/architecture)
+[Full Architecture Documentation](https://protolabs.studio/docs/architecture)
 
 ## Documentation
 
@@ -211,30 +211,15 @@ Join builders exploring agentic coding and autonomous development:
 
 We're committed to providing a welcoming and inclusive community. Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! protoLabs Studio uses an RC branch workflow:
+protoMaker uses an **ideas-only contribution model** — AI agents implement all code. We don't accept code PRs from the community.
 
-- **Main branch**: Production-ready releases only
-- **RC branch**: Active development (target for PRs)
-- **Feature branches**: `feature/your-feature-name`
+- **Submit an idea**: [Idea Submission template](https://github.com/proto-labs-ai/protoMaker/issues/new?template=idea_submission.yml)
+- **Report a bug**: [Bug Report template](https://github.com/proto-labs-ai/protoMaker/issues/new?template=bug_report.yml)
+- **Join the discussion**: [Discord](https://discord.gg/jjem7aEDKU)
 
-**Quick Contribution Steps**:
-
-1. Fork the repo and clone: `gh repo fork proto-labs-ai/protolabs-studio --clone`
-2. Create feature branch from RC: `git checkout -b feature/your-feature RC`
-3. Make changes and test: `npm run test`
-4. Push and create PR to RC branch
-
-**Development Areas**:
-
-- 🎨 **Frontend** - React components in `apps/ui/src/`
-- 🔧 **Backend** - Services in `apps/server/src/services/`
-- 📦 **Shared Libs** - Packages in `libs/`
-- 🔌 **Claude Code Plugin** - MCP tools in `packages/mcp-server/`
-- 📖 **Documentation** - Markdown docs in `docs/`
-
-📋 [Full Contributing Guidelines](CONTRIBUTING.md) | 🐛 [Report a Bug](https://github.com/proto-labs-ai/protolabs-studio/issues/new?template=bug_report.md)
+[Full Contributing Guidelines](CONTRIBUTING.md)
 
 ## Security
 

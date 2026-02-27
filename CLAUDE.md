@@ -61,6 +61,7 @@ See `docs/protolabs/brand.md` for the full brand bible including voice, team, na
 
 - **Dev Server Management**: NEVER start, stop, restart, or otherwise manage the dev server yourself. Always ask the user to manage it, or you will break it.
 - **Document as you build**: When adding or changing a feature, update the relevant docs in `docs/`. New services get a page in the appropriate section. New config options get added to env var tables. API changes get reflected in the server reference. Follow the rules in `docs/dev/docs-standard.md` — every page must belong to a sidebar section, use `kebab-case.md` naming, and stay under 800 lines. If no appropriate section exists, add the page to the closest match rather than creating a new root-level file.
+- **No emojis in docs or code**: Do not use emojis anywhere in documentation, markdown files, comments, or code. The only exceptions are ✅ and ❌ when used as status indicators in documentation tables or checklists.
 
 ## Common Commands
 
