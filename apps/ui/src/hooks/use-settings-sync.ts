@@ -824,7 +824,12 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       lastProjectDir: serverSettings.lastProjectDir ?? '',
       recentFolders: serverSettings.recentFolders ?? [],
       eventHooks: serverSettings.eventHooks ?? [],
-      featureFlags: serverSettings.featureFlags ?? { calendar: false, designs: false, docs: false },
+      featureFlags: serverSettings.featureFlags ?? {
+        calendar: false,
+        designs: false,
+        docs: false,
+        fileEditor: false,
+      },
     });
 
     // Also refresh setup wizard state

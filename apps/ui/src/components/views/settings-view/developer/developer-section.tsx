@@ -25,6 +25,10 @@ const FEATURE_FLAG_LABELS: Record<string, { label: string; description: string }
     label: 'Docs',
     description: 'Show the Docs viewer in the project sidebar.',
   },
+  fileEditor: {
+    label: 'File Editor',
+    description: 'Show the File Editor (tabbed code editor) in the project sidebar.',
+  },
 };
 
 export function DeveloperSection() {

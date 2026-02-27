@@ -712,7 +712,12 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     muteDoneSound: settings.muteDoneSound ?? false,
     serverLogLevel: settings.serverLogLevel ?? 'info',
     enableRequestLogging: settings.enableRequestLogging ?? true,
-    featureFlags: settings.featureFlags ?? { calendar: false, designs: false, docs: false },
+    featureFlags: settings.featureFlags ?? {
+      calendar: false,
+      designs: false,
+      docs: false,
+      fileEditor: false,
+    },
     keyboardShortcuts: {
       ...current.keyboardShortcuts,
       ...(settings.keyboardShortcuts as unknown as Partial<typeof current.keyboardShortcuts>),

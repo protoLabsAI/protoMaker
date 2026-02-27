@@ -196,6 +196,8 @@ export interface FeatureFlags {
   designs: boolean;
   /** Docs view in project sidebar */
   docs: boolean;
+  /** File Editor view in project sidebar (tabbed code editor) */
+  fileEditor: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -203,6 +205,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   calendar: false,
   designs: false,
   docs: false,
+  fileEditor: false,
 };
 
 export interface GlobalSettings {

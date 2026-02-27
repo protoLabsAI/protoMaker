@@ -50,6 +50,7 @@ interface UseNavigationProps {
   hideCalendar: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
+  hideFileEditor: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -76,6 +77,7 @@ export function useNavigation({
   hideCalendar,
   hideDesigns,
   hideDocs,
+  hideFileEditor,
   currentProject,
   projects,
   projectHistory,
@@ -176,12 +178,15 @@ export function useNavigation({
         icon: NotebookPen,
         shortcut: shortcuts.notes,
       },
-      {
+    ];
+
+    if (!hideFileEditor) {
+      projectItems.push({
         id: 'file-editor',
         label: 'File Editor',
         icon: FolderOpen,
-      },
-    ];
+      });
+    }
 
     if (!hideDesigns) {
       projectItems.push({
@@ -271,6 +276,7 @@ export function useNavigation({
     hideCalendar,
     hideDesigns,
     hideDocs,
+    hideFileEditor,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,
