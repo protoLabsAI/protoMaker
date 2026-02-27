@@ -3,6 +3,7 @@
  *
  * Ava is the single chat persona across all surfaces (overlay, sidebar, notes).
  * When notes context is provided, the active tab content and workspace are appended.
+ * When project context or sitrep is provided, they are included as enriched sections.
  */
 
 export interface NotesContext {
@@ -11,6 +12,21 @@ export interface NotesContext {
   activeTabName?: string;
   activeTabContent?: string;
   tabs?: Array<{ name: string; wordCount: number; agentRead: boolean }>;
+}
+
+/**
+ * Options for building the Ava system prompt.
+ * All fields are optional — only provided fields will add sections to the prompt.
+ */
+export interface AvaSystemPromptOpts {
+  /** Legacy notes context (sidebar/notes view) */
+  ctx?: NotesContext;
+  /** Project context loaded via loadContextFiles (CLAUDE.md, memory, etc.) */
+  projectContext?: string;
+  /** Current sitrep / situation report for the project */
+  sitrep?: string;
+  /** Additional prompt extension text appended at the end */
+  extension?: string;
 }
 
 const AVA_BASE_PROMPT = `You are Ava, Chief of Staff at protoLabs Studio — an AI-native development agency that builds products using autonomous AI agents.
@@ -39,7 +55,40 @@ function buildActiveContent(ctx: NotesContext): string {
   return `\n\nActive tab "${ctx.activeTabName}" content:\n---\n${ctx.activeTabContent}\n---`;
 }
 
-export function buildAvaSystemPrompt(ctx?: NotesContext): string {
-  if (!ctx) return AVA_BASE_PROMPT;
-  return AVA_BASE_PROMPT + buildTabListing(ctx.tabs) + buildActiveContent(ctx);
+export function buildAvaSystemPrompt(opts?: AvaSystemPromptOpts | NotesContext): string {
+  // Handle no opts
+  if (!opts) return AVA_BASE_PROMPT;
+
+  // Detect legacy NotesContext shape (has 'view' and 'projectPath' directly)
+  if ('view' in opts && 'projectPath' in opts) {
+    const ctx = opts as NotesContext;
+    return AVA_BASE_PROMPT + buildTabListing(ctx.tabs) + buildActiveContent(ctx);
+  }
+
+  // New opts object shape
+  const { ctx, projectContext, sitrep, extension } = opts as AvaSystemPromptOpts;
+
+  let prompt = AVA_BASE_PROMPT;
+
+  // Append legacy notes context sections if provided
+  if (ctx) {
+    prompt += buildTabListing(ctx.tabs) + buildActiveContent(ctx);
+  }
+
+  // Append project context section when provided
+  if (projectContext) {
+    prompt += `\n\n## Project Context\n\n${projectContext}`;
+  }
+
+  // Append sitrep section when provided
+  if (sitrep) {
+    prompt += `\n\n## Current Situation Report\n\n${sitrep}`;
+  }
+
+  // Append any custom extension text
+  if (extension) {
+    prompt += `\n\n${extension}`;
+  }
+
+  return prompt;
 }
