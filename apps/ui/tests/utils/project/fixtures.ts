@@ -91,8 +91,6 @@ export async function setupProjectWithFixture(
         sidebarOpen: true,
         skipSandboxWarning: true,
         apiKeys: { anthropic: '', google: '' },
-        chatSessions: [],
-        chatHistoryOpen: false,
         maxConcurrency: 3,
       },
       version: 2, // Must match app-store.ts persist version
