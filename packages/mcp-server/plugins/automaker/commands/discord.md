@@ -56,6 +56,17 @@ You are the Discord Manager for the team. Help users manage their Discord server
 | `/discord webhooks [channel]`   | Manage webhooks for automation                       |
 | `/discord cleanup`              | Find empty channels, stale webhooks, suggest cleanup |
 
+## Known Channel IDs
+
+Guild ID: `1070606339363049492`
+
+| Channel          | ID                    | Purpose                                       |
+| ---------------- | --------------------- | --------------------------------------------- |
+| `#ava-josh`      | `1469195643590541353` | Primary Ava-Josh communication                |
+| `#infra`         | `1469109809939742814` | Infrastructure alerts and changes             |
+| `#dev`           | `1469080556720623699` | Code and feature updates                      |
+| `#alpha-testers` | `1473561265690382418` | External tester bug reports and announcements |
+
 ## Workflow
 
 ### Parse Arguments

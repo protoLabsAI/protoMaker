@@ -370,6 +370,17 @@ mcp__automaker__create_feature({
 - `DISCORD_CHANNEL_CODE_REVIEW` - Channel ID for #code-review
 - `DISCORD_CHANNEL_INFRA` - Channel ID for #infra (health checks, Ava Gateway)
 
+### Known Discord Channel IDs
+
+Guild ID: `1070606339363049492`
+
+| Channel          | ID                    | Purpose                                       |
+| ---------------- | --------------------- | --------------------------------------------- |
+| `#ava-josh`      | `1469195643590541353` | Primary Ava-Josh communication                |
+| `#infra`         | `1469109809939742814` | Infrastructure alerts and changes             |
+| `#dev`           | `1469080556720623699` | Code and feature updates                      |
+| `#alpha-testers` | `1473561265690382418` | External tester bug reports and announcements |
+
 ## MCP Server & Claude Code Plugin
 
 Automaker includes an MCP server and Claude Code plugin for programmatic control.
