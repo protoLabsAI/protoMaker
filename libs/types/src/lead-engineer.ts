@@ -115,7 +115,17 @@ export type LeadRuleAction =
   | { type: 'post_discord'; channelId: string; message: string }
   | { type: 'log'; level: 'info' | 'warn' | 'error'; message: string }
   | { type: 'escalate_llm'; reason: string; context: Record<string, unknown> }
-  | { type: 'project_completing' };
+  | { type: 'project_completing' }
+  | {
+      type: 'update_feature';
+      featureId: string;
+      updates: {
+        description?: string;
+        statusChangeReason?: string;
+        failureCount?: number;
+        awaitingGatePhase?: null;
+      };
+    };
 
 // ────────────────────────── Fast-Path Rules ──────────────────────────
 
