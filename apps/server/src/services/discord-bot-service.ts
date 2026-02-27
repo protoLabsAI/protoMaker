@@ -118,6 +118,28 @@ export class DiscordBotService {
   /** Map thread IDs to agent assignments for slash-command-created threads */
   private agentThreads = new Map<string, { agentType: string; userId: string }>();
 
+  /**
+   * Pending gate hold messages for the signal-aware channel router.
+   * Keyed by Discord messageId → gate context.
+   */
+  private pendingGateMessages = new Map<
+    string,
+    { featureId: string; projectPath: string; channelId: string }
+  >();
+
+  /** Reverse lookup: featureId → Discord messageId for editing/cancelling */
+  private gateMessagesByFeature = new Map<string, string>();
+
+  /**
+   * Registered callback to resolve a pipeline gate when a Discord reaction fires.
+   * Set by wiring.ts after PipelineOrchestrator is available.
+   */
+  private gateResolver?: (
+    featureId: string,
+    projectPath: string,
+    action: 'advance' | 'reject'
+  ) => Promise<void>;
+
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
@@ -140,6 +162,122 @@ export class DiscordBotService {
    */
   setRoleRegistry(registry: RoleRegistryService): void {
     this.roleRegistry = registry;
+  }
+
+  /**
+   * Register the gate resolver callback used when ✅/❌ reactions arrive on
+   * gate-hold messages posted by DiscordChannelHandler.
+   */
+  setGateResolver(
+    fn: (featureId: string, projectPath: string, action: 'advance' | 'reject') => Promise<void>
+  ): void {
+    this.gateResolver = fn;
+  }
+
+  /**
+   * Post a gate-hold message to a Discord channel with ✅/❌ reaction instructions.
+   * Registers the message in the pending gate map so handleReaction() can resolve it.
+   * Returns the Discord messageId, or null on failure.
+   */
+  async postGateHoldMessage(
+    channelId: string,
+    featureId: string,
+    projectPath: string,
+    featureTitle?: string,
+    phase?: string
+  ): Promise<string | null> {
+    if (!this.client) return null;
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return null;
+
+      const phaseStr = phase ? ` at \`${phase}\` phase` : '';
+      const content = [
+        `🚦 **Gate Hold** — Approval required to proceed${phaseStr}.`,
+        `**Feature:** ${featureTitle || featureId}`,
+        `React with ✅ to **advance** or ❌ to **reject**.`,
+      ].join('\n');
+
+      const msg = await channel.send(content);
+      await msg.react('✅');
+      await msg.react('❌');
+
+      this.pendingGateMessages.set(msg.id, { featureId, projectPath, channelId });
+      this.gateMessagesByFeature.set(featureId, msg.id);
+
+      return msg.id;
+    } catch (error) {
+      logger.error(`Failed to post gate hold message for feature ${featureId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Edit the gate-hold message for a feature (e.g., to show resolved status).
+   */
+  async editGateMessage(featureId: string, content: string): Promise<void> {
+    if (!this.client) return;
+    const messageId = this.gateMessagesByFeature.get(featureId);
+    if (!messageId) return;
+
+    const gate = this.pendingGateMessages.get(messageId);
+    if (!gate) return;
+
+    try {
+      const channel = (await this.client.channels.fetch(gate.channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return;
+      const msg = await channel.messages.fetch(messageId);
+      await msg.edit(content);
+    } catch (error) {
+      logger.warn(`Failed to edit gate message for feature ${featureId}:`, error);
+    }
+  }
+
+  /** Get the Discord messageId of a pending gate message for a feature. */
+  getGateMessageId(featureId: string): string | undefined {
+    return this.gateMessagesByFeature.get(featureId);
+  }
+
+  /** Get the channel ID where the gate message was posted for a feature. */
+  getGateMessageChannelId(featureId: string): string | undefined {
+    const messageId = this.gateMessagesByFeature.get(featureId);
+    if (!messageId) return undefined;
+    return this.pendingGateMessages.get(messageId)?.channelId;
+  }
+
+  /**
+   * Wait for the first non-bot message in a channel/thread.
+   * Used by DiscordChannelHandler.sendHITLForm() to capture form responses.
+   * Returns the message content or null on timeout.
+   */
+  waitForReply(channelId: string, timeoutMs: number = 5 * 60 * 1000): Promise<string | null> {
+    return new Promise((resolve) => {
+      if (!this.client) {
+        resolve(null);
+        return;
+      }
+
+      let settled = false;
+
+      const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        this.client?.off(Events.MessageCreate, handler);
+        resolve(null);
+      }, timeoutMs);
+
+      const handler = (message: Message) => {
+        if (message.channelId === channelId && !message.author.bot) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          this.client?.off(Events.MessageCreate, handler);
+          resolve(message.content);
+        }
+      };
+
+      this.client.on(Events.MessageCreate, handler);
+    });
   }
 
   /**
@@ -1725,6 +1863,28 @@ export class DiscordBotService {
     userId: string,
     _added: boolean
   ): Promise<void> {
+    // Check pipeline gate hold messages first (signal-aware channel router)
+    const gateData = this.pendingGateMessages.get(messageId);
+    if (gateData && this.gateResolver) {
+      if (emoji === '✅') {
+        logger.info(
+          `Gate advanced for feature ${gateData.featureId} via Discord reaction by ${userId}`
+        );
+        this.pendingGateMessages.delete(messageId);
+        this.gateMessagesByFeature.delete(gateData.featureId);
+        await this.gateResolver(gateData.featureId, gateData.projectPath, 'advance');
+        return;
+      } else if (emoji === '❌') {
+        logger.info(
+          `Gate rejected for feature ${gateData.featureId} via Discord reaction by ${userId}`
+        );
+        this.pendingGateMessages.delete(messageId);
+        this.gateMessagesByFeature.delete(gateData.featureId);
+        await this.gateResolver(gateData.featureId, gateData.projectPath, 'reject');
+        return;
+      }
+    }
+
     const approval = this.approvalMessages.get(messageId);
     if (!approval) return;
 
