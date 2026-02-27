@@ -2,14 +2,8 @@
  * Feature types for AutoMaker feature management
  */
 
-/**
- * Channel through which a feature was created or is being managed.
- * Used by ChannelRouter to dispatch HITL forms, approvals, and notifications
- * back to the originating channel.
- */
-export type SignalChannel = 'ui' | 'linear' | 'discord' | 'github' | 'mcp';
-
 import type { PlanningMode, ThinkingLevel, GitWorkflowSettings } from './settings.js';
+import type { SignalChannel } from './signal-channel.js';
 import type { ReasoningEffort } from './provider.js';
 import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
