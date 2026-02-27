@@ -8,6 +8,7 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
+import type { SignalChannel, SignalMetadata } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
@@ -52,6 +53,38 @@ export interface SignalIntakeStatus {
   active: boolean;
   signalCounts: SignalCounts;
   lastSignalAt: string | null;
+}
+
+/**
+ * Map a raw signal source string to a canonical SignalChannel.
+ * Returns undefined for sources that don't map to a known channel.
+ */
+function mapToSignalChannel(source: string): SignalChannel | undefined {
+  if (source === 'linear') return 'linear';
+  if (source === 'discord') return 'discord';
+  if (source === 'github') return 'github';
+  if (source.startsWith('mcp')) return 'mcp';
+  return undefined;
+}
+
+/**
+ * Extract signal provenance metadata from the signal's channelContext.
+ * Returns undefined if no relevant metadata fields are present.
+ */
+function buildSignalMetadata(signal: SignalPayload): SignalMetadata | undefined {
+  const ctx = signal.channelContext;
+  if (!ctx) return undefined;
+
+  const metadata: SignalMetadata = {};
+  if (ctx.issueId) metadata.issueId = ctx.issueId as string;
+  if (ctx.issueUrl) metadata.issueUrl = ctx.issueUrl as string;
+  if (ctx.channelId) metadata.channelId = ctx.channelId as string;
+  if (ctx.channelName) metadata.channelName = ctx.channelName as string;
+  if (ctx.messageId) metadata.messageId = ctx.messageId as string;
+
+  // Return undefined if no metadata fields were populated
+  if (Object.keys(metadata).length === 0) return undefined;
+  return metadata;
 }
 
 export class SignalIntakeService {
@@ -272,6 +305,10 @@ export class SignalIntakeService {
         }
       }
 
+      // Map signal source to canonical channel and extract provenance metadata
+      const sourceChannel = mapToSignalChannel(signal.source);
+      const signalMetadata = buildSignalMetadata(signal);
+
       // Create feature with idea state
       const feature = await this.featureLoader.create(projectPath, {
         title: `[${signal.source}] ${title}`,
@@ -280,6 +317,9 @@ export class SignalIntakeService {
         category: 'Signal Intake',
         complexity: 'medium',
         workItemState: 'idea',
+        // Signal provenance
+        ...(sourceChannel ? { sourceChannel } : {}),
+        ...(signalMetadata ? { signalMetadata } : {}),
         // Store Linear issue ID if available
         ...(signal.source === 'linear' && signal.channelContext?.issueId
           ? { linearIssueId: signal.channelContext.issueId as string }

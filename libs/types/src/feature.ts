@@ -124,6 +124,28 @@ export interface RemediationHistoryEntry {
   changesSummary?: string;
 }
 
+/**
+ * Channel through which a signal was received by the signal intake service.
+ */
+export type SignalChannel = 'linear' | 'discord' | 'github' | 'mcp';
+
+/**
+ * Metadata extracted from a signal's channelContext at feature creation time.
+ * Preserves provenance information about where the feature originated.
+ */
+export interface SignalMetadata {
+  /** Linear or GitHub issue ID */
+  issueId?: string;
+  /** GitHub issue URL */
+  issueUrl?: string;
+  /** Discord channel ID */
+  channelId?: string;
+  /** Discord channel name */
+  channelName?: string;
+  /** Discord message ID */
+  messageId?: string;
+}
+
 export interface Feature {
   id: string;
   title?: string;
@@ -462,6 +484,18 @@ export interface Feature {
    * Set when this feature is added to a promotion batch targeting staging/main.
    */
   promotionBatchId?: string;
+
+  // Signal provenance fields
+  /**
+   * Channel through which this feature was created (from signal intake).
+   * Set at creation time for features originating from external signals.
+   */
+  sourceChannel?: SignalChannel;
+  /**
+   * Metadata extracted from the signal's channelContext at creation time.
+   * Contains source-specific identifiers (issueId, channelId, messageId, etc.).
+   */
+  signalMetadata?: SignalMetadata;
 
   // GTM Content Track fields
   /**

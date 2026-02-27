@@ -65,6 +65,8 @@ export type {
   StatusTransition,
   ExecutionRecord,
   RemediationHistoryEntry,
+  SignalChannel,
+  SignalMetadata,
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 
