@@ -282,16 +282,8 @@ export function AvaSettingsPanel({ projectPath }: { projectPath: string }) {
 
       {/* Save button */}
       <div className="flex justify-end">
-        <Button
-          onClick={() => saveConfig()}
-          disabled={isSaving}
-          className="gap-2"
-        >
-          {isSaving ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Save className="size-4" />
-          )}
+        <Button onClick={() => saveConfig()} disabled={isSaving} className="gap-2">
+          {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
           Save
         </Button>
       </div>

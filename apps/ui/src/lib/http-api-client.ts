@@ -94,7 +94,9 @@ const ComposedHttpClient = withAvaClient(
         withContentClient(
           withSettingsClient(
             withSetupClient(
-              withGitClient(withAgentClient(withFeaturesClient(withFilesystemClient(BaseHttpClient))))
+              withGitClient(
+                withAgentClient(withFeaturesClient(withFilesystemClient(BaseHttpClient)))
+              )
             )
           )
         )
