@@ -188,19 +188,19 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
  * New features should start behind a flag until ready for general availability.
  */
 export interface FeatureFlags {
-  /** Calendar view in project sidebar (default: true in dev) */
+  /** Calendar view in project sidebar */
   calendar: boolean;
-  /** Designs/pen file viewer in project sidebar (default: true in dev) */
+  /** Designs/pen file viewer in project sidebar */
   designs: boolean;
-  /** Docs view in project sidebar (default: true in dev) */
+  /** Docs view in project sidebar */
   docs: boolean;
 }
 
-/** Default feature flags — all on in development, off in staging/production */
+/** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
-  calendar: true,
-  designs: true,
-  docs: true,
+  calendar: false,
+  designs: false,
+  docs: false,
 };
 
 export interface GlobalSettings {
