@@ -3697,3 +3697,15 @@ usageStats:
 - **Problem solved:** Some features are created via UI, not Linear, so have no linearIssueId. Gate approval still works but comments don't post to Linear.
 - **Why this works:** Ensures robustness: all features support gate holds regardless of source. Handler interface abstracts this difference. Prevents special-case logic throughout codebase.
 - **Trade-offs:** Silent failure for non-Linear features (no error, no comment). Benefits: clean abstraction, no caller logic needed.
+
+### Environment variables for git hooks must be set via the `env` object in execAsync/execFileAsync, not as shell command prefixes (2026-02-27)
+- **Context:** Setting HUSKY=0 to disable Husky hook execution in worktree commits
+- **Why:** The env object parameter ensures proper isolation and consistent behavior across different execution contexts (especially worktrees where shell behavior diverges from standard repos)
+- **Rejected:** Shell-based prefix approach: `HUSKY=0 git commit` in the command string itself
+- **Trade-offs:** env object is more verbose but more reliable; shell prefix is simpler syntactically but fails in worktree contexts
+- **Breaking if changed:** Switching back to shell prefix will cause hook execution to fail in worktrees because the variable won't propagate correctly
+
+#### [Pattern] Git commit operations from multiple code paths must all synchronize the same hook-disabling environment variable (HUSKY=0) (2026-02-27)
+- **Problem solved:** Three separate execution paths make commits: worktree-guard.ts, git-workflow-service.ts, and create-pr route in common.ts
+- **Why this works:** Any git commit path that misses HUSKY=0 will trigger hook failures; the inconsistency propagates as silent failures in specific workflows
+- **Trade-offs:** Distributed pattern is less refactorable but requires less code reorganization; the trade-off is higher maintenance cost when adding new commit paths

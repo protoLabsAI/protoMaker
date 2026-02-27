@@ -39,7 +39,7 @@ const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
   .filter(Boolean)
   .join(pathSeparator);
 
-const execEnv = { ...process.env, PATH: extendedPath };
+const execEnv = { ...process.env, PATH: extendedPath, HUSKY: '0' };
 
 export interface WorktreeRecoveryResult {
   /** Whether any uncommitted changes were detected */
