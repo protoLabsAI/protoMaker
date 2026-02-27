@@ -133,7 +133,18 @@ export const staleDeps: LeadFastPathRule = {
 
       const allDepsDone = feature.dependencies!.every((depId) => {
         const dep = worldState.features[depId];
-        return dep && (dep.status === 'done' || dep.status === 'verified');
+        if (!dep) return false;
+        // Foundation deps require done (merged) — 'review' is NOT sufficient
+        if (dep.isFoundation) {
+          return dep.status === 'done' || dep.status === 'completed' || dep.status === 'verified';
+        }
+        // Non-foundation deps: 'review' is sufficient to unblock
+        return (
+          dep.status === 'done' ||
+          dep.status === 'completed' ||
+          dep.status === 'verified' ||
+          dep.status === 'review'
+        );
       });
 
       if (allDepsDone) {

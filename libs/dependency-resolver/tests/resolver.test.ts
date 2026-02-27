@@ -343,32 +343,33 @@ describe('resolver.ts', () => {
         expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
       });
 
-      it('should NOT allow review to satisfy non-foundation deps', () => {
+      it('should allow review to satisfy non-foundation deps', () => {
         const normalDep = createFeature('Config', { status: 'review' });
         const feature = createFeature('Phase2', { dependencies: ['Config'] });
         const allFeatures = [normalDep, feature];
 
-        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
+        // Non-foundation dep in review is sufficient
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
       });
 
-      it('should handle mixed foundation and non-foundation deps', () => {
+      it('should handle mixed foundation and non-foundation deps — foundation in review blocks', () => {
         const foundation = createFeature('Scaffold', { status: 'review', isFoundation: true });
         const normalDep = createFeature('Config', { status: 'review' });
         const feature = createFeature('Phase3', { dependencies: ['Scaffold', 'Config'] });
         const allFeatures = [foundation, normalDep, feature];
 
-        // Both foundation and normal dep in review block
+        // Foundation dep in review still blocks; non-foundation dep in review is ok
         expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
       });
 
-      it('should NOT satisfy mixed deps when non-foundation dep is in review', () => {
+      it('should satisfy mixed deps when foundation is done and non-foundation dep is in review', () => {
         const foundation = createFeature('Scaffold', { status: 'done', isFoundation: true });
         const normalDep = createFeature('Config', { status: 'review' });
         const feature = createFeature('Phase3', { dependencies: ['Scaffold', 'Config'] });
         const allFeatures = [foundation, normalDep, feature];
 
-        // Foundation is done (satisfied), but Config in review is NOT satisfied
-        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
+        // Foundation is done (satisfied) + non-foundation in review is now sufficient
+        expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
       });
 
       it('should NOT block foundation dep when skipVerification is true', () => {
@@ -381,6 +382,24 @@ describe('resolver.ts', () => {
           true
         );
       });
+    });
+  });
+
+  describe('review-eligible path — non-foundation deps', () => {
+    it('feature with standard dep in review status becomes eligible', () => {
+      const dep = createFeature('DepA', { status: 'review' });
+      const feature = createFeature('Feature1', { dependencies: ['DepA'] });
+      const allFeatures = [dep, feature];
+
+      expect(areDependenciesSatisfied(feature, allFeatures)).toBe(true);
+    });
+
+    it('feature with foundation dep in review status remains blocked', () => {
+      const dep = createFeature('Foundation1', { status: 'review', isFoundation: true });
+      const feature = createFeature('Feature2', { dependencies: ['Foundation1'] });
+      const allFeatures = [dep, feature];
+
+      expect(areDependenciesSatisfied(feature, allFeatures)).toBe(false);
     });
   });
 
@@ -461,12 +480,13 @@ describe('resolver.ts', () => {
       expect(getBlockingDependencies(feature, allFeatures)).toEqual([]);
     });
 
-    it('should treat non-foundation dep in review as blocking', () => {
+    it('should NOT treat non-foundation dep in review as blocking', () => {
       const normalDep = createFeature('Config', { status: 'review' });
       const feature = createFeature('Phase2', { dependencies: ['Config'] });
       const allFeatures = [normalDep, feature];
 
-      expect(getBlockingDependencies(feature, allFeatures)).toEqual(['Config']);
+      // Non-foundation dep in review is sufficient — not blocking
+      expect(getBlockingDependencies(feature, allFeatures)).toEqual([]);
     });
   });
 
