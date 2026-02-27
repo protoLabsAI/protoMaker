@@ -6,8 +6,8 @@ importance: 0.5
 relatedFiles: []
 usageStats:
   loaded: 83
-  referenced: 22
-  successfulFeatures: 22
+  referenced: 23
+  successfulFeatures: 23
 ---
 # GTM Signal Intelligence & Content Operations
 
