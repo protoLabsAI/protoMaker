@@ -211,7 +211,7 @@ export class ReviewProcessor implements StateProcessor {
 
     try {
       const { stdout } = await execAsync(
-        `gh pr view ${ctx.prNumber} --json reviewDecision,statusCheckRollup --jq '{decision: .reviewDecision, checks: [(.statusCheckRollup // [])[] | .conclusion]}'`,
+        `gh pr view ${ctx.prNumber} --json reviewDecision,statusCheckRollup,reviews --jq '{decision: .reviewDecision, checks: [(.statusCheckRollup // [])[] | .conclusion], approvedCount: ([(.reviews // [])[] | select(.state == "APPROVED")] | length)}'`,
         { cwd: ctx.projectPath, timeout: 15000 }
       );
 
@@ -220,9 +220,13 @@ export class ReviewProcessor implements StateProcessor {
       if (data.decision === 'APPROVED') return 'approved';
       if (data.decision === 'CHANGES_REQUESTED') return 'changes_requested';
 
-      // No review required + all checks pass → treat as approved (required_approving_review_count: 0)
+      // Require at least one human APPROVED review — CI passing alone is not sufficient
       const checks = (data.checks || []) as string[];
-      if (checks.length > 0 && checks.every((c: string) => c === 'SUCCESS')) {
+      const approvedCount = (data.approvedCount as number) ?? 0;
+      if (
+        approvedCount > 0 &&
+        (checks.length === 0 || checks.every((c: string) => c === 'SUCCESS'))
+      ) {
         return 'approved';
       }
 
