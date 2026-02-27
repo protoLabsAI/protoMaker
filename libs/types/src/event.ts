@@ -317,6 +317,7 @@ export type EventType =
   | 'lead-engineer:rule-evaluated'
   | 'lead-engineer:project-completing'
   | 'lead-engineer:project-completed'
+  | 'lead-engineer:hitl-response'
   // Notes workspace events (agent-initiated tab mutations)
   | 'notes:tab-created'
   | 'notes:tab-deleted'
@@ -599,6 +600,12 @@ export interface EventPayloadMap {
   };
   'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
   'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
+  'lead-engineer:hitl-response': {
+    formId: string;
+    featureId?: string;
+    projectPath?: string;
+    response?: Record<string, unknown>[];
+  };
 
   // Linear sync conflict event (manual resolution required)
   'linear:sync:conflict': {

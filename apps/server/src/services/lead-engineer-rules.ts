@@ -451,6 +451,90 @@ export const classifiedRecovery: LeadFastPathRule = {
   },
 };
 
+/**
+ * hitlFormResponse — Handle lead_engineer HITL form responses.
+ * Routes retry/provide_context/skip/close responses to the appropriate actions.
+ */
+export const hitlFormResponse: LeadFastPathRule = {
+  name: 'hitlFormResponse',
+  description: 'HITL form response from lead_engineer caller → retry/provide_context/skip/close',
+  triggers: ['lead-engineer:hitl-response'],
+
+  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
+    const event = payload as Record<string, unknown> | null;
+    if (!event) return [];
+
+    const featureId = event.featureId as string | undefined;
+    if (!featureId) return [];
+
+    const feature = worldState.features[featureId];
+    if (!feature) return [];
+
+    const response = event.response as Record<string, unknown>[] | undefined;
+    if (!response?.length) return [];
+
+    const step0 = response[0];
+    const action = step0.action as string | undefined;
+    if (!action) return [];
+
+    const ruleActions: LeadRuleAction[] = [];
+
+    switch (action) {
+      case 'retry': {
+        ruleActions.push({
+          type: 'update_feature',
+          featureId,
+          updates: {
+            failureCount: 0,
+            statusChangeReason: 'Retried via HITL form',
+          },
+        });
+        ruleActions.push({ type: 'move_feature', featureId, toStatus: 'backlog' });
+        break;
+      }
+
+      case 'provide_context': {
+        const context = step0.context as string | undefined;
+        ruleActions.push({
+          type: 'update_feature',
+          featureId,
+          updates: {
+            ...(context ? { description: context } : {}),
+            failureCount: 0,
+            statusChangeReason: 'Retried with additional context via HITL form',
+          },
+        });
+        ruleActions.push({ type: 'move_feature', featureId, toStatus: 'backlog' });
+        break;
+      }
+
+      case 'skip': {
+        ruleActions.push({
+          type: 'update_feature',
+          featureId,
+          updates: { statusChangeReason: 'Skipped via HITL form' },
+        });
+        ruleActions.push({ type: 'move_feature', featureId, toStatus: 'done' });
+        break;
+      }
+
+      case 'close': {
+        ruleActions.push({
+          type: 'update_feature',
+          featureId,
+          updates: { awaitingGatePhase: null },
+        });
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    return ruleActions;
+  },
+};
+
 // ────────────────────────── Exports ──────────────────────────
 
 /** Default set of fast-path rules */
@@ -467,6 +551,7 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   threadsBlocking,
   remediationStalled,
   classifiedRecovery,
+  hitlFormResponse,
 ];
 
 /**

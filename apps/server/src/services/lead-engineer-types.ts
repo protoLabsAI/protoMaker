@@ -15,6 +15,7 @@ import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { FactStoreService } from './fact-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
+import type { HITLFormService } from './hitl-form-service.js';
 
 // ────────────────────────── Budget / timing constants ──────────────────────────
 
@@ -55,6 +56,7 @@ export interface ProcessorServiceContext {
   factStoreService?: FactStoreService;
   leadHandoffService?: LeadHandoffService;
   antagonisticReviewService?: IPlanReviewService;
+  hitlFormService?: HITLFormService;
 }
 
 // ────────────────────────── Feature State Machine Types ──────────────────────────

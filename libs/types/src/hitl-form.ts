@@ -8,7 +8,7 @@
 import type { SignalChannel, SignalMetadata } from './signal-channel.js';
 
 /** Who initiated the form request */
-export type HITLFormCallerType = 'agent' | 'flow' | 'api';
+export type HITLFormCallerType = 'agent' | 'flow' | 'api' | 'lead_engineer';
 
 /** Form lifecycle status */
 export type HITLFormStatus = 'pending' | 'submitted' | 'cancelled' | 'expired';

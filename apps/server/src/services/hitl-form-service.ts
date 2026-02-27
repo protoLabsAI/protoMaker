@@ -426,6 +426,16 @@ export class HITLFormService {
           // No-op — caller polls via get()
           break;
         }
+        case 'lead_engineer': {
+          this.events.emit('lead-engineer:hitl-response', {
+            formId: form.id,
+            featureId: form.featureId,
+            projectPath: form.projectPath,
+            response: form.response,
+          });
+          logger.info(`Routed form response to lead engineer: feature=${form.featureId}`);
+          break;
+        }
       }
     } catch (error) {
       logger.error(`Failed to route response for form ${form.id}:`, error);
