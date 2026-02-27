@@ -790,19 +790,55 @@ Open-source model provider via CLI subprocess.
 - CLI-based execution
 - Model detection for `opencode-*` prefixed models
 
-### 5. Traced Provider (Langfuse Wrapper)
+### 5. Groq Provider (SDK-based)
+
+**Location**: `apps/server/src/providers/groq-provider.ts`
+
+Uses the `groq-sdk` for streaming completions from Groq's fast inference API.
+
+#### Features
+
+- ✅ Native SDK integration (no CLI required)
+- ✅ Streaming responses via `groq-sdk` chat completions
+- ✅ Conversation history support (prepended as chat messages)
+- ✅ Llama and Mixtral model families
+
+#### Model Detection
+
+Routes models that:
+
+- Start with `"groq/"` (e.g., `"groq/llama-3.3-70b-versatile"`)
+- Are known Groq model IDs: `llama-3.3-70b-versatile`, `llama-3.1-70b-versatile`, `llama-3.1-8b-instant`, `mixtral-8x7b-32768`, `gemma2-9b-it`
+
+#### Available Models
+
+| Model                     | Description                | Context |
+| ------------------------- | -------------------------- | ------- |
+| `llama-3.3-70b-versatile` | Latest Llama 3.3 (default) | 128K    |
+| `llama-3.1-70b-versatile` | Llama 3.1 70B              | 128K    |
+| `llama-3.1-8b-instant`    | Fast, lightweight          | 128K    |
+| `mixtral-8x7b-32768`      | Mixtral MoE                | 32K     |
+| `gemma2-9b-it`            | Google Gemma 2 9B          | 8K      |
+
+#### Authentication
+
+Requires:
+
+- `GROQ_API_KEY` environment variable (or `config.apiKey` in provider settings)
+
+### 7. Traced Provider (Langfuse Wrapper)
 
 **Location**: `apps/server/src/providers/traced-provider.ts`
 
 Wraps any other provider with Langfuse tracing for observability. Not a standalone provider — it decorates an existing provider to add cost tracking, latency measurement, and trace collection.
 
-### 6. Fake Provider (Testing)
+### 8. Fake Provider (Testing)
 
 **Location**: `apps/server/src/providers/fake-provider.ts`
 
 Mock provider for testing. Returns deterministic responses without making real API calls. Used in CI/E2E tests via `AUTOMAKER_MOCK_AGENT=true`.
 
-### 7. CLI Provider (Base Class)
+### 9. CLI Provider (Base Class)
 
 **Location**: `apps/server/src/providers/cli-provider.ts`
 

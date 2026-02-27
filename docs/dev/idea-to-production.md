@@ -31,6 +31,22 @@ Work enters through five channels, all routed by `SignalIntakeService`:
 
 **Full path** routes through PM Agent for research, PRD generation, and CTO approval before decomposition.
 
+### Signal intent classification
+
+`SignalIntakeService` applies a second classification layer — intent — independent of the ops/gtm routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
+
+**Type:** `SignalIntent` in `libs/types/src/signal-intent.ts`
+
+| Intent           | Description                                                                                    | Routing                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `work_order`     | Concrete task ready for implementation (Linear new issue, MCP create_feature, UI board action) | Ops pipeline — normal execution                                           |
+| `idea`           | Vague concept needing PM refinement (MCP process_idea, Discord brainstorm channels)            | PM Agent research + PRD                                                   |
+| `feedback`       | Commentary on existing work (Linear comment on active issue, PR review)                        | Routes to running agent via `sendMessageToAgent()` or `followUpFeature()` |
+| `conversational` | Casual message or question — no work item created (Discord @mentions, social exchanges)        | GTM or acknowledged without feature creation                              |
+| `interrupt`      | Urgent signal requiring immediate human attention (SLA breach, emergency)                      | Bypasses PM pipeline entirely — creates HITL form directly                |
+
+The `intent` field is threaded onto all `signal:routed` events. The interrupt fast-path uses `HITLFormService` (wired via `setHITLFormService()` at server startup).
+
 ## The 9 phases
 
 Defined in `libs/types/src/pipeline-phase.ts`.
