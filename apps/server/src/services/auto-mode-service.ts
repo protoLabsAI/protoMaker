@@ -3629,8 +3629,10 @@ Format your response as a structured markdown document.`;
           env: gitEnv,
         });
       } else {
-        // Determine base branch: use epic branch if feature belongs to an epic
-        let baseBranch = 'HEAD';
+        // Determine base branch: use epic branch if feature belongs to an epic,
+        // otherwise use origin/dev as the canonical base (never HEAD which would
+        // inherit whatever branch is currently checked out in the main repo).
+        let baseBranch = 'origin/dev';
         if (feature?.epicId && !feature.isEpic) {
           try {
             const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
