@@ -19,6 +19,7 @@ import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { HITLFormService } from './hitl-form-service.js';
+import type { LinearChannelHandler } from './channel-handlers/linear-channel-handler.js';
 import { LinearIssueSync } from './linear-issue-sync.js';
 import { LinearProjectSync } from './linear-project-sync.js';
 import { LinearWebhookHandler } from './linear-webhook-handler.js';
@@ -115,6 +116,23 @@ export class LinearSyncService {
   setHITLFormService(service: HITLFormService): void {
     this.hitlFormService = service;
     logger.info('HITLFormService injected into LinearSyncService');
+  }
+
+  /**
+   * Expose the inner LinearCommentService for use by LinearChannelHandler.
+   * Called from wiring.ts to pass it into the channel handler constructor.
+   */
+  getCommentService(): LinearCommentService {
+    return this.commentService;
+  }
+
+  /**
+   * Inject LinearChannelHandler into the comment service for gate resolution.
+   * Must be called after initialize(). Delegates to commentService.setChannelHandler().
+   */
+  setChannelHandler(handler: LinearChannelHandler): void {
+    this.commentService.setChannelHandler(handler);
+    logger.info('LinearChannelHandler wired into LinearCommentService');
   }
 
   start(): void {
