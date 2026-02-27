@@ -11,6 +11,9 @@
  * - Audit log for signal history
  */
 
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+
 import type { EscalationSignal, EscalationChannel } from '@protolabs-ai/types';
 import { EscalationSeverity } from '@protolabs-ai/types';
 import { createLogger } from '@protolabs-ai/utils';
@@ -49,6 +52,15 @@ interface DeduplicationEntry {
 }
 
 /**
+ * Persisted escalation store schema
+ */
+interface EscalationStoreData {
+  version: 1;
+  recentSignals: Array<{ key: string; timestamp: number }>;
+  savedAt: string;
+}
+
+/**
  * EscalationRouter manages signal routing and channel orchestration
  */
 export class EscalationRouter {
@@ -59,6 +71,69 @@ export class EscalationRouter {
   private events: EventEmitter | null = null;
   private deduplicationWindowMs: number = 30 * 60 * 1000; // 30 minutes
   private readonly MAX_LOG_ENTRIES = 1000;
+  private storePath: string | null = null;
+
+  /**
+   * Initialize the router with a file-backed dedup store.
+   * Loads previously persisted signals from disk so dedup windows survive restarts.
+   */
+  async initialize(storePath: string): Promise<void> {
+    this.storePath = storePath;
+    await this.loadStore();
+  }
+
+  /**
+   * Load persisted dedup state from disk.
+   */
+  private async loadStore(): Promise<void> {
+    if (!this.storePath) return;
+    try {
+      const content = await readFile(this.storePath, 'utf-8');
+      const data = JSON.parse(content) as EscalationStoreData;
+      if (data.version !== 1) {
+        logger.warn(`Escalation store version mismatch: expected 1, got ${data.version}`);
+        return;
+      }
+      const now = Date.now();
+      let loaded = 0;
+      for (const entry of data.recentSignals) {
+        if (now - entry.timestamp <= this.deduplicationWindowMs) {
+          this.recentSignals.set(entry.key, { key: entry.key, timestamp: entry.timestamp });
+          loaded++;
+        }
+      }
+      logger.info(`Escalation store loaded: ${loaded} active signals from ${this.storePath}`);
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        logger.info('No escalation store found at startup, starting fresh');
+      } else {
+        logger.error('Failed to load escalation store:', error);
+      }
+    }
+  }
+
+  /**
+   * Atomically persist current dedup state to disk.
+   */
+  private async persistStore(): Promise<void> {
+    if (!this.storePath) return;
+    const data: EscalationStoreData = {
+      version: 1,
+      recentSignals: Array.from(this.recentSignals.values()).map((e) => ({
+        key: e.key,
+        timestamp: e.timestamp,
+      })),
+      savedAt: new Date().toISOString(),
+    };
+    const tmpPath = `${this.storePath}.tmp`;
+    try {
+      await mkdir(dirname(this.storePath), { recursive: true });
+      await writeFile(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+      await rename(tmpPath, this.storePath);
+    } catch (error) {
+      logger.error('Failed to persist escalation store:', error);
+    }
+  }
 
   /**
    * Set event emitter for listening to escalation signals
@@ -231,6 +306,7 @@ export class EscalationRouter {
       timestamp: Date.now(),
     });
     this.cleanupOldSignals();
+    void this.persistStore();
   }
 
   /**
@@ -322,6 +398,8 @@ export class EscalationRouter {
 
     logger.info(`Signal acknowledged: ${deduplicationKey} by ${acknowledgedBy}`);
 
+    void this.persistStore();
+
     if (this.events) {
       this.events.emit('escalation:acknowledged', {
         deduplicationKey,
@@ -391,11 +469,17 @@ export class EscalationRouter {
 let routerInstance: EscalationRouter | null = null;
 
 /**
- * Get or create the singleton escalation router instance
+ * Get or create the singleton escalation router instance.
+ * Auto-initializes the file-backed dedup store on first creation.
  */
 export function getEscalationRouter(): EscalationRouter {
   if (!routerInstance) {
     routerInstance = new EscalationRouter();
+    const dataDir = process.env.DATA_DIR || './data';
+    const storePath = join(dataDir, 'escalations.json');
+    routerInstance.initialize(storePath).catch((err) => {
+      logger.error('Failed to initialize escalation store:', err);
+    });
     logger.info('EscalationRouter instance created');
   }
   return routerInstance;
