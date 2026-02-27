@@ -194,8 +194,8 @@ docker compose start
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/automaker.git
-cd automaker
+git clone https://github.com/proto-labs-ai/protomaker.git
+cd protomaker
 
 # Create volumes
 docker volume create automaker-data

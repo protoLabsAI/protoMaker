@@ -25,7 +25,7 @@ See main [README.md authentication section](../README.md#authentication) for det
 
 ### Option 1: Download and Install from GitHub
 
-1. Visit [GitHub Releases](https://github.com/AutoMaker-Org/automaker/releases)
+1. Visit [GitHub Releases](https://github.com/proto-labs-ai/protomaker/releases)
 2. Find the latest release and download the `.rpm` file:
    - Download: `protoLabs-<version>-x86_64.rpm`
 
@@ -43,20 +43,20 @@ See main [README.md authentication section](../README.md#authentication) for det
 
 ### Option 2: Install Directly from URL
 
-Install from GitHub releases URL without downloading first. Visit [releases page](https://github.com/AutoMaker-Org/automaker/releases) to find the latest version.
+Install from GitHub releases URL without downloading first. Visit [releases page](https://github.com/proto-labs-ai/protomaker/releases) to find the latest version.
 
 **Fedora:**
 
 ```bash
 # Replace v0.11.0 with the actual latest version
-sudo dnf install https://github.com/AutoMaker-Org/automaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
+sudo dnf install https://github.com/proto-labs-ai/protomaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
 ```
 
 **RHEL/CentOS:**
 
 ```bash
 # Replace v0.11.0 with the actual latest version
-sudo yum install https://github.com/AutoMaker-Org/automaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
+sudo yum install https://github.com/proto-labs-ai/protomaker/releases/download/v0.11.0/protoLabs-0.11.0-x86_64.rpm
 ```
 
 ## Running protoLabs
@@ -220,7 +220,7 @@ sudo setenforce 1
 ```
 
 **Permanent fix (not recommended for production):**
-Create custom SELinux policy based on ausearch output. For support, see [GitHub Issues](https://github.com/AutoMaker-Org/automaker/issues).
+Create custom SELinux policy based on ausearch output. For support, see [GitHub Issues](https://github.com/proto-labs-ai/protomaker/issues).
 
 ### Port Conflicts
 
@@ -352,8 +352,8 @@ sudo dnf install nodejs npm git
 
 ```bash
 # Clone repository
-git clone https://github.com/AutoMaker-Org/automaker.git
-cd automaker
+git clone https://github.com/proto-labs-ai/protomaker.git
+cd protomaker
 
 # Install dependencies
 npm install
@@ -388,7 +388,7 @@ sudo yum update automaker
 sudo dnf remove automaker
 
 # Download the latest .rpm from releases page
-# https://github.com/AutoMaker-Org/automaker/releases
+# https://github.com/proto-labs-ai/protomaker/releases
 # Then reinstall with:
 # sudo dnf install ./protoLabs-<VERSION>-x86_64.rpm
 ```
@@ -398,9 +398,9 @@ sudo dnf remove automaker
 ### Resources
 
 - [Main README](../README.md) - Project overview
-- [CONTRIBUTING.md](https://github.com/proto-labs-ai/automaker/blob/main/CONTRIBUTING.md) - Contributing guide
-- [GitHub Issues](https://github.com/AutoMaker-Org/automaker/issues) - Bug reports & feature requests
-- [Discussions](https://github.com/AutoMaker-Org/automaker/discussions) - Questions & community
+- [CONTRIBUTING.md](https://github.com/proto-labs-ai/protomaker/blob/main/CONTRIBUTING.md) - Contributing guide
+- [GitHub Issues](https://github.com/proto-labs-ai/protomaker/issues) - Bug reports & feature requests
+- [Discussions](https://github.com/proto-labs-ai/protomaker/discussions) - Questions & community
 
 ### Reporting Issues
 
@@ -477,7 +477,7 @@ chmod 700 ~/.config/automaker/
 
 ## Contributing
 
-Found an issue or want to improve Fedora support? See [CONTRIBUTING.md](https://github.com/proto-labs-ai/automaker/blob/main/CONTRIBUTING.md).
+Found an issue or want to improve Fedora support? See [CONTRIBUTING.md](https://github.com/proto-labs-ai/protomaker/blob/main/CONTRIBUTING.md).
 
 ---
 

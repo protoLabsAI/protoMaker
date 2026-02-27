@@ -65,7 +65,7 @@ await use_mcp_tool({
   server_name: 'automaker',
   tool_name: 'start_agent',
   arguments: {
-    projectPath: '/path/to/automaker',
+    projectPath: '/path/to/protomaker',
     featureId: 'feature-123',
     useWorktrees: true
   }
@@ -465,13 +465,13 @@ You are an AI software engineer working on feature implementation.
 ## Project Context Files
 
 ### CLAUDE.md
-**Path:** `/path/to/automaker/CLAUDE.md`
+**Path:** `/path/to/protomaker/CLAUDE.md`
 **Purpose:** Project overview and guidelines
 
 [Full CLAUDE.md content here...]
 
 ### CODE_QUALITY.md
-**Path:** `/path/to/automaker/.automaker/context/CODE_QUALITY.md`
+**Path:** `/path/to/protomaker/.automaker/context/CODE_QUALITY.md`
 **Purpose:** Coding standards
 
 - Always write tests for new features
@@ -481,7 +481,7 @@ You are an AI software engineer working on feature implementation.
 ## Memory Files
 
 ### authentication-patterns.md
-**Path:** `/path/to/automaker/.automaker/memory/authentication-patterns.md`
+**Path:** `/path/to/protomaker/.automaker/memory/authentication-patterns.md`
 **Category:** patterns
 **Used:** 5 times
 

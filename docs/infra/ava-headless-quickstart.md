@@ -60,7 +60,7 @@ export DISCORD_BOT_TOKEN="<your-token>"
 ### 3. Install the protoLabs plugin
 
 ```bash
-cd /path/to/automaker
+cd /path/to/protomaker
 claude plugin marketplace add $(pwd)/packages/mcp-server/plugins
 claude plugin install automaker
 ```
@@ -86,8 +86,8 @@ After=network.target
 [Service]
 Type=simple
 User=<your-user>
-WorkingDirectory=/path/to/automaker
-ExecStart=/path/to/automaker/scripts/ava-monitor.sh --loop 300
+WorkingDirectory=/path/to/protomaker
+ExecStart=/path/to/protomaker/scripts/ava-monitor.sh --loop 300
 Restart=always
 RestartSec=30
 Environment=AUTOMAKER_API_KEY=<key>
@@ -109,7 +109,7 @@ sudo journalctl -u ava-monitor -f  # Watch logs
 
 ```bash
 # Run every 5 minutes
-*/5 * * * * cd /path/to/automaker && ./scripts/ava-monitor.sh >> /var/log/ava-monitor.log 2>&1
+*/5 * * * * cd /path/to/protomaker && ./scripts/ava-monitor.sh >> /var/log/ava-monitor.log 2>&1
 ```
 
 **Option C: Docker sidecar**

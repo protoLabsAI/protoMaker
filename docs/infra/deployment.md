@@ -424,7 +424,7 @@ docker compose up -d
 
 ```bash
 # Pull latest code
-cd /path/to/automaker
+cd /path/to/protomaker
 git pull
 
 # Rebuild and restart
