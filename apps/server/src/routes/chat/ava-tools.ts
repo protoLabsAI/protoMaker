@@ -91,7 +91,7 @@ function makeTool<TSchema extends z.ZodType<any>>(config: {
 export function buildAvaTools(
   projectPath: string,
   services: AvaToolsServices,
-  config: AvaToolsConfig,
+  config: AvaToolsConfig
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {};
 
@@ -102,7 +102,7 @@ export function buildAvaTools(
     tools['get_board_summary'] = makeTool({
       description:
         'Get a summary of the project board, including total feature count and counts broken down by status.',
-      inputSchema:z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         const features = await services.featureLoader.getAll(projectPath);
         const byStatus: Record<string, number> = {};
@@ -117,7 +117,7 @@ export function buildAvaTools(
     tools['list_features'] = makeTool({
       description:
         'List features on the project board. Optionally filter by status to see only features in a particular column.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         status: z
           .enum(FEATURE_STATUS_ENUM)
           .optional()
@@ -139,7 +139,7 @@ export function buildAvaTools(
 
     tools['get_feature'] = makeTool({
       description: 'Retrieve full details of a specific feature by its ID.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         featureId: z.string().describe('The feature ID to look up'),
       }),
       execute: async ({ featureId }) => {
@@ -158,9 +158,12 @@ export function buildAvaTools(
   if (config.boardWrite) {
     tools['create_feature'] = makeTool({
       description: 'Create a new feature on the project board.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         title: z.string().describe('Short title for the feature'),
-        description: z.string().optional().describe('Detailed description of what needs to be done'),
+        description: z
+          .string()
+          .optional()
+          .describe('Detailed description of what needs to be done'),
         priority: z
           .number()
           .int()
@@ -188,7 +191,7 @@ export function buildAvaTools(
 
     tools['update_feature'] = makeTool({
       description: 'Update one or more fields of an existing feature.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         featureId: z.string().describe('The feature ID to update'),
         title: z.string().optional().describe('New title'),
         description: z.string().optional().describe('New description'),
@@ -218,13 +221,15 @@ export function buildAvaTools(
     tools['move_feature'] = makeTool({
       description:
         "Move a feature to a different status column on the Kanban board (e.g. from 'backlog' to 'in_progress').",
-      inputSchema:z.object({
+      inputSchema: z.object({
         featureId: z.string().describe('The feature ID to move'),
         status: z.enum(FEATURE_STATUS_ENUM).describe('Target status column'),
       }),
       execute: async ({ featureId, status }) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const feature = await services.featureLoader.update(projectPath, featureId, { status } as any);
+        const feature = await services.featureLoader.update(projectPath, featureId, {
+          status,
+        } as any);
         services.events?.emit('feature:moved', { projectPath, featureId, status, feature });
         return { featureId, newStatus: feature.status };
       },
@@ -232,7 +237,7 @@ export function buildAvaTools(
 
     tools['delete_feature'] = makeTool({
       description: 'Permanently delete a feature from the project board.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         featureId: z.string().describe('The feature ID to delete'),
       }),
       execute: async ({ featureId }) => {
@@ -251,7 +256,7 @@ export function buildAvaTools(
   if (config.agentControl) {
     tools['list_running_agents'] = makeTool({
       description: 'List all active (non-archived) agent sessions.',
-      inputSchema:z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         const sessions = await services.agentService.listSessions(false);
         return sessions;
@@ -260,7 +265,7 @@ export function buildAvaTools(
 
     tools['start_agent'] = makeTool({
       description: 'Create and start a new agent session.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         name: z.string().describe('Human-readable name for this agent session'),
         workingDirectory: z
           .string()
@@ -273,7 +278,7 @@ export function buildAvaTools(
           name,
           projectPath,
           workingDirectory,
-          model,
+          model
         );
         return session;
       },
@@ -281,7 +286,7 @@ export function buildAvaTools(
 
     tools['stop_agent'] = makeTool({
       description: 'Stop and remove an agent session.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         sessionId: z.string().describe('ID of the session to stop'),
       }),
       execute: async ({ sessionId }) => {
@@ -292,7 +297,7 @@ export function buildAvaTools(
 
     tools['get_agent_output'] = makeTool({
       description: 'Retrieve the saved agent output log for a given feature.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         featureId: z.string().describe('Feature ID whose agent output should be retrieved'),
       }),
       execute: async ({ featureId }) => {
@@ -308,7 +313,7 @@ export function buildAvaTools(
   if (config.autoMode) {
     tools['get_auto_mode_status'] = makeTool({
       description: 'Get the current auto-mode status for this project.',
-      inputSchema:z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         return services.autoModeService.getStatusForProject(projectPath);
       },
@@ -317,7 +322,7 @@ export function buildAvaTools(
     tools['start_auto_mode'] = makeTool({
       description:
         'Start the auto-mode loop so Ava will automatically pick up and execute backlog features.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         maxConcurrency: z
           .number()
           .int()
@@ -333,7 +338,7 @@ export function buildAvaTools(
         const count = await services.autoModeService.startAutoLoopForProject(
           projectPath,
           branchName ?? null,
-          maxConcurrency,
+          maxConcurrency
         );
         return { startedFeatureCount: count };
       },
@@ -341,7 +346,7 @@ export function buildAvaTools(
 
     tools['stop_auto_mode'] = makeTool({
       description: 'Stop the auto-mode loop for this project.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         branchName: z
           .string()
           .optional()
@@ -350,7 +355,7 @@ export function buildAvaTools(
       execute: async ({ branchName }) => {
         const count = await services.autoModeService.stopAutoLoopForProject(
           projectPath,
-          branchName ?? null,
+          branchName ?? null
         );
         return { stoppedFeatureCount: count };
       },
@@ -363,7 +368,7 @@ export function buildAvaTools(
   if (config.projectMgmt) {
     tools['get_project_spec'] = makeTool({
       description: 'Read the project specification document from .automaker/spec.md.',
-      inputSchema:z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         const specPath = path.join(projectPath, '.automaker', 'spec.md');
         try {
@@ -378,7 +383,7 @@ export function buildAvaTools(
     tools['update_project_spec'] = makeTool({
       description:
         'Write new content to the project specification document at .automaker/spec.md. Creates the file if it does not exist.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         content: z.string().describe('Markdown content to write to spec.md'),
       }),
       execute: async ({ content }) => {
@@ -398,7 +403,7 @@ export function buildAvaTools(
     tools['get_execution_order'] = makeTool({
       description:
         'Return the recommended execution order for all features, resolved from their dependency graph (topological sort).',
-      inputSchema:z.object({}),
+      inputSchema: z.object({}),
       execute: async () => {
         const features = await services.featureLoader.getAll(projectPath);
         const ordered = topologicalSort(features);
@@ -413,17 +418,17 @@ export function buildAvaTools(
 
     tools['set_feature_dependencies'] = makeTool({
       description: 'Set the list of feature IDs that a feature depends on.',
-      inputSchema:z.object({
+      inputSchema: z.object({
         featureId: z.string().describe('The feature whose dependencies should be updated'),
         dependencies: z
           .array(z.string())
-          .describe(
-            'Array of feature IDs that must be completed before this feature can start',
-          ),
+          .describe('Array of feature IDs that must be completed before this feature can start'),
       }),
       execute: async ({ featureId, dependencies }) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const feature = await services.featureLoader.update(projectPath, featureId, { dependencies } as any);
+        const feature = await services.featureLoader.update(projectPath, featureId, {
+          dependencies,
+        } as any);
         return { featureId, dependencies: feature.dependencies ?? [] };
       },
     });
