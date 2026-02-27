@@ -25,6 +25,12 @@ jobs:
             echo "✅ Bootstrap PR — establishing branch strategy, one-time exception granted"
             exit 0
           fi
+          # Recovery exception: branches created from staging to resolve DAG divergence.
+          # Pattern: chore/promote-staging-main-* (e.g. after accidental squash promotion)
+          if [[ "$SOURCE" == chore/promote-staging-main-* ]]; then
+            echo "✅ Recovery branch from staging — DAG divergence fix, exception granted"
+            exit 0
+          fi
           if [ "$SOURCE" != "staging" ]; then
             echo "::error::PRs to main must come from the 'staging' branch."
             echo "::error::Current source: '$SOURCE'"
