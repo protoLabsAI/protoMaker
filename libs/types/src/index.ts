@@ -68,6 +68,9 @@ export type {
 } from './feature.js';
 export { normalizeFeatureStatus } from './feature.js';
 
+// Signal channel types (provenance tracking)
+export type { SignalChannel, SignalMetadata } from './signal-channel.js';
+
 // Quarantine types
 export type {
   TrustTier,

@@ -475,6 +475,18 @@ export interface Feature {
    */
   promotionBatchId?: string;
 
+  // Signal provenance fields
+  /**
+   * Channel through which this feature was created (from signal intake).
+   * Set at creation time for features originating from external signals.
+   */
+  sourceChannel?: SignalChannel;
+  /**
+   * Metadata extracted from the signal's channelContext at creation time.
+   * Contains source-specific identifiers (issueId, channelId, messageId, etc.).
+   */
+  signalMetadata?: SignalMetadata;
+
   // GTM Content Track fields
   /**
    * Type of feature: 'code' for engineering work, 'content' for GTM/marketing content.
