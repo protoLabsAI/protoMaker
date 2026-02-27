@@ -140,6 +140,9 @@ export function setupWebSockets(server: http.Server, services: ServiceContainer)
       }
     });
 
+    // Re-emit pending HITL forms so the UI dialog queue is restored after page refresh/reconnect
+    services.hitlFormService.reEmitPending();
+
     ws.on('close', () => {
       logger.info('Client disconnected');
       unsubscribe();
