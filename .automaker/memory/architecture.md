@@ -3670,3 +3670,30 @@ usageStats:
 - **Rejected:** Creating worktree-specific node_modules would be cleaner but uses significantly more disk space. Committing dist/ to main branch would pollute git history with build artifacts.
 - **Trade-offs:** Rebuilding dist/ must happen every time the worktree modifies exported types, adding a synchronization step. But it avoids disk bloat and keeps git clean.
 - **Breaking if changed:** If dist/ is gitignored and not rebuilt, the main branch's TypeScript checks will fail for new exports. If dist/ is committed to git, merging the feature branch becomes conflict-prone.
+
+#### [Pattern] /approve and /reject command detection requires explicit hasPendingApproval() guard to scope detection only to gates in progress, not generic approval keywords elsewhere in Linear comments (2026-02-27)
+- **Problem solved:** LinearCommentService already routes generic 'approval' keywords to LinearApprovalBridge for new feature creation. New gate approval commands use identical keywords but different workflow.
+- **Why this works:** Without scoping guard, any /approve in any Linear comment would trigger gate logic. Guard prevents false positives and hijacking unrelated workflows. Explicit state-based routing is safer than implicit context inference.
+- **Trade-offs:** Adds runtime guard check (cheap) but requires maintaining pending approval state. Makes workflow intent explicit rather than implicit.
+
+### Expose LinearCommentService via getCommentService() getter on parent LinearSyncService to enable handler composition without exposing internal service details (2026-02-27)
+- **Context:** LinearChannelHandler needs LinearCommentService instance to inject itself into comment routing. Service is private encapsulation detail of LinearSyncService.
+- **Why:** Enables clean composition: handler receives only what it needs (comment service) rather than entire parent service. Alternative of passing LinearSyncService creates unnecessary coupling to sync logic.
+- **Rejected:** Could pass entire LinearSyncService and handler extracts commentService internally. Rejected because it couples handler to sync service contract and makes dependencies implicit.
+- **Trade-offs:** Creates new stable API contract (getCommentService must never be removed). Requires modifying file outside feature's explicit scope (linear-sync-service.ts). Benefit: clean separation of concerns.
+- **Breaking if changed:** Removing getCommentService() breaks wiring.ts instantiation. Changing what it returns breaks handler initialization.
+
+#### [Pattern] Implement stateful pending approval tracking (Map<featureId, PendingApproval>) to enable correct command routing rather than implicit context inference (2026-02-27)
+- **Problem solved:** System needs to distinguish 'this gate is pending approval' from 'feature was just created' or 'other workflow' to route /approve/reject correctly.
+- **Why this works:** Explicit state enables precise routing without false positives. State serves a validation/routing purpose (prevents incorrect command interpretation), not just information storage. Cleaner than trying to infer intent from feature metadata.
+- **Trade-offs:** Adds in-memory state (acceptable for short-lived gates) and requires cleanup discipline (state must clear on resolution). Benefit: deterministic, testable routing logic.
+
+#### [Gotcha] Feature required modifying linear-sync-service.ts (not in original scope) to expose getCommentService() and setChannelHandler() methods for wiring (2026-02-27)
+- **Situation:** Implementation discovered that composing the handler required changes to an external file (LinearSyncService) to expose its private comment service.
+- **Root cause:** LinearSyncService encapsulates LinearCommentService, making it inaccessible for dependency injection. No way to pass it to handler without modifying parent service.
+- **How to avoid:** Minimal changes (two simple getter/setter methods) but reveals scope creep. Document these additions as required for LinearChannelHandler integration.
+
+#### [Pattern] Implement UIChannelHandler no-op fallback when linearIssueId is absent, allowing graceful degradation for non-Linear features (2026-02-27)
+- **Problem solved:** Some features are created via UI, not Linear, so have no linearIssueId. Gate approval still works but comments don't post to Linear.
+- **Why this works:** Ensures robustness: all features support gate holds regardless of source. Handler interface abstracts this difference. Prevents special-case logic throughout codebase.
+- **Trade-offs:** Silent failure for non-Linear features (no error, no comment). Benefits: clean abstraction, no caller logic needed.

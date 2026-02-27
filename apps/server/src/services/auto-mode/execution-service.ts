@@ -599,6 +599,9 @@ export class ExecutionService {
       tempRunningFeature.model = modelResult.model;
       tempRunningFeature.provider = provider;
 
+      // Persist the resolved model to the feature JSON so the UI can display it
+      await this.featureLoader.update(projectPath, featureId, { model: modelResult.model });
+
       // Sync and restack the branch before agent execution
       // This keeps the branch fresh and reduces merge conflicts
       if (branchName && useWorktrees) {
@@ -1162,25 +1165,92 @@ export class ExecutionService {
 
         // Recovery didn't suggest retry or not retryable - fall back to original behavior
         // Increment failure count for model escalation on retry
+        let newFailureCount = 0;
         if (feature) {
-          const newFailureCount = (feature.failureCount ?? 0) + 1;
+          newFailureCount = (feature.failureCount ?? 0) + 1;
           await this.featureLoader.update(projectPath, featureId, {
             failureCount: newFailureCount,
           });
           logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
         }
-        await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
-        this.callbacks.emitAutoModeEvent('auto_mode_error', {
-          featureId,
-          featureName: feature?.title,
-          branchName: feature?.branchName ?? null,
-          error: errorInfo.message,
-          errorType: errorInfo.type,
-          projectPath,
-          recoveryAttempted: true,
-          recoveryAction: recoveryResult.actionTaken,
-          failureCategory: failureAnalysis.category,
-        });
+
+        // Detect git commit / pre-commit hook failures. These are deterministic — retrying
+        // immediately will fail again and cause a retry storm. Apply exponential backoff
+        // (min 30s, max 5min). After MAX_GIT_COMMIT_RETRIES attempts, leave blocked for
+        // human review rather than continuing to burn API calls on a doomed loop.
+        const GIT_COMMIT_FAILURE_PATTERNS = [
+          'git commit',
+          'git workflow failed',
+          'pre-commit',
+          'hook failed',
+          'lint-staged',
+        ];
+        const MAX_GIT_COMMIT_RETRIES = 3;
+        const isGitCommitFailure = GIT_COMMIT_FAILURE_PATTERNS.some((p) =>
+          errorInfo.message.toLowerCase().includes(p)
+        );
+
+        if (isGitCommitFailure) {
+          if (newFailureCount >= MAX_GIT_COMMIT_RETRIES) {
+            logger.warn(
+              `[GitCommitFailure] Feature ${featureId} blocked after ${newFailureCount} ` +
+                `git commit failures — requires human intervention`
+            );
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: `Git commit hook failure (${newFailureCount} attempts) — blocked for human review`,
+            });
+            this.callbacks.emitAutoModeEvent('auto_mode_error', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              error: `Git commit hook failure (${newFailureCount} attempts) — blocked for human review`,
+              errorType: 'git_commit_failure',
+              projectPath,
+            });
+          } else {
+            // Exponential backoff: 30s → 60s → 120s … max 5min
+            const backoffMs = Math.min(30_000 * Math.pow(2, newFailureCount - 1), 300_000);
+            logger.warn(
+              `[GitCommitFailure] Feature ${featureId} git commit failed ` +
+                `(attempt ${newFailureCount}), retrying in ${Math.round(backoffMs / 1000)}s`
+            );
+            const capturedId = featureId;
+            const retryTimer = setTimeout(() => {
+              this.retryTimers.delete(capturedId);
+              this.callbacks
+                .updateFeatureStatus(projectPath, capturedId, 'backlog')
+                .catch((err) =>
+                  logger.error(
+                    `[GitCommitFailure] Failed to reset feature ${capturedId} to backlog after backoff:`,
+                    err
+                  )
+                );
+            }, backoffMs);
+            this.retryTimers.set(featureId, retryTimer);
+            this.callbacks.emitAutoModeEvent('auto_mode_error', {
+              featureId,
+              featureName: feature?.title,
+              branchName: feature?.branchName ?? null,
+              error: `Git commit failure — retrying in ${Math.round(backoffMs / 1000)}s (attempt ${newFailureCount})`,
+              errorType: 'git_commit_failure',
+              projectPath,
+            });
+          }
+        } else {
+          await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
+          this.callbacks.emitAutoModeEvent('auto_mode_error', {
+            featureId,
+            featureName: feature?.title,
+            branchName: feature?.branchName ?? null,
+            error: errorInfo.message,
+            errorType: errorInfo.type,
+            projectPath,
+            recoveryAttempted: true,
+            recoveryAction: recoveryResult.actionTaken,
+            failureCategory: failureAnalysis.category,
+          });
+        }
 
         // Track this failure and check if we should pause auto mode
         // This handles both specific quota/rate limit errors AND generic failures

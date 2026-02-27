@@ -182,6 +182,27 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
  * Includes theme, UI state, feature defaults, keyboard shortcuts, and projects.
  * Format: JSON with version field for migration support.
  */
+
+/**
+ * Feature flags for toggling in-development UI features.
+ * New features should start behind a flag until ready for general availability.
+ */
+export interface FeatureFlags {
+  /** Calendar view in project sidebar (default: true in dev) */
+  calendar: boolean;
+  /** Designs/pen file viewer in project sidebar (default: true in dev) */
+  designs: boolean;
+  /** Docs view in project sidebar (default: true in dev) */
+  docs: boolean;
+}
+
+/** Default feature flags — all on in development, off in staging/production */
+export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  calendar: true,
+  designs: true,
+  docs: true,
+};
+
 export interface GlobalSettings {
   /** Version number for schema migration */
   version: number;
@@ -558,7 +579,8 @@ export interface GlobalSettings {
   // Hivemind Configuration
   /**
    * Unique identifier for this Automaker instance in a hivemind mesh.
-   * Defaults to os.hostname() at runtime if not set.
+   * Also used for PR ownership watermarking to prevent multi-instance conflicts.
+   * Auto-generated UUID on first call and persisted for subsequent calls.
    */
   instanceId?: string;
 
@@ -603,6 +625,13 @@ export interface GlobalSettings {
    * @see PromotionConfig in promotion.ts
    */
   promotion?: PromotionConfig;
+
+  /**
+   * Feature flags for toggling in-development UI features.
+   * Defaults to all enabled in development, disabled in staging/production.
+   * Toggled per-installation via Settings > Developer > Feature Flags.
+   */
+  featureFlags?: FeatureFlags;
 }
 
 /** Default global settings used when no settings file exists */
@@ -677,4 +706,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     enabled: false,
     projects: [],
   },
+  // Feature flags — all on in development by default
+  featureFlags: DEFAULT_FEATURE_FLAGS,
 };

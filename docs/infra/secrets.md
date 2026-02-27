@@ -153,7 +153,7 @@ Wrap MCP server commands with `infisical run` to inject secrets at startup.
         "dev",
         "--",
         "node",
-        "/path/to/automaker/packages/mcp-server/dist/index.js"
+        "/path/to/protomaker/packages/mcp-server/dist/index.js"
       ]
     },
     "discord": {

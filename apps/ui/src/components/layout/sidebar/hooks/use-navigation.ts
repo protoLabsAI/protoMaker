@@ -46,6 +46,9 @@ interface UseNavigationProps {
   hideSpecEditor: boolean;
   hideContext: boolean;
   hideTerminal: boolean;
+  hideCalendar: boolean;
+  hideDesigns: boolean;
+  hideDocs: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -69,6 +72,9 @@ export function useNavigation({
   hideSpecEditor,
   hideContext,
   hideTerminal,
+  hideCalendar,
+  hideDesigns,
+  hideDocs,
   currentProject,
   projects,
   projectHistory,
@@ -129,12 +135,6 @@ export function useNavigation({
         shortcut: shortcuts.memory,
       },
       {
-        id: 'notes',
-        label: 'Notes',
-        icon: NotebookPen,
-        shortcut: shortcuts.notes,
-      },
-      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
@@ -150,10 +150,13 @@ export function useNavigation({
       if (item.id === 'context' && hideContext) {
         return false;
       }
+      if (item.id === 'docs' && hideDocs) {
+        return false;
+      }
       return true;
     });
 
-    // Build project items - Terminal is conditionally included
+    // Build project items - Terminal, Calendar, Designs are conditionally included
     const projectItems: NavItem[] = [
       {
         id: 'analytics',
@@ -167,16 +170,28 @@ export function useNavigation({
         shortcut: shortcuts.board,
       },
       {
+        id: 'notes',
+        label: 'Notes',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
+      },
+    ];
+
+    if (!hideDesigns) {
+      projectItems.push({
         id: 'designs',
         label: 'Designs',
         icon: Palette,
-      },
-      {
+      });
+    }
+
+    if (!hideCalendar) {
+      projectItems.push({
         id: 'calendar',
         label: 'Calendar',
         icon: CalendarDays,
-      },
-    ];
+      });
+    }
 
     // Add Terminal to Project section if not hidden
     if (!hideTerminal) {
@@ -247,6 +262,9 @@ export function useNavigation({
     hideSpecEditor,
     hideContext,
     hideTerminal,
+    hideCalendar,
+    hideDesigns,
+    hideDocs,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,

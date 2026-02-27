@@ -573,11 +573,11 @@ npm run setup-ci -- /path/to/project
 
 ## Reference
 
-- **protoLabs Workflows**: `.github/workflows/` in automaker repo
+- **protoLabs Workflows**: `.github/workflows/` in protomaker repo
 - **Branch Protection**: `scripts/infra/rulesets/main.json`
 - **GitHub Actions Docs**: https://docs.github.com/actions
 - **GitHub Rulesets API**: https://docs.github.com/rest/repos/rules
 
 ---
 
-**Questions or issues?** Open an issue at https://github.com/proto-labs-ai/automaker
+**Questions or issues?** Open an issue at https://github.com/proto-labs-ai/protomaker

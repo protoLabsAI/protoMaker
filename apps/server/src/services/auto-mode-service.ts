@@ -3629,8 +3629,30 @@ Format your response as a structured markdown document.`;
           env: gitEnv,
         });
       } else {
-        // Create new branch from HEAD
-        await execAsync(`git worktree add -b "${branchName}" "${worktreePath}" HEAD`, {
+        // Determine base branch: use epic branch if feature belongs to an epic
+        let baseBranch = 'HEAD';
+        if (feature?.epicId && !feature.isEpic) {
+          try {
+            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
+            if (epicFeature?.branchName) {
+              // Verify the epic branch exists before using it as base
+              await execAsync(`git rev-parse --verify "${epicFeature.branchName}"`, {
+                cwd: projectPath,
+              });
+              baseBranch = epicFeature.branchName;
+              logger.info(
+                `Feature ${feature.id} belongs to epic, branching from epic branch: ${baseBranch}`
+              );
+            }
+          } catch {
+            logger.warn(
+              `Epic branch not found for feature ${feature.id} (epicId: ${feature.epicId}), falling back to HEAD`
+            );
+          }
+        }
+
+        // Create new branch from base (epic branch or HEAD)
+        await execAsync(`git worktree add -b "${branchName}" "${worktreePath}" ${baseBranch}`, {
           cwd: projectPath,
           env: gitEnv,
         });
@@ -3951,6 +3973,22 @@ Format your response as a structured markdown document.`;
               );
             }
           } else {
+            // Guard: if the feature was blocked due to a git commit / workflow failure,
+            // don't immediately re-enqueue it — that would recreate the retry storm.
+            // After MAX_GIT_COMMIT_RETRIES repeated failures, leave it blocked and require
+            // human intervention to fix the hook issue (e.g. .prettierignore, Husky config).
+            const changeReason = feature.statusChangeReason ?? '';
+            const isGitWorkflowBlock =
+              changeReason.includes('git commit') || changeReason.includes('git workflow failed');
+            const MAX_GIT_COMMIT_RETRIES = 3;
+            if (isGitWorkflowBlock && (feature.failureCount ?? 0) >= MAX_GIT_COMMIT_RETRIES) {
+              logger.warn(
+                `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
+                  `blocked after ${feature.failureCount} git commit failures. Requires human intervention.`
+              );
+              continue;
+            }
+
             logger.info(
               `[loadPendingFeatures] Unblocking feature ${feature.id} — all dependencies now satisfied`
             );

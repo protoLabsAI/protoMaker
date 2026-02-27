@@ -10,14 +10,14 @@ Install directly from the GitHub repository:
 
 ```bash
 # 1. Add the protoLabs plugin marketplace from GitHub
-claude plugin marketplace add https://github.com/proto-labs-ai/automaker/tree/main/packages/mcp-server/plugins
+claude plugin marketplace add https://github.com/proto-labs-ai/protomaker/tree/main/packages/mcp-server/plugins
 
 # 2. Install the plugin
 claude plugin install automaker
 
 # 3. Start protoLabs server (in a separate terminal)
-git clone https://github.com/proto-labs-ai/automaker.git
-cd automaker
+git clone https://github.com/proto-labs-ai/protomaker.git
+cd protomaker
 npm install
 npm run dev:web
 
@@ -32,8 +32,8 @@ For developers working on protoLabs:
 
 ```bash
 # 1. Clone and install protoLabs
-git clone https://github.com/proto-labs-ai/automaker.git
-cd automaker
+git clone https://github.com/proto-labs-ai/protomaker.git
+cd protomaker
 npm install
 
 # 2. Build the MCP server
@@ -86,7 +86,7 @@ The plugin consists of:
 
 ### Prerequisites
 
-- protoLabs server running (`npm run dev` from the automaker root directory)
+- protoLabs server running (`npm run dev` from the protomaker root directory)
 - Claude Code CLI installed and authenticated
 - Node.js 22+
 
@@ -118,7 +118,7 @@ npm run build
 
 ```bash
 # Add the local marketplace
-claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+claude plugin marketplace add /path/to/protomaker/packages/mcp-server/plugins
 
 # Install the plugin
 claude plugin install automaker
@@ -128,7 +128,7 @@ claude plugin install automaker
 
 ```bash
 # Create symlink to Claude's plugins directory
-ln -s /path/to/automaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/automaker
+ln -s /path/to/protomaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/automaker
 ```
 
 ### Step 4: Restart Claude Code
@@ -191,7 +191,7 @@ If you prefer to configure MCP directly, add to `~/.claude/claude_desktop_config
   "mcpServers": {
     "automaker": {
       "command": "node",
-      "args": ["/path/to/automaker/packages/mcp-server/dist/index.js"],
+      "args": ["/path/to/protomaker/packages/mcp-server/dist/index.js"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "your-api-key"
@@ -213,7 +213,7 @@ For production deployments using Docker, follow these steps to configure the MCP
 
 ### Step 1: Configure docker-compose.override.yml
 
-Create `docker-compose.override.yml` in the automaker root directory:
+Create `docker-compose.override.yml` in the protomaker root directory:
 
 ```yaml
 # protoLabs Production Override
@@ -243,7 +243,7 @@ services:
 
 ### Step 2: Configure .env File
 
-Create or update `.env` in the automaker root directory:
+Create or update `.env` in the protomaker root directory:
 
 ```bash
 AUTOMAKER_API_KEY=your-secure-api-key
@@ -268,7 +268,7 @@ Edit `packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json` to use a
   "mcpServers": {
     "automaker": {
       "command": "node",
-      "args": ["/absolute/path/to/automaker/packages/mcp-server/dist/index.js"],
+      "args": ["/absolute/path/to/protomaker/packages/mcp-server/dist/index.js"],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "your-secure-api-key",
@@ -292,7 +292,7 @@ curl http://localhost:3008/api/health
 ### Step 5: Install/Reinstall Plugin
 
 ```bash
-claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
+claude plugin marketplace add /path/to/protomaker/packages/mcp-server/plugins
 claude plugin install automaker
 ```
 

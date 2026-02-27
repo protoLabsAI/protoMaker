@@ -1,6 +1,6 @@
 import { Label } from '@protolabs-ai/ui/atoms';
 import { Switch } from '@protolabs-ai/ui/atoms';
-import { Code2 } from 'lucide-react';
+import { Code2, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore, type ServerLogLevel } from '@/store/app-store';
 import { toast } from 'sonner';
@@ -12,9 +12,30 @@ const LOG_LEVEL_OPTIONS: { value: ServerLogLevel; label: string; description: st
   { value: 'debug', label: 'Debug', description: 'Show all messages including debug' },
 ];
 
+const FEATURE_FLAG_LABELS: Record<string, { label: string; description: string }> = {
+  calendar: {
+    label: 'Calendar',
+    description: 'Show the Calendar view in the project sidebar.',
+  },
+  designs: {
+    label: 'Designs',
+    description: 'Show the Designs (pen file) viewer in the project sidebar.',
+  },
+  docs: {
+    label: 'Docs',
+    description: 'Show the Docs viewer in the project sidebar.',
+  },
+};
+
 export function DeveloperSection() {
-  const { serverLogLevel, setServerLogLevel, enableRequestLogging, setEnableRequestLogging } =
-    useAppStore();
+  const {
+    serverLogLevel,
+    setServerLogLevel,
+    enableRequestLogging,
+    setEnableRequestLogging,
+    featureFlags,
+    setFeatureFlags,
+  } = useAppStore();
 
   return (
     <div
@@ -84,6 +105,41 @@ export function DeveloperSection() {
               });
             }}
           />
+        </div>
+
+        {/* Feature Flags */}
+        <div className="pt-4 border-t border-border/30 space-y-3">
+          <div className="flex items-center gap-2">
+            <Flag className="w-4 h-4 text-muted-foreground" />
+            <Label className="text-foreground font-medium">Feature Flags</Label>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Toggle in-development UI features. Enabled by default in development; disable to
+            replicate staging/production behavior.
+          </p>
+          <div className="space-y-3">
+            {(Object.keys(featureFlags) as Array<keyof typeof featureFlags>).map((key) => {
+              const meta = FEATURE_FLAG_LABELS[key];
+              if (!meta) return null;
+              return (
+                <div key={key} className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm text-foreground">{meta.label}</Label>
+                    <p className="text-xs text-muted-foreground">{meta.description}</p>
+                  </div>
+                  <Switch
+                    checked={featureFlags[key]}
+                    onCheckedChange={(checked) => {
+                      setFeatureFlags({ [key]: checked });
+                      toast.success(`${meta.label} ${checked ? 'enabled' : 'disabled'}`, {
+                        description: 'Feature flag updated',
+                      });
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

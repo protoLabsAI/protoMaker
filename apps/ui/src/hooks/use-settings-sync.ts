@@ -88,6 +88,7 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'worktreePanelCollapsed',
   'lastProjectDir',
   'recentFolders',
+  'featureFlags',
 ] as const;
 
 // Fields from setup store to sync
@@ -825,6 +826,7 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       lastProjectDir: serverSettings.lastProjectDir ?? '',
       recentFolders: serverSettings.recentFolders ?? [],
       eventHooks: serverSettings.eventHooks ?? [],
+      featureFlags: serverSettings.featureFlags ?? { calendar: true, designs: true, docs: true },
     });
 
     // Also refresh setup wizard state

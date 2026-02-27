@@ -11,7 +11,9 @@ import type {
   PromptCustomization,
   ServerLogLevel,
   EventHook,
+  FeatureFlags,
 } from '@protolabs-ai/types';
+import { DEFAULT_FEATURE_FLAGS } from '@protolabs-ai/types';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from './types';
 import type {
   ViewMode,
@@ -96,6 +98,9 @@ export interface AppState {
   // Server Log Level Settings
   serverLogLevel: ServerLogLevel; // Log level for the API server (error, warn, info, debug)
   enableRequestLogging: boolean; // Enable HTTP request logging (Morgan)
+
+  // Feature Flags — toggle in-development UI features per-installation
+  featureFlags: FeatureFlags;
 
   // MCP Servers
   mcpServers: MCPServerConfig[]; // List of configured MCP servers for agent use
@@ -254,6 +259,9 @@ export interface AppActions {
   setServerLogLevel: (level: ServerLogLevel) => void;
   setEnableRequestLogging: (enabled: boolean) => void;
 
+  // Feature Flag actions
+  setFeatureFlags: (flags: Partial<FeatureFlags>) => void;
+
   // Editor Configuration actions
   setDefaultEditorCommand: (command: string | null) => void;
 
@@ -349,6 +357,7 @@ const initialState: AppState = {
   muteDoneSound: false, // Default to sound enabled (not muted)
   serverLogLevel: 'info', // Default to info level for server logs
   enableRequestLogging: true, // Default to enabled for HTTP request logging
+  featureFlags: DEFAULT_FEATURE_FLAGS, // All flags on in development by default
   mcpServers: [], // No MCP servers configured by default
   defaultEditorCommand: null, // Auto-detect: Cursor > VS Code > first available
   enableSkills: true, // Skills enabled by default
@@ -1156,6 +1165,10 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Server Log Level actions
   setServerLogLevel: (level) => set({ serverLogLevel: level }),
   setEnableRequestLogging: (enabled) => set({ enableRequestLogging: enabled }),
+
+  // Feature Flag actions
+  setFeatureFlags: (flags) =>
+    set((state) => ({ featureFlags: { ...state.featureFlags, ...flags } })),
 
   // Editor Configuration actions
   setDefaultEditorCommand: (command) => set({ defaultEditorCommand: command }),
