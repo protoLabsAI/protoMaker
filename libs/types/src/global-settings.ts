@@ -246,8 +246,6 @@ export interface GlobalSettings {
   // UI State Preferences
   /** Whether sidebar is currently open */
   sidebarOpen: boolean;
-  /** Whether chat history panel is open */
-  chatHistoryOpen: boolean;
 
   // Feature Generation Defaults
   /** Max features to generate concurrently */
@@ -643,7 +641,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   skipClaudeSetup: false,
   theme: 'dark',
   sidebarOpen: true,
-  chatHistoryOpen: false,
   maxConcurrency: DEFAULT_MAX_CONCURRENCY,
   defaultSkipTests: true,
   enableDependencyBlocking: true,
