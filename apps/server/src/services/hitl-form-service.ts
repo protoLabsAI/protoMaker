@@ -16,10 +16,12 @@ import { join } from 'path';
 import { createLogger } from '@protolabs-ai/utils';
 import { ensureAutomakerDir } from '@protolabs-ai/platform';
 import type {
+  Feature,
   HITLFormRequest,
   HITLFormRequestInput,
   HITLFormRequestSummary,
 } from '@protolabs-ai/types';
+import type { ChannelRouter } from './channel-router.js';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('HITLFormService');
@@ -38,6 +40,8 @@ export interface HITLFormServiceDeps {
   followUpFeature: (projectPath: string, featureId: string, prompt: string) => Promise<void>;
   /** Known project paths for loading persisted forms on startup */
   getKnownProjectPaths?: () => string[];
+  /** Load a feature by projectPath + featureId (used for channel routing) */
+  getFeature?: (projectPath: string, featureId: string) => Promise<Feature | null>;
 }
 
 export class HITLFormService {
@@ -46,17 +50,32 @@ export class HITLFormService {
   private events: EventEmitter;
   private followUpFeature: HITLFormServiceDeps['followUpFeature'];
   private getKnownProjectPaths: () => string[];
+  private getFeatureFn:
+    | ((projectPath: string, featureId: string) => Promise<Feature | null>)
+    | null = null;
+  private channelRouter: ChannelRouter | null = null;
 
   constructor(deps: HITLFormServiceDeps) {
     this.events = deps.events;
     this.followUpFeature = deps.followUpFeature;
     this.getKnownProjectPaths = deps.getKnownProjectPaths ?? (() => []);
+    this.getFeatureFn = deps.getFeature ?? null;
     this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
 
     // Load persisted forms on startup (fire-and-forget)
     this.loadPersistedForms().catch((err) =>
       logger.error('Failed to load persisted HITL forms:', err)
     );
+  }
+
+  /**
+   * Wire in the channel router for non-UI form delivery.
+   * When set and a form request has replyChannel, the form will be sent
+   * via the appropriate channel handler instead of emitting hitl:form-requested.
+   */
+  setChannelRouter(channelRouter: ChannelRouter): void {
+    this.channelRouter = channelRouter;
+    logger.info('ChannelRouter wired into HITLFormService');
   }
 
   /**
@@ -86,15 +105,50 @@ export class HITLFormService {
     this.forms.set(form.id, form);
     this.persistForm(form);
 
-    this.events.emit('hitl:form-requested', {
-      formId: form.id,
-      title: form.title,
-      callerType: form.callerType,
-      featureId: form.featureId,
-      projectPath: form.projectPath,
-      stepCount: form.steps.length,
-      expiresAt: form.expiresAt,
-    });
+    if (form.replyChannel && this.channelRouter && form.featureId && form.projectPath) {
+      // Non-UI channel: route form delivery through the channel handler
+      const router = this.channelRouter;
+      const featureId = form.featureId;
+      const projectPath = form.projectPath;
+      const formCopy = form;
+      const getFeatureFn = this.getFeatureFn;
+
+      (async () => {
+        try {
+          let feature: Feature | null = null;
+          if (getFeatureFn) {
+            feature = await getFeatureFn(projectPath, featureId);
+          }
+          if (feature) {
+            await router.getHandler(feature).sendHITLForm(feature, input);
+          } else {
+            // Feature not found — fall back to UI event
+            this.events.emit('hitl:form-requested', {
+              formId: formCopy.id,
+              title: formCopy.title,
+              callerType: formCopy.callerType,
+              featureId: formCopy.featureId,
+              projectPath: formCopy.projectPath,
+              stepCount: formCopy.steps.length,
+              expiresAt: formCopy.expiresAt,
+            });
+          }
+        } catch (err) {
+          logger.error(`Failed to route HITL form ${formCopy.id} to channel handler:`, err);
+        }
+      })();
+    } else {
+      // UI channel (no replyChannel): emit hitl:form-requested for backward compatibility
+      this.events.emit('hitl:form-requested', {
+        formId: form.id,
+        title: form.title,
+        callerType: form.callerType,
+        featureId: form.featureId,
+        projectPath: form.projectPath,
+        stepCount: form.steps.length,
+        expiresAt: form.expiresAt,
+      });
+    }
 
     logger.info(
       `Form created: ${form.id} (${form.title}) — ${form.steps.length} step(s), TTL ${ttl}s`

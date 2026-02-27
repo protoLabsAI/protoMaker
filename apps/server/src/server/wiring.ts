@@ -50,6 +50,8 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
     auditService,
     leadEngineerService,
     pipelineOrchestrator,
+    hitlFormService,
+    channelRouter,
     prFeedbackService,
     worktreeLifecycleService,
     githubStateChecker,
@@ -192,6 +194,10 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
       logger.warn('[Bugs] Failed to create Linear issue for bug:', error);
     }
   });
+
+  // Channel Router wiring — must come before pipeline and HITL form service wiring
+  pipelineOrchestrator.setChannelRouter(channelRouter);
+  hitlFormService.setChannelRouter(channelRouter);
 
   // Lead Engineer cross-service wiring
   leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
