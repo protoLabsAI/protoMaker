@@ -89,7 +89,34 @@ jobs:
       - name: Create GitHub Release
         run: |
           gh release create "v${{ steps.version.outputs.version }}" \
+            --title "v${{ steps.version.outputs.version }} Alpha" \
             --generate-notes \
-            --latest
+            --prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post release notes to Discord
+        if: ${{ secrets.DISCORD_DEV_WEBHOOK != '' }}
+        run: |
+          VERSION="v${{ steps.version.outputs.version }}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${VERSION}"
+
+          # Fetch the auto-generated release notes (truncate to 3900 chars — Discord embed limit is 4096)
+          NOTES=$(gh release view "$VERSION" --json body --jq '.body' | head -c 3900)
+
+          # Escape JSON special characters
+          NOTES_JSON=$(printf '%s' "$NOTES" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read()))")
+
+          curl -sf -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"${VERSION} Alpha released\",
+                \"url\": \"${RELEASE_URL}\",
+                \"description\": ${NOTES_JSON},
+                \"color\": 5763719
+              }]
+            }" \
+            "$DISCORD_DEV_WEBHOOK" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
