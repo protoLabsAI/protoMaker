@@ -143,6 +143,44 @@ jobs:
           done
           docker image prune -f 2>/dev/null || true
 
+      - name: Notify Discord
+        if: always()
+        run: |
+          VERSION=$(curl -sf http://localhost:3008/api/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('version','unknown'))" 2>/dev/null || echo "unknown")
+          COMMIT="${{ github.sha }}"
+          COMMIT="${COMMIT:0:8}"
+          STATUS="${{ job.status }}"
+          ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
+
+          if [ "$STATUS" = "success" ]; then
+            MSG="Main deployed: \`${COMMIT}\` (v${VERSION}) — all healthy"
+            WEBHOOK="${DISCORD_DEPLOY_WEBHOOK:-}"
+          else
+            case "$ROLLBACK_OUTCOME" in
+              success)
+                MSG="ALERT: Main deploy FAILED: \`${COMMIT}\` — rolled back to previous version. Check GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                ;;
+              failure)
+                MSG="ALERT: Main deploy FAILED: \`${COMMIT}\` — rollback ALSO FAILED. Manual intervention required. Check GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                ;;
+              *)
+                MSG="ALERT: Main deploy FAILED: \`${COMMIT}\` — no rollback performed. Check GitHub Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                ;;
+            esac
+            WEBHOOK="${DISCORD_ALERTS_WEBHOOK:-}"
+          fi
+
+          if [ -n "${WEBHOOK:-}" ]; then
+            curl -sf -H "Content-Type: application/json" \
+              -d "{\"content\": \"${MSG}\"}" \
+              "$WEBHOOK" || true
+          fi
+
+          echo "$MSG"
+        env:
+          DISCORD_DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+          DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
+
       - name: Summary
         if: always()
         run: |
