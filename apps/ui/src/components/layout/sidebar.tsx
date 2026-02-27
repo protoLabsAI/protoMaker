@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from '@tanstack/react-router';
 const logger = createLogger('Sidebar');
 import { cn, isMac } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
-import { useNotificationsStore } from '@/store/notifications-store';
+import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { useCeremonyStore } from '@/store/ceremony-store';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { getElectronAPI, isElectron } from '@/lib/electron';
@@ -96,8 +96,8 @@ export function Sidebar() {
   // Get customizable keyboard shortcuts
   const shortcuts = useKeyboardShortcutsConfig();
 
-  // Get unread notifications count
-  const unreadNotificationsCount = useNotificationsStore((s) => s.unreadCount);
+  // Get pending actionable items count (drives the inbox badge)
+  const unreadNotificationsCount = useActionableItemsStore((s) => s.pendingCount);
 
   // Get unread ceremony event count
   const unreadCeremonyCount = useCeremonyStore((s) => s.unreadCount);
@@ -257,6 +257,7 @@ export function Sidebar() {
     hideTerminal,
     hideCalendar: !featureFlags.calendar,
     hideDesigns: !featureFlags.designs,
+    hideDocs: !featureFlags.docs,
     currentProject,
     projects,
     projectHistory,

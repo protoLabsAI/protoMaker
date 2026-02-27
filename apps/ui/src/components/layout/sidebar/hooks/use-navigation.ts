@@ -48,6 +48,7 @@ interface UseNavigationProps {
   hideTerminal: boolean;
   hideCalendar: boolean;
   hideDesigns: boolean;
+  hideDocs: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -73,6 +74,7 @@ export function useNavigation({
   hideTerminal,
   hideCalendar,
   hideDesigns,
+  hideDocs,
   currentProject,
   projects,
   projectHistory,
@@ -133,12 +135,6 @@ export function useNavigation({
         shortcut: shortcuts.memory,
       },
       {
-        id: 'notes',
-        label: 'Notes',
-        icon: NotebookPen,
-        shortcut: shortcuts.notes,
-      },
-      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
@@ -152,6 +148,9 @@ export function useNavigation({
         return false;
       }
       if (item.id === 'context' && hideContext) {
+        return false;
+      }
+      if (item.id === 'docs' && hideDocs) {
         return false;
       }
       return true;
@@ -169,6 +168,12 @@ export function useNavigation({
         label: 'Kanban Board',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
+      },
+      {
+        id: 'notes',
+        label: 'Notes',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
       },
     ];
 
@@ -257,6 +262,9 @@ export function useNavigation({
     hideSpecEditor,
     hideContext,
     hideTerminal,
+    hideCalendar,
+    hideDesigns,
+    hideDocs,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,

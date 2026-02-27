@@ -192,12 +192,15 @@ export interface FeatureFlags {
   calendar: boolean;
   /** Designs/pen file viewer in project sidebar (default: true in dev) */
   designs: boolean;
+  /** Docs view in project sidebar (default: true in dev) */
+  docs: boolean;
 }
 
 /** Default feature flags — all on in development, off in staging/production */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   calendar: true,
   designs: true,
+  docs: true,
 };
 
 export interface GlobalSettings {

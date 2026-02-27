@@ -21,6 +21,10 @@ const FEATURE_FLAG_LABELS: Record<string, { label: string; description: string }
     label: 'Designs',
     description: 'Show the Designs (pen file) viewer in the project sidebar.',
   },
+  docs: {
+    label: 'Docs',
+    description: 'Show the Docs viewer in the project sidebar.',
+  },
 };
 
 export function DeveloperSection() {
