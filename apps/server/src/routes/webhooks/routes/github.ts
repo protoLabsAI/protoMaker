@@ -53,6 +53,25 @@ interface GitHubIssuePayload {
   };
 }
 
+interface GitHubIssueCommentPayload {
+  action: string;
+  issue: {
+    number: number;
+    title: string;
+  };
+  comment: {
+    id: number;
+    body: string;
+    user: {
+      login: string;
+    };
+    created_at: string;
+  };
+  repository: {
+    full_name: string;
+  };
+}
+
 /**
  * Verify GitHub webhook signature
  */
@@ -146,7 +165,8 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
       if (
         eventType !== 'pull_request' &&
         eventType !== 'pull_request_review' &&
-        eventType !== 'issues'
+        eventType !== 'issues' &&
+        eventType !== 'issue_comment'
       ) {
         logger.debug(`Ignoring event: ${eventType}`);
         res.json({ success: true, message: 'Event type not handled' });
@@ -175,6 +195,31 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         }
 
         res.json({ success: true, message: 'Issue event processed' });
+        return;
+      }
+
+      // Handle issue_comment events (created)
+      if (eventType === 'issue_comment') {
+        const commentPayload = req.body as GitHubIssueCommentPayload;
+
+        if (commentPayload.action === 'created') {
+          logger.info(
+            `GitHub issue #${commentPayload.issue.number} comment by ${commentPayload.comment.user.login}`
+          );
+
+          // Emit event for GitHubChannelHandler to process /approve and /reject commands
+          events.emit('webhook:github:issue_comment', {
+            issueNumber: commentPayload.issue.number,
+            issueTitle: commentPayload.issue.title,
+            commentId: commentPayload.comment.id,
+            body: commentPayload.comment.body,
+            author: commentPayload.comment.user.login,
+            createdAt: commentPayload.comment.created_at,
+            repository: commentPayload.repository.full_name,
+          });
+        }
+
+        res.json({ success: true, message: 'Issue comment event processed' });
         return;
       }
 
