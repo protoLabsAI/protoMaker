@@ -297,6 +297,9 @@ export type {
   ProviderModel,
   ClaudeCompatibleProvider,
   ClaudeCompatibleProviderTemplate,
+  // OpenAI-compatible provider types
+  OpenAICompatibleConfig,
+  OpenAICompatibleTemplate,
   // Claude API profile types (deprecated)
   ClaudeApiProfile,
   ClaudeApiProfileTemplate,
@@ -345,6 +348,8 @@ export {
   DEFAULT_DISCORD_INTEGRATION,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
+  // OpenAI-compatible provider templates
+  OPENAI_COMPATIBLE_TEMPLATES,
   // Claude API profile constants (deprecated)
   CLAUDE_API_PROFILE_TEMPLATES,
   // Environment presets

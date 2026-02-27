@@ -224,6 +224,98 @@ export const CLAUDE_PROVIDER_TEMPLATES: ClaudeCompatibleProviderTemplate[] = [
 ];
 
 // ============================================================================
+// OpenAI-Compatible Providers - Configuration for OpenAI API-compatible endpoints
+// ============================================================================
+
+/**
+ * OpenAICompatibleConfig - Configuration for an OpenAI-compatible API endpoint
+ *
+ * Providers expose their models via the standard OpenAI Chat Completions API.
+ * Each config has its own baseUrl, apiKey, and models list.
+ */
+export interface OpenAICompatibleConfig {
+  /** Unique identifier (uuid) */
+  id: string;
+  /** Display name (e.g., "Local Ollama", "LM Studio") */
+  name: string;
+  /** Whether this provider is enabled (models appear in dropdowns) */
+  enabled?: boolean;
+
+  // Connection settings
+  /** Base URL for the OpenAI-compatible API endpoint */
+  baseUrl: string;
+  /** API key sourcing strategy */
+  apiKeySource: ApiKeySource;
+  /** API key value (only required when apiKeySource = 'inline') */
+  apiKey?: string;
+  /** API_TIMEOUT_MS override in milliseconds */
+  timeoutMs?: number;
+
+  /** Models exposed by this provider (appear in all dropdowns) */
+  models: ProviderModel[];
+}
+
+/**
+ * OpenAICompatibleTemplate - Template for quick provider setup
+ *
+ * Contains pre-configured settings for known OpenAI-compatible providers.
+ */
+export interface OpenAICompatibleTemplate {
+  /** Template identifier */
+  templateId: string;
+  /** Display name for the template */
+  name: string;
+  /** Base URL for the API endpoint */
+  baseUrl: string;
+  /** Default API key source for this template */
+  defaultApiKeySource: ApiKeySource;
+  /** Timeout in milliseconds */
+  timeoutMs?: number;
+  /** Description shown in UI */
+  description: string;
+  /** URL to get API key */
+  apiKeyUrl?: string;
+  /** Default models for this provider */
+  defaultModels: ProviderModel[];
+}
+
+/** Predefined templates for known OpenAI-compatible providers */
+export const OPENAI_COMPATIBLE_TEMPLATES: OpenAICompatibleTemplate[] = [
+  {
+    templateId: 'ollama',
+    name: 'Ollama',
+    baseUrl: 'http://localhost:11434/v1',
+    defaultApiKeySource: 'inline',
+    description: 'Run open-source LLMs locally with Ollama',
+    defaultModels: [
+      { id: 'llama3.2', displayName: 'Llama 3.2' },
+      { id: 'mistral', displayName: 'Mistral' },
+      { id: 'codellama', displayName: 'Code Llama' },
+    ],
+  },
+  {
+    templateId: 'lmstudio',
+    name: 'LM Studio',
+    baseUrl: 'http://localhost:1234/v1',
+    defaultApiKeySource: 'inline',
+    description: 'Run local LLMs with LM Studio',
+    defaultModels: [{ id: 'local-model', displayName: 'Local Model' }],
+  },
+  {
+    templateId: 'together',
+    name: 'Together AI',
+    baseUrl: 'https://api.together.xyz/v1',
+    defaultApiKeySource: 'inline',
+    description: 'Access 200+ open-source models via Together AI',
+    apiKeyUrl: 'https://api.together.ai/settings/api-keys',
+    defaultModels: [
+      { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', displayName: 'Llama 3.3 70B Turbo' },
+      { id: 'mistralai/Mixtral-8x7B-Instruct-v0.1', displayName: 'Mixtral 8x7B' },
+    ],
+  },
+];
+
+// ============================================================================
 // Deprecated Claude API Profiles (kept for migration)
 // ============================================================================
 

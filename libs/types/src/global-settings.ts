@@ -43,6 +43,7 @@ import type {
   ClaudeCompatibleProvider,
   ClaudeApiProfile,
   MCPServerConfig,
+  OpenAICompatibleConfig,
 } from './provider-settings.js';
 import type { EventHook } from './event-settings.js';
 import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
@@ -443,6 +444,14 @@ export interface GlobalSettings {
    */
   claudeCompatibleProviders?: ClaudeCompatibleProvider[];
 
+  // OpenAI-Compatible Providers Configuration
+  /**
+   * OpenAI-compatible provider configurations.
+   * Each provider uses the standard OpenAI Chat Completions API format.
+   * Supports local providers (Ollama, LM Studio) and cloud providers (Together AI, etc.)
+   */
+  openaiCompatibleProviders?: OpenAICompatibleConfig[];
+
   // Deprecated Claude API Profiles (kept for migration)
   /**
    * @deprecated Use claudeCompatibleProviders instead.
@@ -695,6 +704,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   subagentsSources: ['user', 'project'],
   // New provider system
   claudeCompatibleProviders: [],
+  openaiCompatibleProviders: [],
   // Deprecated - kept for migration
   claudeApiProfiles: [],
   activeClaudeApiProfileId: null,
