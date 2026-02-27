@@ -1,0 +1,51 @@
+name: Close External PRs
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+jobs:
+  close-external-pr:
+    name: Close external code contributions
+    runs-on: ubuntu-latest
+    # Only run for PRs from forks (external contributors)
+    if: github.event.pull_request.head.repo.fork == true
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Close PR and post explanation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const author = context.payload.pull_request.user.login;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `Hi @${author}, thank you for your interest in protoMaker! 🙏
+
+            **We don't accept code contributions via pull requests.**
+
+            protoMaker uses an **ideas-only contribution model** — all implementation is handled by AI agents to maintain architectural consistency and code quality standards.
+
+            **What you can do instead:**
+
+            - 💡 **Submit your idea** using the [Idea Submission](https://github.com/${context.repo.owner}/${context.repo.repo}/issues/new?template=idea_submission.yml) template — if accepted, our AI agents will implement it
+            - 🐛 **Report a bug** using the [Bug Report](https://github.com/${context.repo.owner}/${context.repo.repo}/issues/new?template=bug_report.yml) template
+            - 💬 **Join the discussion** on [Discord](https://discord.gg/jjem7aEDKU) to share feedback
+
+            You're welcome to fork the repository and use your changes privately — that's what MIT is for. We just can't merge external code back in.
+
+            See [CONTRIBUTING.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md) for the full explanation.
+
+            Closing this PR automatically.`
+            });
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              state: 'closed'
+            });

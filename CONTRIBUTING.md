@@ -1,17 +1,17 @@
-# Contributing to Automaker
+# Contributing to protoMaker
 
-Thank you for your interest in contributing to Automaker! We're excited to have you as part of our community.
+Thank you for your interest in contributing to protoMaker! We're excited to have you as part of our community.
 
 ## Ideas-Only Contribution Model
 
-Automaker follows an **ideas-only contribution model**. This means:
+protoMaker follows an **ideas-only contribution model**. This means:
 
 - ✅ **We welcome:** Ideas, bug reports, feature requests, feedback, and suggestions
 - ❌ **We do not accept:** Code contributions, pull requests, or patches from the community
 
 ### Why This Model?
 
-Automaker is an autonomous AI development studio that uses AI agents to implement features. By focusing on ideas rather than code contributions, we:
+protoMaker is an autonomous AI development studio that uses AI agents to implement features. By focusing on ideas rather than code contributions, we:
 
 - Maintain architectural consistency
 - Ensure all code follows our patterns and standards
@@ -20,7 +20,7 @@ Automaker is an autonomous AI development studio that uses AI agents to implemen
 
 ### We Do Not Accept Code Contributions
 
-**Please do not submit pull requests with code changes.** They will be politely closed with a reference to this document.
+**Please do not submit pull requests with code changes.** They will be automatically closed with a reference to this document.
 
 Instead, submit your ideas through our issue templates, and our AI agents will handle the implementation if your idea is accepted.
 
@@ -32,8 +32,8 @@ Have an idea for a new feature or improvement? We'd love to hear it!
 
 **Process:**
 
-1. [Search existing issues](https://github.com/proto-labs-ai/automaker/issues) to avoid duplicates
-2. [Submit an idea](https://github.com/proto-labs-ai/automaker/issues/new/choose) using the "Idea Submission" template
+1. [Search existing issues](https://github.com/proto-labs-ai/protoMaker/issues) to avoid duplicates
+2. [Submit an idea](https://github.com/proto-labs-ai/protoMaker/issues/new/choose) using the "Idea Submission" template
 3. Provide a clear problem statement and proposed solution
 4. Our team will review and respond
 
@@ -52,8 +52,8 @@ Found a bug? Help us fix it by reporting it properly.
 
 **Process:**
 
-1. [Search existing bug reports](https://github.com/proto-labs-ai/automaker/issues?q=is%3Aissue+label%3Abug) to avoid duplicates
-2. [Submit a bug report](https://github.com/proto-labs-ai/automaker/issues/new/choose) using the "Bug Report" template
+1. [Search existing bug reports](https://github.com/proto-labs-ai/protoMaker/issues?q=is%3Aissue+label%3Abug) to avoid duplicates
+2. [Submit a bug report](https://github.com/proto-labs-ai/protoMaker/issues/new/choose) using the "Bug Report" template
 3. Include all requested information: steps to reproduce, expected behavior, actual behavior, environment details
 4. Add screenshots or logs if available
 
@@ -67,7 +67,7 @@ Found a bug? Help us fix it by reporting it properly.
 
 ### 3. Join Discussions
 
-Participate in conversations about features, architecture, and the future of Automaker.
+Participate in conversations about features, architecture, and the future of protoMaker.
 
 **Where to engage:**
 
@@ -90,17 +90,17 @@ Documentation improvements are valuable contributions!
 
 ### 5. Spread the Word
 
-Help grow the Automaker community:
+Help grow the protoMaker community:
 
-- ⭐ Star the [GitHub repository](https://github.com/proto-labs-ai/automaker)
+- ⭐ Star the [GitHub repository](https://github.com/proto-labs-ai/protoMaker)
 - Share your experience on social media
 - Write blog posts about your use cases
-- Recommend Automaker to others
+- Recommend protoMaker to others
 - Answer questions in Discord or GitHub Discussions
 
 ## Architecture Resources
 
-Understanding Automaker's architecture helps you contribute better ideas:
+Understanding protoMaker's architecture helps you contribute better ideas:
 
 ### Core Architecture
 
@@ -178,7 +178,7 @@ Understanding our label system helps you navigate issues:
 
 ### Can I fork the repository and make changes for my own use?
 
-Yes! Automaker is open source under the MIT License. You're free to fork, modify, and use it however you like for your own purposes. We just don't accept those changes back into the main repository via pull requests.
+Yes! protoMaker is open source under the MIT License. You're free to fork, modify, and use it however you like for your own purposes. We just don't accept those changes back into the main repository via pull requests.
 
 ### Can I help with code review?
 
@@ -224,16 +224,16 @@ While we don't accept code contributions, we value all forms of contribution:
 
 ## Getting Help
 
-Need help using Automaker or have questions?
+Need help using protoMaker or have questions?
 
 - 📚 **Documentation:** [https://docs.protolabs.studio](https://docs.protolabs.studio)
 - 💬 **Discord:** [https://discord.gg/jjem7aEDKU](https://discord.gg/jjem7aEDKU)
-- 🐛 **Bug Reports:** [Submit an issue](https://github.com/proto-labs-ai/automaker/issues/new/choose)
-- 💡 **Feature Ideas:** [Submit an idea](https://github.com/proto-labs-ai/automaker/issues/new/choose)
+- 🐛 **Bug Reports:** [Submit an issue](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
+- 💡 **Feature Ideas:** [Submit an idea](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
 
 ## Thank You
 
-Your ideas, feedback, and participation make Automaker better. Whether you're reporting bugs, suggesting features, or helping others in the community, you're making a valuable contribution.
+Your ideas, feedback, and participation make protoMaker better. Whether you're reporting bugs, suggesting features, or helping others in the community, you're making a valuable contribution.
 
 We appreciate your understanding of our ideas-only model and look forward to building the future of AI-powered development together!
 

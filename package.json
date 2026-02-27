@@ -2,6 +2,15 @@
   "name": "protolabs-studio",
   "version": "0.2.0",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/proto-labs-ai/protoMaker.git"
+  },
+  "homepage": "https://protolabs.studio",
+  "bugs": {
+    "url": "https://github.com/proto-labs-ai/protoMaker/issues"
+  },
   "packageManager": "npm@10.9.3",
   "engines": {
     "node": ">=22.0.0 <23.0.0"

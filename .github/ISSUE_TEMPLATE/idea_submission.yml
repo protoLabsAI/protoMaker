@@ -20,7 +20,7 @@ body:
     id: feature-area
     attributes:
       label: Feature Area
-      description: Which area of Automaker does this idea relate to?
+      description: Which area of protoMaker does this idea relate to?
       options:
         - UI/UX (User Interface)
         - Agent/AI
