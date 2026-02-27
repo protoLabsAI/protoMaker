@@ -2,6 +2,13 @@
  * Feature types for AutoMaker feature management
  */
 
+/**
+ * Channel through which a feature was created or is being managed.
+ * Used by ChannelRouter to dispatch HITL forms, approvals, and notifications
+ * back to the originating channel.
+ */
+export type SignalChannel = 'ui' | 'linear' | 'discord' | 'github' | 'mcp';
+
 import type { PlanningMode, ThinkingLevel, GitWorkflowSettings } from './settings.js';
 import type { ReasoningEffort } from './provider.js';
 import type { AgentRole } from './agent-roles.js';
@@ -238,6 +245,12 @@ export interface Feature {
    * Stored on failure so subsequent retries can resume from where the agent left off.
    */
   lastSessionId?: string;
+  /**
+   * The channel through which this feature was originally submitted.
+   * Used by ChannelRouter to route HITL forms, approvals, and notifications
+   * back to the originating system. Defaults to 'ui' if not set.
+   */
+  sourceChannel?: SignalChannel;
   /**
    * Assigned agent role (for headsdown agents)
    * Determines which specialized agent should work on this feature.
