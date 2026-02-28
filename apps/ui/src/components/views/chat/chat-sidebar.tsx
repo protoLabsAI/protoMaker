@@ -58,6 +58,8 @@ export function ChatSidebar({ className }: { className?: string }) {
     handleModelChange,
   } = useChatSession({
     defaultModel: 'sonnet',
+    projectId: currentProject?.id,
+    projectPath: currentProject?.path,
     body: notesContext ? { context: notesContext } : undefined,
   });
 
