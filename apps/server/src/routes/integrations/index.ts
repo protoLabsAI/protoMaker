@@ -5,7 +5,11 @@
 import { Router, Request, Response } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
-import type { ProjectIntegrations, ReactionAbility } from '@protolabs-ai/types';
+import type {
+  ProjectIntegrations,
+  ReactionAbility,
+  DiscordChannelSignalConfig,
+} from '@protolabs-ai/types';
 import { integrationService } from '../../services/integration-service.js';
 import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
 
@@ -264,6 +268,76 @@ export function createIntegrationRoutes(
     } catch (error) {
       logger.error('Failed to update reaction abilities:', error);
       res.status(500).json({ error: 'Failed to update reaction abilities' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Signal channel endpoints
+  // ---------------------------------------------------------------------------
+
+  /**
+   * GET /api/integrations/signal-channels
+   * Get the list of Discord channel signal configs for a project
+   */
+  router.get('/signal-channels', async (req: Request, res: Response) => {
+    try {
+      const projectPath = req.query.projectPath as string | undefined;
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const channels: DiscordChannelSignalConfig[] =
+        projectSettings.integrations?.discord?.signalChannels ?? [];
+
+      res.json({ channels });
+    } catch (error) {
+      logger.error('Failed to get signal channels:', error);
+      res.status(500).json({ error: 'Failed to get signal channels' });
+    }
+  });
+
+  /**
+   * PUT /api/integrations/signal-channels
+   * Save the list of Discord channel signal configs for a project
+   */
+  router.put('/signal-channels', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, channels } = req.body as {
+        projectPath?: string;
+        channels?: DiscordChannelSignalConfig[];
+      };
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      if (!Array.isArray(channels)) {
+        res.status(400).json({ error: 'channels must be an array' });
+        return;
+      }
+
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const existingDiscord = projectSettings.integrations?.discord ?? { enabled: false };
+
+      await settingsService.updateProjectSettings(projectPath, {
+        integrations: {
+          ...projectSettings.integrations,
+          discord: {
+            ...existingDiscord,
+            signalChannels: channels,
+          },
+        },
+      });
+
+      logger.info(`Updated signal channels for project: ${projectPath}`);
+      res.json({ channels });
+    } catch (error) {
+      logger.error('Failed to update signal channels:', error);
+      res.status(500).json({ error: 'Failed to update signal channels' });
     }
   });
 
