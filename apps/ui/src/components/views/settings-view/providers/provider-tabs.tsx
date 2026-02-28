@@ -37,7 +37,11 @@ export function ProviderTabs({ defaultTab = 'claude' }: ProviderTabsProps) {
           <Zap className="w-4 h-4" />
           Groq
         </TabsTrigger>
-        <TabsTrigger value="openai-compatible" className="flex items-center gap-2" data-testid="openai-compatible-tab-trigger">
+        <TabsTrigger
+          value="openai-compatible"
+          className="flex items-center gap-2"
+          data-testid="openai-compatible-tab-trigger"
+        >
           <Server className="w-4 h-4" />
           OpenAI-Compatible
         </TabsTrigger>

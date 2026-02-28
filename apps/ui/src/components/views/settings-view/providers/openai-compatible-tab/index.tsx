@@ -138,12 +138,8 @@ interface ProviderFormProps {
 }
 
 function ProviderForm({ provider, template, onSave, onBack }: ProviderFormProps) {
-  const [name, setName] = useState(
-    provider?.name ?? template?.name ?? ''
-  );
-  const [baseUrl, setBaseUrl] = useState(
-    provider?.baseUrl ?? template?.baseUrl ?? ''
-  );
+  const [name, setName] = useState(provider?.name ?? template?.name ?? '');
+  const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? template?.baseUrl ?? '');
   const [apiKey, setApiKey] = useState(provider?.apiKey ?? '');
   const [showKey, setShowKey] = useState(false);
   const [models, setModels] = useState<ProviderModel[]>(
@@ -255,7 +251,9 @@ function ProviderForm({ provider, template, onSave, onBack }: ProviderFormProps)
             <Label className="text-sm font-medium flex items-center gap-1.5">
               <Key className="h-3.5 w-3.5 text-muted-foreground" />
               API Key
-              <span className="text-xs font-normal text-muted-foreground">(optional for local providers)</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                (optional for local providers)
+              </span>
             </Label>
             <div className="relative">
               <Input

@@ -1126,10 +1126,7 @@ export function PhaseModelSelector({
   };
 
   // Render OpenAI-Compatible provider model item (simple selection, no thinking levels)
-  const renderOpenAICompatModelItem = (
-    provider: OpenAICompatibleConfig,
-    model: ProviderModel
-  ) => {
+  const renderOpenAICompatModelItem = (provider: OpenAICompatibleConfig, model: ProviderModel) => {
     const isSelected = selectedModel === model.id;
     const isFavorite = favoriteModels.includes(model.id);
 
