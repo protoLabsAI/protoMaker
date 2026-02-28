@@ -1038,6 +1038,19 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
         [key]: value,
       },
     });
+    // When avaAnywhere changes, re-register the global Electron shortcut.
+    // Convert app format (Cmd+Shift+X) to Electron accelerator format.
+    if (key === 'avaAnywhere' && typeof window !== 'undefined') {
+      const accelerator = value
+        .replace(/\bCmd\b/g, 'CommandOrControl')
+        .replace(/\bCtrl\b/g, 'CommandOrControl')
+        .replace(/\bOpt\b/g, 'Alt');
+      (
+        window as Window & {
+          electronAPI?: { setOverlayShortcut?: (acc: string) => Promise<boolean> };
+        }
+      ).electronAPI?.setOverlayShortcut?.(accelerator);
+    }
   },
 
   setKeyboardShortcuts: (shortcuts) => {

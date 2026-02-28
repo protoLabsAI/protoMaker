@@ -111,6 +111,7 @@ const SHORTCUT_LABELS: Record<keyof KeyboardShortcuts, string> = {
   splitTerminalDown: 'Split Down',
   closeTerminal: 'Close Terminal',
   newTerminalTab: 'New Tab',
+  avaAnywhere: 'Open Ava Anywhere',
 };
 
 // Categorize shortcuts for color coding
@@ -131,6 +132,7 @@ const SHORTCUT_CATEGORIES: Record<keyof KeyboardShortcuts, 'navigation' | 'ui' |
   githubIssues: 'navigation',
   githubPrs: 'navigation',
   toggleSidebar: 'ui',
+  avaAnywhere: 'ui',
   addFeature: 'action',
   addContextFile: 'action',
   startNext: 'action',

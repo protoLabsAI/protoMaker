@@ -151,6 +151,7 @@ export function parseShortcut(shortcut: string | undefined | null): ShortcutKey 
       modifier === 'ctrl' ||
       modifier === 'win' ||
       modifier === 'super' ||
+      modifier === 'commandorcontrol' ||
       modifier === '⌘' ||
       modifier === '^' ||
       modifier === '⊞' ||
@@ -249,6 +250,9 @@ export interface KeyboardShortcuts {
   splitTerminalDown: string;
   closeTerminal: string;
   newTerminalTab: string;
+
+  // Global overlay shortcut (Electron accelerator format, e.g. "CommandOrControl+Shift+Space")
+  avaAnywhere: string;
 }
 
 // Default keyboard shortcuts
@@ -291,6 +295,9 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   splitTerminalDown: 'Alt+S',
   closeTerminal: 'Alt+W',
   newTerminalTab: 'Alt+T',
+
+  // Global overlay shortcut
+  avaAnywhere: 'CommandOrControl+Shift+Space',
 };
 
 // ---------------------------------------------------------------------------

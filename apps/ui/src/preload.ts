@@ -64,6 +64,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleOverlay: (): Promise<void> => ipcRenderer.invoke('overlay:toggle'),
   hideOverlay: (): Promise<void> => ipcRenderer.invoke('overlay:hide'),
   showOverlay: (): Promise<void> => ipcRenderer.invoke('overlay:show'),
+  startHide: (): void => ipcRenderer.send('overlay:start-hide'),
+  resizeOverlay: (height: number): Promise<void> => ipcRenderer.invoke('overlay:resize', height),
+  setOverlayShortcut: (accelerator: string): Promise<boolean> =>
+    ipcRenderer.invoke('overlay:set-shortcut', accelerator),
+  onOverlayDidShow: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('overlay:did-show', handler);
+    return () => ipcRenderer.removeListener('overlay:did-show', handler);
+  },
+  onOverlayHideRequested: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('overlay:hide-requested', handler);
+    return () => ipcRenderer.removeListener('overlay:hide-requested', handler);
+  },
 
   // Auto-updater
   updater: {

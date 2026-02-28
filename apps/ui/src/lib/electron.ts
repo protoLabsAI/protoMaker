@@ -554,6 +554,11 @@ export interface ElectronAPI {
   toggleOverlay?: () => Promise<void>;
   hideOverlay?: () => Promise<void>;
   showOverlay?: () => Promise<void>;
+  startHide?: () => void;
+  resizeOverlay?: (height: number) => Promise<void>;
+  setOverlayShortcut?: (accelerator: string) => Promise<boolean>;
+  onOverlayDidShow?: (callback: () => void) => () => void;
+  onOverlayHideRequested?: (callback: () => void) => () => void;
 
   openExternalLink: (url: string) => Promise<{ success: boolean; error?: string }>;
   openDirectory: () => Promise<DialogResult>;
@@ -1043,6 +1048,27 @@ export const getElectronAPI = (): ElectronAPI => {
 // Async version (same as sync since HTTP client is synchronously instantiated)
 export const getElectronAPIAsync = async (): Promise<ElectronAPI> => {
   return getElectronAPI();
+};
+
+/**
+ * Access the Electron preload bridge directly for overlay IPC calls.
+ * These methods are only available in Electron renderer processes (not the HTTP API client).
+ */
+export const getOverlayAPI = ():
+  | Pick<
+      ElectronAPI,
+      | 'toggleOverlay'
+      | 'hideOverlay'
+      | 'showOverlay'
+      | 'startHide'
+      | 'resizeOverlay'
+      | 'setOverlayShortcut'
+      | 'onOverlayDidShow'
+      | 'onOverlayHideRequested'
+    >
+  | undefined => {
+  if (typeof window === 'undefined') return undefined;
+  return (window as unknown as { electronAPI?: ElectronAPI }).electronAPI;
 };
 
 // Check if backend is connected (for showing connection status in UI)

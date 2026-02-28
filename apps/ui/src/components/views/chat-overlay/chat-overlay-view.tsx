@@ -8,21 +8,53 @@
  * In web mode, this route is unused — ChatModal provides the equivalent.
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { getElectronAPI, isElectron } from '@/lib/electron';
-import { useChatSession } from '@/hooks/use-chat-session';
+import { getOverlayAPI } from '@/lib/electron';
 import { ChatOverlayContent } from './chat-overlay-content';
 
 export function ChatOverlayView() {
-  const chatSession = useChatSession({ defaultModel: 'sonnet' });
-  const { historyOpen, setHistoryOpen } = chatSession;
+  // animClass drives the CSS entrance/exit animation on the wrapper div
+  const [animClass, setAnimClass] = useState('');
+  const isHidingRef = useRef(false);
 
-  const handleHide = useCallback(() => {
-    if (isElectron()) {
-      getElectronAPI()?.hideOverlay?.();
-    }
+  const startHide = useCallback(() => {
+    if (isHidingRef.current) return;
+    isHidingRef.current = true;
+    const bridge = getOverlayAPI();
+    // Signal main process so blur handler won't race with our animation
+    bridge?.startHide?.();
+    setAnimClass('animate-out fade-out slide-out-to-top-2 duration-150 fill-mode-forwards');
+    setTimeout(() => {
+      bridge?.hideOverlay?.();
+      isHidingRef.current = false;
+    }, 150);
   }, []);
+
+  // Listen for overlay:did-show from main process to trigger entrance animation
+  useEffect(() => {
+    const bridge = getOverlayAPI();
+    if (!bridge?.onOverlayDidShow) {
+      // Web / non-Electron fallback: show immediately
+      setAnimClass('animate-in slide-in-from-top-2 fade-in duration-200');
+      return;
+    }
+    const cleanup = bridge.onOverlayDidShow(() => {
+      isHidingRef.current = false;
+      setAnimClass('animate-in slide-in-from-top-2 fade-in duration-200');
+    });
+    return cleanup;
+  }, []);
+
+  // Listen for overlay:hide-requested (triggered by window blur in main process)
+  useEffect(() => {
+    const bridge = getOverlayAPI();
+    if (!bridge?.onOverlayHideRequested) return;
+    const cleanup = bridge.onOverlayHideRequested(() => {
+      startHide();
+    });
+    return cleanup;
+  }, [startHide]);
 
   // When the Electron overlay window is shown again, focus the chat input
   useEffect(() => {
@@ -36,30 +68,17 @@ export function ChatOverlayView() {
     return () => window.removeEventListener('focus', handleWindowFocus);
   }, []);
 
-  // Escape key hides the overlay (or closes history panel first)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (historyOpen) {
-          setHistoryOpen(false);
-        } else {
-          handleHide();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleHide, historyOpen, setHistoryOpen]);
-
   return (
     <div
       data-slot="chat-overlay"
       className={cn(
         'flex h-screen w-screen flex-col bg-background',
-        'overflow-hidden rounded-xl border border-border'
+        'overflow-hidden rounded-xl border border-border',
+        'will-change-transform',
+        animClass
       )}
     >
-      <ChatOverlayContent {...chatSession} onHide={handleHide} />
+      <ChatOverlayContent onHide={startHide} />
     </div>
   );
 }

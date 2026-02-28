@@ -796,6 +796,12 @@ function createWindow(): void {
 
 const OVERLAY_WIDTH = 420;
 const OVERLAY_HEIGHT = 600;
+const OVERLAY_HEIGHT_EXPANDED = 900;
+
+// Track current global shortcut accelerator so it can be re-registered dynamically
+let currentOverlayAccelerator = 'CommandOrControl+Shift+Space';
+// Flag set by renderer before exit animation; prevents blur from double-hiding
+let isOverlayAnimatingOut = false;
 
 /**
  * Create the pre-warmed overlay window (hidden until shortcut activates it).
@@ -838,9 +844,11 @@ function createOverlayWindow(): void {
   overlayWindow.loadURL(overlayUrl);
 
   overlayWindow.on('blur', () => {
-    // Hide on focus loss (click outside)
+    // If renderer is already running exit animation, skip — it will call overlay:hide when done
+    if (isOverlayAnimatingOut) return;
+    // Request renderer to animate out before hiding
     if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.hide();
+      overlayWindow.webContents.send('overlay:hide-requested');
     }
   });
 
@@ -865,39 +873,42 @@ function toggleOverlay(): void {
     createOverlayWindow();
     overlayWindow?.show();
     overlayWindow?.focus();
+    overlayWindow?.webContents.send('overlay:did-show');
     return;
   }
 
   if (overlayWindow.isVisible()) {
-    overlayWindow.hide();
+    // Request renderer to animate out
+    if (!isOverlayAnimatingOut) {
+      overlayWindow.webContents.send('overlay:hide-requested');
+    }
   } else {
-    // Position near cursor's current screen
+    // Position near cursor's current screen, respecting work area origin
     const cursorPoint = screen.getCursorScreenPoint();
     const currentDisplay = screen.getDisplayNearestPoint(cursorPoint);
-    const { x: workX, width: workW } = currentDisplay.workArea;
+    const { x: workX, y: workY, width: workW } = currentDisplay.workArea;
 
-    overlayWindow.setPosition(Math.round(workX + workW / 2 - OVERLAY_WIDTH / 2), 80);
+    isOverlayAnimatingOut = false;
+    overlayWindow.setPosition(Math.round(workX + workW / 2 - OVERLAY_WIDTH / 2), workY + 80);
     overlayWindow.show();
     overlayWindow.focus();
+    overlayWindow.webContents.send('overlay:did-show');
   }
 }
 
 /**
  * Register the global shortcut for Ava Anywhere.
- * Cmd+Shift+Space on macOS, Ctrl+Shift+Space on Windows/Linux.
+ * Uses currentOverlayAccelerator (default: CommandOrControl+Shift+Space).
  */
 function registerOverlayShortcut(): void {
-  const accelerator =
-    process.platform === 'darwin' ? 'CommandOrControl+Shift+Space' : 'Ctrl+Shift+Space';
-
-  const registered = globalShortcut.register(accelerator, () => {
+  const registered = globalShortcut.register(currentOverlayAccelerator, () => {
     toggleOverlay();
   });
 
   if (registered) {
-    logger.info(`Global shortcut registered: ${accelerator}`);
+    logger.info(`Global shortcut registered: ${currentOverlayAccelerator}`);
   } else {
-    logger.warn(`Failed to register global shortcut: ${accelerator}`);
+    logger.warn(`Failed to register global shortcut: ${currentOverlayAccelerator}`);
   }
 }
 
@@ -1144,6 +1155,7 @@ ipcMain.handle('overlay:toggle', () => {
 });
 
 ipcMain.handle('overlay:hide', () => {
+  isOverlayAnimatingOut = false;
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.hide();
   }
@@ -1153,8 +1165,40 @@ ipcMain.handle('overlay:show', () => {
   if (!overlayWindow || overlayWindow.isDestroyed()) {
     createOverlayWindow();
   }
+  isOverlayAnimatingOut = false;
   overlayWindow?.show();
   overlayWindow?.focus();
+  overlayWindow?.webContents.send('overlay:did-show');
+});
+
+// Renderer signals that exit animation has started — suppress blur handler
+ipcMain.on('overlay:start-hide', () => {
+  isOverlayAnimatingOut = true;
+});
+
+// Dynamic shortcut re-registration
+ipcMain.handle('overlay:set-shortcut', (_event, accelerator: string) => {
+  globalShortcut.unregister(currentOverlayAccelerator);
+  const ok = globalShortcut.register(accelerator, () => toggleOverlay());
+  if (ok) {
+    currentOverlayAccelerator = accelerator;
+    logger.info(`Global shortcut updated: ${accelerator}`);
+  } else {
+    // Roll back to previous accelerator on failure
+    globalShortcut.register(currentOverlayAccelerator, () => toggleOverlay());
+    logger.warn(
+      `Failed to register shortcut: ${accelerator}, rolled back to ${currentOverlayAccelerator}`
+    );
+  }
+  return ok;
+});
+
+// Resize overlay window height
+ipcMain.handle('overlay:resize', (_event, height: number) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    const clampedHeight = Math.max(400, Math.min(height, 1200));
+    overlayWindow.setSize(OVERLAY_WIDTH, clampedHeight, true);
+  }
 });
 
 // Native file dialogs

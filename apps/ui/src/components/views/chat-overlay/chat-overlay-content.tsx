@@ -8,9 +8,9 @@
  * to useChatSession for project-scoped session management.
  */
 
-import { useState, useCallback } from 'react';
-import { History, X, Settings } from 'lucide-react';
-import { ChatMessageList, ChatInput } from '@protolabs-ai/ui/ai';
+import { useState, useCallback, useEffect } from 'react';
+import { History, X, Settings, ChevronUp, ChevronDown } from 'lucide-react';
+import { ChatMessageList, ChatInput, SuggestionList } from '@protolabs-ai/ui/ai';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,11 @@ import { ConversationList } from './conversation-list';
 import { AvaSettingsPanel } from './ava-settings-panel';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { useAppStore } from '@/store/app-store';
+import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
+import { getOverlayAPI } from '@/lib/electron';
+
+const OVERLAY_HEIGHT_DEFAULT = 600;
+const OVERLAY_HEIGHT_EXPANDED = 900;
 
 export interface ChatOverlayContentProps {
   /** Called when the user wants to close/hide the overlay or modal */
@@ -29,6 +34,7 @@ export interface ChatOverlayContentProps {
 
 export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayContentProps) {
   const currentProject = useAppStore((s) => s.currentProject);
+  const features = useAppStore((s) => s.features);
 
   const {
     messages,
@@ -54,6 +60,9 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
   const [inputValue, setInputValue] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const suggestions = useContextualSuggestions(features ?? []);
 
   const handleSubmit = useCallback(() => {
     const text = inputValue.trim();
@@ -62,7 +71,35 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     setInputValue('');
   }, [inputValue, isStreaming, sendMessage]);
 
+  const handleSuggestionSelect = useCallback(
+    (value: string) => {
+      sendMessage({ text: value });
+    },
+    [sendMessage]
+  );
+
+  const handleExpand = useCallback(() => {
+    const next = !expanded;
+    setExpanded(next);
+    getOverlayAPI()?.resizeOverlay?.(next ? OVERLAY_HEIGHT_EXPANDED : OVERLAY_HEIGHT_DEFAULT);
+  }, [expanded]);
+
   const shortcutHint = isModal ? '\u2318K to close' : 'Esc to hide';
+
+  // Escape key: close history panel if open, otherwise hide the overlay
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (historyOpen) {
+          setHistoryOpen(false);
+        } else {
+          onHide();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyOpen, setHistoryOpen, onHide]);
 
   return (
     <div data-slot="chat-overlay-content" className="flex h-full w-full flex-col overflow-hidden">
@@ -98,6 +135,18 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           >
             <span className="text-xs">New</span>
           </Button>
+          {!isModal && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={handleExpand}
+              title={expanded ? 'Collapse' : 'Expand'}
+              aria-label={expanded ? 'Collapse overlay' : 'Expand overlay'}
+            >
+              {expanded ? <ChevronDown className="size-3.5" /> : <ChevronUp className="size-3.5" />}
+            </Button>
+          )}
           <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -158,6 +207,11 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
         {/* Chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
           <ChatMessageList messages={messages} emptyMessage="Ask Ava anything..." />
+
+          {/* Contextual suggestions — shown only when no messages in current session */}
+          {messages.length === 0 && (
+            <SuggestionList suggestions={suggestions} onSelect={handleSuggestionSelect} />
+          )}
 
           <ChatInput
             value={inputValue}

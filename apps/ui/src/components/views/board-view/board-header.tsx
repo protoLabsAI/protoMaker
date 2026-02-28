@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Switch } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Wand2, GitBranch, ClipboardCheck, DollarSign } from 'lucide-react';
+import { Label, Kbd, KbdGroup } from '@protolabs-ai/ui/atoms';
+import { Wand2, GitBranch, ClipboardCheck, DollarSign, Sparkles } from 'lucide-react';
 import { ConflictBadge } from './components/conflict-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { UsagePopover } from '@/components/usage-popover';
@@ -18,6 +18,8 @@ import { BoardControls } from './board-controls';
 import { ViewToggle, type ViewMode } from './components';
 import { HeaderMobileMenu } from './header-mobile-menu';
 import { formatCostUsd } from '@/lib/format';
+import { isElectron, getOverlayAPI } from '@/lib/electron';
+import { formatShortcut } from '@/store/types';
 
 export type { ViewMode };
 
@@ -113,6 +115,9 @@ export function BoardHeader({
   // Codex usage tracking visibility logic
   // Show if Codex is authenticated (CLI or API key)
   const showCodexUsage = !!codexAuthStatus?.authenticated;
+
+  // Ava Anywhere shortcut for discoverability hint
+  const avaAnywhereShortcut = useAppStore((state) => state.keyboardShortcuts.avaAnywhere);
 
   // Calculate cumulative project cost from all features
   const features = useAppStore((state) => state.features);
@@ -265,6 +270,21 @@ export function BoardHeader({
               onPlanUseSelectedWorktreeBranchChange={setPlanUseSelectedWorktreeBranch}
             />
           </div>
+        )}
+
+        {/* Ava Anywhere discoverability hint — Electron only */}
+        {isMounted && !isTablet && isElectron() && (
+          <button
+            onClick={() => getOverlayAPI()?.toggleOverlay?.()}
+            className="flex items-center gap-1.5 px-3 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            title="Open Ava Anywhere"
+            data-testid="ava-anywhere-hint"
+          >
+            <Sparkles className="size-3.5" />
+            <KbdGroup>
+              <Kbd>{formatShortcut(avaAnywhereShortcut, true)}</Kbd>
+            </KbdGroup>
+          </button>
         )}
       </div>
     </div>
