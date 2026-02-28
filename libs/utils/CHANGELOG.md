@@ -1,5 +1,26 @@
 # @protolabs-ai/utils
 
+## 0.15.3
+
+### Patch Changes
+
+- ### Bug Fixes
+  - update worktree-recovery-service mocks for execFileAsync PR creation
+  - add pull-requests:write to auto-release sync step
+
+  ### Refactors
+  - [linear] docs: Add browser extension installation guide to protoLabs doc (#1489)
+  - [linear] fix(agent): git-workflow-service PR body backtick shell error — (#1490)
+  - [linear] feat(observability): add per-tool-call span tracing in TracedPr (#1488)
+  - [linear] fix(observability): remove cost=0 stub in antagonistic review a (#1487)
+  - [linear] fix(observability): extend Langfuse cost pricing table to cover (#1485)
+  - [linear] feat(ci): add langfuse-prompt-update repository_dispatch workfl (#1482)
+  - [linear] feat(observability): implement TrajectoryStoreService — persist (#1481)
+
+- Updated dependencies
+  - @protolabs-ai/types@0.15.3
+  - @protolabs-ai/platform@0.15.3
+
 ## 0.15.2
 
 ### Patch Changes

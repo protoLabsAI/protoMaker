@@ -1,6 +1,6 @@
 {
   "name": "@protolabs-ai/tools",
-  "version": "0.15.2",
+  "version": "0.15.3",
   "type": "module",
   "description": "Unified tool definition and registry system for AutoMaker",
   "main": "dist/index.js",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabs-ai/types": "^0.15.2",
+    "@protolabs-ai/types": "^0.15.3",
     "zod": "^4.3.6",
     "zod-to-json-schema": "^3.24.1"
   },
