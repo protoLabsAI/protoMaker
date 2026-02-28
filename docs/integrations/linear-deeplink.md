@@ -20,10 +20,10 @@ Our current integration is **webhook-based** (AgentSession events). When a user 
 
 The deeplink feature is **entirely separate** from this flow. It is a client-side action in the Linear app — Linear opens the user's chosen tool directly (e.g., launches Claude Code CLI) with a pre-built prompt string. There is no webhook or server-side call to our infrastructure.
 
-| Mechanism | Trigger | Data path | Our role |
-| --------- | ------- | --------- | -------- |
-| @mention / AgentSession | User @mentions agent in comment | Linear → our webhook → agent responds | Active — we receive and handle |
-| Deeplink | User presses keyboard shortcut / button | Linear → opens tool directly | Passive — Claude Code CLI receives, not our server |
+| Mechanism               | Trigger                                 | Data path                             | Our role                                           |
+| ----------------------- | --------------------------------------- | ------------------------------------- | -------------------------------------------------- |
+| @mention / AgentSession | User @mentions agent in comment         | Linear → our webhook → agent responds | Active — we receive and handle                     |
+| Deeplink                | User presses keyboard shortcut / button | Linear → opens tool directly          | Passive — Claude Code CLI receives, not our server |
 
 ## Implications for protoLabs Studio
 
@@ -50,11 +50,11 @@ If Linear exposes a URL scheme for custom tools (e.g., `protolabs://open?issue=X
 
 ## Action items from this investigation
 
-| Item | Priority | Notes |
-| ---- | -------- | ----- |
-| Document custom prompt template guidance | Low | Add to `linear-sync.md` usage tips |
-| Monitor Linear changelog for custom tool registration API | Low | Required before we can appear in deeplink menu |
-| Evaluate URL scheme handler (Electron) | Backlog | Only relevant if Linear opens its tool registry |
+| Item                                                      | Priority | Notes                                           |
+| --------------------------------------------------------- | -------- | ----------------------------------------------- |
+| Document custom prompt template guidance                  | Low      | Add to `linear-sync.md` usage tips              |
+| Monitor Linear changelog for custom tool registration API | Low      | Required before we can appear in deeplink menu  |
+| Evaluate URL scheme handler (Electron)                    | Backlog  | Only relevant if Linear opens its tool registry |
 
 ## References
 
