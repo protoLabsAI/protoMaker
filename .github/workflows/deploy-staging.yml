@@ -13,7 +13,7 @@ jobs:
   deploy:
     runs-on: [self-hosted, staging]
     if: github.repository == 'proto-labs-ai/protoMaker'
-    timeout-minutes: 30
+    timeout-minutes: 60
     concurrency:
       group: staging-deploy
       cancel-in-progress: false
@@ -115,6 +115,8 @@ jobs:
         working-directory: ${{ env.DEPLOY_DIR }}
         env:
           GIT_COMMIT_SHA: ${{ github.sha }}
+          DOCKER_BUILDKIT: 1
+          COMPOSE_DOCKER_CLI_BUILD: 1
         run: |
           # setup-staging.sh --build isolates storybook from critical services.
           # If storybook fails to build, the script continues (non-fatal).

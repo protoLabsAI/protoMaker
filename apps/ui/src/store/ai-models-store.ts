@@ -11,6 +11,7 @@ import type {
   ModelDefinition,
   ClaudeCompatibleProvider,
   ClaudeApiProfile,
+  OpenAICompatibleConfig,
 } from '@protolabs-ai/types';
 import {
   getAllCursorModelIds,
@@ -68,6 +69,8 @@ interface AIModelsState {
   skipSandboxWarning: boolean;
   // Claude-Compatible Providers
   claudeCompatibleProviders: ClaudeCompatibleProvider[];
+  // OpenAI-Compatible Providers
+  openaiCompatibleProviders: OpenAICompatibleConfig[];
   // Claude API Profiles (deprecated)
   claudeApiProfiles: ClaudeApiProfile[];
   activeClaudeApiProfileId: string | null;
@@ -138,6 +141,15 @@ interface AIModelsActions {
   // Claude Agent SDK Settings actions
   setAutoLoadClaudeMd: (enabled: boolean) => Promise<void>;
   setSkipSandboxWarning: (skip: boolean) => Promise<void>;
+  // OpenAI-Compatible Provider actions
+  addOpenAICompatibleProvider: (provider: OpenAICompatibleConfig) => Promise<void>;
+  updateOpenAICompatibleProvider: (
+    id: string,
+    updates: Partial<OpenAICompatibleConfig>
+  ) => Promise<void>;
+  deleteOpenAICompatibleProvider: (id: string) => Promise<void>;
+  setOpenAICompatibleProviders: (providers: OpenAICompatibleConfig[]) => Promise<void>;
+  toggleOpenAICompatibleProviderEnabled: (id: string) => Promise<void>;
   // Claude-Compatible Provider actions
   addClaudeCompatibleProvider: (provider: ClaudeCompatibleProvider) => Promise<void>;
   updateClaudeCompatibleProvider: (
@@ -203,6 +215,7 @@ const initialState: AIModelsState = {
   autoLoadClaudeMd: false,
   skipSandboxWarning: false,
   claudeCompatibleProviders: [],
+  openaiCompatibleProviders: [],
   claudeApiProfiles: [],
   activeClaudeApiProfileId: null,
   claudeRefreshInterval: 60,
@@ -372,6 +385,47 @@ export const useAIModelsStore = create<AIModelsState & AIModelsActions>()((set, 
       logger.error('Failed to sync skipSandboxWarning setting to server - reverting');
       set({ skipSandboxWarning: previous });
     }
+  },
+
+  // OpenAI-Compatible Provider actions
+  addOpenAICompatibleProvider: async (provider) => {
+    set({ openaiCompatibleProviders: [...get().openaiCompatibleProviders, provider] });
+    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
+    await syncSettingsToServer();
+  },
+
+  updateOpenAICompatibleProvider: async (id, updates) => {
+    set({
+      openaiCompatibleProviders: get().openaiCompatibleProviders.map((p) =>
+        p.id === id ? { ...p, ...updates } : p
+      ),
+    });
+    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
+    await syncSettingsToServer();
+  },
+
+  deleteOpenAICompatibleProvider: async (id) => {
+    set({
+      openaiCompatibleProviders: get().openaiCompatibleProviders.filter((p) => p.id !== id),
+    });
+    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
+    await syncSettingsToServer();
+  },
+
+  setOpenAICompatibleProviders: async (providers) => {
+    set({ openaiCompatibleProviders: providers });
+    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
+    await syncSettingsToServer();
+  },
+
+  toggleOpenAICompatibleProviderEnabled: async (id) => {
+    set({
+      openaiCompatibleProviders: get().openaiCompatibleProviders.map((p) =>
+        p.id === id ? { ...p, enabled: p.enabled === false ? true : false } : p
+      ),
+    });
+    const { syncSettingsToServer } = await import('@/hooks/use-settings-migration');
+    await syncSettingsToServer();
   },
 
   // Claude-Compatible Provider actions
