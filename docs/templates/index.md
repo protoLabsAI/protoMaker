@@ -4,9 +4,9 @@ Starter templates for common project types. Each template is a pre-configured re
 
 ## Available templates
 
-| Template                                            | Stack                                  | Description                                                                    |
-| --------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
-| [Browser extension](./browser-extension)            | WXT + React + TypeScript + Tailwind    | Chrome/Firefox MV3 extension with messaging, storage, and test setup included. |
+| Template                                 | Stack                               | Description                                                                    |
+| ---------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------ |
+| [Browser extension](./browser-extension) | WXT + React + TypeScript + Tailwind | Chrome/Firefox MV3 extension with messaging, storage, and test setup included. |
 
 ## Using a template
 

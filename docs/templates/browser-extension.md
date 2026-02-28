@@ -22,22 +22,22 @@ After `npm run build`, load the `dist/` directory in Chrome via `chrome://extens
 
 ### Core modules
 
-| Module       | Location                   | Description                                                                   |
-| ------------ | -------------------------- | ----------------------------------------------------------------------------- |
-| Messaging    | `src/lib/messaging.ts`     | Type-safe message passing between extension contexts (background, content, popup) |
-| Storage      | `src/lib/storage.ts`       | Typed wrapper around `browser.storage.local` with schema validation           |
-| Permissions  | `src/lib/permissions.ts`   | Runtime permission request helpers with user-facing prompts                   |
+| Module      | Location                 | Description                                                                       |
+| ----------- | ------------------------ | --------------------------------------------------------------------------------- |
+| Messaging   | `src/lib/messaging.ts`   | Type-safe message passing between extension contexts (background, content, popup) |
+| Storage     | `src/lib/storage.ts`     | Typed wrapper around `browser.storage.local` with schema validation               |
+| Permissions | `src/lib/permissions.ts` | Runtime permission request helpers with user-facing prompts                       |
 
 ### Entrypoints
 
 WXT uses an entrypoints directory pattern. The template includes:
 
-| Entrypoint        | Location                         | Description                          |
-| ----------------- | -------------------------------- | ------------------------------------ |
-| Background        | `src/entrypoints/background.ts`  | Service worker for MV3               |
-| Content script    | `src/entrypoints/content.ts`     | Injected into matching pages         |
-| Popup             | `src/entrypoints/popup/`         | Browser action popup (React)         |
-| Options page      | `src/entrypoints/options/`       | Full-page settings UI (React)        |
+| Entrypoint     | Location                        | Description                   |
+| -------------- | ------------------------------- | ----------------------------- |
+| Background     | `src/entrypoints/background.ts` | Service worker for MV3        |
+| Content script | `src/entrypoints/content.ts`    | Injected into matching pages  |
+| Popup          | `src/entrypoints/popup/`        | Browser action popup (React)  |
+| Options page   | `src/entrypoints/options/`      | Full-page settings UI (React) |
 
 ### Test setup
 
@@ -131,7 +131,7 @@ chrome.action.onClicked.addListener((tab) => {
 
 // Incorrect — async work before open() risks missing the gesture window
 chrome.action.onClicked.addListener(async (tab) => {
-  await fetchSomething();           // gesture window may have expired
+  await fetchSomething(); // gesture window may have expired
   chrome.sidePanel.open({ tabId: tab.id! });
 });
 ```
@@ -142,15 +142,15 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 Create a file or directory under `src/entrypoints/`. WXT auto-discovers entrypoints by filename convention:
 
-| Filename pattern          | Type                          |
-| ------------------------- | ----------------------------- |
-| `background.ts`           | Background service worker     |
-| `content.ts`              | Content script (all URLs)     |
-| `content/index.ts`        | Content script with React UI  |
-| `popup/index.html`        | Browser action popup          |
-| `sidepanel/index.html`    | Side panel                    |
-| `options/index.html`      | Options page                  |
-| `devtools/index.html`     | DevTools panel                |
+| Filename pattern       | Type                         |
+| ---------------------- | ---------------------------- |
+| `background.ts`        | Background service worker    |
+| `content.ts`           | Content script (all URLs)    |
+| `content/index.ts`     | Content script with React UI |
+| `popup/index.html`     | Browser action popup         |
+| `sidepanel/index.html` | Side panel                   |
+| `options/index.html`   | Options page                 |
+| `devtools/index.html`  | DevTools panel               |
 
 ### Adding permissions
 
