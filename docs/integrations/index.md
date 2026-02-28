@@ -20,6 +20,10 @@ Unified API key and provider profile system. Manage multiple AI providers, switc
 
 Full Linear integration with three modes: @mention the agent on any issue for context-aware AI analysis, create Linear projects to trigger automated planning with HITL checkpoints, and bidirectional status/issue sync. Supports intelligent agent routing, priority-based model selection, and multi-turn conversations.
 
+### [Langfuse](./langfuse)
+
+LLM observability, trace inspection, and managed prompt versioning. Traces every agent LLM call with cost, latency, and feature tags. Includes seven MCP tools for querying traces, scoring runs, and managing datasets.
+
 ## External Tools
 
 protoLabs also works with:
