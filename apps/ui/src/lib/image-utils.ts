@@ -257,3 +257,15 @@ export const isImageFilename = (filename: string): boolean => {
   const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
   return imageExtensions.includes(ext);
 };
+
+/**
+ * Get the file extension from a filename
+ *
+ * @param filename - The filename to extract extension from
+ * @returns The lowercase file extension including the dot (e.g., ".md"), or empty string if none
+ */
+export function getFileExtension(filename: string): string {
+  const lastDot = filename.lastIndexOf('.');
+  if (lastDot === -1 || lastDot === 0) return '';
+  return filename.substring(lastDot).toLowerCase();
+}

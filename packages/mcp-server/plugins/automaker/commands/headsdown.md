@@ -97,17 +97,17 @@ Use Context7 to look up current library docs when implementing features. Two-ste
 
 Work enters the board via the **Linear intake bridge**. When a Linear issue moves to "In Progress", the intake bridge auto-creates a board feature. Headsdown mode processes whatever lands on the board — you don't need to interact with Linear directly.
 
-**If you find new work during productive waiting** (bugs, improvements, cleanup needs), create a Linear issue instead of a board feature:
+**If you find new work during productive waiting** (bugs, improvements, cleanup needs), create a Linear issue instead of a board feature. Use the team ID and state IDs from your project's `linear-config` skill (run `/linear-config` to see them):
 
 ```
 mcp__linear__linear_createIssue({
-  teamId: "185e7caa-2855-4c67-a347-2011016bdddf",
+  teamId: "<from linear-config>",
   title: "Fix: [description]",
   description: "[details]"
 })
 ```
 
-Then move it to "In Progress" (`stateId: "3f4a449a-f1c1-49e4-999c-e0ccf0f828ad"`) to trigger intake.
+Then move it to "In Progress" (use the `inProgress` stateId from `linear-config`) to trigger intake.
 
 ---
 
@@ -536,6 +536,7 @@ AskUserQuestion({
 - **Don't break things** - Run tests before moving on
 - **Don't forget context** - Update docs as you go
 - **Don't hoard changes** - Commit frequently
+- **Don't leave memory drift** - Always commit `.automaker/memory/*.md` and `.automaker/context/` changes alongside your code commits. These are git-tracked files, not runtime data. Check `git status` for unstaged `.automaker/memory/` changes before switching branches or ending a session.
 - **Don't ignore failures** - Address them before moving on
 - **Don't present menus** - Decide and act autonomously
 - **Don't duplicate crew work** - Check if PR Maintainer/Board Janitor already handled it

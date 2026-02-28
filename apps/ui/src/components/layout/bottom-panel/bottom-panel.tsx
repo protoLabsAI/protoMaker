@@ -12,7 +12,6 @@ import {
   MonitorCog,
   LineChart,
   Radio,
-  MessageSquare,
   PanelBottomOpen,
   X,
 } from 'lucide-react';
@@ -31,8 +30,6 @@ export function BottomPanel() {
   const toggleBottomPanel = useAppStore((s) => s.toggleBottomPanel);
   const setBottomPanelActiveTab = useAppStore((s) => s.setBottomPanelActiveTab);
   const features = useAppStore((s) => s.features);
-  const chatSidebarOpen = useAppStore((s) => s.chatSidebarOpen);
-  const toggleChatSidebar = useAppStore((s) => s.toggleChatSidebar);
   const { data: agentCount } = useRunningAgentsCount();
 
   if (isMobile) return null;
@@ -144,18 +141,6 @@ export function BottomPanel() {
 
         {/* Spacer */}
         <div className="flex-1" />
-
-        {/* Chat toggle */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleChatSidebar();
-          }}
-          className={`p-1 rounded-md transition-colors ${chatSidebarOpen ? 'text-violet-400' : 'text-muted-foreground hover:text-foreground'}`}
-          title="Toggle chat"
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-        </button>
 
         {/* Panel toggle */}
         <PanelBottomOpen

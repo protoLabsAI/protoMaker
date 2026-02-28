@@ -162,15 +162,15 @@ export function useNavigation({
     // Build project items - Terminal, Calendar, Designs are conditionally included
     const projectItems: NavItem[] = [
       {
-        id: 'analytics',
-        label: 'System View',
-        icon: Network,
-      },
-      {
         id: 'board',
         label: 'Kanban Board',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
+      },
+      {
+        id: 'analytics',
+        label: 'System View',
+        icon: Network,
       },
       {
         id: 'notes',
@@ -260,7 +260,7 @@ export function useNavigation({
         },
         {
           id: 'project-settings',
-          label: 'Options',
+          label: 'Project Settings',
           icon: Settings,
           shortcut: shortcuts.projectSettings,
         },

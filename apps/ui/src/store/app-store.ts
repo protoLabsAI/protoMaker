@@ -51,7 +51,6 @@ export interface AppState {
   // View state
   currentView: ViewMode;
   sidebarOpen: boolean;
-  chatSidebarOpen: boolean;
   bottomPanelOpen: boolean;
   bottomPanelActiveTab: string;
   mobileSidebarHidden: boolean; // Completely hides sidebar on mobile
@@ -177,8 +176,6 @@ export interface AppActions {
   setCurrentView: (view: ViewMode) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
-  toggleChatSidebar: () => void;
-  setChatSidebarOpen: (open: boolean) => void;
   toggleBottomPanel: () => void;
   setBottomPanelActiveTab: (tab: string) => void;
   toggleMobileSidebarHidden: () => void;
@@ -320,7 +317,6 @@ const initialState: AppState = {
   projectHistoryIndex: -1,
   currentView: 'welcome',
   sidebarOpen: true,
-  chatSidebarOpen: false,
   bottomPanelOpen: false,
   bottomPanelActiveTab: 'activity',
   mobileSidebarHidden: false, // Sidebar visible by default on mobile
@@ -715,8 +711,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   setCurrentView: (view) => set({ currentView: view }),
   toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  toggleChatSidebar: () => set({ chatSidebarOpen: !get().chatSidebarOpen }),
-  setChatSidebarOpen: (open) => set({ chatSidebarOpen: open }),
   toggleBottomPanel: () => set({ bottomPanelOpen: !get().bottomPanelOpen }),
   setBottomPanelActiveTab: (tab) => set({ bottomPanelActiveTab: tab }),
   toggleMobileSidebarHidden: () => set({ mobileSidebarHidden: !get().mobileSidebarHidden }),

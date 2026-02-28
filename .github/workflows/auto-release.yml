@@ -111,7 +111,9 @@ jobs:
       - name: Sync version bump back to staging and dev
         # The version bump commit lands on main. Sync it back so staging and dev
         # stay consistent. Opens PRs main→staging and main→dev and auto-merges them.
-        # Uses GH_PAT so the PRs can be created and merged by the bot.
+        # Uses GITHUB_TOKEN (not GH_PAT) — GH_PAT is only needed for the v* tag push
+        # to trigger build-electron.yml. PR creation uses GraphQL which requires repo
+        # scope; GITHUB_TOKEN has it, GH_PAT may not.
         # Both PRs use --merge to preserve the DAG (same rule as promotion PRs).
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
@@ -145,7 +147,7 @@ jobs:
             echo "Enabled auto-merge for dev sync PR #${DEV_PR_NUM}"
           fi
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Post release notes to Discord
         if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}

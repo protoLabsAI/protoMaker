@@ -29,6 +29,10 @@ const FEATURE_FLAG_LABELS: Record<string, { label: string; description: string }
     label: 'File Editor',
     description: 'Show the File Editor (tabbed code editor) in the project sidebar.',
   },
+  pipeline: {
+    label: 'Authority Pipeline',
+    description: 'Enable the authority pipeline (TRIAGE, SPEC, PUBLISH). Experimental.',
+  },
 };
 
 export function DeveloperSection() {

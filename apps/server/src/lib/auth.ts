@@ -30,6 +30,17 @@ function isEnvTrue(envVar: string | undefined): boolean {
   return envVar === 'true';
 }
 
+/**
+ * Check if auth is disabled (only allowed in development, never in production/staging)
+ */
+function isAuthDisabled(): boolean {
+  return (
+    isEnvTrue(process.env.AUTOMAKER_DISABLE_AUTH) &&
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'staging'
+  );
+}
+
 // Session store - persisted to file for survival across server restarts
 const validSessions = new Map<string, { createdAt: number; expiresAt: number }>();
 
@@ -140,23 +151,31 @@ const API_KEY = ensureApiKey();
 // Width for log box content (excluding borders)
 const BOX_CONTENT_WIDTH = 67;
 
-// Print API key to console for web mode users (unless suppressed for production logging)
-if (!isEnvTrue(process.env.AUTOMAKER_HIDE_API_KEY)) {
+// Mask API key for safe logging (show first 4 + last 4 chars)
+function maskApiKey(key: string): string {
+  if (key.length <= 8) return '****';
+  return `${key.slice(0, 4)}${'*'.repeat(key.length - 8)}${key.slice(-4)}`;
+}
+
+// Print API key info to console (masked by default, full key only with AUTOMAKER_SHOW_API_KEY=true)
+{
+  const showFullKey = isEnvTrue(process.env.AUTOMAKER_SHOW_API_KEY);
+  const displayKey = showFullKey ? API_KEY : maskApiKey(API_KEY);
   const autoLoginEnabled = isEnvTrue(process.env.AUTOMAKER_AUTO_LOGIN);
   const autoLoginStatus = autoLoginEnabled ? 'enabled (auto-login active)' : 'disabled';
 
   // Build box lines with exact padding
-  const header = '🔐 API Key for Web Mode Authentication'.padEnd(BOX_CONTENT_WIDTH);
+  const header = 'API Key for Web Mode Authentication'.padEnd(BOX_CONTENT_WIDTH);
   const line1 = "When accessing via browser, you'll be prompted to enter this key:".padEnd(
     BOX_CONTENT_WIDTH
   );
-  const line2 = API_KEY.padEnd(BOX_CONTENT_WIDTH);
+  const line2 = displayKey.padEnd(BOX_CONTENT_WIDTH);
   const line3 = 'In Electron mode, authentication is handled automatically.'.padEnd(
     BOX_CONTENT_WIDTH
   );
   const line4 = `Auto-login (AUTOMAKER_AUTO_LOGIN): ${autoLoginStatus}`.padEnd(BOX_CONTENT_WIDTH);
-  const tipHeader = '💡 Tips'.padEnd(BOX_CONTENT_WIDTH);
-  const line5 = 'Set AUTOMAKER_API_KEY env var to use a fixed key'.padEnd(BOX_CONTENT_WIDTH);
+  const tipHeader = 'Tips'.padEnd(BOX_CONTENT_WIDTH);
+  const line5 = 'Set AUTOMAKER_SHOW_API_KEY=true to reveal the full key'.padEnd(BOX_CONTENT_WIDTH);
   const line6 = 'Set AUTOMAKER_AUTO_LOGIN=true to skip the login prompt'.padEnd(BOX_CONTENT_WIDTH);
 
   logger.info(`
@@ -179,8 +198,6 @@ if (!isEnvTrue(process.env.AUTOMAKER_HIDE_API_KEY)) {
 ║  ${line6}║
 ╚═════════════════════════════════════════════════════════════════════╝
 `);
-} else {
-  logger.info('API key banner hidden (AUTOMAKER_HIDE_API_KEY=true)');
 }
 
 /**
@@ -382,8 +399,8 @@ function checkAuthentication(
  * 5. Session cookie (for web mode)
  */
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
-  // Allow disabling auth for local/trusted networks
-  if (isEnvTrue(process.env.AUTOMAKER_DISABLE_AUTH)) {
+  // Allow disabling auth in development only (never in production/staging)
+  if (isAuthDisabled()) {
     next();
     return;
   }
@@ -433,10 +450,10 @@ export function isAuthEnabled(): boolean {
  * Get authentication status for health endpoint
  */
 export function getAuthStatus(): { enabled: boolean; method: string } {
-  const disabled = isEnvTrue(process.env.AUTOMAKER_DISABLE_AUTH);
+  const disabled = isAuthDisabled();
   return {
     enabled: !disabled,
-    method: disabled ? 'disabled' : 'api_key_or_session',
+    method: disabled ? 'disabled (dev only)' : 'api_key_or_session',
   };
 }
 
@@ -444,7 +461,7 @@ export function getAuthStatus(): { enabled: boolean; method: string } {
  * Check if a request is authenticated (for status endpoint)
  */
 export function isRequestAuthenticated(req: Request): boolean {
-  if (isEnvTrue(process.env.AUTOMAKER_DISABLE_AUTH)) return true;
+  if (isAuthDisabled()) return true;
   const result = checkAuthentication(
     req.headers as Record<string, string | string[] | undefined>,
     req.query as Record<string, string | undefined>,
@@ -462,6 +479,6 @@ export function checkRawAuthentication(
   query: Record<string, string | undefined>,
   cookies: Record<string, string | undefined>
 ): boolean {
-  if (isEnvTrue(process.env.AUTOMAKER_DISABLE_AUTH)) return true;
+  if (isAuthDisabled()) return true;
   return checkAuthentication(headers, query, cookies).authenticated;
 }

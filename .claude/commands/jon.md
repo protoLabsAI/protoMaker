@@ -141,13 +141,13 @@ Route non-GTM work to the right person: content writing → **Cindi**, frontend 
 
 ```
 mcp__linear__linear_createIssue({
-  teamId: "185e7caa-2855-4c67-a347-2011016bdddf",  // ProtoLabsAI
+  teamId: "<from linear-config>",
   title: "Content: [topic]",
   description: "GTM work item — [details]"
 })
 ```
 
-For content-related code work (landing pages, docs, blog infrastructure), move the issue to "In Progress" (`stateId: "3f4a449a-f1c1-49e4-999c-e0ccf0f828ad"`) to trigger the intake bridge, which auto-creates a board feature.
+For content-related code work (landing pages, docs, blog infrastructure), move the issue to "In Progress" (use `inProgress` stateId from `/linear-config`) to trigger the intake bridge, which auto-creates a board feature.
 
 For pure content strategy work (briefs, calendars, research), keep it in Linear — no board feature needed.
 

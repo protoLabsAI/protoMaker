@@ -8,6 +8,7 @@ import {
   FlaskConical,
   Workflow,
   Plug,
+  Server,
   MessageSquareText,
   User,
   Shield,
@@ -62,7 +63,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
           { id: 'opencode-provider', label: 'OpenCode', icon: OpenCodeIcon },
         ],
       },
-      { id: 'mcp-servers', label: 'MCP Servers', icon: Plug },
+      { id: 'mcp-servers', label: 'MCP Servers', icon: Server },
     ],
   },
   {

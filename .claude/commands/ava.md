@@ -413,8 +413,9 @@ mcp__plugin_automaker_automaker__write_note_tab({
 ```
 New work identified (bug, feature, improvement)
   ↓
-Create Linear issue: mcp__linear__linear_createIssue({
-  teamId: "185e7caa-2855-4c67-a347-2011016bdddf",  // ProtoLabsAI
+Create Linear issue (use IDs from /linear-config):
+mcp__linear__linear_createIssue({
+  teamId: "<from linear-config>",
   title: "...",
   description: "...",
   priority: 1-4  // 1=urgent, 2=high, 3=medium, 4=low
@@ -423,7 +424,7 @@ Create Linear issue: mcp__linear__linear_createIssue({
 Move to "Todo" state (triggers intake bridge → creates board feature):
 mcp__linear__linear_updateIssue({
   issueId: "<id>",
-  stateId: "8e05f945-0bf5-4d42-8d01-fbd63f471ead"  // "Todo"
+  stateId: "<todo stateId from linear-config>"
 })
   ↓
 Intake bridge auto-creates board feature with linearIssueId

@@ -5,7 +5,6 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@protolabs-ai/utils/logger';
 import { Sidebar } from '@/components/layout/sidebar';
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
-import { ChatSidebar } from '@/components/views/chat/chat-sidebar';
 import { ChatModal, useChatModalShortcut } from '@/components/layout/chat-modal';
 import {
   FileBrowserProvider,
@@ -890,7 +889,6 @@ function RootLayoutContent() {
           </div>
           <BottomPanel />
         </div>
-        <ChatSidebar />
         <ChatModal />
         <MobileBottomNav />
         <Toaster richColors position="bottom-right" />

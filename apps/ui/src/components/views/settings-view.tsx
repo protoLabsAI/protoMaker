@@ -196,6 +196,7 @@ export function SettingsView() {
       {/* Header Section */}
       <SettingsHeader
         icon={Cog}
+        title="Global Settings"
         showNavigation={showNavigation}
         onToggleNavigation={toggleNavigation}
         actions={

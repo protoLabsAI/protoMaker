@@ -71,6 +71,16 @@ export class FeatureLoader implements FeatureStore {
       normalized = { ...normalized, featureType: 'code' };
     }
 
+    // Normalize dependencies — ensure always an array (may be stored as JSON string)
+    if (normalized.dependencies && typeof normalized.dependencies === 'string') {
+      try {
+        const parsed = JSON.parse(normalized.dependencies as unknown as string);
+        normalized = { ...normalized, dependencies: Array.isArray(parsed) ? parsed : [] };
+      } catch {
+        normalized = { ...normalized, dependencies: [] };
+      }
+    }
+
     return normalized;
   }
 
