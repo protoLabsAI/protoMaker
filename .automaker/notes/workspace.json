@@ -3,7 +3,8 @@
   "activeTabId": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
   "tabOrder": [
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
-    "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f"
+    "a69c769a-e33e-41fd-b6d2-1d7cd9996f2f",
+    "a06b4167-d09e-4421-b1f8-80d5f646b381"
   ],
   "tabs": {
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08": {
@@ -35,7 +36,22 @@
         "wordCount": 37,
         "characterCount": 284
       }
+    },
+    "a06b4167-d09e-4421-b1f8-80d5f646b381": {
+      "id": "a06b4167-d09e-4421-b1f8-80d5f646b381",
+      "name": "Ava",
+      "content": "<h2>Ava — Strategic Notes</h2>\n<p>This tab is for Josh to leave strategic direction, priorities, and context for Ava across sessions. Ava reads this on every activation and appends status updates after significant work.</p>\n<hr>\n<h3>How to use this tab</h3>\n<ul>\n<li>Leave priorities here: \"focus on X this week\", \"don't touch Y until Z ships\"</li>\n<li>Paste context I should know: decisions made, constraints, upcoming deadlines</li>\n<li>Ava will append status updates below after each significant work block</li>\n</ul>\n<hr>\n<h3>Status — 2026-02-28</h3>\n<p><strong>Session summary:</strong> Fixed Lead Engineer concurrency lease race (features blocking in 2s due to fire-and-forget executeFeature + event completion race). Recovered cant-adjust-concurrent-agents (gh PR creation failed on backtick shell escaping). Triaged all 7 blocked features — 6 are legitimate human tasks (payment, GTM, external repos), 1 recovered. Merged staging→main, v0.15.1 released via auto-release.yml. Both open PRs (#1472 ava-anywhere, #1473 cant-adjust) queued with auto-merge.</p>\n<p><strong>Board state:</strong> 0 agents running. All 7 backlog features assigned to josh — auto-mode idle by design. Beads empty.</p>\n<p><strong>Next session:</strong> Check if #1472 and #1473 merged. If backlog still stalled, ask Josh which features to unassign for agent pickup or what new work to create via Linear.</p>",
+      "permissions": {
+        "agentRead": true,
+        "agentWrite": true
+      },
+      "metadata": {
+        "createdAt": 1772296459216,
+        "updatedAt": 1772296459216,
+        "wordCount": 187,
+        "characterCount": 1239
+      }
     }
   },
-  "workspaceVersion": 3
+  "workspaceVersion": 4
 }

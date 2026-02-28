@@ -5,7 +5,7 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 27
+  loaded: 29
   referenced: 12
   successfulFeatures: 12
 ---

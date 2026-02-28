@@ -36,10 +36,22 @@ export interface MockGeneration {
   endTime?: Date;
 }
 
+export interface MockSpan {
+  id: string;
+  traceId: string;
+  name: string;
+  input?: any;
+  output?: any;
+  metadata?: Record<string, any>;
+  startTime?: Date;
+  endTime?: Date;
+}
+
 export class MockLangfuseAPI {
   private prompts: Map<string, MockPrompt[]> = new Map();
   private traces: Map<string, MockTrace> = new Map();
   private generations: Map<string, MockGeneration> = new Map();
+  private spans: Map<string, MockSpan> = new Map();
   private shouldFail = false;
 
   /**
@@ -94,6 +106,16 @@ export class MockLangfuseAPI {
   }
 
   /**
+   * Record a span
+   */
+  recordSpan(span: MockSpan): void {
+    if (this.shouldFail) {
+      throw new Error('Mock API failure');
+    }
+    this.spans.set(span.id, span);
+  }
+
+  /**
    * Get recorded trace by ID
    */
   getTrace(id: string): MockTrace | undefined {
@@ -122,12 +144,20 @@ export class MockLangfuseAPI {
   }
 
   /**
+   * Get all recorded spans
+   */
+  getAllSpans(): MockSpan[] {
+    return Array.from(this.spans.values());
+  }
+
+  /**
    * Clear all recorded data
    */
   clear(): void {
     this.prompts.clear();
     this.traces.clear();
     this.generations.clear();
+    this.spans.clear();
     this.shouldFail = false;
   }
 
@@ -166,6 +196,20 @@ export function createMockLangfuseClient(api: MockLangfuseAPI) {
         });
         return genOptions;
       },
+      span: (spanOptions: any) => {
+        api.recordSpan({
+          id: spanOptions.id ?? Math.random().toString(36).slice(2),
+          traceId: options.id,
+          name: spanOptions.name,
+          input: spanOptions.input,
+          output: spanOptions.output,
+          metadata: spanOptions.metadata,
+          startTime: spanOptions.startTime,
+          endTime: spanOptions.endTime,
+        });
+        return spanOptions;
+      },
+      update: (_data: any) => {},
     }),
     flushAsync: async () => {
       // No-op for mock

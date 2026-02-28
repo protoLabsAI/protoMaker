@@ -2,6 +2,14 @@
 
 Connect protoLabs to your development workflow. Each integration is either **Required** for core functionality or **Optional** for enhanced capabilities.
 
+## Browser
+
+Use protoLabs directly from Chrome without switching windows.
+
+| Integration                              | Description                                                                                                                         | Status   |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [Browser extension](./browser-extension) | Chrome extension for side panel chat, right-click context menu, GitHub PR integration, and a badge indicator showing server status. | Optional |
+
 ## AI Control Plane
 
 Configure and control the AI agents that power your development studio.

@@ -75,8 +75,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push --force-with-lease
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create
-      mockExec.mockResolvedValueOnce({
+      // gh pr create (execFileAsync)
+      mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/42\n',
         stderr: '',
       });
@@ -154,8 +154,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push --force-with-lease succeeds
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create succeeds
-      mockExec.mockResolvedValueOnce({
+      // gh pr create (execFileAsync)
+      mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/99\n',
         stderr: '',
       });
@@ -191,8 +191,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push (NO --force-with-lease since rebase was aborted)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create
-      mockExec.mockResolvedValueOnce({
+      // gh pr create (execFileAsync)
+      mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/55\n',
         stderr: '',
       });
@@ -223,8 +223,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push (NO --force-with-lease)
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // gh pr create
-      mockExec.mockResolvedValueOnce({
+      // gh pr create (execFileAsync)
+      mockExecFile.mockResolvedValueOnce({
         stdout: 'https://github.com/owner/repo/pull/77\n',
         stderr: '',
       });

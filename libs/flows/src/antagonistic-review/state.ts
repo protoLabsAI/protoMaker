@@ -18,6 +18,14 @@ import {
 } from '@protolabs-ai/types';
 
 /**
+ * Token usage captured from a single LLM node invocation
+ */
+export interface NodeTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
  * Zod schema for AntagonisticReviewState
  * Validates the review state structure
  */
@@ -44,6 +52,11 @@ export const AntagonisticReviewStateSchema = z.object({
   // HITL (Human-in-the-Loop) integration
   hitlRequired: z.boolean().optional(),
   hitlFeedback: z.string().optional(),
+
+  // Token usage per LLM node (for cost tracking)
+  avaTokenUsage: z.object({ inputTokens: z.number(), outputTokens: z.number() }).optional(),
+  jonTokenUsage: z.object({ inputTokens: z.number(), outputTokens: z.number() }).optional(),
+  consolidateTokenUsage: z.object({ inputTokens: z.number(), outputTokens: z.number() }).optional(),
 });
 
 /**
@@ -83,6 +96,15 @@ export interface AntagonisticReviewState {
 
   /** Feedback from human reviewer if HITL was triggered */
   hitlFeedback?: string;
+
+  /** Token usage from ava-review LLM call (for cost tracking) */
+  avaTokenUsage?: NodeTokenUsage;
+
+  /** Token usage from jon-review LLM call (for cost tracking) */
+  jonTokenUsage?: NodeTokenUsage;
+
+  /** Token usage from consolidate LLM call (for cost tracking) */
+  consolidateTokenUsage?: NodeTokenUsage;
 
   /** Smart LLM model for review nodes (injected by adapter) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -126,6 +148,11 @@ export const AntagonisticReviewStateAnnotation = Annotation.Root({
   // HITL integration (replace semantics)
   hitlRequired: Annotation<boolean | undefined>,
   hitlFeedback: Annotation<string | undefined>,
+
+  // Token usage per LLM node (replace semantics)
+  avaTokenUsage: Annotation<NodeTokenUsage | undefined>,
+  jonTokenUsage: Annotation<NodeTokenUsage | undefined>,
+  consolidateTokenUsage: Annotation<NodeTokenUsage | undefined>,
 
   // LLM models (injected by adapter, replace semantics)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
