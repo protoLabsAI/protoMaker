@@ -188,6 +188,15 @@ export interface ProjectSettings {
   /** Auto-load CLAUDE.md files using SDK's settingSources option (project override) */
   autoLoadClaudeMd?: boolean;
 
+  // Persona Scoping (per-project activation)
+  /**
+   * Agent template names that are enabled for this project.
+   * When defined, only templates in this list are active for the project.
+   * When undefined or empty, all registered templates are available (global default).
+   * Tier-0 (built-in) templates appear in the list but can still be toggled per-project.
+   */
+  enabledPersonas?: string[];
+
   // Subagents Configuration
   /**
    * Project-specific custom subagent definitions for specialized task delegation

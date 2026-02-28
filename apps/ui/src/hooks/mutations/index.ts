@@ -74,3 +74,10 @@ export {
 
 // Cursor Permissions mutations
 export { useApplyCursorProfile, useCopyCursorConfig } from './use-cursor-permissions-mutations';
+
+// Agent Template mutations
+export {
+  useRegisterTemplate,
+  useUpdateTemplate,
+  useUnregisterTemplate,
+} from './use-agent-template-mutations';

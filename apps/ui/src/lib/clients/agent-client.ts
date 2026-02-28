@@ -225,5 +225,37 @@ export const withAgentClient = <TBase extends Constructor<BaseHttpClient>>(Base:
         count: number;
         error?: string;
       }> => this.post('/api/agents/templates/list', { role }),
+
+      get: (
+        name: string
+      ): Promise<{
+        success: boolean;
+        template?: Record<string, unknown>;
+        error?: string;
+      }> => this.post('/api/agents/templates/get', { name }),
+
+      register: (
+        template: Record<string, unknown>
+      ): Promise<{
+        success: boolean;
+        template?: Record<string, unknown>;
+        error?: string;
+      }> => this.post('/api/agents/templates/register', template),
+
+      update: (
+        name: string,
+        updates: Record<string, unknown>
+      ): Promise<{
+        success: boolean;
+        template?: Record<string, unknown>;
+        error?: string;
+      }> => this.post('/api/agents/templates/update', { name, ...updates }),
+
+      unregister: (
+        name: string
+      ): Promise<{
+        success: boolean;
+        error?: string;
+      }> => this.post('/api/agents/templates/unregister', { name }),
     };
   };
