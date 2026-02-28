@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
-import { Settings, FolderOpen, Menu, X } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Settings, FolderOpen } from 'lucide-react';
+import { useSettingsNavigation } from '@/components/shared/settings';
 import { ProjectIdentitySection } from './project-identity-section';
 import { ProjectThemeSection } from './project-theme-section';
 import { WorktreePreferencesSection } from './worktree-preferences-section';
@@ -13,12 +13,10 @@ import { ProjectIntegrationsSection } from './project-integrations-section';
 import { DangerZoneSection } from '../settings-view/danger-zone/danger-zone-section';
 import { DeleteProjectDialog } from '../settings-view/components/delete-project-dialog';
 import { SettingsScopeToggle } from '../settings-view/components/settings-scope-toggle';
+import { SettingsHeader } from '../settings-view/components/settings-header';
 import { ProjectSettingsNavigation } from './components/project-settings-navigation';
 import { useProjectSettingsView } from './hooks/use-project-settings-view';
 import type { Project as ElectronProject } from '@/lib/electron';
-
-// Breakpoint constant for mobile (matches Tailwind lg breakpoint)
-const LG_BREAKPOINT = 1024;
 
 // Convert to the shared types used by components
 interface SettingsProject {
@@ -38,32 +36,8 @@ export function ProjectSettingsView() {
   // Use project settings view navigation hook
   const { activeView, navigateTo } = useProjectSettingsView();
 
-  // Mobile navigation state - default to showing on desktop, hidden on mobile
-  const [showNavigation, setShowNavigation] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= LG_BREAKPOINT;
-    }
-    return true;
-  });
-
-  // Auto-close navigation on mobile when a section is selected
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < LG_BREAKPOINT) {
-      setShowNavigation(false);
-    }
-  }, [activeView]);
-
-  // Handle window resize to show/hide navigation appropriately
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= LG_BREAKPOINT) {
-        setShowNavigation(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Shared mobile navigation state
+  const { showNavigation, setShowNavigation, toggleNavigation } = useSettingsNavigation(activeView);
 
   // Convert electron Project to settings-view Project type
   const convertProject = (project: ElectronProject | null): SettingsProject | null => {
@@ -139,27 +113,13 @@ export function ProjectSettingsView() {
       data-testid="project-settings-view"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Settings className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <h1 className="text-xl font-bold">Project Settings</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure settings for {currentProject.name}
-            </p>
-          </div>
-        </div>
-        {/* Mobile menu button - far right */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowNavigation(!showNavigation)}
-          className="lg:hidden h-8 w-8 p-0"
-          aria-label={showNavigation ? 'Close navigation menu' : 'Open navigation menu'}
-        >
-          {showNavigation ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </Button>
-      </div>
+      <SettingsHeader
+        title="Project Settings"
+        description={`Configure settings for ${currentProject.name}`}
+        icon={Settings}
+        showNavigation={showNavigation}
+        onToggleNavigation={toggleNavigation}
+      />
 
       {/* Scope Toggle */}
       <div className="shrink-0 px-4 py-2 border-b border-border/30">

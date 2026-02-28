@@ -1,5 +1,3 @@
-import React from 'react';
-import type { LucideIcon } from 'lucide-react';
 import {
   Key,
   Bot,
@@ -28,14 +26,15 @@ import {
   OpenAIIcon,
   OpenCodeIcon,
 } from '@/components/shared/provider-icon';
+import type { SettingsNavigationItem } from '@/components/shared/settings';
 import type { SettingsViewId } from '../hooks/use-settings-view';
 
-export interface NavigationItem {
+export type { SettingsNavigationItem };
+
+export type NavigationItem = SettingsNavigationItem & {
   id: SettingsViewId;
-  label: string;
-  icon: LucideIcon | React.ComponentType<{ className?: string }>;
-  subItems?: NavigationItem[];
-}
+  subItems?: (SettingsNavigationItem & { id: SettingsViewId })[];
+};
 
 export interface NavigationGroup {
   label: string;

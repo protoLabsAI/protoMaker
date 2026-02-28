@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearch } from '@tanstack/react-router';
 import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { useThemeStore } from '@/store/theme-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { useWorktreeStore } from '@/store/worktree-store';
+import { Cog, FileJson } from 'lucide-react';
+import { Button } from '@protolabs-ai/ui/atoms';
+import { useSettingsNavigation } from '@/components/shared/settings';
 
 import { useSettingsView, type SettingsViewId } from './settings-view/hooks';
-import { NAV_ITEMS } from './settings-view/config/navigation';
 import { SettingsHeader } from './settings-view/components/settings-header';
 import { KeyboardMapDialog } from './settings-view/components/keyboard-map-dialog';
 import { SettingsNavigation } from './settings-view/components/settings-navigation';
@@ -41,9 +43,6 @@ import { ImportExportDialog } from './settings-view/components/import-export-dia
 import { SettingsScopeToggle } from './settings-view/components/settings-scope-toggle';
 import type { Theme } from './settings-view/shared/types';
 
-// Breakpoint constant for mobile (matches Tailwind lg breakpoint)
-const LG_BREAKPOINT = 1024;
-
 export function SettingsView() {
   const navigate = useNavigate();
   const {
@@ -57,7 +56,6 @@ export function SettingsView() {
     setEnableAiCommitMessages,
     muteDoneSound,
     setMuteDoneSound,
-    currentProject,
     defaultPlanningMode,
     setDefaultPlanningMode,
     defaultRequirePlanApproval,
@@ -92,32 +90,8 @@ export function SettingsView() {
   const [showKeyboardMapDialog, setShowKeyboardMapDialog] = useState(false);
   const [showImportExportDialog, setShowImportExportDialog] = useState(false);
 
-  // Mobile navigation state - default to showing on desktop, hidden on mobile
-  const [showNavigation, setShowNavigation] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= LG_BREAKPOINT;
-    }
-    return true; // Default to showing on SSR
-  });
-
-  // Auto-close navigation on mobile when a section is selected
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < LG_BREAKPOINT) {
-      setShowNavigation(false);
-    }
-  }, [activeView]);
-
-  // Handle window resize to show/hide navigation appropriately
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= LG_BREAKPOINT) {
-        setShowNavigation(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Shared mobile navigation state
+  const { showNavigation, setShowNavigation, toggleNavigation } = useSettingsNavigation(activeView);
 
   // Render the active section based on current view
   const renderActiveSection = () => {
@@ -221,13 +195,24 @@ export function SettingsView() {
     >
       {/* Header Section */}
       <SettingsHeader
+        icon={Cog}
         showNavigation={showNavigation}
-        onToggleNavigation={() => setShowNavigation(!showNavigation)}
-        onImportExportClick={() => setShowImportExportDialog(true)}
+        onToggleNavigation={toggleNavigation}
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImportExportDialog(true)}
+            className="gap-2"
+          >
+            <FileJson className="w-4 h-4" />
+            <span className="hidden sm:inline">Import / Export</span>
+          </Button>
+        }
       />
 
       {/* Scope Toggle */}
-      <div className="shrink-0 px-4 lg:px-8 py-2 border-b border-border/30">
+      <div className="shrink-0 px-4 py-2 border-b border-border/30">
         <SettingsScopeToggle
           active="global"
           onSwitch={(scope) => {
@@ -240,9 +225,7 @@ export function SettingsView() {
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Side Navigation - Overlay on mobile, sidebar on desktop */}
         <SettingsNavigation
-          navItems={NAV_ITEMS}
           activeSection={activeView}
-          currentProject={currentProject}
           onNavigate={handleNavigate}
           isOpen={showNavigation}
           onClose={() => setShowNavigation(false)}

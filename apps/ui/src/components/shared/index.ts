@@ -40,3 +40,11 @@ export { CountUpTimer } from './count-up-timer';
 
 // Panel Components
 export { HeaderActionsPanel } from './header-actions-panel';
+
+// Settings Components
+export {
+  type SettingsNavigationItem,
+  useSettingsNavigation,
+  SettingsNavButton,
+  SettingsNavContainer,
+} from './settings';
