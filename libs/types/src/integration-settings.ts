@@ -8,6 +8,7 @@
 
 import type { EventHookTrigger } from './event-settings.js';
 import type { SignalIntent } from './signal-intent.js';
+import type { ReactionAbility } from './discord.js';
 
 // ============================================================================
 // Discord Settings - Global Discord bot configuration

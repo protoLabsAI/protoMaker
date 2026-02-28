@@ -335,6 +335,15 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Discord
+  // ============================================
+  discord: {
+    /** Reaction abilities for a project */
+    reactionAbilities: (projectPath: string) =>
+      ['discord', 'reaction-abilities', projectPath] as const,
+  },
+
+  // ============================================
   // System Health
   // ============================================
   system: {

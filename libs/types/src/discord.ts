@@ -199,3 +199,39 @@ export interface DiscordUserMessageRoutedPayload {
   content: string;
   routedToAgent: string;
 }
+
+// ============================================================================
+// Reaction Abilities - Emoji-triggered workflow intents
+// ============================================================================
+
+/**
+ * The intent/action type associated with a reaction ability
+ */
+export type ReactionAbilityIntent = 'work_order' | 'idea' | 'feedback' | 'conversational';
+
+/**
+ * ReactionAbility - A configured emoji reaction that triggers a workflow
+ *
+ * When a trusted user reacts to a Discord message with the configured emoji,
+ * the system creates a work item or routes it according to the intent.
+ */
+export interface ReactionAbility {
+  /** Unique identifier for this ability */
+  id: string;
+  /** Unicode emoji (e.g. "🐛") or Discord custom emoji ID (e.g. ":bug:123456789") */
+  emoji: string;
+  /** Human-readable label (e.g. "Report Bug") */
+  label: string;
+  /** The intent/action this reaction triggers */
+  intent: ReactionAbilityIntent;
+  /** Channel IDs this ability applies to; empty array or undefined means all channels */
+  channels?: string[];
+  /** Role IDs allowed to trigger this ability; empty array or undefined means any role */
+  allowedRoles?: string[];
+  /** Specific user IDs allowed to trigger this ability */
+  allowedUsers?: string[];
+  /** Automatically create a feature when triggered (default: true) */
+  autoFeature?: boolean;
+  /** Whether this ability is currently active */
+  enabled: boolean;
+}

@@ -328,7 +328,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use('/api/scheduler', createSchedulerRoutes(schedulerService, settingsService));
   app.use('/api/ava', createAvaRoutes(services));
-  app.use('/api/discord', createDiscordRoutes(discordBotService));
+  app.use('/api/discord', createDiscordRoutes(discordBotService, settingsService));
   app.use(
     '/api/agents',
     createAgentManagementRoutes(roleRegistryService, agentFactoryService, dynamicAgentExecutor)

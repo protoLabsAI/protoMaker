@@ -104,3 +104,6 @@ export {
 // Agent Templates
 export { useAgentTemplates } from './use-agent-templates';
 export type { AgentTemplateMetadata } from './use-agent-templates';
+
+// Discord
+export { useReactionAbilities, useSaveReactionAbilities } from './use-reaction-abilities';

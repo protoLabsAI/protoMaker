@@ -76,6 +76,10 @@ export function createIntegrationRoutes(
       }
 
       if (integrations.discord) {
+        // Preserve existing reactionAbilities when updating discord config
+        const existingSettings = await settingsService.getProjectSettings(projectPath);
+        const existingReactionAbilities = existingSettings.integrations?.discord?.reactionAbilities;
+
         validatedIntegrations.discord = {
           enabled: integrations.discord.enabled ?? false,
           serverId: integrations.discord.serverId,
@@ -88,6 +92,7 @@ export function createIntegrationRoutes(
           useWebhook: integrations.discord.useWebhook ?? false,
           webhookId: integrations.discord.webhookId,
           webhookToken: integrations.discord.webhookToken,
+          reactionAbilities: existingReactionAbilities,
         };
       }
 

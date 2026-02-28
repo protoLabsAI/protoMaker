@@ -552,6 +552,8 @@ export type {
   DiscordReplyContext,
   DiscordRoutedMessage,
   DiscordUserMessageRoutedPayload,
+  ReactionAbilityIntent,
+  ReactionAbility,
 } from './discord.js';
 
 // Agent role types (headsdown agents)
