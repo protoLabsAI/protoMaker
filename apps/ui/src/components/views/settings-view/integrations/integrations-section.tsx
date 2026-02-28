@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Plug, RefreshCw } from 'lucide-react';
 import { Button, Spinner } from '@protolabs-ai/ui/atoms';
+import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api-fetch';
 import type { IntegrationSummary } from '@protolabs-ai/types';
 import { IntegrationCard } from './integration-card';
 import { IntegrationConfigDialog } from './integration-config-dialog';
+import { SignalsPanel } from './signals-panel';
+
+type ActiveTab = 'integrations' | 'signals';
 
 const CATEGORY_LABELS: Record<string, string> = {
   communication: 'Communication',
@@ -17,6 +21,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export function IntegrationsSection() {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('integrations');
   const [integrations, setIntegrations] = useState<IntegrationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,63 +86,88 @@ export function IntegrationsSection() {
           <Plug className="w-5 h-5 text-zinc-500" />
           <h2 className="text-lg font-semibold">Integrations</h2>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="gap-1.5"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        {activeTab === 'integrations' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        )}
       </div>
 
-      <p className="text-sm text-zinc-500">
-        Manage external connections for Discord, Linear, GitHub, and more.
-      </p>
+      <div className="flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-800">
+        {(['integrations', 'signals'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-4 py-2 text-sm font-medium capitalize border-b-2 -mb-px transition-colors',
+              activeTab === tab
+                ? 'border-zinc-900 dark:border-zinc-100 text-zinc-900 dark:text-zinc-100'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+            )}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-sm">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          {error}
-        </div>
-      )}
+      {activeTab === 'integrations' && (
+        <>
+          <p className="text-sm text-zinc-500">
+            Manage external connections for Discord, Linear, GitHub, and more.
+          </p>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Spinner />
-        </div>
-      ) : (
-        <div className="space-y-8">
-          {Object.entries(grouped).map(([category, items]) => (
-            <div key={category} className="space-y-3">
-              <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                {CATEGORY_LABELS[category] ?? category}
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {items.map((integration) => (
-                  <IntegrationCard
-                    key={integration.id}
-                    integration={integration}
-                    onToggle={handleToggle}
-                    onConfigure={setConfigDialogId}
-                  />
-                ))}
-              </div>
+          {error && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-sm">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {error}
             </div>
-          ))}
-        </div>
+          )}
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Spinner />
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {Object.entries(grouped).map(([category, items]) => (
+                <div key={category} className="space-y-3">
+                  <h3 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                    {CATEGORY_LABELS[category] ?? category}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {items.map((integration) => (
+                      <IntegrationCard
+                        key={integration.id}
+                        integration={integration}
+                        onToggle={handleToggle}
+                        onConfigure={setConfigDialogId}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <IntegrationConfigDialog
+            integrationId={configDialogId}
+            open={configDialogId !== null}
+            onOpenChange={(open) => {
+              if (!open) setConfigDialogId(null);
+            }}
+            onSaved={fetchIntegrations}
+          />
+        </>
       )}
 
-      <IntegrationConfigDialog
-        integrationId={configDialogId}
-        open={configDialogId !== null}
-        onOpenChange={(open) => {
-          if (!open) setConfigDialogId(null);
-        }}
-        onSaved={fetchIntegrations}
-      />
+      {activeTab === 'signals' && <SignalsPanel />}
     </div>
   );
 }

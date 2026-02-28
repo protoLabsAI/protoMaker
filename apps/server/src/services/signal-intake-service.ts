@@ -7,9 +7,10 @@
  * triggering the PM Agent research → PRD → decomposition flow.
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '@protolabs-ai/utils';
-import type { HITLFormRequestInput } from '@protolabs-ai/types';
-import type { SignalIntent } from '@protolabs-ai/types';
+import type { HITLFormRequestInput, SignalChannel } from '@protolabs-ai/types';
+import type { SignalIntent, RecentSignal } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
@@ -61,6 +62,17 @@ export interface SignalIntakeStatus {
   lastSignalAt: string | null;
 }
 
+const RING_BUFFER_MAX = 200;
+
+/** Maps a raw signal source string to a canonical SignalChannel value */
+function sourceToChannel(source: string): SignalChannel {
+  if (source === 'linear') return 'linear';
+  if (source === 'github') return 'github';
+  if (source === 'discord') return 'discord';
+  if (source.startsWith('mcp')) return 'mcp';
+  return 'ui';
+}
+
 export class SignalIntakeService {
   private processedSignals = new Set<string>();
   private signalCounts: SignalCounts = {
@@ -71,6 +83,7 @@ export class SignalIntakeService {
   };
   private lastSignalAt: string | null = null;
   private hitlFormService: HITLFormCreator | null = null;
+  private recentSignals: RecentSignal[] = [];
 
   constructor(
     private events: EventEmitter,
@@ -108,6 +121,50 @@ export class SignalIntakeService {
       signalCounts: { ...this.signalCounts },
       lastSignalAt: this.lastSignalAt,
     };
+  }
+
+  /**
+   * Return the recent signals ring buffer, newest-first.
+   */
+  public getRecentSignals(): RecentSignal[] {
+    return [...this.recentSignals].reverse();
+  }
+
+  /**
+   * Push a new entry into the ring buffer (status: pending).
+   * Drops the oldest entry when the buffer exceeds RING_BUFFER_MAX.
+   */
+  private pushToRingBuffer(signal: SignalPayload, intent: SignalIntent): RecentSignal {
+    const entry: RecentSignal = {
+      id: uuidv4(),
+      channel: sourceToChannel(signal.source),
+      intent,
+      preview: signal.content.substring(0, 120),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    this.recentSignals.push(entry);
+    if (this.recentSignals.length > RING_BUFFER_MAX) {
+      this.recentSignals.shift();
+    }
+    return entry;
+  }
+
+  /**
+   * Update the status (and optionally featureId) of a ring buffer entry by id.
+   */
+  private updateRingBufferEntry(
+    id: string,
+    status: RecentSignal['status'],
+    featureId?: string
+  ): void {
+    const entry = this.recentSignals.find((s) => s.id === id);
+    if (entry) {
+      entry.status = status;
+      if (featureId !== undefined) {
+        entry.featureId = featureId;
+      }
+    }
   }
 
   /**
@@ -352,6 +409,9 @@ export class SignalIntakeService {
 
       const projectPath = signal.channelContext?.projectPath || this.defaultProjectPath;
 
+      // Push to ring buffer (status: pending)
+      const bufferEntry = this.pushToRingBuffer(signal, intent);
+
       // Interrupt intent: bypass PM pipeline and create a HITL form directly for human triage
       if (intent === 'interrupt') {
         logger.info(`Interrupt signal received: "${title}" — creating HITL form for human triage`);
@@ -399,6 +459,7 @@ export class SignalIntakeService {
           );
         }
 
+        this.updateRingBufferEntry(bufferEntry.id, 'dismissed');
         this.events.emit('signal:routed', {
           projectPath,
           featureId: undefined,
@@ -419,6 +480,7 @@ export class SignalIntakeService {
         logger.info(`GTM signal routed: "${title}" (source: ${signal.source}, intent: ${intent})`);
 
         // Create feature with idea state before emitting to ensure featureId is available
+        this.updateRingBufferEntry(bufferEntry.id, 'creating');
         const gtmFeature = await this.featureLoader.create(projectPath, {
           title: `[${signal.source}] ${title}`,
           description,
@@ -427,6 +489,7 @@ export class SignalIntakeService {
           complexity: 'medium',
           workItemState: 'idea',
         });
+        this.updateRingBufferEntry(bufferEntry.id, 'created', gtmFeature.id);
 
         this.events.emit('authority:gtm-signal-received', {
           projectPath,
@@ -473,11 +536,13 @@ export class SignalIntakeService {
               `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
             );
           }
+          this.updateRingBufferEntry(bufferEntry.id, 'dismissed');
           return;
         }
       }
 
       // Create feature with idea state
+      this.updateRingBufferEntry(bufferEntry.id, 'creating');
       const feature = await this.featureLoader.create(projectPath, {
         title: `[${signal.source}] ${title}`,
         description,
@@ -494,6 +559,7 @@ export class SignalIntakeService {
           ? { githubIssueNumber: signal.channelContext.issueNumber as number }
           : {}),
       });
+      this.updateRingBufferEntry(bufferEntry.id, 'created', feature.id);
 
       // Trigger PM Agent pipeline
       this.events.emit('authority:idea-injected', {

@@ -367,10 +367,21 @@ export class ExecuteProcessor implements StateProcessor {
       let unsubscribe: (() => void) | null = null;
       let timedOut = false;
 
+      // Track the execution promise so we can chain resolves through it.
+      // This prevents a race condition where the EXECUTE processor retries before
+      // concurrencyManager.release() runs in executeFeature()'s finally block:
+      // event fires → outer promise resolves → retry calls acquire() → lease still held.
+      // By chaining through executionSettled, we guarantee the finally block has run.
+      let executionSettled: Promise<void> = Promise.resolve();
+
+      const safeResolve = (result: { success: boolean; error?: string }) => {
+        executionSettled.then(() => resolve(result)).catch(() => resolve(result));
+      };
+
       const timeout = setTimeout(() => {
         timedOut = true;
         if (unsubscribe) unsubscribe();
-        resolve({ success: false, error: 'Execution timed out after 30 minutes' });
+        safeResolve({ success: false, error: 'Execution timed out after 30 minutes' });
       }, EXECUTE_TIMEOUT_MS);
 
       // Subscribe to completion events for this feature (filter by both featureId and projectPath)
@@ -383,13 +394,13 @@ export class ExecuteProcessor implements StateProcessor {
           clearTimeout(timeout);
           if (!timedOut) {
             if (unsubscribe) unsubscribe();
-            resolve({ success: true });
+            safeResolve({ success: true });
           }
         } else if (type === 'feature:stopped') {
           clearTimeout(timeout);
           if (!timedOut) {
             if (unsubscribe) unsubscribe();
-            resolve({
+            safeResolve({
               success: false,
               error: 'Agent was stopped before completion',
             });
@@ -398,7 +409,7 @@ export class ExecuteProcessor implements StateProcessor {
           clearTimeout(timeout);
           if (!timedOut) {
             if (unsubscribe) unsubscribe();
-            resolve({
+            safeResolve({
               success: false,
               error: (p?.error as string) || 'Agent execution failed',
             });
@@ -423,12 +434,15 @@ export class ExecuteProcessor implements StateProcessor {
       }
       const recoveryContext = contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
 
-      // Start execution (bypasses lead engineer delegation — calls executeFeature directly)
-      this.serviceContext.autoModeService
+      // Start execution (bypasses lead engineer delegation — calls executeFeature directly).
+      // Store as executionSettled so safeResolve waits for the concurrency lease to be
+      // released before unblocking the EXECUTE processor's retry attempt.
+      executionSettled = this.serviceContext.autoModeService
         .executeFeature(ctx.projectPath, ctx.feature.id, true, false, undefined, {
           recoveryContext,
           retryCount: ctx.retryCount,
         })
+        .then(() => {})
         .catch((err: unknown) => {
           clearTimeout(timeout);
           if (!timedOut && unsubscribe) {
