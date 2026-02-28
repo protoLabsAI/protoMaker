@@ -303,12 +303,15 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         return;
       }
 
-      // Track whether the feature was already marked done before this event
-      const wasAlreadyDone = currentFeature.status === 'done';
+      // Idempotency guard: skip update if feature is already in a terminal status.
+      // Prevents double-updating completedAt or re-emitting feature:pr-merged on duplicate
+      // webhook deliveries.
+      const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
+      const wasAlreadyTerminal = TERMINAL_STATUSES.has(currentFeature.status ?? '');
 
-      if (wasAlreadyDone) {
-        logger.info(
-          `Feature "${feature.title}" is already in "done" status. PR #${prNumber} merge confirmed.`
+      if (wasAlreadyTerminal) {
+        logger.debug(
+          `Feature "${feature.title}" already in terminal status '${currentFeature.status}' — skipping merge update for PR #${prNumber}`
         );
       } else {
         // Update feature status to done
@@ -355,8 +358,8 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       res.json({
         success: true,
-        message: wasAlreadyDone
-          ? `Feature already marked as done`
+        message: wasAlreadyTerminal
+          ? `Feature already in terminal status '${currentFeature.status}'`
           : `Feature "${feature.title}" moved to done`,
         featureId: feature.featureId,
       });

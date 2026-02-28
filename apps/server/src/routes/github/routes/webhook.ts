@@ -149,7 +149,9 @@ async function handlePullRequestEvent(
     baseBranch: pull_request.base.ref,
   });
 
-  // Future: Update feature status when PR is merged/closed
+  // PR merge -> feature status transition is handled by the primary webhook router
+  // at apps/server/src/routes/webhooks/routes/github.ts (pull_request.closed + merged:true).
+  // Do not implement it here.
 }
 
 /**

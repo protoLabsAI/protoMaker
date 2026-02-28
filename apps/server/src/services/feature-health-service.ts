@@ -3,29 +3,27 @@
  *
  * Checks for:
  * - Orphaned features (epicId references non-existent epic)
- * - Merged-but-not-done (branch merged to main but feature not marked done)
  * - Completed epics (all children done but epic still in-progress/backlog)
  * - Stale in-progress (features stuck in running with no active agent)
  * - Dangling dependencies (depend on deleted/non-existent features)
+ * - Stale pipeline gates (awaiting gate beyond timeout threshold)
  *
  * Provides dry-run and auto-fix modes.
+ * Note: merged-not-done detection was removed. PR merge -> done transitions are
+ * handled synchronously by the primary webhook handler at
+ * apps/server/src/routes/webhooks/routes/github.ts.
  */
 
 import { createLogger } from '@protolabs-ai/utils';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import type { Feature } from '@protolabs-ai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
-
-const execFileAsync = promisify(execFile);
 
 const logger = createLogger('FeatureHealth');
 
 export interface HealthIssue {
   type:
     | 'orphaned_epic_ref'
-    | 'merged_not_done'
     | 'epic_children_done'
     | 'stale_running'
     | 'stale_gate'
@@ -70,7 +68,6 @@ export class FeatureHealthService {
     issues.push(...this.checkEpicChildrenDone(features, featureMap));
     issues.push(...(await this.checkStaleRunning(features, projectPath)));
     issues.push(...this.checkStaleGates(features));
-    issues.push(...(await this.checkMergedNotDone(features, projectPath)));
 
     // Auto-fix if requested
     if (autoFix) {
@@ -274,128 +271,6 @@ export class FeatureHealthService {
   }
 
   /**
-   * Features with branches that are merged to main (or their epic branch) but not marked done.
-   * Uses execFileAsync with argument arrays to prevent command injection.
-   */
-  private async checkMergedNotDone(
-    features: Feature[],
-    projectPath: string
-  ): Promise<HealthIssue[]> {
-    const issues: HealthIssue[] = [];
-    const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);
-
-    // Detect default branch (try main first, then master)
-    let defaultBranch = 'main';
-    try {
-      await execFileAsync('git', ['rev-parse', '--verify', 'main'], {
-        cwd: projectPath,
-        encoding: 'utf-8',
-        timeout: 5_000,
-      });
-    } catch {
-      try {
-        await execFileAsync('git', ['rev-parse', '--verify', 'master'], {
-          cwd: projectPath,
-          encoding: 'utf-8',
-          timeout: 5_000,
-        });
-        defaultBranch = 'master';
-      } catch {
-        // Neither main nor master exist, skip this check
-        return issues;
-      }
-    }
-
-    // Get list of branches merged into the default branch
-    let mergedBranches: Set<string>;
-    try {
-      const { stdout: output } = await execFileAsync('git', ['branch', '--merged', defaultBranch], {
-        cwd: projectPath,
-        encoding: 'utf-8',
-        timeout: 10_000,
-      });
-      mergedBranches = new Set(
-        output
-          .split('\n')
-          .map((line) => line.trim().replace(/^\*\s*/, ''))
-          .filter((b) => b && b !== 'main' && b !== 'master')
-      );
-    } catch {
-      // Git command failed, skip this check
-      return issues;
-    }
-
-    // Build a map of epic branches for checking child features
-    const epicBranchMap = new Map<string, string>();
-    for (const f of features) {
-      if (f.isEpic && f.branchName) {
-        epicBranchMap.set(f.id, f.branchName);
-      }
-    }
-
-    // Cache epic branch --merged results to avoid redundant git calls
-    const epicMergedCache = new Map<string, Set<string>>();
-
-    for (const feature of features) {
-      if (!feature.branchName) continue;
-      if (doneStatuses.has(feature.status ?? '')) continue;
-      if (feature.isEpic) continue; // Epics are handled separately
-
-      let isMerged = mergedBranches.has(feature.branchName);
-
-      // For features with an epicId, also check if branch is merged into the epic branch
-      if (!isMerged && feature.epicId) {
-        const epicBranch = epicBranchMap.get(feature.epicId);
-        if (epicBranch) {
-          let epicMergedBranches = epicMergedCache.get(epicBranch);
-          if (!epicMergedBranches) {
-            try {
-              const { stdout: epicMergedOutput } = await execFileAsync(
-                'git',
-                ['branch', '--merged', epicBranch],
-                {
-                  cwd: projectPath,
-                  encoding: 'utf-8',
-                  timeout: 5_000,
-                }
-              );
-              epicMergedBranches = new Set(
-                epicMergedOutput
-                  .split('\n')
-                  .map((line) => line.trim().replace(/^\*\s*/, ''))
-                  .filter((b) => b)
-              );
-              epicMergedCache.set(epicBranch, epicMergedBranches);
-            } catch {
-              // Epic branch check failed, cache empty set to avoid retrying
-              epicMergedBranches = new Set();
-              epicMergedCache.set(epicBranch, epicMergedBranches);
-            }
-          }
-          isMerged = epicMergedBranches.has(feature.branchName);
-        }
-      }
-
-      if (isMerged) {
-        const targetBranch =
-          feature.epicId && epicBranchMap.get(feature.epicId)
-            ? epicBranchMap.get(feature.epicId)!
-            : defaultBranch;
-        issues.push({
-          type: 'merged_not_done',
-          featureId: feature.id,
-          featureTitle: feature.title ?? feature.id,
-          message: `Branch '${feature.branchName}' is merged to ${targetBranch} but feature status is '${feature.status}'`,
-          autoFixable: true,
-          fix: 'Set status to done',
-        });
-      }
-    }
-
-    return issues;
-  }
-
-  /**
    * Apply an auto-fix for a given issue.
    */
   private async applyFix(
@@ -429,10 +304,6 @@ export class FeatureHealthService {
 
       case 'stale_gate':
         await this.featureLoader.update(projectPath, issue.featureId, { status: 'blocked' });
-        break;
-
-      case 'merged_not_done':
-        await this.featureLoader.update(projectPath, issue.featureId, { status: 'done' });
         break;
     }
   }

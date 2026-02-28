@@ -754,7 +754,7 @@ async function checkMergedBranches(events: EventEmitter, projectPaths: string[])
 
 /**
  * Run board health audit with auto-fix enabled.
- * Finds and fixes: orphaned epic refs, dangling deps, completed epics, stale running, merged-not-done.
+ * Finds and fixes: orphaned epic refs, dangling deps, completed epics, stale running, stale gates.
  * Runs against all known project paths rather than relying on process.cwd().
  */
 async function runBoardHealthAudit(
