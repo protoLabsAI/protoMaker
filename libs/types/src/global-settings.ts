@@ -5,7 +5,6 @@
  * and DATA_DIR/credentials.json respectively), plus version constants and concurrency utilities.
  *
  * Related types in domain files:
- * - VoiceSettings, WhisperModelSize → ui-settings.ts
  * - MCPToolInfo, MCPServerConfig → provider-settings.ts
  * - ErrorTrackingSettings → integration-settings.ts
  */
@@ -27,7 +26,6 @@ import type {
   ServerLogLevel,
   WindowBounds,
   KeyboardShortcuts,
-  VoiceSettings,
 } from './ui-settings.js';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from './ui-settings.js';
 import type {
@@ -547,12 +545,6 @@ export interface GlobalSettings {
    * @see DiscordSettings
    */
   discord?: DiscordSettings;
-
-  /**
-   * Voice activation settings for offline wake word + speech-to-text.
-   * @see VoiceSettings in ui-settings.ts
-   */
-  voice?: VoiceSettings;
 
   /**
    * Error tracking and monitoring settings with Sentry integration.
