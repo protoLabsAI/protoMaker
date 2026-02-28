@@ -1351,7 +1351,7 @@ ls -la $AUTOMAKER_ROOT/packages/mcp-server/plugins/
 **Example Scenario:**
 
 ```bash
-$ claude plugin install automaker
+$ claude plugin install protolabs
 Error: Plugin not found
 
 $ ./scripts/setup-protolab.sh /path/to/project
@@ -1370,13 +1370,13 @@ $ ./scripts/setup-protolab.sh /path/to/project
 2. **Try manual plugin install:**
 
    ```bash
-   claude plugin install automaker
+   claude plugin install protolabs
    ```
 
 3. **Check detailed error:**
 
    ```bash
-   claude plugin install automaker 2>&1 | head -20
+   claude plugin install protolabs 2>&1 | head -20
    ```
 
 4. **Rebuild plugin from source:**
@@ -1397,7 +1397,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 6. **Try install again:**
 
    ```bash
-   claude plugin install automaker
+   claude plugin install protolabs
    ```
 
 7. **Check installed plugins:**
@@ -1417,7 +1417,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 
 ```bash
 # Verify plugin can be installed before setup
-claude plugin marketplace list | grep automaker || \
+claude plugin marketplace list | grep protolabs || \
   echo "Plugin not available"
 
 # Then run setup
@@ -1463,7 +1463,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 1. **Check plugin version:**
 
    ```bash
-   claude plugin list | grep automaker
+   claude plugin list | grep protolabs
    ```
 
 2. **Check Automaker server version:**
@@ -1478,18 +1478,18 @@ $ ./scripts/setup-protolab.sh /path/to/project
 
    ```bash
    # Update to latest version
-   claude plugin update automaker
+   claude plugin update protolabs
 
    # Verify
-   claude plugin list | grep automaker
+   claude plugin list | grep protolabs
    ```
 
 4. **If update fails, reinstall:**
 
    ```bash
-   claude plugin uninstall automaker
+   claude plugin uninstall protolabs
    sleep 2
-   claude plugin install automaker
+   claude plugin install protolabs
    ```
 
 5. **Update Claude CLI if plugin still incompatible:**
@@ -1499,7 +1499,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
    claude --version
 
    # Try plugin install again
-   claude plugin install automaker
+   claude plugin install protolabs
    ```
 
 6. **Verify compatibility:**
@@ -1522,7 +1522,7 @@ $ ./scripts/setup-protolab.sh /path/to/project
 ```bash
 # Keep everything up to date
 npm install -g @anthropic-ai/claude-cli@latest
-claude plugin update automaker
+claude plugin update protolabs
 
 # Start fresh Automaker server
 npm run dev

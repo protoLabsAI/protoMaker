@@ -17,11 +17,11 @@ cd protomaker
 claude plugin marketplace add https://github.com/proto-labs-ai/protomaker/tree/main/packages/mcp-server/plugins
 
 # 3. Install the plugin
-claude plugin install automaker
+claude plugin install protolabs
 
 # 4. Configure the plugin — AUTOMAKER_ROOT is required
 #    The plugin needs to know where your local clone lives
-PLUGIN_DIR=~/.claude/plugins/automaker
+PLUGIN_DIR=~/.claude/plugins/protolabs
 cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
 # Edit .env and set AUTOMAKER_ROOT to the absolute path of this repo
 echo "AUTOMAKER_ROOT=$(pwd)" >> "$PLUGIN_DIR/.env"
@@ -51,10 +51,10 @@ npm run build:packages
 
 # 3. Add the plugin marketplace and install
 claude plugin marketplace add $(pwd)/packages/mcp-server/plugins
-claude plugin install automaker
+claude plugin install protolabs
 
 # 4. Configure the plugin — AUTOMAKER_ROOT is required
-PLUGIN_DIR=~/.claude/plugins/automaker
+PLUGIN_DIR=~/.claude/plugins/protolabs
 cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
 echo "AUTOMAKER_ROOT=$(pwd)" > "$PLUGIN_DIR/.env"
 echo "AUTOMAKER_API_KEY=your-dev-key-2026" >> "$PLUGIN_DIR/.env"
@@ -140,7 +140,7 @@ The plugin requires an environment file to locate your local protomaker clone.
 
 ```bash
 # Find where Claude Code installed the plugin
-PLUGIN_DIR=~/.claude/plugins/automaker
+PLUGIN_DIR=~/.claude/plugins/protolabs
 
 # Create the .env from the example template
 cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
@@ -164,14 +164,14 @@ AUTOMAKER_API_KEY=your-dev-key-2026
 claude plugin marketplace add /path/to/protomaker/packages/mcp-server/plugins
 
 # Install the plugin
-claude plugin install automaker
+claude plugin install protolabs
 ```
 
 **Option B: Symlink Directly**
 
 ```bash
 # Create symlink to Claude's plugins directory
-ln -s /path/to/protomaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/automaker
+ln -s /path/to/protomaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/protolabs
 ```
 
 ### Step 4: Restart Claude Code
@@ -196,7 +196,7 @@ You should see your Kanban board or a message to start the protoLabs server.
 
 ### Environment Variables
 
-Configure these in the plugin's `.env` file (`~/.claude/plugins/automaker/.env`).
+Configure these in the plugin's `.env` file (`~/.claude/plugins/protolabs/.env`).
 Copy `.env.example` in that directory to get started.
 
 | Variable             | Description                                                   | Default                 |
@@ -298,7 +298,7 @@ VITE_HOSTNAME=localhost
 Set `AUTOMAKER_ROOT` in the plugin `.env` to point at your protomaker clone. The `start-mcp.sh` launcher handles path resolution from there:
 
 ```bash
-PLUGIN_DIR=~/.claude/plugins/automaker
+PLUGIN_DIR=~/.claude/plugins/protolabs
 echo "AUTOMAKER_ROOT=/absolute/path/to/protomaker" > "$PLUGIN_DIR/.env"
 echo "AUTOMAKER_API_KEY=your-secure-api-key" >> "$PLUGIN_DIR/.env"
 ```
@@ -315,7 +315,7 @@ curl http://localhost:3008/api/health
 
 ```bash
 claude plugin marketplace add /path/to/protomaker/packages/mcp-server/plugins
-claude plugin install automaker
+claude plugin install protolabs
 ```
 
 ### Memory Allocation Guidelines
@@ -353,7 +353,7 @@ Each project maintains its own `.automaker/` directory with independent features
 **Fix:**
 
 ```bash
-PLUGIN_DIR=~/.claude/plugins/automaker
+PLUGIN_DIR=~/.claude/plugins/protolabs
 cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
 # Open .env and set AUTOMAKER_ROOT to the absolute path of your protomaker clone
 echo "AUTOMAKER_ROOT=/absolute/path/to/protomaker" >> "$PLUGIN_DIR/.env"
@@ -380,7 +380,7 @@ Then restart Claude Code.
 If neither of the above applies:
 
 1. Verify the plugin is installed: `ls ~/.claude/plugins/`
-2. Check `~/.claude/plugins/automaker/.env` exists and contains `AUTOMAKER_ROOT`
+2. Check `~/.claude/plugins/protolabs/.env` exists and contains `AUTOMAKER_ROOT`
 3. Confirm `AUTOMAKER_ROOT` points to the correct repo: `ls "$AUTOMAKER_ROOT/packages/mcp-server/dist/index.js"`
 4. Restart Claude Code
 
@@ -398,7 +398,7 @@ If neither of the above applies:
 ### Tools Not Available
 
 1. Check the health endpoint: `/board` — if it fails, start protoLabs
-2. Verify MCP tools are loaded: `mcp__automaker__health_check()`
+2. Verify MCP tools are loaded: `mcp__protolabs__health_check()`
 
 ### Feature Dependencies Not Working
 
@@ -430,7 +430,7 @@ PR-related tools require `GH_TOKEN`:
 
 - Ensure `plugin.json` uses absolute path in `args`
 - Rebuild: `npm run build:packages`
-- Reinstall plugin: `claude plugin install automaker`
+- Reinstall plugin: `claude plugin install protolabs`
 
 **Container memory issues:**
 

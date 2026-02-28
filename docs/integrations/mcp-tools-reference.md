@@ -80,7 +80,7 @@ For installation and configuration, see [Claude Plugin Setup](./claude-plugin.md
 ### Using Project Tools
 
 ```
-[Calls mcp__automaker__create_project with:
+[Calls mcp__protolabs__create_project with:
   projectPath: "/path/to/project"
   title: "User Authentication System"
   goal: "Add secure user authentication"
@@ -94,7 +94,7 @@ For installation and configuration, see [Claude Plugin Setup](./claude-plugin.md
   milestones: [...]
 ]
 
-[Calls mcp__automaker__create_project_features with:
+[Calls mcp__protolabs__create_project_features with:
   projectPath: "/path/to/project"
   projectSlug: "user-authentication-system"
   createEpics: true

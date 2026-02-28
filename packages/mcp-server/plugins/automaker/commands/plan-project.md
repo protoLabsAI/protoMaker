@@ -8,25 +8,25 @@ allowed-tools:
   - Grep
   - Task
   - AskUserQuestion
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__initiate_project
-  - mcp__plugin_automaker_automaker__generate_project_prd
-  - mcp__plugin_automaker_automaker__approve_project_prd
-  - mcp__plugin_automaker_automaker__launch_project
-  - mcp__plugin_automaker_automaker__get_lifecycle_status
-  - mcp__plugin_automaker_automaker__collect_related_issues
-  - mcp__plugin_automaker_automaker__create_project
-  - mcp__plugin_automaker_automaker__get_project
-  - mcp__plugin_automaker_automaker__update_project
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__get_project_spec
-  - mcp__plugin_automaker_automaker__list_context_files
-  - mcp__plugin_automaker_automaker__get_context_file
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__set_feature_dependencies
-  - mcp__plugin_automaker_automaker__sync_project_to_linear
-  - mcp__plugin_automaker_automaker__archive_project
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__initiate_project
+  - mcp__plugin_protolabs_studio__generate_project_prd
+  - mcp__plugin_protolabs_studio__approve_project_prd
+  - mcp__plugin_protolabs_studio__launch_project
+  - mcp__plugin_protolabs_studio__get_lifecycle_status
+  - mcp__plugin_protolabs_studio__collect_related_issues
+  - mcp__plugin_protolabs_studio__create_project
+  - mcp__plugin_protolabs_studio__get_project
+  - mcp__plugin_protolabs_studio__update_project
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__get_project_spec
+  - mcp__plugin_protolabs_studio__list_context_files
+  - mcp__plugin_protolabs_studio__get_context_file
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__set_feature_dependencies
+  - mcp__plugin_protolabs_studio__sync_project_to_linear
+  - mcp__plugin_protolabs_studio__archive_project
 model: sonnet
 ---
 

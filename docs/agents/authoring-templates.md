@@ -32,7 +32,7 @@ const securityAuditorTemplate = {
 const validated = AgentTemplateSchema.parse(securityAuditorTemplate);
 
 // Register via MCP tool
-mcp__automaker__register_agent_template({
+mcp__protolabs__register_agent_template({
   projectPath: '/path/to/project',
   template: validated,
 });
@@ -386,7 +386,7 @@ try {
 **Via MCP tool:**
 
 ```typescript
-const result = await mcp__automaker__register_agent_template({
+const result = await mcp__protolabs__register_agent_template({
   projectPath: '/path/to/project',
   template: validated,
 });
@@ -410,7 +410,7 @@ curl -X POST http://localhost:3008/api/agents/register-template \
 ### Step 4: Execute
 
 ```typescript
-const execution = await mcp__automaker__execute_dynamic_agent({
+const execution = await mcp__protolabs__execute_dynamic_agent({
   projectPath: '/path/to/project',
   templateName: 'code-reviewer',
   input: {
@@ -502,7 +502,7 @@ Automaker includes several pre-registered templates:
 ### List All Templates
 
 ```typescript
-const templates = await mcp__automaker__list_agent_templates({
+const templates = await mcp__protolabs__list_agent_templates({
   projectPath: '/path/to/project',
 });
 
@@ -512,7 +512,7 @@ console.log('Available templates:', templates.data.templates);
 ### Get Template Details
 
 ```typescript
-const template = await mcp__automaker__get_agent_template({
+const template = await mcp__protolabs__get_agent_template({
   projectPath: '/path/to/project',
   templateName: 'backend-engineer',
 });
@@ -523,7 +523,7 @@ console.log('Template:', template.data);
 ### Update Template
 
 ```typescript
-const updated = await mcp__automaker__update_agent_template({
+const updated = await mcp__protolabs__update_agent_template({
   projectPath: '/path/to/project',
   templateName: 'code-reviewer',
   updates: {
@@ -536,7 +536,7 @@ const updated = await mcp__automaker__update_agent_template({
 ### Unregister Template
 
 ```typescript
-const result = await mcp__automaker__unregister_agent_template({
+const result = await mcp__protolabs__unregister_agent_template({
   projectPath: '/path/to/project',
   templateName: 'code-reviewer',
 });
@@ -816,7 +816,7 @@ maxTurns: 100; // Feature implementation
 **Solution:** Use a different name or unregister the existing template:
 
 ```typescript
-await mcp__automaker__unregister_agent_template({
+await mcp__protolabs__unregister_agent_template({
   projectPath: '/path/to/project',
   templateName: 'existing-name',
 });
@@ -847,7 +847,7 @@ name: 'CodeReviewer'; // CamelCase
 
 ```typescript
 // Check available tools
-const tools = await mcp__automaker__list_tools();
+const tools = await mcp__protolabs__list_tools();
 console.log('Available tools:', tools);
 
 // Use correct tool names

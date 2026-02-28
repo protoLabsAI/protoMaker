@@ -5,10 +5,10 @@ allowed-tools:
   - Read
   - Glob
   - Grep
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_features
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
+  - mcp__protolabs__get_project_spec
+  - mcp__protolabs__list_features
+  - mcp__protolabs__list_context_files
+  - mcp__protolabs__get_context_file
 model: opus
 ---
 

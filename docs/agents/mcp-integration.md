@@ -162,13 +162,13 @@ async *executeQuery(options: ExecuteOptions): AsyncGenerator<ProviderMessage> {
 
 ```typescript
 // List features on the board
-mcp__automaker__list_features({ projectPath, status: 'backlog' });
+mcp__protolabs__list_features({ projectPath, status: 'backlog' });
 
 // Get feature details
-mcp__automaker__get_feature({ projectPath, featureId });
+mcp__protolabs__get_feature({ projectPath, featureId });
 
 // Create new feature
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath,
   title: 'Add authentication',
   description: 'Implement OAuth2 + JWT',
@@ -177,7 +177,7 @@ mcp__automaker__create_feature({
 });
 
 // Update feature
-mcp__automaker__update_feature({
+mcp__protolabs__update_feature({
   projectPath,
   featureId,
   title: 'Updated title',
@@ -185,29 +185,29 @@ mcp__automaker__update_feature({
 });
 
 // Delete feature
-mcp__automaker__delete_feature({ projectPath, featureId });
+mcp__protolabs__delete_feature({ projectPath, featureId });
 
 // Move feature to different column
-mcp__automaker__move_feature({ projectPath, featureId, toStatus: 'review' });
+mcp__protolabs__move_feature({ projectPath, featureId, toStatus: 'review' });
 ```
 
 ### Agent Control
 
 ```typescript
 // Start agent for a feature
-mcp__automaker__start_agent({ projectPath, featureId, useWorktrees: true });
+mcp__protolabs__start_agent({ projectPath, featureId, useWorktrees: true });
 
 // Stop running agent
-mcp__automaker__stop_agent({ featureId });
+mcp__protolabs__stop_agent({ featureId });
 
 // List all running agents
-mcp__automaker__list_running_agents();
+mcp__protolabs__list_running_agents();
 
 // Get agent output
-mcp__automaker__get_agent_output({ projectPath, featureId });
+mcp__protolabs__get_agent_output({ projectPath, featureId });
 
 // Send message to running agent
-mcp__automaker__send_message_to_agent({
+mcp__protolabs__send_message_to_agent({
   projectPath,
   featureId,
   message: 'Please add error handling',
@@ -218,73 +218,73 @@ mcp__automaker__send_message_to_agent({
 
 ```typescript
 // Add feature to queue
-mcp__automaker__queue_feature({ projectPath, featureId });
+mcp__protolabs__queue_feature({ projectPath, featureId });
 
 // List queue
-mcp__automaker__list_queue();
+mcp__protolabs__list_queue();
 
 // Clear queue
-mcp__automaker__clear_queue();
+mcp__protolabs__clear_queue();
 ```
 
 ### Context Files
 
 ```typescript
 // List context files
-mcp__automaker__list_context_files({ projectPath });
+mcp__protolabs__list_context_files({ projectPath });
 
 // Read context file
-mcp__automaker__get_context_file({ projectPath, filename: 'coding-rules.md' });
+mcp__protolabs__get_context_file({ projectPath, filename: 'coding-rules.md' });
 
 // Create context file
-mcp__automaker__create_context_file({
+mcp__protolabs__create_context_file({
   projectPath,
   filename: 'security-guidelines.md',
   content: '# Security Guidelines\n\n...',
 });
 
 // Delete context file
-mcp__automaker__delete_context_file({ projectPath, filename: 'old-rules.md' });
+mcp__protolabs__delete_context_file({ projectPath, filename: 'old-rules.md' });
 ```
 
 ### Auto-Mode
 
 ```typescript
 // Start auto-mode
-mcp__automaker__start_auto_mode({ projectPath, maxConcurrency: 2 });
+mcp__protolabs__start_auto_mode({ projectPath, maxConcurrency: 2 });
 
 // Stop auto-mode
-mcp__automaker__stop_auto_mode({ projectPath });
+mcp__protolabs__stop_auto_mode({ projectPath });
 
 // Get auto-mode status
-mcp__automaker__get_auto_mode_status({ projectPath });
+mcp__protolabs__get_auto_mode_status({ projectPath });
 ```
 
 ### Orchestration
 
 ```typescript
 // Set feature dependencies
-mcp__automaker__set_feature_dependencies({
+mcp__protolabs__set_feature_dependencies({
   projectPath,
   featureId,
   dependencies: ['feature-123', 'feature-456'],
 });
 
 // Get dependency graph
-mcp__automaker__get_dependency_graph({ projectPath });
+mcp__protolabs__get_dependency_graph({ projectPath });
 
 // Get execution order
-mcp__automaker__get_execution_order({ projectPath, status: 'backlog' });
+mcp__protolabs__get_execution_order({ projectPath, status: 'backlog' });
 ```
 
 ### Project Management
 
 ```typescript
 // List projects
-mcp__automaker__list_projects({ projectPath });
+mcp__protolabs__list_projects({ projectPath });
 
 // Create project plan
-mcp__automaker__create_project({
+mcp__protolabs__create_project({
   projectPath,
   title: 'Authentication System',
   goal: 'Implement OAuth2 authentication',
@@ -293,7 +293,7 @@ mcp__automaker__create_project({
 });
 
 // Create features from project
-mcp__automaker__create_project_features({
+mcp__protolabs__create_project_features({
   projectPath,
   projectSlug: 'authentication-system',
   createEpics: true,
@@ -305,10 +305,10 @@ mcp__automaker__create_project_features({
 
 ```typescript
 // Health check
-mcp__automaker__health_check();
+mcp__protolabs__health_check();
 
 // Get board summary
-mcp__automaker__get_board_summary({ projectPath });
+mcp__protolabs__get_board_summary({ projectPath });
 ```
 
 ## Creating New MCP Tools
@@ -413,7 +413,7 @@ claude
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  Chief of Staff calls mcp__automaker__start_agent    │
+│  Chief of Staff calls mcp__protolabs__start_agent    │
 │  - Passes projectPath and featureId                  │
 └──────────────────┬───────────────────────────────────┘
                    │

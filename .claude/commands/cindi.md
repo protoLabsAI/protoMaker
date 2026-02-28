@@ -14,48 +14,48 @@ allowed-tools:
   - Write
   - Bash
   # Automaker - feature and agent management
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__update_feature
-  - mcp__plugin_automaker_automaker__move_feature
-  - mcp__plugin_automaker_automaker__start_agent
-  - mcp__plugin_automaker_automaker__stop_agent
-  - mcp__plugin_automaker_automaker__list_running_agents
-  - mcp__plugin_automaker_automaker__get_agent_output
-  - mcp__plugin_automaker_automaker__send_message_to_agent
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__update_feature
+  - mcp__plugin_protolabs_studio__move_feature
+  - mcp__plugin_protolabs_studio__start_agent
+  - mcp__plugin_protolabs_studio__stop_agent
+  - mcp__plugin_protolabs_studio__list_running_agents
+  - mcp__plugin_protolabs_studio__get_agent_output
+  - mcp__plugin_protolabs_studio__send_message_to_agent
   # Context files
-  - mcp__plugin_automaker_automaker__list_context_files
-  - mcp__plugin_automaker_automaker__get_context_file
-  - mcp__plugin_automaker_automaker__create_context_file
+  - mcp__plugin_protolabs_studio__list_context_files
+  - mcp__plugin_protolabs_studio__get_context_file
+  - mcp__plugin_protolabs_studio__create_context_file
   # Content pipeline
-  - mcp__plugin_automaker_automaker__create_content
-  - mcp__plugin_automaker_automaker__get_content_status
-  - mcp__plugin_automaker_automaker__list_content
-  - mcp__plugin_automaker_automaker__review_content
-  - mcp__plugin_automaker_automaker__export_content
+  - mcp__plugin_protolabs_studio__create_content
+  - mcp__plugin_protolabs_studio__get_content_status
+  - mcp__plugin_protolabs_studio__list_content
+  - mcp__plugin_protolabs_studio__review_content
+  - mcp__plugin_protolabs_studio__export_content
   # Antagonistic review (quality gate for content)
-  - mcp__plugin_automaker_automaker__execute_antagonistic_review
+  - mcp__plugin_protolabs_studio__execute_antagonistic_review
   # Project pipeline (understand what to write about)
-  - mcp__plugin_automaker_automaker__list_projects
-  - mcp__plugin_automaker_automaker__get_project
-  - mcp__plugin_automaker_automaker__get_project_spec
-  - mcp__plugin_automaker_automaker__get_project_metrics
+  - mcp__plugin_protolabs_studio__list_projects
+  - mcp__plugin_protolabs_studio__get_project
+  - mcp__plugin_protolabs_studio__get_project_spec
+  - mcp__plugin_protolabs_studio__get_project_metrics
   # Discord - team communication
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
-  - mcp__plugin_automaker_discord__discord_get_server_info
-  - mcp__plugin_automaker_discord__discord_add_reaction
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_get_server_info
+  - mcp__plugin_protolabs_discord__discord_add_reaction
   # Discord DMs
-  - mcp__plugin_automaker_automaker__send_discord_dm
-  - mcp__plugin_automaker_automaker__read_discord_dms
+  - mcp__plugin_protolabs_studio__send_discord_dm
+  - mcp__plugin_protolabs_studio__read_discord_dms
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
   # Settings
-  - mcp__plugin_automaker_automaker__get_settings
+  - mcp__plugin_protolabs_studio__get_settings
 ---
 
 # Cindi — Content Writing Specialist
@@ -322,7 +322,7 @@ You are **creative, strategic, and quality-obsessed.**
 
 ## On Activation
 
-Call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
+Call `mcp__plugin_protolabs_studio__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 1. Check board for content-related features (`list_features`)
 2. Review any open content PRs or drafts

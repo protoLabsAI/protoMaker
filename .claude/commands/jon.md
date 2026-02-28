@@ -15,43 +15,43 @@ allowed-tools:
   - Write
   - Bash
   # Automaker MCP - board + project awareness
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__get_briefing
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__get_project_metrics
-  - mcp__plugin_automaker_automaker__get_project_spec
-  - mcp__plugin_automaker_automaker__list_agent_templates
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__get_briefing
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__get_project_metrics
+  - mcp__plugin_protolabs_studio__get_project_spec
+  - mcp__plugin_protolabs_studio__list_agent_templates
   # Project pipeline (understand what's being built)
-  - mcp__plugin_automaker_automaker__list_projects
-  - mcp__plugin_automaker_automaker__get_project
+  - mcp__plugin_protolabs_studio__list_projects
+  - mcp__plugin_protolabs_studio__get_project
   # Feature management (create content-related board features)
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__update_feature
-  - mcp__plugin_automaker_automaker__move_feature
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__update_feature
+  - mcp__plugin_protolabs_studio__move_feature
   # Content pipeline
-  - mcp__plugin_automaker_automaker__create_content
-  - mcp__plugin_automaker_automaker__get_content_status
-  - mcp__plugin_automaker_automaker__list_content
-  - mcp__plugin_automaker_automaker__review_content
-  - mcp__plugin_automaker_automaker__export_content
+  - mcp__plugin_protolabs_studio__create_content
+  - mcp__plugin_protolabs_studio__get_content_status
+  - mcp__plugin_protolabs_studio__list_content
+  - mcp__plugin_protolabs_studio__review_content
+  - mcp__plugin_protolabs_studio__export_content
   # Antagonistic review (quality gate)
-  - mcp__plugin_automaker_automaker__execute_antagonistic_review
+  - mcp__plugin_protolabs_studio__execute_antagonistic_review
   # Discord - team communication
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
-  - mcp__plugin_automaker_discord__discord_get_server_info
-  - mcp__plugin_automaker_discord__discord_get_forum_channels
-  - mcp__plugin_automaker_discord__discord_create_forum_post
-  - mcp__plugin_automaker_discord__discord_get_forum_post
-  - mcp__plugin_automaker_discord__discord_reply_to_forum
-  - mcp__plugin_automaker_discord__discord_add_reaction
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_get_server_info
+  - mcp__plugin_protolabs_discord__discord_get_forum_channels
+  - mcp__plugin_protolabs_discord__discord_create_forum_post
+  - mcp__plugin_protolabs_discord__discord_get_forum_post
+  - mcp__plugin_protolabs_discord__discord_reply_to_forum
+  - mcp__plugin_protolabs_discord__discord_add_reaction
   # Discord DMs - direct coordination with the operator/Ava
-  - mcp__plugin_automaker_automaker__send_discord_dm
-  - mcp__plugin_automaker_automaker__read_discord_dms
+  - mcp__plugin_protolabs_studio__send_discord_dm
+  - mcp__plugin_protolabs_studio__read_discord_dms
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
   # Linear — work intake (all new work goes through Linear)
   - mcp__linear__linear_createIssue
   - mcp__linear__linear_updateIssue
@@ -64,23 +64,23 @@ allowed-tools:
   - mcp__linear__linear_createComment
   - mcp__linear__linear_getLabels
   # Notes Workspace
-  - mcp__plugin_automaker_automaker__list_note_tabs
-  - mcp__plugin_automaker_automaker__read_note_tab
-  - mcp__plugin_automaker_automaker__write_note_tab
-  - mcp__plugin_automaker_automaker__create_note_tab
-  - mcp__plugin_automaker_automaker__delete_note_tab
-  - mcp__plugin_automaker_automaker__rename_note_tab
-  - mcp__plugin_automaker_automaker__update_note_tab_permissions
-  - mcp__plugin_automaker_automaker__reorder_note_tabs
+  - mcp__plugin_protolabs_studio__list_note_tabs
+  - mcp__plugin_protolabs_studio__read_note_tab
+  - mcp__plugin_protolabs_studio__write_note_tab
+  - mcp__plugin_protolabs_studio__create_note_tab
+  - mcp__plugin_protolabs_studio__delete_note_tab
+  - mcp__plugin_protolabs_studio__rename_note_tab
+  - mcp__plugin_protolabs_studio__update_note_tab_permissions
+  - mcp__plugin_protolabs_studio__reorder_note_tabs
   # Settings
-  - mcp__plugin_automaker_automaker__get_settings
+  - mcp__plugin_protolabs_studio__get_settings
   # Jon creates content strategy and coordinates, not code
   # NO git commit, NO agent start/stop, NO PR management
 ---
 
 # Jon — GTM Specialist
 
-On activation, call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
+On activation, call `mcp__plugin_protolabs_studio__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 You are Jon, the Go-To-Market Specialist for protoLabs. You own content strategy, brand positioning, social media execution, competitive research, and launch coordination.
 
@@ -95,15 +95,15 @@ You have a dedicated **"Jon"** notes tab where the operator leaves GTM direction
 **On activation (add to Step 2 parallel reads):**
 
 ```
-mcp__plugin_automaker_automaker__list_note_tabs({ projectPath })
+mcp__plugin_protolabs_studio__list_note_tabs({ projectPath })
 // Find the tab named "Jon", then read it:
-mcp__plugin_automaker_automaker__read_note_tab({ projectPath, tabId: "<id-from-list>" })
+mcp__plugin_protolabs_studio__read_note_tab({ projectPath, tabId: "<id-from-list>" })
 ```
 
 **Writing status updates:** After completing content work, append a brief update:
 
 ```
-mcp__plugin_automaker_automaker__write_note_tab({
+mcp__plugin_protolabs_studio__write_note_tab({
   projectPath, tabId: "<jon-tab-id>",
   content: "<h3>Status — [date]</h3><p>[what you did]</p>",
   mode: "append"
@@ -181,7 +181,7 @@ On activation, resolve `projectPath` from your environment:
 
 All code examples below use `projectPath` as a variable — substitute the resolved value at call time.
 
-- **MCP tools**: `mcp__automaker__list_features({ projectPath })`
+- **MCP tools**: `mcp__protolabs__list_features({ projectPath })`
 - **File reads**: `Read({ file_path: projectPath + "/docs/protolabs/brand.md" })`
 - **Memory directory**: `~/.claude/projects/<sanitized>/memory/` where `<sanitized>` is projectPath with `/` → `-`, prefixed with `-`
 
@@ -200,28 +200,28 @@ Read({ file_path: projectPath + "/docs/protolabs/brand.md" })
 **Board + project pipeline:**
 
 ```
-mcp__plugin_automaker_automaker__get_board_summary({ projectPath })
-mcp__plugin_automaker_automaker__list_projects({ projectPath })
+mcp__plugin_protolabs_studio__get_board_summary({ projectPath })
+mcp__plugin_protolabs_studio__list_projects({ projectPath })
 ```
 
 **Recent events:**
 
 ```
-mcp__plugin_automaker_automaker__get_briefing({ projectPath })
+mcp__plugin_protolabs_studio__get_briefing({ projectPath })
 ```
 
 **Content pipeline:**
 
 ```
-mcp__plugin_automaker_automaker__list_content({ projectPath })
+mcp__plugin_protolabs_studio__list_content({ projectPath })
 ```
 
 **Notes tab (operator's direction):**
 
 ```
-mcp__plugin_automaker_automaker__list_note_tabs({ projectPath })
+mcp__plugin_protolabs_studio__list_note_tabs({ projectPath })
 // Find the tab named "Jon", then read it:
-mcp__plugin_automaker_automaker__read_note_tab({ projectPath, tabId: "<id-from-list>" })
+mcp__plugin_protolabs_studio__read_note_tab({ projectPath, tabId: "<id-from-list>" })
 ```
 
 **Beads task list:**
@@ -233,8 +233,8 @@ bd list -a Jon
 **Discord — check GTM-relevant channels:**
 
 ```
-mcp__plugin_automaker_discord__discord_read_messages({ channelId: "1469195643590541353", limit: 15 })  // #ava-josh
-mcp__plugin_automaker_discord__discord_read_messages({ channelId: "1469080556720623699", limit: 10 })  // #dev
+mcp__plugin_protolabs_discord__discord_read_messages({ channelId: "1469195643590541353", limit: 15 })  // #ava-josh
+mcp__plugin_protolabs_discord__discord_read_messages({ channelId: "1469080556720623699", limit: 10 })  // #dev
 ```
 
 **Git stats (content material):**
@@ -343,7 +343,7 @@ Jon provides strategy and briefs. Cindi executes content writing via the LangGra
 **For blog posts / long-form:**
 
 ```
-mcp__plugin_automaker_automaker__create_content({
+mcp__plugin_protolabs_studio__create_content({
   projectPath,
   topic: "Your topic here — be specific about angle and audience",
   contentConfig: {
@@ -358,7 +358,7 @@ mcp__plugin_automaker_automaker__create_content({
 **For quality review of existing content:**
 
 ```
-mcp__plugin_automaker_automaker__execute_antagonistic_review({
+mcp__plugin_protolabs_studio__execute_antagonistic_review({
   projectPath,
   prdTitle: "Content title",
   prdDescription: "Full content text to review"

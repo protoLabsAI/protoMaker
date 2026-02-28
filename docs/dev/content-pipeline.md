@@ -19,7 +19,7 @@ Start a content flow via MCP:
 
 ```bash
 # Create content
-mcp__automaker__create_content({
+mcp__protolabs__create_content({
   projectPath: "/path/to/project",
   topic: "Building RAG Pipelines with LangGraph",
   format: "guide",
@@ -28,13 +28,13 @@ mcp__automaker__create_content({
 })
 
 # Check progress
-mcp__automaker__get_content_status({
+mcp__protolabs__get_content_status({
   projectPath: "/path/to/project",
   runId: "content-1708123456789-abc123"
 })
 
 # Export when done
-mcp__automaker__export_content({
+mcp__protolabs__export_content({
   projectPath: "/path/to/project",
   runId: "content-1708123456789-abc123",
   format: "markdown"
@@ -168,10 +168,10 @@ Trace: content:{topic} [content-pipeline, format:{format}]
 
 ```bash
 # List recent content traces
-mcp__automaker__langfuse_list_traces({ tags: ["content-pipeline"], limit: 10 })
+mcp__protolabs__langfuse_list_traces({ tags: ["content-pipeline"], limit: 10 })
 
 # Get specific trace with cost data
-mcp__automaker__langfuse_get_trace({ traceId: "content-content-1708123456789-abc123" })
+mcp__protolabs__langfuse_get_trace({ traceId: "content-content-1708123456789-abc123" })
 ```
 
 ### Analytics Dashboard
@@ -274,7 +274,7 @@ The `AntagonisticReviewerGraph` subgraph evaluates content across scoring dimens
 ### Export Formats
 
 ```bash
-mcp__automaker__export_content({
+mcp__protolabs__export_content({
   projectPath: "/path/to/project",
   runId: "content-...",
   format: "markdown"       # or "frontmatter-md", "jsonl", "hf-dataset"
@@ -296,17 +296,17 @@ HITL gates: `research_hitl`, `outline_hitl`, `final_review_hitl`.
 
 ```bash
 # Start with HITL enabled
-mcp__automaker__create_content({
+mcp__protolabs__create_content({
   projectPath: "/path/to/project",
   topic: "...",
   enableHITL: true
 })
 
 # Check status — will show "interrupted" at review gates
-mcp__automaker__get_content_status({ projectPath: "...", runId: "..." })
+mcp__protolabs__get_content_status({ projectPath: "...", runId: "..." })
 
 # Resume with approval
-mcp__automaker__review_content({
+mcp__protolabs__review_content({
   projectPath: "...",
   runId: "...",
   gate: "research_hitl",

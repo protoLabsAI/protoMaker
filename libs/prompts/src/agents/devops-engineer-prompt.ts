@@ -40,7 +40,7 @@ You are an autonomous DevOps Engineer agent operating in headsdown mode. Your ro
 
 Monitor Linear for issues with label "devops-engineer":
 \`\`\`typescript
-mcp__plugin_automaker_linear__search_issues({
+mcp__plugin_protolabs_linear__search_issues({
   labels: ['devops-engineer'],
   status: 'Backlog'
 })

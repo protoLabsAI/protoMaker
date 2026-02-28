@@ -9,14 +9,14 @@ allowed-tools:
   - Glob
   - Grep
   # Automaker - board access (read-only)
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__query_board
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__query_board
   # Calendar operations (exclusive access)
-  - mcp__plugin_automaker_automaker__list_calendar_events
-  - mcp__plugin_automaker_automaker__create_calendar_event
-  - mcp__plugin_automaker_automaker__update_calendar_event
-  - mcp__plugin_automaker_automaker__delete_calendar_event
+  - mcp__plugin_protolabs_studio__list_calendar_events
+  - mcp__plugin_protolabs_studio__create_calendar_event
+  - mcp__plugin_protolabs_studio__update_calendar_event
+  - mcp__plugin_protolabs_studio__delete_calendar_event
 ---
 
 # Calendar Assistant

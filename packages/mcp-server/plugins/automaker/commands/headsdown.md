@@ -16,53 +16,53 @@ allowed-tools:
   - TaskGet
   - AskUserQuestion
   # Feature Management
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__update_feature
-  - mcp__plugin_automaker_automaker__delete_feature
-  - mcp__plugin_automaker_automaker__move_feature
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__update_feature
+  - mcp__plugin_protolabs_studio__delete_feature
+  - mcp__plugin_protolabs_studio__move_feature
   # Agent Control
-  - mcp__plugin_automaker_automaker__start_agent
-  - mcp__plugin_automaker_automaker__stop_agent
-  - mcp__plugin_automaker_automaker__list_running_agents
-  - mcp__plugin_automaker_automaker__get_agent_output
-  - mcp__plugin_automaker_automaker__send_message_to_agent
+  - mcp__plugin_protolabs_studio__start_agent
+  - mcp__plugin_protolabs_studio__stop_agent
+  - mcp__plugin_protolabs_studio__list_running_agents
+  - mcp__plugin_protolabs_studio__get_agent_output
+  - mcp__plugin_protolabs_studio__send_message_to_agent
   # Auto-Mode
-  - mcp__plugin_automaker_automaker__start_auto_mode
-  - mcp__plugin_automaker_automaker__stop_auto_mode
-  - mcp__plugin_automaker_automaker__get_auto_mode_status
+  - mcp__plugin_protolabs_studio__start_auto_mode
+  - mcp__plugin_protolabs_studio__stop_auto_mode
+  - mcp__plugin_protolabs_studio__get_auto_mode_status
   # Board & Orchestration
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__get_execution_order
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__get_execution_order
   # PR & Merge Pipeline
-  - mcp__plugin_automaker_automaker__merge_pr
-  - mcp__plugin_automaker_automaker__check_pr_status
-  - mcp__plugin_automaker_automaker__get_pr_feedback
-  - mcp__plugin_automaker_automaker__resolve_pr_threads
-  - mcp__plugin_automaker_automaker__create_pr_from_worktree
+  - mcp__plugin_protolabs_studio__merge_pr
+  - mcp__plugin_protolabs_studio__check_pr_status
+  - mcp__plugin_protolabs_studio__get_pr_feedback
+  - mcp__plugin_protolabs_studio__resolve_pr_threads
+  - mcp__plugin_protolabs_studio__create_pr_from_worktree
   # Worktree Management
-  - mcp__plugin_automaker_automaker__list_worktrees
-  - mcp__plugin_automaker_automaker__get_worktree_status
+  - mcp__plugin_protolabs_studio__list_worktrees
+  - mcp__plugin_protolabs_studio__get_worktree_status
   # Utilities
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__get_settings
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__get_settings
   # Discord
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
   # Linear
   - mcp__linear__linear_createIssue
   - mcp__linear__linear_updateIssue
   - mcp__linear__linear_searchIssues
   - mcp__linear__linear_getIssues
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
 ---
 
 # Heads Down Mode
 
-On activation, call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
+On activation, call `mcp__plugin_protolabs_studio__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 You are in **deep work mode**. Your job is to autonomously process features, merge PRs, groom the board, and stay productive until the system is **void of work**. Do not bother the user unless you are truly blocked with no alternatives.
 
@@ -132,21 +132,21 @@ Run all of these to build a complete picture of the system:
 
 ```
 # Health
-mcp__plugin_automaker_automaker__health_check()
+mcp__plugin_protolabs_studio__health_check()
 
 # Board state
-mcp__plugin_automaker_automaker__get_board_summary({ projectPath })
-mcp__plugin_automaker_automaker__list_features({ projectPath })
-mcp__plugin_automaker_automaker__get_execution_order({ projectPath })
+mcp__plugin_protolabs_studio__get_board_summary({ projectPath })
+mcp__plugin_protolabs_studio__list_features({ projectPath })
+mcp__plugin_protolabs_studio__get_execution_order({ projectPath })
 
 # Running agents
-mcp__plugin_automaker_automaker__list_running_agents()
+mcp__plugin_protolabs_studio__list_running_agents()
 
 # PR landscape
 gh pr list --json number,title,state,mergeable,headRefName,baseRefName,statusCheckRollup,updatedAt --limit 50
 
 # Worktree state
-mcp__plugin_automaker_automaker__list_worktrees({ projectPath })
+mcp__plugin_protolabs_studio__list_worktrees({ projectPath })
 ```
 
 Display a unified dashboard:
@@ -194,7 +194,7 @@ After displaying the dashboard, immediately begin acting on what you found — d
 If not already running:
 
 ```
-mcp__plugin_automaker_automaker__start_auto_mode({
+mcp__plugin_protolabs_studio__start_auto_mode({
   projectPath,
   maxConcurrency: 1  // or higher if project supports parallel work
 })
@@ -207,7 +207,7 @@ mcp__plugin_automaker_automaker__start_auto_mode({
 ### Check for Running Agents
 
 ```
-mcp__plugin_automaker_automaker__list_running_agents()
+mcp__plugin_protolabs_studio__list_running_agents()
 ```
 
 ### If Agent Running:
@@ -250,7 +250,7 @@ For each PR, extract: number, title, head/base branches, mergeable state, CodeRa
 ### 4.2 Build Epic Mapping
 
 ```
-mcp__plugin_automaker_automaker__list_features({ projectPath })
+mcp__plugin_protolabs_studio__list_features({ projectPath })
 ```
 
 Map feature branches to epic branches. Features target their epic branch, epics target main, standalone features target main.
@@ -277,15 +277,15 @@ Sort by:
 For each PR that is ready (MERGEABLE + all checks passing):
 
 ```
-mcp__plugin_automaker_automaker__check_pr_status({ projectPath, prNumber })
-mcp__plugin_automaker_automaker__merge_pr({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__check_pr_status({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__merge_pr({ projectPath, prNumber })
 ```
 
 If a PR has unresolved review threads:
 
 ```
-mcp__plugin_automaker_automaker__get_pr_feedback({ projectPath, prNumber })
-mcp__plugin_automaker_automaker__resolve_pr_threads({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__get_pr_feedback({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__resolve_pr_threads({ projectPath, prNumber })
 ```
 
 ### 4.6 Handle Conflicts
@@ -309,7 +309,7 @@ gh pr list --json headRefName --jq '.[].headRefName'
 For branches missing PRs, create them:
 
 ```
-mcp__plugin_automaker_automaker__create_pr_from_worktree({ projectPath, featureId })
+mcp__plugin_protolabs_studio__create_pr_from_worktree({ projectPath, featureId })
 ```
 
 ### 4.8 Flag Stale PRs

@@ -1,15 +1,15 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "automaker-plugins",
-  "description": "Automaker AI Development Studio plugins for managing Kanban boards, AI agents, and feature orchestration",
+  "name": "protolabs-plugins",
+  "description": "protoLabs Studio plugins for managing Kanban boards, AI agents, and feature orchestration",
   "owner": {
     "name": "Proto Labs AI",
     "email": "support@protolabs.ai"
   },
   "plugins": [
     {
-      "name": "automaker",
-      "description": "Automaker AI Development Studio - Manage Kanban boards, AI agents, and feature orchestration via MCP",
+      "name": "protolabs",
+      "description": "protoLabs Studio - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration via MCP.",
       "author": {
         "name": "Proto Labs AI",
         "email": "support@protolabs.ai"

@@ -15,7 +15,7 @@ metadata:
 
 ## The Rule
 
-**NEVER make direct API calls (curl, fetch) to the Automaker server.** Always use MCP tools (`mcp__plugin_automaker_automaker__*`).
+**NEVER make direct API calls (curl, fetch) to the Automaker server.** Always use MCP tools (`mcp__plugin_protolabs_studio__*`).
 
 ## Why
 
@@ -28,42 +28,42 @@ metadata:
 
 ### Board Operations
 ```
-mcp__plugin_automaker_automaker__get_board_summary({ projectPath })
-mcp__plugin_automaker_automaker__list_features({ projectPath })
-mcp__plugin_automaker_automaker__get_feature({ projectPath, featureId })
-mcp__plugin_automaker_automaker__create_feature({ projectPath, title, description })
-mcp__plugin_automaker_automaker__update_feature({ projectPath, featureId, updates })
-mcp__plugin_automaker_automaker__move_feature({ projectPath, featureId, status })
+mcp__plugin_protolabs_studio__get_board_summary({ projectPath })
+mcp__plugin_protolabs_studio__list_features({ projectPath })
+mcp__plugin_protolabs_studio__get_feature({ projectPath, featureId })
+mcp__plugin_protolabs_studio__create_feature({ projectPath, title, description })
+mcp__plugin_protolabs_studio__update_feature({ projectPath, featureId, updates })
+mcp__plugin_protolabs_studio__move_feature({ projectPath, featureId, status })
 ```
 
 ### Agent Control
 ```
-mcp__plugin_automaker_automaker__start_agent({ projectPath, featureId })
-mcp__plugin_automaker_automaker__stop_agent({ projectPath, featureId })
-mcp__plugin_automaker_automaker__list_running_agents()
-mcp__plugin_automaker_automaker__get_agent_output({ projectPath, featureId })
-mcp__plugin_automaker_automaker__send_message_to_agent({ projectPath, featureId, message })
+mcp__plugin_protolabs_studio__start_agent({ projectPath, featureId })
+mcp__plugin_protolabs_studio__stop_agent({ projectPath, featureId })
+mcp__plugin_protolabs_studio__list_running_agents()
+mcp__plugin_protolabs_studio__get_agent_output({ projectPath, featureId })
+mcp__plugin_protolabs_studio__send_message_to_agent({ projectPath, featureId, message })
 ```
 
 ### Auto-Mode
 ```
-mcp__plugin_automaker_automaker__start_auto_mode({ projectPath, maxConcurrency })
-mcp__plugin_automaker_automaker__stop_auto_mode({ projectPath })
-mcp__plugin_automaker_automaker__get_auto_mode_status({ projectPath })
+mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency })
+mcp__plugin_protolabs_studio__stop_auto_mode({ projectPath })
+mcp__plugin_protolabs_studio__get_auto_mode_status({ projectPath })
 ```
 
 ### Orchestration
 ```
-mcp__plugin_automaker_automaker__set_feature_dependencies({ projectPath, featureId, dependencies })
-mcp__plugin_automaker_automaker__get_dependency_graph({ projectPath })
-mcp__plugin_automaker_automaker__get_execution_order({ projectPath })
+mcp__plugin_protolabs_studio__set_feature_dependencies({ projectPath, featureId, dependencies })
+mcp__plugin_protolabs_studio__get_dependency_graph({ projectPath })
+mcp__plugin_protolabs_studio__get_execution_order({ projectPath })
 ```
 
 ### GitHub
 ```
-mcp__plugin_automaker_automaker__merge_pr({ projectPath, prNumber })
-mcp__plugin_automaker_automaker__check_pr_status({ projectPath, prNumber })
-mcp__plugin_automaker_automaker__resolve_review_threads({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__merge_pr({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__check_pr_status({ projectPath, prNumber })
+mcp__plugin_protolabs_studio__resolve_review_threads({ projectPath, prNumber })
 ```
 
 ## When MCP Tool Doesn't Exist

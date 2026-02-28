@@ -9,10 +9,10 @@ allowed-tools:
   - Task
   - AskUserQuestion
   - Write
-  - mcp__plugin_automaker_automaker__get_project_spec
-  - mcp__plugin_automaker_automaker__list_context_files
-  - mcp__plugin_automaker_automaker__get_context_file
-  - mcp__plugin_automaker_automaker__list_features
+  - mcp__plugin_protolabs_studio__get_project_spec
+  - mcp__plugin_protolabs_studio__list_context_files
+  - mcp__plugin_protolabs_studio__get_context_file
+  - mcp__plugin_protolabs_studio__list_features
 model: sonnet
 ---
 
@@ -39,12 +39,12 @@ Create a structured Product Requirements Document using the SPARC methodology.
 2. Get project specification:
 
    ```
-   mcp__plugin_automaker_automaker__get_project_spec({ projectPath })
+   mcp__plugin_protolabs_studio__get_project_spec({ projectPath })
    ```
 
 3. Review related features:
    ```
-   mcp__plugin_automaker_automaker__list_features({ projectPath })
+   mcp__plugin_protolabs_studio__list_features({ projectPath })
    ```
 
 ### Step 2: Clarify Requirements

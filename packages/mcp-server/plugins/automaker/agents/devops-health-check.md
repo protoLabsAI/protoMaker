@@ -5,7 +5,7 @@ allowed-tools:
   - Bash
   - Read
   - Grep
-  - mcp__automaker__health_check
+  - mcp__protolabs__health_check
 model: haiku
 ---
 

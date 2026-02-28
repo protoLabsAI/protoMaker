@@ -114,7 +114,7 @@ interface Phase {
 ### Via MCP Tool
 
 ```typescript
-mcp__automaker__create_project({
+mcp__protolabs__create_project({
   projectPath: '/path/to/project',
   title: 'User Authentication System',
   goal: 'Implement secure JWT-based authentication',
@@ -189,7 +189,7 @@ curl -X POST http://localhost:3008/api/projects/create \
 Convert project phases to board features with milestones as epics:
 
 ```typescript
-mcp__automaker__create_project_features({
+mcp__protolabs__create_project_features({
   projectPath: '/path/to/project',
   projectSlug: 'user-authentication-system',
   createEpics: true, // Create epic for each milestone
@@ -213,7 +213,7 @@ Board Features:
 Convert phases directly to features without epic grouping:
 
 ```typescript
-mcp__automaker__create_project_features({
+mcp__protolabs__create_project_features({
   projectPath: '/path/to/project',
   projectSlug: 'user-authentication-system',
   createEpics: false, // No epics
@@ -261,7 +261,7 @@ interface Feature {
 
 ```typescript
 // 1. Create epic feature
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath: '/path/to/project',
   title: 'Foundation Infrastructure',
   description: 'Core types, services, and utilities',
@@ -271,7 +271,7 @@ mcp__automaker__create_feature({
 });
 
 // 2. Create child features
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath: '/path/to/project',
   title: 'Add Auth Types',
   description: 'TypeScript definitions for auth',
@@ -329,7 +329,7 @@ gh pr create --base main --title "Epic: Foundation Infrastructure"
 **Via MCP Tool:**
 
 ```typescript
-mcp__automaker__set_feature_dependencies({
+mcp__protolabs__set_feature_dependencies({
   projectPath: '/path/to/project',
   featureId: 'feature-456',
   dependsOn: ['feature-123', 'feature-789'],
@@ -353,7 +353,7 @@ curl -X POST http://localhost:3008/api/features/set-dependencies \
 **Get dependency graph:**
 
 ```typescript
-const graph = await mcp__automaker__get_dependency_graph({
+const graph = await mcp__protolabs__get_dependency_graph({
   projectPath: '/path/to/project',
 });
 ```
@@ -375,7 +375,7 @@ const graph = await mcp__automaker__get_dependency_graph({
 **Get topologically sorted execution order:**
 
 ```typescript
-const order = await mcp__automaker__get_execution_order({
+const order = await mcp__protolabs__get_execution_order({
   projectPath: '/path/to/project',
 });
 ```
@@ -395,7 +395,7 @@ const order = await mcp__automaker__get_execution_order({
 Auto-mode processes features in dependency order:
 
 ```typescript
-mcp__automaker__start_auto_mode({
+mcp__protolabs__start_auto_mode({
   projectPath: '/path/to/project',
   respectDependencies: true, // Wait for dependencies to complete
 });
@@ -586,7 +586,7 @@ ls .automaker/projects/
 **Solution:** Review dependency chain:
 
 ```typescript
-const graph = await mcp__automaker__get_dependency_graph({
+const graph = await mcp__protolabs__get_dependency_graph({
   projectPath: '/path/to/project',
 });
 // Visualize to find cycle

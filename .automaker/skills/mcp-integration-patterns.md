@@ -19,7 +19,7 @@ How to add, structure, and test MCP tools in the Automaker MCP server (`packages
 
 ## ⛔ NEVER Make Direct API Calls
 
-**NEVER use `curl`, `fetch`, or `axios` directly against the Automaker server.** Always use MCP tools (`mcp__plugin_automaker_automaker__*`).
+**NEVER use `curl`, `fetch`, or `axios` directly against the Automaker server.** Always use MCP tools (`mcp__plugin_protolabs_studio__*`).
 
 ```bash
 # ❌ WRONG — bypasses auth, error handling, and path resolution
@@ -28,7 +28,7 @@ curl -X POST http://localhost:3008/features/list \
   -d '{"projectPath": "/path/to/project"}'
 
 # ✅ CORRECT — use the MCP tool
-mcp__plugin_automaker_automaker__list_features({ projectPath: "/path/to/project" })
+mcp__plugin_protolabs_studio__list_features({ projectPath: "/path/to/project" })
 ```
 
 **Why?**
@@ -160,7 +160,7 @@ case 'my_new_tool':
 npm run build:packages
 ```
 
-The new tool will appear as `mcp__plugin_automaker_automaker__my_new_tool` in Claude Code after the MCP server restarts.
+The new tool will appear as `mcp__plugin_protolabs_studio__my_new_tool` in Claude Code after the MCP server restarts.
 
 The `apiCall()` helper (defined in `index.ts`) calls the Automaker REST API. Base URL: `AUTOMAKER_API_URL` env var (default: `http://localhost:3008`). Auth: `Authorization: Bearer ${AUTOMAKER_API_KEY}`.
 
@@ -173,7 +173,7 @@ The `apiCall()` helper (defined in `index.ts`) calls the Automaker REST API. Bas
 ```bash
 # After changes: rebuild, start dev, then call in Claude Code:
 npm run build:packages && npm run dev
-mcp__plugin_automaker_automaker__my_new_tool({ projectPath: "/path/to/project" })
+mcp__plugin_protolabs_studio__my_new_tool({ projectPath: "/path/to/project" })
 
 # Debug underlying API directly (dev only):
 source packages/mcp-server/plugins/automaker/.env
@@ -190,7 +190,7 @@ Handler logic is thin (`apiCall` wrappers) — prefer integration testing via MC
 
 | Anti-Pattern | Consequence | Fix |
 |---|---|---|
-| Direct `curl`/`fetch` to Automaker API | Auth fails after key rotation; no retry | Use `mcp__plugin_automaker_automaker__*` tools |
+| Direct `curl`/`fetch` to Automaker API | Auth fails after key rotation; no retry | Use `mcp__plugin_protolabs_studio__*` tools |
 | No error response shape | Callers can't detect failure programmatically | Return `{ success: false, error: string }` |
 | Hardcoding `http://localhost:3008` in tools | Breaks in staging/production | Use `apiCall()` — it reads `AUTOMAKER_API_URL` |
 | Adding tool definition but not the handler case | Tool is listed but throws "Unknown tool" | Always add both definition + case in handleTool |

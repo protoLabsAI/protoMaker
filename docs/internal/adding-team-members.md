@@ -12,7 +12,7 @@ Use the **dynamic** approach for custom roles, experiments, and project-specific
 Register a template via MCP:
 
 ```typescript
-mcp__plugin_automaker_automaker__register_agent_template({
+mcp__plugin_protolabs_studio__register_agent_template({
   template: {
     name: 'my-custom-agent',
     displayName: 'My Custom Agent',
@@ -31,7 +31,7 @@ mcp__plugin_automaker_automaker__register_agent_template({
 Then execute it:
 
 ```typescript
-mcp__plugin_automaker_automaker__execute_dynamic_agent({
+mcp__plugin_protolabs_studio__execute_dynamic_agent({
   templateName: 'my-custom-agent',
   projectPath: '/path/to/project',
   prompt: 'Do the thing',

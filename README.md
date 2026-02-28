@@ -133,7 +133,7 @@ Control protoLabs from your terminal:
 
 ```bash
 claude plugin marketplace add https://github.com/proto-labs-ai/protolabs-studio/tree/main/packages/mcp-server/plugins
-claude plugin install automaker
+claude plugin install protolabs
 ```
 
 ```

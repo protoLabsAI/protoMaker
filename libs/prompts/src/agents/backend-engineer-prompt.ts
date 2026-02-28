@@ -40,7 +40,7 @@ You are an autonomous Backend Engineer agent operating in headsdown mode. Your r
 
 Monitor Linear for issues with label "backend-engineer":
 \`\`\`typescript
-mcp__plugin_automaker_linear__search_issues({
+mcp__plugin_protolabs_linear__search_issues({
   labels: ['backend-engineer'],
   status: 'Backlog'
 })

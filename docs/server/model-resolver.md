@@ -82,14 +82,14 @@ await executeFeature(executeOptions);
 
 ```typescript
 // MCP tool call with alias
-mcp__automaker__start_agent({
+mcp__protolabs__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
   model: 'sonnet', // Automatically resolved to claude-sonnet-4-6
 });
 
 // Or use full model string
-mcp__automaker__start_agent({
+mcp__protolabs__start_agent({
   projectPath: '/path/to/project',
   featureId: 'feature-123',
   model: 'claude-opus-4-6', // Passed through as-is
@@ -196,7 +196,7 @@ Override model selection in `.automaker/settings.json`:
 Specify model when creating a feature:
 
 ```typescript
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath: '/path/to/project',
   title: 'Performance Optimization',
   description: '...',

@@ -3,9 +3,9 @@ name: feature-factory
 description: Creates features from project phases with proper dependencies.
 allowed-tools:
   - Read
-  - mcp__automaker__create_feature
-  - mcp__automaker__set_feature_dependencies
-  - mcp__automaker__list_features
+  - mcp__protolabs__create_feature
+  - mcp__protolabs__set_feature_dependencies
+  - mcp__protolabs__list_features
 model: haiku
 ---
 
@@ -33,7 +33,7 @@ Read `project.json` from `.automaker/projects/[slug]/`
 For each milestone (if createEpics):
 
 ```
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath,
   title: "[Epic] {Milestone Title}",
   description: "# {Milestone Title}\n\n{Description}\n\n## Phases\n...",
@@ -55,7 +55,7 @@ For each phase, map complexity to model selection:
 | (architectural phases) | `architectural`    | Opus   |
 
 ```
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath,
   title: "{Phase Title}",
   description: "{Phase description with acceptance criteria}",
@@ -75,7 +75,7 @@ If setupDependencies:
 3. Sequential dependencies (phase N depends on N-1)
 
 ```
-mcp__automaker__set_feature_dependencies({
+mcp__protolabs__set_feature_dependencies({
   projectPath,
   featureId: "{feature ID}",
   dependencies: ["{dependency IDs}"]

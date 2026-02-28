@@ -363,7 +363,7 @@ Auto-mode uses a tiered model selection based on feature complexity:
 **Setting complexity via MCP:**
 
 ```typescript
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath: '/path/to/project',
   title: 'Core Infrastructure Setup',
   description: '...',
@@ -425,7 +425,7 @@ npm run build:packages
 
 # 3. Add the plugin marketplace and install
 claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
-claude plugin install automaker
+claude plugin install protolabs
 ```
 
 ### Available MCP Tools
@@ -555,7 +555,7 @@ This keeps main clean while allowing incremental feature development within epic
 
 ```typescript
 // Create project plan
-mcp__automaker__create_project({
+mcp__protolabs__create_project({
   projectPath: '/path/to/project',
   title: 'My Feature',
   goal: 'Implement X functionality',
@@ -584,7 +584,7 @@ mcp__automaker__create_project({
 });
 
 // Convert to board features
-mcp__automaker__create_project_features({
+mcp__protolabs__create_project_features({
   projectPath: '/path/to/project',
   projectSlug: 'my-feature',
   createEpics: true,

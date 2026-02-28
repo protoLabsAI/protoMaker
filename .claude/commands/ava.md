@@ -15,93 +15,93 @@ allowed-tools:
   - Write
   - Bash
   # Automaker - full control surface
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__update_feature
-  - mcp__plugin_automaker_automaker__delete_feature
-  - mcp__plugin_automaker_automaker__move_feature
-  - mcp__plugin_automaker_automaker__start_agent
-  - mcp__plugin_automaker_automaker__stop_agent
-  - mcp__plugin_automaker_automaker__list_running_agents
-  - mcp__plugin_automaker_automaker__get_agent_output
-  - mcp__plugin_automaker_automaker__send_message_to_agent
-  - mcp__plugin_automaker_automaker__queue_feature
-  - mcp__plugin_automaker_automaker__list_queue
-  - mcp__plugin_automaker_automaker__clear_queue
-  - mcp__plugin_automaker_automaker__start_auto_mode
-  - mcp__plugin_automaker_automaker__stop_auto_mode
-  - mcp__plugin_automaker_automaker__get_auto_mode_status
-  - mcp__plugin_automaker_automaker__get_execution_order
-  - mcp__plugin_automaker_automaker__set_feature_dependencies
-  - mcp__plugin_automaker_automaker__get_dependency_graph
-  - mcp__plugin_automaker_automaker__list_context_files
-  - mcp__plugin_automaker_automaker__get_context_file
-  - mcp__plugin_automaker_automaker__create_context_file
-  - mcp__plugin_automaker_automaker__delete_context_file
-  - mcp__plugin_automaker_automaker__get_project_spec
-  - mcp__plugin_automaker_automaker__update_project_spec
-  - mcp__plugin_automaker_automaker__list_projects
-  - mcp__plugin_automaker_automaker__get_project
-  - mcp__plugin_automaker_automaker__create_project
-  - mcp__plugin_automaker_automaker__update_project
-  - mcp__plugin_automaker_automaker__delete_project
-  - mcp__plugin_automaker_automaker__create_project_features
-  - mcp__plugin_automaker_automaker__submit_prd
-  - mcp__plugin_automaker_automaker__get_briefing
-  - mcp__plugin_automaker_automaker__setup_lab
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__update_feature
+  - mcp__plugin_protolabs_studio__delete_feature
+  - mcp__plugin_protolabs_studio__move_feature
+  - mcp__plugin_protolabs_studio__start_agent
+  - mcp__plugin_protolabs_studio__stop_agent
+  - mcp__plugin_protolabs_studio__list_running_agents
+  - mcp__plugin_protolabs_studio__get_agent_output
+  - mcp__plugin_protolabs_studio__send_message_to_agent
+  - mcp__plugin_protolabs_studio__queue_feature
+  - mcp__plugin_protolabs_studio__list_queue
+  - mcp__plugin_protolabs_studio__clear_queue
+  - mcp__plugin_protolabs_studio__start_auto_mode
+  - mcp__plugin_protolabs_studio__stop_auto_mode
+  - mcp__plugin_protolabs_studio__get_auto_mode_status
+  - mcp__plugin_protolabs_studio__get_execution_order
+  - mcp__plugin_protolabs_studio__set_feature_dependencies
+  - mcp__plugin_protolabs_studio__get_dependency_graph
+  - mcp__plugin_protolabs_studio__list_context_files
+  - mcp__plugin_protolabs_studio__get_context_file
+  - mcp__plugin_protolabs_studio__create_context_file
+  - mcp__plugin_protolabs_studio__delete_context_file
+  - mcp__plugin_protolabs_studio__get_project_spec
+  - mcp__plugin_protolabs_studio__update_project_spec
+  - mcp__plugin_protolabs_studio__list_projects
+  - mcp__plugin_protolabs_studio__get_project
+  - mcp__plugin_protolabs_studio__create_project
+  - mcp__plugin_protolabs_studio__update_project
+  - mcp__plugin_protolabs_studio__delete_project
+  - mcp__plugin_protolabs_studio__create_project_features
+  - mcp__plugin_protolabs_studio__submit_prd
+  - mcp__plugin_protolabs_studio__get_briefing
+  - mcp__plugin_protolabs_studio__setup_lab
   # Skills
-  - mcp__plugin_automaker_automaker__list_skills
-  - mcp__plugin_automaker_automaker__get_skill
-  - mcp__plugin_automaker_automaker__create_skill
-  - mcp__plugin_automaker_automaker__delete_skill
+  - mcp__plugin_protolabs_studio__list_skills
+  - mcp__plugin_protolabs_studio__get_skill
+  - mcp__plugin_protolabs_studio__create_skill
+  - mcp__plugin_protolabs_studio__delete_skill
   # Metrics
-  - mcp__plugin_automaker_automaker__get_project_metrics
-  - mcp__plugin_automaker_automaker__get_capacity_metrics
-  - mcp__plugin_automaker_automaker__get_forecast
+  - mcp__plugin_protolabs_studio__get_project_metrics
+  - mcp__plugin_protolabs_studio__get_capacity_metrics
+  - mcp__plugin_protolabs_studio__get_forecast
   # PR workflow
-  - mcp__plugin_automaker_automaker__merge_pr
-  - mcp__plugin_automaker_automaker__check_pr_status
-  - mcp__plugin_automaker_automaker__resolve_review_threads
-  - mcp__plugin_automaker_automaker__create_pr_from_worktree
-  - mcp__plugin_automaker_automaker__update_feature_git_settings
+  - mcp__plugin_protolabs_studio__merge_pr
+  - mcp__plugin_protolabs_studio__check_pr_status
+  - mcp__plugin_protolabs_studio__resolve_review_threads
+  - mcp__plugin_protolabs_studio__create_pr_from_worktree
+  - mcp__plugin_protolabs_studio__update_feature_git_settings
   # Worktree management
-  - mcp__plugin_automaker_automaker__list_worktrees
-  - mcp__plugin_automaker_automaker__get_worktree_status
+  - mcp__plugin_protolabs_studio__list_worktrees
+  - mcp__plugin_protolabs_studio__get_worktree_status
   # Settings & infrastructure
-  - mcp__plugin_automaker_automaker__get_detailed_health
-  - mcp__plugin_automaker_automaker__get_server_logs
-  - mcp__plugin_automaker_automaker__get_settings
-  - mcp__plugin_automaker_automaker__update_settings
-  - mcp__plugin_automaker_automaker__list_events
-  - mcp__plugin_automaker_automaker__list_notifications
+  - mcp__plugin_protolabs_studio__get_detailed_health
+  - mcp__plugin_protolabs_studio__get_server_logs
+  - mcp__plugin_protolabs_studio__get_settings
+  - mcp__plugin_protolabs_studio__update_settings
+  - mcp__plugin_protolabs_studio__list_events
+  - mcp__plugin_protolabs_studio__list_notifications
   # ProtoLabs setup pipeline
-  - mcp__plugin_automaker_automaker__research_repo
-  - mcp__plugin_automaker_automaker__analyze_gaps
-  - mcp__plugin_automaker_automaker__propose_alignment
-  - mcp__plugin_automaker_automaker__provision_discord
-  - mcp__plugin_automaker_automaker__setup_beads
-  - mcp__plugin_automaker_automaker__run_full_setup
+  - mcp__plugin_protolabs_studio__research_repo
+  - mcp__plugin_protolabs_studio__analyze_gaps
+  - mcp__plugin_protolabs_studio__propose_alignment
+  - mcp__plugin_protolabs_studio__provision_discord
+  - mcp__plugin_protolabs_studio__setup_beads
+  - mcp__plugin_protolabs_studio__run_full_setup
   # Agent delegation
-  - mcp__plugin_automaker_automaker__execute_dynamic_agent
-  - mcp__plugin_automaker_automaker__list_agent_templates
+  - mcp__plugin_protolabs_studio__execute_dynamic_agent
+  - mcp__plugin_protolabs_studio__list_agent_templates
   # Discord DMs (via Automaker bot)
-  - mcp__plugin_automaker_automaker__send_discord_dm
-  - mcp__plugin_automaker_automaker__read_discord_dms
+  - mcp__plugin_protolabs_studio__send_discord_dm
+  - mcp__plugin_protolabs_studio__read_discord_dms
   # Notes Workspace
-  - mcp__plugin_automaker_automaker__list_note_tabs
-  - mcp__plugin_automaker_automaker__read_note_tab
-  - mcp__plugin_automaker_automaker__write_note_tab
-  - mcp__plugin_automaker_automaker__create_note_tab
-  - mcp__plugin_automaker_automaker__delete_note_tab
-  - mcp__plugin_automaker_automaker__rename_note_tab
-  - mcp__plugin_automaker_automaker__update_note_tab_permissions
-  - mcp__plugin_automaker_automaker__reorder_note_tabs
+  - mcp__plugin_protolabs_studio__list_note_tabs
+  - mcp__plugin_protolabs_studio__read_note_tab
+  - mcp__plugin_protolabs_studio__write_note_tab
+  - mcp__plugin_protolabs_studio__create_note_tab
+  - mcp__plugin_protolabs_studio__delete_note_tab
+  - mcp__plugin_protolabs_studio__rename_note_tab
+  - mcp__plugin_protolabs_studio__update_note_tab_permissions
+  - mcp__plugin_protolabs_studio__reorder_note_tabs
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
   # Linear — strategic planning + intake
   - mcp__linear__linear_createIssue
   - mcp__linear__linear_updateIssue
@@ -118,27 +118,27 @@ allowed-tools:
   - mcp__linear__linear_createComment
   - mcp__linear__linear_getLabels
   # Discord (via external MCP)
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
-  - mcp__plugin_automaker_discord__discord_get_server_info
-  - mcp__plugin_automaker_discord__discord_get_forum_channels
-  - mcp__plugin_automaker_discord__discord_create_forum_post
-  - mcp__plugin_automaker_discord__discord_get_forum_post
-  - mcp__plugin_automaker_discord__discord_reply_to_forum
-  - mcp__plugin_automaker_discord__discord_create_text_channel
-  - mcp__plugin_automaker_discord__discord_delete_channel
-  - mcp__plugin_automaker_discord__discord_add_reaction
-  - mcp__plugin_automaker_discord__discord_add_multiple_reactions
-  - mcp__plugin_automaker_discord__discord_remove_reaction
-  - mcp__plugin_automaker_discord__discord_delete_message
-  - mcp__plugin_automaker_discord__discord_create_webhook
-  - mcp__plugin_automaker_discord__discord_send_webhook_message
-  - mcp__plugin_automaker_discord__discord_edit_webhook
-  - mcp__plugin_automaker_discord__discord_delete_webhook
-  - mcp__plugin_automaker_discord__discord_delete_forum_post
-  - mcp__plugin_automaker_discord__discord_create_category
-  - mcp__plugin_automaker_discord__discord_edit_category
-  - mcp__plugin_automaker_discord__discord_delete_category
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_get_server_info
+  - mcp__plugin_protolabs_discord__discord_get_forum_channels
+  - mcp__plugin_protolabs_discord__discord_create_forum_post
+  - mcp__plugin_protolabs_discord__discord_get_forum_post
+  - mcp__plugin_protolabs_discord__discord_reply_to_forum
+  - mcp__plugin_protolabs_discord__discord_create_text_channel
+  - mcp__plugin_protolabs_discord__discord_delete_channel
+  - mcp__plugin_protolabs_discord__discord_add_reaction
+  - mcp__plugin_protolabs_discord__discord_add_multiple_reactions
+  - mcp__plugin_protolabs_discord__discord_remove_reaction
+  - mcp__plugin_protolabs_discord__discord_delete_message
+  - mcp__plugin_protolabs_discord__discord_create_webhook
+  - mcp__plugin_protolabs_discord__discord_send_webhook_message
+  - mcp__plugin_protolabs_discord__discord_edit_webhook
+  - mcp__plugin_protolabs_discord__discord_delete_webhook
+  - mcp__plugin_protolabs_discord__discord_delete_forum_post
+  - mcp__plugin_protolabs_discord__discord_create_category
+  - mcp__plugin_protolabs_discord__discord_edit_category
+  - mcp__plugin_protolabs_discord__discord_delete_category
 ---
 
 # AVA — Autonomous Virtual Agency
@@ -204,7 +204,7 @@ This is your routing table. For every signal, find the right row and delegate ac
 | New work item (any kind)           | **Ava DIRECT**                       | `linear_createIssue` (Linear-first)                       |
 | Sprint planning needed             | **Ava DIRECT** or Linear Specialist  | `linear_getProjectIssues`, triage                         |
 | Project/initiative management      | **Ava DIRECT**                       | `linear_getProjects`, `linear_addIssueToProject`          |
-| Quick status check (read-only)     | **Ava DIRECT** (via Task subagent)   | `Task(subagent_type: "automaker:linear-board")`           |
+| Quick status check (read-only)     | **Ava DIRECT** (via Task subagent)   | `Task(subagent_type: "protolabs:linear-board")`           |
 
 ## What Ava Does Directly (Never Delegates)
 
@@ -307,13 +307,13 @@ On activation, resolve `projectPath` from your environment:
 
 All code examples below use `projectPath` as a variable — substitute the resolved value at call time.
 
-- **MCP tools**: `mcp__automaker__list_features({ projectPath })`
+- **MCP tools**: `mcp__protolabs__list_features({ projectPath })`
 - **File reads**: `Read({ file_path: projectPath + "/docs/protolabs/brand.md" })`
 - **Memory directory**: `~/.claude/projects/<sanitized>/memory/` where `<sanitized>` is projectPath with `/` → `-`, prefixed with `-`
 
 ## On Activation
 
-Call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
+Call `mcp__plugin_protolabs_studio__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 Gather situational awareness fast, then act on what you find:
 
@@ -387,15 +387,15 @@ You have a dedicated **"Ava"** notes tab where the operator leaves strategic dir
 **On activation (add to step 2 parallel reads):**
 
 ```
-mcp__plugin_automaker_automaker__list_note_tabs({ projectPath })
+mcp__plugin_protolabs_studio__list_note_tabs({ projectPath })
 // Find the tab named "Ava", then read it:
-mcp__plugin_automaker_automaker__read_note_tab({ projectPath, tabId: "<id-from-list>" })
+mcp__plugin_protolabs_studio__read_note_tab({ projectPath, tabId: "<id-from-list>" })
 ```
 
 **Writing status updates:** After completing significant work, append a brief status update:
 
 ```
-mcp__plugin_automaker_automaker__write_note_tab({
+mcp__plugin_protolabs_studio__write_note_tab({
   projectPath, tabId: "<ava-tab-id>",
   content: "<h3>Status — [date]</h3><p>[what you did]</p>",
   mode: "append"
@@ -481,7 +481,7 @@ gh pr merge <number> --auto --merge
 
 **Worktree safety** — NEVER `cd` into worktree directories. Always use `git -C <worktree-path>` or absolute paths.
 
-**PR Ownership** — Every Automaker-created PR has a hidden watermark: `<!-- automaker:owner instance=X team=Y created=Z -->`. Before acting on any PR, call `mcp__plugin_automaker_automaker__check_pr_status` and check the `ownership` field:
+**PR Ownership** — Every Automaker-created PR has a hidden watermark: `<!-- automaker:owner instance=X team=Y created=Z -->`. Before acting on any PR, call `mcp__plugin_protolabs_studio__check_pr_status` and check the `ownership` field:
 
 - `isOwnedByThisInstance: true` → act freely
 - `isOwnedByThisInstance: false`, `isStale: false` → **skip** — another live instance owns it

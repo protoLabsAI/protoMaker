@@ -6,10 +6,10 @@ allowed-tools:
   - Glob
   - Grep
   - Write
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
-  - mcp__automaker__list_features
+  - mcp__protolabs__get_project_spec
+  - mcp__protolabs__list_context_files
+  - mcp__protolabs__get_context_file
+  - mcp__protolabs__list_features
 model: opus
 ---
 
@@ -41,8 +41,8 @@ You receive:
 If research summary not provided, gather basic context:
 
 ```
-mcp__automaker__get_project_spec({ projectPath })
-mcp__automaker__list_features({ projectPath })
+mcp__protolabs__get_project_spec({ projectPath })
+mcp__protolabs__list_features({ projectPath })
 ```
 
 ### Step 2: Draft Each Section

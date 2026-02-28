@@ -339,7 +339,7 @@ Use the `trigger_ceremony` MCP tool for quick testing:
 
 ```typescript
 // Milestone standup
-mcp__plugin_automaker_automaker__trigger_ceremony({
+mcp__plugin_protolabs_studio__trigger_ceremony({
   projectPath: '/path/to/project',
   projectSlug: 'my-project',
   milestoneSlug: 'foundation',
@@ -347,7 +347,7 @@ mcp__plugin_automaker_automaker__trigger_ceremony({
 });
 
 // Milestone retro
-mcp__plugin_automaker_automaker__trigger_ceremony({
+mcp__plugin_protolabs_studio__trigger_ceremony({
   projectPath: '/path/to/project',
   projectSlug: 'my-project',
   milestoneSlug: 'foundation',
@@ -355,7 +355,7 @@ mcp__plugin_automaker_automaker__trigger_ceremony({
 });
 
 // Project retro (no milestoneSlug needed)
-mcp__plugin_automaker_automaker__trigger_ceremony({
+mcp__plugin_protolabs_studio__trigger_ceremony({
   projectPath: '/path/to/project',
   projectSlug: 'my-project',
   ceremonyType: 'project-retro',

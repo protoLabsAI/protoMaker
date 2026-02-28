@@ -74,7 +74,7 @@
     "typecheck": "npm run typecheck --workspace=apps/ui && tsc --noEmit --project apps/server/tsconfig.json",
     "rebuild": "rm -rf node_modules apps/*/node_modules libs/*/node_modules && npm install",
     "prepare": "husky && npm run build:packages",
-    "plugin:reload": "claude plugin uninstall automaker && claude plugin install automaker",
+    "plugin:reload": "claude plugin uninstall protolabs && claude plugin install protolabs",
     "changeset": "changeset",
     "changeset:version": "changeset version",
     "changeset:publish": "changeset publish",

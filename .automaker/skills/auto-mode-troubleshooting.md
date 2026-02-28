@@ -24,7 +24,7 @@ When `isAutoLoopRunning: true` but `runningFeatures: []` — the loop is alive b
 **Diagnosis:**
 ```
 # Check if backlog features have branchNames
-mcp__plugin_automaker_automaker__list_features({ projectPath })
+mcp__plugin_protolabs_studio__list_features({ projectPath })
 # Look for: branchName !== null on backlog features
 
 # Check if worktrees exist for those branches
@@ -39,8 +39,8 @@ for wt in .worktrees/*/; do
 done
 
 # Restart auto-mode
-mcp__plugin_automaker_automaker__stop_auto_mode({ projectPath })
-mcp__plugin_automaker_automaker__start_auto_mode({ projectPath, maxConcurrency: 1 })
+mcp__plugin_protolabs_studio__stop_auto_mode({ projectPath })
+mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency: 1 })
 ```
 
 Features become "orphaned" (branchName set but no worktree) = eligible for main worktree auto-mode.
@@ -63,7 +63,7 @@ Features become "orphaned" (branchName set but no worktree) = eligible for main 
 
 **Diagnosis:**
 ```
-mcp__plugin_automaker_automaker__list_features({ projectPath })
+mcp__plugin_protolabs_studio__list_features({ projectPath })
 # Check: Do all chain-starter features (no deps) exist and have status=backlog?
 # Check: Are dependency IDs still set correctly? (resets clear deps)
 ```

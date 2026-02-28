@@ -6,21 +6,21 @@ allowed-tools:
   - AskUserQuestion
   - Task
   # Feature Management
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__update_feature
-  - mcp__plugin_automaker_automaker__delete_feature
-  - mcp__plugin_automaker_automaker__move_feature
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__update_feature
+  - mcp__plugin_protolabs_studio__delete_feature
+  - mcp__plugin_protolabs_studio__move_feature
   # Agent Control
-  - mcp__plugin_automaker_automaker__start_agent
-  - mcp__plugin_automaker_automaker__stop_agent
-  - mcp__plugin_automaker_automaker__list_running_agents
-  - mcp__plugin_automaker_automaker__get_agent_output
-  - mcp__plugin_automaker_automaker__send_message_to_agent
+  - mcp__plugin_protolabs_studio__start_agent
+  - mcp__plugin_protolabs_studio__stop_agent
+  - mcp__plugin_protolabs_studio__list_running_agents
+  - mcp__plugin_protolabs_studio__get_agent_output
+  - mcp__plugin_protolabs_studio__send_message_to_agent
   # Utilities
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__get_board_summary
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__get_board_summary
 ---
 
 # Automaker Board Manager
@@ -45,7 +45,7 @@ You can:
 1. First, check if the Automaker server is running:
 
    ```
-   mcp__plugin_automaker_automaker__health_check()
+   mcp__plugin_protolabs_studio__health_check()
    ```
 
    If it fails, inform the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
@@ -56,7 +56,7 @@ You can:
 
 ### Board Overview
 
-When showing the board, use `mcp__plugin_automaker_automaker__get_board_summary()` first for counts, then `mcp__plugin_automaker_automaker__list_features()` for details.
+When showing the board, use `mcp__plugin_protolabs_studio__get_board_summary()` first for counts, then `mcp__plugin_protolabs_studio__list_features()` for details.
 
 Display format:
 
@@ -164,7 +164,7 @@ feature-a   feature-b   feature-c
 For thorough review of completed work, spawn the agent-reviewer:
 
 ```
-Task(subagent_type: "automaker:agent-reviewer",
+Task(subagent_type: "protolabs:agent-reviewer",
      prompt: "Project: <projectPath>. Feature ID: <featureId>.
               Focus: security, code quality, tests")
 ```

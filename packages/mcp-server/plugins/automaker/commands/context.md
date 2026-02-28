@@ -7,14 +7,14 @@ allowed-tools:
   - Read
   - Write
   # Context File Management
-  - mcp__plugin_automaker_automaker__list_context_files
-  - mcp__plugin_automaker_automaker__get_context_file
-  - mcp__plugin_automaker_automaker__create_context_file
-  - mcp__plugin_automaker_automaker__delete_context_file
+  - mcp__plugin_protolabs_studio__list_context_files
+  - mcp__plugin_protolabs_studio__get_context_file
+  - mcp__plugin_protolabs_studio__create_context_file
+  - mcp__plugin_protolabs_studio__delete_context_file
   # Project Spec
-  - mcp__plugin_automaker_automaker__get_project_spec
-  - mcp__plugin_automaker_automaker__update_project_spec
-  - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_protolabs_studio__get_project_spec
+  - mcp__plugin_protolabs_studio__update_project_spec
+  - mcp__plugin_protolabs_studio__health_check
 ---
 
 # Automaker Context Manager
@@ -38,7 +38,7 @@ Every time an agent starts working on a feature, ALL context files are loaded in
 ### List Context Files
 
 ```
-mcp__plugin_automaker_automaker__list_context_files({ projectPath })
+mcp__plugin_protolabs_studio__list_context_files({ projectPath })
 ```
 
 Display:
@@ -56,7 +56,7 @@ Display:
 ### View a Context File
 
 ```
-mcp__plugin_automaker_automaker__get_context_file({ projectPath, filename: "coding-standards.md" })
+mcp__plugin_protolabs_studio__get_context_file({ projectPath, filename: "coding-standards.md" })
 ```
 
 ### Create a Context File
@@ -84,7 +84,7 @@ options:
 Then create:
 
 ```
-mcp__plugin_automaker_automaker__create_context_file({
+mcp__plugin_protolabs_studio__create_context_file({
   projectPath,
   filename: "my-rules.md",
   content: "<markdown content>"
@@ -94,7 +94,7 @@ mcp__plugin_automaker_automaker__create_context_file({
 ### Delete a Context File
 
 ```
-mcp__plugin_automaker_automaker__delete_context_file({ projectPath, filename: "old-rules.md" })
+mcp__plugin_protolabs_studio__delete_context_file({ projectPath, filename: "old-rules.md" })
 ```
 
 ## Project Spec
@@ -104,13 +104,13 @@ The project spec (`.automaker/spec.md`) is a special context file that describes
 ### View Project Spec
 
 ```
-mcp__plugin_automaker_automaker__get_project_spec({ projectPath })
+mcp__plugin_protolabs_studio__get_project_spec({ projectPath })
 ```
 
 ### Update Project Spec
 
 ```
-mcp__plugin_automaker_automaker__update_project_spec({ projectPath, content: "<new content>" })
+mcp__plugin_protolabs_studio__update_project_spec({ projectPath, content: "<new content>" })
 ```
 
 ## Writing Effective Context Files

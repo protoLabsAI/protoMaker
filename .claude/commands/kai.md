@@ -14,46 +14,46 @@ allowed-tools:
   - Write
   - Bash
   # Automaker - feature and agent management
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__update_feature
-  - mcp__plugin_automaker_automaker__move_feature
-  - mcp__plugin_automaker_automaker__start_agent
-  - mcp__plugin_automaker_automaker__stop_agent
-  - mcp__plugin_automaker_automaker__list_running_agents
-  - mcp__plugin_automaker_automaker__get_agent_output
-  - mcp__plugin_automaker_automaker__send_message_to_agent
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__update_feature
+  - mcp__plugin_protolabs_studio__move_feature
+  - mcp__plugin_protolabs_studio__start_agent
+  - mcp__plugin_protolabs_studio__stop_agent
+  - mcp__plugin_protolabs_studio__list_running_agents
+  - mcp__plugin_protolabs_studio__get_agent_output
+  - mcp__plugin_protolabs_studio__send_message_to_agent
   # Context files
-  - mcp__plugin_automaker_automaker__list_context_files
-  - mcp__plugin_automaker_automaker__get_context_file
-  - mcp__plugin_automaker_automaker__create_context_file
+  - mcp__plugin_protolabs_studio__list_context_files
+  - mcp__plugin_protolabs_studio__get_context_file
+  - mcp__plugin_protolabs_studio__create_context_file
   # PR workflow
-  - mcp__plugin_automaker_automaker__merge_pr
-  - mcp__plugin_automaker_automaker__check_pr_status
-  - mcp__plugin_automaker_automaker__resolve_review_threads
-  - mcp__plugin_automaker_automaker__create_pr_from_worktree
+  - mcp__plugin_protolabs_studio__merge_pr
+  - mcp__plugin_protolabs_studio__check_pr_status
+  - mcp__plugin_protolabs_studio__resolve_review_threads
+  - mcp__plugin_protolabs_studio__create_pr_from_worktree
   # Worktree management
-  - mcp__plugin_automaker_automaker__list_worktrees
-  - mcp__plugin_automaker_automaker__get_worktree_status
+  - mcp__plugin_protolabs_studio__list_worktrees
+  - mcp__plugin_protolabs_studio__get_worktree_status
   # Server diagnostics
-  - mcp__plugin_automaker_automaker__get_server_logs
-  - mcp__plugin_automaker_automaker__get_detailed_health
+  - mcp__plugin_protolabs_studio__get_server_logs
+  - mcp__plugin_protolabs_studio__get_detailed_health
   # Discord - team communication
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
-  - mcp__plugin_automaker_discord__discord_get_server_info
-  - mcp__plugin_automaker_discord__discord_add_reaction
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_get_server_info
+  - mcp__plugin_protolabs_discord__discord_add_reaction
   # Discord DMs
-  - mcp__plugin_automaker_automaker__send_discord_dm
-  - mcp__plugin_automaker_automaker__read_discord_dms
+  - mcp__plugin_protolabs_studio__send_discord_dm
+  - mcp__plugin_protolabs_studio__read_discord_dms
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
   # Settings
-  - mcp__plugin_automaker_automaker__get_settings
+  - mcp__plugin_protolabs_studio__get_settings
 ---
 
 # Kai — Backend Engineer
@@ -298,7 +298,7 @@ You are **pragmatic, thorough, and reliability-focused.**
 
 ## On Activation
 
-Call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
+Call `mcp__plugin_protolabs_studio__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 1. Check board for backend-related features (`list_features`)
 2. Review any open backend PRs

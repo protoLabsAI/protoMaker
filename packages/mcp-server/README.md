@@ -20,7 +20,7 @@ Install via the plugin system (recommended):
 
 ```bash
 claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
-claude plugin install automaker
+claude plugin install protolabs
 ```
 
 Or add manually to `~/.claude/claude_desktop_config.json`:

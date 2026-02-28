@@ -5,11 +5,11 @@ allowed-tools:
   - Read
   - Glob
   - Grep
-  - mcp__automaker__get_feature
-  - mcp__automaker__get_agent_output
-  - mcp__automaker__update_feature
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
+  - mcp__protolabs__get_feature
+  - mcp__protolabs__get_agent_output
+  - mcp__protolabs__update_feature
+  - mcp__protolabs__list_context_files
+  - mcp__protolabs__get_context_file
 model: sonnet
 ---
 
@@ -32,14 +32,14 @@ You receive:
 1. Get feature details and agent output:
 
    ```
-   mcp__automaker__get_feature({ projectPath, featureId })
-   mcp__automaker__get_agent_output({ projectPath, featureId })
+   mcp__protolabs__get_feature({ projectPath, featureId })
+   mcp__protolabs__get_agent_output({ projectPath, featureId })
    ```
 
 2. Get project coding standards:
    ```
-   mcp__automaker__list_context_files({ projectPath })
-   mcp__automaker__get_context_file({ projectPath, filename: "coding-standards.md" })
+   mcp__protolabs__list_context_files({ projectPath })
+   mcp__protolabs__get_context_file({ projectPath, filename: "coding-standards.md" })
    ```
 
 ### Step 2: Review the Changes
@@ -140,7 +140,7 @@ Structure your review:
 If the review passes, you may be asked to move the feature:
 
 ```
-mcp__automaker__update_feature({
+mcp__protolabs__update_feature({
   projectPath,
   featureId,
   status: "done"  // or back to "in-progress" if changes needed

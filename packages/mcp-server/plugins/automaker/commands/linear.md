@@ -58,11 +58,11 @@ allowed-tools:
   - mcp__linear__linear_addProjectToInitiative
   - mcp__linear__linear_removeProjectFromInitiative
   # Automaker Board (for cross-referencing)
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__get_board_summary
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__get_board_summary
   # Automaker → Linear Sync
-  - mcp__plugin_automaker_automaker__sync_project_to_linear
+  - mcp__plugin_protolabs_studio__sync_project_to_linear
 ---
 
 # Linear Project Manager
@@ -80,8 +80,8 @@ This is the **main orchestrator agent**. It handles:
 
 For specialized work, spawn sub-agents:
 
-- `automaker:linear-board` - Board operations, issue queries, bulk updates
-- `automaker:linear-triage` - Issue triage, prioritization, assignment
+- `protolabs:linear-board` - Board operations, issue queries, bulk updates
+- `protolabs:linear-triage` - Issue triage, prioritization, assignment
 
 ## Capabilities
 
@@ -431,7 +431,7 @@ mcp__linear__linear_addProjectToInitiative({
 Spawn the triage sub-agent for bulk issue management:
 
 ```
-Task(subagent_type: "automaker:linear-triage",
+Task(subagent_type: "protolabs:linear-triage",
      prompt: "Triage the Linear workspace:
               1. Find all unassigned issues
               2. Find all issues without priority
@@ -590,7 +590,7 @@ When creating or assigning issues, use team routing to determine the correct Lin
 Sync an entire Automaker project's milestones to Linear project milestones. Creates/updates milestones, matches existing issues to milestones by epic title, assigns issues, and optionally cleans up placeholder milestones. Idempotent — safe to re-run.
 
 ```ts
-mcp__plugin_automaker_automaker__sync_project_to_linear({
+mcp__plugin_protolabs_studio__sync_project_to_linear({
   projectPath: '/path/to/project',
   projectSlug: 'my-project',
   linearProjectId: '<optional-override>', // Uses project.linearProjectId if omitted
@@ -620,7 +620,7 @@ When Automaker features map to Linear issues:
 
 ```
 # Get feature details from Automaker board
-mcp__plugin_automaker_automaker__get_feature({ projectPath, featureId })
+mcp__plugin_protolabs_studio__get_feature({ projectPath, featureId })
 
 # Determine target team from feature context
 # Use routing rules above or analyze feature description/title
@@ -820,7 +820,7 @@ mcp__linear__linear_createIssueRelation({
 **Sync project milestones to Linear:**
 
 ```ts
-mcp__plugin_automaker_automaker__sync_project_to_linear({
+mcp__plugin_protolabs_studio__sync_project_to_linear({
   projectPath: '/path/to/project',
   projectSlug: 'my-project',
   cleanupPlaceholders: true,

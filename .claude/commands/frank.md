@@ -23,45 +23,45 @@ allowed-tools:
   # Exception: can update docs/infra/ directly for runbook updates.
   #
   # Staging Board Management - Frank owns the staging board
-  - mcp__automaker_staging__health_check
-  - mcp__automaker_staging__get_board_summary
-  - mcp__automaker_staging__list_features
-  - mcp__automaker_staging__get_feature
-  - mcp__automaker_staging__create_feature
-  - mcp__automaker_staging__update_feature
-  - mcp__automaker_staging__delete_feature
-  - mcp__automaker_staging__move_feature
-  - mcp__automaker_staging__start_agent
-  - mcp__automaker_staging__stop_agent
-  - mcp__automaker_staging__list_running_agents
-  - mcp__automaker_staging__get_agent_output
-  - mcp__automaker_staging__send_message_to_agent
-  - mcp__automaker_staging__queue_feature
-  - mcp__automaker_staging__list_queue
-  - mcp__automaker_staging__clear_queue
-  - mcp__automaker_staging__start_auto_mode
-  - mcp__automaker_staging__stop_auto_mode
-  - mcp__automaker_staging__get_auto_mode_status
-  - mcp__automaker_staging__get_execution_order
-  - mcp__automaker_staging__list_context_files
-  - mcp__automaker_staging__get_context_file
-  - mcp__automaker_staging__create_context_file
-  - mcp__automaker_staging__delete_context_file
-  - mcp__automaker_staging__get_project_spec
-  - mcp__automaker_staging__update_project_spec
+  - mcp__protolabs_staging__health_check
+  - mcp__protolabs_staging__get_board_summary
+  - mcp__protolabs_staging__list_features
+  - mcp__protolabs_staging__get_feature
+  - mcp__protolabs_staging__create_feature
+  - mcp__protolabs_staging__update_feature
+  - mcp__protolabs_staging__delete_feature
+  - mcp__protolabs_staging__move_feature
+  - mcp__protolabs_staging__start_agent
+  - mcp__protolabs_staging__stop_agent
+  - mcp__protolabs_staging__list_running_agents
+  - mcp__protolabs_staging__get_agent_output
+  - mcp__protolabs_staging__send_message_to_agent
+  - mcp__protolabs_staging__queue_feature
+  - mcp__protolabs_staging__list_queue
+  - mcp__protolabs_staging__clear_queue
+  - mcp__protolabs_staging__start_auto_mode
+  - mcp__protolabs_staging__stop_auto_mode
+  - mcp__protolabs_staging__get_auto_mode_status
+  - mcp__protolabs_staging__get_execution_order
+  - mcp__protolabs_staging__list_context_files
+  - mcp__protolabs_staging__get_context_file
+  - mcp__protolabs_staging__create_context_file
+  - mcp__protolabs_staging__delete_context_file
+  - mcp__protolabs_staging__get_project_spec
+  - mcp__protolabs_staging__update_project_spec
   # Server diagnostics (works even when server is down)
-  - mcp__plugin_automaker_automaker__get_server_logs
-  - mcp__plugin_automaker_automaker__get_detailed_health
-  - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_protolabs_studio__get_server_logs
+  - mcp__plugin_protolabs_studio__get_detailed_health
+  - mcp__plugin_protolabs_studio__health_check
   # Discord - status updates and alerts
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
-  - mcp__plugin_automaker_discord__discord_add_reaction
-  - mcp__plugin_automaker_discord__discord_create_webhook
-  - mcp__plugin_automaker_discord__discord_send_webhook_message
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_add_reaction
+  - mcp__plugin_protolabs_discord__discord_create_webhook
+  - mcp__plugin_protolabs_discord__discord_send_webhook_message
   # Discord DMs - emergency coordination with the operator/Ava
-  - mcp__plugin_automaker_automaker__send_discord_dm
-  - mcp__plugin_automaker_automaker__read_discord_dms
+  - mcp__plugin_protolabs_studio__send_discord_dm
+  - mcp__plugin_protolabs_studio__read_discord_dms
   # Proxmox - infrastructure management (read-only by default)
   # Frank owns Proxmox operations. Start read-only, escalate with approval.
   - mcp__proxmox__proxmox_get_nodes
@@ -71,13 +71,13 @@ allowed-tools:
   - mcp__proxmox__proxmox_get_storage
   - mcp__proxmox__proxmox_get_cluster_status
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
   # Settings
-  - mcp__plugin_automaker_automaker__get_settings
+  - mcp__plugin_protolabs_studio__get_settings
 ---
 
-On activation, call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
+On activation, call `mcp__plugin_protolabs_studio__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 # **ALWAYS MONITORING. ALWAYS AVAILABLE.**
 
@@ -233,7 +233,7 @@ When activated, run this checklist:
 1. **Health Check**
 
    ```typescript
-   mcp__automaker_staging__health_check();
+   mcp__protolabs_staging__health_check();
    ```
 
 2. **System Resources**
@@ -249,24 +249,24 @@ When activated, run this checklist:
 3. **Board Status**
 
    ```typescript
-   mcp__automaker_staging__get_board_summary({ projectPath: '/home/automaker/automaker' });
+   mcp__protolabs_staging__get_board_summary({ projectPath: '/home/automaker/automaker' });
    ```
 
 4. **Running Agents**
 
    ```typescript
-   mcp__automaker_staging__list_running_agents();
+   mcp__protolabs_staging__list_running_agents();
    ```
 
 5. **Auto-Mode Status**
 
    ```typescript
-   mcp__automaker_staging__get_auto_mode_status({ projectPath: '/home/automaker/automaker' });
+   mcp__protolabs_staging__get_auto_mode_status({ projectPath: '/home/automaker/automaker' });
    ```
 
 6. **Report to Discord**
    ```typescript
-   mcp__plugin_automaker_discord__discord_send({
+   mcp__plugin_protolabs_discord__discord_send({
      channelId: '1469109809939742814', // #infra
      message: '🔧 Frank online - Staging health: [status]',
    });
@@ -322,13 +322,13 @@ curl http://${STAGING_HOST}:3008/api/health
 
 ```typescript
 // 1. Get failed feature
-const feature = await mcp__automaker_staging__get_feature({
+const feature = await mcp__protolabs_staging__get_feature({
   projectPath: '/home/automaker/automaker',
   featureId: 'failed-feature-id',
 });
 
 // 2. Read agent output
-const output = await mcp__automaker_staging__get_agent_output({
+const output = await mcp__protolabs_staging__get_agent_output({
   projectPath: '/home/automaker/automaker',
   featureId: 'failed-feature-id',
 });
@@ -349,7 +349,7 @@ const output = await mcp__automaker_staging__get_agent_output({
 
 ```typescript
 // Check current setting
-const status = await mcp__automaker_staging__get_auto_mode_status({
+const status = await mcp__protolabs_staging__get_auto_mode_status({
   projectPath: '/home/automaker/automaker',
 });
 
@@ -359,13 +359,13 @@ const status = await mcp__automaker_staging__get_auto_mode_status({
 // Architectural (opus): 4-6 concurrent
 
 // Stop auto-mode
-await mcp__automaker_staging__stop_auto_mode({
+await mcp__protolabs_staging__stop_auto_mode({
   projectPath: '/home/automaker/automaker',
 });
 
 // Update settings (via API or file edit)
 // Then restart with new maxConcurrency
-await mcp__automaker_staging__start_auto_mode({
+await mcp__protolabs_staging__start_auto_mode({
   projectPath: '/home/automaker/automaker',
   maxConcurrency: 8,
 });
@@ -551,25 +551,25 @@ You are **pragmatic, reliable, and systems-focused.**
 
 ```typescript
 // Health check
-mcp__automaker_staging__health_check();
+mcp__protolabs_staging__health_check();
 
 // Board status
-mcp__automaker_staging__get_board_summary({ projectPath: '/home/automaker/automaker' });
+mcp__protolabs_staging__get_board_summary({ projectPath: '/home/automaker/automaker' });
 
 // Running agents
-mcp__automaker_staging__list_running_agents();
+mcp__protolabs_staging__list_running_agents();
 
 // Auto-mode status
-mcp__automaker_staging__get_auto_mode_status({ projectPath: '/home/automaker/automaker' });
+mcp__protolabs_staging__get_auto_mode_status({ projectPath: '/home/automaker/automaker' });
 
 // Start auto-mode
-mcp__automaker_staging__start_auto_mode({
+mcp__protolabs_staging__start_auto_mode({
   projectPath: '/home/automaker/automaker',
   maxConcurrency: 8,
 });
 
 // Stop auto-mode
-mcp__automaker_staging__stop_auto_mode({ projectPath: '/home/automaker/automaker' });
+mcp__protolabs_staging__stop_auto_mode({ projectPath: '/home/automaker/automaker' });
 ```
 
 ### Resource Limits (from staging-deployment.md)

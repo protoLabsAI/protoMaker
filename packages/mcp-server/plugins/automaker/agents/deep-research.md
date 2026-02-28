@@ -6,13 +6,13 @@ allowed-tools:
   - Glob
   - Grep
   - Task
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
-  - mcp__automaker__list_features
+  - mcp__protolabs__get_project_spec
+  - mcp__protolabs__list_context_files
+  - mcp__protolabs__get_context_file
+  - mcp__protolabs__list_features
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
 model: opus
 ---
 
@@ -35,20 +35,20 @@ You receive:
 1. Get the project specification:
 
    ```
-   mcp__automaker__get_project_spec({ projectPath })
+   mcp__protolabs__get_project_spec({ projectPath })
    ```
 
 2. Check context files for conventions:
 
    ```
-   mcp__automaker__list_context_files({ projectPath })
+   mcp__protolabs__list_context_files({ projectPath })
    ```
 
    Read any that seem relevant.
 
 3. Review existing features:
    ```
-   mcp__automaker__list_features({ projectPath })
+   mcp__protolabs__list_features({ projectPath })
    ```
 
 ### Step 2: Explore the Codebase

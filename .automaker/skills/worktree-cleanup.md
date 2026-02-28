@@ -48,7 +48,7 @@ done
 
 ```bash
 # Stop auto-mode first
-mcp__plugin_automaker_automaker__stop_auto_mode({ projectPath })
+mcp__plugin_protolabs_studio__stop_auto_mode({ projectPath })
 
 # Remove all worktrees
 for wt in .worktrees/*/; do
@@ -56,7 +56,7 @@ for wt in .worktrees/*/; do
 done
 
 # Restart auto-mode — features become orphaned = eligible
-mcp__plugin_automaker_automaker__start_auto_mode({ projectPath, maxConcurrency: 1 })
+mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency: 1 })
 ```
 
 ## Preserving Work from Worktrees

@@ -5,15 +5,15 @@ argument-hint: (start|stop|status) [project-path]
 allowed-tools:
   - AskUserQuestion
   # Auto-mode Control
-  - mcp__plugin_automaker_automaker__start_auto_mode
-  - mcp__plugin_automaker_automaker__stop_auto_mode
-  - mcp__plugin_automaker_automaker__get_auto_mode_status
+  - mcp__plugin_protolabs_studio__start_auto_mode
+  - mcp__plugin_protolabs_studio__stop_auto_mode
+  - mcp__plugin_protolabs_studio__get_auto_mode_status
   # Supporting tools
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__list_running_agents
-  - mcp__plugin_automaker_automaker__get_execution_order
-  - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__list_running_agents
+  - mcp__plugin_protolabs_studio__get_execution_order
+  - mcp__plugin_protolabs_studio__health_check
 ---
 
 # Automaker Auto-Mode Controller
@@ -56,7 +56,7 @@ options:
 Then start:
 
 ```
-mcp__plugin_automaker_automaker__start_auto_mode({
+mcp__plugin_protolabs_studio__start_auto_mode({
   projectPath: "<path>",
   maxConcurrency: <chosen-value>
 })
@@ -71,7 +71,7 @@ When user says "stop", "halt", "pause auto-mode":
 3. Show what was in progress (agents will complete their current feature)
 
 ```
-mcp__plugin_automaker_automaker__stop_auto_mode({ projectPath: "<path>" })
+mcp__plugin_protolabs_studio__stop_auto_mode({ projectPath: "<path>" })
 ```
 
 ### Check Status
@@ -79,7 +79,7 @@ mcp__plugin_automaker_automaker__stop_auto_mode({ projectPath: "<path>" })
 When user says "status", "check", "is auto-mode running":
 
 ```
-mcp__plugin_automaker_automaker__get_auto_mode_status({ projectPath: "<path>" })
+mcp__plugin_protolabs_studio__get_auto_mode_status({ projectPath: "<path>" })
 ```
 
 Display:
@@ -105,11 +105,11 @@ Display:
 User: "start auto-mode"
 
 You:
-1. mcp__plugin_automaker_automaker__health_check()
-2. mcp__plugin_automaker_automaker__get_board_summary({ projectPath })
-3. mcp__plugin_automaker_automaker__get_execution_order({ projectPath })
+1. mcp__plugin_protolabs_studio__health_check()
+2. mcp__plugin_protolabs_studio__get_board_summary({ projectPath })
+3. mcp__plugin_protolabs_studio__get_execution_order({ projectPath })
 4. Ask about concurrency
-5. mcp__plugin_automaker_automaker__start_auto_mode({ projectPath, maxConcurrency })
+5. mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency })
 6. Confirm started and show first features being processed
 ```
 

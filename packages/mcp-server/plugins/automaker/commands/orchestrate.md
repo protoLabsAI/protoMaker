@@ -6,14 +6,14 @@ allowed-tools:
   - AskUserQuestion
   - Task
   # Orchestration
-  - mcp__plugin_automaker_automaker__set_feature_dependencies
-  - mcp__plugin_automaker_automaker__get_dependency_graph
-  - mcp__plugin_automaker_automaker__get_execution_order
+  - mcp__plugin_protolabs_studio__set_feature_dependencies
+  - mcp__plugin_protolabs_studio__get_dependency_graph
+  - mcp__plugin_protolabs_studio__get_execution_order
   # Feature tools for context
-  - mcp__plugin_automaker_automaker__list_features
-  - mcp__plugin_automaker_automaker__get_feature
-  - mcp__plugin_automaker_automaker__get_board_summary
-  - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_protolabs_studio__list_features
+  - mcp__plugin_protolabs_studio__get_feature
+  - mcp__plugin_protolabs_studio__get_board_summary
+  - mcp__plugin_protolabs_studio__health_check
 ---
 
 # Automaker Orchestrator
@@ -60,7 +60,7 @@ The resolved order features should be processed, respecting dependencies:
 ### View Dependency Graph
 
 ```
-mcp__plugin_automaker_automaker__get_dependency_graph({ projectPath })
+mcp__plugin_protolabs_studio__get_dependency_graph({ projectPath })
 ```
 
 Display as:
@@ -103,7 +103,7 @@ multiSelect: true
 Then:
 
 ```
-mcp__plugin_automaker_automaker__set_feature_dependencies({
+mcp__plugin_protolabs_studio__set_feature_dependencies({
   projectPath,
   featureId: "<feature>",
   dependencies: ["abc-123", "def-456"]
@@ -113,7 +113,7 @@ mcp__plugin_automaker_automaker__set_feature_dependencies({
 ### View Execution Order
 
 ```
-mcp__plugin_automaker_automaker__get_execution_order({ projectPath, status: "backlog" })
+mcp__plugin_protolabs_studio__get_execution_order({ projectPath, status: "backlog" })
 ```
 
 Display:
@@ -150,7 +150,7 @@ Cannot set this dependency.
 For complex features, spawn the feature-planner agent to break them down:
 
 ```
-Task(subagent_type: "automaker:feature-planner",
+Task(subagent_type: "protolabs:feature-planner",
      prompt: "Project: /path/to/project.
               Feature: Add a complete payment system with Stripe integration.
               Context: We're using React and Express.")
@@ -168,7 +168,7 @@ The feature-planner will:
 To understand the project before planning:
 
 ```
-Task(subagent_type: "automaker:codebase-analyzer",
+Task(subagent_type: "protolabs:codebase-analyzer",
      prompt: "Project: /path/to/project.
               Review backlog features and suggest optimal dependencies.")
 ```
@@ -217,7 +217,7 @@ You:
 User: "I want to add a complete user management system"
 
 You:
-Task(subagent_type: "automaker:feature-planner",
+Task(subagent_type: "protolabs:feature-planner",
      prompt: "Project: /path/to/project.
               Feature: Complete user management - registration, login,
               profile editing, password reset, email verification,

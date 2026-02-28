@@ -141,7 +141,7 @@ Covers:
 
 1. Read [Context System Deep Dive](./context-system.md)
 2. Create a context file in `.automaker/context/`
-3. Or use the MCP tool: `mcp__automaker__create_context_file()`
+3. Or use the MCP tool: `mcp__protolabs__create_context_file()`
 
 ### "I want to control agents programmatically"
 

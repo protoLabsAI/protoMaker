@@ -8,36 +8,36 @@ allowed-tools:
   - Bash
   - Read
   # Channel Management
-  - mcp__plugin_automaker_discord__discord_create_text_channel
-  - mcp__plugin_automaker_discord__discord_delete_channel
+  - mcp__plugin_protolabs_discord__discord_create_text_channel
+  - mcp__plugin_protolabs_discord__discord_delete_channel
   # Category Management
-  - mcp__plugin_automaker_discord__discord_create_category
-  - mcp__plugin_automaker_discord__discord_edit_category
-  - mcp__plugin_automaker_discord__discord_delete_category
+  - mcp__plugin_protolabs_discord__discord_create_category
+  - mcp__plugin_protolabs_discord__discord_edit_category
+  - mcp__plugin_protolabs_discord__discord_delete_category
   # Message Management
-  - mcp__plugin_automaker_discord__discord_send
-  - mcp__plugin_automaker_discord__discord_read_messages
-  - mcp__plugin_automaker_discord__discord_delete_message
+  - mcp__plugin_protolabs_discord__discord_send
+  - mcp__plugin_protolabs_discord__discord_read_messages
+  - mcp__plugin_protolabs_discord__discord_delete_message
   # Forum Management
-  - mcp__plugin_automaker_discord__discord_get_forum_channels
-  - mcp__plugin_automaker_discord__discord_create_forum_post
-  - mcp__plugin_automaker_discord__discord_get_forum_post
-  - mcp__plugin_automaker_discord__discord_reply_to_forum
-  - mcp__plugin_automaker_discord__discord_delete_forum_post
+  - mcp__plugin_protolabs_discord__discord_get_forum_channels
+  - mcp__plugin_protolabs_discord__discord_create_forum_post
+  - mcp__plugin_protolabs_discord__discord_get_forum_post
+  - mcp__plugin_protolabs_discord__discord_reply_to_forum
+  - mcp__plugin_protolabs_discord__discord_delete_forum_post
   # Webhook Management
-  - mcp__plugin_automaker_discord__discord_create_webhook
-  - mcp__plugin_automaker_discord__discord_send_webhook_message
-  - mcp__plugin_automaker_discord__discord_edit_webhook
-  - mcp__plugin_automaker_discord__discord_delete_webhook
+  - mcp__plugin_protolabs_discord__discord_create_webhook
+  - mcp__plugin_protolabs_discord__discord_send_webhook_message
+  - mcp__plugin_protolabs_discord__discord_edit_webhook
+  - mcp__plugin_protolabs_discord__discord_delete_webhook
   # Reactions
-  - mcp__plugin_automaker_discord__discord_add_reaction
-  - mcp__plugin_automaker_discord__discord_add_multiple_reactions
-  - mcp__plugin_automaker_discord__discord_remove_reaction
+  - mcp__plugin_protolabs_discord__discord_add_reaction
+  - mcp__plugin_protolabs_discord__discord_add_multiple_reactions
+  - mcp__plugin_protolabs_discord__discord_remove_reaction
   # Private Messages (via Automaker bot)
-  - mcp__plugin_automaker_automaker__send_discord_dm
-  - mcp__plugin_automaker_automaker__read_discord_dms
+  - mcp__plugin_protolabs_studio__send_discord_dm
+  - mcp__plugin_protolabs_studio__read_discord_dms
   # User & Server
-  - mcp__plugin_automaker_discord__discord_get_server_info
+  - mcp__plugin_protolabs_discord__discord_get_server_info
 ---
 
 # Discord Manager
@@ -88,7 +88,7 @@ Based on the user's input, determine the action:
 Show a comprehensive server overview:
 
 ```
-mcp__plugin_automaker_discord__discord_get_server_info()
+mcp__plugin_protolabs_discord__discord_get_server_info()
 ```
 
 Display format:
@@ -139,7 +139,7 @@ options:
 ### Send the announcement:
 
 ```
-mcp__plugin_automaker_discord__discord_send({
+mcp__plugin_protolabs_discord__discord_send({
   channelId: "<selected_channel_id>",
   message: "<announcement_content>"
 })
@@ -194,7 +194,7 @@ Agenda:
 ### List Channels
 
 ```
-mcp__plugin_automaker_discord__discord_get_server_info()
+mcp__plugin_protolabs_discord__discord_get_server_info()
 ```
 
 Display organized by category:
@@ -234,9 +234,9 @@ options:
 Then:
 
 ```
-mcp__plugin_automaker_discord__discord_create_text_channel({ name: "channel-name", categoryId: "optional" })
+mcp__plugin_protolabs_discord__discord_create_text_channel({ name: "channel-name", categoryId: "optional" })
 # or
-mcp__plugin_automaker_discord__discord_create_category({ name: "Category Name" })
+mcp__plugin_protolabs_discord__discord_create_category({ name: "Category Name" })
 ```
 
 ### Delete Channel
@@ -260,7 +260,7 @@ options:
 ### Send DM to a Member
 
 ```
-mcp__plugin_automaker_automaker__send_discord_dm({
+mcp__plugin_protolabs_studio__send_discord_dm({
   username: "username",
   content: "Your message here"
 })
@@ -269,7 +269,7 @@ mcp__plugin_automaker_automaker__send_discord_dm({
 ### Read DMs from a Member
 
 ```
-mcp__plugin_automaker_automaker__read_discord_dms({
+mcp__plugin_protolabs_studio__read_discord_dms({
   username: "username",
   limit: 10
 })
@@ -278,7 +278,7 @@ mcp__plugin_automaker_automaker__read_discord_dms({
 ### Send Direct Message
 
 ```
-mcp__plugin_automaker_automaker__send_discord_dm({
+mcp__plugin_protolabs_studio__send_discord_dm({
   username: "username",
   content: "Your message here"
 })
@@ -291,7 +291,7 @@ mcp__plugin_automaker_automaker__send_discord_dm({
 ### Read Recent Messages
 
 ```
-mcp__plugin_automaker_discord__discord_read_messages({
+mcp__plugin_protolabs_discord__discord_read_messages({
   channelId: "<channel_id>",
   limit: 20
 })
@@ -314,7 +314,7 @@ _Showing last 20 messages_
 ### Send Message
 
 ```
-mcp__plugin_automaker_discord__discord_send({
+mcp__plugin_protolabs_discord__discord_send({
   channelId: "<channel_id>",
   message: "Message content"
 })
@@ -323,7 +323,7 @@ mcp__plugin_automaker_discord__discord_send({
 ### React to Message
 
 ```
-mcp__plugin_automaker_discord__discord_add_reaction({
+mcp__plugin_protolabs_discord__discord_add_reaction({
   channelId: "<channel_id>",
   messageId: "<message_id>",
   emoji: "👍"
@@ -337,7 +337,7 @@ mcp__plugin_automaker_discord__discord_add_reaction({
 ### Create Webhook
 
 ```
-mcp__plugin_automaker_discord__discord_create_webhook({
+mcp__plugin_protolabs_discord__discord_create_webhook({
   channelId: "<channel_id>",
   name: "Webhook Name"
 })
@@ -348,7 +348,7 @@ mcp__plugin_automaker_discord__discord_create_webhook({
 ### Send via Webhook
 
 ```
-mcp__plugin_automaker_discord__discord_send_webhook_message({
+mcp__plugin_protolabs_discord__discord_send_webhook_message({
   webhookUrl: "<full_webhook_url>",
   message: "Message content"
 })
@@ -395,7 +395,7 @@ Analyze the server for cleanup opportunities:
 ### Daily Standup Reminder
 
 ```
-mcp__plugin_automaker_discord__discord_send({
+mcp__plugin_protolabs_discord__discord_send({
   channelId: "<standup_channel>",
   message: "🌅 **Daily Standup**\n\nPlease share:\n1. What you did yesterday\n2. What you're doing today\n3. Any blockers\n\n@everyone"
 })
@@ -404,7 +404,7 @@ mcp__plugin_automaker_discord__discord_send({
 ### PR Notification
 
 ```
-mcp__plugin_automaker_discord__discord_send({
+mcp__plugin_protolabs_discord__discord_send({
   channelId: "<dev_channel>",
   message: "🚀 **PR Ready for Review**\n\n**Title**: [PR Title]\n**Author**: @[author]\n**Link**: [PR URL]\n\nPlease review when available!"
 })
@@ -413,7 +413,7 @@ mcp__plugin_automaker_discord__discord_send({
 ### Incident Alert
 
 ```
-mcp__plugin_automaker_discord__discord_send({
+mcp__plugin_protolabs_discord__discord_send({
   channelId: "<alerts_channel>",
   message: "🚨 **Incident Alert**\n\n**Severity**: [High/Medium/Low]\n**Service**: [service name]\n**Status**: Investigating\n\n@oncall"
 })
@@ -471,7 +471,7 @@ For complex operations, spawn specialized agents:
 ### Discord Audit
 
 ```
-Task(subagent_type: "automaker:discord-audit",
+Task(subagent_type: "protolabs:discord-audit",
      prompt: "Audit the Discord server for:
               - Channel organization
               - Permission issues
@@ -482,7 +482,7 @@ Task(subagent_type: "automaker:discord-audit",
 ### Bulk Operations
 
 ```
-Task(subagent_type: "automaker:discord-bulk",
+Task(subagent_type: "protolabs:discord-bulk",
      prompt: "Perform bulk operation:
               - Archive channels matching pattern
               - Send message to multiple channels
@@ -498,13 +498,13 @@ Task(subagent_type: "automaker:discord-bulk",
 To get a channel ID:
 
 1. Use `/discord channels` to list with IDs
-2. Or use `mcp__plugin_automaker_discord__discord_get_server_info()` and filter by name
+2. Or use `mcp__plugin_protolabs_discord__discord_get_server_info()` and filter by name
 
 ### User Mentions
 
 To mention a user in a message, use their Discord user ID format: `<@USER_ID>`.
 
-To DM a user directly: `mcp__plugin_automaker_automaker__send_discord_dm({ username: "name", content: "message" })`
+To DM a user directly: `mcp__plugin_protolabs_studio__send_discord_dm({ username: "name", content: "message" })`
 
 ### Emoji Reactions
 

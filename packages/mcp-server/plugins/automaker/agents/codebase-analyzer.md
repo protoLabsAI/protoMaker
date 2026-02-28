@@ -5,12 +5,12 @@ allowed-tools:
   - Read
   - Glob
   - Grep
-  - mcp__automaker__list_features
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__update_project_spec
+  - mcp__protolabs__list_features
+  - mcp__protolabs__get_project_spec
+  - mcp__protolabs__update_project_spec
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
 model: opus
 ---
 
@@ -80,7 +80,7 @@ Identify:
 Given a list of features, suggest optimal dependencies:
 
 ```
-mcp__automaker__list_features({ projectPath })
+mcp__protolabs__list_features({ projectPath })
 ```
 
 Analyze:
@@ -190,21 +190,21 @@ Machine-readable output for tools:
 ### Map Architecture
 
 ```
-Task(subagent_type: "automaker:codebase-analyzer",
+Task(subagent_type: "protolabs:codebase-analyzer",
      prompt: "Project: /path/to/project. Map the architecture and key patterns.")
 ```
 
 ### Suggest Dependencies
 
 ```
-Task(subagent_type: "automaker:codebase-analyzer",
+Task(subagent_type: "protolabs:codebase-analyzer",
      prompt: "Project: /path/to/project. Review backlog features and suggest optimal dependencies and execution order.")
 ```
 
 ### Impact Analysis
 
 ```
-Task(subagent_type: "automaker:codebase-analyzer",
+Task(subagent_type: "protolabs:codebase-analyzer",
      prompt: "Project: /path/to/project. Analyze impact of changing src/services/auth.ts")
 ```
 

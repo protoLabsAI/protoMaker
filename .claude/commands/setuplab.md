@@ -9,23 +9,23 @@ allowed-tools:
   - Glob
   - Grep
   - Task
-  - mcp__plugin_automaker_automaker__health_check
-  - mcp__plugin_automaker_automaker__setup_lab
-  - mcp__plugin_automaker_automaker__research_repo
-  - mcp__plugin_automaker_automaker__analyze_gaps
-  - mcp__plugin_automaker_automaker__propose_alignment
-  - mcp__plugin_automaker_automaker__provision_discord
-  - mcp__plugin_automaker_automaker__setup_beads
-  - mcp__plugin_automaker_automaker__run_full_setup
-  - mcp__plugin_automaker_automaker__clone_repo
-  - mcp__plugin_automaker_automaker__generate_report
-  - mcp__plugin_automaker_automaker__create_feature
-  - mcp__plugin_automaker_automaker__set_feature_dependencies
-  - mcp__plugin_automaker_automaker__create_context_file
-  - mcp__plugin_automaker_automaker__update_project_spec
-  - mcp__plugin_automaker_discord__discord_create_category
-  - mcp__plugin_automaker_discord__discord_create_text_channel
-  - mcp__plugin_automaker_discord__discord_create_webhook
+  - mcp__plugin_protolabs_studio__health_check
+  - mcp__plugin_protolabs_studio__setup_lab
+  - mcp__plugin_protolabs_studio__research_repo
+  - mcp__plugin_protolabs_studio__analyze_gaps
+  - mcp__plugin_protolabs_studio__propose_alignment
+  - mcp__plugin_protolabs_studio__provision_discord
+  - mcp__plugin_protolabs_studio__setup_beads
+  - mcp__plugin_protolabs_studio__run_full_setup
+  - mcp__plugin_protolabs_studio__clone_repo
+  - mcp__plugin_protolabs_studio__generate_report
+  - mcp__plugin_protolabs_studio__create_feature
+  - mcp__plugin_protolabs_studio__set_feature_dependencies
+  - mcp__plugin_protolabs_studio__create_context_file
+  - mcp__plugin_protolabs_studio__update_project_spec
+  - mcp__plugin_protolabs_discord__discord_create_category
+  - mcp__plugin_protolabs_discord__discord_create_text_channel
+  - mcp__plugin_protolabs_discord__discord_create_webhook
 model: sonnet
 ---
 
@@ -60,14 +60,14 @@ Execute these phases in order, presenting results to the user between phases.
 1. Verify Automaker server is running:
 
    ```
-   mcp__plugin_automaker_automaker__health_check()
+   mcp__plugin_protolabs_studio__health_check()
    ```
 
    If down, tell the user: "Automaker server is not running. Start it with `npm run dev` in the automaker directory."
 
 2. Resolve the project path from the user's argument:
    - **If argument is a git URL** (starts with `https://`, `git@`, or ends with `.git`):
-     - Use `mcp__plugin_automaker_automaker__clone_repo({ gitUrl })` to clone to `./labs/{repo-name}/`
+     - Use `mcp__plugin_protolabs_studio__clone_repo({ gitUrl })` to clone to `./labs/{repo-name}/`
      - The tool returns `{ success: true, path: "/absolute/path/to/labs/repo-name", message: "..." }`
      - Use the returned path for subsequent phases
      - Present to user: "Cloned {gitUrl} to {path}"
@@ -81,7 +81,7 @@ Execute these phases in order, presenting results to the user between phases.
 Scan the target repo to understand its current state:
 
 ```
-mcp__plugin_automaker_automaker__research_repo({ projectPath })
+mcp__plugin_protolabs_studio__research_repo({ projectPath })
 ```
 
 **Present results to the user:**
@@ -109,13 +109,13 @@ mcp__plugin_automaker_automaker__research_repo({ projectPath })
 Compare against our standard:
 
 ```
-mcp__plugin_automaker_automaker__analyze_gaps({ projectPath, research })
+mcp__plugin_protolabs_studio__analyze_gaps({ projectPath, research })
 ```
 
 Then generate an HTML report and auto-open it:
 
 ```
-mcp__plugin_automaker_automaker__generate_report({ projectPath, research, report })
+mcp__plugin_protolabs_studio__generate_report({ projectPath, research, report })
 ```
 
 This will create an HTML report at `{projectPath}/.automaker/gap-report.html` and automatically open it in the default browser.
@@ -180,7 +180,7 @@ AskUserQuestion:
 **5a. Automaker Init:**
 
 ```
-mcp__plugin_automaker_automaker__setup_lab({ projectPath })
+mcp__plugin_protolabs_studio__setup_lab({ projectPath })
 ```
 
 Then create tailored context files based on research results:
@@ -189,7 +189,7 @@ Then create tailored context files based on research results:
 - Create `.automaker/context/coding-rules.md` with rules appropriate for the detected tech stack (TypeScript, React, Python as applicable)
 - Update `.automaker/spec.md` with a project overview generated from research data
 
-Use `mcp__plugin_automaker_automaker__create_context_file` and `mcp__plugin_automaker_automaker__update_project_spec` to write these.
+Use `mcp__plugin_protolabs_studio__create_context_file` and `mcp__plugin_protolabs_studio__update_project_spec` to write these.
 
 **5b. Discord Provisioning (ask first):**
 
@@ -206,14 +206,14 @@ AskUserQuestion:
 
 If yes, use the Discord MCP tools to create channels:
 
-1. `mcp__plugin_automaker_discord__discord_create_category({ guildId, name: projectName })`
+1. `mcp__plugin_protolabs_discord__discord_create_category({ guildId, name: projectName })`
 2. Create channels: general, updates, dev under the category
 3. Create webhook on updates channel
 
 **5c. Beads Init:**
 
 ```
-mcp__plugin_automaker_automaker__setup_beads({ projectPath })
+mcp__plugin_protolabs_studio__setup_beads({ projectPath })
 ```
 
 ### Phase 6: Propose Alignment Work
@@ -221,7 +221,7 @@ mcp__plugin_automaker_automaker__setup_beads({ projectPath })
 Generate the alignment proposal:
 
 ```
-mcp__plugin_automaker_automaker__propose_alignment({ projectPath, gapAnalysis })
+mcp__plugin_protolabs_studio__propose_alignment({ projectPath, gapAnalysis })
 ```
 
 **Present the proposal:**

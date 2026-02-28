@@ -68,7 +68,7 @@
         ]
       },
       {
-        "matcher": "mcp__plugin_automaker_automaker__create_feature",
+        "matcher": "mcp__plugin_protolabs_studio__create_feature",
         "hooks": [
           {
             "type": "command",
@@ -107,7 +107,7 @@
     ],
     "PostToolUseFailure": [
       {
-        "matcher": "mcp__plugin_automaker_automaker__",
+        "matcher": "mcp__plugin_protolabs_studio__",
         "hooks": [
           {
             "type": "command",

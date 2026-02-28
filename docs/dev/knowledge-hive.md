@@ -582,7 +582,7 @@ Use the top 3 results to inform your implementation.
 The Automaker MCP server exposes knowledge search:
 
 ```typescript
-mcp__automaker__search_knowledge({
+mcp__protolabs__search_knowledge({
   projectPath: '/path/to/project',
   query: 'how to add a new memory category',
   maxResults: 5,

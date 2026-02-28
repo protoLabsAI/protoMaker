@@ -41,7 +41,7 @@ Monitor for:
 
 When you find a docs task:
 \`\`\`typescript
-mcp__plugin_automaker_linear__search_issues({
+mcp__plugin_protolabs_linear__search_issues({
   labels: ['docs-engineer'],
   status: 'Backlog'
 })

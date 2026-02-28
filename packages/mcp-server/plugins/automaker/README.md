@@ -1,6 +1,6 @@
-# Automaker Claude Plugin
+# protoLabs Studio Claude Plugin
 
-Claude Code plugin for managing Automaker's Kanban board, AI agents, and feature orchestration.
+Claude Code plugin for managing protoLabs Studio's Kanban board, AI agents, and feature orchestration.
 
 ## Installation
 
@@ -11,10 +11,10 @@ Claude Code plugin for managing Automaker's Kanban board, AI agents, and feature
 claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
 
 # Install the plugin
-claude plugin install automaker
+claude plugin install protolabs
 
 # Configure environment
-PLUGIN_DIR=~/.claude/plugins/automaker
+PLUGIN_DIR=~/.claude/plugins/protolabs
 cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
 echo "AUTOMAKER_ROOT=$(pwd)" >> "$PLUGIN_DIR/.env"
 echo "AUTOMAKER_API_KEY=your-dev-key-2026" >> "$PLUGIN_DIR/.env"
@@ -23,7 +23,7 @@ echo "AUTOMAKER_API_KEY=your-dev-key-2026" >> "$PLUGIN_DIR/.env"
 ### Option 2: Symlink
 
 ```bash
-ln -s /path/to/automaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/automaker
+ln -s /path/to/automaker/packages/mcp-server/plugins/automaker ~/.claude/plugins/protolabs
 ```
 
 Restart Claude Code after installation.
@@ -136,11 +136,11 @@ name: command-name
 description: What the command does
 argument-hint: (optional arguments)
 allowed-tools:
-  - mcp__automaker__tool_name
+  - mcp__protolabs__tool_name
 ---
 # Command Instructions
 
 Your prompt content here...
 ```
 
-After modifying hooks, do a full reinstall: `claude plugin uninstall automaker && claude plugin install automaker`.
+After modifying hooks, do a full reinstall: `claude plugin uninstall protolabs && claude plugin install protolabs`.

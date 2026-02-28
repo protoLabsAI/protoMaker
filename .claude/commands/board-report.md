@@ -17,10 +17,10 @@ Provide quick, actionable insights into:
 ### 1. Gather Data
 
 ```
-mcp__automaker__health_check()
-mcp__automaker__get_board_summary()
-mcp__automaker__list_running_agents()
-mcp__automaker__get_auto_mode_status()
+mcp__protolabs__health_check()
+mcp__protolabs__get_board_summary()
+mcp__protolabs__list_running_agents()
+mcp__protolabs__get_auto_mode_status()
 ```
 
 ### 2. Analyze Completed Work

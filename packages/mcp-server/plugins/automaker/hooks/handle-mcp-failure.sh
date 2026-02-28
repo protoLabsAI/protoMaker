@@ -1,7 +1,7 @@
 #!/bin/bash
 # handle-mcp-failure.sh
 # PostToolUseFailure hook for MCP tool diagnostics
-# Fires when mcp__plugin_automaker_automaker__ tools fail
+# Fires when mcp__plugin_protolabs_studio__ tools fail
 
 set -euo pipefail
 
@@ -11,7 +11,7 @@ ERROR_MESSAGE="${ERROR_MESSAGE:-No error message available}"
 PROJECT_PATH="${PROJECT_PATH:-/Users/kj/dev/automaker}"
 
 # Check if this is an MCP tool failure
-if [[ ! "$TOOL_NAME" =~ ^mcp__plugin_automaker_automaker__ ]]; then
+if [[ ! "$TOOL_NAME" =~ ^mcp__plugin_protolabs_studio__ ]]; then
   exit 0  # Not an MCP tool, skip
 fi
 

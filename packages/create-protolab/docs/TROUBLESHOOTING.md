@@ -620,10 +620,10 @@ claude plugin marketplace list
 claude plugin marketplace list
 
 # Try manual install
-claude plugin install automaker
+claude plugin install protolabs
 
 # Check plugin status
-claude plugin list | grep automaker
+claude plugin list | grep protolabs
 
 # If not found, rebuild from source
 cd /path/to/automaker/packages/mcp-server
@@ -631,7 +631,7 @@ npm install
 npm run build
 
 # Try install again
-claude plugin install automaker
+claude plugin install protolabs
 ```
 
 ### Error: "Plugin version mismatch or incompatible"
@@ -651,11 +651,11 @@ claude plugin install automaker
 npm install -g @anthropic-ai/claude-cli@latest
 
 # Update plugin
-claude plugin update automaker
+claude plugin update protolabs
 
 # Or force reinstall
-claude plugin uninstall automaker
-claude plugin install automaker
+claude plugin uninstall protolabs
+claude plugin install protolabs
 
 # Check versions
 claude --version

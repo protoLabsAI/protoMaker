@@ -56,14 +56,14 @@ For direct message sending without the bot service, use the MCP send tools which
 
 Always use MCP tools:
 ```
-mcp__plugin_automaker_discord__discord_send({ channelId, message })
-mcp__plugin_automaker_automaker__send_discord_dm({ username, content })
+mcp__plugin_protolabs_discord__discord_send({ channelId, message })
+mcp__plugin_protolabs_studio__send_discord_dm({ username, content })
 ```
 
 For reading:
 ```
-mcp__plugin_automaker_discord__discord_read_messages({ channelId, limit })
-mcp__plugin_automaker_automaker__read_discord_dms({ username, limit })
+mcp__plugin_protolabs_discord__discord_read_messages({ channelId, limit })
+mcp__plugin_protolabs_studio__read_discord_dms({ username, limit })
 ```
 
 ## Long Messages

@@ -26,7 +26,7 @@ run_monitoring_pass() {
   cd "$PROJECT_DIR"
 
   claude -p "/ava" \
-    --allowedTools "Bash(gh *),Bash(gt *),Bash(git *),Bash(npx prettier *),Read,Glob,Grep,mcp__plugin_automaker_automaker__*,mcp__plugin_automaker_discord__*" \
+    --allowedTools "Bash(gh *),Bash(gt *),Bash(git *),Bash(npx prettier *),Read,Glob,Grep,mcp__plugin_protolabs_studio__*,mcp__plugin_protolabs_discord__*" \
     --output-format json \
     2>>"$log_file" | tee -a "$log_file" | jq -r '.result // "No result"' 2>/dev/null
 

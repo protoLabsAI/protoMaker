@@ -5,15 +5,15 @@ allowed-tools:
   - Read
   - Glob
   - Grep
-  - mcp__automaker__list_features
-  - mcp__automaker__create_feature
-  - mcp__automaker__set_feature_dependencies
-  - mcp__automaker__get_project_spec
-  - mcp__automaker__list_context_files
-  - mcp__automaker__get_context_file
+  - mcp__protolabs__list_features
+  - mcp__protolabs__create_feature
+  - mcp__protolabs__set_feature_dependencies
+  - mcp__protolabs__get_project_spec
+  - mcp__protolabs__list_context_files
+  - mcp__protolabs__get_context_file
   # Context7 - live library documentation
-  - mcp__plugin_automaker_context7__resolve-library-id
-  - mcp__plugin_automaker_context7__query-docs
+  - mcp__plugin_protolabs_context7__resolve-library-id
+  - mcp__plugin_protolabs_context7__query-docs
 model: opus
 ---
 
@@ -36,19 +36,19 @@ You receive:
 1. Get the project spec for architectural context:
 
    ```
-   mcp__automaker__get_project_spec({ projectPath })
+   mcp__protolabs__get_project_spec({ projectPath })
    ```
 
 2. List existing features to avoid duplicates:
 
    ```
-   mcp__automaker__list_features({ projectPath })
+   mcp__protolabs__list_features({ projectPath })
    ```
 
 3. Check context files for coding standards:
 
    ```
-   mcp__automaker__list_context_files({ projectPath })
+   mcp__protolabs__list_context_files({ projectPath })
    ```
 
 4. If needed, explore the codebase structure:
@@ -85,7 +85,7 @@ For each task, create a feature with:
 - **Complexity**: Set appropriately for model selection (see below)
 
 ```
-mcp__automaker__create_feature({
+mcp__protolabs__create_feature({
   projectPath,
   title: "Add User model and types",
   description: `## Overview
@@ -128,7 +128,7 @@ Set `complexity` to control which AI model handles the task:
 After creating all features, set up the dependency graph:
 
 ```
-mcp__automaker__set_feature_dependencies({
+mcp__protolabs__set_feature_dependencies({
   projectPath,
   featureId: "<ui-feature-id>",
   dependencies: ["<api-feature-id>", "<types-feature-id>"]

@@ -31,7 +31,7 @@ if [ -z "${AUTOMAKER_ROOT:-}" ]; then
   echo "3. Add: \`AUTOMAKER_API_KEY=your-dev-key-2026\`"
   echo "4. Restart Claude Code"
   echo ""
-  echo "**Note:** All MCP tools (mcp__plugin_automaker_automaker__*) will be unavailable until this is fixed."
+  echo "**Note:** All MCP tools (mcp__plugin_protolabs_studio__*) will be unavailable until this is fixed."
   exit 0
 fi
 
@@ -72,7 +72,7 @@ if [ "$HTTP_CODE" != "200" ]; then
   echo "- Wrong API URL (check AUTOMAKER_API_URL in \`${ENV_FILE}\`)"
   echo "- Auth failure (verify AUTOMAKER_API_KEY in \`${ENV_FILE}\` matches server)"
   echo ""
-  echo "**Note:** All MCP tools (mcp__plugin_automaker_automaker__*) will fail until server is reachable."
+  echo "**Note:** All MCP tools (mcp__plugin_protolabs_studio__*) will fail until server is reachable."
   exit 0
 fi
 

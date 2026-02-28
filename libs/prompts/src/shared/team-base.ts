@@ -63,11 +63,11 @@ You have access to Context7 MCP tools for looking up **current** library documen
 
 1. **Resolve the library ID** — find the exact Context7 identifier:
    \`\`\`
-   mcp__plugin_automaker_context7__resolve-library-id({ libraryName: "express" })
+   mcp__plugin_protolabs_context7__resolve-library-id({ libraryName: "express" })
    \`\`\`
 2. **Query the docs** — fetch relevant docs/examples:
    \`\`\`
-   mcp__plugin_automaker_context7__query-docs({ context7CompatibleLibraryID: "/npm/express/express", topic: "Router middleware" })
+   mcp__plugin_protolabs_context7__query-docs({ context7CompatibleLibraryID: "/npm/express/express", topic: "Router middleware" })
    \`\`\`
 
 **When to use Context7:**

@@ -377,7 +377,7 @@ curl -X POST http://localhost:3008/api/knowledge/compact \
 Or via MCP:
 
 ```typescript
-mcp__automaker__compact_memory({
+mcp__protolabs__compact_memory({
   projectPath: '/path/to/project',
   categoryFile: 'patterns.md',
   threshold: 30000, // Custom threshold
@@ -424,7 +424,7 @@ curl -X POST http://localhost:3008/api/knowledge/prune \
 Or via MCP:
 
 ```typescript
-mcp__automaker__prune_knowledge({
+mcp__protolabs__prune_knowledge({
   projectPath: '/path/to/project',
 });
 ```

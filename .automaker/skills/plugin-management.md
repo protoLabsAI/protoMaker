@@ -20,13 +20,13 @@ The Automaker plugin (`packages/mcp-server/plugins/automaker/`) is the nerve cen
 ```bash
 # First install
 claude plugin marketplace add /path/to/automaker/packages/mcp-server/plugins
-claude plugin install automaker
+claude plugin install protolabs
 
 # Update (picks up new tools, commands)
-claude plugin update automaker
+claude plugin update protolabs
 
 # Full reinstall (required after hooks.json changes)
-claude plugin uninstall automaker && claude plugin install automaker
+claude plugin uninstall protolabs && claude plugin install protolabs
 
 # Check installed versions
 claude plugin list
@@ -52,10 +52,10 @@ Use `${CLAUDE_PLUGIN_ROOT}` for paths to hook scripts within the plugin director
 
 | Change | Action |
 |--------|--------|
-| New MCP tool added | `claude plugin update automaker` |
-| Tool schema changed | `claude plugin update automaker` |
+| New MCP tool added | `claude plugin update protolabs` |
+| Tool schema changed | `claude plugin update protolabs` |
 | hooks.json modified | Full reinstall (uninstall + install) |
-| New command/skill added | `claude plugin update automaker` |
+| New command/skill added | `claude plugin update protolabs` |
 | Plugin .env changed | Restart Claude Code session |
 
 **`update` alone doesn't pick up hooks changes.** Always do full reinstall for hooks.
@@ -71,8 +71,8 @@ claude plugin list
 
 If you see multiple automaker entries, uninstall all, then install latest:
 ```bash
-claude plugin uninstall automaker  # repeat if multiple
-claude plugin install automaker
+claude plugin uninstall protolabs  # repeat if multiple
+claude plugin install protolabs
 ```
 
 ## After Adding MCP Tools

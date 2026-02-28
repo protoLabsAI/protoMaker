@@ -1,6 +1,6 @@
 ---
 name: upgrade-plugin
-description: Upgrade the Automaker Claude Code plugin from an older version to current. Handles uninstall, reinstall, env migration, and verification.
+description: Upgrade the protoLabs Claude Code plugin from an older version to current. Handles uninstall, reinstall, env migration, and verification.
 argument-hint: (no arguments)
 temporary: true
 temporary-reason: Early tester onboarding — remove once all testers are on v0.15.x+
@@ -15,11 +15,12 @@ allowed-tools:
 
 # Plugin Upgrade
 
-You are upgrading the user's Automaker Claude Code plugin from an older version to the current version. This is a guided, safe migration.
+You are upgrading the user's protoLabs Claude Code plugin from an older version to the current version. This is a guided, safe migration.
 
 ## Important Context
 
-- The plugin directory on the user's system is `~/.claude/plugins/automaker/`
+- The OLD plugin directory (pre-rename) is `~/.claude/plugins/automaker/`
+- The NEW plugin directory is `~/.claude/plugins/protolabs/`
 - The plugin source lives in the repo at `packages/mcp-server/plugins/automaker/`
 - The `.env` file in the plugin directory contains user secrets -- it MUST be preserved
 - Hooks changes require a full uninstall/reinstall (update alone won't pick them up)
@@ -79,11 +80,14 @@ fi
 ### 4. Uninstall Old Version
 
 ```bash
-# Remove all instances (may need multiple runs if duplicates exist)
-claude plugin uninstall automaker
+# Remove old-name plugin (pre-rename)
+claude plugin uninstall automaker 2>/dev/null || true
+
+# Remove new-name plugin if already installed
+claude plugin uninstall protolabs 2>/dev/null || true
 ```
 
-If duplicates were detected in step 1, run uninstall again until `claude plugin list` shows no automaker entries.
+If duplicates were detected in step 1, run uninstall again until `claude plugin list` shows no automaker or protolabs entries.
 
 ### 5. Reinstall from Marketplace
 
@@ -91,27 +95,27 @@ If duplicates were detected in step 1, run uninstall again until `claude plugin 
 # Ensure marketplace is registered
 claude plugin marketplace add "$(pwd)/packages/mcp-server/plugins"
 
-# Install fresh
-claude plugin install automaker
+# Install fresh (new name)
+claude plugin install protolabs
 ```
 
 ### 6. Restore .env
 
 ```bash
-# Restore backed-up .env
+# Restore backed-up .env to new plugin location
 if [ -f /tmp/automaker-plugin-env-backup ]; then
-  cp /tmp/automaker-plugin-env-backup ~/.claude/plugins/automaker/.env
+  cp /tmp/automaker-plugin-env-backup ~/.claude/plugins/protolabs/.env
   echo "Restored .env from backup"
 fi
 
 # Verify AUTOMAKER_ROOT is set correctly
-grep AUTOMAKER_ROOT ~/.claude/plugins/automaker/.env
+grep AUTOMAKER_ROOT ~/.claude/plugins/protolabs/.env
 ```
 
 If no `.env` backup existed, create one:
 
 ```bash
-cp ~/.claude/plugins/automaker/.env.example ~/.claude/plugins/automaker/.env
+cp ~/.claude/plugins/protolabs/.env.example ~/.claude/plugins/protolabs/.env
 ```
 
 Then ask the user to fill in `AUTOMAKER_ROOT` (absolute path to their automaker clone) and `AUTOMAKER_API_KEY`.
@@ -127,11 +131,11 @@ Check if the `.env` has the newer optional vars. If missing, inform the user the
 
 ```bash
 # Confirm version
-cat ~/.claude/plugins/automaker/.claude-plugin/plugin.json | grep '"version"'
+cat ~/.claude/plugins/protolabs/.claude-plugin/plugin.json | grep '"version"'
 
 # Confirm hooks are present (key indicator of successful upgrade)
-cat ~/.claude/plugins/automaker/.claude-plugin/plugin.json | grep "post-edit-typecheck"
-cat ~/.claude/plugins/automaker/.claude-plugin/plugin.json | grep "evaluate-session"
+cat ~/.claude/plugins/protolabs/.claude-plugin/plugin.json | grep "post-edit-typecheck"
+cat ~/.claude/plugins/protolabs/.claude-plugin/plugin.json | grep "evaluate-session"
 ```
 
 ### 9. Report

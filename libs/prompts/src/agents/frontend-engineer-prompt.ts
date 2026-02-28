@@ -39,7 +39,7 @@ You are an autonomous Frontend Engineer agent operating in headsdown mode. Your 
 
 Monitor Linear for issues with label "frontend-engineer":
 \`\`\`typescript
-mcp__plugin_automaker_linear__search_issues({
+mcp__plugin_protolabs_linear__search_issues({
   labels: ['frontend-engineer'],
   status: 'Backlog'
 })

@@ -315,16 +315,16 @@ Analyze, critique, and improve prompts for LLM agents.
 
 ## Subagents
 
-The plugin includes 13 specialized agents for complex tasks. Invoke them via the `Task` tool with `subagent_type: "automaker:<agent-name>"`.
+The plugin includes 13 specialized agents for complex tasks. Invoke them via the `Task` tool with `subagent_type: "protolabs:<agent-name>"`.
 
-### automaker:feature-planner
+### protolabs:feature-planner
 
 Breaks down complex features into smaller, implementable tasks with proper dependencies.
 
 **Model:** Opus | **When to Use:** Planning a large feature with multiple components
 
 ```javascript
-Task(subagent_type: "automaker:feature-planner",
+Task(subagent_type: "protolabs:feature-planner",
      prompt: "Project: /path/to/project.
               Feature: Add a complete user authentication system with:
               - Login/logout
@@ -334,80 +334,80 @@ Task(subagent_type: "automaker:feature-planner",
               Context: Using React and Express with PostgreSQL.")
 ```
 
-### automaker:agent-reviewer
+### protolabs:agent-reviewer
 
 Reviews completed agent work and provides feedback.
 
 **Model:** Sonnet | **When to Use:** After an agent completes a feature, for code quality assessment
 
 ```javascript
-Task(subagent_type: "automaker:agent-reviewer",
+Task(subagent_type: "protolabs:agent-reviewer",
      prompt: "Project: /path/to/project.
               Feature ID: abc-123.
               Focus: security, code quality, tests")
 ```
 
-### automaker:codebase-analyzer
+### protolabs:codebase-analyzer
 
 Analyzes codebase structure, patterns, and suggests feature dependencies.
 
 **Model:** Opus | **When to Use:** Understanding a new codebase, planning optimal execution order
 
-### automaker:deep-research
+### protolabs:deep-research
 
 Codebase exploration agent for gathering context before planning.
 
 **Model:** Opus | **When to Use:** Deep-diving into a codebase area before implementing a feature
 
-### automaker:sparc-prd
+### protolabs:sparc-prd
 
 SPARC PRD creation agent for structured requirements documents.
 
 **Model:** Opus | **When to Use:** Creating comprehensive PRDs with situation/problem/approach/results/constraints
 
-### automaker:prd-reviewer
+### protolabs:prd-reviewer
 
 PRD validation agent that checks quality and feasibility.
 
 **Model:** Opus | **When to Use:** Reviewing a generated PRD before approval
 
-### automaker:feature-factory
+### protolabs:feature-factory
 
 Creates features from project phases with proper dependencies.
 
 **Model:** Haiku | **When to Use:** Converting project phases into board features
 
-### automaker:project-scaffold
+### protolabs:project-scaffold
 
 Creates project directory structure from approved PRD.
 
 **Model:** Haiku | **When to Use:** Scaffolding `.automaker/projects/` structure from a PRD
 
-### automaker:linear-triage
+### protolabs:linear-triage
 
 Triage Linear issues -- find unassigned work, suggest priorities, identify stale issues.
 
 **Model:** Sonnet | **When to Use:** Organizing and prioritizing Linear backlog
 
-### automaker:linear-board
+### protolabs:linear-board
 
 Linear board operations -- search issues, view status, check assignments.
 
 **Model:** Haiku | **When to Use:** Quick queries against Linear board state
 
-### automaker:devops-health-check
+### protolabs:devops-health-check
 
 Run comprehensive health diagnostics for deployment.
 
 **Model:** Haiku | **When to Use:** Checking system health, diagnosing issues
 
-### automaker:devops-logs
+### protolabs:devops-logs
 
 Analyze container logs for errors, patterns, and issues.
 
 **Model:** Haiku | **When to Use:** Investigating runtime errors or anomalies
 
-### automaker:devops-backup
+### protolabs:devops-backup
 
 Backup and restore Docker volumes.
 
@@ -461,7 +461,7 @@ User: Create a feature to add a dark mode toggle
 
 Claude: I'll create that feature for you.
 
-[Calls mcp__automaker__create_feature with:
+[Calls mcp__protolabs__create_feature with:
   projectPath: "/path/to/project"
   title: "Add dark mode toggle"
   description: "## Overview
@@ -489,7 +489,7 @@ User: The dashboard feature should depend on the auth feature
 
 Claude: I'll set up that dependency.
 
-[Calls mcp__automaker__set_feature_dependencies with:
+[Calls mcp__protolabs__set_feature_dependencies with:
   projectPath: "/path/to/project"
   featureId: "dashboard-id"
   dependencies: ["auth-id"]]
@@ -505,7 +505,7 @@ User: Start auto-mode with 2 concurrent agents
 
 Claude: Starting auto-mode...
 
-[Calls mcp__automaker__start_auto_mode with:
+[Calls mcp__protolabs__start_auto_mode with:
   projectPath: "/path/to/project"
   maxConcurrency: 2]
 
@@ -524,7 +524,7 @@ User: What did the agent do on the auth feature?
 
 Claude: Let me check the agent output.
 
-[Calls mcp__automaker__get_agent_output with:
+[Calls mcp__protolabs__get_agent_output with:
   projectPath: "/path/to/project"
   featureId: "auth-id"]
 
@@ -558,7 +558,7 @@ name: my-command
 description: What this command does
 argument-hint: (optional arguments)
 allowed-tools:
-  - mcp__automaker__tool_name
+  - mcp__protolabs__tool_name
 ---
 # Command Instructions
 
@@ -576,7 +576,7 @@ description: What this agent does
 allowed-tools:
   - Read
   - Write
-  - mcp__automaker__tool_name
+  - mcp__protolabs__tool_name
 model: sonnet
 ---
 # Agent Instructions

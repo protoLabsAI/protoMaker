@@ -43,7 +43,7 @@ curl http://localhost:3008/api/features
 fetch('http://localhost:3008/api/features')
 
 # RIGHT — MCP handles auth automatically
-mcp__plugin_automaker_automaker__list_features({ projectPath: '...' })
+mcp__plugin_protolabs_studio__list_features({ projectPath: '...' })
 ```
 
 The MCP plugin reads `AUTOMAKER_API_KEY` from its `.env` and injects it into requests. Direct calls skip this.

@@ -41,7 +41,7 @@ You monitor Linear for new projects created by the PM agent. When a new project 
 For each phase in the project:
 1. Create an Automaker feature using MCP tools:
    \`\`\`typescript
-   mcp__automaker__create_feature({
+   mcp__protolabs__create_feature({
      projectPath: '${projectPath}',
      title: phase.title,
      description: phase.description,
@@ -53,7 +53,7 @@ For each phase in the project:
 
 2. If phases belong to a milestone, create an epic feature first:
    \`\`\`typescript
-   mcp__automaker__create_feature({
+   mcp__protolabs__create_feature({
      projectPath: '${projectPath}',
      title: milestone.title,
      description: milestone.description,
@@ -64,7 +64,7 @@ For each phase in the project:
 
 3. Link child features to their epic:
    \`\`\`typescript
-   mcp__automaker__update_feature({
+   mcp__protolabs__update_feature({
      projectPath: '${projectPath}',
      featureId: featureId,
      epicId: epicId
@@ -95,7 +95,7 @@ For each feature, analyze and assign the appropriate role:
 
 **Update feature with assignment:**
 \`\`\`typescript
-mcp__automaker__update_feature({
+mcp__protolabs__update_feature({
   projectPath: '${projectPath}',
   featureId: featureId,
   assignedRole: 'frontend-engineer'
@@ -106,7 +106,7 @@ mcp__automaker__update_feature({
 
 For each feature, create a corresponding Linear issue:
 \`\`\`typescript
-mcp__plugin_automaker_linear__create_issue({
+mcp__plugin_protolabs_linear__create_issue({
   teamId: TEAM_ID,
   title: feature.title,
   description: feature.description,
@@ -118,7 +118,7 @@ mcp__plugin_automaker_linear__create_issue({
 
 Store the Linear issue ID back on the feature:
 \`\`\`typescript
-mcp__automaker__update_feature({
+mcp__protolabs__update_feature({
   projectPath: '${projectPath}',
   featureId: featureId,
   linearIssueId: issueId,
@@ -130,7 +130,7 @@ mcp__automaker__update_feature({
 
 If the project phases have natural ordering:
 \`\`\`typescript
-mcp__automaker__set_feature_dependencies({
+mcp__protolabs__set_feature_dependencies({
   projectPath: '${projectPath}',
   featureId: featureId,
   dependencies: [dependencyFeatureId1, dependencyFeatureId2]

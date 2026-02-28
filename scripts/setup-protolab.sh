@@ -227,16 +227,16 @@ fi
 
 # Check if plugin is installed
 PLUGIN_LIST=$(claude plugin list 2>&1 || true)
-if ! echo "$PLUGIN_LIST" | grep -q "automaker"; then
+if ! echo "$PLUGIN_LIST" | grep -q "protolabs"; then
   log_info "Installing Automaker plugin..."
-  claude plugin install automaker
+  claude plugin install protolabs
   log_success "Automaker plugin installed"
 else
   log_success "Automaker plugin already installed"
 
   # Check if update is available
   log_info "Checking for plugin updates..."
-  UPDATE_OUTPUT=$(claude plugin update automaker 2>&1 || true)
+  UPDATE_OUTPUT=$(claude plugin update protolabs 2>&1 || true)
   if echo "$UPDATE_OUTPUT" | grep -q "successfully"; then
     log_success "Plugin updated to latest version"
   else
@@ -245,8 +245,8 @@ else
 fi
 
 # Step 4b: Write plugin .env if not already present
-PLUGIN_ENV="$HOME/.claude/plugins/automaker/.env"
-PLUGIN_ENV_EXAMPLE="$HOME/.claude/plugins/automaker/.env.example"
+PLUGIN_ENV="$HOME/.claude/plugins/protolabs/.env"
+PLUGIN_ENV_EXAMPLE="$HOME/.claude/plugins/protolabs/.env.example"
 
 if [[ ! -f "$PLUGIN_ENV" ]]; then
   if [[ -f "$PLUGIN_ENV_EXAMPLE" ]]; then
