@@ -70,6 +70,8 @@ export const useHITLFormStore = create<HITLFormState & HITLFormActions>((set, ge
     })),
 
   openForm: (form) => {
+    // Guard: form summaries from the list endpoint lack `steps` — skip those
+    if (!form.steps) return;
     // Restore draft data if available
     const draft = get().loadDraft(form.id);
     set({

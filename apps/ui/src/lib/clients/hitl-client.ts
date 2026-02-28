@@ -13,6 +13,7 @@ import type {
   ActionableItemStatus,
   CreateActionableItemInput,
   HITLFormRequest,
+  HITLFormRequestSummary,
 } from '@protolabs-ai/types';
 import type { NotificationsAPI, EventHistoryAPI } from '../electron';
 import type { EventCallback } from './base-http-client';
@@ -65,7 +66,7 @@ export const withHitlClient = <TBase extends Constructor<BaseHttpClient>>(Base: 
 
       list: (
         projectPath?: string
-      ): Promise<{ success: boolean; forms?: HITLFormRequest[]; error?: string }> =>
+      ): Promise<{ success: boolean; forms?: HITLFormRequestSummary[]; error?: string }> =>
         this.post('/api/hitl-forms/list', { projectPath }),
 
       submit: (
