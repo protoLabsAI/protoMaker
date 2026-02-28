@@ -172,9 +172,7 @@ export class ContentFlowService {
    * Uses specGenerationModel for heavy content generation (smart model)
    * and fileDescriptionModel for fast auxiliary tasks.
    */
-  private async createModels(
-    projectPath: string
-  ): Promise<{
+  private async createModels(projectPath: string): Promise<{
     smartModel: BaseChatModel;
     fastModel: BaseChatModel;
     smartModelName: string;
