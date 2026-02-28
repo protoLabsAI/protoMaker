@@ -21,6 +21,7 @@ import type {
   IntegrationStatusResponse,
   SystemHealthResponse,
 } from './api-types';
+import type { DiscordChannelSignalConfig } from '@protolabs-ai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
@@ -197,6 +198,15 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
     integrations = {
       status: (projectPath: string) =>
         this.post<IntegrationStatusResponse>('/api/integrations/status', { projectPath }),
+      getSignalChannels: (projectPath: string) =>
+        this.get<{ channels: DiscordChannelSignalConfig[] }>(
+          `/api/integrations/signal-channels?projectPath=${encodeURIComponent(projectPath)}`
+        ),
+      updateSignalChannels: (projectPath: string, channels: DiscordChannelSignalConfig[]) =>
+        this.put<{ channels: DiscordChannelSignalConfig[] }>('/api/integrations/signal-channels', {
+          projectPath,
+          channels,
+        }),
     };
 
     // System API

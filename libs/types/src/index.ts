@@ -281,6 +281,7 @@ export type {
   DiscordChannelSignalConfig,
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
+  DiscordChannelSignalConfig,
   GoogleIntegrationConfig,
   ProjectIntegrations,
   IntegrationEventMapping,
