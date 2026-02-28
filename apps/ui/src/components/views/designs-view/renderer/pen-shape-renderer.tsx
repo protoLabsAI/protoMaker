@@ -58,7 +58,7 @@ export function PenShapeRenderer({ node, onClick, style: externalStyle }: PenSha
   }
 
   // Shape-specific styles
-  if (node.type === 'RECTANGLE') {
+  if (node.type === 'rectangle') {
     // Corner radius for rectangles
     if (node.cornerRadius !== undefined) {
       if (typeof node.cornerRadius === 'number') {
@@ -69,7 +69,7 @@ export function PenShapeRenderer({ node, onClick, style: externalStyle }: PenSha
         style.borderRadius = `${tl}px ${tr}px ${br}px ${bl}px`;
       }
     }
-  } else if (node.type === 'ELLIPSE') {
+  } else if (node.type === 'ellipse') {
     // Ellipses are always rounded
     style.borderRadius = '50%';
   }

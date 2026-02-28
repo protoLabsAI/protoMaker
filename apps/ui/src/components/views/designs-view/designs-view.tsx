@@ -73,6 +73,7 @@ export function DesignsView() {
     if (dragData?.type === 'component' && dropData?.type === 'frame') {
       const componentId = dragData.componentId;
       const frameId = dropData.frameId;
+      if (!componentId || !frameId) return;
       createRefNode(frameId, componentId);
       return;
     }

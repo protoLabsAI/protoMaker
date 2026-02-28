@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 56
-  referenced: 25
-  successfulFeatures: 25
+  loaded: 57
+  referenced: 26
+  successfulFeatures: 26
 ---
 # architecture
 
@@ -3709,3 +3709,22 @@ usageStats:
 - **Problem solved:** Three separate execution paths make commits: worktree-guard.ts, git-workflow-service.ts, and create-pr route in common.ts
 - **Why this works:** Any git commit path that misses HUSKY=0 will trigger hook failures; the inconsistency propagates as silent failures in specific workflows
 - **Trade-offs:** Distributed pattern is less refactorable but requires less code reorganization; the trade-off is higher maintenance cost when adding new commit paths
+
+### Deleted entire changeset-release.yml workflow file rather than disabling npm publish step within it (2026-02-28)
+- **Context:** Two workflows (changeset-release and auto-release) competing for ownership of release pipeline stages, causing duplicate/conflicting operations
+- **Why:** Complete removal eliminates ambiguity, prevents accidental re-enablement later, makes ownership explicit in codebase
+- **Rejected:** Alternative: disable npm publish via conditional (if: false) or comment—leaves dead code and invites confusion about which workflow controls releases
+- **Trade-offs:** Cleaner ownership model vs harder to understand intent from git blame alone without commit message context
+- **Breaking if changed:** Any scripts or metrics dashboards directly referencing .github/workflows/changeset-release.yml will fail; rollback requires git revert + manual re-enablement
+
+#### [Pattern] Consolidate competing pipeline components into single-owner workflow model—auto-release.yml owns: version bump → tag → GitHub Release → platform builds (2026-02-28)
+- **Problem solved:** Multiple tools handling different release stages created coordination bugs and race conditions
+- **Why this works:** Single source of truth eliminates duplicate logic, makes failure modes deterministic, simplifies troubleshooting when releases fail
+- **Trade-offs:** Clearer mental model and easier debugging vs tighter coupling—if auto-release.yml breaks, entire pipeline fails with no fallback
+
+### Critical changes to release pipeline merged through dev branch (dev → staging → main) instead of direct main PR (2026-02-28)
+- **Context:** Workflow consolidation is a breaking change to release tooling; feature branch needed to show merge path through staged environments
+- **Why:** Staging maturity model ensures release-critical changes are tested upstream before reaching main/production; protects stable release branch from untested tooling changes
+- **Rejected:** Direct PR to main would merge faster but introduces untested workflow changes directly into stable release branch
+- **Trade-offs:** Slower merge time vs critical risk reduction—prevents release-pipeline-breaking changes from reaching main without verification
+- **Breaking if changed:** If skipped and PR'd directly to main, broken workflow change locks all releases until fix can be deployed

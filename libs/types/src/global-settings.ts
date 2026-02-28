@@ -199,6 +199,12 @@ export interface FeatureFlags {
   docs: boolean;
   /** File Editor view in project sidebar (tabbed code editor) */
   fileEditor: boolean;
+  /**
+   * Authority pipeline (TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → … → PUBLISH).
+   * When false, PipelineOrchestrator ignores all events — no gate cycling, no HITL
+   * interruptions. Off by default until the pipeline overhaul is complete.
+   */
+  pipeline: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -207,6 +213,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   designs: false,
   docs: false,
   fileEditor: false,
+  pipeline: false,
 };
 
 export interface GlobalSettings {

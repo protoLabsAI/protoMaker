@@ -145,8 +145,8 @@ export function useBoardDragDrop({
           }
 
           // Update feature's branchName
-          updateFeature(featureId, { branchName: newBranchName });
-          await persistFeatureUpdate(featureId, { branchName: newBranchName });
+          updateFeature(featureId, { branchName: newBranchName ?? undefined });
+          await persistFeatureUpdate(featureId, { branchName: newBranchName ?? undefined });
 
           const branchDisplay = worktreeData.isMain ? targetBranch : targetBranch;
           toast.success('Feature moved to branch', {

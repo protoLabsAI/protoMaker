@@ -4,7 +4,7 @@ import {
   sanitizeMarkdownForLLM,
   detectPromptInjection,
   validateFilePaths,
-} from '../sanitize';
+} from '../sanitize.js';
 
 describe('normalizeUnicode', () => {
   it('strips zero-width space (U+200B)', () => {
@@ -79,7 +79,9 @@ describe('detectPromptInjection', () => {
     const violations = detectPromptInjection(input);
 
     expect(violations.length).toBeGreaterThan(0);
-    const ignoreViolation = violations.find((v) => v.type === 'ignore_instructions');
+    const ignoreViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) => v.type === 'ignore_instructions'
+    );
     expect(ignoreViolation).toBeDefined();
     expect(ignoreViolation?.severity).toBe('block');
   });
@@ -89,7 +91,9 @@ describe('detectPromptInjection', () => {
     const violations = detectPromptInjection(input);
 
     expect(violations.length).toBeGreaterThan(0);
-    const roleViolation = violations.find((v) => v.type === 'role_manipulation');
+    const roleViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) => v.type === 'role_manipulation'
+    );
     expect(roleViolation).toBeDefined();
     expect(roleViolation?.severity).toBe('block');
   });
@@ -99,7 +103,9 @@ describe('detectPromptInjection', () => {
     const violations = detectPromptInjection(input);
 
     expect(violations.length).toBeGreaterThan(0);
-    const roleViolation = violations.find((v) => v.type === 'role_manipulation');
+    const roleViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) => v.type === 'role_manipulation'
+    );
     expect(roleViolation).toBeDefined();
     expect(roleViolation?.severity).toBe('block');
   });
@@ -109,7 +115,9 @@ describe('detectPromptInjection', () => {
     const violations = detectPromptInjection(input);
 
     expect(violations.length).toBeGreaterThan(0);
-    const systemViolation = violations.find((v) => v.type === 'system_marker');
+    const systemViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) => v.type === 'system_marker'
+    );
     expect(systemViolation).toBeDefined();
     expect(systemViolation?.severity).toBe('block');
   });
@@ -126,7 +134,10 @@ describe('detectPromptInjection', () => {
     const violations = detectPromptInjection(input);
 
     // Should not have repeated_instructions violation for single use
-    const repeatedViolation = violations.find((v) => v.type === 'repeated_instructions');
+    const repeatedViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) =>
+        v.type === 'repeated_instructions'
+    );
     expect(repeatedViolation).toBeUndefined();
   });
 });
@@ -139,7 +150,9 @@ describe('validateFilePaths', () => {
     const violations = validateFilePaths(input, projectRoot);
 
     expect(violations.length).toBeGreaterThan(0);
-    const traversalViolation = violations.find((v) => v.type === 'path_traversal');
+    const traversalViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) => v.type === 'path_traversal'
+    );
     expect(traversalViolation).toBeDefined();
     expect(traversalViolation?.severity).toBe('block');
     expect(traversalViolation?.message).toContain('../../../etc/passwd');
@@ -150,7 +163,9 @@ describe('validateFilePaths', () => {
     const violations = validateFilePaths(input, projectRoot);
 
     expect(violations.length).toBeGreaterThan(0);
-    const unauthorizedViolation = violations.find((v) => v.type === 'unauthorized_path');
+    const unauthorizedViolation = violations.find(
+      (v: { type: string; severity: string; message?: string }) => v.type === 'unauthorized_path'
+    );
     expect(unauthorizedViolation).toBeDefined();
     expect(unauthorizedViolation?.severity).toBe('block');
   });

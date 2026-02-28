@@ -1,17 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus,
-  Trash2,
-  Pencil,
-  ChevronLeft,
-  Server,
-  Globe,
-  Key,
-  Check,
-  X,
-  Info,
-} from 'lucide-react';
+import { Plus, Trash2, Pencil, ChevronLeft, Server, Globe, Key, X, Info } from 'lucide-react';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Input } from '@protolabs-ai/ui/atoms';
 import { Label } from '@protolabs-ai/ui/atoms';
@@ -357,7 +346,6 @@ const CUSTOM_TEMPLATE: OpenAICompatibleTemplate = {
   templateId: 'custom',
   name: 'Custom Provider',
   baseUrl: '',
-  defaultApiKeySource: 'inline',
   description: 'Configure a custom OpenAI-compatible endpoint',
   defaultModels: [],
 };

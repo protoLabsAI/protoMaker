@@ -44,14 +44,24 @@ export function UpdateNotification() {
       return;
     }
 
-    const electronAPI = window.electronAPI;
-    if (!electronAPI?.updater) {
+    const electronAPI = (window as unknown as Record<string, unknown>).electronAPI as
+      | Record<string, unknown>
+      | undefined;
+    const updater = electronAPI?.updater as
+      | {
+          getState: () => Promise<unknown>;
+          onStateChanged: (cb: (state: unknown) => void) => () => void;
+          downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
+          installUpdate: () => Promise<void>;
+        }
+      | undefined;
+    if (!updater) {
       logger.warn('Updater API not available');
       return;
     }
 
     // Get initial state
-    electronAPI.updater
+    updater
       .getState()
       .then((state) => {
         setUpdateState(state as UpdateState);
@@ -61,7 +71,7 @@ export function UpdateNotification() {
       });
 
     // Listen for state changes
-    const unsubscribe = electronAPI.updater.onStateChanged((state) => {
+    const unsubscribe = updater.onStateChanged((state) => {
       const newState = state as UpdateState;
       setUpdateState(newState);
 
@@ -93,13 +103,22 @@ export function UpdateNotification() {
   }, []);
 
   const handleDownloadUpdate = useCallback(async () => {
-    if (!isElectron() || !window.electronAPI?.updater) {
+    const updater = (
+      (window as unknown as Record<string, unknown>).electronAPI as
+        | Record<string, unknown>
+        | undefined
+    )?.updater as
+      | {
+          downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
+        }
+      | undefined;
+    if (!isElectron() || !updater) {
       return;
     }
 
     setIsDownloading(true);
     try {
-      const result = await window.electronAPI.updater.downloadUpdate();
+      const result = await updater.downloadUpdate();
       if (!result.success) {
         logger.error('Failed to download update:', result.error);
         toast.error('Failed to download update', {
@@ -115,12 +134,21 @@ export function UpdateNotification() {
   }, []);
 
   const handleInstallUpdate = useCallback(async () => {
-    if (!isElectron() || !window.electronAPI?.updater) {
+    const updater = (
+      (window as unknown as Record<string, unknown>).electronAPI as
+        | Record<string, unknown>
+        | undefined
+    )?.updater as
+      | {
+          installUpdate: () => Promise<void>;
+        }
+      | undefined;
+    if (!isElectron() || !updater) {
       return;
     }
 
     try {
-      await window.electronAPI.updater.installUpdate();
+      await updater.installUpdate();
     } catch (error) {
       logger.error('Install update crashed:', error);
       toast.error('Failed to install update');

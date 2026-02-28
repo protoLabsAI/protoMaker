@@ -206,6 +206,25 @@ npm run format:check
 
 **Never use** `prettier --write` without `--ignore-path /dev/null` in a worktree context.
 
+## CRITICAL: TypeScript Validation — Run Before Commit
+
+Every agent **must** run `npm run typecheck` before considering work complete. TypeScript type checking is enforced in CI — PRs with type errors will be rejected.
+
+**Before committing, run:**
+
+```bash
+npm run typecheck
+```
+
+This runs `tsc --noEmit` on the UI and server. If there are errors in files you modified, fix them. If errors exist in files you did NOT modify, note them in your agent output but do not block on them.
+
+**Common patterns that introduce type errors:**
+
+- Adding a property to a type but not updating all consumers
+- Importing a type that was renamed or moved
+- Passing `null` where `undefined` is expected (use `?? undefined`)
+- Missing type annotations on callback parameters in `.find()`, `.map()`, `.filter()`
+
 ## Verdict System (All Feature Agents)
 
 All feature agents (kai, matt, sam, frank, and any future agents) **must** follow the Verdict System pattern when surfacing findings from analysis, review, or audit tasks.

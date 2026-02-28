@@ -21,12 +21,15 @@ export function StrokeSection({ node }: StrokeSectionProps) {
     return null;
   }
 
-  const strokes = node.strokes as Array<{
-    type: string;
-    color?: string;
-    opacity?: number;
-    thickness?: number;
-  }>;
+  // Access strokes via type assertion since we checked above
+  const strokes = (node as unknown as { strokes: import('@protolabs-ai/types').PenStroke[] })
+    .strokes;
+
+  // Convert PenColor to CSS string for display
+  const colorToDisplayString = (color: string | import('@protolabs-ai/types').PenColor): string => {
+    if (typeof color === 'string') return color;
+    return `rgb(${color.r}, ${color.g}, ${color.b})`;
+  };
 
   return (
     <div className="border-b border-border">
@@ -43,38 +46,39 @@ export function StrokeSection({ node }: StrokeSectionProps) {
       {/* Section content */}
       {isExpanded && (
         <div className="space-y-3 px-4 pb-4">
-          {strokes.map((stroke, index) => (
-            <div key={index} className="space-y-2">
-              {/* Color */}
-              <div className="flex items-center gap-2">
-                {stroke.color && (
+          {strokes.map((stroke, index) => {
+            const colorStr = colorToDisplayString(stroke.color);
+            return (
+              <div key={index} className="space-y-2">
+                {/* Color */}
+                <div className="flex items-center gap-2">
                   <div
                     className="h-6 w-6 rounded border border-border"
-                    style={{ backgroundColor: stroke.color }}
-                    title={stroke.color}
+                    style={{ backgroundColor: colorStr }}
+                    title={colorStr}
                   />
-                )}
-                <div className="flex-1">
-                  <div className="text-sm font-mono">{stroke.color || 'None'}</div>
-                  {stroke.opacity !== undefined && stroke.opacity < 1 && (
-                    <div className="text-xs text-muted-foreground">
-                      Opacity: {(stroke.opacity * 100).toFixed(0)}%
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Thickness */}
-              {stroke.thickness !== undefined && (
-                <div>
-                  <label className="text-xs text-muted-foreground">Thickness</label>
-                  <div className="mt-1 rounded border border-border bg-muted px-2 py-1 text-sm">
-                    {stroke.thickness}px
+                  <div className="flex-1">
+                    <div className="text-sm font-mono">{colorStr}</div>
+                    {stroke.opacity !== undefined && stroke.opacity < 1 && (
+                      <div className="text-xs text-muted-foreground">
+                        Opacity: {(stroke.opacity * 100).toFixed(0)}%
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Width */}
+                {stroke.width !== undefined && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">Width</label>
+                    <div className="mt-1 rounded border border-border bg-muted px-2 py-1 text-sm">
+                      {stroke.width}px
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

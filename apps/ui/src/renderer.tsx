@@ -2,14 +2,21 @@
 import { init as initSentryRenderer } from '@sentry/electron/renderer';
 
 // Initialize immediately with environment variables
-// @ts-expect-error - window.process is injected by Electron preload
-if (window.process?.env?.SENTRY_DSN_ELECTRON && window.process?.env?.SENTRY_ENABLED !== 'false') {
+if (
+  (window as unknown as Record<string, unknown>).process &&
+  ((window as unknown as Record<string, unknown>).process as Record<string, Record<string, string>>)
+    ?.env?.SENTRY_DSN_ELECTRON &&
+  ((window as unknown as Record<string, unknown>).process as Record<string, Record<string, string>>)
+    ?.env?.SENTRY_ENABLED !== 'false'
+) {
   try {
+    const proc = (window as unknown as Record<string, unknown>).process as Record<
+      string,
+      Record<string, string>
+    >;
     initSentryRenderer({
-      // @ts-expect-error - window.process is injected by Electron preload
-      dsn: window.process.env.SENTRY_DSN_ELECTRON,
-      // @ts-expect-error - window.process is injected by Electron preload
-      environment: window.process.env.NODE_ENV || 'production',
+      dsn: proc.env.SENTRY_DSN_ELECTRON,
+      environment: proc.env.NODE_ENV || 'production',
       tracesSampleRate: 0.1,
       sendDefaultPii: false,
     });

@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   checks:
-    runs-on: self-hosted
+    runs-on: namespace-profile-protolabs-linux
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
 
     steps:
@@ -47,6 +47,9 @@ jobs:
 
       - name: Lint Server (import safety)
         run: npm run lint:server
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Run npm audit
         run: npm audit --audit-level=critical

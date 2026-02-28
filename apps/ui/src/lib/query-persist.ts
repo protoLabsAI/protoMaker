@@ -7,7 +7,9 @@
  * Only active in web mode - Electron has no benefit from IDB persistence.
  */
 
+// @ts-expect-error -- optional dependency, may not be installed
 import { PersistedClient, Persister } from '@tanstack/react-query-persist-client';
+// @ts-expect-error -- optional dependency, may not be installed
 import { del, get, set } from 'idb-keyval';
 
 /**

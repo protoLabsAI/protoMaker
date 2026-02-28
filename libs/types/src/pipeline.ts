@@ -17,6 +17,17 @@ export interface PipelineConfig {
   steps: PipelineStep[];
 }
 
+/**
+ * Summary captured from a single pipeline step execution.
+ * Accumulated on the feature to provide phase-structured output history.
+ */
+export interface PipelineSummary {
+  stepId: string;
+  stepName: string;
+  summary: string;
+  completedAt: string;
+}
+
 export type PipelineStatus = `pipeline_${string}`;
 
 export type FeatureStatusWithPipeline =

@@ -58,9 +58,9 @@ function TabsDemo() {
   );
 }
 
-export const ThreeTabs: Story = {
+export const ThreeTabs = {
   render: () => <TabsDemo />,
-};
+} as unknown as Story;
 
 function TwoTabDemo() {
   const [active, setActive] = useState('overview');
@@ -81,6 +81,6 @@ function TwoTabDemo() {
   );
 }
 
-export const TextOnly: Story = {
+export const TextOnly = {
   render: () => <TwoTabDemo />,
-};
+} as unknown as Story;

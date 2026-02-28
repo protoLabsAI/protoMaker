@@ -337,7 +337,6 @@ export function Sidebar() {
                 onDocs={() => getElectronAPI().openExternalLink('https://docs.protolabs.studio')}
                 onNewProject={() => setShowNewProjectModal(true)}
                 onOpenFolder={handleOpenFolder}
-                onSettings={() => navigate({ to: '/settings' })}
                 onClose={handleToggleSidebar}
               />
             </div>
@@ -360,17 +359,16 @@ export function Sidebar() {
           />
         </div>
 
-        {sidebarOpen && (
-          <div
-            className={cn(
-              'shrink-0 border-t border-border/40 px-4 py-3',
-              'transition-opacity duration-200',
-              contentReady ? 'opacity-100' : 'opacity-0'
-            )}
-          >
-            <AutomakerLogo sidebarOpen={sidebarOpen} navigate={navigate} />
-          </div>
-        )}
+        <div
+          className={cn(
+            'shrink-0 border-t border-border/40 py-3',
+            sidebarOpen ? 'px-4' : 'px-2 flex justify-center',
+            'transition-opacity duration-200',
+            sidebarOpen ? (contentReady ? 'opacity-100' : 'opacity-0') : 'opacity-100'
+          )}
+        >
+          <AutomakerLogo sidebarOpen={sidebarOpen} navigate={navigate} />
+        </div>
 
         <TrashDialog
           open={showTrashDialog}

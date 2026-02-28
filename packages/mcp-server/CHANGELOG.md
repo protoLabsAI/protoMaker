@@ -1,5 +1,17 @@
 # @protolabs-ai/mcp-server
 
+## 0.11.0
+
+### Minor Changes
+
+- ### Features
+  - auto-sync version bump back to staging and dev after release
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/tools@0.11.0
+
 ## 0.10.2
 
 ### Patch Changes

@@ -15,23 +15,34 @@ interface PenGroupRendererProps {
 
 /**
  * Renders a group node as a div with layout only (no background/fill)
+ * Note: PenGroup does not have layout properties in the type system,
+ * but parsed data may include them. We access them via type-safe casts.
  */
 export function PenGroupRenderer({ node, onClick, style: externalStyle }: PenGroupRendererProps) {
+  // Access optional layout properties that may exist on parsed data
+  const nodeAny = node as PenGroup & {
+    layoutMode?: string;
+    itemSpacing?: number;
+    clipsContent?: boolean;
+  };
+
   const style: CSSProperties = {
-    position: node.layoutMode === 'none' ? 'relative' : undefined,
-    display: node.layoutMode !== 'none' ? 'flex' : undefined,
+    position: nodeAny.layoutMode === 'none' ? 'relative' : undefined,
+    display: nodeAny.layoutMode !== 'none' ? 'flex' : undefined,
     boxSizing: 'border-box',
   };
 
   // Layout direction
-  const flexDirection = layoutToFlexDirection(node.layoutMode);
+  const flexDirection = layoutToFlexDirection(
+    nodeAny.layoutMode as 'none' | 'horizontal' | 'vertical' | undefined
+  );
   if (flexDirection) {
     style.flexDirection = flexDirection as 'row' | 'column';
   }
 
   // Gap (itemSpacing)
-  if (node.itemSpacing !== undefined && node.layoutMode !== 'none') {
-    style.gap = `${node.itemSpacing}px`;
+  if (nodeAny.itemSpacing !== undefined && nodeAny.layoutMode !== 'none') {
+    style.gap = `${nodeAny.itemSpacing}px`;
   }
 
   // Width and height from bounds
@@ -46,7 +57,7 @@ export function PenGroupRenderer({ node, onClick, style: externalStyle }: PenGro
   }
 
   // Clip content (overflow:hidden)
-  if (node.clipsContent) {
+  if (nodeAny.clipsContent) {
     style.overflow = 'hidden';
   }
 

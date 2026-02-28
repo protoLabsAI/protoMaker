@@ -26,7 +26,7 @@ export const Default: Story = {
   },
 };
 
-export const WithOrb: Story = {
+export const WithOrb = {
   render: () => (
     <div className="grid grid-cols-2 gap-4 w-[500px]">
       <GlowCard orb="top-right" orbColor="#8b5cf6" className="p-6">
@@ -47,7 +47,7 @@ export const WithOrb: Story = {
       </GlowCard>
     </div>
   ),
-};
+} as unknown as Story;
 
 export const GradientBorder: Story = {
   args: {

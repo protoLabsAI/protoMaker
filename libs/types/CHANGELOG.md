@@ -1,5 +1,12 @@
 # @protolabs-ai/types
 
+## 0.11.0
+
+### Minor Changes
+
+- ### Features
+  - auto-sync version bump back to staging and dev after release
+
 ## 0.10.2
 
 ### Patch Changes

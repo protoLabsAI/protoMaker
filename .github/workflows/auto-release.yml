@@ -32,6 +32,17 @@ jobs:
       DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
 
     steps:
+      - name: Verify GH_PAT is set
+        run: |
+          if [ -z "${{ secrets.GH_PAT }}" ]; then
+            echo "WARNING: GH_PAT secret is not set."
+            echo "The v* tag push will fall back to GITHUB_TOKEN."
+            echo "build-electron.yml will NOT fire automatically."
+            echo "Set GH_PAT in repository secrets to enable the release → Electron build chain."
+          else
+            echo "GH_PAT is configured — release → Electron build chain is active."
+          fi
+
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:

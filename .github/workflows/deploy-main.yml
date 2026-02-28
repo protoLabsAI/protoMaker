@@ -63,6 +63,14 @@ jobs:
             fi
           done
 
+      - name: Drain running agents
+        run: |
+          AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
+          curl -sf -X POST http://localhost:3008/api/deploy/drain \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: $AUTOMAKER_API_KEY" \
+            --max-time 180 || echo "Drain skipped (server not running or no agents)"
+
       - name: Rebuild images
         run: docker compose build --no-cache
 
@@ -100,14 +108,15 @@ jobs:
           fi
 
       - name: Smoke tests
+        id: smoke
         run: |
           export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
           if [ -f ./scripts/smoke-test.sh ]; then
-            ./scripts/smoke-test.sh http://localhost:3008 || echo "Smoke tests failed (non-fatal for now)"
+            ./scripts/smoke-test.sh http://localhost:3008
           fi
 
       - name: Rollback on failure
-        if: failure() && steps.verify.outcome == 'failure'
+        if: failure() && (steps.verify.outcome == 'failure' || steps.smoke.outcome == 'failure')
         run: |
           echo "Deploy failed — rolling back"
           docker compose down

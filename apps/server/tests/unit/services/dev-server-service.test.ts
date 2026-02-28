@@ -219,7 +219,8 @@ describe('dev-server-service.ts', () => {
       expect(result.success).toBe(true);
       expect(result.result).toBeDefined();
       expect(result.result?.port).toBeGreaterThanOrEqual(3001);
-      expect(result.result?.url).toContain('http://localhost:');
+      const expectedHostname = process.env.HOSTNAME || 'localhost';
+      expect(result.result?.url).toContain(`http://${expectedHostname}:`);
     });
   });
 

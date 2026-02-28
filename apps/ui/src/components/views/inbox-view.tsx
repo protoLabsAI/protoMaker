@@ -177,7 +177,7 @@ function CeremonyDeliveryBadge({ status }: { status: CeremonyAuditEntry['deliver
       cls: 'text-red-500 bg-red-500/10',
     },
   };
-  const { icon, label, cls } = config[status] ?? config.pending;
+  const { icon, label, cls } = config[status as keyof typeof config] ?? config.pending;
   return (
     <span
       className={cn(

@@ -185,7 +185,7 @@ export function usePipelineTracker(props?: UsePipelineTrackerProps): UsePipeline
         id: itemId,
         title,
         status: stageId,
-        progress: payload?.progress,
+        progress: (p as Record<string, unknown> | null)?.progress as TrackedWorkItem['progress'],
         metadata: {
           lastEventType: type,
           lastEventTime: Date.now(),

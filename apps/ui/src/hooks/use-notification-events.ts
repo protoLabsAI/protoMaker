@@ -20,11 +20,12 @@ export function useNotificationEvents(projectPath: string | null) {
 
     const api = getHttpApiClient();
 
-    const unsubscribe = api.notifications.onNotificationCreated((notification: Notification) => {
+    const unsubscribe = api.notifications.onNotificationCreated((notification: unknown) => {
       // Only handle notifications for the current project
-      if (!pathsEqual(notification.projectPath, projectPath)) return;
+      const n = notification as Notification;
+      if (!pathsEqual(n.projectPath, projectPath)) return;
 
-      addNotification(notification);
+      addNotification(n);
     });
 
     return unsubscribe;

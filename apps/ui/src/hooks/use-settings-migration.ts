@@ -43,6 +43,7 @@ import {
   type GlobalSettings,
   type CursorModelId,
   type OpencodeModelId,
+  DEFAULT_FEATURE_FLAGS,
 } from '@protolabs-ai/types';
 
 const logger = createLogger('SettingsMigration');
@@ -725,12 +726,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     muteDoneSound: settings.muteDoneSound ?? false,
     serverLogLevel: settings.serverLogLevel ?? 'info',
     enableRequestLogging: settings.enableRequestLogging ?? true,
-    featureFlags: settings.featureFlags ?? {
-      calendar: false,
-      designs: false,
-      docs: false,
-      fileEditor: false,
-    },
+    featureFlags: { ...DEFAULT_FEATURE_FLAGS, ...(settings.featureFlags ?? {}) },
     keyboardShortcuts: {
       ...current.keyboardShortcuts,
       ...(settings.keyboardShortcuts as unknown as Partial<typeof current.keyboardShortcuts>),

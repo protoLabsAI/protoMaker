@@ -26,7 +26,8 @@ export function HITLFormStepRenderer({
   onChange,
   submitRef,
 }: HITLFormStepProps) {
-  const formRef = useRef<InstanceType<typeof Form> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formRef = useRef<any>(null);
 
   const handleSubmit = useCallback(
     (e: IChangeEvent) => {
