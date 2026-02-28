@@ -3,3 +3,5 @@ export { ClaudeSettingsTab } from './claude-settings-tab';
 export { CursorSettingsTab } from './cursor-settings-tab';
 export { CodexSettingsTab } from './codex-settings-tab';
 export { OpencodeSettingsTab } from './opencode-settings-tab';
+export { GroqSettingsTab } from './groq-settings-tab';
+export { OpenAICompatibleTab } from './openai-compatible-tab';
