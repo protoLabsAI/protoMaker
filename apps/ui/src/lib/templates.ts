@@ -13,9 +13,28 @@ export interface StarterTemplate {
   features: string[];
   category: 'fullstack' | 'frontend' | 'backend' | 'ai' | 'other';
   author: string;
+  isLegacy?: boolean;
 }
 
 export const starterTemplates: StarterTemplate[] = [
+  {
+    id: 'browser-extension-template',
+    name: 'Browser Extension Template',
+    description:
+      'Multi-browser extension template with popup, content script, background worker, and options page. Targets Chrome and Firefox (MV3).',
+    repoUrl: 'https://github.com/proto-labs-ai/browser-extension-template',
+    techStack: ['WXT', 'React', 'TypeScript', 'Tailwind CSS', 'Vitest', 'Playwright'],
+    features: [
+      'Popup UI with React',
+      'Content script injection',
+      'Background service worker',
+      'Options page',
+      'Chrome + Firefox MV3 support',
+      'Hot module reload in dev',
+    ],
+    category: 'frontend',
+    author: 'proto-labs-ai',
+  },
   {
     id: 'automaker-starter-kit',
     name: 'Automaker Starter Kit',
@@ -45,6 +64,7 @@ export const starterTemplates: StarterTemplate[] = [
     ],
     category: 'fullstack',
     author: 'webdevcody',
+    isLegacy: true,
   },
   {
     id: 'agentic-jumpstart',
@@ -62,6 +82,7 @@ export const starterTemplates: StarterTemplate[] = [
     ],
     category: 'ai',
     author: 'webdevcody',
+    isLegacy: true,
   },
   {
     id: 'full-stack-campus',
@@ -91,6 +112,7 @@ export const starterTemplates: StarterTemplate[] = [
     ],
     category: 'fullstack',
     author: 'webdevcody',
+    isLegacy: true,
   },
 ];
 

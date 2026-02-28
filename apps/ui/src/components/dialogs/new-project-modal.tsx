@@ -44,6 +44,75 @@ interface NewProjectModalProps {
   isCreating: boolean;
 }
 
+function TemplateCard({
+  template,
+  selected,
+  onSelect,
+  onOpenRepo,
+}: {
+  template: StarterTemplate;
+  selected: boolean;
+  onSelect: (template: StarterTemplate) => void;
+  onOpenRepo: (url: string) => void;
+}) {
+  return (
+    <div
+      className={cn(
+        'p-4 rounded-lg border cursor-pointer transition-all',
+        selected
+          ? 'border-brand-500 bg-brand-500/10'
+          : 'border-border bg-muted/30 hover:border-border-glass hover:bg-muted/50'
+      )}
+      onClick={() => onSelect(template)}
+      data-testid={`template-${template.id}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h4 className="font-medium text-foreground">{template.name}</h4>
+            {selected && <Check className="w-4 h-4 text-brand-500" />}
+          </div>
+          <p className="text-sm text-muted-foreground mb-3">{template.description}</p>
+
+          {/* Tech Stack */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {template.techStack.slice(0, 6).map((tech) => (
+              <Badge key={tech} variant="secondary" className="text-xs">
+                {tech}
+              </Badge>
+            ))}
+            {template.techStack.length > 6 && (
+              <Badge variant="secondary" className="text-xs">
+                +{template.techStack.length - 6} more
+              </Badge>
+            )}
+          </div>
+
+          {/* Key Features */}
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium">Features: </span>
+            {template.features.slice(0, 3).join(' \u00B7 ')}
+            {template.features.length > 3 && ` \u00B7 +${template.features.length - 3} more`}
+          </div>
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="shrink-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenRepo(template.repoUrl);
+          }}
+        >
+          <ExternalLink className="w-4 h-4 mr-1" />
+          View
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function NewProjectModal({
   open,
   onOpenChange,
@@ -317,68 +386,17 @@ export function NewProjectModal({
                     errors.templateSelection && 'ring-2 ring-red-500/50'
                   )}
                 >
-                  {starterTemplates.map((template) => (
-                    <div
-                      key={template.id}
-                      className={cn(
-                        'p-4 rounded-lg border cursor-pointer transition-all',
-                        selectedTemplate?.id === template.id && !useCustomUrl
-                          ? 'border-brand-500 bg-brand-500/10'
-                          : 'border-border bg-muted/30 hover:border-border-glass hover:bg-muted/50'
-                      )}
-                      onClick={() => handleSelectTemplate(template)}
-                      data-testid={`template-${template.id}`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium text-foreground">{template.name}</h4>
-                            {selectedTemplate?.id === template.id && !useCustomUrl && (
-                              <Check className="w-4 h-4 text-brand-500" />
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {template.description}
-                          </p>
-
-                          {/* Tech Stack */}
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {template.techStack.slice(0, 6).map((tech) => (
-                              <Badge key={tech} variant="secondary" className="text-xs">
-                                {tech}
-                              </Badge>
-                            ))}
-                            {template.techStack.length > 6 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{template.techStack.length - 6} more
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Key Features */}
-                          <div className="text-xs text-muted-foreground">
-                            <span className="font-medium">Features: </span>
-                            {template.features.slice(0, 3).join(' · ')}
-                            {template.features.length > 3 &&
-                              ` · +${template.features.length - 3} more`}
-                          </div>
-                        </div>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenRepo(template.repoUrl);
-                          }}
-                        >
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {starterTemplates
+                    .filter((t) => !t.isLegacy)
+                    .map((template) => (
+                      <TemplateCard
+                        key={template.id}
+                        template={template}
+                        selected={selectedTemplate?.id === template.id && !useCustomUrl}
+                        onSelect={handleSelectTemplate}
+                        onOpenRepo={handleOpenRepo}
+                      />
+                    ))}
 
                   {/* Custom URL Option */}
                   <div
@@ -419,6 +437,28 @@ export function NewProjectModal({
                       </div>
                     )}
                   </div>
+
+                  {/* Legacy Templates */}
+                  {starterTemplates.some((t) => t.isLegacy) && (
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground select-none py-2">
+                        Legacy Templates ({starterTemplates.filter((t) => t.isLegacy).length})
+                      </summary>
+                      <div className="space-y-3 mt-2">
+                        {starterTemplates
+                          .filter((t) => t.isLegacy)
+                          .map((template) => (
+                            <TemplateCard
+                              key={template.id}
+                              template={template}
+                              selected={selectedTemplate?.id === template.id && !useCustomUrl}
+                              onSelect={handleSelectTemplate}
+                              onOpenRepo={handleOpenRepo}
+                            />
+                          ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               </div>
             </TabsContent>
