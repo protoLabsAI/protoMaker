@@ -47,14 +47,15 @@ DevOps documentation in [`docs/infra/`](./infra/):
 
 ## Integrations
 
-| Document                                                     | Description                                             |
-| ------------------------------------------------------------ | ------------------------------------------------------- |
-| [Claude Plugin](./integrations/claude-plugin.md)             | Plugin installation, configuration, Docker deployment   |
-| [Plugin Commands](./integrations/plugin-commands.md)         | Commands reference, subagents, step-by-step examples    |
-| [MCP Tools Reference](./integrations/mcp-tools-reference.md) | Full MCP tool catalog (120+ tools)                      |
-| [Discord](./integrations/discord.md)                         | Discord channels, bot integration, event routing        |
-| [Linear](./integrations/linear-sync.md)                      | Agent interaction, project planning, bidirectional sync |
-| [API Key Profiles](./integrations/api-key-profiles.md)       | Unified API key and provider profile system             |
+| Document                                                     | Description                                                    |
+| ------------------------------------------------------------ | -------------------------------------------------------------- |
+| [Browser Extension](./integrations/browser-extension.md)     | Chrome extension for side panel chat, context menu, and GitHub |
+| [Claude Plugin](./integrations/claude-plugin.md)             | Plugin installation, configuration, Docker deployment          |
+| [Plugin Commands](./integrations/plugin-commands.md)         | Commands reference, subagents, step-by-step examples           |
+| [MCP Tools Reference](./integrations/mcp-tools-reference.md) | Full MCP tool catalog (120+ tools)                             |
+| [Discord](./integrations/discord.md)                         | Discord channels, bot integration, event routing               |
+| [Linear](./integrations/linear-sync.md)                      | Agent interaction, project planning, bidirectional sync        |
+| [API Key Profiles](./integrations/api-key-profiles.md)       | Unified API key and provider profile system                    |
 
 ## Server Reference
 
