@@ -202,6 +202,29 @@ export interface ReactionAbility {
 }
 
 // ============================================================================
+// Discord Channel Signal Config - Per-channel polling config for signal intake
+// ============================================================================
+
+/**
+ * DiscordChannelSignalConfig - Per-channel configuration for signal monitoring
+ *
+ * Defines which Discord channels the monitor polls for messages, and how those
+ * messages are routed through the signal intake pipeline.
+ */
+export interface DiscordChannelSignalConfig {
+  /** Discord channel ID to monitor */
+  channelId: string;
+  /** Human-readable channel name for logging and display */
+  channelName: string;
+  /** Override the auto-classified signal intent for messages from this channel */
+  intentOverride?: SignalIntent;
+  /** Automatically create a board feature when a signal is detected */
+  autoFeature: boolean;
+  /** Whether this channel config is active */
+  enabled: boolean;
+}
+
+// ============================================================================
 // Discord Integration - Per-project Discord communication integration
 // ============================================================================
 

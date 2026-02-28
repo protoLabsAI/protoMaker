@@ -6,7 +6,11 @@
  */
 
 import type { EventEmitter } from '../lib/events.js';
-import type { DiscordMonitorConfig, WorkItem } from '@protolabs-ai/types';
+import type {
+  DiscordMonitorConfig,
+  DiscordChannelSignalConfig,
+  WorkItem,
+} from '@protolabs-ai/types';
 import { createLogger } from '@protolabs-ai/utils';
 
 const logger = createLogger('DiscordMonitor');
@@ -127,6 +131,86 @@ export class DiscordMonitor {
     }
     this.intervals.clear();
     this.lastMessageIds.clear();
+  }
+
+  /**
+   * Start monitoring Discord channels for signal intake.
+   *
+   * Unlike startMonitoring() (which filters by keywords for headsdown agents),
+   * this method emits discord:message:detected for ALL new messages in configured
+   * channels. Keyword filtering is handled downstream by IntegrationService.
+   */
+  async startChannelMonitoring(
+    configs: DiscordChannelSignalConfig[],
+    pollInterval = 30000
+  ): Promise<void> {
+    const enabledConfigs = configs.filter((c) => c.enabled);
+
+    for (const config of enabledConfigs) {
+      const { channelId } = config;
+
+      // Skip if already monitoring this channel
+      if (this.intervals.has(channelId)) {
+        logger.debug(`Channel ${channelId} already being monitored, skipping`);
+        continue;
+      }
+
+      // Establish baseline: record the latest message ID to avoid replaying history
+      try {
+        const messages = await this.fetchMessages(channelId, 1);
+        if (messages.length > 0) {
+          this.lastMessageIds.set(channelId, messages[0].id);
+        }
+      } catch (error) {
+        logger.error(`Failed to fetch initial messages for channel ${channelId}:`, error);
+      }
+
+      // Start polling loop
+      const interval = setInterval(async () => {
+        try {
+          await this.pollChannelForSignals(config);
+        } catch (error) {
+          logger.error(`Error polling Discord channel ${channelId} for signals:`, error);
+        }
+      }, pollInterval);
+
+      this.intervals.set(channelId, interval);
+      logger.info(
+        `Started signal monitoring for Discord channel ${channelId} (${config.channelName})`
+      );
+    }
+  }
+
+  /**
+   * Poll a channel for new messages and emit discord:message:detected for each.
+   * Emits the flat payload format expected by IntegrationService.handleDiscordMessage.
+   */
+  private async pollChannelForSignals(config: DiscordChannelSignalConfig): Promise<void> {
+    const { channelId, channelName } = config;
+    const messages = await this.fetchMessages(channelId, 10);
+
+    const lastId = this.lastMessageIds.get(channelId);
+    const newMessages = lastId ? messages.filter((m) => BigInt(m.id) > BigInt(lastId)) : messages;
+
+    if (newMessages.length === 0) {
+      return;
+    }
+
+    // Update last seen message ID (messages are newest-first)
+    this.lastMessageIds.set(channelId, newMessages[0].id);
+
+    for (const message of newMessages) {
+      this.events.emit('discord:message:detected', {
+        channelId,
+        channelName,
+        userId: message.authorId,
+        username: message.authorName,
+        content: message.content,
+        timestamp: message.timestamp,
+      });
+
+      logger.debug(`Emitted discord:message:detected for message ${message.id} in ${channelName}`);
+    }
   }
 
   /**

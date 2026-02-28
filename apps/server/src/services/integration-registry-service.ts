@@ -16,6 +16,7 @@ import {
   type IntegrationDescriptor,
   type IntegrationHealth,
   type IntegrationSummary,
+  type DiscordChannelSignalConfig,
 } from '@protolabs-ai/types';
 import { createLogger } from '@protolabs-ai/utils';
 import type { EventEmitter } from '../lib/events.js';
@@ -28,6 +29,9 @@ export class IntegrationRegistryService {
   private integrations = new Map<string, IntegrationDescriptor>();
   private healthCheckers = new Map<string, HealthCheckFn>();
   private events?: EventEmitter;
+
+  /** Per-project Discord channel signal configs, keyed by project path */
+  private channelConfigs = new Map<string, DiscordChannelSignalConfig[]>();
 
   constructor(events?: EventEmitter) {
     this.events = events;
@@ -232,5 +236,37 @@ export class IntegrationRegistryService {
    */
   get size(): number {
     return this.integrations.size;
+  }
+
+  // ============================================================================
+  // Discord Channel Signal Config — per-project channel monitoring registry
+  // ============================================================================
+
+  /**
+   * Store channel signal configs for a project.
+   * Replaces any previously stored configs for that project.
+   */
+  setChannelConfigs(projectPath: string, configs: DiscordChannelSignalConfig[]): void {
+    this.channelConfigs.set(projectPath, configs);
+    logger.info(`Stored ${configs.length} Discord channel config(s) for project "${projectPath}"`);
+  }
+
+  /**
+   * Get channel signal configs for a specific project.
+   */
+  getChannelConfigs(projectPath: string): DiscordChannelSignalConfig[] {
+    return this.channelConfigs.get(projectPath) ?? [];
+  }
+
+  /**
+   * Get all channel configs across all projects as a flat array of enabled configs.
+   * Used by the Discord monitor to determine which channels to poll.
+   */
+  getAllEnabledChannelConfigs(): DiscordChannelSignalConfig[] {
+    const all: DiscordChannelSignalConfig[] = [];
+    for (const configs of this.channelConfigs.values()) {
+      all.push(...configs.filter((c) => c.enabled));
+    }
+    return all;
   }
 }
