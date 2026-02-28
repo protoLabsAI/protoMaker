@@ -11,10 +11,11 @@ import fs from 'node:fs/promises';
 import { createLogger } from '@protolabs-ai/utils';
 import { getAutomakerDir } from '@protolabs-ai/platform';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { ChatAnthropic } from '@langchain/anthropic';
 import { createContentCreationFlow } from '@protolabs-ai/flows';
 import type { EventEmitter } from '../lib/events.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
+import { createFlowModel } from '../lib/flow-model-factory.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('ContentFlowService');
 
@@ -124,9 +125,11 @@ export interface HITLReview {
 export class ContentFlowService {
   private activeRuns: Map<string, ContentFlowStatus>;
   private events: EventEmitter | null = null;
+  private settingsService: SettingsService | null | undefined;
 
-  constructor() {
+  constructor(settingsService?: SettingsService | null) {
     this.activeRuns = new Map();
+    this.settingsService = settingsService;
   }
 
   /**
@@ -134,6 +137,14 @@ export class ContentFlowService {
    */
   setEventEmitter(emitter: EventEmitter): void {
     this.events = emitter;
+  }
+
+  /**
+   * Set settings service for model resolution.
+   * Can be called after construction to wire in the service.
+   */
+  setSettingsService(settingsService: SettingsService | null | undefined): void {
+    this.settingsService = settingsService;
   }
 
   /**
@@ -155,21 +166,18 @@ export class ContentFlowService {
   }
 
   /**
-   * Create models from config
+   * Create models from settings via createFlowModel().
+   * Uses specGenerationModel for heavy content generation (smart model)
+   * and fileDescriptionModel for fast auxiliary tasks.
    */
-  private createModels(): { smartModel: BaseChatModel; fastModel: BaseChatModel } {
-    // Cast needed: ChatAnthropic's type doesn't perfectly align with BaseChatModel
-    // due to LangChain version mismatch on the 'profile' property, but works at runtime
-    const smartModel = new ChatAnthropic({
-      model: 'claude-sonnet-4-5-20250929',
-      temperature: 0.7,
-    }) as unknown as BaseChatModel;
-
-    const fastModel = new ChatAnthropic({
-      model: 'claude-haiku-4-5-20251001',
-      temperature: 0.5,
-    }) as unknown as BaseChatModel;
-
+  private async createModels(
+    projectPath: string
+  ): Promise<{ smartModel: BaseChatModel; fastModel: BaseChatModel }> {
+    const services = { settingsService: this.settingsService };
+    const [smartModel, fastModel] = await Promise.all([
+      createFlowModel('specGenerationModel', projectPath, services),
+      createFlowModel('fileDescriptionModel', projectPath, services),
+    ]);
     return { smartModel, fastModel };
   }
 
@@ -197,7 +205,7 @@ export class ContentFlowService {
       `Starting content flow ${runId} for topic: ${topic} (autonomous=${!contentConfig?.enableHITL})`
     );
 
-    const { smartModel, fastModel } = this.createModels();
+    const { smartModel, fastModel } = await this.createModels(projectPath);
 
     // Initialize Langfuse tracing
     const langfuse = getLangfuseInstance();

@@ -3,13 +3,12 @@
  *
  * Creates a ProjectPlanningFlowConfig with real LLM-powered executors.
  * This is the production wiring that replaces mock executors with actual
- * ChatAnthropic models.
+ * LangChain models resolved from settings.
  *
  * Used by: server index.ts when initializing ProjectPlanningService
  */
 
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { ChatAnthropic } from '@langchain/anthropic';
 import {
   type ProjectPlanningFlowConfig,
   createLLMResearchExecutor,
@@ -19,43 +18,36 @@ import {
   createLLMMilestonePlanner,
 } from '@protolabs-ai/flows';
 import { createLogger } from '@protolabs-ai/utils';
+import { createFlowModel } from '../lib/flow-model-factory.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('ProjectPlanningExecutors');
 
 /**
- * Create ChatAnthropic models for planning flow.
- *
- * Uses sonnet for all planning tasks (smart model).
- * The double cast is needed due to LangChain type mismatch on the 'profile' property
- * — same pattern used in ContentFlowService and AntagonisticReviewAdapter.
- */
-function createModels(): { smartModel: BaseChatModel; fastModel: BaseChatModel } {
-  const smartModel = new ChatAnthropic({
-    model: 'claude-sonnet-4-5-20250929',
-    temperature: 0.7,
-    maxTokens: 8192,
-  }) as unknown as BaseChatModel;
-
-  const fastModel = new ChatAnthropic({
-    model: 'claude-haiku-4-5-20251001',
-    temperature: 0.5,
-    maxTokens: 4096,
-  }) as unknown as BaseChatModel;
-
-  return { smartModel, fastModel };
-}
-
-/**
  * Creates a ProjectPlanningFlowConfig with real LLM executors.
  *
- * All 5 planning executors use the smart model (sonnet) by default.
+ * The model for all planning executors is resolved from the 'specGenerationModel'
+ * phase setting, applying project-level overrides when projectPath is provided.
+ *
+ * All 5 planning executors use the smart model by default.
  * The IssueCreator is NOT included here — it's injected separately
  * by ProjectPlanningService using the LinearMCPClient.
+ *
+ * @param services - Services container with settingsService for model resolution
+ * @param projectPath - Optional project path for per-project model overrides
+ * @returns Promise resolving to ProjectPlanningFlowConfig with LLM executors
  */
-export function createLLMProjectPlanningConfig(): ProjectPlanningFlowConfig {
-  const { smartModel } = createModels();
+export async function createLLMProjectPlanningConfig(
+  services?: { settingsService: SettingsService | null | undefined },
+  projectPath?: string
+): Promise<ProjectPlanningFlowConfig> {
+  const smartModel: BaseChatModel = await createFlowModel(
+    'specGenerationModel',
+    projectPath,
+    services ?? { settingsService: undefined }
+  );
 
-  logger.info('Created LLM-powered project planning executors (sonnet)');
+  logger.info('Created LLM-powered project planning executors (specGenerationModel)');
 
   return {
     researchExecutor: createLLMResearchExecutor(smartModel),
