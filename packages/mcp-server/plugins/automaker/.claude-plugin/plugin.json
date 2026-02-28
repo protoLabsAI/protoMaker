@@ -16,27 +16,6 @@
         "GH_TOKEN": "${GH_TOKEN}",
         "ENABLE_TOOL_SEARCH": "auto:10"
       }
-    },
-    "discord": {
-      "command": "npx",
-      "args": ["-y", "mcp-discord"],
-      "env": {
-        "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}"
-      }
-    },
-    "linear": {
-      "command": "bash",
-      "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-linear.sh"],
-      "env": {
-        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
-      }
-    },
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "env": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      }
     }
   },
   "hooks": {

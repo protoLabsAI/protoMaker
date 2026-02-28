@@ -9,6 +9,28 @@
         "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}",
         "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
       }
+    },
+    "discord": {
+      "command": "npx",
+      "args": ["-y", "mcp-discord"],
+      "env": {
+        "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}"
+      }
+    },
+    "linear": {
+      "command": "bash",
+      "args": ["packages/mcp-server/plugins/automaker/hooks/start-linear.sh"],
+      "env": {
+        "AUTOMAKER_ROOT": "${AUTOMAKER_ROOT}",
+        "LINEAR_API_KEY": "${LINEAR_API_KEY}"
+      }
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      }
     }
   },
   "hooks": {
