@@ -11,14 +11,10 @@ import { normalizeFeatureStatus } from '@protolabs-ai/types';
 
 type ColumnId = Feature['status'];
 
-export type BoardAssigneeFilter = 'all' | 'my-tasks' | 'agent-tasks';
-
 interface UseBoardColumnFeaturesProps {
   features: Feature[];
   runningAutoTasks: string[];
   searchQuery: string;
-  assigneeFilter: BoardAssigneeFilter;
-  boardUsername: string;
   currentWorktreePath: string | null; // Currently selected worktree path
   currentWorktreeBranch: string | null; // Branch name of the selected worktree (null = main)
   projectPath: string | null; // Main project path (for main worktree)
@@ -28,8 +24,6 @@ export function useBoardColumnFeatures({
   features,
   runningAutoTasks,
   searchQuery,
-  assigneeFilter,
-  boardUsername,
   currentWorktreePath,
   currentWorktreeBranch,
   projectPath,
@@ -62,20 +56,6 @@ export function useBoardColumnFeatures({
         )
       : features;
 
-    // Filter by assignee
-    const filteredFeatures =
-      assigneeFilter === 'all'
-        ? searchFiltered
-        : assigneeFilter === 'my-tasks'
-          ? searchFiltered.filter(
-              (f) =>
-                f.assignee &&
-                f.assignee !== 'agent' &&
-                f.assignee.trim().toLowerCase() === boardUsername.trim().toLowerCase()
-            )
-          : // agent-tasks: unassigned or explicitly 'agent'
-            searchFiltered.filter((f) => !f.assignee || f.assignee === 'agent');
-
     // Determine the effective worktree path and branch for filtering
     // If currentWorktreePath is null, we're on the main worktree
     // Use the branch name from the selected worktree
@@ -85,7 +65,7 @@ export function useBoardColumnFeatures({
     // In that case, we can't do branch-based filtering, so we'll handle it specially below
     const effectiveBranch = currentWorktreeBranch;
 
-    filteredFeatures.forEach((f) => {
+    searchFiltered.forEach((f) => {
       // If feature has a running agent, always show it in "in_progress"
       const isRunning = runningTaskIds.has(f.id);
 
@@ -241,8 +221,6 @@ export function useBoardColumnFeatures({
     features,
     runningAutoTasks,
     searchQuery,
-    assigneeFilter,
-    boardUsername,
     currentWorktreePath,
     currentWorktreeBranch,
     projectPath,
