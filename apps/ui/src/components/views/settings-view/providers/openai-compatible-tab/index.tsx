@@ -357,7 +357,6 @@ const CUSTOM_TEMPLATE: OpenAICompatibleTemplate = {
   templateId: 'custom',
   name: 'Custom Provider',
   baseUrl: '',
-  defaultApiKeySource: 'inline',
   description: 'Configure a custom OpenAI-compatible endpoint',
   defaultModels: [],
 };

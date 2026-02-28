@@ -124,6 +124,9 @@ npm run test:all            # All tests (packages + server)
 # Single test file
 npm run test:server -- tests/unit/specific.test.ts
 
+# Type checking
+npm run typecheck           # Full typecheck (UI + server)
+
 # Linting and formatting
 npm run lint                # ESLint
 npm run format              # Prettier write

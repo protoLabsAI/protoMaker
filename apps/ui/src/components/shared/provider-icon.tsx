@@ -395,6 +395,7 @@ export const PROVIDER_ICON_COMPONENTS: Record<
   cursor: CursorIcon,
   codex: OpenAIIcon,
   opencode: OpenCodeIcon,
+  groq: OpenAIIcon,
 };
 
 /**

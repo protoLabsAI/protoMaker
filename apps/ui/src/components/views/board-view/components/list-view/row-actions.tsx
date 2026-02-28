@@ -529,7 +529,7 @@ export const RowActions = memo(function RowActions({
                   onClick={withClose(() => window.open(feature.prUrl, '_blank'))}
                 />
               )}
-              {feature.worktree && (
+              {(feature as Feature & { worktree?: unknown }).worktree && (
                 <MenuItem
                   icon={GitBranch}
                   label="View Branch"

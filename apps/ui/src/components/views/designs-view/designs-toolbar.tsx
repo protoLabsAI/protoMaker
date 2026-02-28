@@ -30,14 +30,14 @@ export function DesignsToolbar({ themes, selectedTheme, onThemeChange }: Designs
       // Cmd/Ctrl + Z to undo
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        if (canUndo) {
+        if (canUndo()) {
           undo();
         }
       }
       // Cmd/Ctrl + Shift + Z to redo
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') {
         e.preventDefault();
-        if (canRedo) {
+        if (canRedo()) {
           redo();
         }
       }
@@ -91,7 +91,7 @@ export function DesignsToolbar({ themes, selectedTheme, onThemeChange }: Designs
         <div className="flex items-center gap-1">
           <Button
             onClick={() => undo()}
-            disabled={!canUndo}
+            disabled={!canUndo()}
             variant="secondary"
             size="sm"
             title="Undo (Cmd+Z)"
@@ -101,7 +101,7 @@ export function DesignsToolbar({ themes, selectedTheme, onThemeChange }: Designs
           </Button>
           <Button
             onClick={() => redo()}
-            disabled={!canRedo}
+            disabled={!canRedo()}
             variant="secondary"
             size="sm"
             title="Redo (Cmd+Shift+Z)"

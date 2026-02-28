@@ -260,7 +260,7 @@ export function useNavigation({
         },
         {
           id: 'project-settings',
-          label: 'Project Settings',
+          label: 'Options',
           icon: Settings,
           shortcut: shortcuts.projectSettings,
         },

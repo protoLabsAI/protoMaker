@@ -121,13 +121,13 @@ const initialState: DesignsState = {
 function updateNodeInTree(nodes: PenNode[], nodeId: string, updates: Partial<PenNode>): PenNode[] {
   return nodes.map((node) => {
     if (node.id === nodeId) {
-      return { ...node, ...updates };
+      return { ...node, ...updates } as PenNode;
     }
     if ('children' in node && node.children) {
       return {
         ...node,
         children: updateNodeInTree(node.children, nodeId, updates),
-      };
+      } as PenNode;
     }
     return node;
   });
@@ -145,13 +145,13 @@ function reorderChildrenInTree(
       const children = [...node.children];
       const [movedItem] = children.splice(fromIndex, 1);
       children.splice(toIndex, 0, movedItem);
-      return { ...node, children };
+      return { ...node, children } as PenNode;
     }
     if ('children' in node && node.children) {
       return {
         ...node,
         children: reorderChildrenInTree(node.children, frameId, fromIndex, toIndex),
-      };
+      } as PenNode;
     }
     return node;
   });
@@ -178,10 +178,10 @@ function moveNodeBetweenFrames(
           }
           return true;
         });
-        return { ...node, children };
+        return { ...node, children } as PenNode;
       }
       if ('children' in node && node.children) {
-        return { ...node, children: removeNode(node.children) };
+        return { ...node, children: removeNode(node.children) } as PenNode;
       }
       return node;
     });
@@ -196,10 +196,10 @@ function moveNodeBetweenFrames(
         if (movedNode) {
           children.splice(insertIndex, 0, movedNode);
         }
-        return { ...node, children };
+        return { ...node, children } as PenNode;
       }
       if ('children' in node && node.children) {
-        return { ...node, children: insertNode(node.children) };
+        return { ...node, children: insertNode(node.children) } as PenNode;
       }
       return node;
     });
@@ -316,12 +316,11 @@ export const useDesignsStore = create<DesignsState & DesignsActions>()((set, get
           const node = nodes[i];
           if (node.id === targetFrameId && node.type === 'frame') {
             // Create new ref node
-            const refNode = {
+            const refNode: PenNode = {
               id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
               name: 'Instance',
               type: 'ref',
-              componentId,
-              children: [],
+              refId: componentId,
             };
 
             // Add to frame's children

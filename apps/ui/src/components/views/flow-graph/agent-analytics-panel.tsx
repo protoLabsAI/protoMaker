@@ -51,9 +51,9 @@ export function AgentAnalyticsPanel({ onClose }: AgentAnalyticsPanelProps) {
 
   const { data, refetch } = useQuery<AgentPerformanceData>({
     queryKey: ['agent-performance', projectPath],
-    queryFn: async () => {
+    queryFn: async (): Promise<AgentPerformanceData> => {
       const api = getHttpApiClient();
-      return api.analytics.getAgentPerformance(projectPath!);
+      return api.analytics.getAgentPerformance(projectPath!) as Promise<AgentPerformanceData>;
     },
     enabled: !!projectPath,
     refetchInterval: 30_000,

@@ -2,9 +2,17 @@
  * Fill section for editing colors
  */
 
-import type { PenNode, PenTextNode } from '@protolabs-ai/types';
+import type { PenNode, PenText, PenColor } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { Input } from '@protolabs-ai/ui/atoms';
+
+/** Extract r/g/b from a PenColor or hex string */
+function extractRGB(color: string | PenColor): { r: number; g: number; b: number } | null {
+  if (typeof color === 'object' && 'r' in color) {
+    return { r: color.r, g: color.g, b: color.b };
+  }
+  return null;
+}
 
 interface FillSectionProps {
   node: PenNode;
@@ -18,26 +26,34 @@ export function FillSection({ node }: FillSectionProps) {
   if ('fills' in node && node.fills && node.fills.length > 0) {
     const fill = node.fills[0];
     if (fill.type === 'solid' && fill.color) {
-      const { r, g, b } = fill.color;
-      currentColor = `#${Math.round(r * 255)
-        .toString(16)
-        .padStart(2, '0')}${Math.round(g * 255)
-        .toString(16)
-        .padStart(2, '0')}${Math.round(b * 255)
-        .toString(16)
-        .padStart(2, '0')}`;
+      const rgb = extractRGB(fill.color);
+      if (rgb) {
+        currentColor = `#${Math.round(rgb.r * 255)
+          .toString(16)
+          .padStart(2, '0')}${Math.round(rgb.g * 255)
+          .toString(16)
+          .padStart(2, '0')}${Math.round(rgb.b * 255)
+          .toString(16)
+          .padStart(2, '0')}`;
+      }
     }
-  } else if (node.type === 'text' && 'color' in node) {
-    const textNode = node as PenTextNode;
-    if (textNode.color) {
-      const { r, g, b } = textNode.color;
-      currentColor = `#${Math.round(r * 255)
-        .toString(16)
-        .padStart(2, '0')}${Math.round(g * 255)
-        .toString(16)
-        .padStart(2, '0')}${Math.round(b * 255)
-        .toString(16)
-        .padStart(2, '0')}`;
+  } else if (node.type === 'text') {
+    // PenText uses fills for color, check first fill
+    const textNode = node as PenText;
+    if (textNode.fills && textNode.fills.length > 0) {
+      const fill = textNode.fills[0];
+      if (fill.type === 'solid' && fill.color) {
+        const rgb = extractRGB(fill.color);
+        if (rgb) {
+          currentColor = `#${Math.round(rgb.r * 255)
+            .toString(16)
+            .padStart(2, '0')}${Math.round(rgb.g * 255)
+            .toString(16)
+            .padStart(2, '0')}${Math.round(rgb.b * 255)
+            .toString(16)
+            .padStart(2, '0')}`;
+        }
+      }
     }
   }
 
@@ -47,12 +63,7 @@ export function FillSection({ node }: FillSectionProps) {
     const g = parseInt(hexColor.slice(3, 5), 16) / 255;
     const b = parseInt(hexColor.slice(5, 7), 16) / 255;
 
-    if (node.type === 'text') {
-      // Update text color
-      updateNode(node.id, {
-        color: { r, g, b, a: 1 },
-      });
-    } else if ('fills' in node) {
+    if ('fills' in node) {
       // Update fills
       const fills = node.fills || [];
       const newFills = [...fills];
@@ -61,7 +72,7 @@ export function FillSection({ node }: FillSectionProps) {
       } else {
         newFills[0] = { type: 'solid', color: { r, g, b, a: 1 } };
       }
-      updateNode(node.id, { fills: newFills });
+      updateNode(node.id, { fills: newFills } as Partial<PenNode>);
     }
   };
 

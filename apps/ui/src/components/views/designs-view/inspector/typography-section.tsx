@@ -2,14 +2,14 @@
  * Typography section for editing text content and properties
  */
 
-import type { PenTextNode } from '@protolabs-ai/types';
+import type { PenText } from '@protolabs-ai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { Input } from '@protolabs-ai/ui/atoms';
 import { Textarea } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
 
 interface TypographySectionProps {
-  node: PenTextNode;
+  node: PenText;
 }
 
 export function TypographySection({ node }: TypographySectionProps) {
@@ -27,7 +27,7 @@ export function TypographySection({ node }: TypographySectionProps) {
     updateNode(node.id, { fontWeight });
   };
 
-  const handleTextAlignChange = (textAlign: PenTextNode['textAlign']) => {
+  const handleTextAlignChange = (textAlign: PenText['textAlign']) => {
     updateNode(node.id, { textAlign });
   };
 

@@ -71,6 +71,7 @@
     "docs:preview": "vitepress preview docs",
     "format": "prettier --ignore-path .prettierignore --write .",
     "format:check": "prettier --ignore-path .prettierignore --check .",
+    "typecheck": "npm run typecheck --workspace=apps/ui && tsc --noEmit --project apps/server/tsconfig.json",
     "rebuild": "rm -rf node_modules apps/*/node_modules libs/*/node_modules && npm install",
     "prepare": "husky && npm run build:packages",
     "plugin:reload": "claude plugin uninstall automaker && claude plugin install automaker",

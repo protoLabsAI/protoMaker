@@ -73,7 +73,7 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
       let dirResult;
       if (isElectronMode) {
         const api = getElectronAPI();
-        dirResult = await api.readDirectory(designsPath);
+        dirResult = await api.readdir(designsPath);
       } else {
         dirResult = await readDirectoryHttp(designsPath);
       }
@@ -104,44 +104,56 @@ export function DesignsTree({ projectPath }: DesignsTreeProps) {
       let result;
       if (isElectronMode) {
         const api = getElectronAPI();
-        result = await api.readDirectory(fullPath);
+        result = await api.readdir(fullPath);
       } else {
         result = await readDirectoryHttp(fullPath);
       }
 
-      if (!result.success || !result.files) {
+      if (!result.success) {
         return [];
       }
 
+      // Normalize: Electron returns { entries: FileEntry[] }, HTTP may return { files: string[] }
+      const files: Array<{ name: string; isDirectory: boolean }> = result.entries
+        ? result.entries.map((e: { name: string; isDirectory: boolean }) => e)
+        : (result.files || []).map((f: string) => ({ name: f, isDirectory: false }));
+
       const nodes: FileTreeNode[] = [];
 
-      for (const file of result.files) {
-        const filePath = relativePath ? `${relativePath}/${file}` : file;
+      for (const file of files) {
+        const fileName = file.name;
+        const filePath = relativePath ? `${relativePath}/${fileName}` : fileName;
         const fileFullPath = `${basePath}/${filePath}`;
 
         // Check if it's a directory
-        let statResult;
-        if (isElectronMode) {
-          const api = getElectronAPI();
-          statResult = await api.statFile(fileFullPath);
-        } else {
-          statResult = await statFileHttp(fileFullPath);
+        let isDirectory = file.isDirectory;
+        if (!result.entries) {
+          // HTTP fallback: stat the file to determine type
+          let statResult;
+          if (isElectronMode) {
+            const api = getElectronAPI();
+            statResult = await api.stat(fileFullPath);
+          } else {
+            statResult = await statFileHttp(fileFullPath);
+          }
+          isDirectory =
+            statResult.success &&
+            (statResult.stats?.isDirectory ?? statResult.isDirectory ?? false);
         }
-        const isDirectory = statResult.success && statResult.isDirectory;
 
         if (isDirectory) {
           // Recursively build subtree
           const children = await buildFileTree(basePath, filePath);
           nodes.push({
-            name: file,
+            name: fileName,
             path: filePath,
             type: 'folder',
             children,
           });
-        } else if (file.endsWith('.pen')) {
+        } else if (fileName.endsWith('.pen')) {
           // Only include .pen files
           nodes.push({
-            name: file,
+            name: fileName,
             path: filePath,
             type: 'file',
           });

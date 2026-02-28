@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { Settings, FolderOpen, Menu, X } from 'lucide-react';
 import { Button } from '@protolabs-ai/ui/atoms';
@@ -11,6 +12,7 @@ import { ProjectCeremoniesSection } from './project-ceremonies-section';
 import { ProjectIntegrationsSection } from './project-integrations-section';
 import { DangerZoneSection } from '../settings-view/danger-zone/danger-zone-section';
 import { DeleteProjectDialog } from '../settings-view/components/delete-project-dialog';
+import { SettingsScopeToggle } from '../settings-view/components/settings-scope-toggle';
 import { ProjectSettingsNavigation } from './components/project-settings-navigation';
 import { useProjectSettingsView } from './hooks/use-project-settings-view';
 import type { Project as ElectronProject } from '@/lib/electron';
@@ -29,6 +31,7 @@ interface SettingsProject {
 }
 
 export function ProjectSettingsView() {
+  const navigate = useNavigate();
   const { currentProject, moveProjectToTrash } = useAppStore();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -156,6 +159,16 @@ export function ProjectSettingsView() {
         >
           {showNavigation ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
         </Button>
+      </div>
+
+      {/* Scope Toggle */}
+      <div className="shrink-0 px-4 py-2 border-b border-border/30">
+        <SettingsScopeToggle
+          active="project"
+          onSwitch={(scope) => {
+            if (scope === 'global') navigate({ to: '/settings' });
+          }}
+        />
       </div>
 
       {/* Content Area with Sidebar */}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearch } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { useThemeStore } from '@/store/theme-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
@@ -37,12 +38,14 @@ import { PersonasSection } from './settings-view/personas';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
 import { MaintenanceSection } from './settings-view/maintenance';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
+import { SettingsScopeToggle } from './settings-view/components/settings-scope-toggle';
 import type { Theme } from './settings-view/shared/types';
 
 // Breakpoint constant for mobile (matches Tailwind lg breakpoint)
 const LG_BREAKPOINT = 1024;
 
 export function SettingsView() {
+  const navigate = useNavigate();
   const {
     defaultSkipTests,
     setDefaultSkipTests,
@@ -222,6 +225,16 @@ export function SettingsView() {
         onToggleNavigation={() => setShowNavigation(!showNavigation)}
         onImportExportClick={() => setShowImportExportDialog(true)}
       />
+
+      {/* Scope Toggle */}
+      <div className="shrink-0 px-4 lg:px-8 py-2 border-b border-border/30">
+        <SettingsScopeToggle
+          active="global"
+          onSwitch={(scope) => {
+            if (scope === 'project') navigate({ to: '/project-settings' });
+          }}
+        />
+      </div>
 
       {/* Content Area with Sidebar */}
       <div className="flex-1 flex min-h-0 overflow-hidden">

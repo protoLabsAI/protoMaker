@@ -181,7 +181,7 @@ export function MassEditDialog({
     if (applyState.thinkingLevel) updates.thinkingLevel = thinkingLevel;
     if (applyState.planningMode) updates.planningMode = planningMode;
     if (applyState.requirePlanApproval) updates.requirePlanApproval = requirePlanApproval;
-    if (applyState.priority) updates.priority = priority;
+    if (applyState.priority) updates.priority = priority as Feature['priority'];
     if (applyState.skipTests) updates.skipTests = skipTests;
     if (applyState.branchName) {
       // For 'current' mode, use empty string (work on current branch)

@@ -54,7 +54,12 @@ export function usePenTheme() {
 
 interface PenThemeProviderProps {
   document: PenDocument | null;
-  children: ReactNode;
+  children:
+    | ReactNode
+    | ((props: {
+        selectedTheme: ThemeSelections;
+        onThemeChange: (axis: string, value: string) => void;
+      }) => ReactNode);
 }
 
 /**
@@ -64,18 +69,43 @@ export function PenThemeProvider({ document, children }: PenThemeProviderProps) 
   // Extract themes and variables from document
   const themes = useMemo<ThemeAxes>(() => {
     if (!document?.themes) return {};
-    // Convert PenDocument themes format to our internal format
-    if (typeof document.themes === 'object' && !Array.isArray(document.themes)) {
-      return document.themes as ThemeAxes;
+    // Convert PenDocument themes (PenTheme[]) to axis-based format
+    if (Array.isArray(document.themes)) {
+      const axes: ThemeAxes = {};
+      for (const theme of document.themes) {
+        // Theme names are typically formatted as "Axis: Value" (e.g., "Mode: Light")
+        const match = theme.name.match(/^([^:]+):\s*(.+)$/);
+        if (match) {
+          const [, axis, value] = match;
+          if (!axes[axis]) axes[axis] = [];
+          axes[axis].push(value);
+        }
+      }
+      return axes;
+    }
+    if (typeof document.themes === 'object') {
+      return document.themes as unknown as ThemeAxes;
     }
     return {};
   }, [document]);
 
   const variables = useMemo<Record<string, Variable>>(() => {
     if (!document?.variables) return {};
-    // Convert PenDocument variables format to our internal format
+    // Convert PenDocument variables (PenVariable[]) to our internal format
+    if (Array.isArray(document.variables)) {
+      const result: Record<string, Variable> = {};
+      for (const v of document.variables) {
+        result[v.name] = {
+          type: v.type,
+          value: Object.entries(v.values).map(([, val]) => ({
+            value: val as string | number | boolean,
+          })),
+        };
+      }
+      return result;
+    }
     if (typeof document.variables === 'object') {
-      return document.variables as Record<string, Variable>;
+      return document.variables as unknown as Record<string, Variable>;
     }
     return {};
   }, [document]);
@@ -155,5 +185,10 @@ export function PenThemeProvider({ document, children }: PenThemeProviderProps) 
     resolveVariable,
   };
 
-  return <PenThemeContext.Provider value={value}>{children}</PenThemeContext.Provider>;
+  const rendered =
+    typeof children === 'function'
+      ? children({ selectedTheme: selections, onThemeChange: setSelection })
+      : children;
+
+  return <PenThemeContext.Provider value={value}>{rendered}</PenThemeContext.Provider>;
 }

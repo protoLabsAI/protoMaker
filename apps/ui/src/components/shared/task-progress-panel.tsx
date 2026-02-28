@@ -64,7 +64,7 @@ export function TaskProgressPanel({
         | undefined;
       if (result.success && feature?.planSpec?.tasks) {
         const planSpec = feature.planSpec;
-        const planTasks = planSpec.tasks;
+        const planTasks = planSpec.tasks!;
         const currentId = planSpec.currentTaskId;
         const completedCount = planSpec.tasksCompleted || 0;
 

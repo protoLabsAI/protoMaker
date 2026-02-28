@@ -86,7 +86,7 @@ export function ClaudeSetupStep({ onNext, onBack, onSkip }: ClaudeSetupStepProps
     cliType: 'claude',
     statusApi,
     setCliStatus: setClaudeCliStatus,
-    setAuthStatus: setClaudeAuthStatus,
+    setAuthStatus: setClaudeAuthStatus as unknown as (status: Record<string, unknown>) => void,
   });
 
   const onInstallSuccess = useCallback(() => {

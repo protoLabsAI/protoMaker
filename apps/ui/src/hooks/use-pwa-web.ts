@@ -1,3 +1,4 @@
+// @ts-expect-error -- virtual module provided by vite-plugin-pwa at build time
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 /**
@@ -10,12 +11,12 @@ export function usePWAWeb() {
     offlineReady: [offlineReady, setOfflineReady],
     updateServiceWorker,
   } = useRegisterSW({
-    onRegistered(registration) {
+    onRegistered(registration: unknown) {
       if (import.meta.env.DEV) {
         console.log('Service Worker registered:', registration);
       }
     },
-    onRegisterError(error) {
+    onRegisterError(error: unknown) {
       console.error('Service Worker registration error:', error);
     },
   });

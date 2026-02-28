@@ -58,7 +58,7 @@ export function PenIconRenderer({ node, onClick, style: externalStyle }: PenIcon
     // Map character (icon name) to Lucide component
     const iconName = node.character;
     const IconComponent = (
-      LucideIcons as Record<
+      LucideIcons as unknown as Record<
         string,
         React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>
       >
