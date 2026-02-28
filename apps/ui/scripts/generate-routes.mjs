@@ -18,7 +18,7 @@ const config = await getConfig(
     generatedRouteTree: './src/routeTree.gen.ts',
     quoteStyle: 'single',
   },
-  ROOT,
+  ROOT
 );
 
 const generator = new Generator({ config, root: ROOT });
