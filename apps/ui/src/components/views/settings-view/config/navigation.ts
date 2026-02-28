@@ -20,6 +20,7 @@ import {
   Timer,
   UserCog,
   Users,
+  Zap,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -61,6 +62,8 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
           { id: 'cursor-provider', label: 'Cursor', icon: CursorIcon },
           { id: 'codex-provider', label: 'Codex', icon: OpenAIIcon },
           { id: 'opencode-provider', label: 'OpenCode', icon: OpenCodeIcon },
+          { id: 'groq-provider', label: 'Groq', icon: Zap },
+          { id: 'openai-compatible-provider', label: 'OpenAI-Compatible', icon: Server },
         ],
       },
       { id: 'mcp-servers', label: 'MCP Servers', icon: Server },

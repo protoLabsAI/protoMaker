@@ -8,6 +8,8 @@ export type SettingsViewId =
   | 'cursor-provider'
   | 'codex-provider'
   | 'opencode-provider'
+  | 'groq-provider'
+  | 'openai-compatible-provider'
   | 'mcp-servers'
   | 'integrations'
   | 'prompts'
