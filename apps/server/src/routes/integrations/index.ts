@@ -5,7 +5,7 @@
 import { Router, Request, Response } from 'express';
 import { createLogger } from '@protolabs-ai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
-import type { ProjectIntegrations } from '@protolabs-ai/types';
+import type { ProjectIntegrations, ReactionAbility } from '@protolabs-ai/types';
 import { integrationService } from '../../services/integration-service.js';
 import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
 
@@ -194,6 +194,76 @@ export function createIntegrationRoutes(
     } catch (error) {
       logger.error('Failed to get integration status:', error);
       res.status(500).json({ error: 'Failed to get integration status' });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Discord reaction abilities
+  // ---------------------------------------------------------------------------
+
+  /**
+   * GET /api/integrations/discord/reaction-abilities
+   * Get the list of reaction abilities for a project
+   */
+  router.get('/discord/reaction-abilities', async (req: Request, res: Response) => {
+    try {
+      const projectPath = req.query.projectPath as string | undefined;
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const abilities: ReactionAbility[] =
+        projectSettings.integrations?.discord?.reactionAbilities ?? [];
+
+      res.json({ abilities });
+    } catch (error) {
+      logger.error('Failed to get reaction abilities:', error);
+      res.status(500).json({ error: 'Failed to get reaction abilities' });
+    }
+  });
+
+  /**
+   * PUT /api/integrations/discord/reaction-abilities
+   * Save the list of reaction abilities for a project
+   */
+  router.put('/discord/reaction-abilities', async (req: Request, res: Response) => {
+    try {
+      const { projectPath, abilities } = req.body as {
+        projectPath?: string;
+        abilities?: ReactionAbility[];
+      };
+
+      if (!projectPath) {
+        res.status(400).json({ error: 'projectPath is required' });
+        return;
+      }
+
+      if (!Array.isArray(abilities)) {
+        res.status(400).json({ error: 'abilities must be an array' });
+        return;
+      }
+
+      const projectSettings = await settingsService.getProjectSettings(projectPath);
+      const existingDiscord = projectSettings.integrations?.discord ?? { enabled: false };
+
+      await settingsService.updateProjectSettings(projectPath, {
+        integrations: {
+          ...projectSettings.integrations,
+          discord: {
+            ...existingDiscord,
+            reactionAbilities: abilities,
+          },
+        },
+      });
+
+      logger.info(`Updated reaction abilities for project: ${projectPath}`);
+      res.json({ abilities });
+    } catch (error) {
+      logger.error('Failed to update reaction abilities:', error);
+      res.status(500).json({ error: 'Failed to update reaction abilities' });
     }
   });
 

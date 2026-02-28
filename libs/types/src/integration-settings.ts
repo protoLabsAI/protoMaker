@@ -7,6 +7,7 @@
  */
 
 import type { EventHookTrigger } from './event-settings.js';
+import type { SignalIntent } from './signal-intent.js';
 
 // ============================================================================
 // Discord Settings - Global Discord bot configuration
@@ -169,6 +170,38 @@ export const DEFAULT_LINEAR_INTEGRATION: LinearIntegrationConfig = {
 };
 
 // ============================================================================
+// Reaction Abilities - Discord emoji reaction to intent mapping
+// ============================================================================
+
+/**
+ * ReactionAbility - Maps a Discord emoji reaction to a signal intent and routing rules
+ *
+ * When a user reacts to a Discord message with the configured emoji, Automaker
+ * interprets the reaction as a signal with the specified intent and routes it
+ * through the intake pipeline accordingly.
+ */
+export interface ReactionAbility {
+  /** Unique identifier (UUID) */
+  id: string;
+  /** Unicode emoji or Discord custom emoji ID */
+  emoji: string;
+  /** Human-readable name (e.g. "Report Bug") */
+  label: string;
+  /** Signal intent classification for routing */
+  intent: SignalIntent;
+  /** Discord channel IDs where this reaction is active (empty = all channels) */
+  channels: string[];
+  /** Discord role IDs allowed to trigger this ability (empty = any role) */
+  allowedRoles: string[];
+  /** Discord user IDs individually trusted for this ability */
+  allowedUsers: string[];
+  /** Whether to auto-create a board feature when this reaction is used */
+  autoFeature: boolean;
+  /** Whether this reaction ability is active */
+  enabled: boolean;
+}
+
+// ============================================================================
 // Discord Integration - Per-project Discord communication integration
 // ============================================================================
 
@@ -203,6 +236,8 @@ export interface DiscordIntegrationConfig {
   webhookToken?: string;
   /** User routing configuration - maps Discord usernames to agent types */
   userRouting?: Record<string, { agentType: string; enabled: boolean }>;
+  /** Reaction abilities - emoji reactions mapped to signal intents */
+  reactionAbilities?: ReactionAbility[];
 }
 
 /** Default Discord integration settings - disabled by default */
