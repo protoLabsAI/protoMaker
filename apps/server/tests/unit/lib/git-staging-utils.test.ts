@@ -21,16 +21,12 @@ describe('buildGitAddCommand', () => {
 
   it('should include .automaker/memory/ when that directory exists', () => {
     mkdirSync(join(tempDir, '.automaker', 'memory'), { recursive: true });
-    expect(buildGitAddCommand(tempDir)).toBe(
-      "git add -A -- ':!.automaker/' '.automaker/memory/'"
-    );
+    expect(buildGitAddCommand(tempDir)).toBe("git add -A -- ':!.automaker/' '.automaker/memory/'");
   });
 
   it('should include .automaker/skills/ when that directory exists', () => {
     mkdirSync(join(tempDir, '.automaker', 'skills'), { recursive: true });
-    expect(buildGitAddCommand(tempDir)).toBe(
-      "git add -A -- ':!.automaker/' '.automaker/skills/'"
-    );
+    expect(buildGitAddCommand(tempDir)).toBe("git add -A -- ':!.automaker/' '.automaker/skills/'");
   });
 
   it('should include both when both directories exist', () => {
