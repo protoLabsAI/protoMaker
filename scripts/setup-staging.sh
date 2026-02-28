@@ -100,6 +100,7 @@ GID=$gid
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECTS_MOUNT=/home/$(whoami)/dev
+LABS_MOUNT=/home/$(whoami)/labs
 ALLOWED_ROOT_DIRECTORY=/home/$(whoami)/dev
 EOF
 

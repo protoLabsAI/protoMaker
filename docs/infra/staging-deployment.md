@@ -154,6 +154,7 @@ GID=1000
 
 # Paths
 PROJECTS_MOUNT=/home/youruser/dev
+LABS_MOUNT=/home/youruser/labs
 ALLOWED_ROOT_DIRECTORY=/home/youruser/dev
 
 # Resources (auto-detected by setup-staging.sh if omitted)

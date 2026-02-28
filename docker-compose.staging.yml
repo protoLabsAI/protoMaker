@@ -119,7 +119,7 @@ services:
 
       # Host project directories - mount at same path for MCP path compatibility
       - ${PROJECTS_MOUNT:-/home/josh/dev}:${PROJECTS_MOUNT:-/home/josh/dev}:rw
-      - /home/josh/labs:/home/josh/labs:rw
+      - ${LABS_MOUNT:-/home/josh/labs}:${LABS_MOUNT:-/home/josh/labs}:rw
 
     deploy:
       resources:
