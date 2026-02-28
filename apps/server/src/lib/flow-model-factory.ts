@@ -27,8 +27,7 @@ const GROQ_MODEL_PREFIXES = ['llama-', 'mixtral-', 'gemma-'];
 
 function isGroqModel(model: string): boolean {
   return (
-    model.startsWith('groq/') ||
-    GROQ_MODEL_PREFIXES.some((prefix) => model.startsWith(prefix))
+    model.startsWith('groq/') || GROQ_MODEL_PREFIXES.some((prefix) => model.startsWith(prefix))
   );
 }
 
