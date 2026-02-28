@@ -1,5 +1,30 @@
 # @protolabs-ai/observability
 
+## 0.13.0
+
+### Minor Changes
+
+- ### Features
+  - add getFileExtension utility to image-utils
+
+  ### Bug Fixes
+  - normalize feature.dependencies from JSON string to array
+  - quick UX wins — sidebar order, nav labels, settings consistency
+  - stop excluding .automaker/memory from commits
+  - use GITHUB_TOKEN for sync-back PR creation in auto-release
+  - guard auth bypass, mask API key in logs (#1429)
+
+  ### Refactors
+  - remove voice activation system (dead code)
+  - remove sidebar chat — Ava Anywhere overlay is the one surface
+  - move project-specific skills and MCP servers out of plugin
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.13.0
+  - @protolabs-ai/utils@0.13.0
+
 ## 0.12.0
 
 ### Minor Changes
