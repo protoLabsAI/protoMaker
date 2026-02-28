@@ -90,6 +90,7 @@ jobs:
           # Gracefully stop auto-mode and wait for agents to finish.
           # Uses the API key from .env (same machine as staging server).
           AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' "$ENV_SOURCE" || echo "")
+          echo "::add-mask::$AUTOMAKER_API_KEY"
           curl -sf -X POST http://localhost:3008/api/deploy/drain \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $AUTOMAKER_API_KEY" \
@@ -169,6 +170,7 @@ jobs:
         run: |
           # Source API key from .env (same machine as staging server)
           export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
+          echo "::add-mask::$AUTOMAKER_API_KEY"
           ./scripts/smoke-test.sh http://localhost:3008
         env:
           DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
