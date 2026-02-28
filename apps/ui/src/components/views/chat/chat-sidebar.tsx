@@ -7,11 +7,12 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useLocation } from '@tanstack/react-router';
-import { MessageSquare, X, Plus } from 'lucide-react';
+import { MessageSquare, X, Plus, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { ChatMessageList, ChatInput } from '@protolabs-ai/ui/ai';
 import { ChatModelSelect } from './components/chat-model-select';
+import { ConversationList } from '@/components/views/chat-overlay/conversation-list';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { useNotesStore } from '@/store/notes-store';
 import { useAppStore } from '@/store/app-store';
@@ -53,9 +54,16 @@ export function ChatSidebar({ className }: { className?: string }) {
     stop,
     isStreaming,
     error,
+    sessions,
+    currentSessionId,
     modelAlias,
     handleNewChat,
+    handleSwitchSession,
+    handleDeleteSession,
     handleModelChange,
+    historyOpen,
+    toggleHistory,
+    setHistoryOpen,
   } = useChatSession({
     defaultModel: 'sonnet',
     projectId: currentProject?.id,
@@ -92,6 +100,16 @@ export function ChatSidebar({ className }: { className?: string }) {
             variant="ghost"
             size="icon"
             className="size-7"
+            onClick={toggleHistory}
+            title="Conversation history"
+            aria-label="Toggle conversation history"
+          >
+            <History className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
             onClick={handleNewChat}
             title="New chat"
           >
@@ -116,25 +134,47 @@ export function ChatSidebar({ className }: { className?: string }) {
         </div>
       )}
 
-      {/* Messages */}
-      <ChatMessageList messages={messages} />
+      {/* Main content area */}
+      <div className="flex min-h-0 flex-1">
+        {/* Conversation list panel — slide in from left */}
+        {historyOpen && (
+          <ConversationList
+            sessions={sessions}
+            currentSessionId={currentSessionId}
+            onSelect={(id) => {
+              handleSwitchSession(id);
+              setHistoryOpen(false);
+            }}
+            onNew={() => {
+              handleNewChat();
+              setHistoryOpen(false);
+            }}
+            onDelete={handleDeleteSession}
+            onClose={() => setHistoryOpen(false)}
+            className="animate-in slide-in-from-left duration-200"
+          />
+        )}
 
-      {/* Input */}
-      <ChatInput
-        value={inputValue}
-        onChange={setInputValue}
-        onSubmit={handleSubmit}
-        onStop={stop}
-        isStreaming={isStreaming}
-        actions={
-          <>
-            <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
-            <span className="text-[10px] text-muted-foreground">
-              {isStreaming ? 'Streaming...' : 'Enter to send'}
-            </span>
-          </>
-        }
-      />
+        {/* Chat area */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <ChatMessageList messages={messages} />
+          <ChatInput
+            value={inputValue}
+            onChange={setInputValue}
+            onSubmit={handleSubmit}
+            onStop={stop}
+            isStreaming={isStreaming}
+            actions={
+              <>
+                <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
+                <span className="text-[10px] text-muted-foreground">
+                  {isStreaming ? 'Streaming...' : 'Enter to send'}
+                </span>
+              </>
+            }
+          />
+        </div>
+      </div>
     </div>
   );
 }
