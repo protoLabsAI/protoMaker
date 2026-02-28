@@ -1,20 +1,19 @@
 /**
- * Discord Bot Service - Connects to Discord for CTO interaction
+ * Discord Bot Service - Connects to Discord for passive channel monitoring
  *
- * Provides the `/idea` slash command and message-prefix command (`!idea`)
- * so the CTO can inject ideas directly from Discord. Supports:
+ * Provides message and reaction-based signal ingestion from Discord. Supports:
  *
- * - Rich input: file attachments (images, .txt, .md) on /idea
+ * - Message prefix command (`!idea`) for injecting ideas
  * - Thread-based review: PM feedback posted in a review thread
  * - CTO response loop: CTO replies in thread to approve or revise
- * - /approve-idea <featureId>: Explicitly approve from anywhere
+ * - Reaction-based gate resolution and approval flows
  * - Milestone notifications: updates when milestones start/complete
  *
  * Setup:
  * 1. Set DISCORD_BOT_TOKEN in .env or environment
- * 2. Invite bot to server with scopes: bot, applications.commands
+ * 2. Invite bot to server with scopes: bot
  * 3. Bot permissions: Send Messages, Read Message History, Add Reactions,
- *    Use Slash Commands, Manage Messages, Create Public Threads
+ *    Manage Messages, Create Public Threads
  *
  * The service is optional - if no token is configured, it logs a warning
  * and the rest of the server operates normally.
@@ -24,13 +23,8 @@ import {
   Client,
   GatewayIntentBits,
   Partials,
-  SlashCommandBuilder,
-  REST,
-  Routes,
   ChannelType,
   type Attachment,
-  type ChatInputCommandInteraction,
-  type Interaction,
   type Message,
   type TextChannel,
   type ThreadChannel,
@@ -44,7 +38,6 @@ import type { PMAuthorityAgent } from './authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
 import type { SettingsService } from './settings-service.js';
-import type { RoleRegistryService } from './role-registry-service.js';
 
 interface AuthorityAgents {
   pm?: PMAuthorityAgent;
@@ -109,15 +102,6 @@ export class DiscordBotService {
   /** Message debounce buffer to batch rapid messages from the same user */
   private messageBuffer: Map<string, { messages: Message[]; timer: NodeJS.Timeout }> = new Map();
 
-  /** Role registry for dynamic agent exposure (slash commands + CLI skills) */
-  private roleRegistry?: RoleRegistryService;
-
-  /** Set of dynamically registered agent slash command names */
-  private agentCommands = new Set<string>();
-
-  /** Map thread IDs to agent assignments for slash-command-created threads */
-  private agentThreads = new Map<string, { agentType: string; userId: string }>();
-
   /**
    * Pending gate hold messages for the signal-aware channel router.
    * Keyed by Discord messageId → gate context.
@@ -154,14 +138,6 @@ export class DiscordBotService {
     this.settingsService = settingsService;
     this.projectPath = projectPath;
     this.agents = agents;
-  }
-
-  /**
-   * Set the role registry for dynamic agent command registration.
-   * Must be called before initialize() for commands to be registered.
-   */
-  setRoleRegistry(registry: RoleRegistryService): void {
-    this.roleRegistry = registry;
   }
 
   /**
@@ -310,11 +286,6 @@ export class DiscordBotService {
       // Set up event handlers
       this.client.once(Events.ClientReady, (readyClient) => {
         logger.info(`Discord bot connected as ${readyClient.user.tag}`);
-        void this.registerSlashCommands(token);
-      });
-
-      this.client.on(Events.InteractionCreate, (interaction) => {
-        void this.handleInteraction(interaction);
       });
 
       this.client.on(Events.MessageCreate, (message) => {
@@ -337,558 +308,6 @@ export class DiscordBotService {
       logger.error('Failed to initialize Discord bot:', error);
       this.client = null;
       return false;
-    }
-  }
-
-  /**
-   * Register slash commands with Discord.
-   */
-  private async registerSlashCommands(token: string): Promise<void> {
-    try {
-      if (!this.client?.user) return;
-
-      const commands = [
-        new SlashCommandBuilder()
-          .setName('idea')
-          .setDescription('Submit a feature idea / PRD for the team to build')
-          .addStringOption((option) =>
-            option.setName('title').setDescription('Short title for the idea').setRequired(true)
-          )
-          .addStringOption((option) =>
-            option
-              .setName('description')
-              .setDescription('Detailed spec/description of what you want built')
-              .setRequired(false)
-          )
-          .addAttachmentOption((option) =>
-            option
-              .setName('attachment')
-              .setDescription('Attach a file (image, .md, .txt) with additional details')
-              .setRequired(false)
-          ),
-
-        new SlashCommandBuilder()
-          .setName('approve-idea')
-          .setDescription('Approve a pending idea after PM review')
-          .addStringOption((option) =>
-            option.setName('feature-id').setDescription('Feature ID to approve').setRequired(true)
-          ),
-
-        new SlashCommandBuilder()
-          .setName('dashboard')
-          .setDescription('View the CTO dashboard - agents, approvals, pipeline status'),
-
-        new SlashCommandBuilder()
-          .setName('approve')
-          .setDescription('Approve a pending approval request')
-          .addStringOption((option) =>
-            option.setName('id').setDescription('Approval request ID').setRequired(true)
-          ),
-
-        new SlashCommandBuilder()
-          .setName('reject')
-          .setDescription('Reject a pending approval request')
-          .addStringOption((option) =>
-            option.setName('id').setDescription('Approval request ID').setRequired(true)
-          )
-          .addStringOption((option) =>
-            option.setName('reason').setDescription('Reason for rejection').setRequired(false)
-          ),
-
-        new SlashCommandBuilder()
-          .setName('setuplab')
-          .setDescription('Initialize Automaker for a new repository')
-          .addStringOption((option) =>
-            option
-              .setName('path')
-              .setDescription('Project path (absolute or relative)')
-              .setRequired(true)
-          ),
-      ];
-
-      // Dynamically register agent commands from the role registry
-      if (this.roleRegistry) {
-        const templates = this.roleRegistry.list();
-        for (const tmpl of templates) {
-          if (!tmpl.exposure?.discord) continue;
-
-          // Skip if name conflicts with an existing hardcoded command
-          const existingNames = new Set(commands.map((c) => c.name));
-          if (existingNames.has(tmpl.name)) {
-            logger.warn(`Skipping agent command /${tmpl.name} — conflicts with built-in command`);
-            continue;
-          }
-
-          commands.push(
-            new SlashCommandBuilder()
-              .setName(tmpl.name)
-              .setDescription(tmpl.description.slice(0, 100))
-              .addStringOption((option) =>
-                option
-                  .setName('message')
-                  .setDescription('Message or task for the agent')
-                  .setRequired(true)
-              ) as SlashCommandBuilder
-          );
-
-          this.agentCommands.add(tmpl.name);
-          logger.info(`Registered dynamic agent command: /${tmpl.name}`);
-        }
-      }
-
-      const rest = new REST({ version: '10' }).setToken(token);
-
-      // Register commands for the specific guild (instant, no 1-hour cache)
-      await rest.put(Routes.applicationGuildCommands(this.client.user.id, GUILD_ID), {
-        body: commands.map((cmd) => cmd.toJSON()),
-      });
-
-      logger.info(`Registered ${commands.length} slash commands for guild ${GUILD_ID}`);
-    } catch (error) {
-      logger.error('Failed to register slash commands:', error);
-    }
-  }
-
-  /**
-   * Handle slash command interactions.
-   */
-  private async handleInteraction(interaction: Interaction): Promise<void> {
-    if (!interaction.isChatInputCommand()) return;
-
-    switch (interaction.commandName) {
-      case 'idea':
-        await this.handleIdeaCommand(interaction);
-        break;
-      case 'approve-idea':
-        await this.handleApproveIdeaCommand(interaction);
-        break;
-      case 'dashboard':
-        await this.handleDashboardCommand(interaction);
-        break;
-      case 'approve':
-        await this.handleApproveCommand(interaction);
-        break;
-      case 'reject':
-        await this.handleRejectCommand(interaction);
-        break;
-      case 'setuplab':
-        await this.handleSetuplabCommand(interaction);
-        break;
-      default:
-        // Check if this is a dynamic agent command
-        if (this.agentCommands.has(interaction.commandName)) {
-          await this.handleAgentCommand(interaction);
-        }
-        break;
-    }
-  }
-
-  /**
-   * Handle /idea slash command with attachment support.
-   */
-  private async handleIdeaCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    const title = interaction.options.getString('title');
-    const description = interaction.options.getString('description') || '';
-    const attachment = interaction.options.getAttachment('attachment');
-
-    if (!title) {
-      await interaction.reply({ content: 'Title is required.', ephemeral: true });
-      return;
-    }
-
-    // Acknowledge immediately (Discord requires response within 3 seconds)
-    await interaction.deferReply();
-
-    try {
-      // Download attachment if provided
-      let attachmentData: {
-        textFiles?: Array<{ filename: string; content: string }>;
-        imagePaths?: string[];
-      } = {};
-      if (attachment) {
-        attachmentData = await this.processAttachment(attachment);
-      }
-
-      const result = await this.injectIdea(
-        title,
-        description,
-        interaction.user.id,
-        attachmentData.textFiles,
-        attachmentData.imagePaths
-      );
-
-      if (result.success) {
-        // Create a review thread for this idea
-        const channel = interaction.channel as TextChannel;
-        const _reply = await interaction.editReply(
-          `**Idea submitted:** "${title}"\n` +
-            `**Feature ID:** \`${result.featureId}\`\n` +
-            `PM agent is reviewing your idea...`
-        );
-
-        // Create a thread for the review conversation
-        let thread: ThreadChannel | null = null;
-        try {
-          const fetchedReply = await interaction.fetchReply();
-          thread = await (channel as TextChannel).threads.create({
-            name: `Review: ${title.slice(0, 90)}`,
-            autoArchiveDuration: 1440, // 24 hours
-            type: ChannelType.PublicThread,
-            startMessage: fetchedReply.id,
-          });
-
-          await thread.send(
-            `**PM Review Thread**\n` +
-              `The PM agent is reviewing this idea. Results will be posted here.\n` +
-              `<@${interaction.user.id}> - Reply in this thread to provide feedback or approve changes.`
-          );
-        } catch (threadError) {
-          logger.warn('Could not create review thread:', threadError);
-        }
-
-        // Track this idea for review followup
-        this.pendingIdeas.set(result.featureId!, {
-          channelId: interaction.channelId,
-          userId: interaction.user.id,
-          title,
-          threadId: thread?.id,
-          createdAt: Date.now(),
-        });
-
-        // Map thread to feature for CTO reply handling
-        if (thread) {
-          this.reviewThreads.set(thread.id, result.featureId!);
-        }
-      } else {
-        await interaction.editReply(`Failed to submit idea: ${result.error}`);
-      }
-    } catch (error) {
-      logger.error('Error handling /idea command:', error);
-      await interaction.editReply('An error occurred while submitting your idea.');
-    }
-  }
-
-  /**
-   * Handle /approve-idea slash command - explicitly approve an idea from anywhere.
-   */
-  private async handleApproveIdeaCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    const featureId = interaction.options.getString('feature-id');
-    if (!featureId) {
-      await interaction.reply({ content: 'Feature ID is required.', ephemeral: true });
-      return;
-    }
-
-    try {
-      const feature = await this.featureLoader.get(this.projectPath, featureId);
-      if (!feature) {
-        await interaction.reply({
-          content: `Feature \`${featureId}\` not found.`,
-          ephemeral: true,
-        });
-        return;
-      }
-
-      if (
-        feature.workItemState !== 'pm_changes_requested' &&
-        feature.workItemState !== 'pm_review'
-      ) {
-        await interaction.reply({
-          content: `Feature is in \`${feature.workItemState}\` state, not awaiting approval.`,
-          ephemeral: true,
-        });
-        return;
-      }
-
-      // Emit CTO approval event for PM agent to pick up
-      this.events.emit('authority:cto-approved-idea', {
-        projectPath: this.projectPath,
-        featureId,
-        approvedBy: `discord:${interaction.user.id}`,
-      });
-
-      await interaction.reply(
-        `**Approved:** "${feature.title}" (\`${featureId}\`)\n` +
-          `PM agent will proceed with decomposition.`
-      );
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      await interaction.reply({ content: `Failed: ${msg}`, ephemeral: true });
-    }
-  }
-
-  /**
-   * Handle /dashboard slash command.
-   */
-  private async handleDashboardCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply();
-
-    try {
-      const lines: string[] = [];
-      lines.push('**CTO Dashboard**\n');
-
-      // Agents
-      const agents = await this.authorityService.getAgents(this.projectPath);
-      lines.push('**Agents:**');
-      if (agents.length === 0) {
-        lines.push('  No agents registered');
-      } else {
-        for (const agent of agents) {
-          lines.push(`  ${agent.role} - trust: ${agent.trust}, status: ${agent.status}`);
-        }
-      }
-
-      // Pending approvals
-      const pendingApprovals = await this.authorityService.getPendingApprovals(this.projectPath);
-      lines.push('\n**Pending Approvals:**');
-      if (pendingApprovals.length === 0) {
-        lines.push('  None');
-      } else {
-        for (const approval of pendingApprovals.slice(0, 5)) {
-          lines.push(
-            `  \`${approval.id}\` - ${approval.proposal.what} on ${approval.proposal.target} (${approval.proposal.risk} risk)`
-          );
-        }
-      }
-
-      // Pipeline (updated with new states)
-      lines.push('\n**Idea Pipeline:**');
-      const features = await this.featureLoader.getAll(this.projectPath);
-      const ideas = features.filter((f) => f.workItemState === 'idea');
-      const pmReview = features.filter((f) => f.workItemState === 'pm_review');
-      const changesReq = features.filter((f) => f.workItemState === 'pm_changes_requested');
-      const approved = features.filter((f) => f.workItemState === 'approved');
-      const planned = features.filter((f) => f.workItemState === 'planned');
-      const ready = features.filter((f) => f.workItemState === 'ready');
-      const inProgress = features.filter((f) => f.workItemState === 'in_progress');
-
-      lines.push(
-        `  Ideas: ${ideas.length} | PM Review: ${pmReview.length} | Changes Requested: ${changesReq.length}`
-      );
-      lines.push(
-        `  Approved: ${approved.length} | Planned: ${planned.length} | Ready: ${ready.length} | In Progress: ${inProgress.length}`
-      );
-
-      await interaction.editReply(lines.join('\n'));
-    } catch (error) {
-      logger.error('Error handling /dashboard command:', error);
-      await interaction.editReply('Failed to load dashboard.');
-    }
-  }
-
-  /**
-   * Handle /approve slash command.
-   */
-  private async handleApproveCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    const requestId = interaction.options.getString('id');
-    if (!requestId) {
-      await interaction.reply({ content: 'Approval ID is required.', ephemeral: true });
-      return;
-    }
-
-    try {
-      await this.authorityService.resolveApproval(requestId, 'approve', 'cto', this.projectPath);
-      await interaction.reply(`Approved: \`${requestId}\``);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      await interaction.reply({ content: `Failed to approve: ${msg}`, ephemeral: true });
-    }
-  }
-
-  /**
-   * Handle /reject slash command.
-   */
-  private async handleRejectCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    const requestId = interaction.options.getString('id');
-    const reason = interaction.options.getString('reason') || 'Rejected by CTO';
-    if (!requestId) {
-      await interaction.reply({ content: 'Approval ID is required.', ephemeral: true });
-      return;
-    }
-
-    try {
-      await this.authorityService.resolveApproval(requestId, 'reject', 'cto', this.projectPath);
-      await interaction.reply(`Rejected: \`${requestId}\` - ${reason}`);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      await interaction.reply({ content: `Failed to reject: ${msg}`, ephemeral: true });
-    }
-  }
-
-  /**
-   * Handle /setuplab slash command.
-   */
-  private async handleSetuplabCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply();
-
-    const projectPath = interaction.options.getString('path');
-    if (!projectPath) {
-      await interaction.editReply('Project path is required.');
-      return;
-    }
-
-    try {
-      // Resolve path (handle ~ and relative paths)
-      let resolvedPath = projectPath;
-      if (resolvedPath.startsWith('~')) {
-        resolvedPath = path.join(process.env.HOME || '/tmp', resolvedPath.slice(1));
-      } else if (!path.isAbsolute(resolvedPath)) {
-        resolvedPath = path.resolve(resolvedPath);
-      }
-
-      logger.info('Setting up lab for project', { projectPath: resolvedPath });
-
-      // Call the setup endpoint with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-      let response;
-      try {
-        response = await fetch('http://localhost:3008/api/setup/project', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ projectPath: resolvedPath }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        if ((fetchError as Error).name === 'AbortError') {
-          await interaction.editReply(
-            '❌ Setup timed out after 15 seconds. The server may be overloaded.'
-          );
-        } else {
-          await interaction.editReply(
-            `❌ Setup failed: ${fetchError instanceof Error ? fetchError.message : 'Network error'}`
-          );
-        }
-        return;
-      }
-
-      if (!response.ok) {
-        const error = (await response.json()) as { error?: string };
-        await interaction.editReply(
-          `❌ Setup failed: ${error.error ?? 'Unknown error'}\n\nPath: \`${resolvedPath}\``
-        );
-        return;
-      }
-
-      const result = (await response.json()) as {
-        success: boolean;
-        filesCreated: string[];
-        projectAdded: boolean;
-        error?: string;
-      };
-
-      // Build success message
-      const lines = [
-        '## Lab Setup Complete ✓',
-        '',
-        `**Project:** \`${resolvedPath}\``,
-        '',
-        '### Initialized:',
-      ];
-
-      if (result.filesCreated && result.filesCreated.length > 0) {
-        for (const file of result.filesCreated) {
-          lines.push(`- ✓ ${file}`);
-        }
-      }
-
-      if (result.projectAdded) {
-        lines.push('- ✓ Added to Automaker settings');
-      }
-
-      lines.push('');
-      lines.push('### Next Steps:');
-      lines.push('1. View your project: Use `/board` in Automaker');
-      lines.push('2. Create features: Use the board UI or MCP');
-      lines.push('3. Add context files: Define coding standards and rules');
-      lines.push('4. Start auto-mode: Autonomous feature processing');
-
-      await interaction.editReply(lines.join('\n'));
-    } catch (error) {
-      logger.error('Error handling /setuplab command:', error);
-      await interaction.editReply(
-        `❌ Setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    }
-  }
-
-  /**
-   * Handle a dynamic agent slash command (e.g. /ava, /gtm, /frank).
-   * Creates a thread and emits a routed message event for the agent.
-   */
-  private async handleAgentCommand(interaction: ChatInputCommandInteraction): Promise<void> {
-    const agentName = interaction.commandName;
-    const userMessage = interaction.options.getString('message') || '';
-    const username = interaction.user.username;
-
-    // Check access control from the registry template
-    if (this.roleRegistry) {
-      const template = this.roleRegistry.get(agentName);
-      const allowedUsers = template?.exposure?.allowedUsers;
-      if (allowedUsers && allowedUsers.length > 0 && !allowedUsers.includes(username)) {
-        await interaction.reply({
-          content: `You don't have access to /${agentName}. Contact an admin.`,
-          ephemeral: true,
-        });
-        return;
-      }
-    }
-
-    await interaction.deferReply();
-
-    try {
-      const displayName = this.roleRegistry?.get(agentName)?.displayName ?? agentName;
-      const replyContent =
-        `**${displayName}** thread started.\n` + `> ${userMessage.slice(0, 200)}`;
-
-      const reply = await interaction.editReply(replyContent);
-
-      // Create a public thread from the reply
-      const channel = interaction.channel as TextChannel;
-      if (!channel || !('threads' in channel)) {
-        logger.warn(`Cannot create thread — channel doesn't support threads`);
-        return;
-      }
-
-      const threadName = `${displayName}: ${userMessage.slice(0, 80)}`;
-      const thread = await channel.threads.create({
-        name: threadName,
-        type: ChannelType.PublicThread,
-        startMessage: reply,
-      });
-
-      // Track thread → agent mapping
-      this.agentThreads.set(thread.id, {
-        agentType: agentName,
-        userId: interaction.user.id,
-      });
-
-      // Emit routed event so AgentDiscordRouter picks it up
-      this.events.emit('discord:user-message:routed', {
-        channelId: thread.id,
-        userId: interaction.user.id,
-        username,
-        content: userMessage,
-        routedToAgent: agentName,
-      });
-
-      logger.info(`Created agent thread for /${agentName}`, {
-        threadId: thread.id,
-        username,
-      });
-    } catch (error) {
-      logger.error(`Error handling /${agentName} command:`, error);
-      try {
-        await interaction.editReply(
-          `Failed to start ${agentName} thread: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      } catch {
-        // Interaction may have expired
-      }
     }
   }
 
@@ -995,19 +414,6 @@ export class DiscordBotService {
       const featureId = this.reviewThreads.get(message.channelId);
       if (featureId) {
         await this.handleThreadReply(message, featureId);
-        return;
-      }
-
-      // Handle messages in agent slash-command threads
-      const agentThread = this.agentThreads.get(message.channelId);
-      if (agentThread) {
-        this.events.emit('discord:user-message:routed', {
-          channelId: message.channelId,
-          userId: message.author.id,
-          username: message.author.username,
-          content: message.content,
-          routedToAgent: agentThread.agentType,
-        });
         return;
       }
     }
