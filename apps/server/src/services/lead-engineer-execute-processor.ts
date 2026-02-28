@@ -18,6 +18,7 @@ import type {
   StateTransitionResult,
 } from './lead-engineer-types.js';
 import { EXECUTE_TIMEOUT_MS } from './lead-engineer-types.js';
+import type { VerifiedTrajectory } from '@protolabs-ai/types';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -344,6 +345,48 @@ export class ExecuteProcessor implements StateProcessor {
         });
       } catch (err) {
         logger.warn('[EXECUTE] Failed to save handoff (non-fatal):', err);
+      }
+    }
+
+    // Fire-and-forget: persist trajectory for the learning flywheel
+    if (this.serviceContext.trajectoryStoreService) {
+      try {
+        const existingTrajectories =
+          await this.serviceContext.trajectoryStoreService.loadTrajectories(
+            ctx.projectPath,
+            ctx.feature.id
+          );
+        const attemptNumber = existingTrajectories.length + 1;
+
+        const fs = await import('node:fs/promises');
+        const outputPath = path.join(
+          getFeatureDir(ctx.projectPath, ctx.feature.id),
+          'agent-output.md'
+        );
+        const agentOutput = await fs.readFile(outputPath, 'utf-8').catch(() => '');
+
+        const trajectory: VerifiedTrajectory = {
+          featureId: ctx.feature.id,
+          domain: 'fullstack',
+          complexity: (ctx.feature.complexity as VerifiedTrajectory['complexity']) || 'medium',
+          model: ctx.feature.model || 'sonnet',
+          planSummary: (ctx.planOutput || '').slice(0, 500),
+          executionSummary: agentOutput.slice(0, 500),
+          costUsd: ctx.feature.costUsd || 0,
+          durationMs: ctx.startedAt ? Date.now() - new Date(ctx.startedAt).getTime() : 0,
+          retryCount: ctx.retryCount,
+          verified: true,
+          timestamp: new Date().toISOString(),
+          attemptNumber,
+        };
+
+        this.serviceContext.trajectoryStoreService.saveTrajectory(
+          ctx.projectPath,
+          ctx.feature.id,
+          trajectory
+        );
+      } catch (err) {
+        logger.warn('[EXECUTE] Failed to save trajectory (non-fatal):', err);
       }
     }
 

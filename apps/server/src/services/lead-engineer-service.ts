@@ -25,6 +25,7 @@ import type { ContextFidelityService } from './context-fidelity-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
 import type { FactStoreService } from './fact-store-service.js';
+import type { TrajectoryStoreService } from './trajectory-store-service.js';
 import { DEFAULT_RULES } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { FeatureStateMachine } from './lead-engineer-state-machine.js';
@@ -69,6 +70,7 @@ export class LeadEngineerService {
   private agentFactoryService?: AgentFactoryService;
   private handoffService?: LeadHandoffService;
   private factStoreService?: FactStoreService;
+  private trajectoryStoreService?: TrajectoryStoreService;
   private antagonisticReviewService?: IPlanReviewService;
   private hitlFormService?: HITLFormService;
 
@@ -120,6 +122,9 @@ export class LeadEngineerService {
   }
   setFactStoreService(s: FactStoreService): void {
     this.factStoreService = s;
+  }
+  setTrajectoryStoreService(s: TrajectoryStoreService): void {
+    this.trajectoryStoreService = s;
   }
   setAntagonisticReviewService(s: IPlanReviewService): void {
     this.antagonisticReviewService = s;
@@ -329,6 +334,7 @@ export class LeadEngineerService {
         leadHandoffService: this.handoffService,
         antagonisticReviewService: this.antagonisticReviewService,
         hitlFormService: this.hitlFormService,
+        trajectoryStoreService: this.trajectoryStoreService,
       };
 
       const workflowSettings = await getWorkflowSettings(

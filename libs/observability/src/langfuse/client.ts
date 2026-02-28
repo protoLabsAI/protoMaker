@@ -285,6 +285,37 @@ export class LangfuseClient {
   }
 
   /**
+   * Create or upsert a dataset item in Langfuse.
+   * Creates the dataset if it doesn't exist, then adds the item.
+   */
+  async createDatasetItem(options: {
+    datasetName: string;
+    input?: Record<string, unknown>;
+    expectedOutput?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+    sourceTraceId?: string;
+  }): Promise<void> {
+    if (!this.isAvailable()) {
+      logger.debug('Langfuse unavailable, skipping dataset item creation');
+      return;
+    }
+
+    try {
+      await this.client!.createDatasetItem({
+        datasetName: options.datasetName,
+        input: options.input,
+        expectedOutput: options.expectedOutput,
+        metadata: options.metadata,
+        sourceTraceId: options.sourceTraceId,
+      });
+      logger.debug('Created dataset item in Langfuse', { datasetName: options.datasetName });
+    } catch (error) {
+      logger.error('Failed to create dataset item in Langfuse', error);
+      throw error;
+    }
+  }
+
+  /**
    * Flush pending events to Langfuse
    */
   async flush(): Promise<void> {
