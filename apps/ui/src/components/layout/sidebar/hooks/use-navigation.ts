@@ -16,7 +16,6 @@ import {
   Palette,
   CalendarDays,
   FolderOpen,
-  MessageCircle,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -162,11 +161,6 @@ export function useNavigation({
 
     // Build project items - Terminal, Calendar, Designs are conditionally included
     const projectItems: NavItem[] = [
-      {
-        id: 'chat',
-        label: 'Ava',
-        icon: MessageCircle,
-      },
       {
         id: 'analytics',
         label: 'System View',
