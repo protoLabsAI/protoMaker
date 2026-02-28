@@ -533,16 +533,16 @@ When features belong to an epic, the git workflow follows a hierarchical PR stru
 ```
 main
   ↑
-epic/foundation ──────────── Epic PR (targets main)
+epic/foundation ──────────── Epic PR (targets dev)
   ↑         ↑         ↑
 feat-a    feat-b    feat-c   Feature PRs (target epic branch)
 ```
 
 **Automatic Behavior:**
 
-- Feature PRs automatically target their epic's branch (not main)
-- Epic PRs target main
-- Features without an epic target main directly
+- Feature PRs automatically target their epic's branch (not dev)
+- Epic PRs target dev
+- Features without an epic target dev directly
 
 **Merge Order:**
 
