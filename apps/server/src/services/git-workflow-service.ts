@@ -1162,21 +1162,29 @@ export class GitWorkflowService {
       // No existing PR found, continue to create
     }
 
-    // Create new PR - always use explicit --repo to target correct repository
-    let prCmd = `gh pr create --base "${baseBranch}"`;
+    // Create new PR - use execFileAsync array args to avoid shell injection
+    // with backticks, $(), !, and other special chars in LLM-generated PR bodies
+    const prArgs = [
+      'pr',
+      'create',
+      '--base',
+      baseBranch,
+      '--head',
+      branchName,
+      '--title',
+      title,
+      '--body',
+      body,
+    ];
 
     if (targetRepo) {
-      prCmd += ` --repo "${targetRepo}"`;
+      prArgs.push('--repo', targetRepo);
     }
-
-    // Use simple branch name since we're targeting our own repo (origin)
-    prCmd += ` --head "${branchName}"`;
-    prCmd += ` --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"')}"`;
 
     try {
       // Use retry logic for PR creation
       const { prUrl, prNumber, prCreatedAt } = await retryWithExponentialBackoff(async () => {
-        const { stdout: prOutput } = await execAsync(prCmd, {
+        const { stdout: prOutput } = await execFileAsync('gh', prArgs, {
           cwd: workDir,
           env: execEnv,
         });
