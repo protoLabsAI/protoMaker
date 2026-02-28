@@ -1,21 +1,22 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
-import { Cpu, Zap } from 'lucide-react';
+import { Cpu, Zap, Server } from 'lucide-react';
 import { CursorSettingsTab } from './cursor-settings-tab';
 import { ClaudeSettingsTab } from './claude-settings-tab';
 import { CodexSettingsTab } from './codex-settings-tab';
 import { OpencodeSettingsTab } from './opencode-settings-tab';
 import { GroqSettingsTab } from './groq-settings-tab';
+import { OpenAICompatibleTab } from './openai-compatible-tab';
 
 interface ProviderTabsProps {
-  defaultTab?: 'claude' | 'cursor' | 'codex' | 'opencode' | 'groq';
+  defaultTab?: 'claude' | 'cursor' | 'codex' | 'opencode' | 'groq' | 'openai-compatible';
 }
 
 export function ProviderTabs({ defaultTab = 'claude' }: ProviderTabsProps) {
   return (
     <Tabs defaultValue={defaultTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-5 mb-6">
+      <TabsList className="grid w-full grid-cols-6 mb-6">
         <TabsTrigger value="claude" className="flex items-center gap-2">
           <AnthropicIcon className="w-4 h-4" />
           Claude
@@ -35,6 +36,14 @@ export function ProviderTabs({ defaultTab = 'claude' }: ProviderTabsProps) {
         <TabsTrigger value="groq" className="flex items-center gap-2">
           <Zap className="w-4 h-4" />
           Groq
+        </TabsTrigger>
+        <TabsTrigger
+          value="openai-compatible"
+          className="flex items-center gap-2"
+          data-testid="openai-compatible-tab-trigger"
+        >
+          <Server className="w-4 h-4" />
+          OpenAI-Compatible
         </TabsTrigger>
       </TabsList>
 
@@ -56,6 +65,10 @@ export function ProviderTabs({ defaultTab = 'claude' }: ProviderTabsProps) {
 
       <TabsContent value="groq">
         <GroqSettingsTab />
+      </TabsContent>
+
+      <TabsContent value="openai-compatible">
+        <OpenAICompatibleTab />
       </TabsContent>
     </Tabs>
   );

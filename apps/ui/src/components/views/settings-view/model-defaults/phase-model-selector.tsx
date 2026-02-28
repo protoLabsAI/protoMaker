@@ -12,6 +12,7 @@ import type {
   ClaudeCompatibleProvider,
   ProviderModel,
   ClaudeModelAlias,
+  OpenAICompatibleConfig,
 } from '@protolabs-ai/types';
 import {
   STANDALONE_CURSOR_MODELS,
@@ -31,7 +32,7 @@ import {
   REASONING_EFFORT_LABELS,
   type ModelOption,
 } from '@/components/views/board-view/shared/model-constants';
-import { Check, ChevronsUpDown, Star, ChevronRight, Zap } from 'lucide-react';
+import { Check, ChevronsUpDown, Star, ChevronRight, Zap, Server } from 'lucide-react';
 import {
   AnthropicIcon,
   CursorIcon,
@@ -179,6 +180,7 @@ export function PhaseModelSelector({
     fetchOpencodeModels,
     disabledProviders,
     claudeCompatibleProviders,
+    openaiCompatibleProviders,
   } = useAIModelsStore();
 
   // Detect mobile devices to use inline expansion instead of nested popovers
@@ -194,6 +196,11 @@ export function PhaseModelSelector({
   const enabledProviders = useMemo(() => {
     return (claudeCompatibleProviders || []).filter((p) => p.enabled !== false);
   }, [claudeCompatibleProviders]);
+
+  // Get enabled OpenAI-compatible providers
+  const enabledOpenAICompatibleProviders = useMemo(() => {
+    return (openaiCompatibleProviders || []).filter((p) => p.enabled !== false);
+  }, [openaiCompatibleProviders]);
 
   // Fetch Codex models on mount
   useEffect(() => {
@@ -453,6 +460,20 @@ export function PhaseModelSelector({
       }
     }
 
+    // Check OpenAI-Compatible Provider models
+    for (const provider of enabledOpenAICompatibleProviders) {
+      const providerModel = provider.models?.find((m) => m.id === selectedModel);
+      if (providerModel) {
+        return {
+          id: selectedModel,
+          label: `${providerModel.displayName} (${provider.name})`,
+          description: provider.name,
+          provider: 'openai-compatible' as const,
+          icon: Server,
+        };
+      }
+    }
+
     return null;
   }, [
     selectedModel,
@@ -462,6 +483,7 @@ export function PhaseModelSelector({
     transformedCodexModels,
     dynamicOpencodeModels,
     enabledProviders,
+    enabledOpenAICompatibleProviders,
   ]);
 
   // Compute grouped vs standalone Cursor models
@@ -1081,6 +1103,59 @@ export function PhaseModelSelector({
               {model.badge}
             </span>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-6 w-6 hover:bg-transparent hover:text-yellow-500 focus:ring-0',
+              isFavorite
+                ? 'text-yellow-500 opacity-100'
+                : 'opacity-0 group-hover:opacity-100 text-muted-foreground'
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavoriteModel(model.id);
+            }}
+          >
+            <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-current')} />
+          </Button>
+          {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+        </div>
+      </CommandItem>
+    );
+  };
+
+  // Render OpenAI-Compatible provider model item (simple selection, no thinking levels)
+  const renderOpenAICompatModelItem = (provider: OpenAICompatibleConfig, model: ProviderModel) => {
+    const isSelected = selectedModel === model.id;
+    const isFavorite = favoriteModels.includes(model.id);
+
+    return (
+      <CommandItem
+        key={`${provider.id}-${model.id}`}
+        value={`${provider.name} ${model.displayName}`}
+        onSelect={() => {
+          onChange({ model: model.id });
+          setOpen(false);
+        }}
+        className="group flex items-center justify-between py-2"
+      >
+        <div className="flex items-center gap-3 overflow-hidden">
+          <Server
+            className={cn(
+              'h-4 w-4 shrink-0',
+              isSelected ? 'text-primary' : 'text-muted-foreground'
+            )}
+          />
+          <div className="flex flex-col truncate">
+            <span className={cn('truncate font-medium', isSelected && 'text-primary')}>
+              {model.displayName}
+            </span>
+            <span className="truncate text-xs text-muted-foreground">{model.id}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 ml-2">
           <Button
             variant="ghost"
             size="icon"
@@ -2002,6 +2077,16 @@ export function PhaseModelSelector({
               {groq.map((model) => renderGroqModelItem(model))}
             </CommandGroup>
           )}
+
+          {/* OpenAI-Compatible Provider Models - each provider as separate group */}
+          {enabledOpenAICompatibleProviders.map((provider) => {
+            if (!provider.models || provider.models.length === 0) return null;
+            return (
+              <CommandGroup key={provider.id} heading={provider.name}>
+                {provider.models.map((model) => renderOpenAICompatModelItem(provider, model))}
+              </CommandGroup>
+            );
+          })}
 
           {opencodeSections.length > 0 && (
             <CommandGroup heading={OPENCODE_CLI_GROUP_LABEL}>
