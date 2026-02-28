@@ -136,6 +136,20 @@ export async function* spawnJSONLProcess(options: SubprocessOptions): AsyncGener
     }
   };
 
+  // Pre-register exit promise to prevent race where process exits between
+  // stdout close and listener registration.
+  const exitPromise = new Promise<number | null>((resolve) => {
+    childProcess.on('exit', (code) => {
+      console.log(`[SubprocessManager] Process exited with code: ${code}`);
+      resolve(code);
+    });
+
+    childProcess.on('error', (error) => {
+      console.error('[SubprocessManager] Process error:', error);
+      resolve(null);
+    });
+  });
+
   // Parse stdout as JSONL (one JSON object per line)
   if (childProcess.stdout) {
     const rl = readline.createInterface({
@@ -176,18 +190,8 @@ export async function* spawnJSONLProcess(options: SubprocessOptions): AsyncGener
     cleanupAbortListener();
   }
 
-  // Wait for process to exit
-  const exitCode = await new Promise<number | null>((resolve) => {
-    childProcess.on('exit', (code) => {
-      console.log(`[SubprocessManager] Process exited with code: ${code}`);
-      resolve(code);
-    });
-
-    childProcess.on('error', (error) => {
-      console.error('[SubprocessManager] Process error:', error);
-      resolve(null);
-    });
-  });
+  // Wait for process to exit (promise was pre-registered before readline to avoid race)
+  const exitCode = await exitPromise;
 
   // Handle non-zero exit codes
   if (exitCode !== 0 && exitCode !== null) {

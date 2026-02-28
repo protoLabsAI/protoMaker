@@ -79,7 +79,7 @@ ARG GID=1001
 # Install git, curl, bash (for terminal), gosu (for user switching), and GitHub CLI (pinned version, multi-arch)
 # Also install Playwright/Chromium system dependencies (aligns with playwright install-deps on Debian/Ubuntu)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl bash gosu ca-certificates openssh-client \
+    git curl bash gosu ca-certificates openssh-client dumb-init \
     # Playwright/Chromium dependencies
     libglib2.0-0 libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
     libcups2 libdrm2 libxkbcommon0 libatspi2.0-0 libxcomposite1 libxdamage1 \
@@ -194,7 +194,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3008/api/health || exit 1
 
 # Use entrypoint to fix permissions before starting
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]
 
 # Start server
 CMD ["node", "apps/server/dist/index.js"]

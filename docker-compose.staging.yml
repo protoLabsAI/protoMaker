@@ -103,10 +103,10 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
 
       # Agent concurrency limit (system hard cap)
-      - AUTOMAKER_MAX_CONCURRENCY=${AUTOMAKER_MAX_CONCURRENCY:-8}
+      - AUTOMAKER_MAX_CONCURRENCY=${AUTOMAKER_MAX_CONCURRENCY:-6}
 
       # Node.js memory tuning for high-concurrency agent execution
-      - NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE:-32768}
+      - NODE_OPTIONS=--max-old-space-size=${NODE_MAX_OLD_SPACE:-4096} --max-semi-space-size=128
 
     volumes:
       # Persistent data
@@ -124,8 +124,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${CPU_LIMIT:-8}'
-          memory: ${MEMORY_LIMIT:-48G}
+          cpus: '${CPU_LIMIT:-6}'
+          memory: ${MEMORY_LIMIT:-32G}
         reservations:
           cpus: '2'
           memory: 8G
