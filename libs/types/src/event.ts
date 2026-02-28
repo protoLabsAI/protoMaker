@@ -29,6 +29,7 @@ export type EventType =
   | 'feature:retry'
   | 'feature:recovery'
   | 'feature:pr-merged'
+  | 'feature:pr-closed-unmerged'
   | 'feature:verify-pending'
   | 'feature:blocked'
   | 'feature:unblocked'
@@ -537,6 +538,12 @@ export interface EventPayloadMap {
     featureTitle?: string;
     prNumber?: number;
     projectPath?: string;
+  };
+  'feature:pr-closed-unmerged': {
+    featureId: string;
+    projectPath: string;
+    prNumber: number;
+    prUrl?: string;
   };
   'feature:verify-pending': {
     featureId: string;

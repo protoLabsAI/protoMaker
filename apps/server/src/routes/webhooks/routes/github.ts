@@ -257,12 +257,55 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         return;
       }
 
-      // Only handle merged PRs for pull_request events
-      if (payload.action !== 'closed' || !payload.pull_request.merged) {
-        logger.debug(
-          `Ignoring PR action: ${payload.action}, merged: ${payload.pull_request.merged}`
+      // Only handle closed pull_request events
+      if (payload.action !== 'closed') {
+        logger.debug(`Ignoring PR action: ${payload.action}`);
+        res.json({ success: true, message: 'Not a close event' });
+        return;
+      }
+
+      // PR closed WITHOUT merging — find linked feature and recover to backlog
+      if (!payload.pull_request.merged) {
+        const closedPrNumber = payload.pull_request.number;
+        const closedProject = settings.projects.find((p) => p.id === settings.currentProjectId);
+        const closedProjectPath = closedProject?.path || process.cwd();
+
+        const closedFeature = await featureLoader.findByPRNumber(closedProjectPath, closedPrNumber);
+
+        if (!closedFeature) {
+          logger.debug(`No feature found for closed PR #${closedPrNumber}`);
+          res.json({ success: true, message: 'No feature linked to this PR' });
+          return;
+        }
+
+        if (closedFeature.status !== 'review') {
+          logger.debug(
+            `Feature ${closedFeature.id} is not in review (status=${closedFeature.status}), skipping recovery`
+          );
+          res.json({ success: true, message: 'Feature not in review, no recovery needed' });
+          return;
+        }
+
+        logger.info(
+          `PR #${closedPrNumber} closed without merging — recovering feature ${closedFeature.id} to backlog`
         );
-        res.json({ success: true, message: 'PR not merged' });
+
+        await featureLoader.update(closedProjectPath, closedFeature.id, {
+          status: 'backlog',
+          statusChangeReason: `PR #${closedPrNumber} closed without merging — auto-recovering to backlog`,
+          prNumber: undefined,
+          prUrl: undefined,
+          reviewStartedAt: undefined,
+        });
+
+        events.emit('feature:pr-closed-unmerged', {
+          featureId: closedFeature.id,
+          projectPath: closedProjectPath,
+          prNumber: closedPrNumber,
+          prUrl: closedFeature.prUrl,
+        });
+
+        res.json({ success: true, message: `Feature ${closedFeature.id} recovered to backlog` });
         return;
       }
 
