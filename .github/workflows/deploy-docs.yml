@@ -1,0 +1,100 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
+# Deploy docs site to staging from the dev branch.
+#
+# Triggers whenever docs/** changes are pushed to dev. Surgically updates only
+# the docs/ directory in the persistent staging deploy dir, then rebuilds the
+# nginx docs container — without touching the running staging app.
+#
+# The docs container runs independently at port 3009 via docker-compose.docs.yml.
+
+name: Deploy Docs
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'docs/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, staging]
+    if: github.repository == 'proto-labs-ai/protoMaker'
+    timeout-minutes: 15
+    concurrency:
+      group: docs-deploy
+      cancel-in-progress: false
+
+    steps:
+      - name: Setup deploy directory
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export DEPLOY_DIR="$HOME/staging-deploy/automaker"
+          echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+
+          if [ ! -d "$DEPLOY_DIR/.git" ]; then
+            mkdir -p "$(dirname "$DEPLOY_DIR")"
+            git clone "$REPO_URL" "$DEPLOY_DIR"
+          fi
+
+          cd "$DEPLOY_DIR"
+          git remote set-url origin "$REPO_URL"
+
+          # Only update the docs/ directory to the dev branch version.
+          # The rest of the deploy dir stays on whatever branch the staging app is using.
+          git fetch origin dev
+          git checkout origin/dev -- docs/ package.json package-lock.json
+          echo "Docs updated to: $(git rev-parse origin/dev | head -c 8)"
+
+      - name: Rebuild docs container
+        working-directory: ${{ env.DEPLOY_DIR }}
+        env:
+          GIT_COMMIT_SHA: ${{ github.sha }}
+        run: |
+          docker compose -f docker-compose.docs.yml up -d --build
+          echo "Docs container rebuilt"
+
+      - name: Verify docs
+        run: |
+          DOCS_PORT=$(grep -oP 'DOCS_PORT=\K\d+' "$DEPLOY_DIR/.env" 2>/dev/null || echo "3009")
+          retries=0
+          while [ $retries -lt 10 ]; do
+            if curl -sf "http://localhost:${DOCS_PORT}/" > /dev/null 2>&1; then
+              echo "Docs site healthy on port ${DOCS_PORT}"
+              break
+            fi
+            retries=$((retries + 1))
+            sleep 2
+          done
+          if [ $retries -eq 10 ]; then
+            echo "Docs health check failed after 20s"
+            docker compose -f docker-compose.docs.yml logs --tail=30 docs
+            exit 1
+          fi
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          COMMIT="${{ github.sha }}"
+          STATUS="${{ job.status }}"
+          if [ "$STATUS" = "success" ]; then
+            MSG="Docs deployed from dev: \`${COMMIT:0:8}\` — https://staging.protolabs.studio:3009"
+          else
+            MSG="Docs deploy FAILED from dev: \`${COMMIT:0:8}\` — Check Actions: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+          if [ -n "${DISCORD_DEPLOY_WEBHOOK:-}" ]; then
+            curl -sf -H "Content-Type: application/json" \
+              -d "{\"content\": \"${MSG}\"}" \
+              "$DISCORD_DEPLOY_WEBHOOK" || true
+          fi
+          echo "$MSG"
+        env:
+          DISCORD_DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
