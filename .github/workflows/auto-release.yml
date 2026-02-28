@@ -97,6 +97,45 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sync version bump back to staging and dev
+        # The version bump commit lands on main. Sync it back so staging and dev
+        # stay consistent. Opens PRs main→staging and main→dev and auto-merges them.
+        # Uses GH_PAT so the PRs can be created and merged by the bot.
+        # Both PRs use --merge to preserve the DAG (same rule as promotion PRs).
+        run: |
+          VERSION="v${{ steps.version.outputs.version }}"
+
+          # main → staging
+          STAGING_PR=$(gh pr create \
+            --title "chore: sync ${VERSION} version bump → staging" \
+            --body "Auto-sync of ${VERSION} release commit from main → staging → dev." \
+            --base staging \
+            --head main 2>&1) || true
+          echo "staging PR: $STAGING_PR"
+
+          STAGING_PR_NUM=$(echo "$STAGING_PR" | grep -oP '(?<=/pull/)\d+' | head -1)
+          if [ -n "$STAGING_PR_NUM" ]; then
+            # Enable auto-merge — merges as soon as required checks pass
+            gh pr merge "$STAGING_PR_NUM" --merge --auto || true
+            echo "Enabled auto-merge for staging sync PR #${STAGING_PR_NUM}"
+          fi
+
+          # main → dev
+          DEV_PR=$(gh pr create \
+            --title "chore: sync ${VERSION} version bump → dev" \
+            --body "Auto-sync of ${VERSION} release commit from main → dev." \
+            --base dev \
+            --head main 2>&1) || true
+          echo "dev PR: $DEV_PR"
+
+          DEV_PR_NUM=$(echo "$DEV_PR" | grep -oP '(?<=/pull/)\d+' | head -1)
+          if [ -n "$DEV_PR_NUM" ]; then
+            gh pr merge "$DEV_PR_NUM" --merge --auto || true
+            echo "Enabled auto-merge for dev sync PR #${DEV_PR_NUM}"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
       - name: Post release notes to Discord
         if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
         run: |
