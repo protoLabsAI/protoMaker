@@ -212,6 +212,9 @@ export function parseLocalStorageSettings(): Partial<GlobalSettings> | null {
       // Claude Compatible Providers (new system)
       claudeCompatibleProviders:
         (state.claudeCompatibleProviders as GlobalSettings['claudeCompatibleProviders']) ?? [],
+      // OpenAI Compatible Providers
+      openaiCompatibleProviders:
+        (state.openaiCompatibleProviders as GlobalSettings['openaiCompatibleProviders']) ?? [],
     };
   } catch (error) {
     logger.error('Failed to parse localStorage settings:', error);
@@ -354,6 +357,16 @@ export function mergeSettings(
     localSettings.claudeCompatibleProviders.length > 0
   ) {
     merged.claudeCompatibleProviders = localSettings.claudeCompatibleProviders;
+  }
+
+  // OpenAI Compatible Providers - preserve from localStorage if server is empty
+  if (
+    (!serverSettings.openaiCompatibleProviders ||
+      serverSettings.openaiCompatibleProviders.length === 0) &&
+    localSettings.openaiCompatibleProviders &&
+    localSettings.openaiCompatibleProviders.length > 0
+  ) {
+    merged.openaiCompatibleProviders = localSettings.openaiCompatibleProviders;
   }
 
   return merged;
@@ -757,6 +770,7 @@ export function hydrateStoreFromSettings(settings: GlobalSettings): void {
     claudeApiProfiles: settings.claudeApiProfiles ?? [],
     activeClaudeApiProfileId: settings.activeClaudeApiProfileId ?? null,
     claudeCompatibleProviders: settings.claudeCompatibleProviders ?? [],
+    openaiCompatibleProviders: settings.openaiCompatibleProviders ?? [],
   });
 
   useWorktreeStore.setState({
@@ -831,6 +845,7 @@ function buildSettingsUpdateFromStore(): Record<string, unknown> {
     claudeApiProfiles: aiState.claudeApiProfiles,
     activeClaudeApiProfileId: aiState.activeClaudeApiProfileId,
     claudeCompatibleProviders: aiState.claudeCompatibleProviders,
+    openaiCompatibleProviders: aiState.openaiCompatibleProviders,
     // Worktree store
     maxConcurrency: worktreeState.maxConcurrency,
     autoModeByWorktree: persistedAutoModeByWorktree,
