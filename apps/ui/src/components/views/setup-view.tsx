@@ -7,6 +7,7 @@ import {
   CompleteStep,
   ProvidersSetupStep,
   GitHubSetupStep,
+  UserProfileSetupStep,
 } from './setup-view/steps';
 import { useNavigate } from '@tanstack/react-router';
 
@@ -17,14 +18,15 @@ export function SetupView() {
   const { currentStep, setCurrentStep, completeSetup } = useSetupStore();
   const navigate = useNavigate();
 
-  // Simplified steps: welcome, theme, providers (combined), github, complete
-  const steps = ['welcome', 'theme', 'providers', 'github', 'complete'] as const;
+  // Steps: welcome, theme, user_profile, providers (combined), github, complete
+  const steps = ['welcome', 'theme', 'user_profile', 'providers', 'github', 'complete'] as const;
   type StepName = (typeof steps)[number];
 
   const getStepName = (): StepName => {
     // Map old step names to new consolidated steps
     if (currentStep === 'welcome') return 'welcome';
     if (currentStep === 'theme') return 'theme';
+    if (currentStep === 'user_profile') return 'user_profile';
     if (
       currentStep === 'claude_detect' ||
       currentStep === 'claude_auth' ||
@@ -49,6 +51,10 @@ export function SetupView() {
         setCurrentStep('theme');
         break;
       case 'theme':
+        logger.debug('[Setup Flow] Moving to user_profile step');
+        setCurrentStep('user_profile');
+        break;
+      case 'user_profile':
         logger.debug('[Setup Flow] Moving to providers step');
         setCurrentStep('providers');
         break;
@@ -69,8 +75,11 @@ export function SetupView() {
       case 'theme':
         setCurrentStep('welcome');
         break;
-      case 'providers':
+      case 'user_profile':
         setCurrentStep('theme');
+        break;
+      case 'providers':
+        setCurrentStep('user_profile');
         break;
       case 'github':
         setCurrentStep('providers');
@@ -114,6 +123,14 @@ export function SetupView() {
 
             {currentStep === 'theme' && (
               <ThemeStep onNext={() => handleNext('theme')} onBack={() => handleBack('theme')} />
+            )}
+
+            {currentStep === 'user_profile' && (
+              <UserProfileSetupStep
+                onNext={() => handleNext('user_profile')}
+                onBack={() => handleBack('user_profile')}
+                onSkip={() => handleNext('user_profile')}
+              />
             )}
 
             {(currentStep === 'providers' ||
