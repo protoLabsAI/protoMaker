@@ -24,6 +24,18 @@ export function ChatOverlayView() {
     }
   }, []);
 
+  // When the Electron overlay window is shown again, focus the chat input
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      const textarea = document.querySelector<HTMLTextAreaElement>(
+        '[data-slot="chat-input"] textarea'
+      );
+      textarea?.focus();
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    return () => window.removeEventListener('focus', handleWindowFocus);
+  }, []);
+
   // Escape key hides the overlay (or closes history panel first)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

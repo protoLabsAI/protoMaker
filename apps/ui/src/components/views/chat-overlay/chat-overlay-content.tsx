@@ -166,6 +166,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             onStop={stop}
             isStreaming={isStreaming}
             placeholder="Ask Ava..."
+            autoFocus
             actions={
               <>
                 <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />

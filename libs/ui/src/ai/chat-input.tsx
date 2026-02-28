@@ -20,6 +20,7 @@ export function ChatInput({
   placeholder = 'Ask anything...',
   actions,
   className,
+  autoFocus,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -31,6 +32,8 @@ export function ChatInput({
   /** Optional slot for extra controls (e.g. model selector) rendered below the input */
   actions?: React.ReactNode;
   className?: string;
+  /** Focus the input on mount */
+  autoFocus?: boolean;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDisabled = disabled || isStreaming;
@@ -42,6 +45,15 @@ export function ChatInput({
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 150)}px`;
   }, [value]);
+
+  // Re-focus after streaming ends so user can type the next message immediately
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    if (prevStreamingRef.current && !isStreaming) {
+      textareaRef.current?.focus();
+    }
+    prevStreamingRef.current = !!isStreaming;
+  }, [isStreaming]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -67,6 +79,7 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={isDisabled}
           rows={1}
+          autoFocus={autoFocus}
           className="flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
         />
         {isStreaming && onStop ? (
