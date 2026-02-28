@@ -8,6 +8,7 @@ import type { AgentRole } from './agent-roles.js';
 import type { WorkItemState } from './authority.js';
 import type { ReviewThreadFeedback, PendingFeedback } from './coderabbit.js';
 import type { PipelineState } from './pipeline-phase.js';
+import type { PipelineSummary } from './pipeline.js';
 import type { SignalChannel, SignalMetadata } from './signal-channel.js';
 
 /**
@@ -181,6 +182,8 @@ export interface Feature {
   };
   error?: string;
   summary?: string;
+  /** Per-pipeline-step summaries accumulated during execution. Enables phase-structured output display. */
+  pipelineSummaries?: PipelineSummary[];
   startedAt?: string;
   descriptionHistory?: DescriptionHistoryEntry[]; // History of description changes
   /** Override global git workflow settings for this specific feature */

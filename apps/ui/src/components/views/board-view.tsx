@@ -1685,6 +1685,7 @@ export function BoardView() {
         featureStatus={outputFeature?.status}
         onNumberKeyPress={handleOutputModalNumberKeyPress}
         branchName={outputFeature?.branchName}
+        featureSummary={outputFeature?.summary}
       />
 
       {/* Archive All Verified Dialog */}
