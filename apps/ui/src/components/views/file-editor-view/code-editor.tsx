@@ -10,15 +10,10 @@
 
 import { useMemo, useEffect, useRef, useCallback } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
-// @ts-expect-error -- codemirror language packages may not have type declarations installed
 import { javascript } from '@codemirror/lang-javascript';
-// @ts-expect-error -- codemirror language packages may not have type declarations installed
 import { css } from '@codemirror/lang-css';
-// @ts-expect-error -- codemirror language packages may not have type declarations installed
 import { json } from '@codemirror/lang-json';
-// @ts-expect-error -- codemirror language packages may not have type declarations installed
 import { markdown } from '@codemirror/lang-markdown';
-// @ts-expect-error -- codemirror language packages may not have type declarations installed
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { EditorView } from '@codemirror/view';

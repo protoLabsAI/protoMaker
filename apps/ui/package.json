@@ -31,7 +31,7 @@
     "postinstall": "electron-builder install-app-deps",
     "preview": "vite preview",
     "lint": "npx eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/generate-routes.mjs && tsc --noEmit",
     "pretest": "node scripts/kill-test-servers.mjs && node scripts/setup-e2e-fixtures.mjs",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
