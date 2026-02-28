@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Label } from '@protolabs-ai/ui/atoms';
 import { Checkbox } from '@protolabs-ai/ui/atoms';
 import {
@@ -12,8 +13,11 @@ import {
   FastForward,
   Sparkles,
   Cpu,
+  Gauge,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getElectronAPI } from '@/lib/electron';
+import { queryKeys } from '@/lib/query-keys';
 import {
   Select,
   SelectContent,
@@ -59,6 +63,21 @@ export function FeatureDefaultsSection({
   onEnableAiCommitMessagesChange,
   onDefaultFeatureModelChange,
 }: FeatureDefaultsSectionProps) {
+  // Fetch global auto-mode status to display the server-side concurrency cap
+  const { data: autoModeStatusData } = useQuery({
+    queryKey: ['autoMode', 'status', undefined],
+    queryFn: async () => {
+      const api = getElectronAPI();
+      return api.autoMode?.status(undefined, null);
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const systemMaxConcurrency: number =
+    ((autoModeStatusData as Record<string, unknown> | undefined)?.systemMaxConcurrency as number) ??
+    null;
+
   return (
     <div
       className={cn(
@@ -311,6 +330,34 @@ export function FeatureDefaultsSection({
               When enabled, opening the commit dialog will automatically generate a commit message
               using AI based on your staged or unstaged changes. You can configure the model used in
               Model Defaults.
+            </p>
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div className="border-t border-border/30" />
+
+        {/* System Concurrency Limit (read-only) */}
+        <div className="group flex items-start space-x-3 p-3 rounded-xl -mx-3">
+          <div className="w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0 bg-muted/40">
+            <Gauge className="w-5 h-5 text-muted-foreground" />
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <Label className="text-foreground font-medium">System Concurrency Limit</Label>
+              <span
+                className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded bg-muted/50 text-muted-foreground"
+                data-testid="system-max-concurrency-value"
+              >
+                {systemMaxConcurrency !== null ? systemMaxConcurrency : '--'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground/80 leading-relaxed">
+              Maximum concurrent agents allowed system-wide. Set by the{' '}
+              <code className="font-mono text-[11px] bg-muted/60 px-1 py-0.5 rounded">
+                AUTOMAKER_MAX_CONCURRENCY
+              </code>{' '}
+              environment variable. Read-only — restart the server to apply changes.
             </p>
           </div>
         </div>

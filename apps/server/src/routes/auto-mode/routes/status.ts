@@ -7,6 +7,7 @@
 
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import { MAX_SYSTEM_CONCURRENCY } from '@protolabs-ai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createStatusHandler(autoModeService: AutoModeService) {
@@ -32,6 +33,7 @@ export function createStatusHandler(autoModeService: AutoModeService) {
           runningFeatures: projectStatus.runningFeatures,
           runningCount: projectStatus.runningCount,
           maxConcurrency: projectStatus.maxConcurrency,
+          systemMaxConcurrency: MAX_SYSTEM_CONCURRENCY,
           projectPath,
           branchName: normalizedBranchName,
         });
@@ -47,6 +49,7 @@ export function createStatusHandler(autoModeService: AutoModeService) {
         ...status,
         activeAutoLoopProjects: activeProjects,
         activeAutoLoopWorktrees: activeWorktrees,
+        systemMaxConcurrency: MAX_SYSTEM_CONCURRENCY,
       });
     } catch (error) {
       logError(error, 'Get status failed');

@@ -17,6 +17,7 @@ import { PipelinePillSelector } from './pipeline-pill-selector';
 import { PipelineEventLog } from './pipeline-event-log';
 import { PipelineAnalytics } from './pipeline-analytics';
 import { AgentAnalyticsPanel } from './agent-analytics-panel';
+import { AutoModeSummaryPanel } from './panels/auto-mode-summary-panel';
 import { NodeDetailDialog, type SelectedNode } from './dialogs/node-detail-dialog';
 import { SignalInputDialog } from './dialogs/signal-input-dialog';
 import { PrdReviewDialog } from './dialogs/prd-review-dialog';
@@ -38,6 +39,9 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
 
   // Agent analytics panel visibility
   const [showAgentAnalytics, setShowAgentAnalytics] = useState(false);
+
+  // Auto-mode summary panel visibility
+  const [showAutoModeSummary, setShowAutoModeSummary] = useState(false);
 
   // Node detail dialog state
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
@@ -207,6 +211,8 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
           onToggleLegend={() => setShowLegend((v) => !v)}
           showAgentAnalytics={showAgentAnalytics}
           onToggleAgentAnalytics={() => setShowAgentAnalytics((v) => !v)}
+          showAutoModeSummary={showAutoModeSummary}
+          onToggleAutoModeSummary={() => setShowAutoModeSummary((v) => !v)}
         />
       </ReactFlowProvider>
 
@@ -245,6 +251,11 @@ export function FlowGraphView({ onFeatureClick }: FlowGraphViewProps) {
 
       {/* Agent Analytics Panel */}
       {showAgentAnalytics && <AgentAnalyticsPanel onClose={() => setShowAgentAnalytics(false)} />}
+
+      {/* Auto-Mode Summary Panel */}
+      {showAutoModeSummary && (
+        <AutoModeSummaryPanel onClose={() => setShowAutoModeSummary(false)} />
+      )}
     </div>
   );
 }

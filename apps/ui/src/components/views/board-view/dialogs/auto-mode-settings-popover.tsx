@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { Label } from '@protolabs-ai/ui/atoms';
 import { Switch } from '@protolabs-ai/ui/atoms';
 import { Slider } from '@protolabs-ai/ui/atoms';
-import { FastForward, Bot, Settings2, Lock, CheckCircle, Clock } from 'lucide-react';
+import { FastForward, Bot, Settings2, Lock, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
+import { getElectronAPI } from '@/lib/electron';
+import { queryKeys } from '@/lib/query-keys';
 import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
 
 interface AutoModeSettingsPopoverProps {
@@ -24,6 +27,24 @@ export function AutoModeSettingsPopover({
 }: AutoModeSettingsPopoverProps) {
   const features = useAppStore((state) => state.features);
   const enableDependencyBlocking = useAppStore((state) => state.enableDependencyBlocking);
+  const currentProject = useAppStore((s) => s.currentProject);
+
+  // Fetch auto-mode status to get the server-side system concurrency cap
+  const { data: statusData } = useQuery({
+    queryKey: queryKeys.autoMode.status(currentProject?.path),
+    queryFn: async () => {
+      const api = getElectronAPI();
+      return api.autoMode?.status(currentProject?.path, null);
+    },
+    enabled: !!currentProject?.path,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const systemMaxConcurrency: number =
+    ((statusData as Record<string, unknown> | undefined)?.systemMaxConcurrency as number) ?? 10;
+  const sliderMax = Math.min(10, systemMaxConcurrency);
+  const isCapped = maxConcurrency > systemMaxConcurrency;
 
   const stats = useMemo(() => {
     let backlog = 0;
@@ -111,19 +132,30 @@ export function AutoModeSettingsPopover({
             </div>
             <div className="flex items-center gap-3">
               <Slider
-                value={[maxConcurrency]}
+                value={[Math.min(maxConcurrency, sliderMax)]}
                 onValueChange={(value) => onConcurrencyChange(value[0])}
                 min={1}
-                max={10}
+                max={sliderMax}
                 step={1}
                 className="flex-1"
                 data-testid="concurrency-slider"
               />
               <span className="text-xs font-medium min-w-[2ch] text-right">{maxConcurrency}</span>
             </div>
-            <p className="text-[10px] text-muted-foreground">
-              Higher values process more features in parallel but use more API resources.
-            </p>
+            {isCapped && (
+              <div className="flex items-start gap-1.5 text-[10px] text-amber-500">
+                <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+                <span>
+                  System limit: {systemMaxConcurrency} concurrent agents. Set{' '}
+                  AUTOMAKER_MAX_CONCURRENCY to increase.
+                </span>
+              </div>
+            )}
+            {!isCapped && (
+              <p className="text-[10px] text-muted-foreground">
+                Higher values process more features in parallel but use more API resources.
+              </p>
+            )}
           </div>
 
           {/* Skip Verification Setting */}
