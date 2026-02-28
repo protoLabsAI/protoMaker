@@ -9,19 +9,29 @@ Setup guide for the Claude Code plugin and MCP server. For commands and examples
 Install directly from the GitHub repository:
 
 ```bash
-# 1. Add the protoLabs plugin marketplace from GitHub
-claude plugin marketplace add https://github.com/proto-labs-ai/protomaker/tree/main/packages/mcp-server/plugins
-
-# 2. Install the plugin
-claude plugin install automaker
-
-# 3. Start protoLabs server (in a separate terminal)
+# 1. Clone the repo (needed for the MCP server binary)
 git clone https://github.com/proto-labs-ai/protomaker.git
 cd protomaker
+
+# 2. Add the protoLabs plugin marketplace
+claude plugin marketplace add https://github.com/proto-labs-ai/protomaker/tree/main/packages/mcp-server/plugins
+
+# 3. Install the plugin
+claude plugin install automaker
+
+# 4. Configure the plugin — AUTOMAKER_ROOT is required
+#    The plugin needs to know where your local clone lives
+PLUGIN_DIR=~/.claude/plugins/automaker
+cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
+# Edit .env and set AUTOMAKER_ROOT to the absolute path of this repo
+echo "AUTOMAKER_ROOT=$(pwd)" >> "$PLUGIN_DIR/.env"
+echo "AUTOMAKER_API_KEY=your-dev-key-2026" >> "$PLUGIN_DIR/.env"
+
+# 5. Start protoLabs server (in a separate terminal)
 npm install
 npm run dev:web
 
-# 4. Verify it works
+# 6. Verify it works
 claude
 > /board
 ```
@@ -39,14 +49,20 @@ npm install
 # 2. Build the MCP server
 npm run build:packages
 
-# 3. Start protoLabs server
-npm run dev:web
-
-# 4. In a new terminal, add the plugin marketplace and install
+# 3. Add the plugin marketplace and install
 claude plugin marketplace add $(pwd)/packages/mcp-server/plugins
 claude plugin install automaker
 
-# 5. Verify it works
+# 4. Configure the plugin — AUTOMAKER_ROOT is required
+PLUGIN_DIR=~/.claude/plugins/automaker
+cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
+echo "AUTOMAKER_ROOT=$(pwd)" > "$PLUGIN_DIR/.env"
+echo "AUTOMAKER_API_KEY=your-dev-key-2026" >> "$PLUGIN_DIR/.env"
+
+# 5. Start protoLabs server (in a separate terminal)
+npm run dev:web
+
+# 6. Verify it works
 claude
 > /board
 ```
@@ -153,12 +169,19 @@ You should see your Kanban board or a message to start the protoLabs server.
 
 ### Environment Variables
 
-Configure these in your shell or the plugin's `plugin.json`:
+Configure these in the plugin's `.env` file (`~/.claude/plugins/automaker/.env`).
+Copy `.env.example` in that directory to get started.
 
-| Variable            | Description                | Default                 |
-| ------------------- | -------------------------- | ----------------------- |
-| `AUTOMAKER_API_URL` | protoLabs API base URL     | `http://localhost:3008` |
-| `AUTOMAKER_API_KEY` | API key for authentication | (required)              |
+| Variable            | Description                                                   | Default                 |
+| ------------------- | ------------------------------------------------------------- | ----------------------- |
+| `AUTOMAKER_ROOT`    | Absolute path to your local protomaker repo clone             | (required)              |
+| `AUTOMAKER_API_KEY` | API key matching the one the protoLabs server is started with | (required)              |
+| `AUTOMAKER_API_URL` | protoLabs API base URL                                        | `http://localhost:3008` |
+| `GH_TOKEN`          | GitHub token for PR operations (`gh auth token` to get it)    | (optional)              |
+| `DISCORD_BOT_TOKEN` | Discord bot token for Discord MCP tools                       | (optional)              |
+| `LINEAR_API_KEY`    | Linear API key for Linear MCP tools                           | (optional)              |
+
+`AUTOMAKER_ROOT` is the most common cause of a new install failing silently. Without it, the plugin cannot locate the MCP server executable and no tools will be available.
 
 ### Plugin Configuration
 
@@ -326,10 +349,13 @@ Each project maintains its own `.automaker/` directory with independent features
 
 ### Plugin Not Loading
 
-1. Verify the MCP server is built: `cd packages/mcp-server && npm run build`
-2. Check the plugin is installed: `ls ~/.claude/plugins/`
-3. Verify the symlink or marketplace entry is correct
-4. Restart Claude Code
+The most common cause is a missing or misconfigured `AUTOMAKER_ROOT`:
+
+1. Check that `~/.claude/plugins/automaker/.env` exists and contains `AUTOMAKER_ROOT`
+2. Verify `AUTOMAKER_ROOT` points to the correct repo: `ls "$AUTOMAKER_ROOT/packages/mcp-server/dist/index.js"`
+3. Rebuild the MCP server if that file is missing: `cd "$AUTOMAKER_ROOT" && npm run build:packages`
+4. Verify the plugin is installed: `ls ~/.claude/plugins/`
+5. Restart Claude Code
 
 ### Connection Errors
 
