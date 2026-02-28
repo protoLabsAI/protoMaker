@@ -122,13 +122,49 @@ export const OPENCODE_MODELS: ModelOption[] = OPENCODE_MODEL_CONFIGS.map((config
 }));
 
 /**
- * All available models (Claude + Cursor + Codex + OpenCode)
+ * Groq models with canonical prefixed IDs
+ * IDs use 'groq-' prefix matching the groq-provider getAvailableModels() output
+ */
+export const GROQ_MODELS: ModelOption[] = [
+  {
+    id: 'groq-llama-3.3-70b-versatile',
+    label: 'Llama 3.3 70B Versatile',
+    description: "Meta's most capable Llama 3.3 model, great for complex reasoning.",
+    badge: 'Balanced',
+    provider: 'groq',
+  },
+  {
+    id: 'groq-llama-3.1-8b-instant',
+    label: 'Llama 3.1 8B Instant',
+    description: 'Ultra-fast 8B model, ideal for low-latency tasks.',
+    badge: 'Speed',
+    provider: 'groq',
+  },
+  {
+    id: 'groq-mixtral-8x7b-32768',
+    label: 'Mixtral 8x7B',
+    description: "Mistral's mixture-of-experts model with 32k context window.",
+    badge: 'Balanced',
+    provider: 'groq',
+  },
+  {
+    id: 'groq-gemma2-9b-it',
+    label: 'Gemma 2 9B IT',
+    description: "Google's Gemma 2 instruction-tuned model.",
+    badge: 'Speed',
+    provider: 'groq',
+  },
+];
+
+/**
+ * All available models (Claude + Cursor + Codex + OpenCode + Groq)
  */
 export const ALL_MODELS: ModelOption[] = [
   ...CLAUDE_MODELS,
   ...CURSOR_MODELS,
   ...CODEX_MODELS,
   ...OPENCODE_MODELS,
+  ...GROQ_MODELS,
 ];
 
 export const THINKING_LEVELS: ThinkingLevel[] = ['none', 'low', 'medium', 'high', 'ultrathink'];
