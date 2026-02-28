@@ -24,6 +24,7 @@ import type {
   Feature,
   ExecutionRecord,
   PipelineStep,
+  PipelineSummary,
   ThinkingLevel,
   PlanningMode,
   ExecutionContext,
@@ -855,6 +856,23 @@ export class ExecutionService {
           // Agent output might not exist yet
         }
 
+        // Extract and save summary to feature for real-time display on kanban cards
+        if (agentOutput) {
+          const extractedSummary = this.extractSummaryFromOutput(agentOutput);
+          if (extractedSummary) {
+            try {
+              await this.featureLoader.update(projectPath, featureId, {
+                summary: extractedSummary,
+              });
+              logger.info(
+                `Saved summary for feature ${featureId} (${extractedSummary.length} chars)`
+              );
+            } catch (summaryError) {
+              logger.warn(`Failed to save summary for feature ${featureId}:`, summaryError);
+            }
+          }
+        }
+
         // Record memory usage if we loaded any memory files
         if (contextResult.memoryFiles.length > 0 && agentOutput) {
           await recordMemoryUsage(
@@ -1539,6 +1557,32 @@ export class ExecutionService {
       updatedContext = (await secureFs.readFile(contextPath, 'utf-8')) as string;
     } catch {
       // No context update
+    }
+
+    // Extract and accumulate pipeline step summary
+    if (updatedContext) {
+      const stepSummary = this.extractSummaryFromOutput(updatedContext);
+      if (stepSummary) {
+        try {
+          const currentFeature = await this.featureLoader.get(projectPath, featureId);
+          if (currentFeature) {
+            const existingSummaries = currentFeature.pipelineSummaries ?? [];
+            await this.featureLoader.update(projectPath, featureId, {
+              pipelineSummaries: [
+                ...existingSummaries,
+                {
+                  stepId: step.id,
+                  stepName: step.name,
+                  summary: stepSummary,
+                  completedAt: new Date().toISOString(),
+                },
+              ],
+            });
+          }
+        } catch (summaryError) {
+          logger.warn(`Failed to save pipeline step summary for ${featureId}:`, summaryError);
+        }
+      }
     }
 
     this.callbacks.emitAutoModeEvent('pipeline_step_complete', {
@@ -2804,6 +2848,40 @@ You can use the Read tool to view these images at any time during implementation
     prompt = prompt.replace(/\{\{planContent\}\}/g, planContent);
 
     return prompt;
+  }
+
+  /**
+   * Extract summary text from agent output using common patterns.
+   * Mirrors the client-side extractSummary() logic in log-parser.ts.
+   */
+  private extractSummaryFromOutput(output: string): string | null {
+    if (!output?.trim()) return null;
+
+    // Try <summary> tags first (preferred format from agent system prompt)
+    const summaryTagMatch = output.match(/<summary>([\s\S]*?)<\/summary>/);
+    if (summaryTagMatch) return summaryTagMatch[1].trim();
+
+    // Try markdown ## Summary section
+    const summaryHeaderMatch = output.match(/^##\s+Summary\s*\n([\s\S]*?)(?=\n##\s+|$)/m);
+    if (summaryHeaderMatch) return summaryHeaderMatch[1].trim();
+
+    // Try other summary headers (Feature, Changes, Implementation)
+    const otherHeaderMatch = output.match(
+      /^##\s+(Feature|Changes|Implementation)\s*\n([\s\S]*?)(?=\n##\s+|$)/m
+    );
+    if (otherHeaderMatch) return `## ${otherHeaderMatch[1]}\n${otherHeaderMatch[2].trim()}`;
+
+    // Try "All tasks completed..." intro lines
+    const introMatch = output.match(/(^|\n)(All tasks completed[\s\S]*?)(?=\n🔧|\n📋|\n⚡|\n❌|$)/);
+    if (introMatch) return introMatch[2].trim();
+
+    // Try "I've/I have successfully completed..." intro lines
+    const completionMatch = output.match(
+      /(^|\n)((I've|I have) (successfully |now )?(completed|finished|implemented)[\s\S]*?)(?=\n🔧|\n📋|\n⚡|\n❌|$)/
+    );
+    if (completionMatch) return completionMatch[2].trim();
+
+    return null;
   }
 
   /**

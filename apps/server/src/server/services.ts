@@ -418,6 +418,11 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Pipeline Orchestrator — unified phase tracking across ops + gtm branches
   const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
+  // Hydrate the pipeline feature flag from settings (async, non-blocking).
+  // Defaults to disabled (false) until the HITL pipeline overhaul ships.
+  void settingsService.getGlobalSettings().then((s) => {
+    pipelineOrchestrator.setEnabled(s.featureFlags?.pipeline ?? false);
+  });
 
   // Channel Router — routes HITL interactions to the originating channel
   const channelRouter = new ChannelRouter();

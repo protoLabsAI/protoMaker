@@ -829,6 +829,7 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
         designs: false,
         docs: false,
         fileEditor: false,
+        pipeline: false,
       },
     });
 

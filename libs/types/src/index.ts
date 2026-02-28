@@ -437,6 +437,7 @@ export type {
   PipelineStep,
   PipelineConfig,
   PipelineStatus,
+  PipelineSummary,
   FeatureStatusWithPipeline,
 } from './pipeline.js';
 

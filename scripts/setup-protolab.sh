@@ -244,6 +244,33 @@ else
   fi
 fi
 
+# Step 4b: Write plugin .env if not already present
+PLUGIN_ENV="$HOME/.claude/plugins/automaker/.env"
+PLUGIN_ENV_EXAMPLE="$HOME/.claude/plugins/automaker/.env.example"
+
+if [[ ! -f "$PLUGIN_ENV" ]]; then
+  if [[ -f "$PLUGIN_ENV_EXAMPLE" ]]; then
+    cp "$PLUGIN_ENV_EXAMPLE" "$PLUGIN_ENV"
+    # Inject the absolute repo root as AUTOMAKER_ROOT using portable sed
+    if [[ "$(uname)" == "Darwin" ]]; then
+      sed -i '' "s|^AUTOMAKER_ROOT=.*|AUTOMAKER_ROOT=$AUTOMAKER_ROOT|" "$PLUGIN_ENV"
+    else
+      sed -i "s|^AUTOMAKER_ROOT=.*|AUTOMAKER_ROOT=$AUTOMAKER_ROOT|" "$PLUGIN_ENV"
+    fi
+    log_success "Plugin .env written with AUTOMAKER_ROOT=$AUTOMAKER_ROOT"
+  else
+    log_info "Plugin .env.example not found — writing minimal .env"
+    {
+      echo "AUTOMAKER_ROOT=$AUTOMAKER_ROOT"
+      echo "AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-your-dev-key-2026}"
+      echo "AUTOMAKER_API_URL=http://localhost:3008"
+    } > "$PLUGIN_ENV"
+    log_success "Plugin .env written with AUTOMAKER_ROOT=$AUTOMAKER_ROOT"
+  fi
+else
+  log_info "Plugin .env already exists — skipping"
+fi
+
 # Step 5: Optional CI/CD Setup
 log_section "Step 5: CI/CD Setup (Optional)"
 

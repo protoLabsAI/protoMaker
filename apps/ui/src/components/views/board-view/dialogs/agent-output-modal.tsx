@@ -14,7 +14,7 @@ import { GitDiffPanel } from '@/components/shared/git-diff-panel';
 import { TaskProgressPanel } from '@/components/shared/task-progress-panel';
 import { Markdown } from '@protolabs-ai/ui/molecules';
 import { useWorktreeStore } from '@/store/worktree-store';
-import { extractSummary } from '@/lib/log-parser';
+import { selectSummary } from '@/lib/summary-selection';
 import { useAgentOutput } from '@/hooks/queries';
 import type { AutoModeEvent } from '@/types/electron';
 
@@ -31,6 +31,8 @@ interface AgentOutputModalProps {
   projectPath?: string;
   /** Branch name for the feature worktree - used when viewing changes */
   branchName?: string;
+  /** Server-side saved summary (preferred over client-extracted summary) */
+  featureSummary?: string;
 }
 
 type ViewMode = 'summary' | 'parsed' | 'raw' | 'changes';
@@ -44,6 +46,7 @@ export function AgentOutputModal({
   onNumberKeyPress,
   projectPath: projectPathProp,
   branchName,
+  featureSummary,
 }: AgentOutputModalProps) {
   const isBacklogPlan = featureId.startsWith('backlog-plan:');
 
@@ -76,8 +79,8 @@ export function AgentOutputModal({
   // Combine initial output from query with streamed content from WebSocket
   const output = initialOutput + streamedContent;
 
-  // Extract summary from output
-  const summary = useMemo(() => extractSummary(output), [output]);
+  // Prefer server-side saved summary; fall back to client-side extraction from output
+  const summary = useMemo(() => selectSummary(featureSummary, output), [featureSummary, output]);
 
   // Determine the effective view mode - default to summary if available, otherwise parsed
   const effectiveViewMode = viewMode ?? (summary ? 'summary' : 'parsed');

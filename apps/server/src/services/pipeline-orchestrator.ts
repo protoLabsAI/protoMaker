@@ -108,6 +108,12 @@ export class PipelineOrchestrator {
   private gateStats = { evaluations: 0, holds: 0 };
   /** Per-phase completion durations (for analytics breakdown) */
   private phaseDurations = new Map<PipelinePhase, number[]>();
+  /**
+   * Feature flag — controlled by settings.featureFlags.pipeline.
+   * When false, all event handling is skipped. Set via setEnabled() at server startup.
+   * Defaults to false (disabled) until the HITL pipeline overhaul is complete.
+   */
+  private enabled = false;
 
   constructor(
     private events: EventBus,
@@ -116,6 +122,15 @@ export class PipelineOrchestrator {
   ) {
     this.setupEventListeners();
     logger.info('PipelineOrchestrator initialized');
+  }
+
+  /**
+   * Toggle the pipeline feature flag at runtime.
+   * Called at server startup after settings are loaded.
+   */
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    logger.info(`PipelineOrchestrator ${enabled ? 'enabled' : 'disabled'} via feature flag`);
   }
 
   /**
@@ -527,6 +542,9 @@ export class PipelineOrchestrator {
 
   private setupEventListeners(): void {
     const subscription = this.events.subscribe(((type: EventType, payload: unknown) => {
+      // Feature flag guard — skip all processing when pipeline is disabled
+      if (!this.enabled) return;
+
       // Handle event-to-phase mapping
       const mapping = EVENT_PHASE_MAP[type];
       if (mapping) {

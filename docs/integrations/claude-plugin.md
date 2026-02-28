@@ -128,6 +128,27 @@ cd packages/mcp-server
 npm run build
 ```
 
+### Step 2.5: Configure the Plugin Environment
+
+The plugin requires an environment file to locate your local protomaker clone.
+
+```bash
+# Find where Claude Code installed the plugin
+PLUGIN_DIR=~/.claude/plugins/automaker
+
+# Create the .env from the example template
+cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
+```
+
+Open `$PLUGIN_DIR/.env` and set `AUTOMAKER_ROOT` to the absolute path of your protomaker repository root:
+
+```
+AUTOMAKER_ROOT=/absolute/path/to/your/protomaker
+AUTOMAKER_API_KEY=your-dev-key-2026
+```
+
+> **Note:** `AUTOMAKER_ROOT` must be an absolute path. Relative paths and `~` are not expanded by the plugin loader.
+
 ### Step 3: Install the Plugin
 
 **Option A: Add via Marketplace (Recommended)**
@@ -347,15 +368,43 @@ Each project maintains its own `.automaker/` directory with independent features
 
 ## Troubleshooting
 
-### Plugin Not Loading
+### AUTOMAKER_ROOT Not Set
 
-The most common cause is a missing or misconfigured `AUTOMAKER_ROOT`:
+**Symptom:** No MCP tools appear in Claude Code. Session start prints `AUTOMAKER_ROOT is not set`.
 
-1. Check that `~/.claude/plugins/automaker/.env` exists and contains `AUTOMAKER_ROOT`
-2. Verify `AUTOMAKER_ROOT` points to the correct repo: `ls "$AUTOMAKER_ROOT/packages/mcp-server/dist/index.js"`
-3. Rebuild the MCP server if that file is missing: `cd "$AUTOMAKER_ROOT" && npm run build:packages`
-4. Verify the plugin is installed: `ls ~/.claude/plugins/`
-5. Restart Claude Code
+**Fix:**
+
+```bash
+PLUGIN_DIR=~/.claude/plugins/automaker
+cp "$PLUGIN_DIR/.env.example" "$PLUGIN_DIR/.env"
+# Open .env and set AUTOMAKER_ROOT to the absolute path of your protomaker clone
+echo "AUTOMAKER_ROOT=/absolute/path/to/protomaker" >> "$PLUGIN_DIR/.env"
+echo "AUTOMAKER_API_KEY=your-dev-key-2026" >> "$PLUGIN_DIR/.env"
+```
+
+Restart Claude Code after editing `.env`.
+
+### MCP Server Binary Not Found
+
+**Symptom:** `AUTOMAKER_ROOT` is set but session start prints `MCP server binary not found`.
+
+**Fix:** The MCP server has not been built yet.
+
+```bash
+cd "$AUTOMAKER_ROOT"
+npm run build:packages
+```
+
+Then restart Claude Code.
+
+### Plugin Not Loading (General)
+
+If neither of the above applies:
+
+1. Verify the plugin is installed: `ls ~/.claude/plugins/`
+2. Check `~/.claude/plugins/automaker/.env` exists and contains `AUTOMAKER_ROOT`
+3. Confirm `AUTOMAKER_ROOT` points to the correct repo: `ls "$AUTOMAKER_ROOT/packages/mcp-server/dist/index.js"`
+4. Restart Claude Code
 
 ### Connection Errors
 
