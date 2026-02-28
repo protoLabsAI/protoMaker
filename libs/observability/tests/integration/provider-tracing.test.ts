@@ -5,7 +5,12 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { LangfuseClient } from '../../src/langfuse/client.js';
-import { wrapProviderWithTracing, type TracingConfig } from '../../src/langfuse/middleware.js';
+import {
+  wrapProviderWithTracing,
+  calculateCost,
+  logger,
+  type TracingConfig,
+} from '../../src/langfuse/middleware.js';
 
 // Mock async generator to simulate provider behavior
 async function* mockProviderGenerator(messages: any[]): AsyncGenerator<any> {
@@ -241,6 +246,73 @@ describe('Provider Tracing Integration', () => {
       expect(results).toEqual(messages);
       // Cost calculation happens in finally block
       // For 1M input + 1M output: 0.8 + 4 = $4.80
+    });
+
+    it('should calculate cost for llama-3.3-70b-versatile', () => {
+      const cost = calculateCost('llama-3.3-70b-versatile', {
+        promptTokens: 1_000_000,
+        completionTokens: 1_000_000,
+      });
+      // 0.59 + 0.79 = 1.38
+      expect(cost).toBeCloseTo(1.38);
+    });
+
+    it('should calculate cost for llama-3.1-8b-instant', () => {
+      const cost = calculateCost('llama-3.1-8b-instant', {
+        promptTokens: 1_000_000,
+        completionTokens: 1_000_000,
+      });
+      // 0.05 + 0.08 = 0.13
+      expect(cost).toBeCloseTo(0.13);
+    });
+
+    it('should calculate cost for gpt-4o', () => {
+      const cost = calculateCost('gpt-4o', {
+        promptTokens: 1_000_000,
+        completionTokens: 1_000_000,
+      });
+      // 2.50 + 10.00 = 12.50
+      expect(cost).toBeCloseTo(12.5);
+    });
+
+    it('should calculate cost for gpt-4o-mini', () => {
+      const cost = calculateCost('gpt-4o-mini', {
+        promptTokens: 1_000_000,
+        completionTokens: 1_000_000,
+      });
+      // 0.15 + 0.60 = 0.75
+      expect(cost).toBeCloseTo(0.75);
+    });
+
+    it('should not match gpt-4o pricing for gpt-4o-mini (substring guard)', () => {
+      const cost = calculateCost('gpt-4o-mini', {
+        promptTokens: 500_000,
+        completionTokens: 500_000,
+      });
+      // gpt-4o-mini at 500K each: (0.5 * 0.15) + (0.5 * 0.60) = 0.375
+      // gpt-4o at 500K each would be: (0.5 * 2.50) + (0.5 * 10.00) = 6.25
+      expect(cost).toBeCloseTo(0.375);
+      expect(cost).not.toBeCloseTo(6.25);
+    });
+
+    it('should return undefined for unknown models', () => {
+      const cost = calculateCost('unknown-model-xyz', {
+        promptTokens: 1_000_000,
+        completionTokens: 1_000_000,
+      });
+      expect(cost).toBeUndefined();
+    });
+
+    it('should emit logger.debug when model has no pricing', () => {
+      const debugSpy = vi.spyOn(logger, 'debug');
+      calculateCost('unknown-model-xyz', {
+        promptTokens: 1_000_000,
+        completionTokens: 1_000_000,
+      });
+      expect(debugSpy).toHaveBeenCalledWith('No pricing found for model, cost will be undefined', {
+        model: 'unknown-model-xyz',
+      });
+      debugSpy.mockRestore();
     });
   });
 

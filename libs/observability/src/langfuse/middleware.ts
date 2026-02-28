@@ -3,7 +3,7 @@ import { createLogger } from '@protolabs-ai/utils';
 import { LangfuseClient } from './client.js';
 import type { CreateGenerationOptions } from './types.js';
 
-const logger = createLogger('LangfuseMiddleware');
+export const logger = createLogger('LangfuseMiddleware');
 
 /**
  * Configuration for provider tracing
@@ -82,12 +82,9 @@ function extractUsageFromMessages(messages: any[]):
   };
 }
 
-/**
- * Calculate cost based on model and token usage
- * Prices are per 1M tokens (as of 2025-01)
- */
-/** Default Claude pricing (per 1M tokens) */
+/** Default pricing per 1M tokens (as of 2026-02) */
 const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
+  // Claude
   'opus-4-6': { input: 15, output: 75 },
   'claude-opus-4-6': { input: 15, output: 75 },
   'opus-4-5': { input: 15, output: 75 },
@@ -98,9 +95,23 @@ const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-5': { input: 3, output: 15 },
   'haiku-4-5': { input: 0.8, output: 4 },
   'claude-haiku-4-5': { input: 0.8, output: 4 },
+
+  // Groq (per 1M tokens, 2026-02)
+  'llama-3.3-70b-versatile': { input: 0.59, output: 0.79 },
+  'llama-3.1-8b-instant': { input: 0.05, output: 0.08 },
+  // deprecated on Groq; retained for legacy trace cost reconstruction
+  'mixtral-8x7b-32768': { input: 0.24, output: 0.24 },
+  'gemma2-9b-it': { input: 0.2, output: 0.2 }, // verify: approximate as of 2026-02
+
+  // OpenAI (per 1M tokens, 2026-02)
+  // NOTE: 'gpt-4o-mini' MUST appear before 'gpt-4o' — substring match hits first entry
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
+  'gpt-4o': { input: 2.5, output: 10.0 },
+  'gpt-4-turbo': { input: 10.0, output: 30.0 },
+  'o3-mini': { input: 1.1, output: 4.4 },
 };
 
-function calculateCost(
+export function calculateCost(
   model: string,
   usage?: { promptTokens: number; completionTokens: number },
   customPricing?: Record<string, { input: number; output: number }>
@@ -121,7 +132,7 @@ function calculateCost(
   }
 
   if (!prices) {
-    // Unknown model, can't calculate cost
+    logger.debug('No pricing found for model, cost will be undefined', { model });
     return undefined;
   }
 
