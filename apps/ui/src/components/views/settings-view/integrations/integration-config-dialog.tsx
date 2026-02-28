@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,13 @@ import {
 } from '@protolabs-ai/ui/atoms';
 import { apiFetch } from '@/lib/api-fetch';
 import { useAppStore } from '@/store/app-store';
-import type { IntegrationDescriptor, ConfigField } from '@protolabs-ai/types';
+import { useSignalChannels } from '@/hooks/use-signal-channels';
+import type {
+  IntegrationDescriptor,
+  ConfigField,
+  DiscordChannelSignalConfig,
+} from '@protolabs-ai/types';
+import type { SignalIntent } from '@protolabs-ai/types';
 
 interface IntegrationConfigDialogProps {
   integrationId: string | null;
@@ -42,6 +48,10 @@ export function IntegrationConfigDialog({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [revealedSecrets, setRevealedSecrets] = useState<Set<string>>(new Set());
   const currentProject = useAppStore((s) => s.currentProject);
+
+  const isDiscord = integrationId === 'discord';
+
+  const signalChannels = useSignalChannels(isDiscord ? (currentProject?.path ?? null) : null);
 
   // Fetch descriptor when opened
   useEffect(() => {
@@ -135,6 +145,14 @@ export function IntegrationConfigDialog({
         throw new Error(body.error || `Save failed: ${res.status}`);
       }
 
+      // Also save signal channels for Discord
+      if (isDiscord) {
+        const channelsSaved = await signalChannels.save();
+        if (!channelsSaved && signalChannels.error) {
+          throw new Error(signalChannels.error);
+        }
+      }
+
       onSaved?.();
       onOpenChange(false);
     } catch (err) {
@@ -190,6 +208,14 @@ export function IntegrationConfigDialog({
                 </div>
               </div>
             ))}
+
+            {isDiscord && (
+              <SignalSourcesSection
+                channels={signalChannels.channels}
+                loading={signalChannels.loading}
+                onChange={signalChannels.setChannels}
+              />
+            )}
           </div>
         )}
 
@@ -205,6 +231,198 @@ export function IntegrationConfigDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Signal Sources Section — only shown for the Discord integration
+// ---------------------------------------------------------------------------
+
+const INTENT_OPTIONS: Array<{ value: SignalIntent | 'auto'; label: string }> = [
+  { value: 'auto', label: 'Auto (classify automatically)' },
+  { value: 'work_order', label: 'Work Order' },
+  { value: 'idea', label: 'Idea' },
+  { value: 'feedback', label: 'Feedback' },
+  { value: 'conversational', label: 'Conversational' },
+];
+
+function SignalSourcesSection({
+  channels,
+  loading,
+  onChange,
+}: {
+  channels: DiscordChannelSignalConfig[];
+  loading: boolean;
+  onChange: (channels: DiscordChannelSignalConfig[]) => void;
+}) {
+  const [newChannelId, setNewChannelId] = useState('');
+  const [newChannelName, setNewChannelName] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const channelIdRef = useRef<HTMLInputElement>(null);
+
+  const handleAdd = () => {
+    const id = newChannelId.trim();
+    const name = newChannelName.trim() || id;
+    if (!id) return;
+
+    const already = channels.some((c) => c.channelId === id);
+    if (already) return;
+
+    onChange([
+      ...channels,
+      {
+        channelId: id,
+        channelName: name,
+        intentOverride: undefined,
+        autoFeature: false,
+        enabled: true,
+      },
+    ]);
+    setNewChannelId('');
+    setNewChannelName('');
+    setShowAddForm(false);
+  };
+
+  const updateChannel = (index: number, patch: Partial<DiscordChannelSignalConfig>) => {
+    const updated = channels.map((c, i) => (i === index ? { ...c, ...patch } : c));
+    onChange(updated);
+  };
+
+  const removeChannel = (index: number) => {
+    onChange(channels.filter((_, i) => i !== index));
+  };
+
+  const handleShowAdd = () => {
+    setShowAddForm(true);
+    setTimeout(() => channelIdRef.current?.focus(), 0);
+  };
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Signal Sources</h4>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Spinner />
+        </div>
+      ) : channels.length === 0 && !showAddForm ? (
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+          No channels monitored. Add a Discord channel to start receiving signals.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {channels.map((channel, index) => (
+            <div
+              key={channel.channelId}
+              className="rounded-md border border-zinc-200 dark:border-zinc-700 p-3 space-y-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{channel.channelName}</p>
+                  <p className="text-xs text-zinc-400 truncate font-mono">{channel.channelId}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeChannel(index)}
+                  className="shrink-0 text-zinc-400 hover:text-red-500 transition-colors"
+                  aria-label="Remove channel"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs text-zinc-500">Intent override</Label>
+                  <Select
+                    value={channel.intentOverride ?? 'auto'}
+                    onValueChange={(v) =>
+                      updateChannel(index, {
+                        intentOverride: v === 'auto' ? undefined : (v as SignalIntent),
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INTENT_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs text-zinc-500">Auto-feature</Label>
+                  <div className="flex items-center h-8">
+                    <Switch
+                      checked={channel.autoFeature}
+                      onCheckedChange={(v) => updateChannel(index, { autoFeature: v })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-zinc-500">Enabled</Label>
+                <Switch
+                  checked={channel.enabled}
+                  onCheckedChange={(v) => updateChannel(index, { enabled: v })}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showAddForm ? (
+        <div className="rounded-md border border-zinc-200 dark:border-zinc-700 p-3 space-y-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Channel ID</Label>
+            <Input
+              ref={channelIdRef}
+              value={newChannelId}
+              onChange={(e) => setNewChannelId(e.target.value)}
+              placeholder="123456789012345678"
+              className="h-8 text-xs font-mono"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+                if (e.key === 'Escape') setShowAddForm(false);
+              }}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Channel name (optional)</Label>
+            <Input
+              value={newChannelName}
+              onChange={(e) => setNewChannelName(e.target.value)}
+              placeholder="#channel-name"
+              className="h-8 text-xs"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+                if (e.key === 'Escape') setShowAddForm(false);
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleAdd} disabled={!newChannelId.trim()}>
+              Add
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowAddForm(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={handleShowAdd}>
+          <Plus className="w-3.5 h-3.5" />
+          Add Channel
+        </Button>
+      )}
+    </div>
   );
 }
 
