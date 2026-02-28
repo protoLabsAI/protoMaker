@@ -29,5 +29,4 @@ LLM observability, trace inspection, and managed prompt versioning. Traces every
 protoLabs also works with:
 
 - **[GitHub Actions](/infra/ci-cd)** — CI/CD pipelines for testing and deployment
-- **[Graphite](https://graphite.dev)** — Stack-aware PR management for epic workflows
 - **[CodeRabbit](https://coderabbit.ai)** — Automated PR review

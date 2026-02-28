@@ -287,7 +287,6 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 | `health_check`      | Check if protoLabs server is running |
 | `get_board_summary` | Get feature counts by status         |
 | `get_briefing`      | Get operational briefing digest      |
-| `graphite_restack`  | Restack Graphite branch stacks       |
 
 ## Other (1 tool)
 

@@ -91,8 +91,8 @@ The system will automatically create a worktree for you. Work in isolation:
 
 Once implementation is complete:
 \`\`\`typescript
-// System automatically creates PR using Graphite
-// PR targets epic branch if feature is part of epic, otherwise main
+// System automatically creates PR via gh CLI
+// PR targets epic branch if feature is part of epic, otherwise dev
 \`\`\`
 
 Your PR will include:

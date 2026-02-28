@@ -31,7 +31,6 @@ Settings are applied at server startup during task registration and can be chang
 | `maintenance:board-health`          | Board Health Reconciliation | Every 6 hours    |
 | `maintenance:auto-merge-prs`        | Auto-Merge Eligible PRs     | Every 5 min      |
 | `maintenance:auto-rebase-stale-prs` | Auto-Rebase Stale PRs       | Every 30 min     |
-| `maintenance:graphite-sync`         | Graphite Branch Sync        | Daily 2 AM       |
 
 ## API Routes
 

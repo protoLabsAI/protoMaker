@@ -322,105 +322,6 @@ git checkout epic/foundation
 gh pr create --base main --title "Epic: Foundation Infrastructure"
 ```
 
-## Graphite Integration
-
-Automaker supports [Graphite](https://graphite.dev) for managing stacked PRs in epic workflows.
-
-### Setup
-
-```bash
-# 1. Install Graphite CLI
-npm install -g @withgraphite/graphite-cli
-
-# 2. Authenticate
-gt auth --token <your-token>
-
-# 3. Initialize in repo
-cd /path/to/project
-gt repo init
-
-# 4. Sync repo in Graphite settings
-# Visit: https://app.graphite.com/settings/synced-repos
-```
-
-### Using Graphite with Epics
-
-**Track epic branch:**
-
-```bash
-gt track epic/foundation --parent main
-```
-
-**Track feature branches:**
-
-```bash
-gt track feature/add-auth-types --parent epic/foundation
-gt track feature/jwt-service --parent epic/foundation
-```
-
-**Submit entire stack:**
-
-```bash
-# Creates/updates all PRs in stack
-gt submit --stack
-```
-
-**View stack:**
-
-```bash
-gt log short
-```
-
-**Output:**
-
-```
-◯ main
-┃
-┣━◯ epic/foundation (1 commit)
-┃ ┃
-┃ ┣━◯ feature/add-auth-types (2 commits)
-┃ ┃
-┃ ┗━◯ feature/jwt-service (3 commits)
-```
-
-### Graphite Commands
-
-| Command                             | Description                      |
-| ----------------------------------- | -------------------------------- |
-| `gt track <branch> --parent <base>` | Track branch in stack            |
-| `gt submit`                         | Create PR for current branch     |
-| `gt submit --stack`                 | Create PRs for entire stack      |
-| `gt sync`                           | Sync with remote                 |
-| `gt restack`                        | Rebase stack after trunk changes |
-| `gt log short`                      | View stack visualization         |
-| `gt stack fix`                      | Resolve stack conflicts          |
-
-### Fallback Behavior
-
-If Graphite is unavailable, Automaker uses standard git/gh commands:
-
-```bash
-# Graphite available
-gt submit --stack
-
-# Fallback
-gh pr create --base epic/foundation --title "Add Auth Types"
-```
-
-**Auto-detection:**
-
-```typescript
-import { isGraphiteAvailable } from '@protolabs-ai/git-utils';
-
-if (await isGraphiteAvailable(projectPath)) {
-  // Use Graphite
-  await execCommand('gt submit --stack');
-} else {
-  // Fallback to gh CLI
-  await execCommand(`gh pr create --base ${epicBranch} --title "${title}"`);
-}
-```
-
 ## Dependency Management
 
 ### Setting Dependencies
@@ -703,23 +604,6 @@ gh pr merge <feature-pr-number>
 
 # Then create epic PR
 gh pr create --base main
-```
-
-### "Graphite command failed"
-
-**Issue:** Graphite CLI not authenticated or repo not synced.
-
-**Solution:**
-
-```bash
-# Re-authenticate
-gt auth --token <your-token>
-
-# Verify repo sync
-gt repo sync-status
-
-# If not synced, visit:
-# https://app.graphite.com/settings/synced-repos
 ```
 
 ## Learn More

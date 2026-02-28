@@ -72,35 +72,6 @@ test.describe('Scheduler Status Endpoint', () => {
     }
   });
 
-  test('GET /api/scheduler/status should include Graphite sync task', async ({ page }) => {
-    await authenticateForTests(page);
-
-    const response = await page.request.get(`${API_BASE_URL}/api/scheduler/status`);
-    const data = await response.json();
-
-    expect(data.success).toBe(true);
-    expect(Array.isArray(data.tasks)).toBe(true);
-
-    // Look for the Graphite sync task (if scheduler has been initialized)
-    // This verifies that the scheduler is actually tracking tasks
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const graphiteSyncTask = data.tasks.find((task: any) =>
-      task.name.toLowerCase().includes('graphite')
-    );
-
-    // If the graphite sync task exists, verify its structure
-    if (graphiteSyncTask) {
-      expect(graphiteSyncTask).toHaveProperty('id');
-      expect(graphiteSyncTask).toHaveProperty('name');
-      expect(graphiteSyncTask).toHaveProperty('enabled');
-      expect(graphiteSyncTask.enabled).toBe(true);
-
-      // Verify it has a next run time (since it's enabled)
-      expect(graphiteSyncTask).toHaveProperty('nextRun');
-      expect(typeof graphiteSyncTask.nextRun).toBe('string');
-    }
-  });
-
   test('GET /api/scheduler/status should be accessible without authentication errors', async ({
     page,
   }) => {

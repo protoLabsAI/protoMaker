@@ -72,7 +72,7 @@ Stale `dist/` after types changes causes downstream PRs to fail with wrong type 
 
 ## Large PRs = Review Bottleneck
 
-Keep PRs under 200 lines. Use Graphite stacking for epic workflows.
+Keep PRs under 200 lines.
 
 ## Crew Loop Automation
 

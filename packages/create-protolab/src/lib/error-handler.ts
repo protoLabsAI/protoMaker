@@ -18,7 +18,6 @@ export enum ErrorCode {
 
   // RECOVERABLE - Can skip and continue
   GH_CLI_MISSING = 'GH_CLI_MISSING',
-  GT_CLI_MISSING = 'GT_CLI_MISSING',
   BD_CLI_MISSING = 'BD_CLI_MISSING',
   DISCORD_API_DOWN = 'DISCORD_API_DOWN',
   GITHUB_API_RATE_LIMIT = 'GITHUB_API_RATE_LIMIT',
@@ -111,13 +110,6 @@ export const ERROR_DEFINITIONS: Record<ErrorCode, Omit<ProtolabError, 'code'>> =
     category: ErrorCategory.RECOVERABLE,
     message: 'GitHub CLI (gh) not found',
     recovery: 'Install with: brew install gh (macOS) or visit https://cli.github.com',
-    canContinue: true,
-  },
-
-  [ErrorCode.GT_CLI_MISSING]: {
-    category: ErrorCategory.RECOVERABLE,
-    message: 'Graphite CLI (gt) not found',
-    recovery: 'Install with: npm install -g @withgraphite/graphite-cli',
     canContinue: true,
   },
 

@@ -157,10 +157,6 @@ export class SettingsService {
         ...DEFAULT_GLOBAL_SETTINGS.gitWorkflow,
         ...settings.gitWorkflow,
       },
-      graphite: {
-        ...DEFAULT_GLOBAL_SETTINGS.graphite,
-        ...(settings.graphite ?? {}),
-      } as typeof DEFAULT_GLOBAL_SETTINGS.graphite,
       autoModeAlwaysOn: {
         ...DEFAULT_GLOBAL_SETTINGS.autoModeAlwaysOn,
         ...(settings.autoModeAlwaysOn ?? {}),

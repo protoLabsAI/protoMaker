@@ -177,28 +177,6 @@ When ready to require E2E tests:
    ```
 3. Apply changes
 
-## Graphite Integration
-
-The repository supports Graphite for stacked PRs with epics:
-
-```
-main
-  ↑
-epic/foundation ──────────── Epic PR (targets main)
-  ↑         ↑         ↑
-feat-a    feat-b    feat-c   Feature PRs (target epic branch)
-```
-
-### Strict Status Checks with Graphite
-
-The ruleset uses `strict_required_status_checks_policy: true`, which means:
-
-- PRs must be up-to-date with the base branch before merging
-- When base branch changes, Graphite will automatically trigger re-checks
-- This may cause cascade re-checks in stacked PRs
-
-Monitor this behavior and adjust if it causes excessive CI runs.
-
 ## Troubleshooting
 
 ### CI Not Running
@@ -255,4 +233,3 @@ The API returns a 404 when trying to update a ruleset that doesn't exist, or 422
 - [GitHub Branch Protection API](https://docs.github.com/en/rest/repos/rules)
 - [GitHub Rulesets Documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)
 - [GitHub CLI Manual](https://cli.github.com/manual/)
-- [Graphite Documentation](https://docs.graphite.dev/)

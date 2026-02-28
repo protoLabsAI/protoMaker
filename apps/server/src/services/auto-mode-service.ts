@@ -126,7 +126,6 @@ import { getNotificationService } from './notification-service.js';
 import { RecoveryService, getRecoveryService } from './recovery-service.js';
 import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
-import { graphiteService } from './graphite-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import {
@@ -3532,59 +3531,6 @@ Format your response as a structured markdown document.`;
   }
 
   /**
-   * Attempt to restack the worktree using Graphite to sync with main/trunk
-   * This helps prevent merge conflicts by keeping the branch up to date
-   *
-   * @param worktreePath - Path to the worktree
-   * @param branchName - Name of the branch being worked on
-   * @returns true if restack succeeded or wasn't needed, false if conflicts occurred
-   */
-  private async attemptGraphiteRestack(worktreePath: string, branchName: string): Promise<boolean> {
-    try {
-      // Check if Graphite should be used
-      const settings = await this.settingsService?.getGlobalSettings();
-      const useGraphite = await graphiteService.shouldUseGraphite(settings?.graphite);
-
-      if (!useGraphite) {
-        logger.debug('Graphite not enabled, skipping restack');
-        return true; // Not an error, just not using Graphite
-      }
-
-      // Check if repo is initialized for Graphite
-      const initialized = await graphiteService.isRepoInitialized(worktreePath);
-      if (!initialized) {
-        logger.debug('Graphite not initialized for this repo, skipping restack');
-        return true; // Not an error, just not initialized
-      }
-
-      // Perform restack to sync with trunk
-      logger.info(`Restacking branch "${branchName}" to sync with trunk`);
-      const result = await graphiteService.restack(worktreePath);
-
-      if (result.conflicts) {
-        logger.warn(
-          `Restack encountered conflicts for branch "${branchName}". Manual resolution required.`
-        );
-        return false; // Conflicts need manual resolution
-      }
-
-      if (!result.success) {
-        logger.warn(`Restack failed for branch "${branchName}": ${result.error}`);
-        // Non-conflict failures are logged but don't block execution
-        return true;
-      }
-
-      logger.info(`Successfully restacked branch "${branchName}"`);
-      return true;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.warn(`Error attempting Graphite restack for "${branchName}": ${errorMsg}`);
-      // Don't block execution on restack errors
-      return true;
-    }
-  }
-
-  /**
    * Create a new worktree for a given branch
    * Returns the worktree path on success, null on failure
    */
@@ -3661,47 +3607,6 @@ Format your response as a structured markdown document.`;
       }
 
       logger.info(`Created worktree for branch "${branchName}" at: ${worktreePath}`);
-
-      // Track branch in Graphite if feature has an epic parent
-      if (feature && this.settingsService) {
-        const settings = await this.settingsService.getGlobalSettings();
-        const shouldUse = await graphiteService.shouldUseGraphite(settings.graphite);
-
-        if (shouldUse) {
-          let parentBranch: string | undefined;
-
-          // If feature belongs to an epic, track against epic branch
-          if (feature.epicId && !feature.isEpic) {
-            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
-            parentBranch = epicFeature?.branchName;
-            if (parentBranch) {
-              logger.info(
-                `Feature ${feature.id} belongs to epic, tracking branch ${branchName} with parent ${parentBranch}`
-              );
-            }
-          }
-
-          // Track the branch (with parent if epic, otherwise trunk)
-          const tracked = await graphiteService.trackBranch(worktreePath, branchName, parentBranch);
-          if (tracked) {
-            logger.info(
-              `Successfully tracked branch ${branchName} in Graphite${parentBranch ? ` with parent ${parentBranch}` : ''}`
-            );
-          } else {
-            logger.warn(`Failed to track branch ${branchName} in Graphite, will use fallback`);
-          }
-        }
-      }
-
-      // Attempt to restack with Graphite to sync with trunk
-      const restackSuccess = await this.attemptGraphiteRestack(worktreePath, branchName);
-      if (!restackSuccess) {
-        logger.warn(
-          `Branch "${branchName}" has merge conflicts after restack. Agent may encounter issues.`
-        );
-        // Note: We don't fail worktree creation, but log the warning
-        // The agent will discover conflicts when it tries to commit
-      }
 
       return path.resolve(worktreePath);
     } catch (error) {

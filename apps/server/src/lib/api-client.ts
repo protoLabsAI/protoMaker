@@ -9,7 +9,7 @@
  * - Comprehensive logging
  *
  * This wrapper is for individual API calls ONLY, not workflow-level retries.
- * Use this for wrapping calls to GitHub, Discord, Graphite, and other external APIs.
+ * Use this for wrapping calls to GitHub, Discord, and other external APIs.
  */
 
 import { createLogger, classifyError } from '@protolabs-ai/utils';
@@ -19,7 +19,7 @@ const logger = createLogger('ApiClient');
 /**
  * Supported API providers with specific rate limit handling
  */
-export type ApiProvider = 'discord' | 'github' | 'graphite' | 'generic';
+export type ApiProvider = 'discord' | 'github' | 'generic';
 
 /**
  * Provider-specific configuration for rate limit delays
@@ -28,7 +28,6 @@ export type ApiProvider = 'discord' | 'github' | 'graphite' | 'generic';
 const PROVIDER_DELAYS: Record<ApiProvider, number> = {
   discord: 500, // Discord has aggressive rate limits
   github: 1000, // GitHub requires 1s minimum between retries
-  graphite: 1000, // Graphite uses GitHub API underneath
   generic: 0, // No provider-specific delay
 };
 
@@ -292,16 +291,6 @@ export class ApiClient {
   ): Promise<ApiRequestResult<T>> {
     return this.request(fn, { ...options, provider: 'discord' });
   }
-
-  /**
-   * Execute a Graphite API request with retry
-   */
-  async graphite<T>(
-    fn: () => Promise<T>,
-    options: Omit<ApiRequestOptions<T>, 'provider'> = {}
-  ): Promise<ApiRequestResult<T>> {
-    return this.request(fn, { ...options, provider: 'graphite' });
-  }
 }
 
 /**
@@ -318,8 +307,3 @@ export const githubClient = new ApiClient('github');
  * Discord-specific API client instance
  */
 export const discordClient = new ApiClient('discord');
-
-/**
- * Graphite-specific API client instance
- */
-export const graphiteClient = new ApiClient('graphite');

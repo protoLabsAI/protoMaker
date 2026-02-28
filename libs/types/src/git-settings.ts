@@ -1,8 +1,7 @@
 /**
  * Git Settings - Configuration for git workflow automation
  *
- * Covers automatic commit, push, PR creation, and merge after feature completion,
- * plus Graphite CLI integration for stack-aware PR management.
+ * Covers automatic commit, push, PR creation, and merge after feature completion.
  */
 
 // ============================================================================
@@ -78,37 +77,3 @@ export interface GitWorkflowResult {
   /** Error message if any step failed (workflow continues best-effort) */
   error?: string;
 }
-
-// ============================================================================
-// Graphite CLI Integration - Stack-aware PR management
-// ============================================================================
-
-/**
- * GraphiteSettings - Configuration for Graphite CLI integration
- *
- * Graphite provides stack-aware PR management, making it easier to work with
- * feature branches that stack on epic branches. When enabled, Automaker uses
- * Graphite CLI commands instead of raw git/gh commands for better stack handling.
- *
- * @see https://graphite.dev/docs/graphite-cli
- */
-export interface GraphiteSettings {
-  /** Enable Graphite CLI integration (default: false) */
-  enabled: boolean;
-  /** Use gt commit instead of git commit (default: false) */
-  useGraphiteCommit?: boolean;
-  /** Auto-track epic branches as stack parents (default: true) */
-  autoTrackEpics?: boolean;
-  /** Use gt stack submit for bulk PR creation (default: false) */
-  useStackSubmit?: boolean;
-}
-
-/**
- * Default Graphite settings - disabled by default for backward compatibility
- */
-export const DEFAULT_GRAPHITE_SETTINGS: GraphiteSettings = {
-  enabled: false,
-  useGraphiteCommit: false,
-  autoTrackEpics: true,
-  useStackSubmit: false,
-};

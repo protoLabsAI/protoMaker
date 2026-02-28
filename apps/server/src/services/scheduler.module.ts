@@ -18,7 +18,6 @@ export function register(container: ServiceContainer): void {
     featureHealthService,
     integrityWatchdogService,
     featureLoader,
-    graphiteSyncScheduler,
   } = container;
 
   // Scheduler Service initialization and maintenance task registration
@@ -33,8 +32,7 @@ export function register(container: ServiceContainer): void {
         featureHealthService,
         integrityWatchdogService,
         featureLoader,
-        settingsService,
-        graphiteSyncScheduler
+        settingsService
       );
     })
     .catch((err) => {

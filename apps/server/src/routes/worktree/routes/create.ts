@@ -25,10 +25,6 @@ import {
 import { trackBranch } from './branch-tracking.js';
 import { createLogger } from '@protolabs-ai/utils';
 import { runInitScript } from '../../../services/init-script-service.js';
-import { graphiteService } from '../../../services/graphite-service.js';
-import type { GraphiteSettings } from '@protolabs-ai/types';
-import { DEFAULT_GRAPHITE_SETTINGS } from '@protolabs-ai/types';
-
 const logger = createLogger('Worktree');
 
 const execAsync = promisify(exec);
@@ -87,12 +83,10 @@ async function findExistingWorktreeForBranch(
 export function createCreateHandler(events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, branchName, baseBranch, graphiteSettings, parentBranch } = req.body as {
+      const { projectPath, branchName, baseBranch } = req.body as {
         projectPath: string;
         branchName: string;
         baseBranch?: string; // Optional base branch to create from (defaults to current HEAD)
-        graphiteSettings?: GraphiteSettings; // Optional Graphite settings for stack tracking
-        parentBranch?: string; // Optional parent branch for Graphite stack (e.g., epic branch)
       };
 
       if (!projectPath || !branchName) {
@@ -204,33 +198,6 @@ export function createCreateHandler(events: EventEmitter) {
       // Resolve to absolute path for cross-platform compatibility
       // normalizePath converts to forward slashes for API consistency
       const absoluteWorktreePath = path.resolve(worktreePath);
-
-      // Track in Graphite stack if enabled (asynchronous, non-blocking)
-      const gSettings = graphiteSettings ?? DEFAULT_GRAPHITE_SETTINGS;
-      if (gSettings.enabled && gSettings.autoTrackEpics) {
-        graphiteService
-          .shouldUseGraphite(gSettings)
-          .then(async (useGraphite) => {
-            if (useGraphite) {
-              // Track the branch in Graphite with optional parent
-              // If parentBranch is provided (e.g., epic branch), use it as stack parent
-              // Otherwise Graphite auto-detects based on the base branch
-              const tracked = await graphiteService.trackBranch(
-                absoluteWorktreePath,
-                branchName,
-                parentBranch
-              );
-              if (tracked) {
-                logger.info(
-                  `Tracked branch ${branchName} in Graphite stack${parentBranch ? ` (parent: ${parentBranch})` : ''}`
-                );
-              }
-            }
-          })
-          .catch((err) => {
-            logger.debug(`Graphite tracking skipped: ${err}`);
-          });
-      }
 
       // Respond immediately (non-blocking)
       res.json({

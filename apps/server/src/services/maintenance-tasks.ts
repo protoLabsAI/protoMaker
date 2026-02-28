@@ -21,10 +21,8 @@ import type { FeatureHealthService } from './feature-health-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
-import type { GraphiteSyncScheduler } from './graphite-sync-scheduler.js';
 import { mergeEligibilityService } from './merge-eligibility-service.js';
 import { githubMergeService } from './github-merge-service.js';
-import { graphiteService } from './graphite-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import type { Feature } from '@protolabs-ai/types';
 import { Octokit } from '@octokit/rest';
@@ -97,8 +95,7 @@ export async function registerMaintenanceTasks(
   featureHealthService?: FeatureHealthService,
   integrityWatchdogService?: DataIntegrityWatchdogService,
   featureLoader?: FeatureLoader,
-  settingsService?: SettingsService,
-  graphiteSyncScheduler?: GraphiteSyncScheduler
+  settingsService?: SettingsService
 ): Promise<void> {
   logger.info('Registering maintenance tasks...');
 
@@ -216,20 +213,6 @@ export async function registerMaintenanceTasks(
     logger.info('Registered GitHub Actions runner health maintenance task');
   } else {
     logger.warn('Skipping runner health task registration - GitHub credentials not configured');
-  }
-
-  // Daily at 2am: Graphite sync (replaces standalone setTimeout/setInterval scheduler)
-  if (graphiteSyncScheduler) {
-    await scheduler.registerTask(
-      'maintenance:graphite-sync',
-      'Graphite Branch Sync',
-      '0 2 * * *', // Daily at 2:00 AM
-      async () => {
-        await graphiteSyncScheduler.runSync();
-      }
-    );
-    taskCount++;
-    logger.info('Registered Graphite sync maintenance task');
   }
 
   logger.info(`Registered ${taskCount} maintenance tasks`);
@@ -1107,7 +1090,7 @@ async function sendDiscordConflictAlert(
 
 /**
  * Auto-rebase stale PRs that are behind their base branch.
- * Uses Graphite (gt restack) when available, falls back to gh pr rebase.
+ * Uses gh pr rebase to update PRs.
  * If conflicts are detected, escalates to human via Discord notification.
  */
 async function autoRebaseStalePRs(
@@ -1133,12 +1116,6 @@ async function autoRebaseStalePRs(
     const skippedPRs: Array<{ pr: string; reason: string }> = [];
 
     for (const projectPath of projectPaths) {
-      // Get global settings for Graphite configuration
-      const globalSettings = await settingsService.getGlobalSettings();
-
-      // Check if Graphite is enabled
-      const useGraphite = await graphiteService.shouldUseGraphite(globalSettings.graphite);
-
       // Get all features in 'review' status
       const allFeatures = await featureLoader.getAll(projectPath);
       const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
@@ -1180,72 +1157,25 @@ async function autoRebaseStalePRs(
         const worktreePath = `${projectPath}/.worktrees/${feature.branchName}`;
 
         try {
-          // Try to rebase using Graphite if available
-          if (useGraphite) {
-            logger.info(
-              `Attempting Graphite restack for PR #${feature.prNumber} (${feature.title})`
-            );
+          logger.info(
+            `Attempting GitHub CLI rebase for PR #${feature.prNumber} (${feature.title})`
+          );
 
-            const restackResult = await graphiteService.restack(worktreePath);
-
-            if (restackResult.success) {
-              totalRebased++;
-              rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
-              logger.info(
-                `Successfully rebased PR #${feature.prNumber} (${feature.title}) using Graphite`
-              );
-
-              // Push the rebased branch
-              await graphiteService.push(worktreePath);
-            } else if (restackResult.conflicts) {
-              totalConflicts++;
-              conflictPRs.push({
-                pr: `#${feature.prNumber} (${feature.title})`,
-                reason: restackResult.error || 'Merge conflicts detected',
-              });
-
-              // Send Discord notification about conflict
-              const prUrl = feature.prUrl || `https://github.com/???/pull/${feature.prNumber}`;
-              await sendDiscordConflictAlert(
-                feature.prNumber,
-                feature.branchName,
-                behindStatus.baseBranch,
-                prUrl,
-                restackResult.error || 'Merge conflicts during restack'
-              );
-
-              logger.warn(
-                `PR #${feature.prNumber} (${feature.title}) has conflicts - escalated to Discord`
-              );
-            } else {
-              totalSkipped++;
-              skippedPRs.push({
-                pr: `#${feature.prNumber} (${feature.title})`,
-                reason: restackResult.error || 'Graphite restack failed',
-              });
+          const { stdout: _stdout, stderr: _stderr } = await execFileAsync(
+            'gh',
+            ['pr', 'rebase', String(feature.prNumber)],
+            {
+              cwd: projectPath,
+              encoding: 'utf-8',
+              timeout: 60_000, // Longer timeout for rebase operations
             }
-          } else {
-            // Fall back to gh pr rebase
-            logger.info(
-              `Attempting GitHub CLI rebase for PR #${feature.prNumber} (${feature.title})`
-            );
+          );
 
-            const { stdout: _stdout, stderr: _stderr } = await execFileAsync(
-              'gh',
-              ['pr', 'rebase', String(feature.prNumber)],
-              {
-                cwd: projectPath,
-                encoding: 'utf-8',
-                timeout: 60_000, // Longer timeout for rebase operations
-              }
-            );
-
-            totalRebased++;
-            rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
-            logger.info(
-              `Successfully rebased PR #${feature.prNumber} (${feature.title}) using GitHub CLI`
-            );
-          }
+          totalRebased++;
+          rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
+          logger.info(
+            `Successfully rebased PR #${feature.prNumber} (${feature.title}) using GitHub CLI`
+          );
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : String(error);
           const lowerErrorMsg = errorMsg.toLowerCase();

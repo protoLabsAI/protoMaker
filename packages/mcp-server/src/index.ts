@@ -695,11 +695,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return result.summary ?? result;
     }
 
-    case 'graphite_restack':
-      return apiCall('/worktree/graphite-restack', {
-        worktreePath: args.worktreePath,
-      });
-
     // Git Operations
     case 'git_enhanced_status':
       return apiCall('/git/enhanced-status', { projectPath: args.projectPath });

@@ -81,7 +81,7 @@ usageStats:
 - **Trade-offs:** Added complexity: three code paths (primary, backup, recovery). Gain: system survives directory deletion, server crashes, concurrent corruption. Loss: requires monitoring backup disk usage, staleness detection between primary and backup.
 
 ### Exclude entire `.automaker/` directory from git operations using `git add -A -- ':!.automaker/'` in all git workflow services, rather than selectively gitignoring specific files. This makes the exclusion explicit in code and independent of .gitignore rules. (2026-02-10)
-- **Context:** Multiple git operations (auto-mode-service.ts, git-workflow-service.ts, graphite-service.ts) all need to avoid staging .automaker runtime files. Initial approach was .gitignore rules, but that created ambiguity.
+- **Context:** Multiple git operations (auto-mode-service.ts, git-workflow-service.ts) all need to avoid staging .automaker runtime files. Initial approach was .gitignore rules, but that created ambiguity.
 - **Why:** Code-level pathspec exclusions are explicit and documented. They survive .gitignore refactors. They're the source of truth for what gets staged. .gitignore is a safety net for accidental commits, not the primary mechanism.
 - **Rejected:** Relying solely on .gitignore with selective includes/excludes. That approach is fragile to gitignore rule order and hard to debug.
 - **Trade-offs:** Easier to audit (all git operations have same pattern) but requires discipline across three services. If forgotten in one place, files would be staged. Gain: clear intent, independent of .gitignore state.
@@ -738,7 +738,7 @@ usageStats:
 ### Graceful degradation for optional tools (gh, gt, bd) - warnings instead of FATAL errors (2026-02-13)
 - **Context:** CLI requires 7+ tools. Some are optional (improve DX but not required). Question: hard requirement or soft requirement?
 - **Why:** Users may have valid monorepos without gh/gt/bd installed. Blocking on missing optional tools prevents legitimate setups. However, certain tools (git, node, npm, jq) are truly required - these are FATAL.
-- **Rejected:** Hard requirement on all tools - would fail for users in monorepos without gh CLI, Graphite, or Beads installed
+- **Rejected:** Hard requirement on all tools - would fail for users in monorepos without gh CLI or Beads installed
 - **Trade-offs:** Easier: broader compatibility. Harder: feature discovery becomes implicit (users don't know gh/gt/bd would improve setup). Mitigation: warning messages suggest tool installation.
 - **Breaking if changed:** If optional tools become required (e.g., gh required for team collaboration), CI/CD setups without gh would fail. Conversely, if required tools become optional, setup skips critical validation.
 

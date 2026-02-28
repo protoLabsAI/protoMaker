@@ -29,8 +29,6 @@ import { getEventHistoryService } from '../services/event-history-service.js';
 import { getBriefingCursorService } from '../services/briefing-cursor-service.js';
 import { getSchedulerService } from '../services/scheduler-service.js';
 import { getHealthMonitorService } from '../services/health-monitor-service.js';
-import { GraphiteSyncScheduler } from '../services/graphite-sync-scheduler.js';
-import { graphiteService } from '../services/graphite-service.js';
 import { integrationService } from '../services/integration-service.js';
 import { SignalIntakeService } from '../services/signal-intake-service.js';
 import { AuthorityService } from '../services/authority-service.js';
@@ -139,7 +137,6 @@ export interface ServiceContainer {
   googleCalendarSyncService: GoogleCalendarSyncService;
   calendarService: typeof calendarService;
   schedulerService: ReturnType<typeof getSchedulerService>;
-  graphiteSyncScheduler: GraphiteSyncScheduler;
 
   // Auto-mode
   autoModeService: AutoModeService;
@@ -593,13 +590,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Agent Discord Router for agent-to-Discord message routing
   const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService, roleRegistryService);
 
-  // Graphite sync scheduler (registered as maintenance:graphite-sync task)
-  const graphiteSyncScheduler = new GraphiteSyncScheduler(
-    settingsService,
-    graphiteService,
-    repoRoot
-  );
-
   // Scheduler Service with event emitter and data directory
   const schedulerService = getSchedulerService();
 
@@ -692,7 +682,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     googleCalendarSyncService,
     calendarService,
     schedulerService,
-    graphiteSyncScheduler,
     autoModeService,
     hitlFormService,
     claudeUsageService,

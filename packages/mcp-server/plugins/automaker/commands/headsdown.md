@@ -44,8 +44,6 @@ allowed-tools:
   # Worktree Management
   - mcp__plugin_automaker_automaker__list_worktrees
   - mcp__plugin_automaker_automaker__get_worktree_status
-  # Graphite
-  - mcp__plugin_automaker_automaker__graphite_restack
   # Utilities
   - mcp__plugin_automaker_automaker__health_check
   - mcp__plugin_automaker_automaker__get_settings
@@ -292,13 +290,11 @@ mcp__plugin_automaker_automaker__resolve_pr_threads({ projectPath, prNumber })
 
 ### 4.6 Handle Conflicts
 
-If PRs have conflicts after merges, use Graphite restack if available:
+If PRs have conflicts after merges, rebase them:
 
+```bash
+gh pr update-branch --rebase <prNumber>
 ```
-mcp__plugin_automaker_automaker__graphite_restack({ projectPath })
-```
-
-Otherwise, note which PRs need rebasing and handle them.
 
 ### 4.7 Detect Missing PRs
 

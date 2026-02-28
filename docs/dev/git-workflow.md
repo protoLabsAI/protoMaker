@@ -97,21 +97,6 @@ gh pr create --base epic/my-epic-name --title "Child feature"
 1. Merge feature PRs into epic branch
 2. Once all features complete, merge epic PR into main
 
-**Graphite Integration:** Automaker supports [Graphite](https://graphite.dev) for stack-aware PR management:
-
-```bash
-# Track epic branch
-gt track epic/my-epic --parent main
-
-# Track feature branch under epic
-gt track feature/my-feature --parent epic/my-epic
-
-# Submit all PRs in stack
-gt submit --stack
-```
-
-If Graphite is not available, the system falls back to standard `gh pr create` with `--base` targeting.
-
 ## Git Worktree Isolation
 
 Automaker executes AI agents in isolated git worktrees to protect the main branch during implementation.
@@ -490,5 +475,4 @@ If recovery fails, the feature is marked `blocked` with a `statusChangeReason` p
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure and dependencies
 - [Multi-Instance PR Coordination](./multi-instance-pr-coordination.md) - Ownership model and stale decay
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Complete contribution guide
-- [Graphite Docs](https://graphite.dev/docs) - Stack-aware PR management
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message format

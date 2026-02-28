@@ -138,7 +138,7 @@ The persona agent runs in an isolated worktree:
 
 PR created and CI runs:
 
-1. Push branch, create PR (via Graphite or gh CLI)
+1. Push branch, create PR (via gh CLI)
 2. Enable auto-merge
 3. Wait for CI checks (format, lint, test, build, audit)
 4. Wait for CodeRabbit review

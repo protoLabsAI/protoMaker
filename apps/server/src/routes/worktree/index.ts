@@ -50,9 +50,6 @@ import {
 } from './routes/init-script.js';
 import { createDiscardChangesHandler } from './routes/discard-changes.js';
 import { createListRemotesHandler } from './routes/list-remotes.js';
-import { createGraphiteStatusHandler } from './routes/graphite-status.js';
-import { createGraphiteSyncHandler } from './routes/graphite-sync.js';
-import { createGraphiteRestackHandler } from './routes/graphite-restack.js';
 import { createHealthHandler } from './routes/health.js';
 import { createPruneHandler } from './routes/prune.js';
 import { createCherryPickHandler } from './routes/cherry-pick.js';
@@ -184,26 +181,6 @@ export function createWorktreeRoutes(
     validatePathParams('worktreePath'),
     requireValidWorktree,
     createListRemotesHandler()
-  );
-
-  // Graphite CLI integration routes
-  router.post(
-    '/graphite-status',
-    validatePathParams('worktreePath'),
-    requireGitRepoOnly,
-    createGraphiteStatusHandler()
-  );
-  router.post(
-    '/graphite-sync',
-    validatePathParams('worktreePath'),
-    requireGitRepoOnly,
-    createGraphiteSyncHandler()
-  );
-  router.post(
-    '/graphite-restack',
-    validatePathParams('worktreePath'),
-    requireGitRepoOnly,
-    createGraphiteRestackHandler()
   );
 
   // Cherry-pick and rebase operations

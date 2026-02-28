@@ -8,7 +8,7 @@
  * Domain files:
  * - ui-settings.ts      - ThemeMode, PlanningMode, WindowBounds, KeyboardShortcuts, BoardBackgroundSettings
  * - agent-settings.ts   - ThinkingLevel, PhaseModelEntry, PhaseModelConfig, CeremonySettings, DeploymentEnvironment
- * - git-settings.ts     - GitWorkflowSettings, GraphiteSettings, GitWorkflowResult
+ * - git-settings.ts     - GitWorkflowSettings, GitWorkflowResult
  * - provider-settings.ts - ClaudeCompatibleProvider, ApiKeySource, ProviderModel, ClaudeApiProfile templates
  * - event-settings.ts   - EventHookTrigger, EventHook, EventHookAction types
  * - integration-settings.ts - DiscordSettings, LinearIntegrationConfig, ProjectIntegrations

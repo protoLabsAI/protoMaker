@@ -87,8 +87,6 @@ allowed-tools:
   # Agent delegation
   - mcp__plugin_automaker_automaker__execute_dynamic_agent
   - mcp__plugin_automaker_automaker__list_agent_templates
-  # Graphite
-  - mcp__plugin_automaker_automaker__graphite_restack
   # Discord DMs (via Automaker bot)
   - mcp__plugin_automaker_automaker__send_discord_dm
   - mcp__plugin_automaker_automaker__read_discord_dms
@@ -449,8 +447,6 @@ LinearSyncService moves issue to "Done" + adds comment
 - Crew loop escalations (these create board features directly by design)
 
 ## Operational Context
-
-**Git workflow: Graphite-first.** Use `gt` over `gh` for all branch and PR operations.
 
 **Three-branch strategy** — All agent PRs target `dev`. Promotion flow: `feature/* → dev → staging → main`.
 

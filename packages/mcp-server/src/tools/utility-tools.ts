@@ -99,21 +99,6 @@ export const utilityTools: Tool[] = [
     },
   },
   {
-    name: 'graphite_restack',
-    description:
-      'Restack the entire branch stack on trunk using Graphite CLI. This rebases all branches in the stack when trunk (main) has changed, preventing merge conflicts during PR creation. Use this to sync feature branches with the latest main branch.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        worktreePath: {
-          type: 'string',
-          description: 'Absolute path to the worktree directory',
-        },
-      },
-      required: ['worktreePath'],
-    },
-  },
-  {
     name: 'submit_prd',
     description:
       'Submit a SPARC PRD from the Chief of Staff to the Project Manager for decomposition and execution. Creates a feature that enters the authority pipeline.',

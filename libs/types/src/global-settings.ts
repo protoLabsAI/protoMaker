@@ -35,8 +35,8 @@ import type {
   DeploymentEnvironment,
 } from './agent-settings.js';
 import { DEFAULT_PHASE_MODELS } from './agent-settings.js';
-import type { GitWorkflowSettings, GraphiteSettings } from './git-settings.js';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from './git-settings.js';
+import type { GitWorkflowSettings } from './git-settings.js';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from './git-settings.js';
 import type {
   ClaudeCompatibleProvider,
   ClaudeApiProfile,
@@ -505,13 +505,6 @@ export interface GlobalSettings {
   gitWorkflow?: GitWorkflowSettings;
 
   /**
-   * Graphite CLI integration settings for stack-aware PR management.
-   * When enabled, uses Graphite CLI commands instead of raw git/gh commands.
-   * @see GraphiteSettings
-   */
-  graphite?: GraphiteSettings;
-
-  /**
    * GitHub webhook settings for automated feature status transitions.
    * When enabled, features automatically move to "done" when their PR is merged.
    *
@@ -710,8 +703,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   autoModeByWorktree: {},
   // Git workflow automation (enabled by default)
   gitWorkflow: DEFAULT_GIT_WORKFLOW_SETTINGS,
-  // Graphite CLI integration (disabled by default)
-  graphite: DEFAULT_GRAPHITE_SETTINGS,
   // Auto-mode always-on (disabled by default)
   autoModeAlwaysOn: {
     enabled: false,

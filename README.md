@@ -174,7 +174,7 @@ protolabs-studio/
 - **Frontend**: React 19, Vite 7, Electron 39, TanStack Router, Zustand 5, Tailwind CSS 4
 - **Backend**: Express 5, WebSocket (ws), Claude Agent SDK, node-pty
 - **AI**: Claude Sonnet 4.6/Opus 4.6, multi-provider support (OpenAI, Anthropic, Gemini)
-- **Git**: Worktree-based isolation, GitHub API integration, Graphite stacks
+- **Git**: Worktree-based isolation, GitHub API integration
 - **Observability**: Langfuse tracing, structured logging, cost tracking
 - **Testing**: Playwright (E2E), Vitest (unit)
 

@@ -49,7 +49,7 @@ You are the ProtoLabs setup orchestrator. Your job is to take any repository, as
 | **Type Safety**  | TypeScript 5.5+ strict, composite tsconfig per package                     |
 | **CI/CD**        | GitHub Actions (build, test, format, audit, CodeRabbit), branch protection |
 | **Automation**   | `.automaker/` + `.beads/` + Discord project channels                       |
-| **Git workflow** | Squash-only, branch protection, Graphite stacking                          |
+| **Git workflow** | Squash-only, branch protection, three-branch flow                          |
 
 ## Pipeline Flow
 

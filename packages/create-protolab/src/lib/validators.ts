@@ -278,13 +278,6 @@ export function checkEnvironment(): EnvironmentCheck[] {
       installUrl: 'https://github.com/jlowin/beads',
     },
     {
-      name: 'gt',
-      required: false,
-      available: isCommandAvailable('gt'),
-      version: getCommandVersion('gt'),
-      installUrl: 'https://graphite.dev',
-    },
-    {
       name: 'jq',
       required: true,
       available: isCommandAvailable('jq'),
@@ -352,10 +345,6 @@ export function validateOptionalTools(): Array<{ tool: string; error: ErrorCode 
 
   if (!isCommandAvailable('gh')) {
     warnings.push({ tool: 'gh', error: ErrorCode.GH_CLI_MISSING });
-  }
-
-  if (!isCommandAvailable('gt')) {
-    warnings.push({ tool: 'gt', error: ErrorCode.GT_CLI_MISSING });
   }
 
   if (!isCommandAvailable('bd')) {

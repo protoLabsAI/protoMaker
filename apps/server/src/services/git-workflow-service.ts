@@ -16,10 +16,9 @@ import type {
   GitWorkflowResult,
   GlobalSettings,
 } from '@protolabs-ai/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS, DEFAULT_GRAPHITE_SETTINGS } from '@protolabs-ai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
 import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
 import { validatePRState } from '@protolabs-ai/types';
-import { graphiteService } from './graphite-service.js';
 import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -375,8 +374,6 @@ export class GitWorkflowService {
    * Run the complete git workflow after feature completion.
    * Operations are best-effort: failures in later steps don't prevent earlier steps from succeeding.
    *
-   * When Graphite is enabled and available, uses Graphite CLI for stack-aware
-   * commit/push/PR operations. Otherwise falls back to git/gh CLI.
    *
    * @param projectPath - Absolute path to the main project (for storing PR metadata)
    * @param featureId - The feature ID
@@ -397,7 +394,6 @@ export class GitWorkflowService {
     events?: EventEmitter
   ): Promise<GitWorkflowResult | null> {
     const gitSettings = this.resolveGitWorkflowSettings(feature, settings);
-    const graphiteSettings = settings.graphite ?? DEFAULT_GRAPHITE_SETTINGS;
 
     // Determine PR base branch:
     // - If feature belongs to an epic and epicBranchName is provided, use it
@@ -406,14 +402,8 @@ export class GitWorkflowService {
     const prBaseBranch =
       epicBranchName && !feature.isEpic ? epicBranchName : gitSettings.prBaseBranch;
 
-    // Check if we should use Graphite for this workflow
-    const useGraphite = await graphiteService.shouldUseGraphite(graphiteSettings);
-    if (useGraphite) {
-      logger.debug(`Using Graphite CLI for git workflow (feature ${featureId})`);
-    }
-
     logger.debug(
-      `Git workflow for ${featureId}: isEpic=${feature.isEpic}, epicId=${feature.epicId}, base=${prBaseBranch}, graphite=${useGraphite}`
+      `Git workflow for ${featureId}: isEpic=${feature.isEpic}, epicId=${feature.epicId}, base=${prBaseBranch}`
     );
 
     // If all operations disabled, skip entirely
@@ -441,15 +431,7 @@ export class GitWorkflowService {
     try {
       // Step 1: Commit changes
       let commitHash: string | null;
-      if (useGraphite && graphiteSettings.useGraphiteCommit) {
-        // Use Graphite commit (updates stack metadata)
-        const title = feature.title || extractTitleFromDescription(feature.description);
-        const commitMessage = `feat: ${title}\n\nImplemented by Automaker auto-mode\nFeature ID: ${feature.id}`;
-        commitHash = await graphiteService.commit(workDir, commitMessage);
-      } else {
-        // Use standard git commit
-        commitHash = await this.commitChanges(workDir, feature, projectPath);
-      }
+      commitHash = await this.commitChanges(workDir, feature, projectPath);
 
       if (!commitHash) {
         // Agent may have already committed. Check for unpushed commits before bailing out.
@@ -470,11 +452,10 @@ export class GitWorkflowService {
       this.trackOperation('commit', featureId, true);
       logger.info(`Committed changes for feature ${featureId}: ${commitHash}`);
 
-      // Step 1.5: Rebase/restack before push to prevent CONFLICTING PRs
-      // Graphite handles this via restack; without Graphite, rebase manually.
+      // Step 1.5: Rebase before push to prevent CONFLICTING PRs
       let needsForceWithLease = false;
 
-      if (!useGraphite && gitSettings.autoPush) {
+      if (gitSettings.autoPush) {
         try {
           const targetBranch = `origin/${prBaseBranch}`;
           logger.info(`Rebasing branch ${branchName} onto ${targetBranch} before push`);
@@ -512,42 +493,10 @@ export class GitWorkflowService {
         }
       }
 
-      if (useGraphite && gitSettings.autoPush) {
-        try {
-          logger.info(`Restacking branch ${branchName} before push`);
-          const restackResult = await graphiteService.restack(workDir);
-
-          if (restackResult.conflicts) {
-            logger.warn(`Restack encountered conflicts for branch ${branchName}`);
-            result.error = 'Restack conflicts detected - manual resolution required';
-            // Don't proceed with push/PR if conflicts exist
-            return result;
-          }
-
-          if (!restackResult.success) {
-            logger.warn(`Restack failed for branch ${branchName}: ${restackResult.error}`);
-            // Log but continue - non-conflict failures shouldn't block PR creation
-          } else {
-            logger.info(`Successfully restacked branch ${branchName}`);
-          }
-        } catch (restackError) {
-          const errorMsg =
-            restackError instanceof Error ? restackError.message : String(restackError);
-          logger.warn(`Error during restack for branch ${branchName}: ${errorMsg}`);
-          // Log but continue - restack errors shouldn't block PR creation
-        }
-      }
-
       // Step 2: Push to remote (if enabled)
       if (gitSettings.autoPush) {
         try {
-          let pushed: boolean;
-          if (useGraphite) {
-            // Graphite push handles force-push-with-lease for rebased stacks
-            pushed = await graphiteService.push(workDir);
-          } else {
-            pushed = await this.pushToRemote(workDir, branchName, needsForceWithLease);
-          }
+          const pushed = await this.pushToRemote(workDir, branchName, needsForceWithLease);
           result.pushed = pushed;
           if (pushed) {
             this.trackOperation('push', featureId, true);
@@ -561,111 +510,19 @@ export class GitWorkflowService {
           // Continue - commit succeeded, push failed
         }
 
-        // Step 3: Sync and restack (if using Graphite and PR creation enabled)
-        if (result.pushed && gitSettings.autoCreatePR && useGraphite) {
-          try {
-            logger.info(`Syncing and restacking branch ${branchName} before PR creation`);
-            const syncResult = await graphiteService.syncAndRestack(workDir);
-
-            if (!syncResult.success) {
-              if (syncResult.conflicts) {
-                // Conflicts detected - this requires manual intervention
-                const conflictError = `Branch ${branchName} has merge conflicts after sync. Manual resolution required.`;
-                logger.error(conflictError);
-                result.error = result.error ? `${result.error}; ${conflictError}` : conflictError;
-                // Don't proceed with PR creation if there are conflicts
-                return result;
-              } else if (syncResult.error?.includes('circuit breaker is open')) {
-                // Circuit breaker is open - fall back to gh CLI for PR creation
-                logger.warn(
-                  `Graphite circuit breaker is open, falling back to gh CLI for PR creation`
-                );
-                // Continue with PR creation using gh CLI fallback below
-              } else {
-                // Sync failed for another reason - log but continue
-                logger.warn(`Sync failed but no conflicts detected: ${syncResult.error}`);
-              }
-            } else {
-              logger.info(`Branch ${branchName} synced and restacked successfully`);
-              // After successful rebase, push the rebased branch
-              try {
-                const rebased = await graphiteService.push(workDir);
-                if (!rebased) {
-                  logger.warn(`Failed to push rebased branch ${branchName}`);
-                }
-              } catch (pushError) {
-                logger.warn(
-                  `Failed to push rebased branch: ${pushError instanceof Error ? pushError.message : String(pushError)}`
-                );
-              }
-            }
-          } catch (syncError) {
-            const errorMsg = syncError instanceof Error ? syncError.message : String(syncError);
-            // Check if circuit breaker is open
-            if (errorMsg.includes('circuit breaker is open')) {
-              logger.warn(
-                `Graphite circuit breaker is open, falling back to gh CLI for PR creation`
-              );
-              // Continue with PR creation using gh CLI fallback below
-            } else {
-              logger.warn(`Sync and restack failed for branch ${branchName}: ${errorMsg}`);
-              // Log the error but continue with PR creation - sync is best-effort
-            }
-          }
-        }
-
-        // Step 4: Create PR (if push succeeded and PR creation enabled)
+        // Step 3: Create PR (if push succeeded and PR creation enabled)
         if (result.pushed && gitSettings.autoCreatePR) {
           try {
-            if (useGraphite) {
-              // Try Graphite submit first - it handles base branch automatically via stack parent
-              try {
-                const prResult = await this.createPullRequestWithGraphite(
-                  workDir,
-                  projectPath,
-                  feature,
-                  branchName
-                );
-                result.prUrl = prResult.prUrl;
-                result.prNumber = prResult.prNumber;
-                result.prAlreadyExisted = prResult.prAlreadyExisted;
-              } catch (graphiteError) {
-                const graphiteErrorMsg =
-                  graphiteError instanceof Error ? graphiteError.message : String(graphiteError);
-
-                // Check if circuit breaker is open - fall back to gh CLI
-                if (graphiteErrorMsg.includes('circuit breaker is open')) {
-                  logger.warn(
-                    `Graphite circuit breaker is open, falling back to gh CLI for PR creation`
-                  );
-                  const prResult = await this.createPullRequest(
-                    workDir,
-                    projectPath,
-                    feature,
-                    branchName,
-                    prBaseBranch
-                  );
-                  result.prUrl = prResult.prUrl;
-                  result.prNumber = prResult.prNumber;
-                  result.prAlreadyExisted = prResult.prAlreadyExisted;
-                } else {
-                  // Other Graphite error - rethrow
-                  throw graphiteError;
-                }
-              }
-            } else {
-              // Use gh CLI
-              const prResult = await this.createPullRequest(
-                workDir,
-                projectPath,
-                feature,
-                branchName,
-                prBaseBranch
-              );
-              result.prUrl = prResult.prUrl;
-              result.prNumber = prResult.prNumber;
-              result.prAlreadyExisted = prResult.prAlreadyExisted;
-            }
+            const prResult = await this.createPullRequest(
+              workDir,
+              projectPath,
+              feature,
+              branchName,
+              prBaseBranch
+            );
+            result.prUrl = prResult.prUrl;
+            result.prNumber = prResult.prNumber;
+            result.prAlreadyExisted = prResult.prAlreadyExisted;
             if (result.prUrl) {
               this.trackOperation('pr_create', featureId, true);
               logger.info(`PR ${result.prAlreadyExisted ? 'exists' : 'created'}: ${result.prUrl}`);
@@ -914,69 +771,6 @@ export class GitWorkflowService {
     if (body.includes('💡')) return 'suggestion';
 
     return 'info';
-  }
-
-  /**
-   * Create a pull request using Graphite CLI.
-   * Graphite automatically determines the base branch from the stack parent.
-   */
-  private async createPullRequestWithGraphite(
-    workDir: string,
-    projectPath: string,
-    feature: Feature,
-    branchName: string
-  ): Promise<{
-    prUrl: string | null;
-    prNumber?: number;
-    prAlreadyExisted?: boolean;
-    prCreatedAt?: string;
-  }> {
-    const title = feature.title || extractTitleFromDescription(feature.description);
-    const body = buildPRBody(feature);
-
-    const submitResult = await graphiteService.submit(workDir, title, body);
-
-    if (submitResult.success && submitResult.prUrl) {
-      const prCreatedAt = new Date().toISOString();
-
-      // Store PR info in metadata
-      await updateWorktreePRInfo(projectPath, branchName, {
-        number: submitResult.prNumber!,
-        url: submitResult.prUrl,
-        title,
-        state: 'OPEN',
-        createdAt: prCreatedAt,
-      });
-
-      return {
-        prUrl: submitResult.prUrl,
-        prNumber: submitResult.prNumber,
-        prAlreadyExisted: false, // Graphite submit handles existing PRs internally
-        prCreatedAt,
-      };
-    }
-
-    // If Graphite submit failed, fall back to checking for existing PR
-    if (submitResult.error) {
-      logger.warn(`Graphite submit failed: ${submitResult.error}, checking for existing PR`);
-      const prInfo = await graphiteService.getPRInfo(workDir);
-      if (prInfo?.prUrl) {
-        await updateWorktreePRInfo(projectPath, branchName, {
-          number: prInfo.prNumber!,
-          url: prInfo.prUrl,
-          title,
-          state: 'OPEN',
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          prUrl: prInfo.prUrl,
-          prNumber: prInfo.prNumber,
-          prAlreadyExisted: true,
-        };
-      }
-    }
-
-    return { prUrl: null };
   }
 
   /**
