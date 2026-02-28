@@ -14,6 +14,9 @@ import path from 'path';
 import { createLogger } from '@protolabs-ai/utils';
 import { getAutomakerDir, ensureAutomakerDir } from '@protolabs-ai/platform';
 import * as secureFs from '../../lib/secure-fs.js';
+import type { AvaToolsConfig } from './ava-tools.js';
+
+export type { AvaToolsConfig };
 
 const logger = createLogger('AvaConfig');
 
@@ -22,32 +25,20 @@ const logger = createLogger('AvaConfig');
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Per-tool enable/disable flags for Ava.
- * Each key represents a named tool capability.
- */
-export interface AvaToolsConfig {
-  /** Full-text search across the project knowledge base */
-  knowledgeSearch: boolean;
-  /** Board / feature read access (list features, check status) */
-  readBoard: boolean;
-  /** Sitrep generation (generate and display a situation report) */
-  sitrep: boolean;
-  /** Web search capability */
-  webSearch: boolean;
-}
-
-/**
  * Ava chat configuration stored per-project.
+ *
+ * Field names intentionally match the frontend AvaConfig in ava-client.ts
+ * so the /api/ava/config endpoints can pass through without transformation.
  */
 export interface AvaConfig {
-  /** Claude model alias to use for Ava (e.g. "sonnet", "opus", "haiku") */
-  model: string;
-  /** Per-tool enable/disable flags */
-  tools: AvaToolsConfig;
-  /** When true, inject a situation report into the system prompt */
-  injectSitrep: boolean;
+  /** Claude model alias to use for Ava ("haiku" | "sonnet" | "opus") */
+  model: 'haiku' | 'sonnet' | 'opus';
+  /** Per-tool-group enable/disable flags */
+  toolGroups: AvaToolsConfig;
+  /** When true, inject a live situation report into the system prompt */
+  sitrepInjection: boolean;
   /** When true, inject project context (CLAUDE.md, context files) into the prompt */
-  injectContext: boolean;
+  contextInjection: boolean;
   /** Additional text appended to Ava's base system prompt (empty = no extension) */
   systemPromptExtension: string;
 }
@@ -62,14 +53,16 @@ export interface AvaConfig {
  */
 export const DEFAULT_AVA_CONFIG: AvaConfig = {
   model: 'sonnet',
-  tools: {
-    knowledgeSearch: true,
-    readBoard: true,
-    sitrep: true,
-    webSearch: true,
+  toolGroups: {
+    boardRead: true,
+    boardWrite: true,
+    agentControl: true,
+    autoMode: true,
+    projectMgmt: true,
+    orchestration: true,
   },
-  injectSitrep: true,
-  injectContext: true,
+  sitrepInjection: true,
+  contextInjection: true,
   systemPromptExtension: '',
 };
 
@@ -102,16 +95,16 @@ export async function loadAvaConfig(projectPath: string): Promise<AvaConfig> {
     const content = await secureFs.readFile(configPath, 'utf-8');
     const parsed = JSON.parse(content as string) as Partial<AvaConfig>;
 
-    // Deep-merge: tools are merged separately to preserve all default keys
-    const mergedTools: AvaToolsConfig = {
-      ...DEFAULT_AVA_CONFIG.tools,
-      ...(parsed.tools ?? {}),
+    // Deep-merge: toolGroups are merged separately to preserve all default keys
+    const mergedToolGroups: AvaToolsConfig = {
+      ...DEFAULT_AVA_CONFIG.toolGroups,
+      ...(parsed.toolGroups ?? {}),
     };
 
     const merged: AvaConfig = {
       ...DEFAULT_AVA_CONFIG,
       ...parsed,
-      tools: mergedTools,
+      toolGroups: mergedToolGroups,
     };
 
     logger.debug(`Loaded ava-config from ${configPath}`);
@@ -120,12 +113,12 @@ export async function loadAvaConfig(projectPath: string): Promise<AvaConfig> {
     // File not found — return defaults without writing anything
     if (isEnoentError(error)) {
       logger.debug(`No ava-config at ${configPath}, using defaults`);
-      return { ...DEFAULT_AVA_CONFIG, tools: { ...DEFAULT_AVA_CONFIG.tools } };
+      return { ...DEFAULT_AVA_CONFIG, toolGroups: { ...DEFAULT_AVA_CONFIG.toolGroups } };
     }
 
     // JSON parse errors or other I/O issues — log and fall back to defaults
     logger.warn(`Failed to read ava-config at ${configPath}, using defaults:`, error);
-    return { ...DEFAULT_AVA_CONFIG, tools: { ...DEFAULT_AVA_CONFIG.tools } };
+    return { ...DEFAULT_AVA_CONFIG, toolGroups: { ...DEFAULT_AVA_CONFIG.toolGroups } };
   }
 }
 
@@ -149,16 +142,16 @@ export async function saveAvaConfig(
   // Load current config (may return defaults if file absent)
   const current = await loadAvaConfig(projectPath);
 
-  // Merge tools separately for deep merge semantics
-  const mergedTools: AvaToolsConfig = {
-    ...current.tools,
-    ...(partial.tools ?? {}),
+  // Merge toolGroups separately for deep merge semantics
+  const mergedToolGroups: AvaToolsConfig = {
+    ...current.toolGroups,
+    ...(partial.toolGroups ?? {}),
   };
 
   const merged: AvaConfig = {
     ...current,
     ...partial,
-    tools: mergedTools,
+    toolGroups: mergedToolGroups,
   };
 
   const configPath = getAvaConfigPath(projectPath);

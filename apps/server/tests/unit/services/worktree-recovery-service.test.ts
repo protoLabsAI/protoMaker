@@ -67,7 +67,11 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git push
+      // git fetch origin dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git rebase origin/dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git push --force-with-lease
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create
       mockExec.mockResolvedValueOnce({
@@ -111,6 +115,10 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git fetch origin dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git rebase origin/dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git push fails
       mockExec.mockRejectedValueOnce(new Error('remote: Permission denied'));
 
@@ -132,7 +140,11 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      // git push succeeds
+      // git fetch origin dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git rebase origin/dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git push --force-with-lease succeeds
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // gh pr create succeeds
       mockExec.mockResolvedValueOnce({
@@ -146,6 +158,70 @@ describe('worktree-recovery-service', () => {
       expect(result.detected).toBe(true);
       expect(result.recovered).toBe(true);
       expect(result.prNumber).toBe(99);
+    });
+
+    it('recovers when rebase conflicts — pushes without force-with-lease', async () => {
+      // git status --short
+      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      // git diff HEAD (for prettier formatting)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // npx prettier
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git add
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git commit (execFile)
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git fetch origin dev (rebase step)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git rebase origin/dev FAILS with CONFLICT
+      mockExec.mockRejectedValueOnce(
+        new Error('CONFLICT (content): Merge conflict in src/index.ts')
+      );
+      // git rebase --abort (best-effort)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git push (NO --force-with-lease since rebase was aborted)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // gh pr create
+      mockExec.mockResolvedValueOnce({
+        stdout: 'https://github.com/owner/repo/pull/55\n',
+        stderr: '',
+      });
+
+      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+
+      expect(result.detected).toBe(true);
+      expect(result.recovered).toBe(true);
+      expect(result.prNumber).toBe(55);
+    });
+
+    it('recovers when rebase fails for non-conflict reason — aborts and pushes normally', async () => {
+      // git status --short
+      mockExec.mockResolvedValueOnce({ stdout: 'M  src/index.ts\n', stderr: '' });
+      // git diff HEAD
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
+      // npx prettier
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git add
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git commit (execFile)
+      mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git fetch origin dev — fails (network error)
+      mockExec.mockRejectedValueOnce(new Error('fatal: unable to access remote'));
+      // git rebase --abort (best-effort after non-conflict failure)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git push (NO --force-with-lease)
+      mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // gh pr create
+      mockExec.mockResolvedValueOnce({
+        stdout: 'https://github.com/owner/repo/pull/77\n',
+        stderr: '',
+      });
+
+      const result = await checkAndRecoverUncommittedWork(baseFeature, '/mock/worktree');
+
+      expect(result.detected).toBe(true);
+      expect(result.recovered).toBe(true);
+      expect(result.prNumber).toBe(77);
     });
   });
 });

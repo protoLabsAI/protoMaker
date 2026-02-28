@@ -470,8 +470,48 @@ export class GitWorkflowService {
       this.trackOperation('commit', featureId, true);
       logger.info(`Committed changes for feature ${featureId}: ${commitHash}`);
 
-      // Step 1.5: Restack with Graphite before pushing (if enabled)
-      // This ensures the branch is up to date with trunk/main to prevent merge conflicts
+      // Step 1.5: Rebase/restack before push to prevent CONFLICTING PRs
+      // Graphite handles this via restack; without Graphite, rebase manually.
+      let needsForceWithLease = false;
+
+      if (!useGraphite && gitSettings.autoPush) {
+        try {
+          const targetBranch = `origin/${prBaseBranch}`;
+          logger.info(`Rebasing branch ${branchName} onto ${targetBranch} before push`);
+          await execAsync(`git fetch origin ${prBaseBranch}`, {
+            cwd: workDir,
+            env: execEnv,
+            timeout: 30_000,
+          });
+          await execAsync(`git rebase ${targetBranch}`, {
+            cwd: workDir,
+            env: execEnv,
+            timeout: 60_000,
+          });
+          needsForceWithLease = true;
+          logger.info(`Successfully rebased branch ${branchName} onto ${targetBranch}`);
+        } catch (rebaseError) {
+          const errorMsg = rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
+          if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
+            logger.warn(
+              `Rebase conflicts for ${branchName}, aborting rebase — PR may need manual rebase`
+            );
+            try {
+              await execAsync('git rebase --abort', { cwd: workDir, env: execEnv });
+            } catch {
+              // Best-effort abort
+            }
+          } else {
+            logger.warn(`Rebase failed for ${branchName}: ${errorMsg} — continuing without rebase`);
+            try {
+              await execAsync('git rebase --abort', { cwd: workDir, env: execEnv });
+            } catch {
+              // Best-effort abort — may not be in rebase state
+            }
+          }
+        }
+      }
+
       if (useGraphite && gitSettings.autoPush) {
         try {
           logger.info(`Restacking branch ${branchName} before push`);
@@ -506,7 +546,7 @@ export class GitWorkflowService {
             // Graphite push handles force-push-with-lease for rebased stacks
             pushed = await graphiteService.push(workDir);
           } else {
-            pushed = await this.pushToRemote(workDir, branchName);
+            pushed = await this.pushToRemote(workDir, branchName, needsForceWithLease);
           }
           result.pushed = pushed;
           if (pushed) {
@@ -1207,17 +1247,22 @@ export class GitWorkflowService {
    * Uses exponential backoff retry (3 attempts with 2s/4s/8s delays).
    * @returns true if push succeeded
    */
-  private async pushToRemote(workDir: string, branchName: string): Promise<boolean> {
+  private async pushToRemote(
+    workDir: string,
+    branchName: string,
+    forceWithLease: boolean = false
+  ): Promise<boolean> {
+    const forceFlag = forceWithLease ? ' --force-with-lease' : '';
     return await retryWithExponentialBackoff(async () => {
       try {
-        await execAsync(`git push -u origin ${branchName}`, {
+        await execAsync(`git push${forceFlag} -u origin ${branchName}`, {
           cwd: workDir,
           env: execEnv,
         });
         return true;
       } catch {
         // Try with --set-upstream
-        await execAsync(`git push --set-upstream origin ${branchName}`, {
+        await execAsync(`git push${forceFlag} --set-upstream origin ${branchName}`, {
           cwd: workDir,
           env: execEnv,
         });

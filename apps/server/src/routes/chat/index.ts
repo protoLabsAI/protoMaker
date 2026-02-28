@@ -7,72 +7,26 @@
  *
  * Per-request enrichment:
  * - Loads AvaConfig from <projectPath>/.automaker/ava-config.json
- * - Injects project context via loadContextFiles when injectContext is true
- * - Injects sitrep from <projectPath>/.automaker/sitrep.md when injectSitrep is true
- * - Passes tools from buildAvaTools with maxSteps: 10
+ * - Injects project context via loadContextFiles when contextInjection is true
+ * - Fetches a live sitrep via getSitrep() when sitrepInjection is true
+ * - Builds tool set from buildAvaTools() gated by config.toolGroups
+ * - Passes tools to streamText with maxSteps: 10
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { Router, type Request, type Response } from 'express';
-import { streamText, stepCountIs, type ModelMessage, type ToolSet } from 'ai';
+import { streamText, stepCountIs, type ModelMessage } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { createLogger } from '@protolabs-ai/utils';
-import { loadContextFiles } from '@protolabs-ai/utils';
+import { createLogger, loadContextFiles } from '@protolabs-ai/utils';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
 import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
+import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.js';
+import { getSitrep } from './sitrep.js';
+import { buildAvaTools } from './ava-tools.js';
 import type { ServiceContainer } from '../../server/services.js';
 
+export type { AvaConfig };
+
 const logger = createLogger('ChatRoutes');
-
-/**
- * Per-project Ava configuration loaded from .automaker/ava-config.json.
- * All fields are optional with sensible defaults.
- */
-export interface AvaConfig {
-  /** Override the model for this project (haiku | sonnet | opus) */
-  model?: string;
-  /** Whether to inject project context files into the system prompt */
-  injectContext?: boolean;
-  /** Whether to inject the current sitrep into the system prompt */
-  injectSitrep?: boolean;
-}
-
-/**
- * Load AvaConfig from <projectPath>/.automaker/ava-config.json.
- * Returns an empty config if the file does not exist or is invalid JSON.
- * Errors are silently swallowed so a missing config is a no-op.
- */
-async function loadAvaConfig(projectPath: string): Promise<AvaConfig> {
-  try {
-    const configPath = path.join(projectPath, '.automaker', 'ava-config.json');
-    const content = await fs.readFile(configPath, 'utf-8');
-    return JSON.parse(content) as AvaConfig;
-  } catch {
-    return {};
-  }
-}
-
-/**
- * Read the sitrep from <projectPath>/.automaker/sitrep.md.
- * Returns null if the file does not exist.
- */
-async function getSitrep(projectPath: string): Promise<string | null> {
-  try {
-    const sitrepPath = path.join(projectPath, '.automaker', 'sitrep.md');
-    return await fs.readFile(sitrepPath, 'utf-8');
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Build the tool set available to Ava during chat.
- * Currently returns an empty set; extend as Ava tools are added in future features.
- */
-export function buildAvaTools(_services: ServiceContainer): ToolSet {
-  return {};
-}
 
 /** Map our internal aliases to AI SDK model IDs */
 function resolveAISDKModel(modelAlias?: string) {
@@ -146,8 +100,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
 
       const messages = toModelMessages(rawMessages);
 
-      // Load AvaConfig when a projectPath is available (cached read from disk)
-      const avaConfig: AvaConfig = projectPath ? await loadAvaConfig(projectPath) : {};
+      // Load AvaConfig when a projectPath is available; fall back to defaults
+      const avaConfig: AvaConfig = projectPath
+        ? await loadAvaConfig(projectPath)
+        : { ...DEFAULT_AVA_CONFIG, toolGroups: { ...DEFAULT_AVA_CONFIG.toolGroups } };
 
       // Model selection: AvaConfig.model > header > body > default (sonnet)
       const modelAlias =
@@ -157,7 +113,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
 
       // Conditionally load project context files
       let projectContext: string | undefined;
-      if (avaConfig.injectContext && projectPath) {
+      if (avaConfig.contextInjection && projectPath) {
         try {
           const contextResult = await loadContextFiles({ projectPath });
           projectContext = contextResult.formattedPrompt || undefined;
@@ -166,27 +122,41 @@ export function createChatRoutes(services: ServiceContainer): Router {
         }
       }
 
-      // Conditionally fetch sitrep
+      // Conditionally fetch live sitrep
       let sitrep: string | undefined;
-      if (avaConfig.injectSitrep && projectPath) {
-        const sitrepText = await getSitrep(projectPath);
-        sitrep = sitrepText ?? undefined;
+      if (avaConfig.sitrepInjection && projectPath) {
+        try {
+          sitrep = await getSitrep(projectPath);
+        } catch (err) {
+          logger.warn('Failed to generate sitrep:', err);
+        }
       }
 
-      // Build Ava system prompt — enriched with project context and sitrep when available
+      // Build Ava system prompt — enriched with project context, sitrep, and extension
       const systemPrompt =
         system ??
         buildAvaSystemPrompt({
           ctx: context,
           projectContext,
           sitrep,
+          extension: avaConfig.systemPromptExtension || undefined,
         });
 
-      // Build tool set for this request
-      const tools = buildAvaTools(services);
+      // Build tool set for this request — gated by per-project toolGroups config
+      const tools = projectPath
+        ? buildAvaTools(
+            projectPath,
+            {
+              featureLoader: services.featureLoader,
+              autoModeService: services.autoModeService,
+              agentService: services.agentService,
+            },
+            avaConfig.toolGroups
+          )
+        : {};
 
       logger.info(
-        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, injectContext=${avaConfig.injectContext ?? false}, injectSitrep=${avaConfig.injectSitrep ?? false}`
+        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}`
       );
 
       const result = streamText({
