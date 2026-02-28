@@ -83,8 +83,6 @@ export function BoardHeader({
   creatingSpecProjectPath,
   assigneeFilter,
   onAssigneeFilterChange,
-  boardUsername,
-  onBoardUsernameChange,
   onShowBoardBackground,
   viewMode,
   onViewModeChange,
