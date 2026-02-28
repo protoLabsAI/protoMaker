@@ -23,6 +23,7 @@ import {
 } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { createLogger } from '@protolabs-ai/utils';
+import { resolveModelString } from '@protolabs-ai/model-resolver';
 import { LangfuseClient } from '@protolabs-ai/observability';
 import { isLangfuseReady } from './langfuse-guard.js';
 import { wrapSubgraph } from '../graphs/utils/subgraph-wrapper.js';
@@ -53,6 +54,8 @@ export interface ContentConfig {
   outputFormats: Array<'markdown' | 'html' | 'pdf'>;
   smartModel: BaseChatModel;
   fastModel: BaseChatModel;
+  smartModelName?: string;
+  fastModelName?: string;
   langfuseClient?: LangfuseClient;
   enableHITL?: boolean; // Optional flag to re-enable human-in-the-loop gates (default: false)
   maxRetries?: number; // Maximum retries per phase (default: 2)
@@ -199,7 +202,7 @@ Return ONLY a JSON array of strings, no markdown formatting. Example:
       config.langfuseClient.createGeneration({
         traceId: state.traceId,
         name: 'generate_queries',
-        model: 'claude-sonnet-4-5-20250929',
+        model: config.smartModelName ?? resolveModelString('sonnet'),
         input: prompt,
         output:
           typeof response.content === 'string'
@@ -347,7 +350,7 @@ Return ONLY the JSON object, no markdown formatting.`;
       config.langfuseClient.createGeneration({
         traceId: state.traceId,
         name: `research_delegate:${query.slice(0, 40)}`,
-        model: 'claude-sonnet-4-5-20250929',
+        model: config.smartModelName ?? resolveModelString('sonnet'),
         input: prompt,
         output:
           typeof response.content === 'string'
@@ -634,7 +637,7 @@ Return ONLY the JSON, no markdown formatting.`;
       config.langfuseClient.createGeneration({
         traceId: state.traceId,
         name: 'generate_outline',
-        model: 'claude-sonnet-4-5-20250929',
+        model: config.smartModelName ?? resolveModelString('sonnet'),
         input: prompt,
         output:
           typeof response.content === 'string'

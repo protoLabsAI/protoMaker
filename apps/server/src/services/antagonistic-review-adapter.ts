@@ -156,9 +156,13 @@ export class AntagonisticReviewAdapter {
       const graph = createAntagonisticReviewGraph(true);
 
       // Create LLM model for the review nodes via settings-aware factory
-      const smartModel = await createFlowModel('specGenerationModel', this.config.projectPath, {
-        settingsService: this.config.settingsService,
-      });
+      const { model: smartModel } = await createFlowModel(
+        'specGenerationModel',
+        this.config.projectPath,
+        {
+          settingsService: this.config.settingsService,
+        }
+      );
 
       // Use thread ID for checkpointing (required for HITL resume)
       const threadId = uuidv4();

@@ -64,6 +64,8 @@ interface ContentCreationConfig {
   outputFormats: Array<'markdown' | 'html' | 'pdf'>;
   smartModel: BaseChatModel;
   fastModel: BaseChatModel;
+  smartModelName?: string;
+  fastModelName?: string;
   langfuseClient?: import('@protolabs-ai/observability').LangfuseClient;
   enableHITL?: boolean;
   maxRetries?: number;
@@ -172,13 +174,21 @@ export class ContentFlowService {
    */
   private async createModels(
     projectPath: string
-  ): Promise<{ smartModel: BaseChatModel; fastModel: BaseChatModel }> {
+  ): Promise<{
+    smartModel: BaseChatModel;
+    fastModel: BaseChatModel;
+    smartModelName: string;
+    fastModelName: string;
+  }> {
     const services = { settingsService: this.settingsService };
-    const [smartModel, fastModel] = await Promise.all([
+    const [
+      { model: smartModel, modelName: smartModelName },
+      { model: fastModel, modelName: fastModelName },
+    ] = await Promise.all([
       createFlowModel('specGenerationModel', projectPath, services),
       createFlowModel('fileDescriptionModel', projectPath, services),
     ]);
-    return { smartModel, fastModel };
+    return { smartModel, fastModel, smartModelName, fastModelName };
   }
 
   /**
@@ -205,7 +215,8 @@ export class ContentFlowService {
       `Starting content flow ${runId} for topic: ${topic} (autonomous=${!contentConfig?.enableHITL})`
     );
 
-    const { smartModel, fastModel } = await this.createModels(projectPath);
+    const { smartModel, fastModel, smartModelName, fastModelName } =
+      await this.createModels(projectPath);
 
     // Initialize Langfuse tracing
     const langfuse = getLangfuseInstance();
@@ -233,6 +244,8 @@ export class ContentFlowService {
       outputFormats: contentConfig?.outputFormats || ['markdown'],
       smartModel,
       fastModel,
+      smartModelName,
+      fastModelName,
       langfuseClient: langfuse.isAvailable() ? langfuse : undefined,
       enableHITL: contentConfig?.enableHITL || false,
       maxRetries: contentConfig?.maxRetries ?? 2,

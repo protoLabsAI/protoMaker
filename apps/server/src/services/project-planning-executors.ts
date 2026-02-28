@@ -8,7 +8,6 @@
  * Used by: server index.ts when initializing ProjectPlanningService
  */
 
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import {
   type ProjectPlanningFlowConfig,
   createLLMResearchExecutor,
@@ -41,7 +40,7 @@ export async function createLLMProjectPlanningConfig(
   services?: { settingsService: SettingsService | null | undefined },
   projectPath?: string
 ): Promise<ProjectPlanningFlowConfig> {
-  const smartModel: BaseChatModel = await createFlowModel(
+  const { model: smartModel } = await createFlowModel(
     'specGenerationModel',
     projectPath,
     services ?? { settingsService: undefined }
