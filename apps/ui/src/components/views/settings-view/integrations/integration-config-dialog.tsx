@@ -21,10 +21,13 @@ import {
 import { apiFetch } from '@/lib/api-fetch';
 import { useAppStore } from '@/store/app-store';
 import { useSignalChannels } from '@/hooks/use-signal-channels';
+import { useGlobalSettings } from '@/hooks/queries/use-settings';
+import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 import type {
   IntegrationDescriptor,
   ConfigField,
   DiscordChannelSignalConfig,
+  UserProfile,
 } from '@protolabs-ai/types';
 import type { SignalIntent } from '@protolabs-ai/types';
 
@@ -216,6 +219,8 @@ export function IntegrationConfigDialog({
                 onChange={signalChannels.setChannels}
               />
             )}
+
+            {isDiscord && <DiscordProfileSection />}
           </div>
         )}
 
@@ -423,6 +428,180 @@ function SignalSourcesSection({
         </Button>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Discord profile section — reads/writes userProfile.discord.* and additionalAllowedUsers
+// ---------------------------------------------------------------------------
+
+function DiscordProfileSection() {
+  const { data: settings } = useGlobalSettings();
+  const updateSettings = useUpdateGlobalSettings({ showSuccessToast: false });
+  const [local, setLocal] = useState<UserProfile>({});
+  const [allowedUsersText, setAllowedUsersText] = useState('');
+
+  useEffect(() => {
+    if (settings?.userProfile) {
+      setLocal(settings.userProfile);
+      setAllowedUsersText((settings.userProfile.additionalAllowedUsers ?? []).join(', '));
+    }
+  }, [settings?.userProfile]);
+
+  const save = useCallback(
+    (overrides?: Partial<UserProfile>) => {
+      const toSave = overrides ? { ...local, ...overrides } : local;
+      updateSettings.mutate({ userProfile: toSave });
+    },
+    [local, updateSettings]
+  );
+
+  const saveAllowedUsers = useCallback(() => {
+    const users = allowedUsersText
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const updated = { ...local, additionalAllowedUsers: users };
+    setLocal(updated);
+    updateSettings.mutate({ userProfile: updated });
+  }, [allowedUsersText, local, updateSettings]);
+
+  return (
+    <>
+      <div className="space-y-3">
+        <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Bot Identity</h4>
+        <div className="space-y-1.5">
+          <Label className="text-sm">Discord username</Label>
+          <Input
+            value={local.discord?.username ?? ''}
+            onChange={(e) =>
+              setLocal((p) => ({
+                ...p,
+                discord: { ...p.discord, username: e.target.value },
+              }))
+            }
+            onBlur={() => save()}
+            placeholder="Discord username"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+          Notification Channels
+        </h4>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm">Primary</Label>
+            <Input
+              className="font-mono"
+              value={local.discord?.channels?.primary ?? ''}
+              onChange={(e) =>
+                setLocal((p) => ({
+                  ...p,
+                  discord: {
+                    ...p.discord,
+                    channels: { ...p.discord?.channels, primary: e.target.value },
+                  },
+                }))
+              }
+              onBlur={() => save()}
+              placeholder="Channel ID"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Dev</Label>
+            <Input
+              className="font-mono"
+              value={local.discord?.channels?.dev ?? ''}
+              onChange={(e) =>
+                setLocal((p) => ({
+                  ...p,
+                  discord: {
+                    ...p.discord,
+                    channels: { ...p.discord?.channels, dev: e.target.value },
+                  },
+                }))
+              }
+              onBlur={() => save()}
+              placeholder="Channel ID"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Infra</Label>
+            <Input
+              className="font-mono"
+              value={local.discord?.channels?.infra ?? ''}
+              onChange={(e) =>
+                setLocal((p) => ({
+                  ...p,
+                  discord: {
+                    ...p.discord,
+                    channels: { ...p.discord?.channels, infra: e.target.value },
+                  },
+                }))
+              }
+              onBlur={() => save()}
+              placeholder="Channel ID"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Deployments</Label>
+            <Input
+              className="font-mono"
+              value={local.discord?.channels?.deployments ?? ''}
+              onChange={(e) =>
+                setLocal((p) => ({
+                  ...p,
+                  discord: {
+                    ...p.discord,
+                    channels: { ...p.discord?.channels, deployments: e.target.value },
+                  },
+                }))
+              }
+              onBlur={() => save()}
+              placeholder="Channel ID"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Alerts</Label>
+            <Input
+              className="font-mono"
+              value={local.discord?.channels?.alerts ?? ''}
+              onChange={(e) =>
+                setLocal((p) => ({
+                  ...p,
+                  discord: {
+                    ...p.discord,
+                    channels: { ...p.discord?.channels, alerts: e.target.value },
+                  },
+                }))
+              }
+              onBlur={() => save()}
+              placeholder="Channel ID"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+          Trusted Users
+        </h4>
+        <div className="space-y-1.5">
+          <Label className="text-sm">Trusted Discord users (comma-separated usernames)</Label>
+          <Input
+            value={allowedUsersText}
+            onChange={(e) => setAllowedUsersText(e.target.value)}
+            onBlur={() => saveAllowedUsers()}
+            placeholder="username1, username2"
+          />
+          <p className="text-xs text-zinc-500">
+            These users can interact with agents and trigger reaction abilities.
+          </p>
+        </div>
+      </div>
+    </>
   );
 }
 
