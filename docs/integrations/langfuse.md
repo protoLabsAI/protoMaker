@@ -117,11 +117,11 @@ langfuse_list_traces --tags '["feature:abc-123", "role:reflection"]'
 
 Agent traces are automatically scored when feature status changes:
 
-| Score              | Range      | Description                             |
-| ------------------ | ---------- | --------------------------------------- |
-| `agent.success`    | 0.0–1.0    | 1.0 = done, 0.7 = review, 0.0 = failed |
-| `agent.efficiency` | 0.0–1.0    | 1 - (turnsUsed / maxTurns)              |
-| `agent.quality`    | 0.0–1.0    | 1 - (reviewThreads × 0.1)               |
+| Score              | Range   | Description                            |
+| ------------------ | ------- | -------------------------------------- |
+| `agent.success`    | 0.0–1.0 | 1.0 = done, 0.7 = review, 0.0 = failed |
+| `agent.efficiency` | 0.0–1.0 | 1 - (turnsUsed / maxTurns)             |
+| `agent.quality`    | 0.0–1.0 | 1 - (reviewThreads × 0.1)              |
 
 Use these scores in Langfuse to compare prompt versions and identify regressions.
 
