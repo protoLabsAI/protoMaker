@@ -279,7 +279,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use(
     '/api/integrations',
     authMiddleware,
-    createIntegrationRoutes(settingsService, integrationRegistryService)
+    createIntegrationRoutes(settingsService, integrationRegistryService, signalIntakeService)
   );
   app.use(
     '/api/system',

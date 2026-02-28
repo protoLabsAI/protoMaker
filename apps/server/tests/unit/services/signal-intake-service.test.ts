@@ -781,6 +781,119 @@ describe('SignalIntakeService', () => {
     });
   });
 
+  describe('recent signals ring buffer', () => {
+    it('should add an entry with status pending when a signal is received', async () => {
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-1', name: 'Dev' },
+        content: 'Fix the bug now',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const recent = signalIntakeService.getRecentSignals();
+      expect(recent).toHaveLength(1);
+      expect(recent[0]).toMatchObject({
+        channel: 'github',
+        intent: 'work_order',
+        preview: 'Fix the bug now',
+        status: 'created',
+        featureId: 'feature-123',
+      });
+      expect(recent[0].id).toBeTruthy();
+      expect(recent[0].createdAt).toBeTruthy();
+    });
+
+    it('should set status to created with featureId after ops feature creation', async () => {
+      vi.mocked(mockFeatureLoader.create).mockResolvedValue({
+        id: 'ring-feature-99',
+        title: 'Test',
+        status: 'backlog',
+      } as any);
+
+      const signal = createTestSignal({
+        source: 'linear',
+        author: { id: 'lin-99', name: 'Dev' },
+        content: 'New ops work',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const recent = signalIntakeService.getRecentSignals();
+      const entry = recent[0];
+      expect(entry.status).toBe('created');
+      expect(entry.featureId).toBe('ring-feature-99');
+    });
+
+    it('should return signals newest-first', async () => {
+      for (let i = 0; i < 3; i++) {
+        const signal = createTestSignal({
+          source: 'github',
+          author: { id: `gh-${i}`, name: `Dev ${i}` },
+          content: `Signal ${i}`,
+        });
+        mockEmitter.emit('signal:received', signal);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+
+      const recent = signalIntakeService.getRecentSignals();
+      expect(recent).toHaveLength(3);
+      // Newest (Signal 2) should be first
+      expect(recent[0].preview).toBe('Signal 2');
+      expect(recent[2].preview).toBe('Signal 0');
+    });
+
+    it('should cap the ring buffer at 200 entries', async () => {
+      // Send 210 unique signals
+      for (let i = 0; i < 210; i++) {
+        const signal = createTestSignal({
+          source: 'github',
+          author: { id: `gh-${i}`, name: `Dev` },
+          content: `Signal ${i}`,
+        });
+        mockEmitter.emit('signal:received', signal);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const recent = signalIntakeService.getRecentSignals();
+      expect(recent.length).toBeLessThanOrEqual(200);
+    });
+
+    it('should preview only the first 120 characters of content', async () => {
+      const longContent = 'A'.repeat(200);
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-long', name: 'Dev' },
+        content: longContent,
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const recent = signalIntakeService.getRecentSignals();
+      expect(recent[0].preview).toHaveLength(120);
+    });
+
+    it('should set status to dismissed for interrupt signals', async () => {
+      const signal = createTestSignal({
+        source: 'discord',
+        author: { id: 'disc-urgent', name: 'Ops' },
+        content: 'URGENT: production is down',
+        channelContext: { channelName: 'incidents-urgent' },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const recent = signalIntakeService.getRecentSignals();
+      expect(recent[0].status).toBe('dismissed');
+      expect(recent[0].intent).toBe('interrupt');
+    });
+  });
+
   describe('submitSignal public API', () => {
     it('should allow manual signal submission via public API', () => {
       const emitSpy = vi.spyOn(mockEmitter, 'emit');
