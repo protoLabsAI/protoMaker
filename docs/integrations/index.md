@@ -1,32 +1,45 @@
 # Integrations
 
-Connect protoLabs to your workflow. Discord, Linear, GitHub, Claude Code CLI.
+Connect protoLabs to your development workflow. Each integration is either **Required** for core functionality or **Optional** for enhanced capabilities.
 
-## Available Integrations
+## AI Control Plane
 
-### [Claude Code Plugin](./claude-plugin)
+Configure and control the AI agents that power your development studio.
 
-Control protoLabs from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects — all from your terminal.
+| Integration                            | Description                                                                                                                          | Status   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| [Claude Code Plugin](./claude-plugin)  | Control protoLabs from the Claude Code CLI via MCP tools. Create features, start agents, manage the board, and orchestrate projects. | Required |
+| [API Key Profiles](./api-key-profiles) | Manage multiple AI providers, switch between API keys, and configure model preferences per project.                                  | Required |
 
-### [Discord](./discord)
+## Observability
 
-Discord bot integration for team communication, event routing, and status updates. Agents can send notifications, receive commands, and participate in channels.
+Monitor agent performance, trace LLM calls, and manage prompt versions.
 
-### [API Key Profiles](./api-key-profiles)
+| Integration            | Description                                                                                                                                                         | Status   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [Langfuse](./langfuse) | LLM observability with trace inspection, cost tracking, and managed prompt versioning. Includes MCP tools for querying traces, scoring runs, and managing datasets. | Optional |
 
-Unified API key and provider profile system. Manage multiple AI providers, switch between API keys, and configure model preferences per project.
+## Project Management
 
-### [Linear](./linear-sync)
+Track work from idea through implementation with bidirectional sync.
 
-Full Linear integration with three modes: @mention the agent on any issue for context-aware AI analysis, create Linear projects to trigger automated planning with HITL checkpoints, and bidirectional status/issue sync. Supports intelligent agent routing, priority-based model selection, and multi-turn conversations.
+| Integration             | Description                                                                                                                             | Status   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [Linear](./linear-sync) | Bidirectional issue sync, @mention agent routing, automated project planning with HITL checkpoints, and priority-based model selection. | Optional |
 
-### [Langfuse](./langfuse)
+## Team Communication
 
-LLM observability, trace inspection, and managed prompt versioning. Traces every agent LLM call with cost, latency, and feature tags. Includes seven MCP tools for querying traces, scoring runs, and managing datasets.
+Keep your team in the loop with real-time notifications and agent interaction.
 
-## External Tools
+| Integration          | Description                                                                                                                                         | Status   |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [Discord](./discord) | Bot integration for event routing, status updates, and agent notifications. Agents can send updates, receive commands, and participate in channels. | Optional |
 
-protoLabs also works with:
+## Code Review and Git
 
-- **[GitHub Actions](/infra/ci-cd)** — CI/CD pipelines for testing and deployment
-- **[CodeRabbit](https://coderabbit.ai)** — Automated PR review
+Automate code review and manage the git workflow from branch to merge.
+
+| Integration                         | Description                                                                                       | Status   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------- | -------- |
+| [GitHub](./github)                  | Repository operations, PR creation, CI status checks, and auto-merge workflows.                   | Required |
+| [CodeRabbit](https://coderabbit.ai) | Automated AI-powered PR review with inline code suggestions and severity-based thread management. | Optional |
