@@ -316,29 +316,6 @@ export interface ProjectIntegrations {
 }
 
 // ============================================================================
-// Discord Channel Signal Config - Per-project channel signal source configuration
-// ============================================================================
-
-/**
- * DiscordChannelSignalConfig - Configuration for a Discord channel as a signal source
- *
- * Defines which Discord channels to monitor for incoming signals (ideas, feature requests,
- * bug reports) and how to process them through the intake pipeline.
- */
-export interface DiscordChannelSignalConfig {
-  /** Discord channel ID */
-  channelId: string;
-  /** Human-readable channel name for display */
-  channelName: string;
-  /** Whether this channel is actively monitored for signals */
-  enabled: boolean;
-  /** Signal intent filter — only route signals matching these intents (empty = all) */
-  intentFilter?: string[];
-  /** Minimum confidence threshold for signal detection (0–1, default: 0.5) */
-  minConfidence?: number;
-}
-
-// ============================================================================
 // Error Tracking Settings - Sentry Integration
 // ============================================================================
 

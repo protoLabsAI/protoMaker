@@ -28,13 +28,11 @@ export function ProfileSection() {
   const updateSettings = useUpdateGlobalSettings({ showSuccessToast: false });
 
   const [local, setLocal] = useState<UserProfile>({});
-  const [allowedUsersText, setAllowedUsersText] = useState('');
 
   // Sync server data to local state
   useEffect(() => {
     if (settings?.userProfile) {
       setLocal(settings.userProfile);
-      setAllowedUsersText((settings.userProfile.additionalAllowedUsers ?? []).join(', '));
     }
   }, [settings?.userProfile]);
 
@@ -45,16 +43,6 @@ export function ProfileSection() {
     },
     [local, updateSettings]
   );
-
-  const saveAllowedUsers = useCallback(() => {
-    const users = allowedUsersText
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const updated = { ...local, additionalAllowedUsers: users };
-    setLocal(updated);
-    updateSettings.mutate({ userProfile: updated });
-  }, [allowedUsersText, local, updateSettings]);
 
   return (
     <div
@@ -73,7 +61,7 @@ export function ProfileSection() {
           <h2 className="text-lg font-semibold text-foreground tracking-tight">User Profile</h2>
         </div>
         <p className="text-sm text-muted-foreground/80 ml-12">
-          Configure your identity, brand, and integrations for agent personalization.
+          Configure your identity and brand information for agent personalization.
         </p>
       </div>
 
@@ -104,109 +92,6 @@ export function ProfileSection() {
               onBlur={() => save()}
               rows={3}
               placeholder="Short bio for content agents"
-            />
-          </FieldRow>
-        </div>
-
-        {/* Discord */}
-        <div className="space-y-4">
-          <GroupHeader>Discord</GroupHeader>
-          <FieldRow label="Username">
-            <Input
-              value={local.discord?.username ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  discord: { ...p.discord, username: e.target.value },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Discord username"
-            />
-          </FieldRow>
-          <FieldRow label="Primary Channel ID">
-            <Input
-              className="font-mono"
-              value={local.discord?.channels?.primary ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  discord: {
-                    ...p.discord,
-                    channels: { ...p.discord?.channels, primary: e.target.value },
-                  },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Channel ID"
-            />
-          </FieldRow>
-          <FieldRow label="Dev Channel ID">
-            <Input
-              className="font-mono"
-              value={local.discord?.channels?.dev ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  discord: {
-                    ...p.discord,
-                    channels: { ...p.discord?.channels, dev: e.target.value },
-                  },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Channel ID"
-            />
-          </FieldRow>
-          <FieldRow label="Infra Channel ID">
-            <Input
-              className="font-mono"
-              value={local.discord?.channels?.infra ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  discord: {
-                    ...p.discord,
-                    channels: { ...p.discord?.channels, infra: e.target.value },
-                  },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Channel ID"
-            />
-          </FieldRow>
-          <FieldRow label="Deployments Channel ID">
-            <Input
-              className="font-mono"
-              value={local.discord?.channels?.deployments ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  discord: {
-                    ...p.discord,
-                    channels: { ...p.discord?.channels, deployments: e.target.value },
-                  },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Channel ID"
-            />
-          </FieldRow>
-          <FieldRow label="Alerts Channel ID">
-            <Input
-              className="font-mono"
-              value={local.discord?.channels?.alerts ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  discord: {
-                    ...p.discord,
-                    channels: { ...p.discord?.channels, alerts: e.target.value },
-                  },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Channel ID"
             />
           </FieldRow>
         </div>
@@ -349,22 +234,6 @@ export function ProfileSection() {
               onBlur={() => save()}
               placeholder="e.g. 192.168.1.100"
             />
-          </FieldRow>
-        </div>
-
-        {/* Access Control */}
-        <div className="space-y-4">
-          <GroupHeader>Access Control</GroupHeader>
-          <FieldRow label="Additional Allowed Users">
-            <Input
-              value={allowedUsersText}
-              onChange={(e) => setAllowedUsersText(e.target.value)}
-              onBlur={() => saveAllowedUsers()}
-              placeholder="Comma-separated Discord usernames"
-            />
-            <p className="text-xs text-muted-foreground/70">
-              Discord usernames allowed to interact with agents, separated by commas.
-            </p>
           </FieldRow>
         </div>
       </div>
