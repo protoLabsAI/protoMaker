@@ -280,12 +280,12 @@ sudo systemctl disable automaker
 
 ### Feature Flags
 
-| Variable                 | Default | Description                       |
-| ------------------------ | ------- | --------------------------------- |
-| `IS_CONTAINERIZED`       | `false` | Skip sandbox confirmation dialogs |
-| `AUTOMAKER_MOCK_AGENT`   | `false` | Use mock agent (for testing)      |
-| `AUTOMAKER_AUTO_LOGIN`   | `false` | Skip login prompt (dev only)      |
-| `AUTOMAKER_HIDE_API_KEY` | `false` | Don't log API key at startup      |
+| Variable                 | Default | Description                                           |
+| ------------------------ | ------- | ----------------------------------------------------- |
+| `IS_CONTAINERIZED`       | `false` | Skip sandbox confirmation dialogs                     |
+| `AUTOMAKER_MOCK_AGENT`   | `false` | Use mock agent (for testing)                          |
+| `AUTOMAKER_AUTO_LOGIN`   | `false` | Skip login prompt (dev only)                          |
+| `AUTOMAKER_SHOW_API_KEY` | `false` | Show full API key in startup logs (masked by default) |
 
 ### Integrations
 

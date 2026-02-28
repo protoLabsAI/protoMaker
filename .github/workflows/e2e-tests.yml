@@ -55,8 +55,7 @@ jobs:
           NODE_ENV: test
           # Use a deterministic API key so Playwright can log in reliably
           AUTOMAKER_API_KEY: test-api-key-for-e2e-tests
-          # Reduce log noise in CI
-          AUTOMAKER_HIDE_API_KEY: 'true'
+          # API key is masked by default, no need to hide
           # Avoid real API calls during CI
           AUTOMAKER_MOCK_AGENT: 'true'
           # Simulate containerized environment to skip sandbox confirmation dialogs
