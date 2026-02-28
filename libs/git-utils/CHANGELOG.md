@@ -1,5 +1,17 @@
 # @protolabs-ai/git-utils
 
+## 0.10.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - wire real implementations — tools, sitrep, config schema (#1409)
+  - rebase onto target branch before PR creation in non-Graphite path (#1407)
+  - delete changeset-release.yml — auto-release owns the release pipeline (#1406)
+- Updated dependencies
+  - @protolabs-ai/types@0.10.1
+  - @protolabs-ai/utils@0.10.1
+
 ## 0.10.0
 
 ### Minor Changes
