@@ -56,7 +56,7 @@ PORT=3008
 
 # Production
 HOST=0.0.0.0
-HOSTNAME=automaker.example.com
+HOSTNAME=protolabs.example.com
 PORT=3008
 ```
 
@@ -73,7 +73,7 @@ PORT=3008
 VITE_HOSTNAME=localhost
 
 # Production
-VITE_HOSTNAME=automaker.example.com
+VITE_HOSTNAME=protolabs.example.com
 ```
 
 ### Data Storage
@@ -374,7 +374,7 @@ export NODE_ENV=production
 # .env.production
 NODE_ENV=production
 HOST=0.0.0.0
-HOSTNAME=automaker.example.com
+HOSTNAME=protolabs.example.com
 PORT=3008
 ANTHROPIC_API_KEY=sk-ant-api03-...
 GITHUB_TOKEN=ghp_...
@@ -484,7 +484,7 @@ lsof -ti:3008 | xargs kill
 VITE_HOSTNAME=localhost
 
 # For production
-VITE_HOSTNAME=automaker.example.com
+VITE_HOSTNAME=protolabs.example.com
 ```
 
 ### \"Langfuse connection failed\"

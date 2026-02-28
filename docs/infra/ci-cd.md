@@ -269,7 +269,7 @@ Auto-deploys to the staging server when code is pushed to the `staging` branch (
 
 ### Deployment Pipeline
 
-1. **Setup** — Clone/pull repo into persistent deploy directory (`/home/josh/staging-deploy/automaker`)
+1. **Setup** — Clone/pull repo into persistent deploy directory (`/home/deploy/staging/automaker`)
 2. **Disk check** — Require at least 10GB free, prune dangling Docker images
 3. **Drain agents** — POST to `/api/deploy/drain` to gracefully stop auto-mode and wait for agents to finish
 4. **Tag rollback** — Tag current working Docker images as `rollback` for restore on failure

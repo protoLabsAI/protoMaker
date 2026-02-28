@@ -138,7 +138,7 @@ docker images | grep automaker
 
 ### 3. Configure Environment
 
-The staging deploy uses a **dedicated** `.env.staging` file at `/home/josh/staging-deploy/.env.staging` — separate from the dev `.env` to prevent accidental breakage. The deploy workflow copies this into the deploy directory as `.env` on each run.
+The staging deploy uses a **dedicated** `.env.staging` file at `/home/deploy/staging/.env.staging` — separate from the dev `.env` to prevent accidental breakage. The deploy workflow copies this into the deploy directory as `.env` on each run.
 
 Create `.env.staging`:
 
@@ -452,12 +452,12 @@ docker exec automaker-server-staging iostat -x 5
 
 To permanently add a new environment variable:
 
-1. **Add to `.env`** at `/home/josh/staging-deploy/automaker/.env`
+1. **Add to `.env`** at `/home/deploy/staging/automaker/.env`
 2. **Add to `docker-compose.staging.yml`** in the `server.environment` section with the pattern `- VAR_NAME=${VAR_NAME:-}`
 3. **Recreate the container** — env vars are only read at container creation, not on restart:
 
 ```bash
-cd /home/josh/staging-deploy/automaker
+cd /home/deploy/staging/automaker
 docker stop automaker-server && docker rm automaker-server
 docker compose -p automaker-staging -f docker-compose.staging.yml up -d server --no-deps
 ```
@@ -675,8 +675,8 @@ Staging auto-deploys from `main` via a GitHub Actions self-hosted runner.
 
 1. Code merges to `main`
 2. `.github/workflows/deploy-staging.yml` triggers on the self-hosted runner
-3. Workflow clones/pulls into a **persistent deploy directory** (`/home/josh/staging-deploy/automaker`) — not the runner's `_work/` workspace (which gets cleaned by cron)
-4. `.env` is copied from `/home/josh/staging-deploy/.env.staging` (dedicated staging credentials, separate from dev `.env`)
+3. Workflow clones/pulls into a **persistent deploy directory** (`/home/deploy/staging/automaker`) — not the runner's `_work/` workspace (which gets cleaned by cron)
+4. `.env` is copied from `/home/deploy/staging/.env.staging` (dedicated staging credentials, separate from dev `.env`)
 5. **Disk pre-check** verifies 10GB+ free space, prunes dangling Docker images first
 6. **Drain step** calls `POST /api/deploy/drain` to gracefully stop auto-mode and wait for running agents to finish (up to 2 minutes, then force-stops)
 7. **Rollback images tagged** — current server and UI images saved as `:rollback` before build
@@ -758,7 +758,7 @@ Set the `DISCORD_DEPLOY_WEBHOOK` secret in GitHub repo settings to receive deplo
 
 **Cause:** The self-hosted runner's workspace cleanup cron (every 5min) deletes the `_work/` directory during long Docker builds. Multiple workflows sharing the same runner can also interfere via `actions/checkout` with `clean: true`.
 
-**Fix:** The deploy workflow now uses a persistent directory (`/home/josh/staging-deploy/automaker`) instead of the runner workspace. Env vars are sourced into the shell via `set -a` so docker compose doesn't need `--env-file`.
+**Fix:** The deploy workflow now uses a persistent directory (`/home/deploy/staging/automaker`) instead of the runner workspace. Env vars are sourced into the shell via `set -a` so docker compose doesn't need `--env-file`.
 
 ### Docker Build Fails on `build:packages`
 
@@ -849,7 +849,7 @@ Failed smoke tests trigger automatic rollback to previous working images.
 
 - **Disk pre-check**: Requires 10GB+ free space before Docker build
 - **Rollback images**: Previous working images tagged as `:rollback` before build; auto-restored on failure
-- **Dedicated env**: `.env.staging` at `/home/josh/staging-deploy/` — separate from dev `.env`
+- **Dedicated env**: `.env.staging` at `/home/deploy/staging/` — separate from dev `.env`
 - **Non-fatal docs build**: Docs build failure doesn't abort app service deploy
 - **Crash loop protection**: Server uses `on-failure:5` restart policy (stops after 5 consecutive crashes)
 

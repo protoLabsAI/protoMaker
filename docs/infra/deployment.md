@@ -384,7 +384,7 @@ For production deployments with HTTPS, use a reverse proxy:
 ```nginx
 server {
     listen 443 ssl;
-    server_name automaker.example.com;
+    server_name protolabs.example.com;
 
     ssl_certificate /path/to/cert.pem;
     ssl_certificate_key /path/to/key.pem;
@@ -421,7 +421,7 @@ When using a custom domain:
 services:
   server:
     environment:
-      - CORS_ORIGIN=https://automaker.example.com
+      - CORS_ORIGIN=https://protolabs.example.com
 ```
 
 ## Updating

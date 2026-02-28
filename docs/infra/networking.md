@@ -151,7 +151,7 @@ services:
 For multiple origins:
 
 ```yaml
-- CORS_ORIGIN=http://localhost:3007,https://automaker.example.com
+- CORS_ORIGIN=http://localhost:3007,https://protolabs.example.com
 ```
 
 ## WebSocket
@@ -207,13 +207,13 @@ services:
 For production with HTTPS:
 
 ```nginx
-# /etc/nginx/sites-available/automaker
+# /etc/nginx/sites-available/protolabs
 server {
     listen 443 ssl http2;
-    server_name automaker.example.com;
+    server_name protolabs.example.com;
 
-    ssl_certificate /etc/letsencrypt/live/automaker.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/automaker.example.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/protolabs.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/protolabs.example.com/privkey.pem;
 
     # UI
     location / {
@@ -243,7 +243,7 @@ server {
 # Redirect HTTP to HTTPS
 server {
     listen 80;
-    server_name automaker.example.com;
+    server_name protolabs.example.com;
     return 301 https://$server_name$request_uri;
 }
 ```
@@ -251,7 +251,7 @@ server {
 ### Caddy
 
 ```caddyfile
-automaker.example.com {
+protolabs.example.com {
     reverse_proxy /api* localhost:3008
     reverse_proxy localhost:3007
 }
@@ -264,9 +264,9 @@ services:
   ui:
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.automaker.rule=Host(`automaker.example.com`)'
-      - 'traefik.http.routers.automaker.tls=true'
-      - 'traefik.http.routers.automaker.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.protolabs.rule=Host(`protolabs.example.com`)'
+      - 'traefik.http.routers.protolabs.tls=true'
+      - 'traefik.http.routers.protolabs.tls.certresolver=letsencrypt'
 ```
 
 ## Firewall Configuration
