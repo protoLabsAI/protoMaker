@@ -17,7 +17,11 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { executeWithFallback } from './classify-topic.js';
-import { ReviewerPerspectiveSchema, type ReviewerPerspective } from './ava-review.js';
+import {
+  ReviewerPerspectiveSchema,
+  type ReviewerPerspective,
+  type NodeTokenUsage,
+} from './ava-review.js';
 
 /**
  * State interface for jon-review node
@@ -26,6 +30,7 @@ export interface JonReviewState {
   prd: string;
   avaReview?: ReviewerPerspective;
   jonReview?: ReviewerPerspective;
+  tokenUsage?: NodeTokenUsage;
   smartModel?: BaseChatModel;
   fastModel?: BaseChatModel;
 }
@@ -60,7 +65,7 @@ Ava's Summary: ${avaReview.comments}
 `
       : '';
 
-    // Execute with model fallback
+    // Execute with model fallback, capturing both content and token usage
     const result = await executeWithFallback(
       { primary: smartModel, fallback: fastModel },
       async (model) => {
@@ -111,19 +116,34 @@ Be strategic, business-focused, and consider customer impact above all. Return O
           },
         ]);
 
-        return response.content.toString();
+        const usageMeta = response.usage_metadata;
+        const fallbackUsage = (response.response_metadata as any)?.usage;
+        let tokenUsage: NodeTokenUsage | undefined;
+        if (usageMeta) {
+          tokenUsage = {
+            inputTokens: usageMeta.input_tokens,
+            outputTokens: usageMeta.output_tokens,
+          };
+        } else if (fallbackUsage) {
+          tokenUsage = {
+            inputTokens: fallbackUsage.prompt_tokens ?? 0,
+            outputTokens: fallbackUsage.completion_tokens ?? 0,
+          };
+        }
+
+        return { content: response.content.toString(), tokenUsage };
       },
       nodeName
     );
 
     // Parse and validate the LLM response
-    const jonReview = parseAndValidateReview(result, nodeName);
+    const jonReview = parseAndValidateReview(result.content, nodeName);
 
     console.log(
       `[${nodeName}] Review complete: ${jonReview.verdict} (${jonReview.sections.length} sections)`
     );
 
-    return { jonReview };
+    return { jonReview, tokenUsage: result.tokenUsage };
   } catch (error) {
     console.error(`[${nodeName}] Failed:`, error);
     throw error;
