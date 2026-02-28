@@ -25,6 +25,12 @@ import { createMigrateHandler } from './routes/migrate.js';
 import { createStatusHandler } from './routes/status.js';
 import { createDiscoverAgentsHandler } from './routes/discover-agents.js';
 import { createGetWorkflowHandler, createUpdateWorkflowHandler } from './routes/workflow.js';
+import {
+  createListOpenAICompatibleProvidersHandler,
+  createCreateOpenAICompatibleProviderHandler,
+  createUpdateOpenAICompatibleProviderHandler,
+  createDeleteOpenAICompatibleProviderHandler,
+} from './routes/openai-compatible-providers.js';
 import type { EventEmitter } from '../../lib/events.js';
 
 /**
@@ -95,6 +101,24 @@ export function createSettingsRoutes(
     '/workflow',
     validatePathParams('projectPath'),
     createUpdateWorkflowHandler(settingsService, events)
+  );
+
+  // OpenAI-compatible provider CRUD
+  router.post(
+    '/openai-compatible-providers/list',
+    createListOpenAICompatibleProvidersHandler(settingsService)
+  );
+  router.post(
+    '/openai-compatible-providers/create',
+    createCreateOpenAICompatibleProviderHandler(settingsService)
+  );
+  router.post(
+    '/openai-compatible-providers/update',
+    createUpdateOpenAICompatibleProviderHandler(settingsService)
+  );
+  router.post(
+    '/openai-compatible-providers/delete',
+    createDeleteOpenAICompatibleProviderHandler(settingsService)
   );
 
   return router;

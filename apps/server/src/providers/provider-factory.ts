@@ -295,6 +295,7 @@ import { CursorProvider } from './cursor-provider.js';
 import { CodexProvider } from './codex-provider.js';
 import { OpencodeProvider } from './opencode-provider.js';
 import { GroqProvider, isGroqModel } from './groq-provider.js';
+import { OpenAICompatibleProvider, isOpenAICompatibleModel } from './openai-compatible-provider.js';
 
 // Register Claude provider
 registerProvider('claude', {
@@ -335,4 +336,11 @@ registerProvider('groq', {
   factory: () => new GroqProvider(),
   canHandleModel: (model: string) => isGroqModel(model),
   priority: 4, // Between codex (5) and opencode (3)
+});
+
+// Register OpenAI-compatible provider
+registerProvider('openai-compatible', {
+  factory: () => new OpenAICompatibleProvider(),
+  canHandleModel: (model: string) => isOpenAICompatibleModel(model),
+  priority: 2, // Between opencode (3) and claude (0)
 });

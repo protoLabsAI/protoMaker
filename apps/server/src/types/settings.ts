@@ -30,6 +30,9 @@ export type {
   ProviderModel,
   ClaudeCompatibleProvider,
   ClaudeCompatibleProviderTemplate,
+  // OpenAI-compatible provider types
+  OpenAICompatibleConfig,
+  OpenAICompatibleTemplate,
   // Legacy profile types (deprecated)
   ClaudeApiProfile,
   ClaudeApiProfileTemplate,
@@ -51,4 +54,5 @@ export {
   SETTINGS_VERSION,
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,
+  OPENAI_COMPATIBLE_TEMPLATES,
 } from '@protolabs-ai/types';
