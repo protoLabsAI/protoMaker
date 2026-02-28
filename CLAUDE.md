@@ -59,6 +59,18 @@ git -C /path/to/.worktrees/<branch> commit --no-verify -m "<feat/fix/refactor>: 
 
 Then use `create_pr_from_worktree` targeting `dev`, move feature to `review`, enable auto-merge on the PR.
 
+**Prettier check fails in CI but passes locally (worktree path masking):**
+Files in `.worktrees/` are excluded by `.prettierignore`. When you run `npx prettier --check` with an absolute path like `/path/to/.worktrees/branch/file.ts`, prettier silently skips the file due to the ignore pattern — reporting success even if the file has issues.
+
+To correctly check a file in a worktree, bypass the ignore file:
+
+```bash
+npx prettier --check /abs/path/to/worktree/file.ts --ignore-path /dev/null
+npx prettier --write /abs/path/to/worktree/file.ts --ignore-path /dev/null
+```
+
+Then commit and push the fix.
+
 **Self-improvement rule:** When you observe a recurring failure pattern that blocks agents, you MUST immediately:
 
 1. File a P1 bug feature on the board describing the root cause and fix

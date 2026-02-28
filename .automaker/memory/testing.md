@@ -5,11 +5,10 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 52
+  loaded: 55
   referenced: 25
   successfulFeatures: 25
 ---
-
 # testing
 
 #### [Pattern] Test .gitignore patterns by creating actual files and running `git check-ignore`, then verify via integration test that the file appears in `git status` (2026-02-10)
