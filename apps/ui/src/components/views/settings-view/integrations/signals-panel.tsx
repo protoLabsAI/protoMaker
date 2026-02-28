@@ -6,19 +6,43 @@ import { apiFetch } from '@/lib/api-fetch';
 import type { RecentSignal, SignalChannel, SignalIntent } from '@protolabs-ai/types';
 
 const CHANNEL_STYLES: Record<SignalChannel, { label: string; className: string }> = {
-  discord: { label: 'Discord', className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
-  linear: { label: 'Linear', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
-  github: { label: 'GitHub', className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300' },
+  discord: {
+    label: 'Discord',
+    className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  },
+  linear: {
+    label: 'Linear',
+    className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  },
+  github: {
+    label: 'GitHub',
+    className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
+  },
   mcp: { label: 'MCP', className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300' },
   ui: { label: 'UI', className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300' },
 };
 
 const INTENT_STYLES: Record<SignalIntent, { label: string; className: string }> = {
-  work_order: { label: 'Work Order', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  idea: { label: 'Idea', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  feedback: { label: 'Feedback', className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
-  conversational: { label: 'Chat', className: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400' },
-  interrupt: { label: 'Interrupt', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+  work_order: {
+    label: 'Work Order',
+    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  },
+  idea: {
+    label: 'Idea',
+    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  },
+  feedback: {
+    label: 'Feedback',
+    className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  },
+  conversational: {
+    label: 'Chat',
+    className: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400',
+  },
+  interrupt: {
+    label: 'Interrupt',
+    className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  },
 };
 
 const STATUS_STYLES: Record<RecentSignal['status'], { dot: string; label: string }> = {
@@ -60,7 +84,8 @@ function SignalRow({ signal, onNavigate }: SignalRowProps) {
     <div
       className={cn(
         'flex flex-col gap-2 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-0',
-        signal.featureId && 'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors'
+        signal.featureId &&
+          'cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors'
       )}
       onClick={handleClick}
     >
@@ -87,7 +112,9 @@ function SignalRow({ signal, onNavigate }: SignalRowProps) {
           <div className={cn('w-1.5 h-1.5 rounded-full', statusStyle.dot)} />
           <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{statusStyle.label}</span>
           <span className="text-[10px] text-zinc-400 dark:text-zinc-500">&middot;</span>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{timeAgo(signal.createdAt)}</span>
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+            {timeAgo(signal.createdAt)}
+          </span>
         </div>
       </div>
       <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate">{signal.preview}</p>
