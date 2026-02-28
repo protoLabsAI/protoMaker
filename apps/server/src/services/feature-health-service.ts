@@ -29,7 +29,8 @@ export interface HealthIssue {
     | 'epic_children_done'
     | 'stale_running'
     | 'stale_gate'
-    | 'dangling_dependency';
+    | 'dangling_dependency'
+    | 'closed_pr_in_review';
   featureId: string;
   featureTitle: string;
   message: string;
@@ -71,6 +72,7 @@ export class FeatureHealthService {
     issues.push(...(await this.checkStaleRunning(features, projectPath)));
     issues.push(...this.checkStaleGates(features));
     issues.push(...(await this.checkMergedNotDone(features, projectPath)));
+    issues.push(...(await this.checkClosedPRsInReview(features)));
 
     // Auto-fix if requested
     if (autoFix) {
@@ -434,6 +436,58 @@ export class FeatureHealthService {
       case 'merged_not_done':
         await this.featureLoader.update(projectPath, issue.featureId, { status: 'done' });
         break;
+
+      case 'closed_pr_in_review': {
+        const feature = featureMap.get(issue.featureId);
+        await this.featureLoader.update(projectPath, issue.featureId, {
+          status: 'backlog',
+          statusChangeReason: `PR closed without merging (detected by board health audit) — auto-recovering to backlog`,
+          prNumber: undefined,
+          prUrl: undefined,
+          reviewStartedAt: undefined,
+        });
+        logger.info(
+          `Auto-fixed closed_pr_in_review: feature ${issue.featureId} recovered to backlog (was PR #${feature?.prNumber})`
+        );
+        break;
+      }
     }
+  }
+
+  /**
+   * Features in 'review' status whose linked PR has been closed without merging.
+   * Compensating control for missed webhooks (runs on 6-hour board health cycle).
+   */
+  private async checkClosedPRsInReview(features: Feature[]): Promise<HealthIssue[]> {
+    const issues: HealthIssue[] = [];
+    const reviewFeatures = features.filter((f) => f.status === 'review' && f.prNumber != null);
+
+    for (const feature of reviewFeatures) {
+      const prNumber = feature.prNumber!;
+      try {
+        const { stdout } = await execFileAsync(
+          'gh',
+          ['pr', 'view', String(prNumber), '--json', 'state,merged'],
+          { encoding: 'utf-8', timeout: 10_000 }
+        );
+        const prData = JSON.parse(stdout) as { state: string; merged: boolean };
+
+        if (prData.state === 'CLOSED' && !prData.merged) {
+          issues.push({
+            type: 'closed_pr_in_review',
+            featureId: feature.id,
+            featureTitle: feature.title ?? feature.id,
+            message: `PR #${prNumber} is closed without merging but feature status is 'review'`,
+            autoFixable: true,
+            fix: 'Reset status to backlog and clear PR fields',
+          });
+        }
+      } catch {
+        // gh CLI not available, PR not found, or network error — skip
+        logger.debug(`Skipping closed PR check for feature ${feature.id} PR #${prNumber}`);
+      }
+    }
+
+    return issues;
   }
 }
