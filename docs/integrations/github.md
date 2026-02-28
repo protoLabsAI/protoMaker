@@ -37,11 +37,11 @@ GH_TOKEN=ghp_your_token_here
 
 ### 3. Required token scopes
 
-| Scope       | Required | Purpose                                           |
-| ----------- | -------- | ------------------------------------------------- |
-| `repo`      | ✅ Yes   | Create/merge PRs, read branches, manage reviews   |
-| `workflow`  | ✅ Yes   | Read CI workflow run status                       |
-| `read:org`  | Optional | Access organization-owned repositories            |
+| Scope      | Required | Purpose                                         |
+| ---------- | -------- | ----------------------------------------------- |
+| `repo`     | ✅ Yes   | Create/merge PRs, read branches, manage reviews |
+| `workflow` | ✅ Yes   | Read CI workflow run status                     |
+| `read:org` | Optional | Access organization-owned repositories          |
 
 > **Note:** `GH_TOKEN` is the primary variable used for PR operations and CodeRabbit integration. `GITHUB_TOKEN` (commented out in `.env.example`) is used only for optional repository-dispatch and Langfuse sync features.
 
@@ -61,9 +61,9 @@ You can also use the setup health check endpoint: `GET /api/setup/gh-status`
 
 ### Environment variables
 
-| Variable       | Required | Description                                                      |
-| -------------- | -------- | ---------------------------------------------------------------- |
-| `GH_TOKEN`     | ✅ Yes   | GitHub token for PR operations, reviews, and CodeRabbit threads  |
+| Variable       | Required | Description                                                     |
+| -------------- | -------- | --------------------------------------------------------------- |
+| `GH_TOKEN`     | ✅ Yes   | GitHub token for PR operations, reviews, and CodeRabbit threads |
 | `GITHUB_TOKEN` | Optional | Alternative token for repository-dispatch / Langfuse sync only  |
 
 Both variables are set in your project's `.env` file (see `.env.example` for the full template).
@@ -159,12 +159,12 @@ The `resolve_pr_threads` MCP tool (and the underlying `CodeRabbitResolverService
 
 **Bots that are auto-resolved:**
 
-| Bot account              | Description                    |
-| ------------------------ | ------------------------------ |
-| `coderabbitai`           | CodeRabbit AI review bot       |
-| `github-actions[bot]`    | GitHub Actions automation      |
-| `dependabot[bot]`        | Dependency update bot          |
-| `renovate[bot]`          | Renovate dependency bot        |
+| Bot account           | Description               |
+| --------------------- | ------------------------- |
+| `coderabbitai`        | CodeRabbit AI review bot  |
+| `github-actions[bot]` | GitHub Actions automation |
+| `dependabot[bot]`     | Dependency update bot     |
+| `renovate[bot]`       | Renovate dependency bot   |
 
 Human review threads are never auto-resolved — only threads created by the bot accounts above are eligible.
 
@@ -191,12 +191,12 @@ The agent then decides whether to accept each feedback item. Accepted items trig
 
 Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference](./mcp-tools-reference.md#github-operations-4-tools) for full details.
 
-| Tool                 | Description                                     |
-| -------------------- | ----------------------------------------------- |
-| `merge_pr`           | Merge an open pull request                      |
+| Tool                 | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `merge_pr`           | Merge an open pull request                        |
 | `check_pr_status`    | Check PR status: CI checks, reviews, mergeability |
-| `get_pr_feedback`    | Retrieve PR review feedback for the agent       |
-| `resolve_pr_threads` | Resolve CodeRabbit and other bot review threads |
+| `get_pr_feedback`    | Retrieve PR review feedback for the agent         |
+| `resolve_pr_threads` | Resolve CodeRabbit and other bot review threads   |
 
 ---
 
@@ -207,6 +207,7 @@ Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference]
 **Symptom:** Agent log shows `gh pr create` failing or a 401 error from the GitHub API.
 
 **Fix:**
+
 1. Verify `GH_TOKEN` is set: `echo $GH_TOKEN`
 2. Re-authenticate: `gh auth login`
 3. Re-export the token: `GH_TOKEN=$(gh auth token)`
@@ -232,6 +233,7 @@ Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference]
 **Symptom:** protoLabs waits for CI but the PR is never merged. Logs show repeated `Waiting for CI checks...`.
 
 **Checks:**
+
 - CI maximum wait is **10 minutes**. If your pipeline takes longer, the check times out and the PR is flagged for review.
 - Verify the GitHub Actions workflow is actually running (check the **Actions** tab on the PR).
 - If CI is passing but the check name doesn't match, ensure required status check names in branch protection match what the workflow reports.
@@ -243,6 +245,7 @@ Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference]
 **Symptom:** After running `resolve_pr_threads`, CodeRabbit threads remain open.
 
 **Checks:**
+
 1. Confirm `GH_TOKEN` has `repo` scope (GraphQL mutations require it)
 2. Verify the CodeRabbit bot account name is `coderabbitai` — custom installations may use a different handle
 3. Check server logs for `CodeRabbitResolver` errors; a 401 or 403 indicates token scope issues
