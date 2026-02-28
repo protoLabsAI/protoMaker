@@ -12,12 +12,14 @@ import type {
 } from '@protolabs-ai/types';
 import { integrationService } from '../../services/integration-service.js';
 import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
+import type { SignalIntakeService } from '../../services/signal-intake-service.js';
 
 const logger = createLogger('IntegrationRoutes');
 
 export function createIntegrationRoutes(
   settingsService: SettingsService,
-  integrationRegistryService?: IntegrationRegistryService
+  integrationRegistryService?: IntegrationRegistryService,
+  signalIntakeService?: SignalIntakeService
 ): Router {
   const router = Router();
 
@@ -339,6 +341,22 @@ export function createIntegrationRoutes(
       logger.error('Failed to update signal channels:', error);
       res.status(500).json({ error: 'Failed to update signal channels' });
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Signal ring buffer
+  // ---------------------------------------------------------------------------
+
+  /**
+   * GET /api/integrations/signals?projectPath=...
+   * Returns the recent signals ring buffer, newest-first.
+   */
+  router.get('/signals', (req: Request, res: Response) => {
+    if (!signalIntakeService) {
+      res.json({ signals: [] });
+      return;
+    }
+    res.json({ signals: signalIntakeService.getRecentSignals() });
   });
 
   // ---------------------------------------------------------------------------
