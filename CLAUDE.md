@@ -539,46 +539,9 @@ This keeps main clean while allowing incremental feature development within epic
 
 ## Graphite Integration
 
-Automaker supports [Graphite](https://graphite.dev) for stack-aware PR management.
+Automaker supports [Graphite](https://graphite.dev) for stack-aware PR management — automatic stacked PR creation, `gt submit` with fallback to `gh pr create`, and the `graphite_restack` MCP tool for keeping stacks up to date.
 
-### Setup
-
-1. Install Graphite CLI: `npm install -g @withgraphite/graphite-cli`
-2. Authenticate: `gt auth --token <your-token>`
-3. Sync your repo in [Graphite settings](https://app.graphite.com/settings/synced-repos)
-4. Join/create a team for your org in [Graphite team settings](https://app.graphite.com/settings)
-
-### Usage with Epics
-
-Graphite excels at managing stacked PRs for the epic workflow:
-
-```bash
-# Track epic branch
-gt track epic/my-epic --parent main
-
-# Track feature branch under epic
-gt track feature/my-feature --parent epic/my-epic
-
-# Submit all PRs in stack
-gt submit --stack
-
-# View stack
-gt log short
-```
-
-### Fallback Behavior
-
-If Graphite is not available or not synced, Automaker falls back to standard git/gh CLI commands. The git workflow service automatically:
-
-- Uses `gt submit` when Graphite is available
-- Falls back to `gh pr create` with proper `--base` targeting otherwise
-- Feature PRs auto-target their epic branch (not main)
-
-### Tips
-
-- Epic branches need at least one commit before PRs can be created
-- Use `gt sync` to keep your stack up to date with remote
-- Use `gt restack` to rebase your stack after trunk changes
+See **[docs/integrations/graphite.md](docs/integrations/graphite.md)** for full setup, usage, common commands, and troubleshooting.
 
 ### Creating a Project via MCP
 

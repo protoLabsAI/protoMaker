@@ -24,10 +24,13 @@ Full Linear integration with three modes: @mention the agent on any issue for co
 
 LLM observability, trace inspection, and managed prompt versioning. Traces every agent LLM call with cost, latency, and feature tags. Includes seven MCP tools for querying traces, scoring runs, and managing datasets.
 
+### [Graphite](./graphite)
+
+Stack-aware PR management for the epic workflow. Automates stacked PR creation with `gt submit --stack`, falls back gracefully to `gh pr create`, and exposes the `graphite_restack` MCP tool for rebasing stacks when trunk moves.
+
 ## External Tools
 
 protoLabs also works with:
 
 - **[GitHub Actions](/infra/ci-cd)** — CI/CD pipelines for testing and deployment
-- **[Graphite](https://graphite.dev)** — Stack-aware PR management for epic workflows
 - **[CodeRabbit](https://coderabbit.ai)** — Automated PR review
