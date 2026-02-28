@@ -303,9 +303,6 @@ export type {
   // Claude API profile types (deprecated)
   ClaudeApiProfile,
   ClaudeApiProfileTemplate,
-  // Voice activation types
-  WhisperModelSize,
-  VoiceSettings,
   // Workflow settings types
   WorkflowSettings,
   // Maintenance scheduler types
@@ -333,8 +330,6 @@ export {
   DEFAULT_GIT_WORKFLOW_SETTINGS,
   // Graphite CLI defaults
   DEFAULT_GRAPHITE_SETTINGS,
-  // Voice activation defaults
-  DEFAULT_VOICE_SETTINGS,
   // Discord integration defaults
   DEFAULT_DISCORD_SETTINGS,
   // Ceremony defaults

@@ -329,11 +329,6 @@ export type EventType =
   | 'twitch:suggestion:updated'
   | 'twitch:suggestion:built'
   | 'twitch:poll:created'
-  // Voice activation events
-  | 'voice:transcription'
-  | 'voice:wake-word-detected'
-  | 'voice:command-received'
-  | 'voice:model-download-progress'
   // Pipeline state machine events (goal gates, checkpoints, loop detection, supervisor)
   | 'pipeline:state-entered'
   | 'pipeline:goal-gate-evaluated'

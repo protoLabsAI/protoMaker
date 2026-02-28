@@ -1,12 +1,11 @@
 /**
- * Content-oriented client mixin: notes, AI editor, content/authority pipelines, voice.
+ * Content-oriented client mixin: notes, AI editor, content/authority pipelines.
  *
  * Extracted from the monolithic http-api-client.ts — contains:
  *   - notes              (workspace CRUD, tab management)
  *   - ai                 (streaming ghost-text, rewrite, generate — raw fetch)
  *   - contentPipeline    (route text to content agents)
  *   - authorityPipeline  (route ideas to PM agent)
- *   - voice              (transcribe via postBinary)
  */
 import type { NotesWorkspace, NoteTabPermissions } from '@protolabs-ai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
@@ -117,25 +116,5 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
         description: string
       ): Promise<{ success: boolean; feature?: unknown; message?: string; error?: string }> =>
         this.post('/api/authority/inject-idea', { projectPath, title, description }),
-    };
-
-    // Voice API
-    voice = {
-      transcribe: (pcmBuffer: ArrayBuffer) =>
-        this.postBinary<{ text: string; isWakeWord: boolean; command?: string }>(
-          '/api/voice/transcribe',
-          pcmBuffer
-        ),
-      getModels: () =>
-        this.get<{
-          models: Array<{
-            size: string;
-            downloaded: boolean;
-            bytes: number;
-            expectedBytes: number;
-          }>;
-        }>('/api/voice/models'),
-      downloadModel: (size: string) =>
-        this.post<{ success: boolean; path: string }>('/api/voice/models/download', { size }),
     };
   };

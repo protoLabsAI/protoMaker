@@ -14,7 +14,7 @@
  * - integration-settings.ts - DiscordSettings, LinearIntegrationConfig, ProjectIntegrations
  * - workflow-settings.ts - WorkflowSettings, TrustBoundaryConfig, PRDCategory
  * - project-settings.ts  - ProjectSettings, WorktreeInfo, ProjectRef, MaintenanceSettings
- * - global-settings.ts  - GlobalSettings, Credentials, MCPServerConfig, VoiceSettings
+ * - global-settings.ts  - GlobalSettings, Credentials, MCPServerConfig
  */
 
 export * from './ui-settings.js';
