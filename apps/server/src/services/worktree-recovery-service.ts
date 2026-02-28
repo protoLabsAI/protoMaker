@@ -7,11 +7,10 @@
  */
 
 import { exec, execFile } from 'child_process';
-import { existsSync } from 'fs';
-import { join } from 'path';
 import { promisify } from 'util';
 import { createLogger } from '@protolabs-ai/utils';
 import type { Feature } from '@protolabs-ai/types';
+import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -42,23 +41,6 @@ const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
   .join(pathSeparator);
 
 const execEnv = { ...process.env, PATH: extendedPath, HUSKY: '0' };
-
-/**
- * Builds a git add command that stages all changes except .automaker/,
- * then re-includes .automaker/memory/ and .automaker/skills/ only if those
- * directories exist in the working tree. This prevents a fatal pathspec error
- * when a directory is absent (e.g. in a fresh worktree).
- */
-function buildGitAddCommand(workDir: string): string {
-  const parts = ["git add -A -- ':!.automaker/'"];
-  if (existsSync(join(workDir, '.automaker/memory'))) {
-    parts.push("'.automaker/memory/'");
-  }
-  if (existsSync(join(workDir, '.automaker/skills'))) {
-    parts.push("'.automaker/skills/'");
-  }
-  return parts.join(' ');
-}
 
 export interface WorktreeRecoveryResult {
   /** Whether any uncommitted changes were detected */
