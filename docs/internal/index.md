@@ -11,3 +11,4 @@ Internal reference docs for the protoLabs team. Not published in public-facing d
 - [Docs Site Decision](./docs-site-decision.md) — ADR: why VitePress was chosen
 - [Adding Cursor Models](./add-new-cursor-model.md) — Adding new model support
 - [GTM Checklist](./gtm-checklist.md) — Josh's consolidated launch / GTM task list
+- [Spike: rtk-ai/rtk](./spike-rtk-ai.md) — Research spike on RTK token-compression tool
