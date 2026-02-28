@@ -114,6 +114,7 @@ export interface InstallProgress {
 export type SetupStep =
   | 'welcome'
   | 'theme'
+  | 'user_profile'
   | 'providers'
   | 'claude_detect'
   | 'claude_auth'

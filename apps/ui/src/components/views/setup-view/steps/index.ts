@@ -1,6 +1,7 @@
 // Re-export all setup step components for easier imports
 export { WelcomeStep } from './welcome-step';
 export { ThemeStep } from './theme-step';
+export { UserProfileSetupStep } from './user-profile-setup-step';
 export { CompleteStep } from './complete-step';
 export { ProvidersSetupStep } from './providers-setup-step';
 export { GitHubSetupStep } from './github-setup-step';
