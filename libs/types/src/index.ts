@@ -278,6 +278,7 @@ export type {
   CeremonySettings,
   // Project integration types
   ReactionAbility,
+  DiscordChannelSignalConfig,
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
   GoogleIntegrationConfig,

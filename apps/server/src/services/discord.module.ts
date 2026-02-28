@@ -3,6 +3,7 @@ import { createLogger } from '@protolabs-ai/utils';
 import type { ServiceContainer } from '../server/services.js';
 import { DiscordDMChannel } from './escalation-channels/discord-dm-channel.js';
 import { eventHookService } from './event-hook-service.js';
+import { DiscordMonitor } from './discord-monitor.js';
 
 const logger = createLogger('Server:Wiring');
 
@@ -25,6 +26,7 @@ export function register(container: ServiceContainer): void {
     headsdownService,
     eventHistoryService,
     ceremonyAuditLog,
+    integrationRegistryService,
   } = container;
 
   // Discord Bot Service initialization
@@ -80,4 +82,21 @@ export function register(container: ServiceContainer): void {
   escalationRouter.registerChannel(
     new DiscordDMChannel(discordBotService, events, undefined, escalationRouter)
   );
+
+  // Start Discord channel signal monitoring when DISCORD_TOKEN is configured.
+  // The monitor polls only channels registered in integrationRegistryService.
+  // Configs start empty and are populated at runtime via setChannelConfigs().
+  if (process.env.DISCORD_TOKEN) {
+    const discordMonitor = new DiscordMonitor(events);
+    discordMonitor.setDiscordBotService(discordBotService);
+
+    const configs = integrationRegistryService.getAllEnabledChannelConfigs();
+    void discordMonitor.startChannelMonitoring(configs).catch((err) => {
+      logger.error('Failed to start Discord channel signal monitoring:', err);
+    });
+
+    logger.info(`Discord channel signal monitor started (${configs.length} channel(s) configured)`);
+  } else {
+    logger.info('Discord channel signal monitor skipped (DISCORD_TOKEN not set)');
+  }
 }
