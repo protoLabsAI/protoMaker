@@ -187,6 +187,21 @@ export class IntegrationService {
             }
           );
           break;
+        case 'discord:reaction:signal':
+          this.handleDiscordReactionSignal(
+            payload as {
+              abilityId: string;
+              emoji: string;
+              messageContent: string;
+              channelId: string;
+              userId: string;
+              username: string;
+              messageId: string;
+              intent: string;
+              autoFeature: boolean;
+            }
+          );
+          break;
         case 'linear:issue:detected':
           this.handleLinearIssue(
             payload as {
@@ -928,6 +943,52 @@ export class IntegrationService {
         channelName: payload.channelName,
       },
       timestamp: payload.timestamp,
+    });
+  }
+
+  /**
+   * Handle discord:reaction:signal events from reaction abilities.
+   * Routes the reacted message content as a signal into the intake pipeline.
+   * If autoFeature is true, autoApprove is set so the signal bypasses PM classification.
+   */
+  private handleDiscordReactionSignal(payload: {
+    abilityId: string;
+    emoji: string;
+    messageContent: string;
+    channelId: string;
+    userId: string;
+    username: string;
+    messageId: string;
+    intent: string;
+    autoFeature: boolean;
+  }): void {
+    logger.info(
+      `Routing reaction signal: ${payload.emoji} by ${payload.username} in channel ${payload.channelId}`,
+      {
+        abilityId: payload.abilityId,
+        messageId: payload.messageId,
+        autoFeature: payload.autoFeature,
+      }
+    );
+
+    if (!this.emitter) return;
+
+    this.emitter.emit('signal:received', {
+      source: 'discord',
+      content: payload.messageContent,
+      author: {
+        id: payload.userId,
+        name: payload.username,
+      },
+      channelContext: {
+        channelId: payload.channelId,
+        messageId: payload.messageId,
+        emoji: payload.emoji,
+        abilityId: payload.abilityId,
+        intent: payload.intent,
+        autoApprove: payload.autoFeature,
+      },
+      timestamp: new Date().toISOString(),
     });
   }
 
