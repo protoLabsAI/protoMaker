@@ -1,5 +1,32 @@
 # @protolabs-ai/spec-parser
 
+## 0.15.0
+
+### Minor Changes
+
+- ### Features
+  - add browser extension template and legacy dropdown for starter kits (#1463)
+  - wire Groq and OpenAI-Compatible settings tabs to UI (#1461)
+  - add optional user profile step to setup flow (#1459)
+  - complete discord-monitor + signal wiring (#1452) (#1453)
+
+  ### Bug Fixes
+  - allow empty title in feature creation and fix flow graph edge handles
+  - prevent HITL form dialog crash when steps is undefined (#1462)
+  - auto-focus chat input when chat overlay opens (#1458)
+  - handle linear:agent-session:updated events in LinearAgentRouter (#1455)
+  - prevent crash when toolExecutions is undefined in agent-node
+
+  ### Refactors
+  - remove Graphite integration entirely (#1451)
+  - Security: Parameterize hardcoded paths in staging compose (#1450)
+  - Content Badge Removal (#1444)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.15.0
+
 ## 0.14.0
 
 ### Minor Changes
