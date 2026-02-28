@@ -7,11 +7,12 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
-import { ChatAnthropic } from '@langchain/anthropic';
 import { createAntagonisticReviewGraph } from '@protolabs-ai/flows';
 import type { SPARCPrd } from '@protolabs-ai/types';
 import { LangfuseClient } from '@protolabs-ai/observability';
 import { v4 as uuidv4 } from 'uuid';
+import { createFlowModel } from '../lib/flow-model-factory.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('AntagonisticReviewAdapter');
 
@@ -75,9 +76,17 @@ export interface ReviewRequest {
  * Configuration for the adapter
  */
 export interface AdapterConfig {
+  /**
+   * @deprecated Model selection is now handled by createFlowModel() via specGenerationModel phase.
+   * This field is kept for backward compatibility but has no effect.
+   */
   smartModel?: string;
   enableHITL?: boolean;
   langfuseClient?: LangfuseClient;
+  /** Settings service for resolving the specGenerationModel phase model */
+  settingsService?: SettingsService | null;
+  /** Project path for project-level model overrides */
+  projectPath?: string;
 }
 
 /**
@@ -101,9 +110,10 @@ export class AntagonisticReviewAdapter {
 
   constructor(config: AdapterConfig = {}) {
     this.config = {
-      smartModel: config.smartModel || 'claude-sonnet-4-5-20250929',
       enableHITL: config.enableHITL || false,
       langfuseClient: config.langfuseClient,
+      settingsService: config.settingsService,
+      projectPath: config.projectPath,
     };
     this.langfuse = config.langfuseClient || null;
   }
@@ -145,11 +155,9 @@ export class AntagonisticReviewAdapter {
       // Create the flow graph (checkpointing enabled by default)
       const graph = createAntagonisticReviewGraph(true);
 
-      // Create LLM models for the review nodes
-      const smartModel = new ChatAnthropic({
-        model: this.config.smartModel || 'claude-sonnet-4-5-20250929',
-        temperature: 0.7,
-        maxTokens: 8192,
+      // Create LLM model for the review nodes via settings-aware factory
+      const smartModel = await createFlowModel('specGenerationModel', this.config.projectPath, {
+        settingsService: this.config.settingsService,
       });
 
       // Use thread ID for checkpointing (required for HITL resume)

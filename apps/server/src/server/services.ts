@@ -266,6 +266,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Settings & identity (created first — injected into most other services)
   const settingsService = new SettingsService(dataDir);
+  // Wire settingsService into the contentFlowService singleton for model resolution
+  contentFlowService.setSettingsService(settingsService);
   const userIdentityService = new UserIdentityService(settingsService);
   const featureLoader = new FeatureLoader();
 
@@ -609,7 +611,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   try {
     const { createLLMProjectPlanningConfig } =
       await import('../services/project-planning-executors.js');
-    const planningFlowConfig = createLLMProjectPlanningConfig();
+    const planningFlowConfig = await createLLMProjectPlanningConfig({ settingsService });
     projectPlanningService = new ProjectPlanningService(
       events,
       linearAgentService,
