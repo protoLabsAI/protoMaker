@@ -178,6 +178,9 @@ export class LinearAgentRouter {
       } else if (type === 'linear:agent-session:removed') {
         const { sessionId } = payload as { sessionId: string };
         this.handleSessionRemoved(sessionId);
+      } else if (type === 'linear:agent-session:updated') {
+        const { sessionId, status } = payload as { sessionId: string; status: string };
+        this.handleSessionUpdated(sessionId, status);
       }
     });
     this.isStarted = true;
@@ -387,6 +390,23 @@ export class LinearAgentRouter {
   private handleSessionRemoved(sessionId: string): void {
     this.sessionMeta.delete(sessionId);
     logger.debug(`Cleaned up session metadata for ${sessionId}`);
+  }
+
+  /**
+   * Handle session status updates — clean up on terminal transitions.
+   * Terminal statuses: complete, error, stale.
+   */
+  private handleSessionUpdated(sessionId: string, status: string): void {
+    const TERMINAL_STATUSES = ['complete', 'error', 'stale'];
+    if (!TERMINAL_STATUSES.includes(status)) return;
+
+    if (status === 'complete') {
+      logger.info(`Session ${sessionId} completed — cleaning up metadata`);
+    } else {
+      logger.warn(`Session ${sessionId} ended with status "${status}" — cleaning up metadata`);
+    }
+
+    this.sessionMeta.delete(sessionId);
   }
 
   // ─── Routing ──────────────────────────────────────────────────────
