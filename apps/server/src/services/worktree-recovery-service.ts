@@ -10,6 +10,7 @@ import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@protolabs-ai/utils';
 import type { Feature } from '@protolabs-ai/types';
+import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -122,7 +123,7 @@ export async function checkAndRecoverUncommittedWork(
     }
 
     // Step 2: Stage changed files (exclude .automaker/ except memory/)
-    await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
+    await execAsync(buildGitAddCommand(worktreePath), {
       cwd: worktreePath,
       env: execEnv,
     });

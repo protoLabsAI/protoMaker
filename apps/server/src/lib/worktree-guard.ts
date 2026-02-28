@@ -9,6 +9,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@protolabs-ai/utils';
+import { buildGitAddCommand } from './git-staging-utils.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('WorktreeGuard');
@@ -60,7 +61,7 @@ export async function ensureCleanWorktree(
 
       // Stage all changes - exclude .automaker/ except memory/ and skills/
       const guardEnv = { ...process.env, HUSKY: '0' };
-      await execAsync("git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'", {
+      await execAsync(buildGitAddCommand(worktreePath), {
         cwd: worktreePath,
         env: guardEnv,
       });
