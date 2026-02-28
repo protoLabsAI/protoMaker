@@ -3,46 +3,57 @@
  *
  * Contains the header, message list, input, and conversation history.
  * Used by both the Electron overlay view and the web fallback modal.
+ *
+ * Reads currentProject from useAppStore and passes projectId/projectPath
+ * to useChatSession for project-scoped session management.
  */
 
 import { useState, useCallback } from 'react';
-import { History, X } from 'lucide-react';
+import { History, X, Settings } from 'lucide-react';
 import { ChatMessageList, ChatInput } from '@protolabs-ai/ui/ai';
 import { Button } from '@protolabs-ai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { ChatModelSelect } from '@/components/views/chat/components/chat-model-select';
 import { ConversationList } from './conversation-list';
-import type { useChatSession } from '@/hooks/use-chat-session';
+import { AvaSettingsPanel } from './ava-settings-panel';
+import { useChatSession } from '@/hooks/use-chat-session';
+import { useAppStore } from '@/store/app-store';
 
-type ChatSessionReturn = ReturnType<typeof useChatSession>;
-
-export interface ChatOverlayContentProps extends ChatSessionReturn {
+export interface ChatOverlayContentProps {
   /** Called when the user wants to close/hide the overlay or modal */
   onHide: () => void;
   /** When true, renders in modal mode (no drag region, different hint text) */
   isModal?: boolean;
 }
 
-export function ChatOverlayContent({
-  messages,
-  sendMessage,
-  stop,
-  isStreaming,
-  error,
-  sessions,
-  currentSessionId,
-  modelAlias,
-  handleNewChat,
-  handleSwitchSession,
-  handleDeleteSession,
-  handleModelChange,
-  historyOpen,
-  toggleHistory,
-  setHistoryOpen,
-  onHide,
-  isModal = false,
-}: ChatOverlayContentProps) {
+export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayContentProps) {
+  const currentProject = useAppStore((s) => s.currentProject);
+
+  const {
+    messages,
+    sendMessage,
+    stop,
+    isStreaming,
+    error,
+    sessions,
+    currentSessionId,
+    modelAlias,
+    handleNewChat,
+    handleSwitchSession,
+    handleDeleteSession,
+    handleModelChange,
+    historyOpen,
+    toggleHistory,
+    setHistoryOpen,
+  } = useChatSession({
+    defaultModel: 'sonnet',
+    projectId: currentProject?.id,
+    projectPath: currentProject?.path,
+  });
+
   const [inputValue, setInputValue] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSubmit = useCallback(() => {
     const text = inputValue.trim();
@@ -87,6 +98,22 @@ export function ChatOverlayContent({
           >
             <span className="text-xs">New</span>
           </Button>
+          <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                title="Settings"
+                aria-label="Open settings"
+              >
+                <Settings className="size-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={6} className="w-72 p-0">
+              <AvaSettingsPanel projectPath={currentProject?.path} />
+            </PopoverContent>
+          </Popover>
           <Button
             variant="ghost"
             size="icon"
