@@ -8,7 +8,6 @@ import {
   Lock,
   Hand,
   Sparkles,
-  User,
   Calendar,
   DollarSign,
   Lightbulb,
@@ -149,7 +148,6 @@ interface CardBadgesProps {
 export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: CardBadgesProps) {
   const hasEpic = !!feature.epicId;
   const hasError = !!feature.error;
-  const hasAssignee = !!feature.assignee;
   const hasDueDate = !!feature.dueDate;
   const hasWorkItemState = !!feature.workItemState;
   const isContent = feature.featureType === 'content';
@@ -157,15 +155,7 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
   const costUsd = typeof feature.costUsd === 'number' ? feature.costUsd : undefined;
   const hasCost = costUsd != null && costUsd > 0;
 
-  if (
-    !hasError &&
-    !hasEpic &&
-    !hasAssignee &&
-    !hasDueDate &&
-    !hasCost &&
-    !hasWorkItemState &&
-    !isContent
-  ) {
+  if (!hasError && !hasEpic && !hasDueDate && !hasCost && !hasWorkItemState && !isContent) {
     return null;
   }
 
@@ -224,14 +214,6 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
         >
           <FileType className="w-3 h-3" />
           Content
-        </div>
-      )}
-
-      {/* Assignee badge */}
-      {hasAssignee && (
-        <div className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium bg-blue-500/15 text-blue-400 border border-blue-500/30">
-          <User className="w-3 h-3" />
-          {feature.assignee}
         </div>
       )}
 
