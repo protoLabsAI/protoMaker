@@ -19,9 +19,16 @@ import {
 import { cn } from '@/lib/utils';
 import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { useProjectSettings } from '@/hooks/queries/use-settings';
-import { useUpdateGlobalSettings, useUpdateProjectSettings } from '@/hooks/mutations/use-settings-mutations';
+import {
+  useUpdateGlobalSettings,
+  useUpdateProjectSettings,
+} from '@/hooks/mutations/use-settings-mutations';
 import { useAgentTemplates } from '@/hooks/queries/use-agent-templates';
-import { useRegisterTemplate, useUpdateTemplate, useUnregisterTemplate } from '@/hooks/mutations/use-agent-template-mutations';
+import {
+  useRegisterTemplate,
+  useUpdateTemplate,
+  useUnregisterTemplate,
+} from '@/hooks/mutations/use-agent-template-mutations';
 import type { AgentTemplateMetadata } from '@/hooks/queries/use-agent-templates';
 import type { CustomPrompt } from '@protolabs-ai/types';
 import { useAppStore } from '@/store/app-store';
@@ -112,10 +119,7 @@ function ToolVisibilityPanel({ template }: ToolVisibilityProps) {
               <Badge
                 key={cap.key}
                 variant={cap.value ? 'secondary' : 'outline'}
-                className={cn(
-                  'text-[10px] gap-1',
-                  !cap.value && 'opacity-40 line-through'
-                )}
+                className={cn('text-[10px] gap-1', !cap.value && 'opacity-40 line-through')}
               >
                 {cap.value ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
                 {cap.label}
@@ -156,7 +160,11 @@ function ToolVisibilityPanel({ template }: ToolVisibilityProps) {
           </p>
           <div className="flex flex-wrap gap-1">
             {disallowed.map((t) => (
-              <Badge key={t} variant="outline" className="text-[10px] font-mono text-destructive border-destructive/40">
+              <Badge
+                key={t}
+                variant="outline"
+                className="text-[10px] font-mono text-destructive border-destructive/40"
+              >
                 {t}
               </Badge>
             ))}
@@ -194,19 +202,29 @@ function ToolVisibilityPanel({ template }: ToolVisibilityProps) {
           </p>
           <div className="flex gap-1.5">
             {template.exposure.cli && (
-              <Badge variant="secondary" className="text-[10px]">CLI</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                CLI
+              </Badge>
             )}
             {template.exposure.discord && (
-              <Badge variant="secondary" className="text-[10px]">Discord</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                Discord
+              </Badge>
             )}
           </div>
         </div>
       )}
 
-      {capabilities.length === 0 && tools.length === 0 && disallowed.length === 0 &&
-        !template.trustLevel && !template.maxRiskAllowed && !template.exposure && (
-        <p className="text-xs text-muted-foreground/50 italic">No capability restrictions defined.</p>
-      )}
+      {capabilities.length === 0 &&
+        tools.length === 0 &&
+        disallowed.length === 0 &&
+        !template.trustLevel &&
+        !template.maxRiskAllowed &&
+        !template.exposure && (
+          <p className="text-xs text-muted-foreground/50 italic">
+            No capability restrictions defined.
+          </p>
+        )}
     </div>
   );
 }
@@ -324,7 +342,9 @@ function TemplateForm({ initial, onSave, onCancel, isSaving }: TemplateFormProps
             onChange={(e) => setRole(e.target.value)}
           >
             {ROLE_OPTIONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>
+                {r}
+              </option>
             ))}
           </select>
         </div>
@@ -342,7 +362,9 @@ function TemplateForm({ initial, onSave, onCancel, isSaving }: TemplateFormProps
           </select>
         </div>
         <div className="space-y-1 col-span-2">
-          <label className="text-xs text-muted-foreground">Allowed Tools (comma-separated, or * for all)</label>
+          <label className="text-xs text-muted-foreground">
+            Allowed Tools (comma-separated, or * for all)
+          </label>
           <Input
             className="text-xs h-8 font-mono"
             value={toolsRaw}
@@ -354,12 +376,14 @@ function TemplateForm({ initial, onSave, onCancel, isSaving }: TemplateFormProps
 
       {/* Capability toggles */}
       <div className="flex flex-wrap gap-x-4 gap-y-2">
-        {([
-          ['canUseBash', 'Bash access', canUseBash, setCanUseBash],
-          ['canModifyFiles', 'File edits', canModifyFiles, setCanModifyFiles],
-          ['canCommit', 'Git commit', canCommit, setCanCommit],
-          ['canCreatePRs', 'Pull requests', canCreatePRs, setCanCreatePRs],
-        ] as const).map(([key, label, val, setter]) => (
+        {(
+          [
+            ['canUseBash', 'Bash access', canUseBash, setCanUseBash],
+            ['canModifyFiles', 'File edits', canModifyFiles, setCanModifyFiles],
+            ['canCommit', 'Git commit', canCommit, setCanCommit],
+            ['canCreatePRs', 'Pull requests', canCreatePRs, setCanCreatePRs],
+          ] as const
+        ).map(([key, label, val, setter]) => (
           <label key={key} className="flex items-center gap-1.5 text-xs cursor-pointer select-none">
             <input
               type="checkbox"
@@ -403,7 +427,7 @@ function TemplateForm({ initial, onSave, onCancel, isSaving }: TemplateFormProps
 interface PersonaCardProps {
   template: AgentTemplateMetadata;
   override: CustomPrompt | undefined;
-  isEnabledForProject: boolean | undefined;  // undefined = no project selected
+  isEnabledForProject: boolean | undefined; // undefined = no project selected
   onToggleOverride: () => void;
   onUpdateValue: (value: string) => void;
   onReset: () => void;
@@ -469,7 +493,10 @@ function PersonaCard({
                 </Badge>
               )}
               {isProtected && (
-                <Badge variant="outline" className="text-[10px] shrink-0 border-amber-500/40 text-amber-600">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] shrink-0 border-amber-500/40 text-amber-600"
+                >
                   <Shield className="w-2.5 h-2.5 mr-1" />
                   Built-in
                 </Badge>
@@ -604,9 +631,7 @@ function SkillSyncPanel({ registeredNames, onSync, isSyncing }: SkillSyncPanelPr
     staleTime: 30_000,
   });
 
-  const unsynced = (discoveredAgents ?? []).filter(
-    (a) => !registeredNames.has(a.name)
-  );
+  const unsynced = (discoveredAgents ?? []).filter((a) => !registeredNames.has(a.name));
 
   if (unsynced.length === 0) return null;
 
@@ -650,7 +675,9 @@ function SkillSyncPanel({ registeredNames, onSync, isSyncing }: SkillSyncPanelPr
                 disabled={isSyncing === agent.name}
                 onClick={() => onSync(agent)}
               >
-                <RefreshCw className={cn('w-3 h-3 mr-1.5', isSyncing === agent.name && 'animate-spin')} />
+                <RefreshCw
+                  className={cn('w-3 h-3 mr-1.5', isSyncing === agent.name && 'animate-spin')}
+                />
                 {isSyncing === agent.name ? 'Syncing...' : 'Sync'}
               </Button>
             </div>
@@ -729,11 +756,9 @@ export function PersonasSection() {
   const toggleProjectPersona = useCallback(
     (name: string) => {
       if (!currentProject?.path) return;
-      const current = enabledPersonas ?? (templates?.map((t) => t.name) ?? []);
+      const current = enabledPersonas ?? templates?.map((t) => t.name) ?? [];
       const isEnabled = current.includes(name);
-      const updated = isEnabled
-        ? current.filter((n: string) => n !== name)
-        : [...current, name];
+      const updated = isEnabled ? current.filter((n: string) => n !== name) : [...current, name];
       updateProjectSettings.mutate({ enabledPersonas: updated });
     },
     [enabledPersonas, templates, currentProject?.path, updateProjectSettings]
@@ -844,7 +869,8 @@ export function PersonasSection() {
           </Button>
         </div>
         <p className="text-sm text-muted-foreground/80 ml-12">
-          Manage agent personas: view tool access, configure per-project activation, and override system prompts.
+          Manage agent personas: view tool access, configure per-project activation, and override
+          system prompts.
           {currentProject && (
             <span className="ml-1 text-primary/70">
               Project toggles apply to <strong>{currentProject.name}</strong>.

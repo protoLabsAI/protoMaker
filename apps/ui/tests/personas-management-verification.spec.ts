@@ -39,11 +39,18 @@ test.describe('Unified Persona Management - UI Verification', () => {
     if (await newTemplateBtn.isVisible({ timeout: 5000 })) {
       await newTemplateBtn.click();
       // The form should open with a "Create Template" submit button and Cancel
-      await expect(page.getByRole('button', { name: /create template/i })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('button', { name: /create template/i })).toBeVisible({
+        timeout: 5000,
+      });
       await expect(page.getByRole('button', { name: /cancel/i })).toBeVisible();
       // Cancel closes the form
-      await page.getByRole('button', { name: /cancel/i }).first().click();
-      await expect(page.getByRole('button', { name: /create template/i })).not.toBeVisible({ timeout: 3000 });
+      await page
+        .getByRole('button', { name: /cancel/i })
+        .first()
+        .click();
+      await expect(page.getByRole('button', { name: /create template/i })).not.toBeVisible({
+        timeout: 3000,
+      });
     }
   });
 

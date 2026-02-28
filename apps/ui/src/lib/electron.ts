@@ -807,7 +807,10 @@ export interface ElectronAPI {
       template?: Record<string, unknown>;
       error?: string;
     }>;
-    update: (name: string, updates: Record<string, unknown>) => Promise<{
+    update: (
+      name: string,
+      updates: Record<string, unknown>
+    ) => Promise<{
       success: boolean;
       template?: Record<string, unknown>;
       error?: string;
