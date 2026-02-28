@@ -256,6 +256,7 @@ async function avaReviewAdapter(
 
   return {
     avaReview: mapNodeReviewToGraphReview(result.avaReview, 'ava'),
+    avaTokenUsage: result.tokenUsage,
   };
 }
 
@@ -304,6 +305,7 @@ async function jonReviewAdapter(
 
   return {
     jonReview: mapNodeReviewToGraphReview(result.jonReview, 'jon'),
+    jonTokenUsage: result.tokenUsage,
   };
 }
 
@@ -361,7 +363,7 @@ async function consolidateAdapter(
     consolidatedPrd = { ...state.prd, generatedAt: new Date().toISOString() };
   }
 
-  return { consolidatedPrd, finalVerdict, hitlRequired };
+  return { consolidatedPrd, finalVerdict, hitlRequired, consolidateTokenUsage: result.tokenUsage };
 }
 
 // ─── Routing Functions ─────────────────────────────────────────────────────

@@ -6,7 +6,7 @@
  */
 
 import { createLogger } from '@protolabs-ai/utils';
-import type { EventType } from '@protolabs-ai/types';
+import type { EventType, VerifiedTrajectory } from '@protolabs-ai/types';
 import { FailureClassifierService } from './failure-classifier-service.js';
 import type {
   ProcessorServiceContext,
@@ -163,6 +163,42 @@ export class EscalateProcessor implements StateProcessor {
       remediationAttempts: ctx.remediationAttempts,
       failureCategory: failureAnalysis.category,
     });
+
+    // Fire-and-forget: persist failure trajectory for the learning flywheel
+    if (this.serviceContext.trajectoryStoreService) {
+      try {
+        const existingTrajectories =
+          await this.serviceContext.trajectoryStoreService.loadTrajectories(
+            ctx.projectPath,
+            ctx.feature.id
+          );
+        const attemptNumber = existingTrajectories.length + 1;
+
+        const trajectory: VerifiedTrajectory = {
+          featureId: ctx.feature.id,
+          domain: 'fullstack',
+          complexity: (ctx.feature.complexity as VerifiedTrajectory['complexity']) || 'medium',
+          model: ctx.feature.model || 'sonnet',
+          planSummary: (ctx.planOutput || '').slice(0, 500),
+          executionSummary: ctx.escalationReason || 'Escalated without execution summary',
+          costUsd: ctx.feature.costUsd || 0,
+          durationMs: ctx.startedAt ? Date.now() - new Date(ctx.startedAt).getTime() : 0,
+          retryCount: ctx.retryCount,
+          escalationReason: ctx.escalationReason,
+          verified: false,
+          timestamp: new Date().toISOString(),
+          attemptNumber,
+        };
+
+        this.serviceContext.trajectoryStoreService.saveTrajectory(
+          ctx.projectPath,
+          ctx.feature.id,
+          trajectory
+        );
+      } catch (err) {
+        logger.warn('[ESCALATE] Failed to save trajectory (non-fatal):', err);
+      }
+    }
 
     return {
       nextState: null,

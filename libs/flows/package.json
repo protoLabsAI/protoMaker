@@ -36,6 +36,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
+    "@protolabs-ai/model-resolver": "^0.15.2",
     "@protolabs-ai/observability": "^0.15.2",
     "@protolabs-ai/prompts": "^0.15.2",
     "@protolabs-ai/types": "^0.15.2",

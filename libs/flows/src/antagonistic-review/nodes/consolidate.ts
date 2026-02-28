@@ -20,7 +20,7 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
 import { executeWithFallback } from './classify-topic.js';
-import { type ReviewerPerspective } from './ava-review.js';
+import { type ReviewerPerspective, type NodeTokenUsage } from './ava-review.js';
 
 /**
  * Final verdict schema for consolidated review
@@ -59,6 +59,7 @@ export interface ConsolidateState {
   jonReview?: ReviewerPerspective;
   pairReviews?: ReviewerPerspective[];
   consolidatedReview?: ConsolidatedReview;
+  tokenUsage?: NodeTokenUsage;
   smartModel?: BaseChatModel;
   fastModel?: BaseChatModel;
 }
@@ -109,7 +110,7 @@ Summary: ${review.comments}
       )
       .join('\n---\n');
 
-    // Execute with model fallback
+    // Execute with model fallback, capturing both content and token usage
     const result = await executeWithFallback(
       { primary: smartModel, fallback: fastModel },
       async (model) => {
@@ -156,19 +157,34 @@ Be thorough, fair, and prioritize both customer value (Jon's focus) and executio
           },
         ]);
 
-        return response.content.toString();
+        const usageMeta = response.usage_metadata;
+        const fallbackUsage = (response.response_metadata as any)?.usage;
+        let tokenUsage: NodeTokenUsage | undefined;
+        if (usageMeta) {
+          tokenUsage = {
+            inputTokens: usageMeta.input_tokens,
+            outputTokens: usageMeta.output_tokens,
+          };
+        } else if (fallbackUsage) {
+          tokenUsage = {
+            inputTokens: fallbackUsage.prompt_tokens ?? 0,
+            outputTokens: fallbackUsage.completion_tokens ?? 0,
+          };
+        }
+
+        return { content: response.content.toString(), tokenUsage };
       },
       nodeName
     );
 
     // Parse and validate the LLM response
-    const consolidatedReview = parseAndValidateConsolidation(result, nodeName);
+    const consolidatedReview = parseAndValidateConsolidation(result.content, nodeName);
 
     console.log(
       `[${nodeName}] Consolidation complete: ${consolidatedReview.verdict} (${allReviews.length} reviews merged)`
     );
 
-    return { consolidatedReview };
+    return { consolidatedReview, tokenUsage: result.tokenUsage };
   } catch (error) {
     console.error(`[${nodeName}] Failed:`, error);
     throw error;

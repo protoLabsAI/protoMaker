@@ -9,7 +9,7 @@
 import { createLogger } from '@protolabs-ai/utils';
 import { createAntagonisticReviewGraph } from '@protolabs-ai/flows';
 import type { SPARCPrd } from '@protolabs-ai/types';
-import { LangfuseClient } from '@protolabs-ai/observability';
+import { LangfuseClient, calculateCost } from '@protolabs-ai/observability';
 import { v4 as uuidv4 } from 'uuid';
 import { createFlowModel } from '../lib/flow-model-factory.js';
 import type { SettingsService } from './settings-service.js';
@@ -156,9 +156,13 @@ export class AntagonisticReviewAdapter {
       const graph = createAntagonisticReviewGraph(true);
 
       // Create LLM model for the review nodes via settings-aware factory
-      const smartModel = await createFlowModel('specGenerationModel', this.config.projectPath, {
-        settingsService: this.config.settingsService,
-      });
+      const { model: smartModel } = await createFlowModel(
+        'specGenerationModel',
+        this.config.projectPath,
+        {
+          settingsService: this.config.settingsService,
+        }
+      );
 
       // Use thread ID for checkpointing (required for HITL resume)
       const threadId = uuidv4();
@@ -267,8 +271,27 @@ export class AntagonisticReviewAdapter {
         });
       }
 
-      // Calculate total cost (placeholder - will be populated by LLM callback tracking)
-      const totalCost = 0; // TODO: Track actual costs from LLM calls
+      // Calculate total cost from token usage collected across graph nodes
+      let totalCost = 0;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const modelName: string = (smartModel as any).model ?? (smartModel as any).modelName ?? '';
+        const usages = [
+          result.avaTokenUsage,
+          result.jonTokenUsage,
+          result.consolidateTokenUsage,
+        ].filter(Boolean) as Array<{ inputTokens: number; outputTokens: number }>;
+        for (const usage of usages) {
+          const cost = calculateCost(modelName, {
+            promptTokens: usage.inputTokens,
+            completionTokens: usage.outputTokens,
+          });
+          totalCost += cost ?? 0;
+        }
+      } catch (err) {
+        logger.warn('Failed to compute antagonistic review cost', err);
+        totalCost = 0;
+      }
 
       // Flush Langfuse events
       await this.langfuse?.flush();

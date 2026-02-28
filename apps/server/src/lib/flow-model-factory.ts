@@ -73,7 +73,7 @@ export async function createFlowModel(
   phase: PhaseModelKey,
   projectPath: string | undefined,
   services: { settingsService: SettingsService | null | undefined }
-): Promise<BaseChatModel> {
+): Promise<{ model: BaseChatModel; modelName: string }> {
   const { phaseModel, provider, credentials } = await getPhaseModelWithOverrides(
     phase,
     services.settingsService,
@@ -105,7 +105,10 @@ export async function createFlowModel(
     }
 
     logger.debug(`createFlowModel: using ChatAnthropic for model=${resolvedModel}`);
-    return new ChatAnthropic(config) as unknown as BaseChatModel;
+    return {
+      model: new ChatAnthropic(config) as unknown as BaseChatModel,
+      modelName: resolvedModel,
+    };
   }
 
   // Groq models (llama-*, mixtral-*, gemma-*, groq/*) — use ChatGroq
@@ -114,7 +117,10 @@ export async function createFlowModel(
       const { ChatGroq } = await import('@langchain/groq');
       const apiKey = process.env.GROQ_API_KEY;
       logger.debug(`createFlowModel: using ChatGroq for model=${resolvedModel}`);
-      return new ChatGroq({ model: resolvedModel, apiKey }) as unknown as BaseChatModel;
+      return {
+        model: new ChatGroq({ model: resolvedModel, apiKey }) as unknown as BaseChatModel,
+        modelName: resolvedModel,
+      };
     } catch {
       logger.warn(
         `createFlowModel: @langchain/groq not available, falling back to ChatAnthropic for model=${resolvedModel}`
@@ -130,14 +136,17 @@ export async function createFlowModel(
       logger.debug(
         `createFlowModel: using ChatOpenAI for model=${resolvedModel}, baseURL=${provider.baseUrl}`
       );
-      return new ChatOpenAI({
-        model: resolvedModel,
-        openAIApiKey: apiKey,
-        configuration: {
-          baseURL: provider.baseUrl,
-          apiKey: apiKey,
-        },
-      }) as unknown as BaseChatModel;
+      return {
+        model: new ChatOpenAI({
+          model: resolvedModel,
+          openAIApiKey: apiKey,
+          configuration: {
+            baseURL: provider.baseUrl,
+            apiKey: apiKey,
+          },
+        }) as unknown as BaseChatModel,
+        modelName: resolvedModel,
+      };
     } catch {
       logger.warn(
         `createFlowModel: @langchain/openai not available, falling back to ChatAnthropic for model=${resolvedModel}`
@@ -150,5 +159,8 @@ export async function createFlowModel(
   logger.warn(
     `createFlowModel: unknown model "${resolvedModel}" for phase "${phase}", falling back to ${fallbackModel}`
   );
-  return new ChatAnthropic({ model: fallbackModel }) as unknown as BaseChatModel;
+  return {
+    model: new ChatAnthropic({ model: fallbackModel }) as unknown as BaseChatModel,
+    modelName: fallbackModel,
+  };
 }

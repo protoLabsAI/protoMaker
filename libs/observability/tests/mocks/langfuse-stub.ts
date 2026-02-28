@@ -59,7 +59,11 @@ export class Langfuse {
   }
 
   trace(_body: LangfuseTraceBody): any {
-    return {};
+    return {
+      span: (_spanBody: any) => ({}),
+      update: (_data: any) => {},
+      generation: (_genBody: any) => ({}),
+    };
   }
 
   generation(_body: LangfuseGenerationBody): any {

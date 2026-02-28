@@ -165,8 +165,6 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
         }
       }
 
-      const draftFlag = draft ? '--draft' : '';
-
       let prUrl: string | null = null;
       let prError: string | null = null;
       let browserUrl: string | null = null;
@@ -311,23 +309,24 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
         // Only create a new PR if one doesn't already exist
         if (!prUrl) {
           try {
-            // Build gh pr create command
-            let prCmd = `gh pr create --base "${base}"`;
+            // Build gh pr create args - use array to avoid shell injection
+            // with backticks, $(), !, and other special chars in LLM-generated PR bodies
+            const prArgs = ['pr', 'create', '--base', base];
 
             // If this is a fork (has upstream remote), specify the repo and head
             if (upstreamRepo && originOwner) {
               // For forks: --repo specifies where to create PR, --head specifies source
-              prCmd += ` --repo "${upstreamRepo}" --head "${originOwner}:${branchName}"`;
+              prArgs.push('--repo', upstreamRepo, '--head', `${originOwner}:${branchName}`);
             } else {
               // Not a fork, just specify the head branch
-              prCmd += ` --head "${branchName}"`;
+              prArgs.push('--head', branchName);
             }
 
-            prCmd += ` --title "${title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"')}" ${draftFlag}`;
-            prCmd = prCmd.trim();
+            prArgs.push('--title', title, '--body', body);
+            if (draft) prArgs.push('--draft');
 
-            logger.debug(`Creating PR with command: ${prCmd}`);
-            const { stdout: prOutput } = await execAsync(prCmd, {
+            logger.debug(`Creating PR with args: gh ${prArgs.join(' ')}`);
+            const { stdout: prOutput } = await execFileAsync('gh', prArgs, {
               cwd: worktreePath,
               env: execEnv,
             });

@@ -3,7 +3,23 @@ import { createLogger } from '@protolabs-ai/utils';
 import { LangfuseClient } from './client.js';
 import type { CreateGenerationOptions } from './types.js';
 
-const logger = createLogger('LangfuseMiddleware');
+const TOOL_SPAN_MAX_BYTES = 2048;
+
+interface PendingToolCall {
+  toolName: string;
+  toolInput: unknown;
+  startTime: Date;
+  turnIndex: number;
+  toolCallIndex: number;
+}
+
+function truncateForSpan(value: unknown): { value: string; truncated?: true } {
+  const serialized = typeof value === 'string' ? value : (JSON.stringify(value) ?? '');
+  if (serialized.length <= TOOL_SPAN_MAX_BYTES) return { value: serialized };
+  return { value: serialized.slice(0, TOOL_SPAN_MAX_BYTES), truncated: true };
+}
+
+export const logger = createLogger('LangfuseMiddleware');
 
 /**
  * Configuration for provider tracing
@@ -82,12 +98,9 @@ function extractUsageFromMessages(messages: any[]):
   };
 }
 
-/**
- * Calculate cost based on model and token usage
- * Prices are per 1M tokens (as of 2025-01)
- */
-/** Default Claude pricing (per 1M tokens) */
+/** Default pricing per 1M tokens (as of 2026-02) */
 const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
+  // Claude
   'opus-4-6': { input: 15, output: 75 },
   'claude-opus-4-6': { input: 15, output: 75 },
   'opus-4-5': { input: 15, output: 75 },
@@ -98,9 +111,23 @@ const DEFAULT_PRICING: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-5': { input: 3, output: 15 },
   'haiku-4-5': { input: 0.8, output: 4 },
   'claude-haiku-4-5': { input: 0.8, output: 4 },
+
+  // Groq (per 1M tokens, 2026-02)
+  'llama-3.3-70b-versatile': { input: 0.59, output: 0.79 },
+  'llama-3.1-8b-instant': { input: 0.05, output: 0.08 },
+  // deprecated on Groq; retained for legacy trace cost reconstruction
+  'mixtral-8x7b-32768': { input: 0.24, output: 0.24 },
+  'gemma2-9b-it': { input: 0.2, output: 0.2 }, // verify: approximate as of 2026-02
+
+  // OpenAI (per 1M tokens, 2026-02)
+  // NOTE: 'gpt-4o-mini' MUST appear before 'gpt-4o' — substring match hits first entry
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
+  'gpt-4o': { input: 2.5, output: 10.0 },
+  'gpt-4-turbo': { input: 10.0, output: 30.0 },
+  'o3-mini': { input: 1.1, output: 4.4 },
 };
 
-function calculateCost(
+export function calculateCost(
   model: string,
   usage?: { promptTokens: number; completionTokens: number },
   customPricing?: Record<string, { input: number; output: number }>
@@ -121,7 +148,7 @@ function calculateCost(
   }
 
   if (!prices) {
-    // Unknown model, can't calculate cost
+    logger.debug('No pricing found for model, cost will be undefined', { model });
     return undefined;
   }
 
@@ -178,12 +205,65 @@ export async function* wrapProviderWithTracing<T>(
   // Collect all messages for usage tracking
   const messages: T[] = [];
   let error: Error | undefined;
+  let turnIndex = -1;
+  const pendingToolCalls = new Map<string, PendingToolCall>();
 
   try {
     // Yield all messages and collect them
     for await (const message of generator) {
       messages.push(message);
       yield message;
+
+      // Inspect for tool events to create per-tool-call spans
+      const msg = message as any;
+      if (msg?.type === 'assistant' && Array.isArray(msg?.message?.content)) {
+        turnIndex++;
+        let toolCallIndex = 0;
+        for (const block of msg.message.content) {
+          if (block?.type === 'tool_use' && block?.id) {
+            pendingToolCalls.set(block.id, {
+              toolName: block.name ?? 'unknown',
+              toolInput: block.input,
+              startTime: new Date(),
+              turnIndex,
+              toolCallIndex,
+            });
+            toolCallIndex++;
+          }
+        }
+      } else if (msg?.type === 'user' && Array.isArray(msg?.message?.content)) {
+        for (const block of msg.message.content) {
+          if (block?.type === 'tool_result' && block?.tool_use_id) {
+            const pending = pendingToolCalls.get(block.tool_use_id);
+            if (pending) {
+              pendingToolCalls.delete(block.tool_use_id);
+              const endTime = new Date();
+              const inputResult = truncateForSpan(pending.toolInput);
+              const outputResult = truncateForSpan(block.content);
+              client.createSpan({
+                traceId,
+                name: `tool:${pending.toolName}`,
+                input: {
+                  toolName: pending.toolName,
+                  toolInput: inputResult.value,
+                  ...(inputResult.truncated ? { truncated: true } : {}),
+                },
+                output: {
+                  result: outputResult.value,
+                  ...(outputResult.truncated ? { truncated: true } : {}),
+                },
+                metadata: {
+                  featureId: options.metadata?.featureId,
+                  turnIndex: pending.turnIndex,
+                  toolCallIndex: pending.toolCallIndex,
+                },
+                startTime: pending.startTime,
+                endTime,
+              });
+            }
+          }
+        }
+      }
     }
   } catch (err) {
     error = err as Error;

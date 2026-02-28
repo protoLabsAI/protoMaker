@@ -14,6 +14,7 @@ export function register(container: ServiceContainer): void {
     discordBotService,
     agentFactoryService,
     factStoreService,
+    trajectoryStoreService,
     leadHandoffService,
     antagonisticReviewService,
   } = container;
@@ -24,6 +25,7 @@ export function register(container: ServiceContainer): void {
   leadEngineerService.setDiscordBot(discordBotService);
   leadEngineerService.setAgentFactory(agentFactoryService);
   leadEngineerService.setFactStoreService(factStoreService);
+  leadEngineerService.setTrajectoryStoreService(trajectoryStoreService);
   leadEngineerService.setHandoffService(leadHandoffService);
   leadEngineerService.setAntagonisticReviewService(antagonisticReviewService);
 

@@ -47,11 +47,20 @@ export const ReviewerPerspectiveSchema = z.object({
 export type ReviewerPerspective = z.infer<typeof ReviewerPerspectiveSchema>;
 
 /**
+ * Token usage from a single LLM call
+ */
+export interface NodeTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
  * State interface for ava-review node
  */
 export interface AvaReviewState {
   prd: string;
   avaReview?: ReviewerPerspective;
+  tokenUsage?: NodeTokenUsage;
   smartModel?: BaseChatModel;
   fastModel?: BaseChatModel;
 }
@@ -69,7 +78,7 @@ export async function avaReviewNode(state: AvaReviewState): Promise<Partial<AvaR
   console.log(`[${nodeName}] Starting Ava's operational review`);
 
   try {
-    // Execute with model fallback
+    // Execute with model fallback, capturing both content and token usage
     const result = await executeWithFallback(
       { primary: smartModel, fallback: fastModel },
       async (model) => {
@@ -113,19 +122,34 @@ Be direct, practical, and focus on execution realities. Return ONLY the JSON obj
           },
         ]);
 
-        return response.content.toString();
+        const usageMeta = response.usage_metadata;
+        const fallbackUsage = (response.response_metadata as any)?.usage;
+        let tokenUsage: NodeTokenUsage | undefined;
+        if (usageMeta) {
+          tokenUsage = {
+            inputTokens: usageMeta.input_tokens,
+            outputTokens: usageMeta.output_tokens,
+          };
+        } else if (fallbackUsage) {
+          tokenUsage = {
+            inputTokens: fallbackUsage.prompt_tokens ?? 0,
+            outputTokens: fallbackUsage.completion_tokens ?? 0,
+          };
+        }
+
+        return { content: response.content.toString(), tokenUsage };
       },
       nodeName
     );
 
     // Parse and validate the LLM response
-    const avaReview = parseAndValidateReview(result, nodeName);
+    const avaReview = parseAndValidateReview(result.content, nodeName);
 
     console.log(
       `[${nodeName}] Review complete: ${avaReview.verdict} (${avaReview.sections.length} sections)`
     );
 
-    return { avaReview };
+    return { avaReview, tokenUsage: result.tokenUsage };
   } catch (error) {
     console.error(`[${nodeName}] Failed:`, error);
     throw error;
