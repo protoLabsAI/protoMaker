@@ -1138,3 +1138,9 @@ usageStats:
 - **Rejected:** Uniform 14-day retention (wastes storage on old test logs, might not keep builds long enough)
 - **Trade-offs:** Slightly higher complexity in CI configuration, but optimizes storage costs for artifact pattern
 - **Breaking if changed:** Shortening build retention to 7 days causes problems when needing to rebuild patch on 10-day-old code
+
+
+#### [Gotcha] GitHub Actions workflow deletions cannot be verified locally or unit tested—only verified by git history inspection and eventual actual CI execution on next trigger (2026-02-28)
+- **Situation:** This fix removes a workflow file; there is no way to validate the change before it runs in production (on next release attempt)
+- **Root cause:** Workflows are event-driven and GitHub-infrastructure-dependent; local simulation cannot reproduce GitHub-specific context, secrets, or webhook triggers
+- **How to avoid:** Cleanest code state vs maximum verification risk—breakage only discovered when next release runs

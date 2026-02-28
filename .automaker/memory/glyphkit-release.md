@@ -5,9 +5,9 @@ relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 9
-  referenced: 2
-  successfulFeatures: 2
+  loaded: 10
+  referenced: 3
+  successfulFeatures: 3
 ---
 # GlyphKit Storybook Release
 
