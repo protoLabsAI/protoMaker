@@ -141,8 +141,42 @@ export async function checkAndRecoverUncommittedWork(
 
     logger.info(`[PostAgentHook] Committed uncommitted work for feature ${feature.id}`);
 
+    // Step 3.5: Rebase onto origin/dev before push to prevent CONFLICTING PRs
+    let useForceWithLease = false;
+    try {
+      await execAsync('git fetch origin dev', {
+        cwd: worktreePath,
+        env: execEnv,
+        timeout: 30_000,
+      });
+      await execAsync('git rebase origin/dev', {
+        cwd: worktreePath,
+        env: execEnv,
+        timeout: 60_000,
+      });
+      useForceWithLease = true;
+    } catch (rebaseError) {
+      const msg = rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
+      if (msg.includes('conflict') || msg.includes('CONFLICT')) {
+        try {
+          await execAsync('git rebase --abort', { cwd: worktreePath, env: execEnv });
+        } catch {
+          // Best-effort abort
+        }
+        logger.warn(`[PostAgentHook] Rebase conflicts for ${feature.id}, pushing without rebase`);
+      } else {
+        logger.warn(`[PostAgentHook] Rebase failed for ${feature.id}: ${msg}`);
+        try {
+          await execAsync('git rebase --abort', { cwd: worktreePath, env: execEnv });
+        } catch {
+          // Best-effort abort — may not be in rebase state
+        }
+      }
+    }
+
     // Step 4: Push to remote with -u
-    await execAsync(`git push -u origin "${branchName}"`, {
+    const forceFlag = useForceWithLease ? ' --force-with-lease' : '';
+    await execAsync(`git push${forceFlag} -u origin "${branchName}"`, {
       cwd: worktreePath,
       env: execEnv,
     });
