@@ -93,6 +93,8 @@ import { usePipelineConfig } from '@/hooks/queries';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
+import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
+import { DEFAULT_MAX_CONCURRENCY } from '@protolabs-ai/types';
 
 // Stable empty array to avoid infinite loop in selector
 const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useWorktreeStore.getState>['getWorktrees']> =
@@ -514,6 +516,9 @@ export function BoardView() {
   const setMaxConcurrencyForWorktree = useWorktreeStore(
     (state) => state.setMaxConcurrencyForWorktree
   );
+  // Mutation to persist concurrency to the server immediately (bypasses the 1s debounce
+  // so that auto-mode restarts read the new value from settings)
+  const updateGlobalSettings = useUpdateGlobalSettings({ showSuccessToast: false });
 
   // Get the current branch from the selected worktree (not from store which may be stale)
   const currentWorktreeBranch = selectedWorktree?.branch ?? null;
@@ -1339,10 +1344,28 @@ export function BoardView() {
         onConcurrencyChange={(newMaxConcurrency) => {
           if (currentProject && selectedWorktree) {
             const branchName = selectedWorktree.isMain ? null : selectedWorktree.branch;
+            // Update local Zustand state immediately for responsive UI
             setMaxConcurrencyForWorktree(currentProject.id, branchName, newMaxConcurrency);
-            // Also update backend if auto mode is running
+            // Persist to server immediately so auto-mode restart reads the new value.
+            // The settings sync debounce (1s) would be too slow when auto-mode
+            // restarts below — this explicit call ensures the value is saved first.
+            const worktreeKey = `${currentProject.id}::${branchName ?? '__main__'}`;
+            const currentAutoMode = useWorktreeStore.getState().autoModeByWorktree;
+            const persistedAutoMode: Record<
+              string,
+              { maxConcurrency: number; branchName: string | null }
+            > = {};
+            for (const [key, value] of Object.entries(currentAutoMode)) {
+              persistedAutoMode[key] = {
+                maxConcurrency: value.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+                branchName: value.branchName,
+              };
+            }
+            // Ensure the current worktree entry has the new value
+            persistedAutoMode[worktreeKey] = { maxConcurrency: newMaxConcurrency, branchName };
+            updateGlobalSettings.mutate({ autoModeByWorktree: persistedAutoMode });
+            // If running, restart so the new limit takes effect
             if (autoMode.isRunning) {
-              // Restart auto mode with new concurrency (backend will handle this)
               autoMode.stop().then(() => {
                 autoMode.start().catch((error) => {
                   logger.error('[AutoMode] Failed to restart with new concurrency:', error);
