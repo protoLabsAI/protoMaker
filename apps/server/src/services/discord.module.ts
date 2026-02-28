@@ -19,7 +19,6 @@ export function register(container: ServiceContainer): void {
     settingsService,
     featureLoader,
     discordBotService,
-    roleRegistryService,
     avaGatewayService,
     escalationRouter,
     agentDiscordRouter,
@@ -29,7 +28,6 @@ export function register(container: ServiceContainer): void {
   } = container;
 
   // Discord Bot Service initialization
-  discordBotService.setRoleRegistry(roleRegistryService);
   void discordBotService.initialize();
 
   // Wire Discord bot service to Ava Gateway

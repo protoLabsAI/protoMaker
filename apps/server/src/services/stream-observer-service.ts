@@ -17,6 +17,15 @@ const LOOP_WINDOW = 8;
 const LOOP_THRESHOLD = 3;
 const STALL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+/**
+ * Tools excluded from loop detection.
+ *
+ * These are task-management meta-tools that legitimately repeat during normal
+ * agent execution (e.g. marking todos complete). Treating them as loops would
+ * produce false positives and abort agents that have finished their work.
+ */
+const LOOP_DETECTION_EXCLUDED_TOOLS = new Set(['TodoWrite', 'TodoRead']);
+
 export interface StreamObserverConfig {
   loopWindow?: number;
   loopThreshold?: number;
@@ -54,10 +63,15 @@ export class StreamObserver {
   onToolUse(toolName: string, toolInput: unknown): void {
     this.lastToolUseTime = Date.now();
 
-    // Hash first 200 chars of input for deduplication
+    // Skip task-management meta-tools — they legitimately repeat as the agent
+    // marks items complete and are never a real implementation loop.
+    if (LOOP_DETECTION_EXCLUDED_TOOLS.has(toolName)) return;
+
+    // Hash the full input string. Truncating to 200 chars caused false positives
+    // for tools like TodoWrite where the meaningful change (status update) appears
+    // beyond the truncation boundary, making consecutive calls look identical.
     const inputStr = typeof toolInput === 'string' ? toolInput : JSON.stringify(toolInput ?? '');
-    const inputSnippet = inputStr.slice(0, 200);
-    const hash = createHash('md5').update(inputSnippet).digest('hex').slice(0, 8);
+    const hash = createHash('md5').update(inputStr).digest('hex').slice(0, 8);
     const signature = `${toolName}:${hash}`;
 
     this.toolSignatures.push(signature);

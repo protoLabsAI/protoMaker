@@ -5,7 +5,7 @@ relevantTo: [observability]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 11
+  loaded: 13
   referenced: 2
   successfulFeatures: 2
 ---

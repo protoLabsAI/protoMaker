@@ -65,6 +65,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached --name-only (staging verification)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -96,6 +98,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached --name-only (staging verification)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git commit (execFile) fails
       mockExecFile.mockRejectedValueOnce(new Error('nothing to commit, working tree clean'));
 
@@ -113,6 +117,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached --name-only (staging verification)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -138,6 +144,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockRejectedValueOnce(new Error('prettier not found'));
       // git add -A -- ':!.automaker/' '.automaker/memory/' '.automaker/skills/'
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached --name-only (staging verification)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git commit succeeds
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -169,6 +177,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached --name-only (staging verification)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev (rebase step)
@@ -203,6 +213,8 @@ describe('worktree-recovery-service', () => {
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git add
       mockExec.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff --cached --name-only (staging verification)
+      mockExec.mockResolvedValueOnce({ stdout: 'src/index.ts\n', stderr: '' });
       // git commit (execFile)
       mockExecFile.mockResolvedValueOnce({ stdout: '', stderr: '' });
       // git fetch origin dev — fails (network error)

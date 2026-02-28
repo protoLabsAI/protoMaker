@@ -279,6 +279,7 @@ export type {
   // Ceremony types (CeremonySettings only — audit types from ceremony.ts)
   CeremonySettings,
   // Project integration types
+  ReactionAbility,
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
   GoogleIntegrationConfig,

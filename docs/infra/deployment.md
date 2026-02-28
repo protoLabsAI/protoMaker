@@ -303,6 +303,23 @@ sudo systemctl disable automaker
 | `DISCORD_CHANNEL_CODE_REVIEW`      | No       | Channel ID for `#code-review` — PR reviews and architecture discussions                          |
 | `DISCORD_CHANNEL_INFRA`            | No       | Channel ID for `#infra` — infrastructure alerts, health checks, Ava Gateway heartbeat monitoring |
 
+### Monitoring (Grafana)
+
+| Variable                | Default   | Description                                       |
+| ----------------------- | --------- | ------------------------------------------------- |
+| `GF_ADMIN_USER`         | `admin`   | Grafana admin username (override in staging/prod) |
+| `GF_ADMIN_PASSWORD`     | `admin`   | Grafana admin password (override in staging/prod) |
+| `DISCORD_WEBHOOK_INFRA` | _(empty)_ | Discord webhook URL for infrastructure alerts     |
+
+Set these in your `.env` file to override the defaults for staging/production deployments:
+
+```bash
+GF_ADMIN_USER=your-admin-username
+GF_ADMIN_PASSWORD=a-strong-password
+```
+
+> **Note:** Production deployments use Docker secrets for credential management. See `docker-compose.prod.yml` for the production pattern.
+
 ### Frontend Configuration
 
 | Variable             | Default     | Description                       |

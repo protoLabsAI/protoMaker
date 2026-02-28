@@ -123,10 +123,37 @@ export async function checkAndRecoverUncommittedWork(
     }
 
     // Step 2: Stage changed files (exclude .automaker/ except memory/ and skills/ if they exist).
-    await execAsync(buildGitAddCommand(worktreePath), {
+    const addCommand = buildGitAddCommand(worktreePath);
+    logger.debug(`[PostAgentHook] Running: ${addCommand}`);
+    await execAsync(addCommand, {
       cwd: worktreePath,
       env: execEnv,
     });
+
+    // Verify files were actually staged. If not, fall back to plain `git add .`
+    // (worktrees are isolated, so staging everything is safe).
+    const { stdout: stagedCheck } = await execAsync('git diff --cached --name-only', {
+      cwd: worktreePath,
+      env: execEnv,
+    });
+    if (!stagedCheck.trim()) {
+      logger.warn(
+        `[PostAgentHook] Pathspec-based git add staged nothing — falling back to 'git add .'`
+      );
+      await execAsync('git add .', { cwd: worktreePath, env: execEnv });
+
+      // Check again
+      const { stdout: retryCheck } = await execAsync('git diff --cached --name-only', {
+        cwd: worktreePath,
+        env: execEnv,
+      });
+      if (!retryCheck.trim()) {
+        result.error = `git add staged nothing even after fallback — files may be unchanged`;
+        logger.error(`[PostAgentHook] ${result.error}`);
+        return result;
+      }
+      logger.info(`[PostAgentHook] Fallback 'git add .' staged files successfully`);
+    }
 
     // Step 3: Commit with HUSKY=0 / --no-verify to bypass hooks
     const commitTitle = (feature.title || 'feature implementation')
@@ -134,10 +161,22 @@ export async function checkAndRecoverUncommittedWork(
       .substring(0, 72);
     const commitMessage = `refactor: ${commitTitle}`;
 
-    await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
-      cwd: worktreePath,
-      env: { ...execEnv, HUSKY: '0' },
-    });
+    try {
+      await execFileAsync('git', ['commit', '--no-verify', '-m', commitMessage], {
+        cwd: worktreePath,
+        env: { ...execEnv, HUSKY: '0' },
+      });
+    } catch (commitError: unknown) {
+      // Log the actual git stderr for debugging
+      const stderr =
+        commitError && typeof commitError === 'object' && 'stderr' in commitError
+          ? String((commitError as { stderr: unknown }).stderr)
+          : '';
+      if (stderr) {
+        logger.error(`[PostAgentHook] git commit stderr: ${stderr.trim()}`);
+      }
+      throw commitError;
+    }
 
     logger.info(`[PostAgentHook] Committed uncommitted work for feature ${feature.id}`);
 
@@ -215,8 +254,13 @@ export async function checkAndRecoverUncommittedWork(
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    result.error = `git workflow failed — uncommitted work in worktree at ${worktreePath}: ${errorMessage}`;
-    logger.error(`[PostAgentHook] Recovery failed for feature ${feature.id}: ${errorMessage}`);
+    const stderr =
+      error && typeof error === 'object' && 'stderr' in error
+        ? String((error as { stderr: unknown }).stderr).trim()
+        : '';
+    const fullError = stderr ? `${errorMessage} | stderr: ${stderr}` : errorMessage;
+    result.error = `git workflow failed — uncommitted work in worktree at ${worktreePath}: ${fullError}`;
+    logger.error(`[PostAgentHook] Recovery failed for feature ${feature.id}: ${fullError}`);
     return result;
   }
 }

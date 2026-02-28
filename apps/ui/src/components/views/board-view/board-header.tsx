@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Switch } from '@protolabs-ai/ui/atoms';
 import { Label } from '@protolabs-ai/ui/atoms';
-import { Wand2, GitBranch, ClipboardCheck, Users, Bot, User, DollarSign } from 'lucide-react';
+import { Wand2, GitBranch, ClipboardCheck, DollarSign } from 'lucide-react';
 import { ConflictBadge } from './components/conflict-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { UsagePopover } from '@/components/usage-popover';
@@ -9,7 +9,6 @@ import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useSetupStore } from '@/store/setup-store';
 import { useIsTablet } from '@/hooks/use-media-query';
-import { useUserIdentity } from '@/hooks/use-user-identity';
 import { AutoModeSettingsPopover } from './dialogs/auto-mode-settings-popover';
 import { WorktreeSettingsPopover } from './dialogs/worktree-settings-popover';
 import { PlanSettingsPopover } from './dialogs/plan-settings-popover';
@@ -19,20 +18,8 @@ import { BoardControls } from './board-controls';
 import { ViewToggle, type ViewMode } from './components';
 import { HeaderMobileMenu } from './header-mobile-menu';
 import { formatCostUsd } from '@/lib/format';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
 
 export type { ViewMode };
-
-type AssigneeFilter = 'all' | 'my-tasks' | 'agent-tasks';
 
 interface BoardHeaderProps {
   projectPath: string;
@@ -50,11 +37,6 @@ interface BoardHeaderProps {
   onSearchChange: (query: string) => void;
   isCreatingSpec: boolean;
   creatingSpecProjectPath?: string;
-  // Assignee filter props
-  assigneeFilter: AssigneeFilter;
-  onAssigneeFilterChange: (filter: AssigneeFilter) => void;
-  boardUsername: string;
-  onBoardUsernameChange: (username: string) => void;
   // Board controls props
   onShowBoardBackground: () => void;
   // View toggle props
@@ -81,8 +63,6 @@ export function BoardHeader({
   onSearchChange,
   isCreatingSpec,
   creatingSpecProjectPath,
-  assigneeFilter,
-  onAssigneeFilterChange,
   onShowBoardBackground,
   viewMode,
   onViewModeChange,
@@ -147,11 +127,6 @@ export function BoardHeader({
 
   const isTablet = useIsTablet();
 
-  // User identity for "My Tasks" filter
-  const { userIdentity, saveIdentity } = useUserIdentity();
-  const [showIdentityDialog, setShowIdentityDialog] = useState(false);
-  const [identityInput, setIdentityInput] = useState('');
-
   return (
     <div className="flex items-center justify-between gap-5 p-4 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="flex items-center gap-4">
@@ -162,56 +137,6 @@ export function BoardHeader({
           creatingSpecProjectPath={creatingSpecProjectPath}
           currentProjectPath={projectPath}
         />
-        {/* Assignee Filter */}
-        {isMounted && (
-          <div className="flex items-center h-8 rounded-md bg-secondary border border-border overflow-hidden">
-            <button
-              type="button"
-              onClick={() => onAssigneeFilterChange('all')}
-              className={`flex items-center gap-1 px-2 h-full text-xs font-medium transition-colors ${
-                assigneeFilter === 'all'
-                  ? 'bg-brand-500/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="All Features"
-            >
-              <Users className="w-3.5 h-3.5" />
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!userIdentity) {
-                  setShowIdentityDialog(true);
-                  return;
-                }
-                onAssigneeFilterChange('my-tasks');
-              }}
-              className={`flex items-center gap-1 px-2 h-full text-xs font-medium transition-colors border-l border-border ${
-                assigneeFilter === 'my-tasks'
-                  ? 'bg-brand-500/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title={userIdentity ? `My Tasks (${userIdentity})` : 'My Tasks'}
-            >
-              <User className="w-3.5 h-3.5" />
-              Mine
-            </button>
-            <button
-              type="button"
-              onClick={() => onAssigneeFilterChange('agent-tasks')}
-              className={`flex items-center gap-1 px-2 h-full text-xs font-medium transition-colors border-l border-border ${
-                assigneeFilter === 'agent-tasks'
-                  ? 'bg-brand-500/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              title="Agent Tasks"
-            >
-              <Bot className="w-3.5 h-3.5" />
-              Agent
-            </button>
-          </div>
-        )}
         {isMounted && <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />}
         <BoardControls isMounted={isMounted} onShowBoardBackground={onShowBoardBackground} />
       </div>
@@ -342,62 +267,6 @@ export function BoardHeader({
           </div>
         )}
       </div>
-
-      {/* User Identity Dialog */}
-      <Dialog open={showIdentityDialog} onOpenChange={setShowIdentityDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter Your Name</DialogTitle>
-            <DialogDescription>
-              Please enter your name to filter tasks assigned to you. This will be saved for future
-              use.
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            value={identityInput}
-            onChange={(e) => setIdentityInput(e.target.value)}
-            placeholder="Your name"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && identityInput.trim()) {
-                saveIdentity(identityInput.trim()).then((success) => {
-                  if (success) {
-                    setShowIdentityDialog(false);
-                    setIdentityInput('');
-                    onAssigneeFilterChange('my-tasks');
-                  }
-                });
-              }
-            }}
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowIdentityDialog(false);
-                setIdentityInput('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (identityInput.trim()) {
-                  saveIdentity(identityInput.trim()).then((success) => {
-                    if (success) {
-                      setShowIdentityDialog(false);
-                      setIdentityInput('');
-                      onAssigneeFilterChange('my-tasks');
-                    }
-                  });
-                }
-              }}
-              disabled={!identityInput.trim()}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

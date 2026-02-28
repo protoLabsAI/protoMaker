@@ -66,6 +66,7 @@ jobs:
       - name: Drain running agents
         run: |
           AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
+          echo "::add-mask::$AUTOMAKER_API_KEY"
           curl -sf -X POST http://localhost:3008/api/deploy/drain \
             -H "Content-Type: application/json" \
             -H "X-API-Key: $AUTOMAKER_API_KEY" \
@@ -111,6 +112,7 @@ jobs:
         id: smoke
         run: |
           export AUTOMAKER_API_KEY=$(grep -oP 'AUTOMAKER_API_KEY=\K.*' .env || echo "")
+          echo "::add-mask::$AUTOMAKER_API_KEY"
           if [ -f ./scripts/smoke-test.sh ]; then
             ./scripts/smoke-test.sh http://localhost:3008
           fi

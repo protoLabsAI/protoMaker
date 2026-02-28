@@ -5,7 +5,7 @@ relevantTo: [monitoring]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 10
+  loaded: 12
   referenced: 2
   successfulFeatures: 2
 ---
