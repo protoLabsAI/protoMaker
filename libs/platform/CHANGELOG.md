@@ -1,5 +1,31 @@
 # @protolabs-ai/platform
 
+## 0.12.0
+
+### Minor Changes
+
+- ### Features
+  - server-side agent output summary extraction and persistence (#1422)
+  - feature-gate PipelineOrchestrator behind settings.featureFlags.pipeline
+  - add GH_PAT validation step to auto-release.yml (#1419)
+  - deploy docs from dev branch on docs/\*\* changes
+
+  ### Bug Fixes
+  - use dynamic hostname in dev-server-service test (#1425)
+  - replace hardcoded Josh references with dynamic user identity (#1424)
+  - add pipeline field to FeatureFlags fallback in use-settings-sync
+  - add AUTOMAKER_ROOT validation wrapper and update install docs (#1421)
+  - sidebar cleanup, settings toggle, TypeScript CI typecheck (#1414)
+  - harden deploy-main.yml — drain, fatal smoke, rollback gate (#1418)
+
+  ### Refactors
+  - unify settings views — shared header, nav, components (#1420)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.12.0
+
 ## 0.11.0
 
 ### Minor Changes
