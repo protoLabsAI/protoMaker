@@ -4,18 +4,18 @@ protoLabs uses GitHub Actions for continuous integration and delivery. All workf
 
 ## Workflows Overview
 
-| Workflow                 | Trigger                           | Runner      | Purpose                               |
-| ------------------------ | --------------------------------- | ----------- | ------------------------------------- |
-| `checks.yml`             | PR, push to main, weekly          | self-hosted | Format, lint, audit                   |
-| `test.yml`               | PR, push to main                  | self-hosted | Unit tests                            |
-| `e2e-tests.yml`          | Push to main, manual              | self-hosted | End-to-end tests                      |
-| `pr-check.yml`           | PR, push to main                  | self-hosted | Build verification                    |
-| `deploy-staging.yml`     | Push to staging, manual           | self-hosted | Auto-deploy staging                   |
-| `auto-release.yml`       | staging→main PR merged            | self-hosted | Version bump + tag + GitHub Release   |
-| `build-electron.yml`     | `v*` tag push                     | matrix      | Multi-platform Electron builds        |
-| `changeset-release.yml`  | Push to main (commit-msg guarded) | self-hosted | Changeset version PR (non-auto paths) |
-| `generate-changelog.yml` | Release published, manual         | self-hosted | AI changelog generation               |
-| `linear-sync.yml`        | PR merged to main                 | self-hosted | Linear issue sync                     |
+| Workflow                 | Trigger                   | Runner      | Purpose                             |
+| ------------------------ | ------------------------- | ----------- | ----------------------------------- |
+| `checks.yml`             | PR, push to main, weekly  | self-hosted | Format, lint, audit                 |
+| `test.yml`               | PR, push to main          | self-hosted | Unit tests                          |
+| `e2e-tests.yml`          | Push to main, manual      | self-hosted | End-to-end tests                    |
+| `pr-check.yml`           | PR, push to main          | self-hosted | Build verification                  |
+| `deploy-staging.yml`     | Push to staging, manual   | self-hosted | Auto-deploy staging environment     |
+| `deploy-main.yml`        | Push to main, manual      | self-hosted | Auto-deploy production environment  |
+| `auto-release.yml`       | staging→main PR merged    | self-hosted | Version bump + tag + GitHub Release |
+| `build-electron.yml`     | `v*` tag push             | matrix      | Multi-platform Electron builds      |
+| `generate-changelog.yml` | Release published, manual | self-hosted | AI changelog generation             |
+| `linear-sync.yml`        | PR merged to main         | self-hosted | Linear issue sync                   |
 
 > **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
 
@@ -197,29 +197,25 @@ Automatically cuts a version bump and GitHub Release whenever a `staging→main`
 staging → main PR merged
     ↓
 auto-release.yml
+    ├── verify GH_PAT is set (warning if absent — Electron build chain won't fire)
     ├── clean stale changesets (find .changeset -name '*.md' ! -name 'README.md' -delete)
     ├── npm run release:prepare  (analyze commits since last tag → bump type)
     ├── npm run changeset:version  (bump @protolabs-ai/* in lockstep, write CHANGELOG)
     ├── git commit "chore: release vX.Y.Z" → pushed to main
-    └── git tag vX.Y.Z → pushed via GH_PAT
-                ↓
-        build-electron.yml fires (macOS, Linux, Windows in parallel)
-        → artifacts uploaded to GitHub Release
+    ├── git tag vX.Y.Z → pushed via GH_PAT
+    │               ↓
+    │       build-electron.yml fires (macOS, Linux, Windows in parallel)
+    │       → artifacts uploaded to GitHub Release
+    └── sync version bump back to staging and dev
+            ├── gh pr create --base staging --head main → auto-merge
+            └── gh pr create --base dev --head main → auto-merge
 ```
 
 ### Token Requirement
 
 `auto-release.yml` uses `secrets.GH_PAT` (falls back to `GITHUB_TOKEN`) for the checkout and tag push. A PAT is required because GitHub's loop-prevention policy blocks `GITHUB_TOKEN`-triggered pushes from firing downstream workflow runs — without it, the `v*` tag won't trigger `build-electron.yml`.
 
-### Guard on `changeset-release.yml`
-
-When `auto-release.yml` pushes the `chore: release vX.Y.Z` commit to main, `changeset-release.yml` would normally fire (it triggers on push to main). A commit-message guard prevents the double-release:
-
-```yaml
-if: >-
-  github.repository == 'proto-labs-ai/protoMaker' &&
-  !startsWith(github.event.head_commit.message, 'chore: release v')
-```
+The first step in the release job validates that `GH_PAT` is configured and emits a visible warning when it is not. The release proceeds regardless — the version bump and GitHub Release are created — but the Electron build chain requires a PAT.
 
 ## Electron Builds (`build-electron.yml`)
 
@@ -285,6 +281,35 @@ Auto-deploys to the staging server when code is pushed to the `staging` branch (
 10. **Notify Discord** — Posts deploy result to `#deployments` via webhook
 
 See [staging-deployment.md](./staging-deployment.md#automated-deploys) for full setup.
+
+## Deploy Production (`deploy-main.yml`)
+
+Auto-deploys to the production server (`/opt/protomaker`) when code is pushed to the `main` branch (i.e., when a `staging→main` PR merges). Includes agent draining, rollback support, and fatal smoke tests.
+
+### Deployment Pipeline
+
+1. **Pull** — `git fetch origin main && git reset --hard origin/main` at `/opt/protomaker`
+2. **Disk check** — Require at least 5GB free, prune dangling Docker images
+3. **Tag rollback** — Tag current working Docker images (`protomaker-{svc}:rollback`) for restore on failure
+4. **Drain agents** — POST to `/api/deploy/drain` to gracefully stop auto-mode and wait for agents to finish
+5. **Rebuild** — `docker compose build --no-cache`
+6. **Restart** — `docker compose down && docker compose up -d`
+7. **Verify** — Health check with 20 retries (60s total)
+8. **Smoke tests** — `./scripts/smoke-test.sh` — **fatal**: failure triggers rollback
+9. **Rollback** — On verify or smoke failure, restores rollback-tagged images
+10. **Cleanup** — Prune rollback tags and unused images
+11. **Notify Discord** — Posts deploy result to `#deployments` or `#alerts` via webhook
+
+### Runner
+
+Runs on `[self-hosted, protolabs]` — the production runner inside CT 104 on pve01.
+
+### Secrets
+
+| Secret                   | Purpose                                   |
+| ------------------------ | ----------------------------------------- |
+| `DISCORD_DEPLOY_WEBHOOK` | Post deploy notifications to #deployments |
+| `DISCORD_ALERTS_WEBHOOK` | Post failure alerts to #alerts            |
 
 ### Self-Hosted Runner
 
