@@ -3,6 +3,22 @@ import { createLogger } from '@protolabs-ai/utils';
 import { LangfuseClient } from './client.js';
 import type { CreateGenerationOptions } from './types.js';
 
+const TOOL_SPAN_MAX_BYTES = 2048;
+
+interface PendingToolCall {
+  toolName: string;
+  toolInput: unknown;
+  startTime: Date;
+  turnIndex: number;
+  toolCallIndex: number;
+}
+
+function truncateForSpan(value: unknown): { value: string; truncated?: true } {
+  const serialized = typeof value === 'string' ? value : (JSON.stringify(value) ?? '');
+  if (serialized.length <= TOOL_SPAN_MAX_BYTES) return { value: serialized };
+  return { value: serialized.slice(0, TOOL_SPAN_MAX_BYTES), truncated: true };
+}
+
 export const logger = createLogger('LangfuseMiddleware');
 
 /**
@@ -189,12 +205,65 @@ export async function* wrapProviderWithTracing<T>(
   // Collect all messages for usage tracking
   const messages: T[] = [];
   let error: Error | undefined;
+  let turnIndex = -1;
+  const pendingToolCalls = new Map<string, PendingToolCall>();
 
   try {
     // Yield all messages and collect them
     for await (const message of generator) {
       messages.push(message);
       yield message;
+
+      // Inspect for tool events to create per-tool-call spans
+      const msg = message as any;
+      if (msg?.type === 'assistant' && Array.isArray(msg?.message?.content)) {
+        turnIndex++;
+        let toolCallIndex = 0;
+        for (const block of msg.message.content) {
+          if (block?.type === 'tool_use' && block?.id) {
+            pendingToolCalls.set(block.id, {
+              toolName: block.name ?? 'unknown',
+              toolInput: block.input,
+              startTime: new Date(),
+              turnIndex,
+              toolCallIndex,
+            });
+            toolCallIndex++;
+          }
+        }
+      } else if (msg?.type === 'user' && Array.isArray(msg?.message?.content)) {
+        for (const block of msg.message.content) {
+          if (block?.type === 'tool_result' && block?.tool_use_id) {
+            const pending = pendingToolCalls.get(block.tool_use_id);
+            if (pending) {
+              pendingToolCalls.delete(block.tool_use_id);
+              const endTime = new Date();
+              const inputResult = truncateForSpan(pending.toolInput);
+              const outputResult = truncateForSpan(block.content);
+              client.createSpan({
+                traceId,
+                name: `tool:${pending.toolName}`,
+                input: {
+                  toolName: pending.toolName,
+                  toolInput: inputResult.value,
+                  ...(inputResult.truncated ? { truncated: true } : {}),
+                },
+                output: {
+                  result: outputResult.value,
+                  ...(outputResult.truncated ? { truncated: true } : {}),
+                },
+                metadata: {
+                  featureId: options.metadata?.featureId,
+                  turnIndex: pending.turnIndex,
+                  toolCallIndex: pending.toolCallIndex,
+                },
+                startTime: pending.startTime,
+                endTime,
+              });
+            }
+          }
+        }
+      }
     }
   } catch (err) {
     error = err as Error;

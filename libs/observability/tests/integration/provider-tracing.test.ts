@@ -316,6 +316,236 @@ describe('Provider Tracing Integration', () => {
     });
   });
 
+  describe('Per-Tool-Call Span Tracing', () => {
+    let enabledClient: LangfuseClient;
+    let enabledConfig: TracingConfig;
+
+    beforeEach(() => {
+      enabledClient = new LangfuseClient({ enabled: false });
+      vi.spyOn(enabledClient, 'isAvailable').mockReturnValue(true);
+      vi.spyOn(enabledClient, 'createTrace').mockReturnValue(null);
+      vi.spyOn(enabledClient, 'createGeneration').mockReturnValue(null);
+      vi.spyOn(enabledClient, 'updateTrace').mockReturnValue(undefined);
+      vi.spyOn(enabledClient, 'flush').mockResolvedValue(undefined);
+
+      enabledConfig = {
+        enabled: true,
+        client: enabledClient,
+      };
+    });
+
+    it('should create one span for a single tool call', async () => {
+      const createSpanSpy = vi.spyOn(enabledClient, 'createSpan').mockReturnValue(null);
+
+      const messages = [
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'tool_use', id: 'tool_1', name: 'Read', input: { path: '/foo.ts' } }],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'tool_result', tool_use_id: 'tool_1', content: 'file content' }],
+          },
+        },
+      ];
+
+      const generator = mockProviderGenerator(messages);
+      const traced = wrapProviderWithTracing(generator, enabledConfig, {
+        model: 'claude-sonnet-4-6',
+        metadata: { featureId: 'feat-123' },
+      });
+
+      for await (const _ of traced) {
+        // consume
+      }
+
+      expect(createSpanSpy).toHaveBeenCalledTimes(1);
+      const spanCall = createSpanSpy.mock.calls[0][0];
+      expect(spanCall.name).toBe('tool:Read');
+      expect(spanCall.input.toolName).toBe('Read');
+      expect(spanCall.input.toolInput).toContain('/foo.ts');
+      expect(spanCall.output.result).toBe('file content');
+      expect(spanCall.metadata.featureId).toBe('feat-123');
+      expect(spanCall.metadata.turnIndex).toBe(0);
+      expect(spanCall.metadata.toolCallIndex).toBe(0);
+      expect(spanCall.startTime).toBeInstanceOf(Date);
+      expect(spanCall.endTime).toBeInstanceOf(Date);
+    });
+
+    it('should track turnIndex correctly across multi-turn runs', async () => {
+      const createSpanSpy = vi.spyOn(enabledClient, 'createSpan').mockReturnValue(null);
+
+      const messages = [
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'tool_use', id: 'tool_1', name: 'Read', input: {} }],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'tool_result', tool_use_id: 'tool_1', content: 'result1' }],
+          },
+        },
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'tool_use', id: 'tool_2', name: 'Write', input: {} }],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'tool_result', tool_use_id: 'tool_2', content: 'result2' }],
+          },
+        },
+      ];
+
+      const generator = mockProviderGenerator(messages);
+      const traced = wrapProviderWithTracing(generator, enabledConfig, {
+        model: 'claude-sonnet-4-6',
+      });
+
+      for await (const _ of traced) {
+        // consume
+      }
+
+      expect(createSpanSpy).toHaveBeenCalledTimes(2);
+      expect(createSpanSpy.mock.calls[0][0].metadata.turnIndex).toBe(0);
+      expect(createSpanSpy.mock.calls[1][0].metadata.turnIndex).toBe(1);
+    });
+
+    it('should truncate tool input at 2KB and set truncated flag', async () => {
+      const createSpanSpy = vi.spyOn(enabledClient, 'createSpan').mockReturnValue(null);
+
+      const largeInput = 'x'.repeat(3000);
+      const messages = [
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'tool_use', id: 'tool_1', name: 'Bash', input: largeInput }],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'tool_result', tool_use_id: 'tool_1', content: 'output' }],
+          },
+        },
+      ];
+
+      const generator = mockProviderGenerator(messages);
+      const traced = wrapProviderWithTracing(generator, enabledConfig, {
+        model: 'claude-sonnet-4-6',
+      });
+
+      for await (const _ of traced) {
+        // consume
+      }
+
+      expect(createSpanSpy).toHaveBeenCalledTimes(1);
+      const spanCall = createSpanSpy.mock.calls[0][0];
+      expect(spanCall.input.toolInput.length).toBe(2048);
+      expect(spanCall.input.truncated).toBe(true);
+    });
+
+    it('should truncate tool output at 2KB and set truncated flag', async () => {
+      const createSpanSpy = vi.spyOn(enabledClient, 'createSpan').mockReturnValue(null);
+
+      const largeOutput = 'y'.repeat(3000);
+      const messages = [
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'tool_use', id: 'tool_1', name: 'Read', input: {} }],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'tool_result', tool_use_id: 'tool_1', content: largeOutput }],
+          },
+        },
+      ];
+
+      const generator = mockProviderGenerator(messages);
+      const traced = wrapProviderWithTracing(generator, enabledConfig, {
+        model: 'claude-sonnet-4-6',
+      });
+
+      for await (const _ of traced) {
+        // consume
+      }
+
+      expect(createSpanSpy).toHaveBeenCalledTimes(1);
+      const spanCall = createSpanSpy.mock.calls[0][0];
+      expect(spanCall.output.result.length).toBe(2048);
+      expect(spanCall.output.truncated).toBe(true);
+    });
+
+    it('should create no spans when tracing is disabled', async () => {
+      const createSpanSpy = vi.spyOn(enabledClient, 'createSpan').mockReturnValue(null);
+
+      const disabledConfig: TracingConfig = { enabled: false, client: enabledClient };
+
+      const messages = [
+        {
+          type: 'assistant',
+          message: {
+            content: [{ type: 'tool_use', id: 'tool_1', name: 'Read', input: {} }],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [{ type: 'tool_result', tool_use_id: 'tool_1', content: 'result' }],
+          },
+        },
+      ];
+
+      const generator = mockProviderGenerator(messages);
+      const traced = wrapProviderWithTracing(generator, disabledConfig, {
+        model: 'claude-sonnet-4-6',
+      });
+
+      for await (const _ of traced) {
+        // consume
+      }
+
+      expect(createSpanSpy).not.toHaveBeenCalled();
+    });
+
+    it('should silently ignore tool_result with no matching tool_use', async () => {
+      const createSpanSpy = vi.spyOn(enabledClient, 'createSpan').mockReturnValue(null);
+
+      const messages = [
+        {
+          type: 'user',
+          message: {
+            content: [
+              { type: 'tool_result', tool_use_id: 'nonexistent_id', content: 'orphan result' },
+            ],
+          },
+        },
+      ];
+
+      const generator = mockProviderGenerator(messages);
+      const traced = wrapProviderWithTracing(generator, enabledConfig, {
+        model: 'claude-sonnet-4-6',
+      });
+
+      for await (const _ of traced) {
+        // consume
+      }
+
+      expect(createSpanSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Usage Extraction', () => {
     it('should extract usage from Anthropic format', async () => {
       const messages = [
