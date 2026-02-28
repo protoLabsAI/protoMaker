@@ -1,7 +1,9 @@
 /**
  * Generate TanStack Router route tree for typecheck.
+ *
  * The Vite plugin normally handles this during dev/build,
  * but tsc --noEmit runs outside Vite so we generate it here.
+ * Called by the `typecheck` npm script before `tsc --noEmit`.
  */
 import { Generator, getConfig } from '@tanstack/router-generator';
 import { fileURLToPath } from 'url';
