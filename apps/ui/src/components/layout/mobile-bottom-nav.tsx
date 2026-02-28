@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { Grid, BarChart3, FileText, Settings } from 'lucide-react';
+import { Grid, BarChart3, FileText, Settings, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-media-query';
 
@@ -13,6 +13,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'board', icon: Grid, label: 'Board', path: '/board' },
   { id: 'analytics', icon: BarChart3, label: 'Analytics', path: '/analytics' },
+  { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/chat' },
   { id: 'notes', icon: FileText, label: 'Notes', path: '/notes' },
   { id: 'settings', icon: Settings, label: 'Settings', path: '/settings' },
 ];
