@@ -52,7 +52,7 @@ jobs:
         run: npm run typecheck
 
       - name: Run npm audit
-        run: npm audit --audit-level=critical
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Validate Dockerfile dependencies
         run: |
