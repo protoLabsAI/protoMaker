@@ -1,0 +1,51 @@
+name: Langfuse Prompt Sync CI
+
+on:
+  repository_dispatch:
+    types: [langfuse-prompt-update]
+
+permissions: read-all
+
+jobs:
+  validate:
+    runs-on: namespace-profile-protolabs-linux
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          rebuild-node-pty-path: 'apps/server'
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run server tests
+        run: npm run test:server
+        env:
+          NODE_ENV: test
+
+      - name: Notify Discord on success
+        if: success() && env.DISCORD_DEV_WEBHOOK != ''
+        run: |
+          PROMPT_NAME="${{ github.event.client_payload.name }}"
+          PROMPT_VERSION="${{ github.event.client_payload.version }}"
+          PROMPT_ACTION="${{ github.event.client_payload.action }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -sf -H "Content-Type: application/json" \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"Langfuse prompt validated: ${PROMPT_NAME}\",
+                \"url\": \"${RUN_URL}\",
+                \"description\": \"Prompt **${PROMPT_NAME}** (v${PROMPT_VERSION}, ${PROMPT_ACTION}) passed typecheck and server tests.\",
+                \"color\": 5763719
+              }]
+            }" \
+            "$DISCORD_DEV_WEBHOOK" || true
+        env:
+          DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
