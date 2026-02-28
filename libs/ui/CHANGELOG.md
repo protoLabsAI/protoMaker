@@ -1,5 +1,61 @@
 # @protolabs-ai/ui
 
+## 0.10.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - surface AUTOMAKER_ROOT missing error on new installs (PRO-335) (#1411)
+
+## 0.10.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - wire real implementations — tools, sitrep, config schema (#1409)
+  - rebase onto target branch before PR creation in non-Graphite path (#1407)
+  - delete changeset-release.yml — auto-release owns the release pipeline (#1406)
+
+## 0.10.0
+
+### Minor Changes
+
+- ### Features
+  - createFlowModel adapter — unified LangGraph flow model creation (#1401)
+
+## 0.9.0
+
+### Minor Changes
+
+- ### Features
+  - OpenAI-compatible provider settings tab with model selector integration (#1396)
+  - full-screen /chat route + Chat nav in MobileBottomNav and Sidebar (#1394)
+  - wire project context into ChatOverlayContent and ChatSidebar (#1390) (#1393)
+  - Groq Settings UI — provider tab, model selector, API key management (#1392)
+
+  ### Bug Fixes
+  - bump deploy-staging timeout to 60min, enable BuildKit (#1398)
+
+  ### Refactors
+  - extract buildGitAddCommand to shared utility + regression tests (#1389)
+
+## 0.8.0
+
+### Minor Changes
+
+- ### Features
+  - OpenAICompatibleProvider — native OpenAI SDK provider with CRUD settings API (#1384)
+  - Ava API client mixin and AvaSettingsPanel component (#1381)
+  - mobile responsive memory and context views (#1377)
+  - chat store and hook — project scoping (#1378)
+  - add Ava config CRUD endpoints and wire services into chat routes (#1376)
+
+  ### Bug Fixes
+  - guard git add pathspec against missing .automaker dirs (#1387)
+  - remove stale llm-providers COPY from Dockerfile [HOTFIX] (#1383)
+  - use workspace Prettier binary in worktrees (#1385)
+  - branch worktrees from origin/dev, not HEAD (#1380)
+
 ## 0.7.0
 
 ### Minor Changes
