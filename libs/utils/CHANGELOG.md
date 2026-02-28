@@ -1,5 +1,27 @@
 # @protolabs-ai/utils
 
+## 0.9.0
+
+### Minor Changes
+
+- ### Features
+  - OpenAI-compatible provider settings tab with model selector integration (#1396)
+  - full-screen /chat route + Chat nav in MobileBottomNav and Sidebar (#1394)
+  - wire project context into ChatOverlayContent and ChatSidebar (#1390) (#1393)
+  - Groq Settings UI — provider tab, model selector, API key management (#1392)
+
+  ### Bug Fixes
+  - bump deploy-staging timeout to 60min, enable BuildKit (#1398)
+
+  ### Refactors
+  - extract buildGitAddCommand to shared utility + regression tests (#1389)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.9.0
+  - @protolabs-ai/platform@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes
