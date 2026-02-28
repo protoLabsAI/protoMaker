@@ -117,6 +117,8 @@ export type EventType =
   | 'prd:review:completed'
   // Discord monitoring events
   | 'discord:message:detected'
+  // Discord reaction ability signal
+  | 'discord:reaction:signal'
   // Discord DM events
   | 'discord:dm:received'
   | 'discord:dm:sent'

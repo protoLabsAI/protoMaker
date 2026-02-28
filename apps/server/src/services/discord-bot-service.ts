@@ -26,11 +26,14 @@ import {
   ChannelType,
   type Attachment,
   type Message,
+  type MessageReaction,
+  type PartialMessageReaction,
   type TextChannel,
   type ThreadChannel,
   Events,
 } from 'discord.js';
 import { createLogger } from '@protolabs-ai/utils';
+import type { ReactionAbility } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -280,7 +283,7 @@ export class DiscordBotService {
           GatewayIntentBits.GuildMessageReactions,
           GatewayIntentBits.DirectMessages,
         ],
-        partials: [Partials.Channel],
+        partials: [Partials.Channel, Partials.Message, Partials.Reaction],
       });
 
       // Set up event handlers
@@ -295,6 +298,7 @@ export class DiscordBotService {
       this.client.on(Events.MessageReactionAdd, (reaction, user) => {
         if (user.bot) return;
         void this.handleReaction(reaction.message.id, reaction.emoji.name || '', user.id, true);
+        void this.handleReactionAbility(reaction, user.id, user.username ?? user.id);
       });
 
       // Listen for PM agent review events
@@ -1530,6 +1534,96 @@ export class DiscordBotService {
     } catch (error) {
       logger.error(`Failed to create thread in channel ${channelId}:`, error);
       return null;
+    }
+  }
+
+  /**
+   * Handle reaction abilities — emoji reactions mapped to signal intents.
+   * This is additive to the existing handleReaction gate/approval logic and does not
+   * interfere with gate resolution or approval flows.
+   */
+  private async handleReactionAbility(
+    reaction: MessageReaction | PartialMessageReaction,
+    userId: string,
+    username: string
+  ): Promise<void> {
+    // Fetch full reaction if partial
+    const fullReaction = reaction.partial ? await reaction.fetch() : reaction;
+    const emojiName = fullReaction.emoji.name || '';
+    if (!emojiName) return;
+
+    const channelId = fullReaction.message.channelId;
+
+    // Load discord config to get reaction abilities
+    const config = await this.getConfig();
+    if (!config?.reactionAbilities?.length) return;
+
+    // Find enabled ability matching this emoji
+    const ability = config.reactionAbilities.find((a) => a.enabled && a.emoji === emojiName);
+    if (!ability) return;
+
+    // Check channel restriction (empty = all channels)
+    if (ability.channels.length > 0 && !ability.channels.includes(channelId)) {
+      logger.debug(`Reaction ability ${ability.id}: channel ${channelId} not in allowed channels`);
+      return;
+    }
+
+    // Check user trust
+    const trusted = await this.isUserTrustedForAbility(fullReaction, userId, ability);
+    if (!trusted) {
+      logger.debug(`Reaction ability ${ability.id}: user ${userId} is not trusted`);
+      return;
+    }
+
+    // Fetch full message content if partial
+    const message = fullReaction.message.partial
+      ? await fullReaction.message.fetch()
+      : fullReaction.message;
+
+    const messageContent = message.content || '';
+
+    logger.info(
+      `Reaction ability triggered: ${ability.label} (${ability.emoji}) by ${username} in channel ${channelId}`
+    );
+
+    this.events.emit('discord:reaction:signal', {
+      abilityId: ability.id,
+      emoji: emojiName,
+      messageContent,
+      channelId,
+      userId,
+      username,
+      messageId: message.id,
+      intent: ability.intent,
+      autoFeature: ability.autoFeature,
+    });
+  }
+
+  /**
+   * Check if a user is trusted to trigger a reaction ability.
+   * User is trusted if their ID is in allowedUsers, or if they have one of the allowedRoles.
+   * If allowedRoles is empty, any user is trusted (no role restriction).
+   */
+  private async isUserTrustedForAbility(
+    reaction: MessageReaction,
+    userId: string,
+    ability: ReactionAbility
+  ): Promise<boolean> {
+    // Explicitly allowed user
+    if (ability.allowedUsers.includes(userId)) return true;
+
+    // No role restrictions means any user is trusted
+    if (ability.allowedRoles.length === 0) return true;
+
+    // Check guild member roles
+    try {
+      const guild = reaction.message.guild;
+      if (!guild) return false;
+      const member = await guild.members.fetch(userId);
+      return ability.allowedRoles.some((roleId) => member.roles.cache.has(roleId));
+    } catch (error) {
+      logger.warn(`Failed to fetch guild member ${userId} for reaction ability role check:`, error);
+      return false;
     }
   }
 

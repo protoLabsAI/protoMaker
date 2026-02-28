@@ -1,5 +1,34 @@
 # @protolabs-ai/flows
 
+## 0.14.0
+
+### Minor Changes
+
+- ### Features
+  - persona management system UI and mutations (#1443)
+  - Add ReactionAbility types, storage, and API endpoints (#1438)
+
+  ### Bug Fixes
+  - exclude TodoWrite from loop detection, hash full input
+  - update worktree-recovery tests for staging verification
+  - add staging verification and fallback to worktree recovery
+  - mask API keys in CI deploy workflows (#1440)
+  - replace hardcoded Grafana credentials with env vars (#1436)
+
+  ### Refactors
+  - AddFeatureDialog Cleanup (#1446)
+  - Assignee Badge Removal (#1441)
+  - remove All/Mine/Agent assignee filter (#1439)
+  - Remove Discord slash commands (#1437)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.14.0
+  - @protolabs-ai/utils@0.14.0
+  - @protolabs-ai/prompts@0.14.0
+  - @protolabs-ai/observability@0.14.0
+
 ## 0.13.0
 
 ### Minor Changes
