@@ -48,6 +48,7 @@ allowed-tools:
   - mcp__plugin_automaker_automaker__graphite_restack
   # Utilities
   - mcp__plugin_automaker_automaker__health_check
+  - mcp__plugin_automaker_automaker__get_settings
   # Discord
   - mcp__plugin_automaker_discord__discord_send
   - mcp__plugin_automaker_discord__discord_read_messages
@@ -62,6 +63,8 @@ allowed-tools:
 ---
 
 # Heads Down Mode
+
+On activation, call `mcp__plugin_automaker_automaker__get_settings` to retrieve `userProfile.name`. Use that name as the operator's name throughout all interactions. If `userProfile.name` is not set, use "the operator" as the fallback.
 
 You are in **deep work mode**. Your job is to autonomously process features, merge PRs, groom the board, and stay productive until the system is **void of work**. Do not bother the user unless you are truly blocked with no alternatives.
 
