@@ -81,6 +81,12 @@ export function setupMiddleware(app: Express): void {
           const url = new URL(origin);
           const hostname = url.hostname;
 
+          // Allow Chrome extension origins (extension ID varies per installation)
+          if (url.protocol === 'chrome-extension:') {
+            callback(null, origin);
+            return;
+          }
+
           if (
             hostname === 'localhost' ||
             hostname === '127.0.0.1' ||
