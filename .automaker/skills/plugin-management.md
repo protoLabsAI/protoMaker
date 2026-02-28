@@ -100,3 +100,7 @@ grep "tool_name" packages/mcp-server/dist/index.js
 - `ENABLE_TOOL_SEARCH` — tool search mode (default: `auto:10`)
 
 This is separate from the project root `.env` which the server uses.
+
+## Temporary Skills
+
+Some commands are temporary (onboarding, migration, one-time setup). These use `temporary: true` in their YAML frontmatter and are tracked in `packages/mcp-server/plugins/automaker/TEMP-SKILLS.md`. Check that file during cleanup passes and remove skills whose removal condition has been met.
