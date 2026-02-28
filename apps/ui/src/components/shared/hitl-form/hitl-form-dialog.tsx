@@ -36,16 +36,21 @@ export function HITLFormDialog() {
   const submitRef = useRef<(() => void) | null>(null);
   const [additionalContext, setAdditionalContext] = useState('');
 
-  const isSingleStep = activeForm && activeForm.steps.length === 1;
+  const isSingleStep = activeForm?.steps && activeForm.steps.length === 1;
 
-  // On mount, fetch pending forms from server and queue any not already in the store
+  // On mount, fetch pending forms from server and queue any not already in the store.
+  // The list endpoint returns summaries (no `steps`), so we must fetch full form data
+  // before adding to the store.
   useEffect(() => {
     const api = getHttpApiClient();
-    api.hitlForms.list().then((result) => {
+    api.hitlForms.list().then(async (result) => {
       if (!result.success || !result.forms) return;
       const { addPendingForm, openForm } = useHITLFormStore.getState();
-      for (const form of result.forms) {
-        addPendingForm(form);
+      for (const summary of result.forms) {
+        const full = await api.hitlForms.get(summary.id);
+        if (full.success && full.form) {
+          addPendingForm(full.form);
+        }
       }
       // Auto-open first pending form if no dialog is currently open
       const state = useHITLFormStore.getState();
@@ -166,7 +171,7 @@ export function HITLFormDialog() {
     [handleDefer]
   );
 
-  if (!activeForm) return null;
+  if (!activeForm || !activeForm.steps) return null;
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
