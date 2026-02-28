@@ -111,24 +111,24 @@ Application chrome (toolbars, panels, sidebars, inspectors, settings, modals) mu
 
 Never use raw Tailwind color classes. Always use semantic tokens:
 
-| Never                                       | Always                                 |
-| ------------------------------------------- | -------------------------------------- |
-| `bg-white`, `bg-gray-900`                   | `bg-background`                        |
-| `bg-white` (card surface)                   | `bg-card`                              |
-| `bg-gray-50`, `bg-gray-800`                 | `bg-muted`                             |
-| `bg-gray-100`, `bg-gray-700`                | `bg-accent` or `bg-secondary`          |
-| `hover:bg-gray-100`                         | `hover:bg-accent`                      |
-| `bg-blue-500`, `bg-indigo-600`              | `bg-primary`                           |
-| `bg-red-500`                                | `bg-destructive`                       |
-| `text-black`, `text-white`, `text-gray-900` | `text-foreground`                      |
-| `text-gray-600`, `text-gray-700`            | `text-foreground-secondary`            |
-| `text-gray-400`, `text-gray-500`            | `text-muted-foreground`                |
-| `text-blue-600`                             | `text-primary`                         |
-| `text-red-500`                              | `text-destructive`                     |
-| `border-gray-200`, `border-gray-700`        | `border-border`                        |
-| `border-gray-300`                           | `border-input`                         |
-| `ring-blue-500`                             | `ring-ring`                            |
-| Inline `style={{ background: '#...' }}`     | Tailwind token class or `var(--token)` |
+| Never                                               | Always                                 |
+| --------------------------------------------------- | -------------------------------------- |
+| `bg-white`, `bg-gray-900`                           | `bg-background`                        |
+| `bg-white` (card surface)                           | `bg-card`                              |
+| `bg-gray-50`, `bg-gray-800`                         | `bg-muted`                             |
+| `bg-gray-100`, `bg-gray-700`                        | `bg-accent` or `bg-secondary`          |
+| `hover:bg-gray-100`                                 | `hover:bg-accent`                      |
+| `bg-blue-500`, `bg-indigo-600`                      | `bg-primary`                           |
+| `bg-red-500`                                        | `bg-destructive`                       |
+| `text-black`, `text-white`, `text-gray-900`         | `text-foreground`                      |
+| `text-gray-600`, `text-gray-700`                    | `text-foreground-secondary`            |
+| `text-gray-400`, `text-gray-500`                    | `text-muted-foreground`                |
+| `text-blue-600`                                     | `text-primary`                         |
+| `text-red-500`                                      | `text-destructive`                     |
+| `border-gray-200`, `border-gray-700`                | `border-border`                        |
+| `border-gray-300`                                   | `border-input`                         |
+| `ring-blue-500`                                     | `ring-ring`                            |
+| <span v-pre>`style={{ background: '#...' }}`</span> | Tailwind token class or `var(--token)` |
 
 ### Status colors
 
