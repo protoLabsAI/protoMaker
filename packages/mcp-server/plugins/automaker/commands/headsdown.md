@@ -536,6 +536,7 @@ AskUserQuestion({
 - **Don't break things** - Run tests before moving on
 - **Don't forget context** - Update docs as you go
 - **Don't hoard changes** - Commit frequently
+- **Don't leave memory drift** - Always commit `.automaker/memory/*.md` and `.automaker/context/` changes alongside your code commits. These are git-tracked files, not runtime data. Check `git status` for unstaged `.automaker/memory/` changes before switching branches or ending a session.
 - **Don't ignore failures** - Address them before moving on
 - **Don't present menus** - Decide and act autonomously
 - **Don't duplicate crew work** - Check if PR Maintainer/Board Janitor already handled it

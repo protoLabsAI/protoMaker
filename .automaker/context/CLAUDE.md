@@ -170,7 +170,7 @@ This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark(
 **WorktreeRecoveryService** runs after every agent exit. If you leave uncommitted changes in the worktree, it will:
 
 1. Format changed files with `npx prettier --ignore-path /dev/null --write <files>`
-2. Stage (excluding `.automaker/`)
+2. Stage (excluding `.automaker/` runtime files — but NOT memory/context, those are your responsibility)
 3. Commit with `HUSKY=0`
 4. Push and create a PR
 

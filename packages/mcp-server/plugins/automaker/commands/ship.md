@@ -51,9 +51,11 @@ If not, infer the message from the diff.
 
 Stage files by name — never `git add -A`. Exclude:
 
-- `.automaker/` (runtime files)
+- `.automaker/features/`, `.automaker/settings.json`, `.automaker/analysis.json` (runtime files)
 - `.env` / credentials
 - Any file matching `*.log`, `*.db`
+
+**Always include** `.automaker/memory/*.md` if changed — these are git-tracked agent learning files that must not be left as unstaged drift.
 
 ```bash
 git add <specific files>
@@ -148,7 +150,7 @@ Confirm what shipped:
 ## What NOT to do
 
 - Don't run `git add -A` or `git add .`
-- Don't commit `.automaker/`, `.env`, or credential files
+- Don't commit `.automaker/features/`, `.automaker/settings.json`, `.env`, or credential files (but DO commit `.automaker/memory/` and `.automaker/context/`)
 - Don't force-push to main
 - Don't skip hooks (`--no-verify`)
 - Don't create a PR if there are unstaged conflicts
