@@ -412,7 +412,7 @@ export class PMAuthorityAgent {
           this.hitlFormService
         ) {
           const { schema, uiSchema } = this.convertQuestionsToSchema(triage.clarifyingQuestions);
-          const form = this.hitlFormService.create({
+          const form = await this.hitlFormService.create({
             title: `Clarifying Questions: ${feature.title}`,
             description: 'The PM Agent needs a few details before researching your idea.',
             steps: [{ schema, uiSchema, title: 'Details', description: triage.reasoning }],
@@ -422,8 +422,14 @@ export class PMAuthorityAgent {
             ttlSeconds: 600,
           });
 
-          logger.info(`HITL form created for idea clarification: ${form.id}`);
-          const response = await this.waitForFormResponse(form.id, 600_000);
+          if (!form) {
+            logger.debug(
+              `HITL form creation blocked (featureFlags.pipeline=false), skipping clarification for ${featureId}`
+            );
+          } else {
+            logger.info(`HITL form created for idea clarification: ${form.id}`);
+          }
+          const response = form ? await this.waitForFormResponse(form.id, 600_000) : null;
 
           if (response?.[0]) {
             clarificationContext = Object.entries(response[0])

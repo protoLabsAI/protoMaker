@@ -1,19 +1,338 @@
 /**
- * CeremonyService — thin orchestrator that composes all ceremony sub-classes
+ * CeremonyService — event-driven orchestrator for LangGraph ceremony flows.
  *
- * Inherits from ProjectRetroCeremony, which composes:
- *   ProjectRetroCeremony → RetroCeremony → StandupCeremony → CeremonyBase
+ * Replaces the ceremony class hierarchy (CeremonyBase → StandupCeremony →
+ * RetroCeremony → ProjectRetroCeremony) with a flat class that subscribes to
+ * the same events and invokes the appropriate LangGraph flow factory functions.
  *
- * The full ceremony logic lives in the sub-classes:
- *   ceremony-base.ts         — shared state, event subscription, utility methods
- *   standup-ceremony.ts      — epic kickoff, milestone standup, epic delivery
- *   retro-ceremony.ts        — milestone retro, content briefs, review ceremonies
- *   project-retro-ceremony.ts — project retro, reflection loop, post-project docs
+ * Public interface is identical to the old hierarchy so consumers
+ * (routes, services.ts, engine routes, integration-service) require no changes.
  */
 
-export { ProjectRetroCeremony as CeremonyService } from './project-retro-ceremony.js';
+import { createLogger } from '@protolabs-ai/utils';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabs-ai/flows';
+import type { EventEmitter } from '../lib/events.js';
+import type { SettingsService } from './settings-service.js';
+import type { FeatureLoader } from './feature-loader.js';
+import type { ProjectService } from './project-service.js';
+import type { MetricsService } from './metrics-service.js';
+import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 
-import { ProjectRetroCeremony } from './project-retro-ceremony.js';
+const logger = createLogger('CeremonyService');
+
+// ---------------------------------------------------------------------------
+// Minimal event payload shapes (mirrors the original ceremony-base.ts types)
+// ---------------------------------------------------------------------------
+
+interface MilestoneEventPayload {
+  projectPath: string;
+  projectTitle: string;
+  projectSlug: string;
+  milestoneTitle: string;
+  milestoneNumber: number;
+  featureCount?: number;
+  totalCostUsd?: number;
+  failureCount?: number;
+  prUrls?: string[];
+  featureSummaries?: Array<{
+    id: string;
+    title: string;
+    status: string;
+    costUsd: number;
+    prUrl?: string;
+    failureCount?: number;
+  }>;
+}
+
+interface ProjectCompletedPayload {
+  projectPath: string;
+  projectTitle: string;
+  projectSlug: string;
+  totalMilestones: number;
+  totalFeatures: number;
+  totalCostUsd: number;
+  failureCount: number;
+  milestoneSummaries: Array<{
+    milestoneTitle: string;
+    featureCount: number;
+    costUsd: number;
+  }>;
+}
+
+// ---------------------------------------------------------------------------
+// EventEmitter-based discordBot adapter
+// Satisfies StandupDiscordBot / RetroDiscordBot structural interfaces without
+// a hard dependency on DiscordBotService.
+// ---------------------------------------------------------------------------
+
+function createDiscordAdapter(emitter: EventEmitter) {
+  return {
+    sendMessage: async (channelId: string, content: string): Promise<{ id: string }> => {
+      emitter.emit('integration:discord', {
+        channelId,
+        content,
+        action: 'send_message',
+      });
+      return { id: '' };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CeremonyService
+// ---------------------------------------------------------------------------
+
+export class CeremonyService {
+  private emitter: EventEmitter | null = null;
+  private settingsService: SettingsService | null = null;
+  private featureLoader: FeatureLoader | null = null;
+  private projectService: ProjectService | null = null;
+  private auditLog: CeremonyAuditLogService | null = null;
+  private unsubscribe: (() => void) | null = null;
+
+  // Observability counters (same shape as old CeremonyBase.ceremonyCounts)
+  private ceremonyCounts = {
+    epicKickoff: 0,
+    standup: 0,
+    milestoneRetro: 0,
+    epicDelivery: 0,
+    contentBrief: 0,
+    projectRetro: 0,
+    postProjectDocs: 0,
+    discordPostFailures: 0,
+  };
+  private lastCeremonyAt: string | null = null;
+
+  // Reflection observability state
+  private lastReflection: {
+    projectTitle: string;
+    projectSlug: string;
+    completedAt: string;
+  } | null = null;
+  private reflectionCount = 0;
+  private activeReflection: string | null = null;
+
+  // Dedup guard for project retros
+  private processedProjects = new Set<string>();
+
+  initialize(
+    emitter: EventEmitter,
+    settingsService: SettingsService,
+    featureLoader: FeatureLoader,
+    projectService: ProjectService,
+    _metricsService: MetricsService
+  ): void {
+    this.emitter = emitter;
+    this.settingsService = settingsService;
+    this.featureLoader = featureLoader;
+    this.projectService = projectService;
+
+    this.unsubscribe = emitter.subscribe((type, payload) => {
+      if (type === 'milestone:started') {
+        this.handleMilestoneStarted(payload as MilestoneEventPayload).catch((err) =>
+          logger.warn('Standup flow error:', err)
+        );
+      } else if (type === 'milestone:completed') {
+        this.handleMilestoneCompleted(payload as MilestoneEventPayload).catch((err) =>
+          logger.warn('Retro flow error:', err)
+        );
+      } else if (type === 'project:completed') {
+        this.handleProjectCompleted(payload as ProjectCompletedPayload).catch((err) =>
+          logger.warn('Project retro flow error:', err)
+        );
+      }
+    });
+
+    logger.info('Ceremony service initialized (LangGraph flows)');
+  }
+
+  setAuditLog(auditLog: CeremonyAuditLogService): void {
+    this.auditLog = auditLog;
+  }
+
+  destroy(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    this.emitter = null;
+    this.settingsService = null;
+    this.featureLoader = null;
+    this.projectService = null;
+  }
+
+  getStatus(): {
+    counts: Record<string, number>;
+    total: number;
+    lastCeremonyAt: string | null;
+  } {
+    const total = Object.values(this.ceremonyCounts).reduce((a, b) => a + b, 0);
+    return { counts: { ...this.ceremonyCounts }, total, lastCeremonyAt: this.lastCeremonyAt };
+  }
+
+  getReflectionStatus(): {
+    active: boolean;
+    activeProject: string | null;
+    reflectionCount: number;
+    lastReflection: { projectTitle: string; projectSlug: string; completedAt: string } | null;
+  } {
+    return {
+      active: this.activeReflection !== null,
+      activeProject: this.activeReflection,
+      reflectionCount: this.reflectionCount,
+      lastReflection: this.lastReflection,
+    };
+  }
+
+  clearProcessedProject(projectPath: string, projectSlug: string): void {
+    const key = `${projectPath}:${projectSlug}`;
+    this.processedProjects.delete(key);
+    logger.info(`Cleared processed project: ${projectSlug}`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private event handlers — delegate to LangGraph flows
+  // ---------------------------------------------------------------------------
+
+  private async handleMilestoneStarted(payload: MilestoneEventPayload): Promise<void> {
+    if (!this.projectService || !this.settingsService || !this.emitter) return;
+
+    const { projectPath, projectSlug, projectTitle, milestoneTitle, milestoneNumber } = payload;
+    const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+    const ceremonySettings = projectSettings.ceremonySettings;
+    if (!ceremonySettings?.enabled) {
+      logger.debug('Ceremonies disabled, skipping standup');
+      return;
+    }
+    const discordChannelId = ceremonySettings.discordChannelId;
+    if (!discordChannelId) {
+      logger.debug('No Discord channel configured, skipping standup');
+      return;
+    }
+
+    const milestoneSlug = milestoneTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    logger.info(`Running standup flow for milestone "${milestoneTitle}" in ${projectTitle}`);
+    this.ceremonyCounts.standup++;
+    this.lastCeremonyAt = new Date().toISOString();
+
+    try {
+      const model = new ChatAnthropic({ model: 'claude-sonnet-4-6' });
+      const flow = createStandupFlow({
+        projectService: this.projectService,
+        model,
+        discordBot: createDiscordAdapter(this.emitter),
+        projectPath,
+        projectSlug,
+        milestoneSlug,
+        discordChannelId,
+      });
+      await flow.invoke({});
+    } catch (err) {
+      this.ceremonyCounts.discordPostFailures++;
+      logger.warn(`Standup flow failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private async handleMilestoneCompleted(payload: MilestoneEventPayload): Promise<void> {
+    if (!this.featureLoader || !this.settingsService || !this.emitter) return;
+
+    const { projectPath, projectSlug, projectTitle, milestoneTitle, milestoneNumber } = payload;
+    const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+    const ceremonySettings = projectSettings.ceremonySettings;
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableMilestoneUpdates) {
+      logger.debug('Milestone retros disabled, skipping');
+      return;
+    }
+    const discordChannelId = ceremonySettings.discordChannelId;
+    if (!discordChannelId) {
+      logger.debug('No Discord channel configured, skipping retro');
+      return;
+    }
+
+    const milestoneSlug = milestoneTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    logger.info(`Running retro flow for milestone "${milestoneTitle}" in ${projectTitle}`);
+    this.ceremonyCounts.milestoneRetro++;
+    this.lastCeremonyAt = new Date().toISOString();
+
+    try {
+      const model = new ChatAnthropic({ model: 'claude-sonnet-4-6' });
+      const flow = createRetroFlow({
+        featureLoader: this.featureLoader,
+        model,
+        discordBot: createDiscordAdapter(this.emitter),
+        projectPath,
+        projectSlug,
+        milestoneSlug,
+        milestoneTitle,
+        milestoneNumber,
+        projectTitle,
+        discordChannelId,
+      });
+      await flow.invoke({});
+    } catch (err) {
+      this.ceremonyCounts.discordPostFailures++;
+      logger.warn(`Retro flow failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private async handleProjectCompleted(payload: ProjectCompletedPayload): Promise<void> {
+    if (!this.featureLoader || !this.settingsService || !this.emitter) return;
+
+    const { projectPath, projectSlug, projectTitle } = payload;
+    const dedupeKey = `${projectPath}:${projectSlug}`;
+    if (this.processedProjects.has(dedupeKey)) {
+      logger.debug(`Project retro already processed for ${projectSlug}, skipping`);
+      return;
+    }
+
+    const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+    const ceremonySettings = projectSettings.ceremonySettings;
+    if (!ceremonySettings?.enabled || !ceremonySettings?.enableProjectRetros) {
+      logger.debug('Project retros disabled, skipping');
+      return;
+    }
+    const discordChannelId = ceremonySettings.discordChannelId;
+    if (!discordChannelId) {
+      logger.debug('No Discord channel configured, skipping project retro');
+      return;
+    }
+
+    this.processedProjects.add(dedupeKey);
+    this.activeReflection = projectTitle;
+    this.ceremonyCounts.projectRetro++;
+    this.lastCeremonyAt = new Date().toISOString();
+    logger.info(`Running project retro flow for "${projectTitle}"`);
+
+    try {
+      const model = new ChatAnthropic({ model: 'claude-sonnet-4-6' });
+      const flow = createProjectRetroFlow({
+        featureLoader: this.featureLoader,
+        model,
+        discordBot: createDiscordAdapter(this.emitter),
+        projectPath,
+        projectSlug,
+        projectTitle,
+        totalMilestones: payload.totalMilestones,
+        totalFeatures: payload.totalFeatures,
+        discordChannelId,
+      });
+      await flow.invoke({});
+
+      this.reflectionCount++;
+      this.lastReflection = {
+        projectTitle,
+        projectSlug,
+        completedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      this.ceremonyCounts.discordPostFailures++;
+      logger.warn(`Project retro flow failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      this.activeReflection = null;
+    }
+  }
+}
 
 // Singleton instance (matches original export shape)
-export const ceremonyService = new ProjectRetroCeremony();
+export const ceremonyService = new CeremonyService();

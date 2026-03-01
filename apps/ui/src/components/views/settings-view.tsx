@@ -41,6 +41,7 @@ import { ProfileSection } from './settings-view/profile';
 import { PersonasSection } from './settings-view/personas';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
 import { MaintenanceSection } from './settings-view/maintenance';
+import { AutomationsSection } from './settings-view/automations/automations-section';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import { SettingsScopeToggle } from './settings-view/components/settings-scope-toggle';
 import type { Theme } from './settings-view/shared/types';
@@ -187,6 +188,8 @@ export function SettingsView() {
         return <WorkflowSettingsPanel />;
       case 'maintenance':
         return <MaintenanceSection />;
+      case 'automations':
+        return <AutomationsSection />;
       case 'developer':
         return <DeveloperSection />;
       default:

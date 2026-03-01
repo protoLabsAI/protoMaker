@@ -1,12 +1,18 @@
 /**
- * Maintenance Tasks - Preset scheduled tasks for system health
+ * Maintenance Tasks - Built-in scheduled task handlers
  *
- * Registers periodic maintenance tasks with the SchedulerService:
+ * Handler functions for system maintenance tasks, registered with the AutomationService
+ * as built-in Automation records at startup via registerMaintenanceFlows().
+ *
+ * Tasks:
  * - Data integrity check (every 5 minutes): monitors feature directory count
- * - Ava Gateway heartbeat (every 30 minutes): board health evaluation
  * - Stale feature detection (hourly): finds features stuck in running/in-progress
- * - Worktree auto-cleanup (daily): auto-removes worktrees for merged branches with safety checks
- * - Branch auto-cleanup (weekly): auto-deletes local branches already merged to main with safety checks
+ * - Worktree auto-cleanup (daily): auto-removes worktrees for merged branches
+ * - Branch auto-cleanup (weekly): auto-deletes local branches already merged to main
+ * - Board health reconciliation (every 6 hours): audits and auto-fixes board state
+ * - Auto-merge eligible PRs (every 5 minutes): merges PRs that pass all checks
+ * - Auto-rebase stale PRs (every 30 minutes): rebases PRs behind their base branch
+ * - GitHub Actions runner health (every 5 minutes): detects stuck builds
  *
  * All tasks emit events for UI display and logging.
  */
@@ -14,7 +20,7 @@
 import { createLogger } from '@protolabs-ai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import type { SchedulerService } from './scheduler-service.js';
+import type { FlowFactory } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
@@ -85,183 +91,78 @@ async function isBranchFullyMerged(
 }
 
 /**
- * Register all maintenance tasks with the scheduler.
- * Called once during server initialization.
+ * Register flow factories for all built-in maintenance tasks in the FlowRegistry.
+ * Called from AutomationService.syncWithScheduler() before seeding automation records.
+ *
+ * Uses a generic registry interface to avoid circular imports with automation-service.ts.
+ * Conditional tasks (data-integrity, board-health, auto-merge, runner-health) are only
+ * registered when the required service dependencies are present.
  */
-export async function registerMaintenanceTasks(
-  scheduler: SchedulerService,
-  events: EventEmitter,
-  autoModeService: AutoModeService,
-  featureHealthService?: FeatureHealthService,
-  integrityWatchdogService?: DataIntegrityWatchdogService,
-  featureLoader?: FeatureLoader,
-  settingsService?: SettingsService
-): Promise<void> {
-  logger.info('Registering maintenance tasks...');
+export function registerMaintenanceFlows(
+  registry: { register(id: string, factory: FlowFactory): void },
+  deps: {
+    events: EventEmitter;
+    autoModeService: AutoModeService;
+    featureHealthService?: FeatureHealthService;
+    integrityWatchdogService?: DataIntegrityWatchdogService;
+    featureLoader?: FeatureLoader;
+    settingsService?: SettingsService;
+  }
+): void {
+  const { events, autoModeService } = deps;
 
-  let taskCount = 3; // Base: stale-features, stale-worktrees, branch-cleanup
+  // Always-registered tasks
+  registry.register('built-in:stale-features', async () => {
+    await checkStaleFeatures(events, autoModeService);
+  });
 
-  // Every 5 minutes: Data integrity check
-  if (integrityWatchdogService) {
-    await scheduler.registerTask(
-      'maintenance:data-integrity',
-      'Data Integrity Check',
-      '*/5 * * * *', // Every 5 minutes
-      async () => {
-        await checkDataIntegrity(integrityWatchdogService, events, autoModeService);
-      }
-    );
-    taskCount++;
+  registry.register('built-in:stale-worktrees', async () => {
+    const projectPaths = getKnownProjectPaths(autoModeService);
+    await detectStaleWorktrees(events, projectPaths);
+  });
+
+  registry.register('built-in:branch-cleanup', async () => {
+    const projectPaths = getKnownProjectPaths(autoModeService);
+    await checkMergedBranches(events, projectPaths);
+  });
+
+  // Conditional on optional services
+  if (deps.integrityWatchdogService) {
+    const watchdog = deps.integrityWatchdogService;
+    registry.register('built-in:data-integrity', async () => {
+      await checkDataIntegrity(watchdog, events, autoModeService);
+    });
   }
 
-  // Hourly: Check for stale features (stuck in running for >2 hours)
-  await scheduler.registerTask(
-    'maintenance:stale-features',
-    'Stale Feature Detection',
-    '0 * * * *', // Every hour at :00
-    async () => {
-      await checkStaleFeatures(events, autoModeService);
-    }
-  );
-
-  // Daily at 3am: Auto-cleanup stale worktrees for merged branches
-  await scheduler.registerTask(
-    'maintenance:stale-worktrees',
-    'Stale Worktree Auto-Cleanup',
-    '0 3 * * *', // Daily at 3:00 AM
-    async () => {
+  if (deps.featureHealthService) {
+    const fhs = deps.featureHealthService;
+    registry.register('built-in:board-health', async () => {
       const projectPaths = getKnownProjectPaths(autoModeService);
-      await detectStaleWorktrees(events, projectPaths);
-    }
-  );
+      await runBoardHealthAudit(fhs, events, projectPaths);
+    });
+  }
 
-  // Weekly on Sunday at 4am: Auto-delete merged branches
-  await scheduler.registerTask(
-    'maintenance:branch-cleanup',
-    'Merged Branch Auto-Cleanup',
-    '0 4 * * 0', // Sunday at 4:00 AM
-    async () => {
+  if (deps.featureLoader && deps.settingsService) {
+    const fl = deps.featureLoader;
+    const ss = deps.settingsService;
+    registry.register('built-in:auto-merge-prs', async () => {
       const projectPaths = getKnownProjectPaths(autoModeService);
-      await checkMergedBranches(events, projectPaths);
-    }
-  );
-
-  // Every 6 hours: Board health reconciliation with auto-fix
-  if (featureHealthService) {
-    await scheduler.registerTask(
-      'maintenance:board-health',
-      'Board Health Reconciliation',
-      '0 */6 * * *', // Every 6 hours
-      async () => {
-        const projectPaths = getKnownProjectPaths(autoModeService);
-        await runBoardHealthAudit(featureHealthService, events, projectPaths);
-      }
-    );
-    taskCount++;
+      await autoMergeEligiblePRs(fl, ss, events, projectPaths);
+    });
+    registry.register('built-in:auto-rebase-stale-prs', async () => {
+      const projectPaths = getKnownProjectPaths(autoModeService);
+      await autoRebaseStalePRs(fl, ss, events, projectPaths);
+    });
   }
 
-  // Every 5 minutes: Auto-merge eligible PRs
-  if (featureLoader && settingsService) {
-    await scheduler.registerTask(
-      'maintenance:auto-merge-prs',
-      'Auto-Merge Eligible PRs',
-      '*/5 * * * *', // Every 5 minutes
-      async () => {
-        const projectPaths = getKnownProjectPaths(autoModeService);
-        await autoMergeEligiblePRs(featureLoader, settingsService, events, projectPaths);
-      }
-    );
-    taskCount++;
-    logger.info('Registered auto-merge PRs maintenance task');
-  } else {
-    logger.warn(
-      `Skipping auto-merge PRs task registration - featureLoader: ${!!featureLoader}, settingsService: ${!!settingsService}`
-    );
-  }
-
-  // Every 30 minutes: Auto-rebase stale PRs
-  if (featureLoader && settingsService) {
-    await scheduler.registerTask(
-      'maintenance:auto-rebase-stale-prs',
-      'Auto-Rebase Stale PRs',
-      '*/30 * * * *', // Every 30 minutes
-      async () => {
-        const projectPaths = getKnownProjectPaths(autoModeService);
-        await autoRebaseStalePRs(featureLoader, settingsService, events, projectPaths);
-      }
-    );
-    taskCount++;
-    logger.info('Registered auto-rebase stale PRs maintenance task');
-  } else {
-    logger.warn(
-      `Skipping auto-rebase stale PRs task registration - featureLoader: ${!!featureLoader}, settingsService: ${!!settingsService}`
-    );
-  }
-
-  // Every 5 minutes: GitHub Actions runner health check
   if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
-    await scheduler.registerTask(
-      'maintenance:runner-health',
-      'GitHub Actions Runner Health',
-      '*/5 * * * *', // Every 5 minutes
-      async () => {
-        const projectPaths = getKnownProjectPaths(autoModeService);
-        await checkRunnerHealth(events, projectPaths);
-      }
-    );
-    taskCount++;
-    logger.info('Registered GitHub Actions runner health maintenance task');
-  } else {
-    logger.warn('Skipping runner health task registration - GitHub credentials not configured');
+    registry.register('built-in:runner-health', async () => {
+      const projectPaths = getKnownProjectPaths(autoModeService);
+      await checkRunnerHealth(events, projectPaths);
+    });
   }
 
-  logger.info(`Registered ${taskCount} maintenance tasks`);
-
-  // Apply settings overrides from GlobalSettings.maintenance
-  if (settingsService) {
-    try {
-      const globalSettings = await settingsService.getGlobalSettings();
-      const maintenanceSettings = globalSettings.maintenance;
-
-      if (maintenanceSettings) {
-        // Master switch: disable all tasks if maintenance.enabled === false
-        if (maintenanceSettings.enabled === false) {
-          logger.info('Maintenance scheduler disabled via settings — disabling all tasks');
-          for (const task of scheduler.getAllTasks()) {
-            if (task.id.startsWith('maintenance:')) {
-              await scheduler.disableTask(task.id);
-            }
-          }
-        }
-
-        // Per-task overrides
-        if (maintenanceSettings.tasks) {
-          for (const [taskId, override] of Object.entries(maintenanceSettings.tasks)) {
-            const task = scheduler.getTask(taskId);
-            if (!task) {
-              logger.warn(`Settings override for unknown task: ${taskId}`);
-              continue;
-            }
-
-            if (override.cronExpression) {
-              await scheduler.updateTaskSchedule(taskId, override.cronExpression);
-              logger.info(`Applied cron override for ${taskId}: ${override.cronExpression}`);
-            }
-
-            if (override.enabled === false) {
-              await scheduler.disableTask(taskId);
-              logger.info(`Disabled ${taskId} via settings override`);
-            } else if (override.enabled === true && maintenanceSettings.enabled !== false) {
-              await scheduler.enableTask(taskId);
-              logger.info(`Enabled ${taskId} via settings override`);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      logger.warn('Failed to apply maintenance settings overrides:', error);
-    }
-  }
+  logger.info('Registered maintenance flow factories');
 }
 
 /**

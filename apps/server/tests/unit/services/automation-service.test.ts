@@ -1,364 +1,542 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AutomationService } from '@/services/automation-service.js';
-import * as secureFs from '@/lib/secure-fs.js';
-import { atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
-import type { Automation, AutomationRunRecord } from '@protolabs-ai/types';
+/**
+ * Unit tests for AutomationService
+ */
 
-vi.mock('@/lib/secure-fs.js');
-vi.mock('@protolabs-ai/utils', async () => {
-  const actual = await vi.importActual<typeof import('@protolabs-ai/utils')>('@protolabs-ai/utils');
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
+
+// Mock @protolabs-ai/platform secureFs — use real fs in a temp dir
+vi.mock('@protolabs-ai/platform', () => {
   return {
-    ...actual,
-    atomicWriteJson: vi.fn(),
-    readJsonWithRecovery: vi.fn(),
-    createLogger: vi.fn(() => ({
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    })),
+    secureFs: {
+      access: async (p: string) => {
+        await fs.promises.access(p);
+      },
+      readFile: async (p: string, enc: string) => {
+        return fs.promises.readFile(p, enc as BufferEncoding);
+      },
+      writeFile: async (p: string, data: string, enc: string) => {
+        return fs.promises.writeFile(p, data, enc as BufferEncoding);
+      },
+      mkdir: async (p: string, opts?: { recursive?: boolean }) => {
+        return fs.promises.mkdir(p, opts);
+      },
+    },
   };
 });
 
-const projectPath = '/test/project';
+// Mock @protolabs-ai/utils
+vi.mock('@protolabs-ai/utils', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
 
-const baseModelConfig: Automation['modelConfig'] = {
-  model: 'claude-sonnet-4-6',
-  thinkingLevel: 'none',
-};
+// Mock maintenance-tasks
+vi.mock('../../../src/services/maintenance-tasks.js', () => ({
+  registerMaintenanceFlows: vi.fn(),
+}));
 
-function makeAutomation(overrides: Partial<Automation> = {}): Automation {
+import { AutomationService, flowRegistry } from '../../../src/services/automation-service.js';
+import type { SchedulerService } from '../../../src/services/scheduler-service.js';
+
+function createMockScheduler(): SchedulerService {
   return {
-    id: 'auto-123',
-    name: 'Test Automation',
-    enabled: true,
-    trigger: { type: 'cron', expression: '0 * * * *' },
-    flowId: 'flow-abc',
-    modelConfig: baseModelConfig,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    ...overrides,
-  };
+    registerTask: vi.fn().mockResolvedValue(undefined),
+    unregisterTask: vi.fn().mockResolvedValue(undefined),
+    enableTask: vi.fn().mockResolvedValue(undefined),
+    disableTask: vi.fn().mockResolvedValue(undefined),
+    updateTaskSchedule: vi.fn().mockResolvedValue(undefined),
+    getTask: vi.fn().mockReturnValue(undefined),
+    initialize: vi.fn(),
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn().mockResolvedValue(undefined),
+    listTasks: vi.fn().mockReturnValue([]),
+    triggerTask: vi.fn().mockResolvedValue(undefined),
+  } as unknown as SchedulerService;
 }
 
 describe('AutomationService', () => {
   let service: AutomationService;
+  let scheduler: ReturnType<typeof createMockScheduler>;
+  let tempDir: string;
 
   beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'automation-test-'));
+    scheduler = createMockScheduler();
+    service = new AutomationService(scheduler, tempDir);
     vi.clearAllMocks();
-
-    // Reset singleton for each test
-    // @ts-expect-error accessing private static for test isolation
-    AutomationService.instance = undefined;
-    service = AutomationService.getInstance();
-
-    vi.mocked(secureFs.access).mockResolvedValue(undefined);
-    vi.mocked(secureFs.mkdir).mockResolvedValue(undefined);
-    vi.mocked(secureFs.unlink).mockResolvedValue(undefined);
-    vi.mocked(atomicWriteJson).mockResolvedValue(undefined);
-    vi.mocked(readJsonWithRecovery).mockResolvedValue({
-      data: null,
-      recovered: false,
-      source: 'default',
-    });
   });
 
-  describe('getInstance', () => {
-    it('should return the same instance', () => {
-      const a = AutomationService.getInstance();
-      const b = AutomationService.getInstance();
-      expect(a).toBe(b);
-    });
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  describe('create', () => {
-    it('should create automation with generated id and timestamps', async () => {
-      const result = await service.create(projectPath, {
-        name: 'My Automation',
-        trigger: { type: 'cron', expression: '0 0 * * *' },
-        flowId: 'flow-1',
-        modelConfig: baseModelConfig,
-      });
-
-      expect(result.id).toBeDefined();
-      expect(result.name).toBe('My Automation');
-      expect(result.enabled).toBe(true);
-      expect(result.trigger).toEqual({ type: 'cron', expression: '0 0 * * *' });
-      expect(result.createdAt).toBeDefined();
-      expect(result.updatedAt).toBeDefined();
-    });
-
-    it('should persist automation via atomicWriteJson', async () => {
-      await service.create(projectPath, {
-        name: 'My Automation',
-        trigger: { type: 'event', eventType: 'feature:created' },
-        flowId: 'flow-1',
-        modelConfig: baseModelConfig,
-      });
-
-      expect(atomicWriteJson).toHaveBeenCalledWith(
-        expect.stringContaining('.automaker/automations/'),
-        expect.objectContaining({ name: 'My Automation' }),
-        expect.any(Object)
-      );
-    });
-
-    it('should set enabled=false when passed explicitly', async () => {
-      const result = await service.create(projectPath, {
-        name: 'Disabled',
-        enabled: false,
-        trigger: { type: 'webhook', path: '/my-hook' },
-        flowId: 'flow-2',
-        modelConfig: baseModelConfig,
-      });
-
-      expect(result.enabled).toBe(false);
-    });
-
-    it('should store optional fields when provided', async () => {
-      const result = await service.create(projectPath, {
-        name: 'Full',
-        description: 'A full automation',
-        trigger: { type: 'cron', expression: '* * * * *' },
-        flowId: 'flow-full',
-        modelConfig: baseModelConfig,
-        tags: ['alpha', 'beta'],
-        metadata: { owner: 'team-a' },
-        inputSchema: { type: 'object', properties: {} },
-      });
-
-      expect(result.description).toBe('A full automation');
-      expect(result.tags).toEqual(['alpha', 'beta']);
-      expect(result.metadata).toEqual({ owner: 'team-a' });
-      expect(result.inputSchema).toEqual({ type: 'object', properties: {} });
-    });
-  });
-
-  describe('get', () => {
-    it('should return automation when file exists', async () => {
-      const automation = makeAutomation();
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({
-        data: automation,
-        recovered: false,
-        source: 'main',
-      });
-
-      const result = await service.get(projectPath, 'auto-123');
-      expect(result).toEqual(automation);
-    });
-
-    it('should return null when file does not exist', async () => {
-      vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-
-      const result = await service.get(projectPath, 'missing-id');
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('update', () => {
-    it('should update fields and bump updatedAt', async () => {
-      const original = makeAutomation();
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({
-        data: original,
-        recovered: false,
-        source: 'main',
-      });
-
-      const updated = await service.update(projectPath, 'auto-123', { name: 'New Name' });
-
-      expect(updated.name).toBe('New Name');
-      expect(updated.id).toBe('auto-123');
-      expect(updated.createdAt).toBe('2026-01-01T00:00:00Z');
-      expect(updated.updatedAt).not.toBe('2026-01-01T00:00:00Z');
-    });
-
-    it('should throw if automation not found', async () => {
-      vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-
-      await expect(service.update(projectPath, 'missing-id', { name: 'x' })).rejects.toThrow(
-        'Automation missing-id not found'
-      );
-    });
-
-    it('should persist updated automation', async () => {
-      const original = makeAutomation();
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({
-        data: original,
-        recovered: false,
-        source: 'main',
-      });
-
-      await service.update(projectPath, 'auto-123', { enabled: false });
-
-      expect(atomicWriteJson).toHaveBeenCalledWith(
-        expect.stringContaining('auto-123.json'),
-        expect.objectContaining({ enabled: false }),
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('delete', () => {
-    it('should delete the automation file', async () => {
-      await service.delete(projectPath, 'auto-123');
-
-      expect(secureFs.unlink).toHaveBeenCalledWith(expect.stringContaining('auto-123.json'));
-    });
-
-    it('should also delete history file if it exists', async () => {
-      await service.delete(projectPath, 'auto-123');
-
-      // unlink called for main file and history file
-      expect(secureFs.unlink).toHaveBeenCalledTimes(2);
-    });
-
-    it('should throw if automation file does not exist', async () => {
-      vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-
-      await expect(service.delete(projectPath, 'missing')).rejects.toThrow(
-        'Automation missing not found'
-      );
-    });
-
-    it('should not throw if history file is missing during delete', async () => {
-      // First access (automation file) succeeds; second (history file) fails
-      vi.mocked(secureFs.access)
-        .mockResolvedValueOnce(undefined)
-        .mockRejectedValueOnce(new Error('ENOENT'));
-
-      await expect(service.delete(projectPath, 'auto-123')).resolves.not.toThrow();
-      expect(secureFs.unlink).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('list', () => {
-    it('should return empty array when directory does not exist', async () => {
-      vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
-
-      const result = await service.list(projectPath);
+  describe('list()', () => {
+    it('returns empty array when no automations exist', async () => {
+      const result = await service.list();
       expect(result).toEqual([]);
     });
+  });
 
-    it('should list all automations', async () => {
-      const auto1 = makeAutomation({ id: 'auto-1', name: 'First' });
-      const auto2 = makeAutomation({ id: 'auto-2', name: 'Second' });
-
-      vi.mocked(secureFs.readdir).mockResolvedValue(['auto-1.json', 'auto-2.json'] as any);
-      vi.mocked(readJsonWithRecovery)
-        .mockResolvedValueOnce({ data: auto1, recovered: false, source: 'main' })
-        .mockResolvedValueOnce({ data: auto2, recovered: false, source: 'main' });
-
-      const result = await service.list(projectPath);
-      expect(result).toHaveLength(2);
-    });
-
-    it('should filter by enabled status', async () => {
-      const enabledAuto = makeAutomation({ id: 'auto-enabled', enabled: true });
-      const disabledAuto = makeAutomation({ id: 'auto-disabled', enabled: false });
-
-      vi.mocked(secureFs.readdir).mockResolvedValue([
-        'auto-enabled.json',
-        'auto-disabled.json',
-      ] as any);
-      vi.mocked(readJsonWithRecovery)
-        .mockResolvedValueOnce({ data: enabledAuto, recovered: false, source: 'main' })
-        .mockResolvedValueOnce({ data: disabledAuto, recovered: false, source: 'main' });
-
-      const result = await service.list(projectPath, { enabled: true });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('auto-enabled');
-    });
-
-    it('should filter by trigger type', async () => {
-      const cronAuto = makeAutomation({
-        id: 'cron-auto',
+  describe('create()', () => {
+    it('creates a cron automation and persists it', async () => {
+      const automation = await service.create({
+        name: 'Test Cron',
+        flowId: 'my-flow',
         trigger: { type: 'cron', expression: '0 * * * *' },
-      });
-      const eventAuto = makeAutomation({
-        id: 'event-auto',
-        trigger: { type: 'event', eventType: 'feature:created' },
+        enabled: true,
       });
 
-      vi.mocked(secureFs.readdir).mockResolvedValue(['cron-auto.json', 'event-auto.json'] as any);
-      vi.mocked(readJsonWithRecovery)
-        .mockResolvedValueOnce({ data: cronAuto, recovered: false, source: 'main' })
-        .mockResolvedValueOnce({ data: eventAuto, recovered: false, source: 'main' });
-
-      const result = await service.list(projectPath, { triggerType: 'cron' });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('cron-auto');
+      expect(automation.id).toBeTruthy();
+      expect(automation.name).toBe('Test Cron');
+      expect(automation.flowId).toBe('my-flow');
+      expect(automation.trigger.type).toBe('cron');
+      expect(automation.enabled).toBe(true);
+      expect(automation.createdAt).toBeTruthy();
+      expect(automation.updatedAt).toBeTruthy();
     });
 
-    it('should filter by tags', async () => {
-      const tagged = makeAutomation({ id: 'tagged', tags: ['alpha', 'beta'] });
-      const untagged = makeAutomation({ id: 'untagged', tags: ['gamma'] });
-
-      vi.mocked(secureFs.readdir).mockResolvedValue(['tagged.json', 'untagged.json'] as any);
-      vi.mocked(readJsonWithRecovery)
-        .mockResolvedValueOnce({ data: tagged, recovered: false, source: 'main' })
-        .mockResolvedValueOnce({ data: untagged, recovered: false, source: 'main' });
-
-      const result = await service.list(projectPath, { tags: ['alpha'] });
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('tagged');
-    });
-
-    it('should exclude history files from listing', async () => {
-      const auto1 = makeAutomation({ id: 'auto-1' });
-
-      vi.mocked(secureFs.readdir).mockResolvedValue(['auto-1.json', 'auto-1.history.json'] as any);
-      vi.mocked(readJsonWithRecovery).mockResolvedValue({
-        data: auto1,
-        recovered: false,
-        source: 'main',
+    it('registers cron automation with scheduler on create', async () => {
+      await service.create({
+        name: 'Cron Auto',
+        flowId: 'flow-x',
+        trigger: { type: 'cron', expression: '*/5 * * * *' },
+        enabled: true,
       });
 
-      const result = await service.list(projectPath);
-      expect(result).toHaveLength(1);
+      expect(scheduler.registerTask).toHaveBeenCalledOnce();
+      const [taskId, name, cron] = vi.mocked(scheduler.registerTask).mock.calls[0];
+      expect(taskId).toMatch(/^automation:/);
+      expect(name).toBe('Cron Auto');
+      expect(cron).toBe('*/5 * * * *');
+    });
+
+    it('does not register disabled automation with scheduler', async () => {
+      await service.create({
+        name: 'Disabled',
+        flowId: 'flow-x',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+
+      expect(scheduler.registerTask).not.toHaveBeenCalled();
+    });
+
+    it('does not register event automation with scheduler', async () => {
+      await service.create({
+        name: 'Event Auto',
+        flowId: 'flow-y',
+        trigger: { type: 'event', eventType: 'feature.done' },
+        enabled: true,
+      });
+
+      expect(scheduler.registerTask).not.toHaveBeenCalled();
+    });
+
+    it('defaults enabled to true', async () => {
+      const auto = await service.create({
+        name: 'Default Enabled',
+        flowId: 'flow-z',
+        trigger: { type: 'webhook', path: '/hook' },
+      });
+
+      expect(auto.enabled).toBe(true);
     });
   });
 
-  describe('getHistory', () => {
-    it('should return empty array when no history file exists', async () => {
-      const automation = makeAutomation();
-      vi.mocked(readJsonWithRecovery)
-        .mockResolvedValueOnce({ data: automation, recovered: false, source: 'main' }) // get automation
-        .mockResolvedValueOnce({ data: [], recovered: false, source: 'default' }); // history
-      // history file access fails
-      vi.mocked(secureFs.access)
-        .mockResolvedValueOnce(undefined) // automation file exists
-        .mockRejectedValueOnce(new Error('ENOENT')); // history file missing
+  describe('get()', () => {
+    it('returns automation by id', async () => {
+      const created = await service.create({
+        name: 'Get Test',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 0 * * *' },
+        enabled: false,
+      });
 
-      const result = await service.getHistory(projectPath, 'auto-123');
-      expect(result).toEqual([]);
+      const fetched = await service.get(created.id);
+      expect(fetched).toBeDefined();
+      expect(fetched!.id).toBe(created.id);
+      expect(fetched!.name).toBe('Get Test');
     });
 
-    it('should return history records when file exists', async () => {
-      const automation = makeAutomation();
-      const records: AutomationRunRecord[] = [
-        {
-          id: 'run-1',
-          automationId: 'auto-123',
-          status: 'success',
-          startedAt: '2026-01-01T00:00:00Z',
-          completedAt: '2026-01-01T00:01:00Z',
-        },
-      ];
+    it('returns undefined for unknown id', async () => {
+      const result = await service.get('nonexistent');
+      expect(result).toBeUndefined();
+    });
+  });
 
-      vi.mocked(readJsonWithRecovery)
-        .mockResolvedValueOnce({ data: automation, recovered: false, source: 'main' })
-        .mockResolvedValueOnce({ data: records, recovered: false, source: 'main' });
+  describe('list() after creates', () => {
+    it('returns all created automations', async () => {
+      await service.create({
+        name: 'A1',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+      await service.create({
+        name: 'A2',
+        flowId: 'f2',
+        trigger: { type: 'event', eventType: 'test' },
+        enabled: true,
+      });
 
-      const result = await service.getHistory(projectPath, 'auto-123');
-      expect(result).toEqual(records);
+      const all = await service.list();
+      expect(all).toHaveLength(2);
+      expect(all.map((a) => a.name)).toContain('A1');
+      expect(all.map((a) => a.name)).toContain('A2');
+    });
+  });
+
+  describe('update()', () => {
+    it('returns undefined for unknown id', async () => {
+      const result = await service.update('nonexistent', { enabled: false });
+      expect(result).toBeUndefined();
     });
 
-    it('should throw if automation not found', async () => {
-      vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
+    it('updates fields and persists', async () => {
+      const created = await service.create({
+        name: 'Original',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 0 * * *' },
+        enabled: false,
+      });
 
-      await expect(service.getHistory(projectPath, 'missing')).rejects.toThrow(
-        'Automation missing not found'
+      const updated = await service.update(created.id, { name: 'Updated', enabled: true });
+      expect(updated).toBeDefined();
+      expect(updated!.name).toBe('Updated');
+      expect(updated!.enabled).toBe(true);
+
+      // Verify persistence
+      const fetched = await service.get(created.id);
+      expect(fetched!.name).toBe('Updated');
+    });
+
+    it('enables scheduler task when enabling cron automation', async () => {
+      const created = await service.create({
+        name: 'Toggle',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 0 * * *' },
+        enabled: false,
+      });
+
+      vi.mocked(scheduler.registerTask).mockClear();
+
+      await service.update(created.id, { enabled: true });
+
+      // Should register since there was no existing task
+      expect(scheduler.registerTask).toHaveBeenCalledOnce();
+    });
+
+    it('disables scheduler task when disabling cron automation', async () => {
+      const created = await service.create({
+        name: 'Disable Test',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 0 * * *' },
+        enabled: true,
+      });
+
+      // Simulate existing task in scheduler
+      vi.mocked(scheduler.getTask).mockReturnValue({
+        id: `automation:${created.id}`,
+        name: 'Disable Test',
+        cronExpression: '0 0 * * *',
+        enabled: true,
+      } as ReturnType<SchedulerService['getTask']>);
+
+      await service.update(created.id, { enabled: false });
+
+      expect(scheduler.disableTask).toHaveBeenCalledWith(`automation:${created.id}`);
+    });
+  });
+
+  describe('delete()', () => {
+    it('returns false for unknown id', async () => {
+      const result = await service.delete('nonexistent');
+      expect(result).toBe(false);
+    });
+
+    it('deletes automation and unregisters from scheduler', async () => {
+      const created = await service.create({
+        name: 'To Delete',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+
+      const result = await service.delete(created.id);
+      expect(result).toBe(true);
+
+      const fetched = await service.get(created.id);
+      expect(fetched).toBeUndefined();
+
+      expect(scheduler.unregisterTask).toHaveBeenCalledWith(`automation:${created.id}`);
+    });
+  });
+
+  describe('getHistory()', () => {
+    it('returns empty array for automation with no runs', async () => {
+      const created = await service.create({
+        name: 'No Runs',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+
+      const runs = await service.getHistory(created.id);
+      expect(runs).toEqual([]);
+    });
+  });
+
+  describe('executeAutomation()', () => {
+    it('throws for unknown automation id', async () => {
+      await expect(service.executeAutomation('nonexistent')).rejects.toThrow(
+        'Automation not found: nonexistent'
       );
+    });
+
+    it('throws when flow is not registered', async () => {
+      const created = await service.create({
+        name: 'No Flow',
+        flowId: 'unregistered-flow',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+
+      await expect(service.executeAutomation(created.id)).rejects.toThrow(
+        'Flow not registered: unregistered-flow'
+      );
+    });
+
+    it('executes the flow and returns a run record', async () => {
+      const flowFn = vi.fn().mockResolvedValue(undefined);
+      flowRegistry.register('test-execute-flow', flowFn);
+
+      const created = await service.create({
+        name: 'Exec Test',
+        flowId: 'test-execute-flow',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: true,
+        modelConfig: { model: 'sonnet' },
+      });
+
+      const run = await service.executeAutomation(created.id, 'manual');
+
+      expect(flowFn).toHaveBeenCalledOnce();
+      expect(flowFn).toHaveBeenCalledWith({ model: 'sonnet' });
+      expect(run.automationId).toBe(created.id);
+      expect(run.status).toBe('success');
+      expect(run.startedAt).toBeTruthy();
+      expect(run.completedAt).toBeTruthy();
+      expect(run.error).toBeUndefined();
+
+      flowRegistry.unregister('test-execute-flow');
+    });
+
+    it('records failure when flow throws', async () => {
+      const flowFn = vi.fn().mockRejectedValue(new Error('flow error'));
+      flowRegistry.register('fail-flow', flowFn);
+
+      const created = await service.create({
+        name: 'Fail Test',
+        flowId: 'fail-flow',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: true,
+      });
+
+      const run = await service.executeAutomation(created.id, 'manual');
+
+      expect(run.status).toBe('failure');
+      expect(run.error).toBe('flow error');
+
+      flowRegistry.unregister('fail-flow');
+    });
+
+    it('persists run in history', async () => {
+      const flowFn = vi.fn().mockResolvedValue(undefined);
+      flowRegistry.register('history-flow', flowFn);
+
+      const created = await service.create({
+        name: 'History Test',
+        flowId: 'history-flow',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: true,
+      });
+
+      await service.executeAutomation(created.id, 'manual');
+      await service.executeAutomation(created.id, 'scheduler');
+
+      const runs = await service.getHistory(created.id);
+      expect(runs).toHaveLength(2);
+
+      flowRegistry.unregister('history-flow');
+    });
+  });
+
+  describe('syncWithScheduler()', () => {
+    it('registers maintenance flows and user cron automations', async () => {
+      const { registerMaintenanceFlows } =
+        await import('../../../src/services/maintenance-tasks.js');
+
+      // Create one enabled cron automation and one disabled
+      await service.create({
+        name: 'Active Cron',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: true,
+      });
+      await service.create({
+        name: 'Disabled Cron',
+        flowId: 'f2',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+
+      vi.mocked(scheduler.registerTask).mockClear();
+
+      // Pass a mock events with subscribe to support event-trigger wiring
+      const mockDeps = {
+        events: { subscribe: vi.fn().mockReturnValue(() => {}) } as never,
+        autoModeService: {} as never,
+        featureHealthService: null as never,
+        integrityWatchdogService: null as never,
+        featureLoader: null as never,
+        settingsService: {} as never,
+      };
+
+      await service.syncWithScheduler(mockDeps);
+
+      expect(registerMaintenanceFlows).toHaveBeenCalledOnce();
+      // 3 always-on built-ins + 1 enabled user automation; disabled user automation is skipped
+      // Ceremony automations are event-triggered and do NOT add to registerTask count
+      expect(scheduler.registerTask).toHaveBeenCalledTimes(4);
+      const taskIds = vi.mocked(scheduler.registerTask).mock.calls.map(([id]) => id);
+      expect(taskIds.every((id) => id.startsWith('automation:'))).toBe(true);
+    });
+
+    it('seeds 3 ceremony automations with correct triggers and flowIds', async () => {
+      const mockDeps = {
+        events: { subscribe: vi.fn().mockReturnValue(() => {}) } as never,
+        autoModeService: {} as never,
+        featureHealthService: null as never,
+        integrityWatchdogService: null as never,
+        featureLoader: null as never,
+        settingsService: {} as never,
+      };
+
+      await service.syncWithScheduler(mockDeps);
+
+      const all = await service.list();
+      const standup = all.find((a) => a.id === 'ceremony:standup');
+      const retro = all.find((a) => a.id === 'ceremony:retro');
+      const projectRetro = all.find((a) => a.id === 'ceremony:project-retro');
+
+      expect(standup).toBeDefined();
+      expect(standup?.trigger).toEqual({ type: 'event', eventType: 'feature:completed' });
+      expect(standup?.flowId).toBe('standup-flow');
+      expect(standup?.enabled).toBe(true);
+
+      expect(retro).toBeDefined();
+      expect(retro?.trigger).toEqual({ type: 'event', eventType: 'ceremony:milestone-update' });
+      expect(retro?.flowId).toBe('retro-flow');
+
+      expect(projectRetro).toBeDefined();
+      expect(projectRetro?.trigger).toEqual({
+        type: 'event',
+        eventType: 'ceremony:project-retro',
+      });
+      expect(projectRetro?.flowId).toBe('project-retro-flow');
+    });
+
+    it('ceremony automations are idempotent — not duplicated on second sync', async () => {
+      const mockDeps = {
+        events: { subscribe: vi.fn().mockReturnValue(() => {}) } as never,
+        autoModeService: {} as never,
+        featureHealthService: null as never,
+        integrityWatchdogService: null as never,
+        featureLoader: null as never,
+        settingsService: {} as never,
+      };
+
+      await service.syncWithScheduler(mockDeps);
+      await service.syncWithScheduler(mockDeps);
+
+      const all = await service.list();
+      const standupCount = all.filter((a) => a.id === 'ceremony:standup').length;
+      expect(standupCount).toBe(1);
+    });
+
+    it('wires event subscription when events emitter is provided', async () => {
+      const subscribeSpy = vi.fn().mockReturnValue(() => {});
+
+      await service.syncWithScheduler({
+        events: { subscribe: subscribeSpy } as never,
+        autoModeService: {} as never,
+        featureHealthService: null as never,
+        integrityWatchdogService: null as never,
+        featureLoader: null as never,
+        settingsService: {} as never,
+      });
+
+      expect(subscribeSpy).toHaveBeenCalledOnce();
+    });
+
+    it('feature:completed event triggers standup-flow execution', async () => {
+      const flowFn = vi.fn().mockResolvedValue(undefined);
+      flowRegistry.register('standup-flow', flowFn);
+
+      let capturedCallback: ((type: string, payload: unknown) => void) | null = null;
+      const mockEvents = {
+        subscribe: vi.fn((cb: (type: string, payload: unknown) => void) => {
+          capturedCallback = cb;
+          return () => {};
+        }),
+      };
+
+      await service.syncWithScheduler({
+        events: mockEvents as never,
+        autoModeService: {} as never,
+        featureHealthService: null as never,
+        integrityWatchdogService: null as never,
+        featureLoader: null as never,
+        settingsService: {} as never,
+      });
+
+      expect(capturedCallback).not.toBeNull();
+
+      // Register the standup flow in flowRegistry so executeAutomation can find it
+      // (already registered above)
+
+      // Simulate feature:completed event
+      capturedCallback!('feature:completed', { featureId: 'f1', projectPath: '/test' });
+
+      // Wait for async chain to settle
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(flowFn).toHaveBeenCalledOnce();
+
+      flowRegistry.unregister('standup-flow');
+    });
+  });
+
+  describe('loadAll()', () => {
+    it('is an alias for list()', async () => {
+      await service.create({
+        name: 'Load All Test',
+        flowId: 'f1',
+        trigger: { type: 'cron', expression: '0 * * * *' },
+        enabled: false,
+      });
+
+      const listResult = await service.list();
+      const loadAllResult = await service.loadAll();
+
+      expect(loadAllResult).toEqual(listResult);
     });
   });
 });

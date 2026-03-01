@@ -1,5 +1,27 @@
 # Automaker Agent Guide
 
+## CRITICAL: Session Resume — Check State Before Starting
+
+Before creating any todo list or writing any code, ALWAYS audit your worktree to understand what was already done:
+
+```bash
+# 1. Check which files already exist or are modified
+git -C /home/josh/dev/ava/.worktrees/<your-branch> status --short
+
+# 2. Check if there are already commits on the branch
+git -C /home/josh/dev/ava/.worktrees/<your-branch> log --oneline origin/dev..HEAD
+```
+
+If files exist (shown as `??` untracked or ` M` modified), you are **resuming a previous session**. Do NOT recreate those files. Do NOT re-run steps that produced those files. Understand what already exists, then continue from where the previous session left off.
+
+**Common resume signals:**
+- `?? apps/server/src/services/foo-service.ts` → service was written, skip to wiring/testing
+- `?? apps/server/src/routes/foo/` → routes exist, skip to mounting them in routes.ts
+- ` M apps/server/src/server/services.ts` → already wired, skip that step
+- No new commits on branch → work was done but not committed yet → skip to format+commit
+
+**If you receive a message from the supervisor with "CONTEXT RESTORE"** — trust it completely. It tells you exactly what is done and what remains. Do exactly what it says.
+
 ## CRITICAL: Scope Discipline
 
 Implement EXACTLY what the feature description says. Nothing more, nothing less.

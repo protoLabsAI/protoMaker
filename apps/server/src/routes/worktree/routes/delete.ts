@@ -9,11 +9,15 @@ import { isGitRepo } from '@protolabs-ai/git-utils';
 import { getErrorMessage, logError, isValidBranchName, execGitCommand } from '../common.js';
 import { createLogger } from '@protolabs-ai/utils';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
+import type { FeatureLoader } from '../../../services/feature-loader.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('Worktree');
 
-export function createDeleteHandler(autoModeService?: AutoModeService) {
+export function createDeleteHandler(
+  autoModeService?: AutoModeService,
+  featureLoader?: FeatureLoader
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, worktreePath, deleteBranch } = req.body as {
@@ -99,6 +103,32 @@ export function createDeleteHandler(autoModeService?: AutoModeService) {
         }
       }
 
+      // Migrate features referencing the deleted branch back to main (branchName: null)
+      let featuresMovedToMain = 0;
+      if (featureLoader && branchName) {
+        try {
+          const features = await featureLoader.getAll(projectPath);
+          const orphanedFeatures = features.filter((f) => f.branchName === branchName);
+
+          for (const feature of orphanedFeatures) {
+            await featureLoader.update(projectPath, feature.id, { branchName: undefined });
+          }
+
+          featuresMovedToMain = orphanedFeatures.length;
+          if (featuresMovedToMain > 0) {
+            logger.info(
+              `Migrated ${featuresMovedToMain} feature(s) from deleted branch "${branchName}" back to main worktree`
+            );
+          }
+        } catch (migrationError) {
+          // Feature migration errors must not block worktree deletion
+          logger.warn(
+            `Failed to migrate features for deleted branch "${branchName}":`,
+            migrationError
+          );
+        }
+      }
+
       res.json({
         success: true,
         deleted: {
@@ -106,6 +136,7 @@ export function createDeleteHandler(autoModeService?: AutoModeService) {
           branch: branchDeleted ? branchName : null,
           branchDeleted,
         },
+        featuresMovedToMain,
       });
     } catch (error) {
       logError(error, 'Delete worktree failed');

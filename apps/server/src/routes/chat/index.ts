@@ -11,10 +11,23 @@
  * - Fetches a live sitrep via getSitrep() when sitrepInjection is true
  * - Builds tool set from buildAvaTools() gated by config.toolGroups
  * - Passes tools to streamText with maxSteps: 10
+ *
+ * Citation extraction:
+ * - After the AI response text is complete, [[feature:id]] and [[doc:path]]
+ *   patterns are extracted and resolved to Citation objects via the feature loader.
+ * - Resolved citations are written to the UI message stream as a data-citations chunk
+ *   so the client can render inline badges and a sources section.
  */
 
 import { Router, type Request, type Response } from 'express';
-import { streamText, stepCountIs, type ModelMessage } from 'ai';
+import {
+  streamText,
+  stepCountIs,
+  createUIMessageStream,
+  pipeUIMessageStreamToResponse,
+  type ModelMessage,
+  type UIMessageChunk,
+} from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createLogger, loadContextFiles } from '@protolabs-ai/utils';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
@@ -23,15 +36,24 @@ import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.
 import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
 import type { ServiceContainer } from '../../server/services.js';
+import type { FeatureLoader } from '../../services/feature-loader.js';
 
 export type { AvaConfig };
 
 const logger = createLogger('ChatRoutes');
 
-/** Map our internal aliases to AI SDK model IDs */
-function resolveAISDKModel(modelAlias?: string) {
-  const resolved = resolveModelString(modelAlias, 'sonnet');
-  return anthropic(resolved);
+/**
+ * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
+ * Chosen to allow meaningful multi-step reasoning without excessive cost.
+ */
+const THINKING_BUDGET_TOKENS = 10_000;
+
+/**
+ * Returns true when the resolved model ID supports Anthropic extended thinking.
+ * Currently all claude-opus and claude-sonnet models support this feature.
+ */
+function modelSupportsExtendedThinking(resolvedModelId: string): boolean {
+  return resolvedModelId.includes('opus') || resolvedModelId.includes('sonnet');
 }
 
 /**
@@ -60,6 +82,74 @@ function toModelMessages(
     return { role: msg.role, content: text } as ModelMessage;
   });
 }
+
+// ── Citation extraction ───────────────────────────────────────────────────────
+
+/** A resolved citation object sent to the client as message annotation data */
+export interface Citation {
+  id: string;
+  type: 'feature' | 'doc';
+  title: string;
+  url?: string;
+  path?: string;
+  status?: string;
+}
+
+/** Pattern matching [[feature:id]] and [[doc:path]] markers */
+const CITATION_PATTERN = /\[\[(feature|doc):([^\]]+)\]\]/g;
+
+/**
+ * Scan the full assistant response text for citation markers, resolve each
+ * unique citation (de-duplicated by type:id key), and return the ordered list.
+ *
+ * Feature citations are resolved via the feature loader; doc citations use the
+ * path as their title. Graceful fallback: if a feature ID is not found, the raw
+ * ID is used as the title and no status is attached.
+ */
+async function extractAndResolveCitations(
+  text: string,
+  projectPath: string,
+  featureLoader: FeatureLoader
+): Promise<Citation[]> {
+  const matches = [...text.matchAll(CITATION_PATTERN)];
+  if (matches.length === 0) return [];
+
+  const seen = new Set<string>();
+  const citations: Citation[] = [];
+
+  for (const match of matches) {
+    const [, type, id] = match as unknown as [string, 'feature' | 'doc', string];
+    const key = `${type}:${id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    if (type === 'feature') {
+      try {
+        const feature = await featureLoader.get(projectPath, id);
+        if (feature) {
+          citations.push({
+            id,
+            type: 'feature',
+            title: feature.title || id,
+            status: feature.status,
+          });
+        } else {
+          // Graceful fallback — ID not found in the project
+          citations.push({ id, type: 'feature', title: id });
+        }
+      } catch {
+        citations.push({ id, type: 'feature', title: id });
+      }
+    } else {
+      // doc citation — use the path as the title
+      citations.push({ id, type: 'doc', title: id, path: id });
+    }
+  }
+
+  return citations;
+}
+
+// ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createChatRoutes(services: ServiceContainer): Router {
   const router = Router();
@@ -109,7 +199,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const modelAlias =
         avaConfig.model || (req.headers['x-model-alias'] as string) || bodyModel || 'sonnet';
 
-      const aiModel = resolveAISDKModel(modelAlias);
+      const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
+      const aiModel = anthropic(resolvedModelId);
 
       // Conditionally load project context files
       let projectContext: string | undefined;
@@ -155,8 +246,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
           )
         : {};
 
+      // Enable extended thinking for models that support it (opus / sonnet).
+      // The thinking budget caps how many tokens the model may use for internal
+      // reasoning before producing its visible response.
+      const extendedThinking = modelSupportsExtendedThinking(resolvedModelId);
+
       logger.info(
-        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}`
+        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}, extendedThinking=${extendedThinking}`
       );
 
       const result = streamText({
@@ -165,6 +261,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
         system: systemPrompt,
         tools,
         stopWhen: stepCountIs(10),
+        ...(extendedThinking && {
+          providerOptions: {
+            anthropic: {
+              thinking: { type: 'enabled', budgetTokens: THINKING_BUDGET_TOKENS },
+            },
+          },
+        }),
         experimental_telemetry: {
           isEnabled: true,
           metadata: {
@@ -174,10 +277,54 @@ export function createChatRoutes(services: ServiceContainer): Router {
         },
       });
 
-      // Pipe the full AI SDK UI message stream to the response.
-      // Uses the AI SDK's UI message stream protocol so tool calls, reasoning,
-      // and source parts flow through to the client (not just text tokens).
-      result.pipeUIMessageStreamToResponse(res);
+      // Wrap the AI stream with a citation extraction step.
+      //
+      // 1. writer.merge() forwards all AI SDK UI message chunks to the client as
+      //    they arrive (text, reasoning, tool calls, etc.).
+      // 2. result.text is a separate consumer of the underlying model stream that
+      //    resolves with the complete assistant text once streaming finishes.
+      // 3. After the text is resolved, we extract [[feature:id]] / [[doc:path]]
+      //    patterns, resolve them, and write a data-citations chunk that the client
+      //    uses to populate inline badges and the Sources section.
+      //
+      // The createUIMessageStream stream stays open until the execute function
+      // resolves, so the data-citations chunk is guaranteed to arrive before the
+      // stream closes.
+      const uiStream = createUIMessageStream({
+        execute: async ({ writer }) => {
+          // Forward the main AI response stream to the client
+          writer.merge(result.toUIMessageStream());
+
+          // Await the full text (separate internal stream tee in streamText)
+          const fullText = await result.text;
+
+          // Resolve citations when a projectPath is available
+          if (projectPath && fullText) {
+            try {
+              const citations = await extractAndResolveCitations(
+                fullText,
+                projectPath,
+                services.featureLoader
+              );
+              if (citations.length > 0) {
+                writer.write({
+                  type: 'data-citations',
+                  data: citations,
+                } as UIMessageChunk);
+              }
+            } catch (err) {
+              logger.warn('Citation extraction failed:', err);
+            }
+          }
+        },
+        onError: (err) => {
+          logger.error('UI message stream error:', err);
+          return err instanceof Error ? err.message : 'Stream error';
+        },
+      });
+
+      // Pipe the wrapped UI message stream (with citations) to the HTTP response
+      pipeUIMessageStreamToResponse({ response: res, stream: uiStream });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Chat stream error:', error);

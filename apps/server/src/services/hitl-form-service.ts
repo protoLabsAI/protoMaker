@@ -23,6 +23,7 @@ import type {
 } from '@protolabs-ai/types';
 import type { ChannelRouter } from './channel-router.js';
 import type { EventEmitter } from '../lib/events.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('HITLFormService');
 
@@ -55,6 +56,7 @@ export class HITLFormService {
     | null = null;
   private channelRouter: ChannelRouter | null = null;
   private reminderTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private settingsService: SettingsService | null = null;
 
   constructor(deps: HITLFormServiceDeps) {
     this.events = deps.events;
@@ -70,6 +72,13 @@ export class HITLFormService {
   }
 
   /**
+   * Wire in the settings service for feature flag checks.
+   */
+  setSettingsService(settingsService: SettingsService): void {
+    this.settingsService = settingsService;
+  }
+
+  /**
    * Wire in the channel router for non-UI form delivery.
    * When set and a form request has replyChannel, the form will be sent
    * via the appropriate channel handler instead of emitting hitl:form-requested.
@@ -80,9 +89,29 @@ export class HITLFormService {
   }
 
   /**
-   * Create a new form request
+   * Create a new form request.
+   * Returns null if featureFlags.pipeline is false (default) — the caller should
+   * handle null as a no-op since HITL is disabled.
    */
-  create(input: HITLFormRequestInput): HITLFormRequest {
+  async create(input: HITLFormRequestInput): Promise<HITLFormRequest | null> {
+    // Gate: featureFlags.pipeline must be enabled
+    if (this.settingsService) {
+      try {
+        const globalSettings = await this.settingsService.getGlobalSettings();
+        if (!(globalSettings.featureFlags?.pipeline ?? false)) {
+          logger.debug('HITLFormService.create() blocked: featureFlags.pipeline is false');
+          return null;
+        }
+      } catch (err) {
+        logger.warn('Failed to read feature flags for HITL gate, blocking form creation:', err);
+        return null;
+      }
+    } else {
+      // No settingsService wired — block by default (pipeline=false is the default)
+      logger.debug('HITLFormService.create() blocked: settingsService not available');
+      return null;
+    }
+
     if (!input.title || !input.steps?.length) {
       throw new Error('title and at least one step are required');
     }

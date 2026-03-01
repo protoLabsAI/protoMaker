@@ -6,11 +6,19 @@
  *
  * Reads currentProject from useAppStore and passes projectId/projectPath
  * to useChatSession for project-scoped session management.
+ *
+ * Input state is managed via PromptInputProvider so ChatInput does not
+ * require value/onChange props to be threaded through the tree.
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { History, X, Settings, ChevronUp, ChevronDown } from 'lucide-react';
-import { ChatMessageList, ChatInput, SuggestionList } from '@protolabs-ai/ui/ai';
+import { History, X, Settings, ChevronUp, ChevronDown, SquarePen } from 'lucide-react';
+import {
+  ChatMessageList,
+  ChatInput,
+  SuggestionList,
+  PromptInputProvider,
+} from '@protolabs-ai/ui/ai';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
@@ -58,18 +66,20 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     projectPath: currentProject?.path,
   });
 
-  const [inputValue, setInputValue] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const suggestions = useContextualSuggestions(features ?? []);
 
-  const handleSubmit = useCallback(() => {
-    const text = inputValue.trim();
-    if (!text || isStreaming) return;
-    sendMessage({ text });
-    setInputValue('');
-  }, [inputValue, isStreaming, sendMessage]);
+  // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
+  // ChatInput clears the input immediately after calling this.
+  const handleSubmit = useCallback(
+    (text: string) => {
+      if (isStreaming) return;
+      sendMessage({ text });
+    },
+    [isStreaming, sendMessage]
+  );
 
   const handleSuggestionSelect = useCallback(
     (value: string) => {
@@ -133,7 +143,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             title="New chat"
             aria-label="New chat"
           >
-            <span className="text-xs">New</span>
+            <SquarePen className="size-3.5" />
           </Button>
           {!isModal && (
             <Button
@@ -213,23 +223,24 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             <SuggestionList suggestions={suggestions} onSelect={handleSuggestionSelect} />
           )}
 
-          <ChatInput
-            value={inputValue}
-            onChange={setInputValue}
-            onSubmit={handleSubmit}
-            onStop={stop}
-            isStreaming={isStreaming}
-            placeholder="Ask Ava..."
-            autoFocus
-            actions={
-              <>
-                <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
-                <span className="text-[10px] text-muted-foreground">
-                  {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
-                </span>
-              </>
-            }
-          />
+          {/* PromptInputProvider scopes input state to this chat area */}
+          <PromptInputProvider>
+            <ChatInput
+              onSubmit={handleSubmit}
+              onStop={stop}
+              isStreaming={isStreaming}
+              placeholder="Ask Ava..."
+              autoFocus
+              actions={
+                <>
+                  <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
+                  <span className="text-xs text-muted-foreground">
+                    {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
+                  </span>
+                </>
+              }
+            />
+          </PromptInputProvider>
         </div>
       </div>
     </div>

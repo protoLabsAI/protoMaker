@@ -23,7 +23,11 @@ export function register(container: ServiceContainer): void {
     leadEngineerService,
     auditService,
     eventStreamBuffer,
+    hitlFormService,
   } = container;
+
+  // HITLFormService — wire settingsService for featureFlags.pipeline gate
+  hitlFormService.setSettingsService(settingsService);
 
   // Calendar service wiring
   calendarService.setFeatureLoader(featureLoader);

@@ -9,6 +9,7 @@ import type { ServiceContainer } from './services.js';
 import { getTerminalService } from '../services/terminal-service.js';
 import { shutdownLangfuse } from '../lib/langfuse-singleton.js';
 import { shutdownOTEL } from '../lib/otel-setup.js';
+import { shutdownOtel } from '../lib/otel.js';
 
 const logger = createLogger('Server:Shutdown');
 
@@ -75,6 +76,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   agentDiscordRouter.stop();
   await shutdownLangfuse();
   await shutdownOTEL();
+  await shutdownOtel();
 
   server.close(() => {
     logger.info('Server closed');

@@ -40,7 +40,16 @@ Context about protoLabs Studio:
 - The team operates with three surfaces: Linear (vision/roadmap), Automaker board (features/agents/PRs), Discord (async communication)
 - Branch strategy: feature/* → dev → staging → main
 
-When helping with planning or specs: structure your output clearly, identify gaps, and flag risks. When helping with decisions: state a recommendation, not a list of options. When helping with writing: improve for clarity, remove noise, sharpen the point.`;
+When helping with planning or specs: structure your output clearly, identify gaps, and flag risks. When helping with decisions: state a recommendation, not a list of options. When helping with writing: improve for clarity, remove noise, sharpen the point.
+
+## Citation Syntax
+
+When you reference a specific feature or context document in your response, use inline citation markers so the UI can link directly to the entity:
+
+- Features: [[feature:<id>]] — e.g. [[feature:feature-1234567890-abc123]]
+- Context files / docs: [[doc:<filename>]] — e.g. [[doc:CLAUDE.md]]
+
+Place the marker immediately after the first mention of the entity in a sentence. Only cite entities you are directly referencing or quoting. Do not fabricate IDs — only use IDs that appear in the context you have been given.`;
 
 function buildTabListing(tabs?: NotesContext['tabs']): string {
   if (!tabs || tabs.length === 0) return '';

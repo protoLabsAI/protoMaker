@@ -48,6 +48,7 @@ interface UseNavigationProps {
     fileEditor: string;
     designs: string;
     calendar: string;
+    automations: string;
   };
   hideSpecEditor: boolean;
   hideContext: boolean;
@@ -346,6 +347,13 @@ export function useNavigation({
         key: shortcuts.settings,
         action: () => navigate({ to: '/settings' }),
         description: 'Navigate to Global Settings',
+      });
+
+      // Add automations shortcut (navigates to Settings > Automations)
+      shortcutsList.push({
+        key: shortcuts.automations,
+        action: () => navigate({ to: '/settings', search: { view: 'automations' } }),
+        description: 'Navigate to Automations',
       });
     }
 
