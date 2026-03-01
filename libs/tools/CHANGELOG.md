@@ -1,5 +1,25 @@
 # @protolabs-ai/tools
 
+## 0.22.0
+
+### Minor Changes
+
+- ### Features
+  - add systemView feature flag, gate system view behind it
+  - step-split bubbles, table styling, docs + Matt ownership
+  - add orphaned feature detection to health monitor (#1576)
+
+  ### Bug Fixes
+  - prevent premature auto-mode idle event emission (#1575)
+
+  ### Refactors
+  - HITL Confirmation Dialogs (#1573)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.22.0
+
 ## 0.21.0
 
 ### Minor Changes
