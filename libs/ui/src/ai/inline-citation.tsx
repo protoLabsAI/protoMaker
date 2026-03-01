@@ -48,11 +48,7 @@ export function InlineCitation({ index, type, id, citation }: InlineCitationProp
           {index}
         </span>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-64 p-3"
-        side="top"
-        sideOffset={6}
-      >
+      <PopoverContent className="w-64 p-3" side="top" sideOffset={6}>
         <div className="flex flex-col gap-2">
           {/* Type + Status badges */}
           <div className="flex items-center gap-1.5">
@@ -70,9 +66,7 @@ export function InlineCitation({ index, type, id, citation }: InlineCitationProp
           <p className="text-sm font-medium leading-tight">{displayTitle}</p>
 
           {/* Path for doc citations */}
-          {citation?.path && (
-            <p className="text-[11px] text-muted-foreground">{citation.path}</p>
-          )}
+          {citation?.path && <p className="text-[11px] text-muted-foreground">{citation.path}</p>}
 
           {/* Fallback notice when citation was not resolved */}
           {!citation && (

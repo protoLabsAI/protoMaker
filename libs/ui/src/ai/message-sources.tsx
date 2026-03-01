@@ -16,10 +16,7 @@ export function MessageSources({ citations }: MessageSourcesProps) {
   if (citations.length === 0) return null;
 
   return (
-    <div
-      data-slot="message-sources"
-      className="mt-2 border-t border-border/30 pt-2"
-    >
+    <div data-slot="message-sources" className="mt-2 border-t border-border/30 pt-2">
       <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
         Sources
       </p>
