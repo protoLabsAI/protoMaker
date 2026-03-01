@@ -45,6 +45,8 @@ export interface AutomationRunRecord {
   completedAt?: string; // ISO 8601
   error?: string;
   output?: unknown;
+  /** OTel trace ID for deep-linking to the Langfuse trace */
+  traceId?: string;
 }
 
 // ============================================================================

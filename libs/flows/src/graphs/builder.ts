@@ -1,5 +1,6 @@
 import { StateGraph, END, START, MemorySaver } from '@langchain/langgraph';
 import type { BaseCheckpointSaver } from '@langchain/langgraph';
+import { trace, SpanStatusCode } from '@opentelemetry/api';
 import type { ConditionalEdgeFunction, NodeName } from './routing.js';
 
 /**
@@ -26,6 +27,11 @@ export interface GraphBuilderConfig<TState> {
    * Custom checkpointer (if not provided, uses MemorySaver)
    */
   checkpointer?: Checkpointer;
+
+  /**
+   * Flow ID used as an OTel span attribute on each node span (default: 'unknown')
+   */
+  flowId?: string;
 }
 
 /**
@@ -39,9 +45,11 @@ export type NodeFunction<TState> = (state: TState) => Promise<Partial<TState>> |
 export class GraphBuilder<TState> {
   private graph: StateGraph<any>;
   private checkpointer?: Checkpointer;
+  private flowId: string;
 
   constructor(config: GraphBuilderConfig<TState>) {
     this.graph = new StateGraph(config.stateAnnotation) as any;
+    this.flowId = config.flowId ?? 'unknown';
 
     if (config.enableCheckpointing) {
       this.checkpointer = config.checkpointer || new MemorySaver();
@@ -49,10 +57,35 @@ export class GraphBuilder<TState> {
   }
 
   /**
-   * Adds a node to the graph
+   * Adds a node to the graph, wrapping it with an OTel child span named flow-node:{name}.
    */
   addNode(name: string, fn: NodeFunction<TState>): this {
-    this.graph.addNode(name, fn);
+    const flowId = this.flowId;
+    const wrappedFn = async (state: TState): Promise<Partial<TState>> => {
+      const tracer = trace.getTracer('flows');
+      const inputKeys = Object.keys(state as object);
+      const span = tracer.startSpan(`flow-node:${name}`, {
+        attributes: {
+          flowId,
+          nodeId: name,
+          inputKeys: inputKeys.join(','),
+        },
+      });
+      try {
+        const result = await fn(state);
+        const outputKeys = Object.keys((result ?? {}) as object);
+        span.setAttribute('outputKeys', outputKeys.join(','));
+        span.setStatus({ code: SpanStatusCode.OK });
+        return result;
+      } catch (err) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
+        span.recordException(err as Error);
+        throw err;
+      } finally {
+        span.end();
+      }
+    };
+    this.graph.addNode(name, wrappedFn);
     return this;
   }
 
