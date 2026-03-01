@@ -416,8 +416,18 @@ export class SignalIntakeService {
       if (intent === 'interrupt') {
         logger.info(`Interrupt signal received: "${title}" — creating HITL form for human triage`);
 
+        let hitlEnabled = false;
+        if (this.settingsService) {
+          try {
+            const globalSettings = await this.settingsService.getGlobalSettings();
+            hitlEnabled = globalSettings.featureFlags?.pipeline ?? false;
+          } catch (err) {
+            logger.warn('[SignalIntake] Failed to read feature flags, HITL disabled:', err);
+          }
+        }
+
         let hitlFormId: string | undefined;
-        if (this.hitlFormService) {
+        if (this.hitlFormService && hitlEnabled) {
           const form = this.hitlFormService.create({
             title: `Interrupt: ${title}`,
             description: `An urgent signal was received from ${signal.source} and requires immediate human attention.\n\n${description}`,
@@ -453,6 +463,10 @@ export class SignalIntakeService {
             ],
           });
           hitlFormId = form.id;
+        } else if (!hitlEnabled) {
+          logger.debug(
+            'HITL forms disabled (featureFlags.pipeline=false), skipping interrupt form'
+          );
         } else {
           logger.warn(
             'HITLFormService not wired into SignalIntakeService — interrupt signal will not create a form. Call setHITLFormService() during service initialization.'

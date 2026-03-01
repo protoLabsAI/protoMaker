@@ -7,11 +7,37 @@
 
 import type { Request, Response } from 'express';
 import type { HITLFormService } from '../../../services/hitl-form-service.js';
+import type { SettingsService } from '../../../services/settings-service.js';
 import { getErrorMessage, logError } from '../common.js';
+import { createLogger } from '@protolabs-ai/utils';
 
-export function createCreateHandler(hitlFormService: HITLFormService) {
+const logger = createLogger('HITLCreateRoute');
+
+export function createCreateHandler(
+  hitlFormService: HITLFormService,
+  settingsService?: SettingsService | null
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
+      // Check featureFlags.pipeline — HITL form creation is gated behind this flag
+      let hitlEnabled = false;
+      if (settingsService) {
+        try {
+          const globalSettings = await settingsService.getGlobalSettings();
+          hitlEnabled = globalSettings.featureFlags?.pipeline ?? false;
+        } catch (err) {
+          logger.warn('Failed to read feature flags, HITL disabled:', err);
+        }
+      }
+
+      if (!hitlEnabled) {
+        logger.debug('HITL forms disabled (featureFlags.pipeline=false), skipping');
+        res
+          .status(403)
+          .json({ success: false, error: 'HITL forms are disabled (featureFlags.pipeline=false)' });
+        return;
+      }
+
       const {
         title,
         description,

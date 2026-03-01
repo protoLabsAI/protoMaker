@@ -406,10 +406,20 @@ export class PMAuthorityAgent {
 
         // Ask user for clarification if triage says it's needed
         let clarificationContext = '';
+        let hitlEnabled = false;
+        if (this.settingsService) {
+          try {
+            const globalSettings = await this.settingsService.getGlobalSettings();
+            hitlEnabled = globalSettings.featureFlags?.pipeline ?? false;
+          } catch (err) {
+            logger.warn('[PMAgent] Failed to read feature flags, HITL disabled:', err);
+          }
+        }
         if (
           triage?.needsClarification &&
           triage.clarifyingQuestions?.length &&
-          this.hitlFormService
+          this.hitlFormService &&
+          hitlEnabled
         ) {
           const { schema, uiSchema } = this.convertQuestionsToSchema(triage.clarifyingQuestions);
           const form = this.hitlFormService.create({
@@ -440,6 +450,10 @@ export class PMAuthorityAgent {
               `No clarification received for ${featureId}, proceeding with original idea`
             );
           }
+        } else if (triage?.needsClarification && !hitlEnabled) {
+          logger.debug(
+            'HITL forms disabled (featureFlags.pipeline=false), skipping clarification form'
+          );
         }
 
         // Inject clarification answers into feature description before research

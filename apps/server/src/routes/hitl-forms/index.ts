@@ -13,6 +13,7 @@
 
 import { Router } from 'express';
 import type { HITLFormService } from '../../services/hitl-form-service.js';
+import type { SettingsService } from '../../services/settings-service.js';
 import { createCreateHandler } from './routes/create.js';
 import { createGetHandler } from './routes/get.js';
 import { createListHandler } from './routes/list.js';
@@ -23,12 +24,16 @@ import { createCancelHandler } from './routes/cancel.js';
  * Create HITL forms router with all endpoints
  *
  * @param hitlFormService - Instance of HITLFormService
+ * @param settingsService - Instance of SettingsService for feature flag checks
  * @returns Express Router configured with all HITL form endpoints
  */
-export function createHITLFormRoutes(hitlFormService: HITLFormService): Router {
+export function createHITLFormRoutes(
+  hitlFormService: HITLFormService,
+  settingsService?: SettingsService | null
+): Router {
   const router = Router();
 
-  router.post('/create', createCreateHandler(hitlFormService));
+  router.post('/create', createCreateHandler(hitlFormService, settingsService));
   router.post('/get', createGetHandler(hitlFormService));
   router.post('/list', createListHandler(hitlFormService));
   router.post('/submit', createSubmitHandler(hitlFormService));

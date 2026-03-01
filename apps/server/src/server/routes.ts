@@ -313,7 +313,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/pipeline', createPipelineRoutes(pipelineService));
   app.use('/api/metrics', createMetricsRoutes(metricsService, ledgerService));
   app.use('/api/notifications', createNotificationsRoutes(notificationService));
-  app.use('/api/hitl-forms', createHITLFormRoutes(hitlFormService));
+  app.use('/api/hitl-forms', createHITLFormRoutes(hitlFormService, settingsService));
   app.use(
     '/api/actionable-items',
     createActionableItemsRoutes(actionableItemService, settingsService)
