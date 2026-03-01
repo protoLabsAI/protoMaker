@@ -79,7 +79,7 @@ Execute these phases in order, presenting results to the user between phases.
    mcp__plugin_protolabs_studio__health_check()
    ```
 
-   If down, tell the user: "protoLabs Studio server is not running. Start it with `npm run dev` in the protomaker directory."
+   If down, tell the user: "protoLabs Studio server is not running. Start it with `npm run dev` in the protoMaker directory."
 
 2. Resolve the project path from the user's argument:
    - **If argument is a git URL** (starts with `https://`, `git@`, or ends with `.git`):
