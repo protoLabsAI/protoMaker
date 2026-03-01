@@ -1,7 +1,7 @@
 {
   "name": "protolabs",
   "description": "protoLabs Studio - AI Development Studio. Manage Kanban boards, AI agents, and feature orchestration.",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "author": {
     "name": "Proto Labs AI"
   },
@@ -9,7 +9,9 @@
   "mcpServers": {
     "studio": {
       "command": "bash",
-      "args": ["${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"],
+      "args": [
+        "${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"
+      ],
       "env": {
         "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}",

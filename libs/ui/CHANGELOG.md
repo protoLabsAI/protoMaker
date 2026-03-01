@@ -1,5 +1,11 @@
 # @protolabs-ai/ui
 
+## 0.16.1
+
+### Patch Changes
+
+- Maintenance release.
+
 ## 0.16.0
 
 ### Minor Changes
