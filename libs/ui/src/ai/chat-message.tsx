@@ -6,6 +6,11 @@
  *
  * Renders all UIMessagePart types: text (markdown), reasoning (collapsible),
  * tool calls (collapsible card), sources, and step boundaries.
+ *
+ * Citation support:
+ *  - Extracts data-citations parts from the message (written by the server's
+ *    citation extraction step) and passes them to ChatMessageMarkdown.
+ *  - Renders a MessageSources section below the bubble when citations are present.
  */
 
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -15,6 +20,8 @@ import { cn } from '../lib/utils.js';
 import { ChainOfThought } from './chain-of-thought.js';
 import { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
 import { ChatMessageMarkdown } from './chat-message-markdown.js';
+import { MessageSources } from './message-sources.js';
+import type { Citation } from './inline-citation.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -118,16 +125,32 @@ function isToolPart(part: Record<string, unknown>): boolean {
 }
 
 /**
+ * Extract resolved citations from message parts.
+ * The server writes these as `data-citations` UIMessageChunks; the AI SDK
+ * surfaces them in the message's parts array as `{ type: 'data-citations', data: Citation[] }`.
+ */
+function extractCitations(parts: Array<Record<string, unknown>>): Citation[] {
+  for (const part of parts) {
+    if (part.type === 'data-citations' && Array.isArray(part.data)) {
+      return part.data as Citation[];
+    }
+  }
+  return [];
+}
+
+/**
  * Render a single message part based on its type.
  */
 function MessagePartRenderer({
   part,
   index,
   stepIndex,
+  citations,
 }: {
   part: Record<string, unknown>;
   index: number;
   stepIndex?: number;
+  citations: Citation[];
 }) {
   const type = part.type as string;
 
@@ -138,7 +161,7 @@ function MessagePartRenderer({
   if (type === 'text') {
     const text = part.text as string;
     if (!text) return null;
-    return <ChatMessageMarkdown content={text} />;
+    return <ChatMessageMarkdown content={text} citations={citations} />;
   }
 
   if (type === 'reasoning') {
@@ -179,6 +202,11 @@ function MessagePartRenderer({
     );
   }
 
+  // data-citations parts are consumed by the parent ChatMessage and not rendered here
+  if (type === 'data-citations') {
+    return null;
+  }
+
   // source-document, file, data-* — render nothing
   return null;
 }
@@ -211,15 +239,20 @@ export function ChatMessage({
   }
 
   // For assistant/system messages, render all parts
-  const hasContent = parts.some(
+  const rawParts = parts as Array<Record<string, unknown>>;
+
+  const hasContent = rawParts.some(
     (p) =>
       (p.type === 'text' && (p as { text: string }).text) ||
       p.type === 'reasoning' ||
       p.type === 'step-start' ||
-      isToolPart(p as Record<string, unknown>) ||
+      isToolPart(p) ||
       p.type === 'source-url'
   );
   if (!hasContent) return null;
+
+  // Extract server-resolved citations from data-citations parts
+  const citations = extractCitations(rawParts);
 
   // Track step-start parts to provide ordinal labels
   let stepCounter = -1;
@@ -228,18 +261,21 @@ export function ChatMessage({
     <div data-slot="chat-message" className={cn(messageVariants({ role }), className)}>
       <ChatMessageAvatar role={role} />
       <ChatMessageBubble role={role}>
-        {parts.map((part, i) => {
-          const p = part as Record<string, unknown>;
-          if (p.type === 'step-start') stepCounter += 1;
+        {rawParts.map((part, i) => {
+          if (part.type === 'step-start') stepCounter += 1;
           return (
             <MessagePartRenderer
               key={i}
-              part={p}
+              part={part}
               index={i}
-              stepIndex={p.type === 'step-start' ? stepCounter : undefined}
+              stepIndex={part.type === 'step-start' ? stepCounter : undefined}
+              citations={citations}
             />
           );
         })}
+
+        {/* Sources section — shown when the message has resolved citations */}
+        <MessageSources citations={citations} />
       </ChatMessageBubble>
     </div>
   );

@@ -8,26 +8,93 @@
  *  - react-markdown tolerates partial/incomplete input without throwing.
  *  - We stabilise the component tree with `useMemo` to avoid unnecessary
  *    re-mounts that would cause content flash during streaming.
+ *
+ * Citation support:
+ *  - [[feature:id]] and [[doc:path]] markers in content are replaced with
+ *    inline <span class="citation"> elements before passing to react-markdown.
+ *  - A custom rehype-sanitize schema allows data-citation-* attributes on spans.
+ *  - The custom `span` component handler detects these spans and renders
+ *    InlineCitation badges using the resolved citations array.
  */
 
 import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { cn } from '../lib/utils.js';
 import { CodeBlock } from './code-block.js';
+import { InlineCitation, type Citation } from './inline-citation.js';
 
 export interface ChatMessageMarkdownProps {
   content: string;
   className?: string;
+  /** Server-resolved citations keyed by type:id, used to populate badge popovers */
+  citations?: Citation[];
 }
 
-export function ChatMessageMarkdown({ content, className }: ChatMessageMarkdownProps) {
+// ── Citation preprocessing ────────────────────────────────────────────────────
+
+/** Matches [[feature:id]] and [[doc:path]] citation markers */
+const CITATION_PATTERN = /\[\[(feature|doc):([^\]]+)\]\]/g;
+
+/**
+ * Replace [[type:id]] markers in content with sanitizer-safe <span> elements
+ * that carry the citation metadata as data attributes.  Returns the transformed
+ * content string and a stable index map so repeated occurrences of the same
+ * citation get the same badge number.
+ */
+function preprocessCitations(content: string): string {
+  const seen = new Map<string, number>();
+  let counter = 0;
+
+  return content.replace(CITATION_PATTERN, (_match, type: string, id: string) => {
+    const key = `${type}:${id}`;
+    if (!seen.has(key)) {
+      seen.set(key, counter++);
+    }
+    const idx = seen.get(key)!;
+    // Encode as HTML span — rehype-raw passes this through; rehype-sanitize
+    // allows it because of the extended schema below.
+    return `<span class="citation" data-citation-type="${type}" data-citation-id="${id}" data-citation-index="${idx}"></span>`;
+  });
+}
+
+// ── Rehype-sanitize schema extension ─────────────────────────────────────────
+
+/**
+ * Extends the default sanitize schema to allow:
+ * - class="citation" on <span> (the only class we inject)
+ * - data-citation-* attributes on <span> (type, id, index)
+ *
+ * All other tags retain their default sanitization rules.
+ */
+const sanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    span: [
+      // Keep any existing span attribute rules from the default schema
+      ...((defaultSchema.attributes as Record<string, unknown[]> | undefined)?.['span'] ?? []),
+      // Allow class="citation" only
+      ['className', 'citation'],
+      // Allow all data-citation-* attributes
+      'data*',
+    ],
+  },
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function ChatMessageMarkdown({ content, className, citations }: ChatMessageMarkdownProps) {
   // Stable plugin arrays — defined outside the render to prevent rehype/remark
   // from re-instantiating plugins on every keystroke during streaming.
   const remarkPlugins = useMemo(() => [remarkGfm], []);
-  const rehypePlugins = useMemo(() => [rehypeRaw, rehypeSanitize], []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rehypePlugins = useMemo(() => [rehypeRaw, [rehypeSanitize, sanitizeSchema]] as any[], []);
+
+  // Pre-process citation markers into span elements before feeding to ReactMarkdown.
+  const processedContent = useMemo(() => preprocessCitations(content), [content]);
 
   return (
     <div
@@ -107,9 +174,35 @@ export function ChatMessageMarkdown({ content, className }: ChatMessageMarkdownP
 
           // ── Strikethrough (del) — remark-gfm adds this ───────────────────
           del: ({ children }) => <del className="opacity-60 line-through">{children}</del>,
+
+          // ── Citation spans ─────────────────────────────────────────────────
+          // Intercept <span class="citation"> injected by preprocessCitations
+          // and render the InlineCitation badge component.
+          span: ({ className: spanClass, ...props }) => {
+            if (spanClass === 'citation') {
+              const attrs = props as Record<string, string | undefined>;
+              const citationType = attrs['data-citation-type'] ?? '';
+              const citationId = attrs['data-citation-id'] ?? '';
+              const citationIndex = parseInt(attrs['data-citation-index'] ?? '0', 10);
+
+              const resolved = citations?.find(
+                (c) => c.id === citationId && c.type === citationType
+              );
+
+              return (
+                <InlineCitation
+                  index={citationIndex + 1}
+                  type={citationType}
+                  id={citationId}
+                  citation={resolved}
+                />
+              );
+            }
+            return <span className={spanClass} {...props} />;
+          },
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

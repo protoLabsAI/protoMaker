@@ -9,6 +9,10 @@ export {
   type MessageRole,
 } from './chat-message.js';
 
+export { InlineCitation, type Citation, type InlineCitationProps } from './inline-citation.js';
+
+export { MessageSources, type MessageSourcesProps } from './message-sources.js';
+
 export { ChatMessageMarkdown, type ChatMessageMarkdownProps } from './chat-message-markdown.js';
 
 export { CodeBlock, type CodeBlockProps } from './code-block.js';
