@@ -1,5 +1,21 @@
 # @protolabs-ai/prompts
 
+## 0.19.0
+
+### Minor Changes
+
+- ### Features
+  - add demo mode (`npm run demo`)
+
+  ### Bug Fixes
+  - replace Zustand store with useSyncExternalStore for demo mode
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.19.0
+  - @protolabs-ai/utils@0.19.0
+
 ## 0.18.1
 
 ### Patch Changes
