@@ -154,6 +154,39 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Wait for sync PRs to merge
+        # The sync PRs must land before the next promotion or version conflicts
+        # will block staging→main and dev→staging PRs. Wait up to 5 minutes.
+        run: |
+          for TARGET in staging dev; do
+            PR_NUM=$(gh pr list --base "$TARGET" --head main --state open \
+              --json number --jq '.[0].number' 2>/dev/null || echo "")
+            if [ -z "$PR_NUM" ]; then
+              echo "No open sync PR for main → ${TARGET}, skipping"
+              continue
+            fi
+            echo "Waiting for sync PR #${PR_NUM} (main → ${TARGET}) to merge..."
+            for i in $(seq 1 30); do
+              STATE=$(gh pr view "$PR_NUM" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
+              if [ "$STATE" = "MERGED" ]; then
+                echo "PR #${PR_NUM} merged."
+                break
+              fi
+              if [ "$STATE" = "CLOSED" ]; then
+                echo "PR #${PR_NUM} was closed without merge — manual sync needed."
+                break
+              fi
+              echo "  Attempt ${i}/30 — state: ${STATE}, waiting 10s..."
+              sleep 10
+            done
+            if [ "$STATE" != "MERGED" ] && [ "$STATE" != "CLOSED" ]; then
+              echo "WARNING: Sync PR #${PR_NUM} did not merge within 5 minutes."
+              echo "The next promotion may hit version conflicts."
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Post release notes to Discord
         if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
         run: |
