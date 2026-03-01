@@ -353,14 +353,37 @@ async function handleIssueEvent(
         title: data.title,
         state: data.state?.name,
       });
-      // Emit issue detected event for signal intake
-      events.emit('linear:issue:detected', {
-        issueId: data.id,
-        title: data.title,
-        description: data.description,
-        state: data.state,
-        createdAt: data.createdAt,
-      });
+      // Route through linearApprovalHandler to check intake trigger state.
+      // Only issues created directly in a trigger state (e.g., "Todo") will fire
+      // linear:intake:triggered. Issues created in "Backlog" or other states are ignored.
+      if (data.state?.name) {
+        const defaultPath = process.env.AUTOMAKER_PROJECT_PATH || repoRoot;
+        let projectPath = defaultPath;
+        if (data.team?.id) {
+          try {
+            const globalSettings = await settingsService.getGlobalSettings();
+            const mapped = globalSettings.linearTeamRoutes?.[data.team.id];
+            if (mapped) {
+              projectPath = mapped;
+              logger.info(`Routed team ${data.team.name} (${data.team.id}) to ${mapped}`);
+            }
+          } catch (err) {
+            logger.warn('Failed to resolve linearTeamRoutes, using default', {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+        await linearApprovalHandler.onIssueStateChange(data.id, data.state.name, projectPath, {
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          team: data.team,
+          project: data.project,
+          assignee: data.assignee ? { id: data.assignee.id, name: data.assignee.name } : undefined,
+        });
+      } else {
+        logger.debug(`Issue created without a state, skipping intake check: ${data.id}`);
+      }
       break;
     case 'update':
       await handleIssueUpdated(data, events, featureLoader, settingsService, repoRoot);

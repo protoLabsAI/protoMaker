@@ -1004,7 +1004,22 @@ export class IntegrationService {
     projectId?: string;
     createdAt: string;
   }): Promise<void> {
-    // All new Linear issues are treated as signals
+    // Secondary guard: skip issues not in an intake trigger state.
+    // The primary gate is in the webhook handler (linearApprovalHandler.onIssueStateChange),
+    // but this catch ensures the signal pipeline is not triggered even if the event
+    // arrives from another source (e.g., the polling monitor).
+    const intakeTriggerStates = ['Todo'];
+    if (
+      payload.state?.name &&
+      !intakeTriggerStates.some((s) => s.toLowerCase() === payload.state!.name.toLowerCase())
+    ) {
+      logger.debug(
+        `Skipping Linear issue signal: state "${payload.state.name}" is not an intake trigger state`,
+        { issueId: payload.issueId }
+      );
+      return;
+    }
+
     logger.info(`Signal detected from Linear issue: ${payload.title}`, {
       issueId: payload.issueId,
       labels: payload.labels,
