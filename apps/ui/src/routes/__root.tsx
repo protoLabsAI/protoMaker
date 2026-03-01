@@ -45,7 +45,7 @@ import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-s
 import { LoadingState } from '@protolabs-ai/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
 import { useBrowserNotifications } from '@/hooks/use-browser-notifications';
-import { useDemoModeStore } from '@/hooks/use-demo-mode';
+import { setDemoMode } from '@/hooks/use-demo-mode';
 import { useIsCompact, useIsMobile } from '@/hooks/use-media-query';
 import { useMobileVisibility } from '@/hooks/use-mobile-visibility';
 import { useVirtualKeyboardResize } from '@/hooks/use-virtual-keyboard-resize';
@@ -270,9 +270,9 @@ function RootLayoutContent() {
       try {
         const result = await checkSandboxEnvironment();
 
-        // Propagate demo mode flag to global store
+        // Propagate demo mode flag to global state
         if (result.demoMode) {
-          useDemoModeStore.getState().setDemoMode(true);
+          setDemoMode(true);
         }
 
         if (result.isContainerized) {

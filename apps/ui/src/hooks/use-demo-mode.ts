@@ -1,16 +1,26 @@
-import { create } from 'zustand';
+import { useSyncExternalStore } from 'react';
 
-interface DemoModeState {
-  demoMode: boolean;
-  setDemoMode: (value: boolean) => void;
+let demoMode = false;
+const listeners = new Set<() => void>();
+
+function subscribe(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
 }
 
-export const useDemoModeStore = create<DemoModeState>((set) => ({
-  demoMode: false,
-  setDemoMode: (value) => set({ demoMode: value }),
-}));
+function getSnapshot(): boolean {
+  return demoMode;
+}
+
+/** Set the demo mode flag (call once during init). */
+export function setDemoMode(value: boolean): void {
+  if (demoMode !== value) {
+    demoMode = value;
+    for (const cb of listeners) cb();
+  }
+}
 
 /** Returns true when the server is running in demo mode. */
 export function useDemoMode(): boolean {
-  return useDemoModeStore((s) => s.demoMode);
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
