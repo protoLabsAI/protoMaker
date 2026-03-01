@@ -141,11 +141,7 @@ export class AutomationService {
     return this.readAutomation(projectPath, id);
   }
 
-  async update(
-    projectPath: string,
-    id: string,
-    input: UpdateAutomationInput
-  ): Promise<Automation> {
+  async update(projectPath: string, id: string, input: UpdateAutomationInput): Promise<Automation> {
     const existing = await this.readAutomation(projectPath, id);
     if (!existing) {
       throw new Error(`Automation ${id} not found`);
@@ -247,10 +243,7 @@ export class AutomationService {
     return result.data ?? [];
   }
 
-  async appendRunRecord(
-    projectPath: string,
-    record: AutomationRunRecord
-  ): Promise<void> {
+  async appendRunRecord(projectPath: string, record: AutomationRunRecord): Promise<void> {
     await this.ensureAutomationsDir(projectPath);
 
     const historyPath = this.getHistoryPath(projectPath, record.automationId);

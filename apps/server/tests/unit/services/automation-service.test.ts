@@ -175,9 +175,9 @@ describe('AutomationService', () => {
     it('should throw if automation not found', async () => {
       vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
 
-      await expect(
-        service.update(projectPath, 'missing-id', { name: 'x' })
-      ).rejects.toThrow('Automation missing-id not found');
+      await expect(service.update(projectPath, 'missing-id', { name: 'x' })).rejects.toThrow(
+        'Automation missing-id not found'
+      );
     });
 
     it('should persist updated automation', async () => {
@@ -202,9 +202,7 @@ describe('AutomationService', () => {
     it('should delete the automation file', async () => {
       await service.delete(projectPath, 'auto-123');
 
-      expect(secureFs.unlink).toHaveBeenCalledWith(
-        expect.stringContaining('auto-123.json')
-      );
+      expect(secureFs.unlink).toHaveBeenCalledWith(expect.stringContaining('auto-123.json'));
     });
 
     it('should also delete history file if it exists', async () => {
@@ -308,10 +306,7 @@ describe('AutomationService', () => {
     it('should exclude history files from listing', async () => {
       const auto1 = makeAutomation({ id: 'auto-1' });
 
-      vi.mocked(secureFs.readdir).mockResolvedValue([
-        'auto-1.json',
-        'auto-1.history.json',
-      ] as any);
+      vi.mocked(secureFs.readdir).mockResolvedValue(['auto-1.json', 'auto-1.history.json'] as any);
       vi.mocked(readJsonWithRecovery).mockResolvedValue({
         data: auto1,
         recovered: false,
