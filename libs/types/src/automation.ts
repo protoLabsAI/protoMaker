@@ -80,3 +80,55 @@ export interface Automation {
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
 }
+
+// ============================================================================
+// API Input Types — supplementary types for REST API layer
+// ============================================================================
+
+/**
+ * Input for creating a new automation via POST /api/automations/create
+ */
+export interface CreateAutomationInput {
+  name: string;
+  description?: string;
+  flowId: string;
+  trigger: CronTriggerInput | EventTriggerInput | WebhookTriggerInput;
+  enabled?: boolean;
+  modelConfig?: Record<string, unknown>;
+}
+
+/** Cron trigger input */
+export interface CronTriggerInput {
+  type: 'cron';
+  expression: string;
+}
+
+/** Event trigger input */
+export interface EventTriggerInput {
+  type: 'event';
+  eventType: string;
+}
+
+/** Webhook trigger input */
+export interface WebhookTriggerInput {
+  type: 'webhook';
+  path: string;
+}
+
+/**
+ * Input for updating an automation via PUT /api/automations/:id
+ */
+export interface UpdateAutomationInput {
+  name?: string;
+  description?: string;
+  flowId?: string;
+  trigger?: CronTriggerInput | EventTriggerInput | WebhookTriggerInput;
+  enabled?: boolean;
+  modelConfig?: Record<string, unknown>;
+}
+
+/**
+ * Type for a flow factory function stored in the FlowRegistry.
+ * Receives optional model config and executes the flow.
+ */
+export type FlowFactory = (modelConfig?: Record<string, unknown>) => Promise<void>;

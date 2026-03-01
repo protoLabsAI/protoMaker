@@ -28,6 +28,7 @@ import { ActionableItemBridgeService } from '../services/actionable-item-bridge-
 import { getEventHistoryService } from '../services/event-history-service.js';
 import { getBriefingCursorService } from '../services/briefing-cursor-service.js';
 import { getSchedulerService } from '../services/scheduler-service.js';
+import { AutomationService } from '../services/automation-service.js';
 import { getHealthMonitorService } from '../services/health-monitor-service.js';
 import { integrationService } from '../services/integration-service.js';
 import { SignalIntakeService } from '../services/signal-intake-service.js';
@@ -138,6 +139,7 @@ export interface ServiceContainer {
   googleCalendarSyncService: GoogleCalendarSyncService;
   calendarService: typeof calendarService;
   schedulerService: ReturnType<typeof getSchedulerService>;
+  automationService: AutomationService;
 
   // Auto-mode
   autoModeService: AutoModeService;
@@ -598,6 +600,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Scheduler Service with event emitter and data directory
   const schedulerService = getSchedulerService();
 
+  // Automation Service — manages automation registry and cron/manual execution
+  const automationService = new AutomationService(schedulerService, dataDir);
+
   // Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
   const specGenerationMonitor = getSpecGenerationMonitor(events, {
     checkIntervalMs: 30000, // Check every 30 seconds
@@ -687,6 +692,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     googleCalendarSyncService,
     calendarService,
     schedulerService,
+    automationService,
     autoModeService,
     hitlFormService,
     claudeUsageService,

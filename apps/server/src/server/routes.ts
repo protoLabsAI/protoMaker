@@ -84,6 +84,7 @@ import { createNotesRoutes } from '../routes/notes/index.js';
 import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createBeadsRoutes } from '../routes/beads/index.js';
+import { createAutomationsRoutes } from '../routes/automations/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -122,6 +123,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectService,
     projectLifecycleService,
     schedulerService,
+    automationService,
     avaGatewayService,
     discordBotService,
     agentFactoryService,
@@ -328,6 +330,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
   );
   app.use('/api/scheduler', createSchedulerRoutes(schedulerService, settingsService));
+  app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   app.use('/api/discord', createDiscordRoutes(discordBotService));
   app.use(
