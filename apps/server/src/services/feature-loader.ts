@@ -5,6 +5,8 @@
 
 import type { Dirent } from 'fs';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import type {
   Feature,
   DescriptionHistoryEntry,
@@ -35,6 +37,7 @@ import { debugLog } from '../lib/debug-log.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import { featuresByStatus } from '../lib/prometheus.js';
 
+const execAsync = promisify(exec);
 const logger = createLogger('FeatureLoader');
 
 // Re-export Feature type for convenience
@@ -880,5 +883,54 @@ export class FeatureLoader implements FeatureStore {
     if (!feature) return;
 
     await this.update(projectPath, featureId, { claimedBy: undefined });
+  }
+
+  /**
+   * Detect features whose branchName points to a non-existent git branch (orphaned features).
+   *
+   * A feature is considered orphaned when it has a non-null `branchName` but the
+   * corresponding git branch no longer exists in the repository.
+   *
+   * @param projectPath - Path to the project root (git repository)
+   * @param preloadedFeatures - Optional pre-loaded features to avoid redundant disk reads
+   * @returns Array of features whose branchName points to a non-existent branch
+   */
+  async detectOrphanedFeatures(
+    projectPath: string,
+    preloadedFeatures?: Feature[]
+  ): Promise<Feature[]> {
+    const features = preloadedFeatures ?? (await this.getAll(projectPath));
+    const featuresWithBranch = features.filter((f) => f.branchName);
+
+    if (featuresWithBranch.length === 0) {
+      return [];
+    }
+
+    const orphaned: Feature[] = [];
+
+    for (const feature of featuresWithBranch) {
+      const exists = await this.branchExists(projectPath, feature.branchName!);
+      if (!exists) {
+        orphaned.push(feature);
+      }
+    }
+
+    return orphaned;
+  }
+
+  /**
+   * Check whether a git branch exists in the project repository.
+   *
+   * @param projectPath - Path to the git repository root
+   * @param branchName - Branch name to verify (e.g. "feature/my-feature")
+   * @returns True if the branch ref can be resolved, false otherwise
+   */
+  private async branchExists(projectPath: string, branchName: string): Promise<boolean> {
+    try {
+      await execAsync(`git rev-parse --verify "${branchName}"`, { cwd: projectPath });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

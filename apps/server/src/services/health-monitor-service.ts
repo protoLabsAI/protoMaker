@@ -52,6 +52,7 @@ export type HealthIssueType =
   | 'stuck_feature'
   | 'retryable_feature'
   | 'orphaned_worktree'
+  | 'orphaned_feature'
   | 'high_memory_usage'
   | 'disk_space_low'
   | 'corrupted_feature';
@@ -379,6 +380,10 @@ export class HealthMonitorService {
     const worktreeIssues = await this.checkWorktreeHealth(projectPath, features);
     issues.push(...worktreeIssues);
 
+    // Check for orphaned features (features with branchName pointing to deleted/non-existent branches)
+    const orphanedFeatureIssues = await this.checkOrphanedFeatures(projectPath, features);
+    issues.push(...orphanedFeatureIssues);
+
     return { issues, activeCount, stuckCount, retryableCount };
   }
 
@@ -531,6 +536,47 @@ export class HealthMonitorService {
       // If we can't check, assume not orphaned to be safe
       return false;
     }
+  }
+
+  /**
+   * Check for orphaned features — features whose branchName points to a non-existent branch.
+   *
+   * Delegates detection to FeatureLoader.detectOrphanedFeatures(), passing the
+   * already-loaded features to avoid redundant disk reads.
+   */
+  private async checkOrphanedFeatures(
+    projectPath: string,
+    features: Feature[]
+  ): Promise<HealthIssue[]> {
+    const issues: HealthIssue[] = [];
+
+    try {
+      const orphaned = await this.featureLoader.detectOrphanedFeatures(projectPath, features);
+
+      for (const feature of orphaned) {
+        logger.warn(
+          `Orphaned feature detected: "${feature.title || feature.id}" — branchName "${feature.branchName}" no longer exists`
+        );
+
+        issues.push({
+          type: 'orphaned_feature',
+          severity: 'warning',
+          message: `Feature "${feature.title || feature.id}" has branchName "${feature.branchName}" pointing to a non-existent branch`,
+          context: {
+            featureId: feature.id,
+            featureTitle: feature.title,
+            branchName: feature.branchName,
+            status: feature.status,
+            projectPath,
+          },
+          autoRemediable: false,
+        });
+      }
+    } catch (error) {
+      logger.error(`Failed to check for orphaned features in ${projectPath}:`, error);
+    }
+
+    return issues;
   }
 
   /**
