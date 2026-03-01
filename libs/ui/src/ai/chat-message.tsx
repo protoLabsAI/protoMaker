@@ -305,6 +305,25 @@ function MessagePartRenderer({
   return null;
 }
 
+/**
+ * Split segments into step groups — each group becomes its own visual bubble.
+ * Segments before the first step-start go into group 0.
+ * Each step-start marker opens a new group.
+ */
+function groupByStep(segments: PartSegment[]): PartSegment[][] {
+  const groups: PartSegment[][] = [[]];
+  for (const seg of segments) {
+    if (seg.kind === 'step-start') {
+      // Start a new group (drop the step-start marker — separation IS the bubble gap)
+      groups.push([]);
+    } else {
+      groups[groups.length - 1].push(seg);
+    }
+  }
+  // Remove empty groups (e.g. trailing step-start with no content after it)
+  return groups.filter((g) => g.length > 0);
+}
+
 export function ChatMessage({
   message,
   className,
@@ -354,8 +373,9 @@ export function ChatMessage({
   // Extract server-resolved citations from data-citations parts
   const citations = extractCitations(rawParts);
 
-  // Build grouped segments: step-start markers, tool groups, and other parts
+  // Build grouped segments and split at step boundaries into separate bubbles
   const segments = buildSegments(rawParts);
+  const stepGroups = groupByStep(segments);
 
   // Stats for the progress indicator
   const stepCount = rawParts.filter((p) => p.type === 'step-start').length;
@@ -363,50 +383,61 @@ export function ChatMessage({
   const streaming = isMessageStreaming(rawParts);
 
   return (
-    <div data-slot="chat-message" className={cn(messageVariants({ role }), className)}>
-      <ChatMessageAvatar role={role} />
-      <ChatMessageBubble role={role}>
-        {/* Step progress indicator — visible while the message is still streaming */}
-        <MessageProgressIndicator
-          stepCount={stepCount}
-          toolCount={toolCount}
-          streaming={streaming}
-        />
+    <div data-slot="chat-message" className={cn('flex flex-col gap-1', className)}>
+      {stepGroups.map((group, groupIdx) => (
+        <div key={groupIdx} className={cn(messageVariants({ role }))}>
+          {/* Avatar only on first bubble; spacer div on subsequent for alignment */}
+          {groupIdx === 0 ? (
+            <ChatMessageAvatar role={role} />
+          ) : (
+            <div className="size-7 shrink-0" aria-hidden />
+          )}
+          <ChatMessageBubble role={role}>
+            {/* Progress indicator only on the last (active) bubble while streaming */}
+            {groupIdx === stepGroups.length - 1 && (
+              <MessageProgressIndicator
+                stepCount={stepCount}
+                toolCount={toolCount}
+                streaming={streaming}
+              />
+            )}
 
-        {segments.map((seg, i) => {
-          if (seg.kind === 'step-start') {
-            return <StepStartPart key={`step-${i}`} stepIndex={seg.stepIndex} />;
-          }
+            {group.map((seg, i) => {
+              // step-start segments are filtered out by groupByStep
+              if (seg.kind === 'step-start') return null;
 
-          if (seg.kind === 'tool-group') {
-            // Single tool → individual card; multiple tools → grouped TaskBlock
-            if (seg.tools.length === 1) {
-              const t = seg.tools[0];
-              return (
-                <ToolInvocationPart
-                  key={t.toolCallId}
-                  toolName={t.toolName}
-                  toolCallId={t.toolCallId}
-                  state={t.state as ToolInvocationPartProps['state']}
-                  input={t.input}
-                  output={t.output}
-                  errorText={t.errorText}
-                  title={t.title}
-                  onApprove={onToolApprove ? () => onToolApprove(t.toolName, t.input) : undefined}
-                  onReject={onToolReject ? () => onToolReject(t.toolName, t.input) : undefined}
-                />
-              );
-            }
-            return <TaskBlock key={seg.segKey} tools={seg.tools} />;
-          }
+              if (seg.kind === 'tool-group') {
+                if (seg.tools.length === 1) {
+                  const t = seg.tools[0];
+                  return (
+                    <ToolInvocationPart
+                      key={t.toolCallId}
+                      toolName={t.toolName}
+                      toolCallId={t.toolCallId}
+                      state={t.state as ToolInvocationPartProps['state']}
+                      input={t.input}
+                      output={t.output}
+                      errorText={t.errorText}
+                      title={t.title}
+                      onApprove={
+                        onToolApprove ? () => onToolApprove(t.toolName, t.input) : undefined
+                      }
+                      onReject={onToolReject ? () => onToolReject(t.toolName, t.input) : undefined}
+                    />
+                  );
+                }
+                return <TaskBlock key={seg.segKey} tools={seg.tools} />;
+              }
 
-          // 'other': text, reasoning, source-url, data-citations, etc.
-          return <MessagePartRenderer key={i} part={seg.part} citations={citations} />;
-        })}
+              // 'other': text, reasoning, source-url, data-citations, etc.
+              return <MessagePartRenderer key={i} part={seg.part} citations={citations} />;
+            })}
 
-        {/* Sources section — shown when the message has resolved citations */}
-        <MessageSources citations={citations} />
-      </ChatMessageBubble>
+            {/* Sources section — only on the last bubble */}
+            {groupIdx === stepGroups.length - 1 && <MessageSources citations={citations} />}
+          </ChatMessageBubble>
+        </div>
+      ))}
     </div>
   );
 }
