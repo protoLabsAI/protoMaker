@@ -837,6 +837,17 @@ export type {
   TrajectoryDomain,
 } from './trajectory.js';
 
+// Automation types (trigger-based automation definitions and run records)
+export type {
+  CronTrigger,
+  EventTrigger,
+  WebhookTrigger,
+  AutomationTrigger,
+  AutomationRunStatus,
+  AutomationRunRecord,
+  Automation,
+} from './automation.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
