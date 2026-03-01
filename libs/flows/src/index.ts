@@ -184,6 +184,14 @@ export {
   extractOptionalEnum,
 } from './content/xml-parser.js';
 
+// Maintenance flow (board health check → LLM analysis → Discord report)
+export {
+  createMaintenanceFlow,
+  type MaintenanceFlowDeps,
+  type MaintenanceFeatureLoader,
+  type MaintenanceDiscordBot,
+} from './maintenance/maintenance-flow.js';
+
 // Project planning flow (Linear-native HITL workflow)
 export {
   createProjectPlanningFlow,

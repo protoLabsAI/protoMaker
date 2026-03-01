@@ -26,3 +26,5 @@ export { createDiscordTools } from './discord-tools.js';
 export type { DiscordDeps, DiscordMessage } from './discord-tools.js';
 export { createGitHubTools } from './github-tools.js';
 export type { GitHubDeps, PullRequest } from './github-tools.js';
+export { createClaudeCodeTool } from './claude-code-tool.js';
+export type { ClaudeCodeDeps } from './claude-code-tool.js';
