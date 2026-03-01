@@ -11,6 +11,8 @@
 
 import { randomUUID } from 'crypto';
 import path from 'path';
+import { trace, context, SpanStatusCode } from '@opentelemetry/api';
+import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import { createLogger } from '@protolabs-ai/utils';
 import { secureFs } from '@protolabs-ai/platform';
 import type { Automation, AutomationRunRecord, AutomationRunStatus } from '@protolabs-ai/types';
@@ -307,6 +309,7 @@ export class AutomationService {
   /**
    * Execute an automation by ID.
    * Looks up the flow by flowId in the FlowRegistry and runs it with modelConfig injected.
+   * Creates a root OTel span for the run and emits a log record on completion.
    */
   async executeAutomation(
     id: string,
@@ -324,6 +327,7 @@ export class AutomationService {
 
     const runId = randomUUID();
     const startedAt = new Date().toISOString();
+    const startMs = Date.now();
 
     logger.info(
       `Executing automation "${automation.name}" (${id}), flow: ${automation.flowId}, triggered by: ${triggeredBy}`
@@ -331,9 +335,26 @@ export class AutomationService {
 
     let status: AutomationRunStatus = 'running';
     let error: string | undefined;
+    let traceId: string | undefined;
+
+    const tracer = trace.getTracer('automation-service');
+    const otelLogger = logs.getLogger('automation-service');
+
+    const span = tracer.startSpan(`automation:${id}`, {
+      attributes: {
+        automationId: id,
+        flowId: automation.flowId,
+        'trigger.type': automation.trigger.type,
+        'modelConfig.model': String(automation.modelConfig?.model ?? ''),
+      },
+    });
+
+    const ctx = trace.setSpan(context.active(), span);
 
     try {
-      await factory(automation.modelConfig);
+      await context.with(ctx, async () => {
+        await factory(automation.modelConfig);
+      });
       status = 'success';
     } catch (err) {
       status = 'failure';
@@ -341,7 +362,35 @@ export class AutomationService {
       logger.error(`Automation "${automation.name}" (${id}) failed:`, err);
     }
 
+    const durationMs = Date.now() - startMs;
     const completedAt = new Date().toISOString();
+
+    span.setAttributes({
+      success: status === 'success',
+      durationMs,
+      ...(error ? { errorMessage: error } : {}),
+    });
+
+    if (status === 'success') {
+      span.setStatus({ code: SpanStatusCode.OK });
+    } else {
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error });
+    }
+
+    traceId = span.spanContext().traceId;
+    span.end();
+
+    otelLogger.emit({
+      body: status === 'success' ? 'Automation run completed' : 'Automation run failed',
+      severityNumber: status === 'success' ? SeverityNumber.INFO : SeverityNumber.ERROR,
+      attributes: {
+        'event.name': status === 'success' ? 'automation.run.complete' : 'automation.run.failed',
+        automationId: id,
+        flowId: automation.flowId,
+        durationMs,
+        ...(error ? { errorMessage: error } : {}),
+      },
+    });
 
     const run: AutomationRunRecord = {
       id: runId,
@@ -350,6 +399,7 @@ export class AutomationService {
       startedAt,
       completedAt,
       error,
+      traceId,
     };
 
     await this.appendRun(run);
