@@ -236,6 +236,7 @@ export interface KeyboardShortcuts {
   fileEditor: string;
   designs: string;
   calendar: string;
+  automations: string;
 
   // UI shortcuts
   toggleSidebar: string;
@@ -283,6 +284,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   fileEditor: 'F',
   designs: 'Shift+D',
   calendar: 'Shift+C',
+  automations: 'U',
 
   // UI
   toggleSidebar: '`',

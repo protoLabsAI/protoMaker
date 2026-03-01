@@ -99,7 +99,10 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
   },
   {
     label: 'Advanced',
-    items: [{ id: 'developer', label: 'Developer', icon: Code2 }],
+    items: [
+      { id: 'automations', label: 'Automations', icon: Zap },
+      { id: 'developer', label: 'Developer', icon: Code2 },
+    ],
   },
 ];
 
