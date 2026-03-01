@@ -24,12 +24,7 @@ export interface MessageActionsProps {
   className?: string;
 }
 
-export function MessageActions({
-  text,
-  onRegenerate,
-  onFeedback,
-  className,
-}: MessageActionsProps) {
+export function MessageActions({ text, onRegenerate, onFeedback, className }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -43,10 +38,7 @@ export function MessageActions({
   };
 
   return (
-    <div
-      data-slot="message-actions"
-      className={cn('flex items-center gap-0.5', className)}
-    >
+    <div data-slot="message-actions" className={cn('flex items-center gap-0.5', className)}>
       {/* Copy */}
       <Button
         variant="ghost"
@@ -56,11 +48,7 @@ export function MessageActions({
         title={copied ? 'Copied!' : 'Copy'}
         className="size-7 text-muted-foreground hover:text-foreground"
       >
-        {copied ? (
-          <Check className="size-3.5 text-green-500" />
-        ) : (
-          <Copy className="size-3.5" />
-        )}
+        {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
       </Button>
 
       {/* Regenerate */}
