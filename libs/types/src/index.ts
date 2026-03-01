@@ -3,6 +3,17 @@
  * Shared type definitions for AutoMaker
  */
 
+// Automation registry supplementary types (CreateAutomationInput, UpdateAutomationInput, FlowFactory)
+// Core types (Automation, AutomationRunRecord, etc.) are already exported from the base workspace types
+export type {
+  CreateAutomationInput,
+  UpdateAutomationInput,
+  FlowFactory,
+  CronTriggerInput,
+  EventTriggerInput,
+  WebhookTriggerInput,
+} from './automation.js';
+
 // Provider types
 export type {
   ProviderConfig,
