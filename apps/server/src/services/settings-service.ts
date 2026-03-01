@@ -282,10 +282,17 @@ export class SettingsService {
       // Merge with defaults and convert any string values to PhaseModelEntry
       const merged: PhaseModelConfig = { ...DEFAULT_PHASE_MODELS };
       for (const key of Object.keys(settings.phaseModels) as Array<keyof PhaseModelConfig>) {
+        if (key === 'flowModels') {
+          // flowModels is Record<string, PhaseModelEntry>, not a single entry — copy as-is
+          if (settings.phaseModels.flowModels) {
+            merged.flowModels = settings.phaseModels.flowModels;
+          }
+          continue;
+        }
         const value = settings.phaseModels[key];
         if (value !== undefined) {
           // Convert string to PhaseModelEntry if needed (v2 -> v3 migration)
-          merged[key] = this.toPhaseModelEntry(value);
+          merged[key] = this.toPhaseModelEntry(value as string | PhaseModelEntry);
         }
       }
       return merged;
