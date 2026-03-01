@@ -478,6 +478,37 @@ export class AutomationService {
 
     logger.info(`Automation sync complete: ${registered} automations registered with scheduler`);
 
+    // Wire event-triggered automations: subscribe once and dispatch to matching automations at runtime
+    const eventsEmitter = deps.events as
+      | { subscribe?: (...args: unknown[]) => unknown }
+      | undefined;
+    if (eventsEmitter && typeof eventsEmitter.subscribe === 'function') {
+      eventsEmitter.subscribe((type: unknown, _payload: unknown) => {
+        void (async () => {
+          try {
+            const allAutomations = await this.readAutomations();
+            const matching = allAutomations.filter(
+              (a) =>
+                a.enabled &&
+                a.trigger.type === 'event' &&
+                (a.trigger as StoredEventTrigger).eventType === type
+            );
+            for (const automation of matching) {
+              this.executeAutomation(automation.id, 'scheduler').catch((err) => {
+                logger.error(
+                  `Event-triggered automation "${automation.name}" (${automation.id}) failed:`,
+                  err
+                );
+              });
+            }
+          } catch (err) {
+            logger.error('Error dispatching event-triggered automations:', err);
+          }
+        })();
+      });
+      logger.info('Event trigger wiring complete');
+    }
+
     // Apply per-task overrides from GlobalSettings.maintenance
     await this.applyMaintenanceSettingsOverrides(deps.settingsService);
   }
@@ -570,6 +601,32 @@ export class AutomationService {
       });
     }
 
+    // Ceremony automations (always seeded — event-triggered)
+    await this.upsertBuiltIn({
+      id: 'ceremony:standup',
+      name: 'Standup Ceremony',
+      description: 'Runs standup flow when a feature completes execution.',
+      trigger: { type: 'event', eventType: 'feature:completed' },
+      flowId: 'standup-flow',
+      enabled: true,
+    });
+    await this.upsertBuiltIn({
+      id: 'ceremony:retro',
+      name: 'Retrospective Ceremony',
+      description: 'Runs retro flow on milestone updates.',
+      trigger: { type: 'event', eventType: 'ceremony:milestone-update' },
+      flowId: 'retro-flow',
+      enabled: true,
+    });
+    await this.upsertBuiltIn({
+      id: 'ceremony:project-retro',
+      name: 'Project Retrospective Ceremony',
+      description: 'Runs project retro flow when a project retrospective is triggered.',
+      trigger: { type: 'event', eventType: 'ceremony:project-retro' },
+      flowId: 'project-retro-flow',
+      enabled: true,
+    });
+
     logger.info('Built-in automation records seeded');
   }
 
@@ -582,7 +639,7 @@ export class AutomationService {
     id: string;
     name: string;
     description: string;
-    trigger: { type: 'cron'; expression: string };
+    trigger: { type: 'cron'; expression: string } | { type: 'event'; eventType: string };
     flowId: string;
     enabled: boolean;
   }): Promise<void> {

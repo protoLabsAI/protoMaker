@@ -38,29 +38,65 @@ type BriefingSeverity = 'critical' | 'high' | 'medium' | 'low';
  * Based on importance to Ava's briefing needs
  */
 const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
-  // Critical: System failures, auto-mode errors, critical health checks
+  // Critical: System failures, blocked features, health checks
   auto_mode_error: 'critical',
   health_check_critical: 'critical',
+  feature_permanently_blocked: 'critical',
+  feature_pr_closed_unmerged: 'critical',
+  headsdown_agent_work_failed: 'critical',
+  pr_ci_failure: 'critical',
 
-  // High: Feature failures, retries, recoveries
+  // High: Feature failures, completions, retries, recoveries, key successes
   feature_error: 'high',
   feature_retry: 'high',
   feature_recovery: 'high',
   pr_feedback_received: 'high',
+  feature_success: 'high',
+  feature_completed: 'high',
+  feature_pr_merged: 'high',
+  pr_approved: 'high',
+  headsdown_agent_work_completed: 'high',
+  pr_remediation_completed: 'high',
+  auto_mode_started: 'high',
 
-  // Medium: Feature successes, auto-mode completions, health checks
-  feature_success: 'medium',
+  // Medium: Routine state changes, completions, ceremonies
   auto_mode_complete: 'medium',
   auto_mode_health_check: 'medium',
+  auto_mode_stopped: 'medium',
   skill_created: 'medium',
   memory_learning: 'medium',
   project_scaffolded: 'medium',
-
-  // Low: Feature creation, project deletion, ceremony events
-  feature_created: 'low',
-  project_deleted: 'low',
   milestone_completed: 'medium',
   project_completed: 'medium',
+  feature_started: 'medium',
+  feature_stopped: 'medium',
+  feature_committed: 'medium',
+  feature_blocked: 'medium',
+  feature_unblocked: 'medium',
+  pr_changes_requested: 'medium',
+  pr_remediation_started: 'medium',
+  ceremony_triggered: 'medium',
+  ceremony_milestone_update: 'medium',
+  ceremony_project_retro: 'medium',
+  linear_approval_detected: 'medium',
+  linear_changes_requested_detected: 'medium',
+
+  // Low: Informational events, creation events, low-impact changes
+  feature_created: 'low',
+  project_deleted: 'low',
+  feature_status_changed: 'low',
+  feature_agent_suggested: 'low',
+  headsdown_agent_started: 'low',
+  headsdown_agent_stopped: 'low',
+  worktree_drift_detected: 'low',
+  coderabbit_review_received: 'low',
+  issue_created: 'low',
+  prd_created: 'low',
+  project_analysis_completed: 'low',
+  discord_message_detected: 'low',
+  project_status_changed: 'low',
+  pr_remediation_failed: 'low',
+  health_issue_detected: 'low',
 };
 
 /**
