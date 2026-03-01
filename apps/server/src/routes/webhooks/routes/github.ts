@@ -97,6 +97,26 @@ function verifySignature(secret: string, signature: string | undefined, body: st
 }
 
 /**
+ * Scan all configured projects to find the one whose features satisfy `matcher`.
+ * Returns the project path on first match, or null if none match.
+ */
+async function findProjectPathForFeature(
+  featureLoader: FeatureLoader,
+  projects: Array<{ path?: string }>,
+  matcher: (path: string) => Promise<boolean>
+): Promise<string | null> {
+  for (const project of projects) {
+    if (!project.path) continue;
+    try {
+      if (await matcher(project.path)) return project.path;
+    } catch {
+      /* continue to next project */
+    }
+  }
+  return null;
+}
+
+/**
  * Find feature by branch name
  */
 async function findFeatureByBranch(
@@ -267,8 +287,10 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
       // PR closed WITHOUT merging — find linked feature and recover to backlog
       if (!payload.pull_request.merged) {
         const closedPrNumber = payload.pull_request.number;
-        const closedProject = settings.projects.find((p) => p.id === settings.currentProjectId);
-        const closedProjectPath = closedProject?.path || process.cwd();
+        const closedProjectPath =
+          (await findProjectPathForFeature(featureLoader, settings.projects, (path) =>
+            featureLoader.findByPRNumber(path, closedPrNumber).then(Boolean)
+          )) ?? process.cwd();
 
         const closedFeature = await featureLoader.findByPRNumber(closedProjectPath, closedPrNumber);
 
@@ -317,10 +339,11 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
 
       logger.info(`PR #${prNumber} merged: ${prTitle} (branch: ${branchName} → ${baseBranch})`);
 
-      // Get project path from settings or use current working directory
-      // In a real implementation, you might want to match the repository to a project
-      const currentProject = settings.projects.find((p) => p.id === settings.currentProjectId);
-      const projectPath = currentProject?.path || process.cwd();
+      // Search all configured projects for the one containing this branch's feature
+      const projectPath =
+        (await findProjectPathForFeature(featureLoader, settings.projects, (path) =>
+          findFeatureByBranch(featureLoader, path, branchName).then(Boolean)
+        )) ?? process.cwd();
 
       // Find feature by branch name
       const feature = await findFeatureByBranch(featureLoader, projectPath, branchName);
@@ -365,6 +388,28 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
         logger.info(
           `Feature "${feature.title}" moved from "${currentFeature.status}" to "done" after PR #${prNumber} was merged`
         );
+
+        // Epic auto-promotion: if all siblings are done/review, promote the parent epic immediately.
+        try {
+          const updatedFeature = await featureLoader.get(projectPath, feature.featureId);
+          if (updatedFeature?.epicId) {
+            const allFeatures = await featureLoader.getAll(projectPath);
+            const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);
+            const siblings = allFeatures.filter((f) => f.epicId === updatedFeature.epicId);
+            const allSiblingsDone = siblings.every((s) => doneStatuses.has(s.status ?? ''));
+            if (allSiblingsDone) {
+              const epic = allFeatures.find((f) => f.id === updatedFeature.epicId);
+              if (epic && !doneStatuses.has(epic.status ?? '')) {
+                await featureLoader.update(projectPath, epic.id, { status: 'done' });
+                logger.info(
+                  `Epic "${epic.title}" auto-promoted to done (all ${siblings.length} children done after PR #${prNumber})`
+                );
+              }
+            }
+          }
+        } catch (epicErr) {
+          logger.warn('Epic auto-promotion check failed (non-fatal):', epicErr);
+        }
 
         // Emit event for UI notification
         events.emit('feature:pr-merged', {
