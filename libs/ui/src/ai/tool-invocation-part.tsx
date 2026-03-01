@@ -16,11 +16,33 @@ import { toolResultRegistry } from './tool-result-registry.js';
 import { BoardSummaryCard } from './tool-results/board-summary-card.js';
 import { FeatureListCard } from './tool-results/feature-list-card.js';
 import { FeatureDetailCard } from './tool-results/feature-detail-card.js';
+import { FeatureCreatedCard } from './tool-results/feature-created-card.js';
+import { FeatureUpdatedCard, MoveFeatureCard } from './tool-results/feature-updated-card.js';
+import { AgentStatusCard } from './tool-results/agent-status-card.js';
+import { AgentOutputCard } from './tool-results/agent-output-card.js';
+import { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
+import { ExecutionOrderCard } from './tool-results/execution-order-card.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
 toolResultRegistry.register('list_features', FeatureListCard);
 toolResultRegistry.register('get_feature', FeatureDetailCard);
+
+// Register custom renderers for the boardWrite tool group
+toolResultRegistry.register('create_feature', FeatureCreatedCard);
+toolResultRegistry.register('update_feature', FeatureUpdatedCard);
+toolResultRegistry.register('move_feature', MoveFeatureCard);
+
+// Register custom renderers for the agentControl tool group
+toolResultRegistry.register('start_agent', AgentStatusCard);
+toolResultRegistry.register('stop_agent', AgentStatusCard);
+toolResultRegistry.register('get_agent_output', AgentOutputCard);
+
+// Register custom renderers for the autoMode tool group
+toolResultRegistry.register('get_auto_mode_status', AutoModeStatusCard);
+
+// Register custom renderers for the orchestration tool group
+toolResultRegistry.register('get_execution_order', ExecutionOrderCard);
 
 type ToolState =
   | 'input-streaming'

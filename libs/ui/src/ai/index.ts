@@ -35,3 +35,9 @@ export {
 export { BoardSummaryCard } from './tool-results/board-summary-card.js';
 export { FeatureListCard } from './tool-results/feature-list-card.js';
 export { FeatureDetailCard } from './tool-results/feature-detail-card.js';
+export { FeatureCreatedCard } from './tool-results/feature-created-card.js';
+export { FeatureUpdatedCard, MoveFeatureCard } from './tool-results/feature-updated-card.js';
+export { AgentStatusCard } from './tool-results/agent-status-card.js';
+export { AgentOutputCard } from './tool-results/agent-output-card.js';
+export { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
+export { ExecutionOrderCard } from './tool-results/execution-order-card.js';
