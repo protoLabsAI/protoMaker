@@ -42,6 +42,60 @@ const execAsync = promisify(exec);
 const logger = createLogger('EventHooks');
 
 /**
+ * Mapping from EventType strings to EventHookTrigger for the expanded trigger set.
+ * Events handled by dedicated methods above are excluded to avoid double-firing.
+ */
+const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> = {
+  // Feature lifecycle
+  'feature:started': 'feature_started',
+  'feature:completed': 'feature_completed',
+  'feature:stopped': 'feature_stopped',
+  'feature:committed': 'feature_committed',
+  'feature:pr-merged': 'feature_pr_merged',
+  'feature:pr-closed-unmerged': 'feature_pr_closed_unmerged',
+  'feature:blocked': 'feature_blocked',
+  'feature:unblocked': 'feature_unblocked',
+  'feature:status-changed': 'feature_status_changed',
+  'feature:permanently-blocked': 'feature_permanently_blocked',
+  'feature:agent-suggested': 'feature_agent_suggested',
+  // Auto-mode
+  'auto-mode:started': 'auto_mode_started',
+  'auto-mode:stopped': 'auto_mode_stopped',
+  // PR lifecycle
+  'pr:approved': 'pr_approved',
+  'pr:changes-requested': 'pr_changes_requested',
+  'pr:ci-failure': 'pr_ci_failure',
+  'pr:remediation-started': 'pr_remediation_started',
+  'pr:remediation-completed': 'pr_remediation_completed',
+  'pr:remediation-failed': 'pr_remediation_failed',
+  // Ceremony events
+  'ceremony:milestone-update': 'ceremony_milestone_update',
+  'ceremony:project-retro': 'ceremony_project_retro',
+  'ceremony:triggered': 'ceremony_triggered',
+  // Infrastructure / health
+  'worktree:drift-detected': 'worktree_drift_detected',
+  'health:issue-detected': 'health_issue_detected',
+  // Headsdown agents
+  'headsdown:agent:started': 'headsdown_agent_started',
+  'headsdown:agent:stopped': 'headsdown_agent_stopped',
+  'headsdown:agent:work-completed': 'headsdown_agent_work_completed',
+  'headsdown:agent:work-failed': 'headsdown_agent_work_failed',
+  // Integrations
+  'coderabbit:review-received': 'coderabbit_review_received',
+  'linear:approval:detected': 'linear_approval_detected',
+  'linear:changes-requested:detected': 'linear_changes_requested_detected',
+  'discord:message:detected': 'discord_message_detected',
+  // Project / planning
+  'issue:created': 'issue_created',
+  'prd:created': 'prd_created',
+  'project:analysis-completed': 'project_analysis_completed',
+  'project:status-changed': 'project_status_changed',
+  // Milestone / project completion (not handled via auto-mode:event)
+  'milestone:completed': 'milestone_completed',
+  'project:completed': 'project_completed',
+};
+
+/**
  * Classify event severity based on trigger type
  *
  * Classification rules:
@@ -55,13 +109,26 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
   if (
     trigger === 'feature_error' ||
     trigger === 'auto_mode_error' ||
-    trigger === 'health_check_critical'
+    trigger === 'health_check_critical' ||
+    trigger === 'feature_permanently_blocked' ||
+    trigger === 'feature_pr_closed_unmerged' ||
+    trigger === 'headsdown_agent_work_failed' ||
+    trigger === 'pr_ci_failure'
   ) {
     return 'critical';
   }
 
   // High priority events - important successes and completions
-  if (trigger === 'feature_success' || trigger === 'auto_mode_complete') {
+  if (
+    trigger === 'feature_success' ||
+    trigger === 'auto_mode_complete' ||
+    trigger === 'feature_completed' ||
+    trigger === 'feature_pr_merged' ||
+    trigger === 'pr_approved' ||
+    trigger === 'headsdown_agent_work_completed' ||
+    trigger === 'pr_remediation_completed' ||
+    trigger === 'auto_mode_started'
+  ) {
     return 'high';
   }
 
@@ -69,13 +136,25 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
   if (
     trigger === 'feature_created' ||
     trigger === 'feature_retry' ||
-    trigger === 'feature_recovery'
+    trigger === 'feature_recovery' ||
+    trigger === 'feature_started' ||
+    trigger === 'feature_stopped' ||
+    trigger === 'feature_committed' ||
+    trigger === 'feature_blocked' ||
+    trigger === 'feature_unblocked' ||
+    trigger === 'pr_changes_requested' ||
+    trigger === 'pr_remediation_started' ||
+    trigger === 'ceremony_triggered' ||
+    trigger === 'ceremony_milestone_update' ||
+    trigger === 'ceremony_project_retro' ||
+    trigger === 'auto_mode_stopped' ||
+    trigger === 'linear_approval_detected' ||
+    trigger === 'linear_changes_requested_detected'
   ) {
     return 'medium';
   }
 
   // Low priority - everything else (informational)
-  // auto_mode_health_check, skill_created, memory_learning, pr_feedback_received, project_scaffolded, project_deleted
   return 'low';
 }
 
@@ -274,6 +353,12 @@ export class EventHookService {
         this.handleProjectScaffoldedEvent(payload as ProjectScaffoldedPayload);
       } else if (type === 'project:deleted') {
         this.handleProjectDeletedEvent(payload as ProjectDeletedPayload);
+      } else {
+        // Handle expanded trigger set via generic mapping
+        const trigger = GENERIC_EVENT_TYPE_TO_TRIGGER[type];
+        if (trigger) {
+          void this.handleGenericEvent(trigger, payload as Record<string, unknown>);
+        }
       }
     });
 
@@ -516,6 +601,37 @@ export class EventHookService {
     };
 
     await this.executeHooksForTrigger('health_check_critical', context);
+  }
+
+  /**
+   * Handle generic events using the GENERIC_EVENT_TYPE_TO_TRIGGER mapping.
+   * Extracts common fields (featureId, projectPath, error) from the payload.
+   */
+  private async handleGenericEvent(
+    trigger: EventHookTrigger,
+    payload: Record<string, unknown>
+  ): Promise<void> {
+    const featureId = typeof payload.featureId === 'string' ? payload.featureId : undefined;
+    const featureName =
+      typeof payload.featureTitle === 'string'
+        ? payload.featureTitle
+        : typeof payload.featureName === 'string'
+          ? payload.featureName
+          : undefined;
+    const projectPath = typeof payload.projectPath === 'string' ? payload.projectPath : undefined;
+    const error = typeof payload.error === 'string' ? payload.error : undefined;
+
+    const hookContext: HookContext = {
+      featureId,
+      featureName,
+      projectPath,
+      projectName: projectPath ? this.extractProjectName(projectPath) : undefined,
+      error,
+      timestamp: new Date().toISOString(),
+      eventType: trigger,
+    };
+
+    await this.executeHooksForTrigger(trigger, hookContext);
   }
 
   /**
