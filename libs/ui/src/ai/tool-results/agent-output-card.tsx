@@ -56,7 +56,8 @@ function extractData(output: unknown): AgentOutputData | null {
 
 /** Get the raw log text from various field names */
 function getLogText(data: AgentOutputData): string {
-  return data.output ?? data.log ?? data.logs ?? data.content ?? '';
+  const raw = data.output ?? data.log ?? data.logs ?? data.content ?? '';
+  return typeof raw === 'string' ? raw : '';
 }
 
 /** Collect file changes from various shapes */

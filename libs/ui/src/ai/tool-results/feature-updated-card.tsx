@@ -81,7 +81,8 @@ function extractUpdateData(output: unknown): UpdateFeatureData | null {
   if ('success' in o && 'data' in o && typeof o.data === 'object' && o.data !== null) {
     return o.data as UpdateFeatureData;
   }
-  if ('before' in o || 'after' in o || 'changes' in o) return o as UpdateFeatureData;
+  if ('before' in o || 'after' in o || 'changes' in o || 'updatedFields' in o)
+    return o as UpdateFeatureData;
   if ('feature' in o) return o as UpdateFeatureData;
   return null;
 }

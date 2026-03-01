@@ -87,7 +87,8 @@ function getStatusDot(status: string | undefined) {
 }
 
 function getDeps(feature: OrderedFeature): string[] {
-  return feature.dependsOn ?? feature.dependencies ?? feature.blockedBy ?? [];
+  const raw = feature.dependsOn ?? feature.dependencies ?? feature.blockedBy;
+  return Array.isArray(raw) ? raw : [];
 }
 
 export function ExecutionOrderCard({ output, state }: ToolResultRendererProps) {

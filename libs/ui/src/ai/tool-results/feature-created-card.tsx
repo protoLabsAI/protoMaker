@@ -38,6 +38,8 @@ function extractData(output: unknown): CreateFeatureData | null {
   if ('feature' in o) return o as CreateFeatureData;
   // The output itself might be a feature
   if ('id' in o) return { feature: o as CreatedFeature };
+  // Direct { featureId, title } shape
+  if ('featureId' in o) return o as CreateFeatureData;
   return null;
 }
 
