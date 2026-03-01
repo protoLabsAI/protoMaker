@@ -12,7 +12,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { History, X, Settings, ChevronUp, ChevronDown } from 'lucide-react';
+import { History, X, Settings, ChevronUp, ChevronDown, SquarePen } from 'lucide-react';
 import {
   ChatMessageList,
   ChatInput,
@@ -143,7 +143,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             title="New chat"
             aria-label="New chat"
           >
-            <span className="text-xs">New</span>
+            <SquarePen className="size-3.5" />
           </Button>
           {!isModal && (
             <Button
@@ -234,7 +234,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
               actions={
                 <>
                   <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
                   </span>
                 </>
