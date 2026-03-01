@@ -50,12 +50,10 @@ export function createCreateHandler(hitlFormService: HITLFormService) {
       });
 
       if (!form) {
-        res
-          .status(403)
-          .json({
-            success: false,
-            error: 'HITL forms are disabled (featureFlags.pipeline is false)',
-          });
+        res.status(403).json({
+          success: false,
+          error: 'HITL forms are disabled (featureFlags.pipeline is false)',
+        });
         return;
       }
 
