@@ -56,7 +56,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   review: { label: 'Review', color: 'text-amber-500', bg: 'bg-amber-500/10' },
   blocked: { label: 'Blocked', color: 'text-red-500', bg: 'bg-red-500/10' },
   done: { label: 'Done', color: 'text-green-500', bg: 'bg-green-500/10' },
-  interrupted: { label: 'Interrupted', color: 'text-orange-500', bg: 'bg-orange-500/10' },
 };
 
 const COMPLEXITY_LABELS: Record<string, string> = {
@@ -153,9 +152,9 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
             @{feature.assignee}
           </span>
         )}
-        {feature.prNumber && (
+        {feature.prNumber && feature.prUrl && (
           <a
-            href={feature.prUrl ?? '#'}
+            href={feature.prUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded bg-muted/80 px-1.5 py-0.5 text-muted-foreground hover:text-foreground"
@@ -163,15 +162,20 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
             PR #{feature.prNumber}
           </a>
         )}
+        {feature.prNumber && !feature.prUrl && (
+          <span className="rounded bg-muted/80 px-1.5 py-0.5 text-muted-foreground">
+            PR #{feature.prNumber}
+          </span>
+        )}
       </div>
 
       {/* Description */}
-      {feature.description && (
+      {typeof feature.description === 'string' && feature.description.length > 0 && (
         <p className="mb-2 leading-relaxed text-foreground/70">{truncate(feature.description)}</p>
       )}
 
       {/* Agent output preview: summary or error */}
-      {feature.summary && (
+      {typeof feature.summary === 'string' && feature.summary.length > 0 && (
         <div className="rounded bg-green-500/5 px-2 py-1.5">
           <span className="text-[10px] font-medium uppercase tracking-wider text-green-600">
             Summary
@@ -181,7 +185,7 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
           </p>
         </div>
       )}
-      {feature.error && (
+      {typeof feature.error === 'string' && feature.error.length > 0 && (
         <div className="rounded bg-destructive/5 px-2 py-1.5">
           <span className="text-[10px] font-medium uppercase tracking-wider text-destructive">
             Error

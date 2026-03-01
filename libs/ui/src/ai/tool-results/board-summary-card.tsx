@@ -15,7 +15,6 @@ interface StatusCounts {
   review?: number;
   blocked?: number;
   done?: number;
-  interrupted?: number;
   [key: string]: number | undefined;
 }
 
@@ -71,15 +70,9 @@ const STATUS_CONFIG: Record<
     bg: 'bg-green-500/10',
     barColor: 'bg-green-500',
   },
-  interrupted: {
-    label: 'Interrupted',
-    color: 'text-orange-500',
-    bg: 'bg-orange-500/10',
-    barColor: 'bg-orange-500',
-  },
 };
 
-const STATUS_ORDER = ['backlog', 'in_progress', 'review', 'blocked', 'done', 'interrupted'];
+const STATUS_ORDER = ['backlog', 'in_progress', 'review', 'blocked', 'done'];
 
 export function BoardSummaryCard({ output, state }: ToolResultRendererProps) {
   const isLoading =

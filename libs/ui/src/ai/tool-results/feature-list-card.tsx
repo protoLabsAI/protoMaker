@@ -39,7 +39,7 @@ function extractData(output: unknown): ListFeaturesData | null {
     return o.data as ListFeaturesData;
   }
   // Direct features array
-  if ('features' in o) return o as ListFeaturesData;
+  if ('features' in o && Array.isArray(o.features)) return o as ListFeaturesData;
   return null;
 }
 
@@ -49,7 +49,6 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
   review: { label: 'Review', color: 'text-amber-500', dot: 'bg-amber-500' },
   blocked: { label: 'Blocked', color: 'text-red-500', dot: 'bg-red-500' },
   done: { label: 'Done', color: 'text-green-500', dot: 'bg-green-500' },
-  interrupted: { label: 'Interrupted', color: 'text-orange-500', dot: 'bg-orange-500' },
 };
 
 const COMPLEXITY_CONFIG: Record<string, { label: string; color: string }> = {
@@ -130,7 +129,7 @@ export function FeatureListCard({ output, state }: ToolResultRendererProps) {
   }
 
   const data = extractData(output);
-  const features = data?.features ?? [];
+  const features = Array.isArray(data?.features) ? data.features : [];
 
   return (
     <div
