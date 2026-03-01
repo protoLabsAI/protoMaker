@@ -64,6 +64,27 @@ export const requestUserInput = defineSharedTool({
     try {
       const typedInput = input as RequestUserInputInput;
 
+      // Check feature flag: HITL forms only created when pipeline flag is enabled
+      const settingsService = context.services?.settingsService as any;
+      if (settingsService) {
+        try {
+          const globalSettings = await settingsService.getGlobalSettings();
+          const hitlEnabled = globalSettings?.featureFlags?.pipeline ?? false;
+          if (!hitlEnabled) {
+            return {
+              success: false,
+              error: 'HITL forms are disabled. Enable featureFlags.pipeline to use this feature.',
+            };
+          }
+        } catch {
+          // If settings cannot be read, default to disabled
+          return {
+            success: false,
+            error: 'HITL forms are disabled. Enable featureFlags.pipeline to use this feature.',
+          };
+        }
+      }
+
       const hitlFormService = context.services?.hitlFormService as any;
       if (!hitlFormService) {
         return {

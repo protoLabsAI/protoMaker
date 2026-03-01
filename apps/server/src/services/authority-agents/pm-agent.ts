@@ -406,7 +406,25 @@ export class PMAuthorityAgent {
 
         // Ask user for clarification if triage says it's needed
         let clarificationContext = '';
+
+        // Check feature flag: HITL forms only created when pipeline flag is enabled
+        let hitlEnabled = false;
+        if (this.settingsService) {
+          try {
+            const globalSettings = await this.settingsService.getGlobalSettings();
+            hitlEnabled = globalSettings.featureFlags?.pipeline ?? false;
+          } catch (err) {
+            logger.warn('Failed to read feature flags, HITL disabled:', err);
+          }
+        }
+        if (!hitlEnabled) {
+          logger.debug(
+            'HITL forms disabled (featureFlags.pipeline=false), skipping clarifying questions'
+          );
+        }
+
         if (
+          hitlEnabled &&
           triage?.needsClarification &&
           triage.clarifyingQuestions?.length &&
           this.hitlFormService
