@@ -9,7 +9,7 @@
  *   4. Return the typed result
  *
  * Usage (server-side):
- *   const model = new ChatAnthropic({ model: 'claude-sonnet-4-5-20250929' });
+ *   const model = createLangChainModel({ model: 'claude-sonnet' });
  *   const flow = createProjectPlanningFlow({
  *     researchExecutor: createLLMResearchExecutor(model),
  *     planningDocGenerator: createLLMPlanningDocGenerator(model),

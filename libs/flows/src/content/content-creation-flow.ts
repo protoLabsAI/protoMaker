@@ -1396,7 +1396,7 @@ export function createContentCreationFlow(options?: ContentCreationFlowOptions) 
   // When HITL is enabled, compile with checkpointer + interruptBefore so the
   // graph can pause and resume at HITL gate nodes.
   // NOTE: HITL mode requires models to be removed from state before checkpointing
-  // works fully (ChatAnthropic instances aren't serializable by MemorySaver).
+  // works fully (LangChain model instances aren't serializable by MemorySaver).
   if (enableHITL) {
     const checkpointer = new MemorySaver();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1408,6 +1408,6 @@ export function createContentCreationFlow(options?: ContentCreationFlowOptions) 
 
   // Autonomous mode: no checkpointer needed since the flow runs end-to-end
   // without interrupts. Avoids MemorySaver serialization issues with
-  // non-serializable ChatAnthropic model instances in state.
+  // non-serializable LangChain model instances in state.
   return graph.compile();
 }
