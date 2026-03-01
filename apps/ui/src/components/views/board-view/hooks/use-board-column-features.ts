@@ -106,8 +106,19 @@ export function useBoardColumnFeatures({
           matchesWorktree = true;
         }
       } else {
-        // Match by branch name
-        matchesWorktree = featureBranch === effectiveBranch;
+        if (featureBranch === effectiveBranch) {
+          // Feature's branch is the current worktree's branch - show it
+          matchesWorktree = true;
+        } else if (currentWorktreePath === null && projectPath) {
+          // On the main worktree: show features that don't have their own dedicated worktree.
+          // Features checked out in a non-main worktree should stay pinned there, not leak onto main.
+          const allWorktrees = useWorktreeStore.getState().worktreesByProject[projectPath] ?? [];
+          const hasOwnWorktree = allWorktrees.some((w) => !w.isMain && w.branch === featureBranch);
+          matchesWorktree = !hasOwnWorktree;
+        } else {
+          // On a non-main worktree viewing a different branch - hide it
+          matchesWorktree = false;
+        }
       }
 
       // Normalize status to handle legacy values, but preserve pipeline_* statuses
