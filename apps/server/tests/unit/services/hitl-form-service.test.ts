@@ -29,6 +29,14 @@ vi.mock('@protolabs-ai/utils', () => ({
   }),
 }));
 
+function createMockSettingsService(pipelineEnabled = true) {
+  return {
+    getGlobalSettings: vi.fn().mockResolvedValue({
+      featureFlags: { pipeline: pipelineEnabled },
+    }),
+  };
+}
+
 function createMockDeps(overrides: Partial<HITLFormServiceDeps> = {}): HITLFormServiceDeps {
   return {
     events: {
@@ -67,6 +75,8 @@ describe('HITLFormService', () => {
     vi.mocked(fs.readFile).mockRejectedValue({ code: 'ENOENT' });
     deps = createMockDeps();
     service = new HITLFormService(deps);
+    // Wire settingsService with pipeline=true so tests can create forms
+    service.setSettingsService(createMockSettingsService(true) as any);
   });
 
   afterEach(() => {
@@ -74,27 +84,50 @@ describe('HITLFormService', () => {
     vi.useRealTimers();
   });
 
+  // ---------- create() — feature flag gate ----------
+
+  describe('create() — feature flag gate', () => {
+    it('should return null when pipeline flag is false', async () => {
+      service.setSettingsService(createMockSettingsService(false) as any);
+      const result = await service.create(createValidInput());
+      expect(result).toBeNull();
+    });
+
+    it('should return null when settingsService is not wired', async () => {
+      const ungatedService = new HITLFormService(createMockDeps());
+      const result = await ungatedService.create(createValidInput());
+      expect(result).toBeNull();
+      ungatedService.shutdown();
+    });
+
+    it('should create a form when pipeline flag is true', async () => {
+      const form = await service.create(createValidInput());
+      expect(form).not.toBeNull();
+      expect(form!.id).toMatch(/^hitl-/);
+    });
+  });
+
   // ---------- create() ----------
 
   describe('create', () => {
-    it('should create a form with valid input', () => {
-      const form = service.create(createValidInput());
+    it('should create a form with valid input', async () => {
+      const form = await service.create(createValidInput());
 
-      expect(form.id).toMatch(/^hitl-/);
-      expect(form.status).toBe('pending');
-      expect(form.title).toBe('Test Form');
-      expect(form.steps).toHaveLength(1);
-      expect(form.createdAt).toBeDefined();
-      expect(form.expiresAt).toBeDefined();
+      expect(form!.id).toMatch(/^hitl-/);
+      expect(form!.status).toBe('pending');
+      expect(form!.title).toBe('Test Form');
+      expect(form!.steps).toHaveLength(1);
+      expect(form!.createdAt).toBeDefined();
+      expect(form!.expiresAt).toBeDefined();
     });
 
-    it('should emit hitl:form-requested event', () => {
-      const form = service.create(createValidInput());
+    it('should emit hitl:form-requested event', async () => {
+      const form = await service.create(createValidInput());
 
       expect(deps.events.emit).toHaveBeenCalledWith(
         'hitl:form-requested',
         expect.objectContaining({
-          formId: form.id,
+          formId: form!.id,
           title: 'Test Form',
           callerType: 'api',
           stepCount: 1,
@@ -102,53 +135,55 @@ describe('HITLFormService', () => {
       );
     });
 
-    it('should throw if title is missing', () => {
-      expect(() => service.create(createValidInput({ title: '' }))).toThrow(
+    it('should throw if title is missing', async () => {
+      await expect(service.create(createValidInput({ title: '' }))).rejects.toThrow(
         'title and at least one step are required'
       );
     });
 
-    it('should throw if steps are empty', () => {
-      expect(() => service.create(createValidInput({ steps: [] }))).toThrow(
+    it('should throw if steps are empty', async () => {
+      await expect(service.create(createValidInput({ steps: [] }))).rejects.toThrow(
         'title and at least one step are required'
       );
     });
 
-    it('should throw if agent caller has no featureId', () => {
-      expect(() =>
+    it('should throw if agent caller has no featureId', async () => {
+      await expect(
         service.create(createValidInput({ callerType: 'agent', featureId: undefined }))
-      ).toThrow('featureId is required for agent caller type');
+      ).rejects.toThrow('featureId is required for agent caller type');
     });
 
-    it('should accept agent caller with featureId', () => {
-      const form = service.create(createValidInput({ callerType: 'agent', featureId: 'feat-123' }));
-      expect(form.callerType).toBe('agent');
-      expect(form.featureId).toBe('feat-123');
+    it('should accept agent caller with featureId', async () => {
+      const form = await service.create(
+        createValidInput({ callerType: 'agent', featureId: 'feat-123' })
+      );
+      expect(form!.callerType).toBe('agent');
+      expect(form!.featureId).toBe('feat-123');
     });
 
-    it('should clamp TTL to minimum 60 seconds', () => {
-      const form = service.create(createValidInput({ ttlSeconds: 10 }));
-      const created = new Date(form.createdAt).getTime();
-      const expires = new Date(form.expiresAt).getTime();
+    it('should clamp TTL to minimum 60 seconds', async () => {
+      const form = await service.create(createValidInput({ ttlSeconds: 10 }));
+      const created = new Date(form!.createdAt).getTime();
+      const expires = new Date(form!.expiresAt).getTime();
       expect(expires - created).toBe(60 * 1000);
     });
 
-    it('should clamp TTL to maximum 24 hours', () => {
-      const form = service.create(createValidInput({ ttlSeconds: 999999 }));
-      const created = new Date(form.createdAt).getTime();
-      const expires = new Date(form.expiresAt).getTime();
+    it('should clamp TTL to maximum 24 hours', async () => {
+      const form = await service.create(createValidInput({ ttlSeconds: 999999 }));
+      const created = new Date(form!.createdAt).getTime();
+      const expires = new Date(form!.expiresAt).getTime();
       expect(expires - created).toBe(86400 * 1000);
     });
 
-    it('should use default TTL of 1 hour when not specified', () => {
-      const form = service.create(createValidInput());
-      const created = new Date(form.createdAt).getTime();
-      const expires = new Date(form.expiresAt).getTime();
+    it('should use default TTL of 1 hour when not specified', async () => {
+      const form = await service.create(createValidInput());
+      const created = new Date(form!.createdAt).getTime();
+      const expires = new Date(form!.expiresAt).getTime();
       expect(expires - created).toBe(3600 * 1000);
     });
 
     it('should persist form to disk', async () => {
-      service.create(createValidInput());
+      await service.create(createValidInput());
 
       // Flush async fire-and-forget saveToDisk
       await vi.advanceTimersByTimeAsync(0);
@@ -160,25 +195,25 @@ describe('HITLFormService', () => {
   // ---------- get() ----------
 
   describe('get', () => {
-    it('should return a created form by ID', () => {
-      const created = service.create(createValidInput());
-      const retrieved = service.get(created.id);
+    it('should return a created form by ID', async () => {
+      const created = await service.create(createValidInput());
+      const retrieved = service.get(created!.id);
       expect(retrieved).toBeDefined();
-      expect(retrieved!.id).toBe(created.id);
+      expect(retrieved!.id).toBe(created!.id);
     });
 
     it('should return undefined for unknown ID', () => {
       expect(service.get('nonexistent')).toBeUndefined();
     });
 
-    it('should auto-expire forms past their TTL', () => {
-      const form = service.create(createValidInput({ ttlSeconds: 60 }));
-      expect(service.get(form.id)!.status).toBe('pending');
+    it('should auto-expire forms past their TTL', async () => {
+      const form = await service.create(createValidInput({ ttlSeconds: 60 }));
+      expect(service.get(form!.id)!.status).toBe('pending');
 
       // Advance past TTL
       vi.advanceTimersByTime(61 * 1000);
 
-      const expired = service.get(form.id);
+      const expired = service.get(form!.id);
       expect(expired!.status).toBe('expired');
     });
   });
@@ -186,33 +221,33 @@ describe('HITLFormService', () => {
   // ---------- listPending() ----------
 
   describe('listPending', () => {
-    it('should return all pending forms', () => {
-      service.create(createValidInput({ title: 'Form A' }));
-      service.create(createValidInput({ title: 'Form B' }));
+    it('should return all pending forms', async () => {
+      await service.create(createValidInput({ title: 'Form A' }));
+      await service.create(createValidInput({ title: 'Form B' }));
 
       const pending = service.listPending();
       expect(pending).toHaveLength(2);
     });
 
-    it('should filter by projectPath', () => {
-      service.create(createValidInput({ projectPath: '/project/a' }));
-      service.create(createValidInput({ projectPath: '/project/b' }));
+    it('should filter by projectPath', async () => {
+      await service.create(createValidInput({ projectPath: '/project/a' }));
+      await service.create(createValidInput({ projectPath: '/project/b' }));
 
       const filtered = service.listPending('/project/a');
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBeDefined();
     });
 
-    it('should exclude expired forms', () => {
-      service.create(createValidInput({ ttlSeconds: 60 }));
+    it('should exclude expired forms', async () => {
+      await service.create(createValidInput({ ttlSeconds: 60 }));
       vi.advanceTimersByTime(61 * 1000);
 
       const pending = service.listPending();
       expect(pending).toHaveLength(0);
     });
 
-    it('should return summaries with correct shape', () => {
-      service.create(createValidInput());
+    it('should return summaries with correct shape', async () => {
+      await service.create(createValidInput());
       const [summary] = service.listPending();
 
       expect(summary).toHaveProperty('id');
@@ -229,8 +264,8 @@ describe('HITLFormService', () => {
 
   describe('submit', () => {
     it('should submit a form with valid response', async () => {
-      const form = service.create(createValidInput());
-      const result = await service.submit(form.id, [{ name: 'John' }]);
+      const form = await service.create(createValidInput());
+      const result = await service.submit(form!.id, [{ name: 'John' }]);
 
       expect(result.status).toBe('submitted');
       expect(result.response).toEqual([{ name: 'John' }]);
@@ -238,13 +273,13 @@ describe('HITLFormService', () => {
     });
 
     it('should emit hitl:form-responded event', async () => {
-      const form = service.create(createValidInput());
-      await service.submit(form.id, [{ name: 'John' }]);
+      const form = await service.create(createValidInput());
+      await service.submit(form!.id, [{ name: 'John' }]);
 
       expect(deps.events.emit).toHaveBeenCalledWith(
         'hitl:form-responded',
         expect.objectContaining({
-          formId: form.id,
+          formId: form!.id,
           cancelled: false,
         })
       );
@@ -255,29 +290,29 @@ describe('HITLFormService', () => {
     });
 
     it('should throw for non-pending form', async () => {
-      const form = service.create(createValidInput());
-      await service.submit(form.id, [{ name: 'first' }]);
+      const form = await service.create(createValidInput());
+      await service.submit(form!.id, [{ name: 'first' }]);
 
-      await expect(service.submit(form.id, [{ name: 'again' }])).rejects.toThrow('is not pending');
+      await expect(service.submit(form!.id, [{ name: 'again' }])).rejects.toThrow('is not pending');
     });
 
     it('should throw for expired form', async () => {
-      const form = service.create(createValidInput({ ttlSeconds: 60 }));
+      const form = await service.create(createValidInput({ ttlSeconds: 60 }));
       vi.advanceTimersByTime(61 * 1000);
 
-      await expect(service.submit(form.id, [{}])).rejects.toThrow('has expired');
+      await expect(service.submit(form!.id, [{}])).rejects.toThrow('has expired');
     });
 
     it('should throw for wrong number of responses', async () => {
-      const form = service.create(createValidInput());
-      await expect(service.submit(form.id, [{}, {}])).rejects.toThrow('Expected 1 response(s)');
+      const form = await service.create(createValidInput());
+      await expect(service.submit(form!.id, [{}, {}])).rejects.toThrow('Expected 1 response(s)');
     });
 
     it('should route response to agent via followUpFeature', async () => {
-      const form = service.create(
+      const form = await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-1', projectPath: '/proj' })
       );
-      await service.submit(form.id, [{ answer: 'yes' }]);
+      await service.submit(form!.id, [{ answer: 'yes' }]);
 
       expect(deps.followUpFeature).toHaveBeenCalledWith(
         '/proj',
@@ -287,8 +322,8 @@ describe('HITLFormService', () => {
     });
 
     it('should not call followUpFeature for api caller', async () => {
-      const form = service.create(createValidInput({ callerType: 'api' }));
-      await service.submit(form.id, [{}]);
+      const form = await service.create(createValidInput({ callerType: 'api' }));
+      await service.submit(form!.id, [{}]);
 
       expect(deps.followUpFeature).not.toHaveBeenCalled();
     });
@@ -298,21 +333,21 @@ describe('HITLFormService', () => {
 
   describe('cancel', () => {
     it('should cancel a pending form', async () => {
-      const form = service.create(createValidInput());
-      const result = await service.cancel(form.id);
+      const form = await service.create(createValidInput());
+      const result = await service.cancel(form!.id);
 
       expect(result.status).toBe('cancelled');
       expect(result.respondedAt).toBeDefined();
     });
 
     it('should emit hitl:form-responded with cancelled=true', async () => {
-      const form = service.create(createValidInput());
-      await service.cancel(form.id);
+      const form = await service.create(createValidInput());
+      await service.cancel(form!.id);
 
       expect(deps.events.emit).toHaveBeenCalledWith(
         'hitl:form-responded',
         expect.objectContaining({
-          formId: form.id,
+          formId: form!.id,
           cancelled: true,
         })
       );
@@ -323,17 +358,17 @@ describe('HITLFormService', () => {
     });
 
     it('should throw for non-pending form', async () => {
-      const form = service.create(createValidInput());
-      await service.cancel(form.id);
+      const form = await service.create(createValidInput());
+      await service.cancel(form!.id);
 
-      await expect(service.cancel(form.id)).rejects.toThrow('is not pending');
+      await expect(service.cancel(form!.id)).rejects.toThrow('is not pending');
     });
 
     it('should route cancellation to agent', async () => {
-      const form = service.create(
+      const form = await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-1', projectPath: '/proj' })
       );
-      await service.cancel(form.id);
+      await service.cancel(form!.id);
 
       expect(deps.followUpFeature).toHaveBeenCalledWith(
         '/proj',
@@ -421,7 +456,7 @@ describe('HITLFormService', () => {
     });
 
     it('should use atomic writes (temp file + rename)', async () => {
-      service.create(createValidInput({ projectPath: '/proj' }));
+      await service.create(createValidInput({ projectPath: '/proj' }));
 
       // Flush async fire-and-forget saveToDisk
       await vi.advanceTimersByTimeAsync(0);
@@ -438,8 +473,8 @@ describe('HITLFormService', () => {
   // ---------- cleanup() ----------
 
   describe('cleanup', () => {
-    it('should expire forms past TTL during cleanup', () => {
-      const form = service.create(createValidInput({ ttlSeconds: 60 }));
+    it('should expire forms past TTL during cleanup', async () => {
+      const form = await service.create(createValidInput({ ttlSeconds: 60 }));
 
       // Advance past TTL but within cleanup interval
       vi.advanceTimersByTime(61 * 1000);
@@ -447,11 +482,11 @@ describe('HITLFormService', () => {
       // Trigger cleanup (runs every 5 minutes)
       vi.advanceTimersByTime(5 * 60 * 1000);
 
-      expect(service.get(form.id)!.status).toBe('expired');
+      expect(service.get(form!.id)!.status).toBe('expired');
     });
 
-    it('should purge old non-pending forms after 24 hours', () => {
-      const form = service.create(createValidInput({ ttlSeconds: 60 }));
+    it('should purge old non-pending forms after 24 hours', async () => {
+      const form = await service.create(createValidInput({ ttlSeconds: 60 }));
       vi.advanceTimersByTime(61 * 1000);
 
       // Advance past purge threshold (24h)
@@ -460,15 +495,15 @@ describe('HITLFormService', () => {
       // Trigger cleanup
       vi.advanceTimersByTime(5 * 60 * 1000);
 
-      expect(service.get(form.id)).toBeUndefined();
+      expect(service.get(form!.id)).toBeUndefined();
     });
   });
 
   // ---------- shutdown() ----------
 
   describe('shutdown', () => {
-    it('should clear all forms', () => {
-      service.create(createValidInput());
+    it('should clear all forms', async () => {
+      await service.create(createValidInput());
       service.shutdown();
 
       expect(service.listPending()).toHaveLength(0);
@@ -478,9 +513,9 @@ describe('HITLFormService', () => {
   // ---------- reEmitPending() ----------
 
   describe('reEmitPending', () => {
-    it('should re-emit hitl:form-requested for each pending form', () => {
-      const form1 = service.create(createValidInput({ title: 'Form 1' }));
-      const form2 = service.create(createValidInput({ title: 'Form 2' }));
+    it('should re-emit hitl:form-requested for each pending form', async () => {
+      const form1 = await service.create(createValidInput({ title: 'Form 1' }));
+      const form2 = await service.create(createValidInput({ title: 'Form 2' }));
       vi.mocked(deps.events.emit).mockClear();
 
       service.reEmitPending();
@@ -490,13 +525,13 @@ describe('HITLFormService', () => {
         .mock.calls.filter(([type]) => type === 'hitl:form-requested');
       expect(calls).toHaveLength(2);
       const formIds = calls.map(([, payload]) => (payload as { formId: string }).formId);
-      expect(formIds).toContain(form1.id);
-      expect(formIds).toContain(form2.id);
+      expect(formIds).toContain(form1!.id);
+      expect(formIds).toContain(form2!.id);
     });
 
     it('should not emit for submitted forms', async () => {
-      const form = service.create(createValidInput());
-      await service.submit(form.id, [{}]);
+      const form = await service.create(createValidInput());
+      await service.submit(form!.id, [{}]);
       vi.mocked(deps.events.emit).mockClear();
 
       service.reEmitPending();
@@ -508,8 +543,8 @@ describe('HITLFormService', () => {
     });
 
     it('should not emit for cancelled forms', async () => {
-      const form = service.create(createValidInput());
-      await service.cancel(form.id);
+      const form = await service.create(createValidInput());
+      await service.cancel(form!.id);
       vi.mocked(deps.events.emit).mockClear();
 
       service.reEmitPending();
@@ -535,8 +570,8 @@ describe('HITLFormService', () => {
   // ---------- getByFeatureId() ----------
 
   describe('getByFeatureId', () => {
-    it('returns pending form matching featureId', () => {
-      service.create(
+    it('returns pending form matching featureId', async () => {
+      await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-123', projectPath: '/proj' })
       );
 
@@ -546,8 +581,8 @@ describe('HITLFormService', () => {
       expect(found!.status).toBe('pending');
     });
 
-    it('returns undefined when no pending form for featureId', () => {
-      service.create(
+    it('returns undefined when no pending form for featureId', async () => {
+      await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-other', projectPath: '/proj' })
       );
 
@@ -555,25 +590,25 @@ describe('HITLFormService', () => {
     });
 
     it('returns undefined when matching form is submitted', async () => {
-      const form = service.create(
+      const form = await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-sub', projectPath: '/proj' })
       );
-      await service.submit(form.id, [{}]);
+      await service.submit(form!.id, [{}]);
 
       expect(service.getByFeatureId('feat-sub')).toBeUndefined();
     });
 
     it('returns undefined when matching form is cancelled', async () => {
-      const form = service.create(
+      const form = await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-can', projectPath: '/proj' })
       );
-      await service.cancel(form.id);
+      await service.cancel(form!.id);
 
       expect(service.getByFeatureId('feat-can')).toBeUndefined();
     });
 
-    it('returns undefined when matching form is expired', () => {
-      service.create(
+    it('returns undefined when matching form is expired', async () => {
+      await service.create(
         createValidInput({
           callerType: 'agent',
           featureId: 'feat-exp',
@@ -586,11 +621,11 @@ describe('HITLFormService', () => {
       expect(service.getByFeatureId('feat-exp')).toBeUndefined();
     });
 
-    it('filters by projectPath when provided', () => {
-      service.create(
+    it('filters by projectPath when provided', async () => {
+      await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-abc', projectPath: '/proj/a' })
       );
-      service.create(
+      await service.create(
         createValidInput({ callerType: 'agent', featureId: 'feat-abc', projectPath: '/proj/b' })
       );
 
@@ -606,8 +641,8 @@ describe('HITLFormService', () => {
   // ---------- reminder timer ----------
 
   describe('reminder timer', () => {
-    it('should re-emit hitl:form-requested at TTL/2 if still pending', () => {
-      const form = service.create(createValidInput({ ttlSeconds: 120 }));
+    it('should re-emit hitl:form-requested at TTL/2 if still pending', async () => {
+      const form = await service.create(createValidInput({ ttlSeconds: 120 }));
       vi.mocked(deps.events.emit).mockClear();
 
       // Advance to TTL/2 (60 seconds)
@@ -617,12 +652,12 @@ describe('HITLFormService', () => {
         .mocked(deps.events.emit)
         .mock.calls.filter(([type]) => type === 'hitl:form-requested');
       expect(calls).toHaveLength(1);
-      expect((calls[0][1] as { formId: string }).formId).toBe(form.id);
+      expect((calls[0][1] as { formId: string }).formId).toBe(form!.id);
     });
 
     it('should NOT re-emit at TTL/2 if form was submitted', async () => {
-      const form = service.create(createValidInput({ ttlSeconds: 120 }));
-      await service.submit(form.id, [{}]);
+      const form = await service.create(createValidInput({ ttlSeconds: 120 }));
+      await service.submit(form!.id, [{}]);
       vi.mocked(deps.events.emit).mockClear();
 
       // Advance past TTL/2
@@ -635,8 +670,8 @@ describe('HITLFormService', () => {
     });
 
     it('should NOT re-emit at TTL/2 if form was cancelled', async () => {
-      const form = service.create(createValidInput({ ttlSeconds: 120 }));
-      await service.cancel(form.id);
+      const form = await service.create(createValidInput({ ttlSeconds: 120 }));
+      await service.cancel(form!.id);
       vi.mocked(deps.events.emit).mockClear();
 
       vi.advanceTimersByTime(60 * 1000);
@@ -647,8 +682,8 @@ describe('HITLFormService', () => {
       expect(calls).toHaveLength(0);
     });
 
-    it('should clear all reminder timers on shutdown', () => {
-      service.create(createValidInput({ ttlSeconds: 120 }));
+    it('should clear all reminder timers on shutdown', async () => {
+      await service.create(createValidInput({ ttlSeconds: 120 }));
       service.shutdown();
       vi.mocked(deps.events.emit).mockClear();
 

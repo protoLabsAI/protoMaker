@@ -1,8 +1,10 @@
 /**
- * Unit tests for EscalateProcessor — HITL form gating
+ * Unit tests for EscalateProcessor — HITL form creation
  *
- * Verifies that forms are only created when featureFlags.pipeline=true
- * and that duplicate forms are not created per feature.
+ * Verifies that EscalateProcessor calls HITLFormService.create() when human input
+ * is needed and that duplicate forms are not created per feature.
+ * Note: featureFlags.pipeline gating is enforced inside HITLFormService.create()
+ * itself — not in EscalateProcessor.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -62,17 +64,21 @@ function makeCtx(featureId = 'feat-001', retryCount = 5): StateContext {
   };
 }
 
-function makeHitlFormService(existingForm?: HITLFormRequest) {
+function makeHitlFormService(existingForm?: HITLFormRequest, pipelineEnabled = true) {
   return {
-    create: vi.fn().mockReturnValue({
-      id: 'hitl-new',
-      status: 'pending',
-      title: 'Agent blocked',
-      steps: [],
-      callerType: 'lead_engineer',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-    }),
+    create: vi.fn().mockResolvedValue(
+      pipelineEnabled
+        ? {
+            id: 'hitl-new',
+            status: 'pending',
+            title: 'Agent blocked',
+            steps: [],
+            callerType: 'lead_engineer',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+          }
+        : null
+    ),
     getByFeatureId: vi.fn().mockReturnValue(existingForm),
   };
 }
@@ -117,8 +123,10 @@ describe('EscalateProcessor — HITL form gating', () => {
     );
   });
 
-  it('does NOT create form when featureFlags.pipeline = false (default)', async () => {
-    const hitlFormService = makeHitlFormService();
+  it('calls create() and handles null return when HITLFormService gates pipeline=false', async () => {
+    // EscalateProcessor delegates featureFlags.pipeline gating to HITLFormService.create().
+    // The mock simulates the service returning null (as it would when pipeline=false).
+    const hitlFormService = makeHitlFormService(undefined, false);
     const ctx = makeServiceContext({
       settingsService: makeSettingsService(
         false
@@ -129,11 +137,14 @@ describe('EscalateProcessor — HITL form gating', () => {
 
     await processor.process(makeCtx());
 
-    expect(hitlFormService.create).not.toHaveBeenCalled();
+    // EscalateProcessor calls create() — HITLFormService is responsible for the gate
+    expect(hitlFormService.create).toHaveBeenCalledOnce();
   });
 
-  it('does NOT create form when settingsService is undefined', async () => {
-    const hitlFormService = makeHitlFormService();
+  it('calls create() and handles null return when settingsService is undefined', async () => {
+    // EscalateProcessor delegates featureFlags.pipeline gating to HITLFormService.create().
+    // The mock simulates the service returning null (as it would when settingsService is absent).
+    const hitlFormService = makeHitlFormService(undefined, false);
     const ctx = makeServiceContext({
       settingsService: undefined,
       hitlFormService: hitlFormService as unknown as ProcessorServiceContext['hitlFormService'],
@@ -142,7 +153,8 @@ describe('EscalateProcessor — HITL form gating', () => {
 
     await processor.process(makeCtx());
 
-    expect(hitlFormService.create).not.toHaveBeenCalled();
+    // EscalateProcessor calls create() — HITLFormService is responsible for the gate
+    expect(hitlFormService.create).toHaveBeenCalledOnce();
   });
 
   it('DOES create form when featureFlags.pipeline = true and failure is non-retryable', async () => {
