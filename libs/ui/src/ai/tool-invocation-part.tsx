@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { ChevronDown, Wrench, Loader2, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils.js';
+import { ConfirmationCard } from './confirmation-card.js';
 import { toolResultRegistry } from './tool-result-registry.js';
 import { BoardSummaryCard } from './tool-results/board-summary-card.js';
 import { FeatureListCard } from './tool-results/feature-list-card.js';
@@ -62,6 +63,10 @@ export interface ToolInvocationPartProps {
   errorText?: string;
   title?: string;
   className?: string;
+  /** Called when user approves a destructive tool call (HITL flow) */
+  onApprove?: () => void;
+  /** Called when user rejects a destructive tool call (HITL flow) */
+  onReject?: () => void;
 }
 
 const stateConfig: Record<ToolState, { label: string; color: string; icon: typeof Loader2 }> = {
@@ -108,12 +113,33 @@ export function ToolInvocationPart({
   errorText,
   title,
   className,
+  onApprove,
+  onReject,
 }: ToolInvocationPartProps) {
   const [isOpen, setIsOpen] = useState(false);
   const config = stateConfig[state] ?? stateConfig['input-available'];
   const StateIcon = config.icon;
   const isRunning =
     state === 'input-streaming' || state === 'input-available' || state === 'approval-responded';
+
+  // ── HITL confirmation states — render ConfirmationCard inline ────────────
+  if (state === 'approval-requested' || state === 'output-denied') {
+    const hitlData =
+      output && typeof output === 'object' ? (output as Record<string, unknown>) : null;
+    const summary = typeof hitlData?.summary === 'string' ? hitlData.summary : undefined;
+
+    return (
+      <ConfirmationCard
+        toolName={toolName}
+        input={input}
+        summary={summary}
+        state={state === 'output-denied' ? 'output-denied' : 'approval-requested'}
+        onApprove={onApprove}
+        onReject={onReject}
+        className={className}
+      />
+    );
+  }
 
   // Look up a custom renderer for this tool
   const CustomRenderer = toolResultRegistry.get(toolName);

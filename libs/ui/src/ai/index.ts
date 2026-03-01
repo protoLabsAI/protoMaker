@@ -9,6 +9,8 @@ export {
   type MessageRole,
 } from './chat-message.js';
 
+export { ConfirmationCard, type ConfirmationCardProps } from './confirmation-card.js';
+
 export { InlineCitation, type Citation, type InlineCitationProps } from './inline-citation.js';
 
 export { MessageSources, type MessageSourcesProps } from './message-sources.js';

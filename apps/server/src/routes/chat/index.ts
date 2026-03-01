@@ -171,6 +171,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
         system,
         context,
         projectPath,
+        approvedActions,
       } = req.body as {
         messages: Array<{
           role: string;
@@ -181,6 +182,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
         system?: string;
         context?: NotesContext;
         projectPath?: string;
+        /** Pre-approved destructive tool calls for the HITL confirmation flow */
+        approvedActions?: Array<{ toolName: string; inputHash: string }>;
       };
 
       if (!rawMessages || !Array.isArray(rawMessages) || rawMessages.length === 0) {
@@ -233,7 +236,9 @@ export function createChatRoutes(services: ServiceContainer): Router {
           extension: avaConfig.systemPromptExtension || undefined,
         });
 
-      // Build tool set for this request — gated by per-project toolGroups config
+      // Build tool set for this request — gated by per-project toolGroups config.
+      // approvedActions carries pre-approved destructive-tool call identifiers for
+      // the HITL confirmation flow.
       const tools = projectPath
         ? buildAvaTools(
             projectPath,
@@ -242,7 +247,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
               autoModeService: services.autoModeService,
               agentService: services.agentService,
             },
-            avaConfig.toolGroups
+            {
+              ...avaConfig.toolGroups,
+              approvedActions: approvedActions ?? [],
+            }
           )
         : {};
 

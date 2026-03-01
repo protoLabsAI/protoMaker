@@ -169,10 +169,18 @@ function buildSegments(rawParts: Array<Record<string, unknown>>): PartSegment[] 
 
       while (i < rawParts.length && isToolPart(rawParts[i])) {
         const p = rawParts[i];
+        const rawState = (p.state as string) ?? 'input-available';
+        // Override state to 'approval-requested' when the tool returned a HITL sentinel
+        const outputData =
+          p.output && typeof p.output === 'object'
+            ? (p.output as Record<string, unknown>)
+            : undefined;
+        const effectiveState: TaskToolState =
+          outputData?.__hitl === true ? 'approval-requested' : (rawState as TaskToolState);
         tools.push({
           toolName: getToolName(p),
           toolCallId: (p.toolCallId as string) ?? `tool-${i}`,
-          state: ((p.state as string) ?? 'input-available') as TaskToolState,
+          state: effectiveState,
           input: p.input,
           output: p.output,
           errorText: p.errorText as string | undefined,
@@ -300,9 +308,15 @@ function MessagePartRenderer({
 export function ChatMessage({
   message,
   className,
+  onToolApprove,
+  onToolReject,
 }: {
   message: UIMessage;
   className?: string;
+  /** Called when the user approves a destructive tool call (HITL). Receives the tool name and input. */
+  onToolApprove?: (toolName: string, input: unknown) => void;
+  /** Called when the user rejects a destructive tool call (HITL). Receives the tool name and input. */
+  onToolReject?: (toolName: string, input: unknown) => void;
 } & Partial<VariantProps<typeof messageVariants>>) {
   const role = message.role as MessageRole;
   const parts = message.parts ?? [];
@@ -378,6 +392,8 @@ export function ChatMessage({
                   output={t.output}
                   errorText={t.errorText}
                   title={t.title}
+                  onApprove={onToolApprove ? () => onToolApprove(t.toolName, t.input) : undefined}
+                  onReject={onToolReject ? () => onToolReject(t.toolName, t.input) : undefined}
                 />
               );
             }
