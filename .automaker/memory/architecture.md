@@ -3728,3 +3728,17 @@ usageStats:
 - **Rejected:** Direct PR to main would merge faster but introduces untested workflow changes directly into stable release branch
 - **Trade-offs:** Slower merge time vs critical risk reduction—prevents release-pipeline-breaking changes from reaching main without verification
 - **Breaking if changed:** If skipped and PR'd directly to main, broken workflow change locks all releases until fix can be deployed
+
+### ProviderFactory.getProviderForModel() routes model-to-provider mapping as a single point of extensibility rather than inline switch/pattern matching in the adapter (2026-03-01)
+- **Context:** Adapter needed to instantiate LangChain models based on PhaseModelEntry type, multiple provider types possible (Claude, OpenAI, Groq, etc.)
+- **Why:** Separates adapter concern (type/option bridging) from provider concern (model→implementation mapping). New providers only require factory changes, not adapter changes.
+- **Rejected:** Direct instantiation (tightly couples adapter to all providers) or switch statement in adapter (mixes concerns, not DRY if used elsewhere)
+- **Trade-offs:** Extensibility gained; hidden coupling created—adding a provider requires knowing factory interface exists and modifying it. Provider selection logic not visible in adapter.
+- **Breaking if changed:** If factory interface changes or is removed, all consumers break. Adding new provider types requires factory modification (not optional).
+
+### @langchain/core declared as peer dependency rather than regular or dev dependency (2026-03-01)
+- **Context:** Adapter wraps LangChain types (BaseChatModel). Package consuming this library likely also uses LangChain directly.
+- **Why:** Peer dependency ensures single instance of LangChain across consumer's dependency tree. Prevents version conflicts when app uses multiple LangChain-based packages. Consumer controls version match.
+- **Rejected:** Regular dependency (ensures version is installed but risks duplication/conflicts) or bundled (tight coupling, larger bundle, version mismatch with consumer's LangChain)
+- **Trade-offs:** Consumer must install @langchain/core themselves (less batteries-included) but gets flexibility and avoids version hell. Library can't guarantee it works with all versions.
+- **Breaking if changed:** If consumer doesn't install @langchain/core or installs incompatible version, adapter breaks at runtime with unclear error. Requires careful docs and peer version constraints.

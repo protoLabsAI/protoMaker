@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 240
-  referenced: 74
-  successfulFeatures: 74
+  loaded: 241
+  referenced: 75
+  successfulFeatures: 75
 ---
 # api
 
@@ -698,3 +698,8 @@ usageStats:
 - **Rejected:** Always return 404 for both cases - hides validation failures, makes debugging harder. Return 403 for traversal - semantically wrong, 403 is for permission denied, not request validation.
 - **Trade-offs:** More precise semantics vs simpler implementation (could return 404 for everything). Precision helps with monitoring and client-side error recovery.
 - **Breaking if changed:** If changed to always 404, clients cannot distinguish attacks from legitimate missing files. Monitoring/alerting on 400s helps detect traversal attempts.
+
+#### [Pattern] Use canonical type guard function (isClaudeModel() from @protolabs-ai/types) to identify model types rather than inline string pattern matching (2026-03-01)
+- **Problem solved:** Adapter needs to route Claude models to ChatAnthropic, other models to appropriate providers. Model identification could be string-based or type-guard-based.
+- **Why this works:** Single source of truth for 'what is a Claude model'. Model identification logic is testable, versioned, and changes propagate automatically. Prevents duplicate/inconsistent checks across codebase.
+- **Trade-offs:** Adds import dependency on types package (tighter coupling) but gains centralized, testable model identity logic. Slightly slower lookup (function call vs string comparison) but negligible.

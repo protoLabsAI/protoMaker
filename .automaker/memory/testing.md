@@ -1144,3 +1144,13 @@ usageStats:
 - **Situation:** This fix removes a workflow file; there is no way to validate the change before it runs in production (on next release attempt)
 - **Root cause:** Workflows are event-driven and GitHub-infrastructure-dependent; local simulation cannot reproduce GitHub-specific context, secrets, or webhook triggers
 - **How to avoid:** Cleanest code state vs maximum verification risk—breakage only discovered when next release runs
+
+#### [Gotcha] Vitest ES module mocking requires vi.hoisted() + vi.mock() BEFORE any imports that use the mocked module. Inline mocks after imports fail silently. (2026-03-01)
+- **Situation:** Tests needed to mock ProviderFactory.getProviderForModel() to verify adapter routes correctly without hitting real provider logic
+- **Root cause:** ES modules are evaluated at parse time; mocks must be set up before the imports that reference them are resolved. This is different from CommonJS dynamic require() semantics.
+- **How to avoid:** Hoisting requirement makes test setup less intuitive but ensures true isolation. Alternative (remove spy and just test return values) loses visibility into routing behavior.
+
+#### [Pattern] Spy on ProviderFactory.getProviderForModel() using real factory instance rather than mocking the factory entirely (2026-03-01)
+- **Problem solved:** Test needed to verify adapter correctly routes models through the factory without testing the factory's own logic
+- **Why this works:** Spying preserves factory behavior (catches real routing issues) while tracking if it was called correctly. Tests the adapter-factory contract, not factory implementation.
+- **Trade-offs:** More realistic integration testing (catches real bugs) but test becomes fragile to factory implementation. Spy approach is better than mock for contract testing.

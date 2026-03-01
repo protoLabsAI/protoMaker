@@ -71,6 +71,19 @@ npx prettier --write /abs/path/to/worktree/file.ts --ignore-path /dev/null
 
 Then commit and push the fix.
 
+**"has existing context, resuming" → agent exits immediately (stale context trap):**
+Server logs show: `Feature <id> has existing context, resuming instead of starting fresh` followed immediately by `Feature <id> execution ended, cleaning up runningFeatures`. The previous run left an `agent-output.md` in `.automaker/features/<id>/`. The server tries to resume the dead Claude session, handshake fails silently, agent exits.
+
+Recovery — rename stale files BEFORE retrying `start_agent`:
+
+```bash
+mv .automaker/features/<id>/agent-output.md .automaker/features/<id>/agent-output.md.stale
+# Also clear any handoff files from the previous session:
+mv .automaker/features/<id>/handoff-EXECUTE.json .automaker/features/<id>/handoff-EXECUTE.json.stale 2>/dev/null || true
+```
+
+Then reset `failureCount: 0` in `feature.json` and call `start_agent`. Resetting feature `status` alone is NOT enough — the stale output file is what triggers the resume path.
+
 **Self-improvement rule:** When you observe a recurring failure pattern that blocks agents, you MUST immediately:
 
 1. File a P1 bug feature on the board describing the root cause and fix
