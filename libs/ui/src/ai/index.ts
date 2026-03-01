@@ -47,6 +47,16 @@ export {
   type ToolState,
 } from './tool-result-registry.js';
 
+export {
+  MessageActions,
+  type MessageActionsProps,
+  type FeedbackRating,
+} from './message-actions.js';
+
+export { AILoader, type AILoaderProps } from './loader.js';
+
+export { ShimmerLoader, type ShimmerLoaderProps } from './shimmer.js';
+
 export { BoardSummaryCard } from './tool-results/board-summary-card.js';
 export { FeatureListCard } from './tool-results/feature-list-card.js';
 export { FeatureDetailCard } from './tool-results/feature-detail-card.js';
