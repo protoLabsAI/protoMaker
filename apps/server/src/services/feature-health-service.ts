@@ -14,10 +14,14 @@
  * apps/server/src/routes/webhooks/routes/github.ts.
  */
 
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createLogger } from '@protolabs-ai/utils';
 import type { Feature } from '@protolabs-ai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
+
+const execFileAsync = promisify(execFile);
 
 const logger = createLogger('FeatureHealth');
 
