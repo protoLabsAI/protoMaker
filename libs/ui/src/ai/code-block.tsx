@@ -115,7 +115,10 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
   return (
     <div
       data-slot="code-block"
-      className={cn('group/code relative my-2 overflow-hidden rounded-md bg-background/50', className)}
+      className={cn(
+        'group/code relative my-2 overflow-hidden rounded-md bg-background/50',
+        className
+      )}
     >
       {/* Header bar: language + copy button */}
       <div className="flex items-center justify-between border-b border-border/30 bg-muted/40 px-3 py-1">

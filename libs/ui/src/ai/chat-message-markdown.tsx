@@ -68,11 +68,7 @@ export function ChatMessageMarkdown({ content, className }: ChatMessageMarkdownP
               children?: React.ReactNode;
             }> | null;
 
-            if (
-              codeEl &&
-              typeof codeEl === 'object' &&
-              'props' in codeEl
-            ) {
+            if (codeEl && typeof codeEl === 'object' && 'props' in codeEl) {
               const codeProps = codeEl.props;
               const langMatch = codeProps.className?.match(/language-(\w+)/);
               const language = langMatch?.[1];
@@ -102,19 +98,14 @@ export function ChatMessageMarkdown({ content, className }: ChatMessageMarkdownP
               );
             }
             return (
-              <code
-                {...props}
-                className="rounded bg-background/50 px-1 py-0.5 font-mono text-xs"
-              >
+              <code {...props} className="rounded bg-background/50 px-1 py-0.5 font-mono text-xs">
                 {codeChildren}
               </code>
             );
           },
 
           // ── Strikethrough (del) — remark-gfm adds this ───────────────────
-          del: ({ children }) => (
-            <del className="opacity-60 line-through">{children}</del>
-          ),
+          del: ({ children }) => <del className="opacity-60 line-through">{children}</del>,
         }}
       >
         {content}
