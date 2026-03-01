@@ -511,7 +511,7 @@ export class EMAuthorityAgent {
       return false;
     }
 
-    const form = this.hitlFormService.create({
+    const form = await this.hitlFormService.create({
       title: `EM: Approve Feature Assignment`,
       description: question,
       steps: [
@@ -539,6 +539,13 @@ export class EMAuthorityAgent {
       projectPath,
       ttlSeconds: 300,
     });
+
+    if (!form) {
+      logger.debug(
+        'HITL approval form creation blocked (featureFlags.pipeline=false), auto-denying'
+      );
+      return false;
+    }
 
     logger.info(`HITL approval form created: ${form.id} for feature ${feature.id}`);
 

@@ -237,7 +237,7 @@ export class LinearWebhookHandler {
 
             let hitlFormId: string | undefined;
             try {
-              const form = this.guards.hitlFormService.create({
+              const form = await this.guards.hitlFormService.create({
                 title: `Linear Sync Conflict — ${feature.title ?? featureId}`,
                 description: [
                   `Both Linear and Automaker changed this feature since the last sync.`,
@@ -270,7 +270,7 @@ export class LinearWebhookHandler {
                 ],
                 ttlSeconds: 86400, // 24 hours
               });
-              hitlFormId = form.id;
+              hitlFormId = form?.id;
             } catch (formError) {
               logger.error(`Failed to create HITL form for conflict on ${featureId}:`, formError);
             }

@@ -38,7 +38,7 @@ export function createCreateHandler(hitlFormService: HITLFormService) {
         return;
       }
 
-      const form = hitlFormService.create({
+      const form = await hitlFormService.create({
         title,
         description,
         steps,
@@ -48,6 +48,14 @@ export function createCreateHandler(hitlFormService: HITLFormService) {
         flowThreadId,
         ttlSeconds,
       });
+
+      if (!form) {
+        res.status(403).json({
+          success: false,
+          error: 'HITL forms are disabled (featureFlags.pipeline is false)',
+        });
+        return;
+      }
 
       res.json({ success: true, form });
     } catch (error) {

@@ -418,7 +418,7 @@ export class SignalIntakeService {
 
         let hitlFormId: string | undefined;
         if (this.hitlFormService) {
-          const form = this.hitlFormService.create({
+          const form = await this.hitlFormService.create({
             title: `Interrupt: ${title}`,
             description: `An urgent signal was received from ${signal.source} and requires immediate human attention.\n\n${description}`,
             callerType: 'api',
@@ -452,7 +452,7 @@ export class SignalIntakeService {
               },
             ],
           });
-          hitlFormId = form.id;
+          hitlFormId = form?.id;
         } else {
           logger.warn(
             'HITLFormService not wired into SignalIntakeService — interrupt signal will not create a form. Call setHITLFormService() during service initialization.'

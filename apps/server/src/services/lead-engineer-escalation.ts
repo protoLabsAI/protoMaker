@@ -84,18 +84,7 @@ export class EscalateProcessor implements StateProcessor {
     const maxRetriesHit = ctx.retryCount >= failureAnalysis.maxRetries;
     const needsHumanInput = !failureAnalysis.isRetryable || maxRetriesHit;
 
-    // Check feature flag: HITL forms only created when pipeline flag is enabled
-    let hitlEnabled = false;
-    if (this.serviceContext.settingsService) {
-      try {
-        const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
-        hitlEnabled = globalSettings.featureFlags?.pipeline ?? false;
-      } catch (err) {
-        logger.warn('[ESCALATE] Failed to read feature flags, HITL disabled:', err);
-      }
-    }
-
-    if (needsHumanInput && hitlEnabled && this.serviceContext.hitlFormService) {
+    if (needsHumanInput && this.serviceContext.hitlFormService) {
       // Deduplication: skip if a pending form already exists for this feature
       const existingForm = this.serviceContext.hitlFormService.getByFeatureId(
         ctx.feature.id,
@@ -108,7 +97,7 @@ export class EscalateProcessor implements StateProcessor {
       } else {
         try {
           const confidencePct = Math.round(failureAnalysis.confidence * 100);
-          this.serviceContext.hitlFormService.create({
+          const form = await this.serviceContext.hitlFormService.create({
             title: `Agent blocked: ${ctx.feature.title}`,
             description: `Failure category: ${failureAnalysis.category}\nRoot cause: ${failureAnalysis.explanation}\nConfidence: ${confidencePct}%`,
             steps: [
@@ -168,19 +157,17 @@ export class EscalateProcessor implements StateProcessor {
             projectPath: ctx.projectPath,
           });
 
-          logger.info(`[ESCALATE] Created HITL form for feature ${ctx.feature.id}`, {
-            category: failureAnalysis.category,
-            isRetryable: failureAnalysis.isRetryable,
-            maxRetriesHit,
-          });
+          if (form) {
+            logger.info(`[ESCALATE] Created HITL form for feature ${ctx.feature.id}`, {
+              category: failureAnalysis.category,
+              isRetryable: failureAnalysis.isRetryable,
+              maxRetriesHit,
+            });
+          }
         } catch (err) {
           logger.error(`[ESCALATE] Failed to create HITL form for feature ${ctx.feature.id}:`, err);
         }
       }
-    } else if (needsHumanInput && !hitlEnabled) {
-      logger.info(
-        `[ESCALATE] HITL forms disabled (featureFlags.pipeline=false), skipping form for feature ${ctx.feature.id}`
-      );
     }
 
     logger.warn(`[ESCALATE] Feature ${ctx.feature.id} moved to blocked`, {

@@ -83,7 +83,7 @@ export const requestUserInput = defineSharedTool({
         };
       }
 
-      const form = hitlFormService.create({
+      const form = await hitlFormService.create({
         title: typedInput.title,
         description: typedInput.description,
         steps: typedInput.steps,
@@ -91,6 +91,13 @@ export const requestUserInput = defineSharedTool({
         featureId,
         projectPath,
       });
+
+      if (!form) {
+        return {
+          success: false,
+          error: 'HITL forms are disabled. Enable featureFlags.pipeline to use this tool.',
+        };
+      }
 
       return {
         success: true,
