@@ -437,16 +437,42 @@ export class GitWorkflowService {
         // Agent may have already committed. Check for unpushed commits before bailing out.
         const unpushedHash = await this.getUnpushedCommitHash(workDir, branchName);
         if (!unpushedHash) {
-          logger.info(`No changes to commit and no unpushed commits for feature ${featureId}`);
-          this.activeWorkflows--;
-          return null;
+          // Agent may have committed AND pushed already. Check if the remote branch is ahead of base.
+          const remoteAheadHash = await this.getRemoteAheadCommitHash(
+            workDir,
+            branchName,
+            prBaseBranch
+          );
+          if (!remoteAheadHash) {
+            logger.info(
+              `No changes to commit and no commits ahead of base for feature ${featureId}`
+            );
+            this.activeWorkflows--;
+            return null;
+          }
+          // Agent pre-committed AND pre-pushed — format all changed files and push a fix commit.
+          logger.info(
+            `Agent pre-pushed commits for feature ${featureId} — applying format fix across PR diff`
+          );
+          await this.formatAndPushAlreadyPushedBranch(
+            workDir,
+            branchName,
+            prBaseBranch,
+            projectPath
+          );
+          const { stdout: headAfterFmt } = await execAsync('git rev-parse --short HEAD', {
+            cwd: workDir,
+            env: execEnv,
+          });
+          commitHash = headAfterFmt.trim();
+        } else {
+          // Agent pre-committed but not yet pushed — format and amend, then continue pipeline
+          logger.info(
+            `No uncommitted changes but found unpushed commits for feature ${featureId}, continuing pipeline`
+          );
+          await this.formatAndAmendLastCommit(workDir, projectPath);
+          commitHash = unpushedHash;
         }
-        // Agent pre-committed — format and amend, then continue pipeline
-        logger.info(
-          `No uncommitted changes but found unpushed commits for feature ${featureId}, continuing pipeline`
-        );
-        await this.formatAndAmendLastCommit(workDir, projectPath);
-        commitHash = unpushedHash;
       }
       result.commitHash = commitHash;
       this.trackOperation('commit', featureId, true);
@@ -1035,6 +1061,104 @@ export class GitWorkflowService {
     } catch (error) {
       logger.warn(
         `Format-and-amend failed (non-fatal): ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * Check if the remote branch exists and is ahead of the base branch.
+   * Returns the short HEAD SHA of the remote branch if it has commits the base doesn't, null otherwise.
+   * Used to detect the "agent committed AND pushed" case before git-workflow runs.
+   */
+  private async getRemoteAheadCommitHash(
+    workDir: string,
+    branchName: string,
+    prBaseBranch: string
+  ): Promise<string | null> {
+    try {
+      await execAsync(`git fetch origin ${branchName} ${prBaseBranch}`, {
+        cwd: workDir,
+        env: execEnv,
+        timeout: 30_000,
+      });
+      const { stdout: countStr } = await execAsync(
+        `git rev-list --count origin/${prBaseBranch}..origin/${branchName}`,
+        { cwd: workDir, env: execEnv }
+      );
+      if (parseInt(countStr.trim(), 10) <= 0) return null;
+      const { stdout: sha } = await execAsync(`git rev-parse --short origin/${branchName}`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+      return sha.trim();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Format all files changed in the PR diff and push a new format-fix commit.
+   * Used when the agent already committed AND pushed without running prettier.
+   * Cannot amend (commits are on the remote), so we add a new commit and push normally.
+   */
+  private async formatAndPushAlreadyPushedBranch(
+    workDir: string,
+    branchName: string,
+    prBaseBranch: string,
+    projectPath: string
+  ): Promise<void> {
+    try {
+      // Make sure local branch tracks the remote commits
+      await execAsync(`git fetch origin ${branchName}`, {
+        cwd: workDir,
+        env: execEnv,
+        timeout: 30_000,
+      });
+      await execAsync(`git reset --hard origin/${branchName}`, { cwd: workDir, env: execEnv });
+
+      // Get all files touched across the entire PR diff (all commits, not just the last one)
+      const { stdout: changedFiles } = await execAsync(
+        `git diff --name-only origin/${prBaseBranch}..HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.css' '*.md'`,
+        { cwd: workDir, env: execEnv }
+      );
+      const files = changedFiles.trim().split('\n').filter(Boolean);
+      if (files.length === 0) {
+        logger.info('No formattable files in PR diff — skipping format-fix commit');
+        return;
+      }
+
+      // Format using the workspace Prettier binary (worktrees have no node_modules)
+      const prettierBin = path.join(projectPath, 'node_modules/.bin/prettier');
+      await execAsync(
+        `node "${prettierBin}" --ignore-path /dev/null --write ${files.map((f) => `"${f}"`).join(' ')}`,
+        { cwd: workDir, env: execEnv }
+      );
+
+      // Only commit if formatting actually changed anything
+      const { stdout: status } = await execAsync('git status --porcelain', {
+        cwd: workDir,
+        env: execEnv,
+      });
+      if (!status.trim()) {
+        logger.info('PR diff already formatted — no format-fix commit needed');
+        return;
+      }
+
+      // Stage and push a new commit (cannot amend — already on remote)
+      await execAsync(buildGitAddCommand(workDir), { cwd: workDir, env: execEnv });
+      await execAsync('git commit --no-verify -m "fix(format): prettier on agent-created files"', {
+        cwd: workDir,
+        env: execEnv,
+      });
+      await execAsync(`git push origin ${branchName}`, {
+        cwd: workDir,
+        env: execEnv,
+        timeout: 60_000,
+      });
+      logger.info(`Format-fix commit pushed for branch ${branchName} (${files.length} files)`);
+    } catch (error) {
+      logger.warn(
+        `Format-and-push failed (non-fatal): ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
