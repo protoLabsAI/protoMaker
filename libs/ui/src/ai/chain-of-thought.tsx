@@ -36,7 +36,7 @@ function parseSteps(text: string): string[] {
       .split(/\n(?=\d+\.\s+)/)
       .map((s) => s.replace(/^\d+\.\s+/, '').trim())
       .filter(Boolean);
-    if (steps.length > 1) return steps;
+    if (steps.length > 0) return steps;
   }
 
   // Paragraph-separated steps
@@ -49,7 +49,7 @@ function parseSteps(text: string): string[] {
   // Line-by-line fallback
   return text
     .split(/\n/)
-    .map((s) => s.trim())
+    .map((s) => s.replace(/^\d+\.\s+/, '').trim())
     .filter(Boolean);
 }
 
