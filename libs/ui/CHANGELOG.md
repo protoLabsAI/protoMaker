@@ -1,5 +1,13 @@
 # @protolabs-ai/ui
 
+## 0.20.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - filter chore PRs from GitHub release notes
+  - add file edit path discipline rule to agent CLAUDE.md
+
 ## 0.20.0
 
 ### Minor Changes

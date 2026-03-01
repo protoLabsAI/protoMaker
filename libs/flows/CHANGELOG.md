@@ -1,5 +1,19 @@
 # @protolabs-ai/flows
 
+## 0.20.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - filter chore PRs from GitHub release notes
+  - add file edit path discipline rule to agent CLAUDE.md
+- Updated dependencies
+  - @protolabs-ai/types@0.20.1
+  - @protolabs-ai/utils@0.20.1
+  - @protolabs-ai/prompts@0.20.1
+  - @protolabs-ai/model-resolver@0.20.1
+  - @protolabs-ai/observability@0.20.1
+
 ## 0.20.0
 
 ### Minor Changes
