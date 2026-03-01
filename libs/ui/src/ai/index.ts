@@ -21,6 +21,8 @@ export { PromptInputProvider, usePromptInput } from './prompt-input-context.js';
 
 export { SuggestionList, type SuggestionItem } from './suggestion.js';
 
+export { ChainOfThought, type ChainOfThoughtProps } from './chain-of-thought.js';
+
 export { ReasoningPart, type ReasoningPartProps } from './reasoning-part.js';
 
 export { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
