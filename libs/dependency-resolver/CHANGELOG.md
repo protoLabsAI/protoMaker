@@ -1,5 +1,23 @@
 # @protolabs-ai/dependency-resolver
 
+## 0.20.0
+
+### Minor Changes
+
+- ### Features
+  - createLangChainModel() LangChain adapter (#1531)
+
+  ### Bug Fixes
+  - show all features on main worktree when worktrees are loaded (#1534)
+
+  ### Refactors
+  - Update all existing flows to use createLangChainModel() (#1533)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.20.0
+
 ## 0.19.0
 
 ### Minor Changes
