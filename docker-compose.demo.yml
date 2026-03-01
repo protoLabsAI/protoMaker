@@ -1,0 +1,67 @@
+# Automaker Demo Mode
+# Quick-start container for demos and happy-path walkthroughs.
+# Auto-login enabled, single agent max, no monitoring stack.
+#
+# Usage:
+#   npm run demo
+#   Then open http://localhost:3007
+#
+# Or directly:
+#   docker compose -f docker-compose.demo.yml up --build
+
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ui
+    container_name: automaker-demo-ui
+    restart: unless-stopped
+    ports:
+      - '3007:80'
+    depends_on:
+      - server
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+      args:
+        UID: ${UID:-1001}
+        GID: ${GID:-1001}
+    container_name: automaker-demo-server
+    restart: unless-stopped
+    ports:
+      - '3008:3008'
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
+      - GH_TOKEN=${GH_TOKEN:-}
+
+      # Demo mode flags
+      - DEMO_MODE=true
+      - AUTOMAKER_AUTO_LOGIN=true
+      - IS_CONTAINERIZED=true
+      - AUTOMAKER_SKIP_SANDBOX_WARNING=true
+
+      # Cap concurrency to 1 agent for demos
+      - AUTOMAKER_MAX_CONCURRENCY=1
+
+      # Data persistence
+      - DATA_DIR=/data
+      - ALLOWED_ROOT_DIRECTORY=/projects
+
+      # Network
+      - HOST=0.0.0.0
+      - PORT=3008
+      - CORS_ORIGIN=http://localhost:3007
+    volumes:
+      - demo-data:/data
+      - demo-claude-config:/home/automaker/.claude
+
+volumes:
+  demo-data:
+    name: automaker-demo-data
+  demo-claude-config:
+    name: automaker-demo-claude-config

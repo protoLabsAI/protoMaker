@@ -1,6 +1,7 @@
 import type { NavigateOptions } from '@tanstack/react-router';
 import { cn } from '@/lib/utils';
 import { useOSDetection } from '@/hooks/use-os-detection';
+import { useDemoMode } from '@/hooks/use-demo-mode';
 
 interface AutomakerLogoProps {
   sidebarOpen: boolean;
@@ -25,6 +26,7 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
   const { os } = useOSDetection();
   const appMode = import.meta.env.VITE_APP_MODE || '?';
   const versionSuffix = `${getOSAbbreviation(os)}${appMode}`;
+  const demoMode = useDemoMode();
 
   return (
     <div
@@ -81,6 +83,11 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
         <span className="text-[0.625rem] text-muted-foreground leading-none font-medium">
           v{appVersion} {versionSuffix}
         </span>
+        {demoMode && (
+          <span className="text-[0.5rem] font-bold uppercase tracking-wider text-brand-400 bg-brand-400/10 px-1.5 py-0.5 rounded">
+            Demo
+          </span>
+        )}
       </div>
 
       {/* Expanded logo - shown when sidebar is open */}
@@ -127,9 +134,16 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
               proto<span className="text-brand-400">Labs</span>
             </span>
           </div>
-          <span className="text-[0.625rem] text-muted-foreground leading-none font-medium ml-9 lg:ml-[38.8px]">
-            v{appVersion} {versionSuffix}
-          </span>
+          <div className="flex items-center gap-1.5 ml-9 lg:ml-[38.8px]">
+            <span className="text-[0.625rem] text-muted-foreground leading-none font-medium">
+              v{appVersion} {versionSuffix}
+            </span>
+            {demoMode && (
+              <span className="text-[0.5rem] font-bold uppercase tracking-wider text-brand-400 bg-brand-400/10 px-1.5 py-0.5 rounded leading-none">
+                Demo
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -37,6 +37,7 @@
     "dev:electron:wsl": "npm run build:packages && npm run _dev:electron:wsl",
     "dev:electron:wsl:gpu": "npm run build:packages && npm run _dev:electron:wsl:gpu",
     "dev:server": "npm run build:packages && npm run _dev:server",
+    "demo": "docker compose -f docker-compose.demo.yml up --build",
     "dev:docker": "docker compose up",
     "dev:docker:rebuild": "docker compose build --no-cache && docker compose up",
     "dev:full": "npm run build:packages && concurrently \"npm run _dev:server\" \"npm run _dev:web\"",

@@ -14,6 +14,7 @@ import type { Request, Response } from 'express';
 import { existsSync, accessSync, constants as fsConstants, writeFileSync } from 'fs';
 import path from 'path';
 import { getVersion } from '../../../lib/version.js';
+import { isDemoMode } from '../../../lib/demo.js';
 
 /**
  * Check if data directory exists and is writable
@@ -77,6 +78,7 @@ export function createReadyHandler() {
       status: isReady ? 'ready' : 'not_ready',
       timestamp: new Date().toISOString(),
       version: getVersion(),
+      demoMode: isDemoMode(),
       checks: {
         apiKey: {
           configured: apiKeyStatus.configured,
