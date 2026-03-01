@@ -1,6 +1,6 @@
 {
   "name": "@protolabs-ai/llm-providers",
-  "version": "0.15.5",
+  "version": "0.15.6",
   "type": "module",
   "description": "LangChain adapter for the protoLabs provider system",
   "main": "dist/index.js",
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@langchain/anthropic": "^0.3.10",
-    "@protolabs-ai/types": "^0.21.0",
+    "@protolabs-ai/types": "^0.22.0",
     "langfuse": "^3.32.0"
   },
   "devDependencies": {
