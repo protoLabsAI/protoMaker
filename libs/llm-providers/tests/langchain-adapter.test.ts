@@ -16,7 +16,17 @@ vi.mock('@langchain/anthropic', () => ({
   },
 }));
 
+// Mock langfuse to avoid requiring credentials in unit tests
+vi.mock('langfuse', () => ({
+  Langfuse: class MockLangfuse {
+    trace() {
+      return { generation: vi.fn() };
+    }
+  },
+}));
+
 import { createLangChainModel, ProviderFactory } from '../src/langchain-adapter.js';
+import type { FlowModelSettingsProvider } from '../src/langchain-adapter.js';
 
 describe('createLangChainModel', () => {
   beforeEach(() => {
@@ -87,7 +97,7 @@ describe('createLangChainModel', () => {
       createLangChainModel(entry);
 
       expect(spy).toHaveBeenCalledOnce();
-      expect(spy).toHaveBeenCalledWith(entry, undefined);
+      expect(spy).toHaveBeenCalledWith(entry, undefined, undefined);
       expect(mocks.chatAnthropicSpy).toHaveBeenCalledOnce();
     });
 
@@ -98,7 +108,66 @@ describe('createLangChainModel', () => {
 
       createLangChainModel(entry, options);
 
-      expect(spy).toHaveBeenCalledWith(entry, options);
+      expect(spy).toHaveBeenCalledWith(entry, options, undefined);
+    });
+  });
+
+  describe('flow model override', () => {
+    it('uses flowModels[flowId] entry from settingsService when provided', () => {
+      const settingsService: FlowModelSettingsProvider = {
+        getPhaseModels: () =>
+          ({
+            flowModels: {
+              'content-creation': { model: 'claude-haiku-4-5-20251001' },
+            },
+          }) as never,
+      };
+
+      createLangChainModel(
+        { model: 'claude-sonnet-4-6' },
+        undefined,
+        settingsService,
+        'content-creation'
+      );
+
+      expect(mocks.chatAnthropicSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'claude-haiku-4-5-20251001' })
+      );
+    });
+
+    it('falls back to supplied entry when flowId not in flowModels', () => {
+      const settingsService: FlowModelSettingsProvider = {
+        getPhaseModels: () =>
+          ({
+            flowModels: {},
+          }) as never,
+      };
+
+      createLangChainModel(
+        { model: 'claude-sonnet-4-6' },
+        undefined,
+        settingsService,
+        'unknown-flow'
+      );
+
+      expect(mocks.chatAnthropicSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'claude-sonnet-4-6' })
+      );
+    });
+
+    it('falls back to supplied entry when settingsService has no getPhaseModels', () => {
+      const settingsService: FlowModelSettingsProvider = {};
+
+      createLangChainModel(
+        { model: 'claude-sonnet-4-6' },
+        undefined,
+        settingsService,
+        'content-creation'
+      );
+
+      expect(mocks.chatAnthropicSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ model: 'claude-sonnet-4-6' })
+      );
     });
   });
 
