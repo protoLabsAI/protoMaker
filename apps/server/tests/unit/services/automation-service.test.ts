@@ -39,7 +39,7 @@ vi.mock('@protolabs-ai/utils', () => ({
 
 // Mock maintenance-tasks
 vi.mock('../../../src/services/maintenance-tasks.js', () => ({
-  registerMaintenanceTasks: vi.fn().mockResolvedValue(undefined),
+  registerMaintenanceFlows: vi.fn(),
 }));
 
 import { AutomationService, flowRegistry } from '../../../src/services/automation-service.js';
@@ -379,8 +379,8 @@ describe('AutomationService', () => {
   });
 
   describe('syncWithScheduler()', () => {
-    it('registers maintenance tasks and user cron automations', async () => {
-      const { registerMaintenanceTasks } =
+    it('registers maintenance flows and user cron automations', async () => {
+      const { registerMaintenanceFlows } =
         await import('../../../src/services/maintenance-tasks.js');
 
       // Create one enabled cron automation and one disabled
@@ -399,22 +399,23 @@ describe('AutomationService', () => {
 
       vi.mocked(scheduler.registerTask).mockClear();
 
+      // Pass null for optional deps to keep seeding deterministic (3 always-on built-ins only)
       const mockDeps = {
         events: {} as never,
         autoModeService: {} as never,
-        featureHealthService: {} as never,
-        integrityWatchdogService: {} as never,
-        featureLoader: {} as never,
+        featureHealthService: null as never,
+        integrityWatchdogService: null as never,
+        featureLoader: null as never,
         settingsService: {} as never,
       };
 
       await service.syncWithScheduler(mockDeps);
 
-      expect(registerMaintenanceTasks).toHaveBeenCalledOnce();
-      // Only the enabled automation should be registered
-      expect(scheduler.registerTask).toHaveBeenCalledOnce();
-      const [taskId] = vi.mocked(scheduler.registerTask).mock.calls[0];
-      expect(taskId).toMatch(/^automation:/);
+      expect(registerMaintenanceFlows).toHaveBeenCalledOnce();
+      // 3 always-on built-ins + 1 enabled user automation; disabled user automation is skipped
+      expect(scheduler.registerTask).toHaveBeenCalledTimes(4);
+      const taskIds = vi.mocked(scheduler.registerTask).mock.calls.map(([id]) => id);
+      expect(taskIds.every((id) => id.startsWith('automation:'))).toBe(true);
     });
   });
 

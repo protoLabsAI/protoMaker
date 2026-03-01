@@ -77,6 +77,9 @@ export interface Automation {
   nextRunAt?: string; // ISO 8601
   lastRunStatus?: AutomationRunStatus;
 
+  /** True for system-managed automations (built-in maintenance tasks). Cannot be deleted via API. */
+  isBuiltIn?: boolean;
+
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
 }

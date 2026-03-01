@@ -21,7 +21,7 @@ import type { FeatureHealthService } from './feature-health-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
-import { registerMaintenanceTasks } from './maintenance-tasks.js';
+import { registerMaintenanceFlows } from './maintenance-tasks.js';
 
 const logger = createLogger('AutomationService');
 
@@ -35,7 +35,7 @@ const MAX_RUNS_PER_AUTOMATION = 50;
 const AUTOMATION_TASK_PREFIX = 'automation:';
 
 /**
- * Dependencies required for syncing with the scheduler (same as registerMaintenanceTasks)
+ * Dependencies required for syncing with the scheduler and seeding built-in automations.
  */
 export interface SyncWithSchedulerDeps {
   events: EventEmitter;
@@ -398,24 +398,18 @@ export class AutomationService {
 
   /**
    * Load all automations and sync enabled cron automations with the scheduler.
-   * Also registers built-in maintenance tasks.
+   * Seeds built-in maintenance task records and registers their flow factories.
    *
-   * Called from scheduler.module.ts after the scheduler has started, replacing
-   * the direct call to registerMaintenanceTasks().
+   * Called from scheduler.module.ts after the scheduler has started.
    */
   async syncWithScheduler(deps: SyncWithSchedulerDeps): Promise<void> {
-    // Register built-in maintenance tasks (preserves existing scheduled behavior)
-    await registerMaintenanceTasks(
-      this.schedulerService,
-      deps.events,
-      deps.autoModeService,
-      deps.featureHealthService,
-      deps.integrityWatchdogService,
-      deps.featureLoader,
-      deps.settingsService
-    );
+    // Register flow factories for built-in maintenance tasks
+    registerMaintenanceFlows(flowRegistry, deps);
 
-    // Register user-defined cron automations
+    // Seed built-in automation records (idempotent — skips existing records)
+    await this.seedBuiltInAutomations(deps);
+
+    // Register all enabled cron automations (built-in + user-defined) with the scheduler
     const automations = await this.readAutomations();
     let registered = 0;
     for (const automation of automations) {
@@ -432,9 +426,178 @@ export class AutomationService {
       }
     }
 
-    logger.info(
-      `Automation sync complete: ${registered} user automations registered with scheduler`
-    );
+    logger.info(`Automation sync complete: ${registered} automations registered with scheduler`);
+
+    // Apply per-task overrides from GlobalSettings.maintenance
+    await this.applyMaintenanceSettingsOverrides(deps.settingsService);
+  }
+
+  /**
+   * Seed built-in automation records. Idempotent: skips any record that already exists
+   * so user edits to built-in automations (e.g. custom cron expressions) are preserved.
+   */
+  private async seedBuiltInAutomations(deps: SyncWithSchedulerDeps): Promise<void> {
+    const always = [
+      {
+        id: 'maintenance:stale-features',
+        name: 'Stale Feature Detection',
+        description: 'Finds features stuck in running/in-progress for more than 2 hours.',
+        trigger: { type: 'cron' as const, expression: '0 * * * *' },
+        flowId: 'built-in:stale-features',
+        enabled: true,
+      },
+      {
+        id: 'maintenance:stale-worktrees',
+        name: 'Stale Worktree Auto-Cleanup',
+        description: 'Auto-removes worktrees for merged branches with safety checks.',
+        trigger: { type: 'cron' as const, expression: '0 3 * * *' },
+        flowId: 'built-in:stale-worktrees',
+        enabled: true,
+      },
+      {
+        id: 'maintenance:branch-cleanup',
+        name: 'Merged Branch Auto-Cleanup',
+        description: 'Auto-deletes local branches already merged to main.',
+        trigger: { type: 'cron' as const, expression: '0 4 * * 0' },
+        flowId: 'built-in:branch-cleanup',
+        enabled: true,
+      },
+    ];
+
+    for (const entry of always) {
+      await this.upsertBuiltIn(entry);
+    }
+
+    if (deps.integrityWatchdogService) {
+      await this.upsertBuiltIn({
+        id: 'maintenance:data-integrity',
+        name: 'Data Integrity Check',
+        description: 'Monitors feature directory count and data consistency.',
+        trigger: { type: 'cron', expression: '*/5 * * * *' },
+        flowId: 'built-in:data-integrity',
+        enabled: true,
+      });
+    }
+
+    if (deps.featureHealthService) {
+      await this.upsertBuiltIn({
+        id: 'maintenance:board-health',
+        name: 'Board Health Reconciliation',
+        description: 'Audits and auto-fixes board state inconsistencies every 6 hours.',
+        trigger: { type: 'cron', expression: '0 */6 * * *' },
+        flowId: 'built-in:board-health',
+        enabled: true,
+      });
+    }
+
+    if (deps.featureLoader && deps.settingsService) {
+      await this.upsertBuiltIn({
+        id: 'maintenance:auto-merge-prs',
+        name: 'Auto-Merge Eligible PRs',
+        description: 'Automatically merges PRs that pass all eligibility checks.',
+        trigger: { type: 'cron', expression: '*/5 * * * *' },
+        flowId: 'built-in:auto-merge-prs',
+        enabled: true,
+      });
+      await this.upsertBuiltIn({
+        id: 'maintenance:auto-rebase-stale-prs',
+        name: 'Auto-Rebase Stale PRs',
+        description: 'Rebases PRs that are behind their base branch.',
+        trigger: { type: 'cron', expression: '*/30 * * * *' },
+        flowId: 'built-in:auto-rebase-stale-prs',
+        enabled: true,
+      });
+    }
+
+    if (process.env.GITHUB_TOKEN && process.env.GITHUB_REPO_OWNER && process.env.GITHUB_REPO_NAME) {
+      await this.upsertBuiltIn({
+        id: 'maintenance:runner-health',
+        name: 'GitHub Actions Runner Health',
+        description: 'Monitors GitHub Actions runner health and detects stuck builds.',
+        trigger: { type: 'cron', expression: '*/5 * * * *' },
+        flowId: 'built-in:runner-health',
+        enabled: true,
+      });
+    }
+
+    logger.info('Built-in automation records seeded');
+  }
+
+  /**
+   * Insert a built-in automation record if it does not already exist.
+   * Skips the write if the ID is already present — preserves any user edits
+   * to cron expressions or enabled state.
+   */
+  private async upsertBuiltIn(fields: {
+    id: string;
+    name: string;
+    description: string;
+    trigger: { type: 'cron'; expression: string };
+    flowId: string;
+    enabled: boolean;
+  }): Promise<void> {
+    const automations = await this.readAutomations();
+    if (automations.some((a) => a.id === fields.id)) return;
+
+    const now = new Date().toISOString();
+    const automation: StoredAutomation = {
+      id: fields.id,
+      isBuiltIn: true,
+      enabled: fields.enabled,
+      name: fields.name,
+      description: fields.description,
+      trigger: fields.trigger,
+      flowId: fields.flowId,
+      createdAt: now,
+      updatedAt: now,
+    };
+    automations.push(automation);
+    await this.writeAutomations(automations);
+  }
+
+  /**
+   * Apply per-task overrides from GlobalSettings.maintenance after the scheduler is populated.
+   * Supports master-switch (enabled: false disables all maintenance: tasks) and
+   * per-task cron expression and enabled/disabled overrides.
+   */
+  private async applyMaintenanceSettingsOverrides(settingsService: SettingsService): Promise<void> {
+    try {
+      const globalSettings = await settingsService.getGlobalSettings();
+      const maintenanceSettings = globalSettings.maintenance;
+      if (!maintenanceSettings) return;
+
+      if (maintenanceSettings.enabled === false) {
+        logger.info('Maintenance scheduler disabled via settings — disabling all tasks');
+        for (const task of this.schedulerService.getAllTasks()) {
+          if (task.id.startsWith('maintenance:')) {
+            await this.schedulerService.disableTask(task.id);
+          }
+        }
+      }
+
+      if (maintenanceSettings.tasks) {
+        for (const [taskId, override] of Object.entries(maintenanceSettings.tasks)) {
+          const task = this.schedulerService.getTask(taskId);
+          if (!task) {
+            logger.warn(`Settings override for unknown task: ${taskId}`);
+            continue;
+          }
+          if (override.cronExpression) {
+            await this.schedulerService.updateTaskSchedule(taskId, override.cronExpression);
+            logger.info(`Applied cron override for ${taskId}: ${override.cronExpression}`);
+          }
+          if (override.enabled === false) {
+            await this.schedulerService.disableTask(taskId);
+            logger.info(`Disabled ${taskId} via settings override`);
+          } else if (override.enabled === true && maintenanceSettings.enabled !== false) {
+            await this.schedulerService.enableTask(taskId);
+            logger.info(`Enabled ${taskId} via settings override`);
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to apply maintenance settings overrides:', error);
+    }
   }
 
   /**
