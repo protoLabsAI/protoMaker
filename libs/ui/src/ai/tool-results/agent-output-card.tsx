@@ -78,7 +78,8 @@ function getChangeType(change: FileChange): 'added' | 'modified' | 'deleted' | '
   const t = (change.type ?? change.status ?? '').toLowerCase();
   if (t === 'added' || t === 'add' || t === 'new' || t === 'created') return 'added';
   if (t === 'deleted' || t === 'delete' || t === 'removed' || t === 'remove') return 'deleted';
-  if (t === 'modified' || t === 'modify' || t === 'changed' || t === 'updated' || t === 'renamed') return 'modified';
+  if (t === 'modified' || t === 'modify' || t === 'changed' || t === 'updated' || t === 'renamed')
+    return 'modified';
   return 'other';
 }
 
@@ -122,20 +123,18 @@ export function AgentOutputCard({ output, state }: ToolResultRendererProps) {
   const fileChanges = getFileChanges(data);
 
   // Compute file change counts — prefer explicit counts
-  const added =
-    data.filesAdded ??
-    fileChanges.filter((f) => getChangeType(f) === 'added').length;
+  const added = data.filesAdded ?? fileChanges.filter((f) => getChangeType(f) === 'added').length;
   const modified =
-    data.filesModified ??
-    fileChanges.filter((f) => getChangeType(f) === 'modified').length;
+    data.filesModified ?? fileChanges.filter((f) => getChangeType(f) === 'modified').length;
   const deleted =
-    data.filesDeleted ??
-    fileChanges.filter((f) => getChangeType(f) === 'deleted').length;
+    data.filesDeleted ?? fileChanges.filter((f) => getChangeType(f) === 'deleted').length;
 
   const hasFileCounts = added > 0 || modified > 0 || deleted > 0 || fileChanges.length > 0;
   const hasLog = logText.trim().length > 0;
 
-  const { lines, truncated } = hasLog ? previewLines(logText.trim()) : { lines: [], truncated: false };
+  const { lines, truncated } = hasLog
+    ? previewLines(logText.trim())
+    : { lines: [], truncated: false };
 
   return (
     <div
@@ -155,9 +154,7 @@ export function AgentOutputCard({ output, state }: ToolResultRendererProps) {
 
       {/* Summary line */}
       {data.summary && (
-        <div className="border-b border-border/50 px-3 py-2 text-foreground/70">
-          {data.summary}
-        </div>
+        <div className="border-b border-border/50 px-3 py-2 text-foreground/70">{data.summary}</div>
       )}
 
       {/* File change summary */}
@@ -188,7 +185,10 @@ export function AgentOutputCard({ output, state }: ToolResultRendererProps) {
                 const type = getChangeType(f);
                 const path = f.path ?? f.file ?? '';
                 return (
-                  <div key={i} className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                  <div
+                    key={i}
+                    className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground"
+                  >
                     <FileChangeIcon type={type} />
                     <span className="truncate">{path || '(unknown)'}</span>
                   </div>
@@ -212,14 +212,11 @@ export function AgentOutputCard({ output, state }: ToolResultRendererProps) {
               {line || '\u00A0'}
             </div>
           ))}
-          {truncated && (
-            <div className="mt-1 text-muted-foreground/60">… (truncated)</div>
-          )}
+          {truncated && <div className="mt-1 text-muted-foreground/60">… (truncated)</div>}
         </div>
       ) : (
-        !hasFileCounts && !data.summary && (
-          <div className="px-3 py-2 text-muted-foreground">No output recorded</div>
-        )
+        !hasFileCounts &&
+        !data.summary && <div className="px-3 py-2 text-muted-foreground">No output recorded</div>
       )}
     </div>
   );

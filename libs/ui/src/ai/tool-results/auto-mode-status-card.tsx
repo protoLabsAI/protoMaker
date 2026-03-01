@@ -95,11 +95,7 @@ export function AutoModeStatusCard({ output, state }: ToolResultRendererProps) {
             : 'bg-muted/80 text-muted-foreground'
         )}
       >
-        {running ? (
-          <Zap className="size-3 fill-current" />
-        ) : (
-          <ZapOff className="size-3" />
-        )}
+        {running ? <Zap className="size-3 fill-current" /> : <ZapOff className="size-3" />}
         {running ? 'Running' : 'Stopped'}
       </span>
 

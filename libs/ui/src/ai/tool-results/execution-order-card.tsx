@@ -163,7 +163,10 @@ export function ExecutionOrderCard({ output, state }: ToolResultRendererProps) {
 
                   {/* Status dot */}
                   <span
-                    className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', getStatusDot(feature.status))}
+                    className={cn(
+                      'mt-1.5 size-1.5 shrink-0 rounded-full',
+                      getStatusDot(feature.status)
+                    )}
                   />
 
                   {/* Title / ID */}

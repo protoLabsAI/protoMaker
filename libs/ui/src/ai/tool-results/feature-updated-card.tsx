@@ -149,7 +149,9 @@ export function FeatureUpdatedCard({ output, state }: ToolResultRendererProps) {
 
   const changes = deriveChanges(data);
   const featureTitle =
-    (data.feature?.title as string | undefined) ?? (data.after?.title as string | undefined) ?? data.title;
+    (data.feature?.title as string | undefined) ??
+    (data.after?.title as string | undefined) ??
+    data.title;
 
   return (
     <div

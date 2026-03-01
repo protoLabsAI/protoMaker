@@ -80,7 +80,8 @@ function AgentRow({ agent }: { agent: AgentInfo }) {
   const displayStatus = resolveStatus(agent.status, agent.state);
   const ui = STATUS_UI[displayStatus];
   const Icon = ui.icon;
-  const elapsed = agent.elapsedMs ?? (agent.elapsedSeconds != null ? agent.elapsedSeconds * 1000 : undefined);
+  const elapsed =
+    agent.elapsedMs ?? (agent.elapsedSeconds != null ? agent.elapsedSeconds * 1000 : undefined);
 
   return (
     <div
@@ -97,7 +98,9 @@ function AgentRow({ agent }: { agent: AgentInfo }) {
         {agent.featureTitle ? (
           <span className="block truncate text-foreground/80">{agent.featureTitle}</span>
         ) : agent.featureId ? (
-          <span className="block font-mono text-[10px] text-muted-foreground">{agent.featureId}</span>
+          <span className="block font-mono text-[10px] text-muted-foreground">
+            {agent.featureId}
+          </span>
         ) : (
           <span className="text-muted-foreground">Unknown feature</span>
         )}
