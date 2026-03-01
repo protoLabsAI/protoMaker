@@ -1,5 +1,24 @@
 # @protolabs-ai/mcp-server
 
+## 0.17.0
+
+### Minor Changes
+
+- ### Features
+  - add /welcome onboarding skill with docs links
+
+  ### Bug Fixes
+  - add sync-wait guard to auto-release and /promote skill
+  - add /api/app-spec CRUD routes and deduplicate plugin skills
+
+  ### Refactors
+  - [linear] feat(maintenance): replace board-health merged-not-done poll wi (#1498)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/tools@0.17.0
+
 ## 0.16.1
 
 ### Patch Changes

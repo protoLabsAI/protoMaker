@@ -1,5 +1,12 @@
 # @protolabs-ai/pen-parser
 
+## 0.6.11
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.17.0
+
 ## 0.6.10
 
 ### Patch Changes
