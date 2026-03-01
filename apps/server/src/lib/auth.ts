@@ -5,7 +5,7 @@
  * 1. Header-based (X-API-Key) - Used by Electron mode
  * 2. Cookie-based (HTTP-only session cookie) - Used by web mode
  *
- * Auto-generates an API key on first run if none is configured.
+ * Uses a known default key (override via AUTOMAKER_API_KEY env var).
  */
 
 import type { Request, Response, NextFunction } from 'express';
@@ -17,7 +17,7 @@ import { createLogger } from '@protolabs-ai/utils';
 const logger = createLogger('Auth');
 
 const DATA_DIR = process.env.DATA_DIR || './data';
-const API_KEY_FILE = path.join(DATA_DIR, '.api-key');
+const DEFAULT_API_KEY = 'protoLabs_studio_key';
 const SESSIONS_FILE = path.join(DATA_DIR, '.sessions');
 const SESSION_COOKIE_NAME = 'automaker_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -109,96 +109,10 @@ async function saveSessions(): Promise<void> {
 // Load existing sessions on startup
 loadSessions();
 
-/**
- * Ensure an API key exists - either from env var, file, or generate new one.
- * This provides CSRF protection by requiring a secret key for all API requests.
- */
-function ensureApiKey(): string {
-  // First check environment variable (Electron passes it this way)
-  if (process.env.AUTOMAKER_API_KEY) {
-    logger.info('Using API key from environment variable');
-    return process.env.AUTOMAKER_API_KEY;
-  }
+// API key — env override or default. Electron passes AUTOMAKER_API_KEY at launch.
+const API_KEY = process.env.AUTOMAKER_API_KEY || DEFAULT_API_KEY;
 
-  // Try to read from file
-  try {
-    if (secureFs.existsSync(API_KEY_FILE)) {
-      const key = (secureFs.readFileSync(API_KEY_FILE, 'utf-8') as string).trim();
-      if (key) {
-        logger.info('Loaded API key from file');
-        return key;
-      }
-    }
-  } catch (error) {
-    logger.warn('Error reading API key file:', error);
-  }
-
-  // Generate new key
-  const newKey = crypto.randomUUID();
-  try {
-    secureFs.mkdirSync(path.dirname(API_KEY_FILE), { recursive: true });
-    secureFs.writeFileSync(API_KEY_FILE, newKey, { encoding: 'utf-8', mode: 0o600 });
-    logger.info('Generated new API key');
-  } catch (error) {
-    logger.error('Failed to save API key:', error);
-  }
-  return newKey;
-}
-
-// API key - always generated/loaded on startup for CSRF protection
-const API_KEY = ensureApiKey();
-
-// Width for log box content (excluding borders)
-const BOX_CONTENT_WIDTH = 67;
-
-// Mask API key for safe logging (show first 4 + last 4 chars)
-function maskApiKey(key: string): string {
-  if (key.length <= 8) return '****';
-  return `${key.slice(0, 4)}${'*'.repeat(key.length - 8)}${key.slice(-4)}`;
-}
-
-// Print API key info to console (masked by default, full key only with AUTOMAKER_SHOW_API_KEY=true)
-{
-  const showFullKey = isEnvTrue(process.env.AUTOMAKER_SHOW_API_KEY);
-  const displayKey = showFullKey ? API_KEY : maskApiKey(API_KEY);
-  const autoLoginEnabled = isEnvTrue(process.env.AUTOMAKER_AUTO_LOGIN);
-  const autoLoginStatus = autoLoginEnabled ? 'enabled (auto-login active)' : 'disabled';
-
-  // Build box lines with exact padding
-  const header = 'API Key for Web Mode Authentication'.padEnd(BOX_CONTENT_WIDTH);
-  const line1 = "When accessing via browser, you'll be prompted to enter this key:".padEnd(
-    BOX_CONTENT_WIDTH
-  );
-  const line2 = displayKey.padEnd(BOX_CONTENT_WIDTH);
-  const line3 = 'In Electron mode, authentication is handled automatically.'.padEnd(
-    BOX_CONTENT_WIDTH
-  );
-  const line4 = `Auto-login (AUTOMAKER_AUTO_LOGIN): ${autoLoginStatus}`.padEnd(BOX_CONTENT_WIDTH);
-  const tipHeader = 'Tips'.padEnd(BOX_CONTENT_WIDTH);
-  const line5 = 'Set AUTOMAKER_SHOW_API_KEY=true to reveal the full key'.padEnd(BOX_CONTENT_WIDTH);
-  const line6 = 'Set AUTOMAKER_AUTO_LOGIN=true to skip the login prompt'.padEnd(BOX_CONTENT_WIDTH);
-
-  logger.info(`
-╔═════════════════════════════════════════════════════════════════════╗
-║  ${header}║
-╠═════════════════════════════════════════════════════════════════════╣
-║                                                                     ║
-║  ${line1}║
-║                                                                     ║
-║  ${line2}║
-║                                                                     ║
-║  ${line3}║
-║                                                                     ║
-║  ${line4}║
-║                                                                     ║
-╠═════════════════════════════════════════════════════════════════════╣
-║  ${tipHeader}║
-╠═════════════════════════════════════════════════════════════════════╣
-║  ${line5}║
-║  ${line6}║
-╚═════════════════════════════════════════════════════════════════════╝
-`);
-}
+logger.info(`API key: ${API_KEY}${process.env.AUTOMAKER_API_KEY ? ' (from env)' : ' (default)'}`);
 
 /**
  * Generate a cryptographically secure session token

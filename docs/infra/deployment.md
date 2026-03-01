@@ -257,13 +257,13 @@ sudo systemctl disable automaker
 
 ### Authentication
 
-| Variable                   | Required | Description                                 |
-| -------------------------- | -------- | ------------------------------------------- |
-| `ANTHROPIC_API_KEY`        | Yes\*    | Anthropic API key                           |
-| `CLAUDE_OAUTH_CREDENTIALS` | Yes\*    | Claude CLI OAuth JSON                       |
-| `AUTOMAKER_API_KEY`        | No       | protoLabs API key (auto-generated if blank) |
-| `CURSOR_AUTH_TOKEN`        | No       | Cursor CLI OAuth token                      |
-| `GH_TOKEN`                 | No       | GitHub CLI token                            |
+| Variable                   | Required | Description                                         |
+| -------------------------- | -------- | --------------------------------------------------- |
+| `ANTHROPIC_API_KEY`        | Yes\*    | Anthropic API key                                   |
+| `CLAUDE_OAUTH_CREDENTIALS` | Yes\*    | Claude CLI OAuth JSON                               |
+| `AUTOMAKER_API_KEY`        | No       | protoLabs API key (default: `protoLabs_studio_key`) |
+| `CURSOR_AUTH_TOKEN`        | No       | Cursor CLI OAuth token                              |
+| `GH_TOKEN`                 | No       | GitHub CLI token                                    |
 
 \*At least one of `ANTHROPIC_API_KEY` or `CLAUDE_OAUTH_CREDENTIALS` is required.
 
@@ -280,12 +280,11 @@ sudo systemctl disable automaker
 
 ### Feature Flags
 
-| Variable                 | Default | Description                                           |
-| ------------------------ | ------- | ----------------------------------------------------- |
-| `IS_CONTAINERIZED`       | `false` | Skip sandbox confirmation dialogs                     |
-| `AUTOMAKER_MOCK_AGENT`   | `false` | Use mock agent (for testing)                          |
-| `AUTOMAKER_AUTO_LOGIN`   | `false` | Skip login prompt (dev only)                          |
-| `AUTOMAKER_SHOW_API_KEY` | `false` | Show full API key in startup logs (masked by default) |
+| Variable               | Default | Description                       |
+| ---------------------- | ------- | --------------------------------- |
+| `IS_CONTAINERIZED`     | `false` | Skip sandbox confirmation dialogs |
+| `AUTOMAKER_MOCK_AGENT` | `false` | Use mock agent (for testing)      |
+| `AUTOMAKER_AUTO_LOGIN` | `false` | Skip login prompt (dev only)      |
 
 ### Integrations
 

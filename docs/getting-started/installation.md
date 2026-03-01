@@ -58,25 +58,25 @@ Features: gradient ASCII art, pre-flight dependency checks, remembers your last 
 
 protoLabs integrates with your authenticated Claude Code CLI. Install and authenticate following the [official quickstart](https://code.claude.com/docs/en/quickstart), then protoLabs detects your credentials automatically.
 
-### Fixed API Key (Development)
+### API Key
 
-By default, the server generates a random API key on each restart. For MCP integration or scripts, use a fixed key:
+The server uses `protoLabs_studio_key` as the default API key. To override, set the env var:
 
 ```bash
-AUTOMAKER_API_KEY=your-dev-key npm run dev --workspace=apps/server
+AUTOMAKER_API_KEY=your-custom-key npm run dev --workspace=apps/server
 ```
 
 ## Environment Variables
 
 ### Server
 
-| Variable            | Default     | Description                   |
-| ------------------- | ----------- | ----------------------------- |
-| `PORT`              | `3008`      | Server port                   |
-| `HOST`              | `0.0.0.0`   | Host to bind to               |
-| `HOSTNAME`          | `localhost` | Hostname for user-facing URLs |
-| `DATA_DIR`          | `./data`    | Data storage directory        |
-| `AUTOMAKER_API_KEY` | _(random)_  | Fixed API key for server auth |
+| Variable            | Default                | Description                   |
+| ------------------- | ---------------------- | ----------------------------- |
+| `PORT`              | `3008`                 | Server port                   |
+| `HOST`              | `0.0.0.0`              | Host to bind to               |
+| `HOSTNAME`          | `localhost`            | Hostname for user-facing URLs |
+| `DATA_DIR`          | `./data`               | Data storage directory        |
+| `AUTOMAKER_API_KEY` | `protoLabs_studio_key` | API key for server auth       |
 
 ### Security
 

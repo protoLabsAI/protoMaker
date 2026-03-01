@@ -55,19 +55,10 @@ function checkDataDir(): { accessible: boolean; writable: boolean; error?: strin
  * Check if API key is configured
  */
 function checkApiKey(): { configured: boolean; source?: string } {
-  // Check environment variable
   if (process.env.AUTOMAKER_API_KEY) {
     return { configured: true, source: 'environment' };
   }
-
-  // Check file
-  const dataDir = process.env.DATA_DIR || './data';
-  const apiKeyFile = path.join(dataDir, '.api-key');
-  if (existsSync(apiKeyFile)) {
-    return { configured: true, source: 'file' };
-  }
-
-  return { configured: false };
+  return { configured: true, source: 'default' };
 }
 
 export function createReadyHandler() {

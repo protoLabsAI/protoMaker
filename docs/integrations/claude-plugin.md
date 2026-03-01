@@ -116,19 +116,12 @@ The plugin consists of:
 - Claude Code CLI installed and authenticated
 - Node.js 22+
 
-### Step 1: Start protoLabs with a Fixed API Key
+### Step 1: Start protoLabs
 
-By default, protoLabs generates a random API key on each restart. For Claude Code integration, use a fixed key:
-
-```bash
-# Start protoLabs with a fixed API key
-AUTOMAKER_API_KEY=your-dev-key-2026 npm run dev
-```
-
-Or add it to your `.env` file:
+The server uses `protoLabs_studio_key` as the default API key. To override, set it in your `.env` or shell:
 
 ```bash
-AUTOMAKER_API_KEY=your-dev-key-2026
+AUTOMAKER_API_KEY=your-custom-key npm run dev
 ```
 
 ### Step 2: Build the MCP Server (if not already built)

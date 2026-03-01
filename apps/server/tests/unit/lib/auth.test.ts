@@ -11,7 +11,7 @@ describe('auth.ts', () => {
   beforeEach(() => {
     vi.resetModules();
     delete process.env.AUTOMAKER_API_KEY;
-    delete process.env.AUTOMAKER_SHOW_API_KEY;
+
     delete process.env.NODE_ENV;
   });
 
