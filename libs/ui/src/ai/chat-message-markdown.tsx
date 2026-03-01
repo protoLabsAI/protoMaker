@@ -14,6 +14,7 @@ import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import { cn } from '../lib/utils.js';
 import { CodeBlock } from './code-block.js';
 
@@ -26,7 +27,7 @@ export function ChatMessageMarkdown({ content, className }: ChatMessageMarkdownP
   // Stable plugin arrays — defined outside the render to prevent rehype/remark
   // from re-instantiating plugins on every keystroke during streaming.
   const remarkPlugins = useMemo(() => [remarkGfm], []);
-  const rehypePlugins = useMemo(() => [rehypeRaw], []);
+  const rehypePlugins = useMemo(() => [rehypeRaw, rehypeSanitize], []);
 
   return (
     <div

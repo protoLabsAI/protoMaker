@@ -106,10 +106,15 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
   }, [code, lang]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard.writeText(code).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      },
+      () => {
+        // Clipboard write failed (permission denied or insecure context)
+      }
+    );
   }, [code]);
 
   return (
