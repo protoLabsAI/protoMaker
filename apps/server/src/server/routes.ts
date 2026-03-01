@@ -258,7 +258,13 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/enhance-prompt', createEnhancePromptRoutes(settingsService));
   app.use(
     '/api/worktree',
-    createWorktreeRoutes(events, settingsService, worktreeLifecycleService, autoModeService)
+    createWorktreeRoutes(
+      events,
+      settingsService,
+      worktreeLifecycleService,
+      autoModeService,
+      featureLoader
+    )
   );
   app.use('/api/git', createGitRoutes());
   app.use('/api/suggestions', createSuggestionsRoutes(events, settingsService));
