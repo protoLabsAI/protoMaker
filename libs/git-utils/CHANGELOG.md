@@ -1,5 +1,28 @@
 # @protolabs-ai/git-utils
 
+## 0.16.0
+
+### Minor Changes
+
+- ### Features
+  - add /upgrade-plugin command and temp-skills tracking
+
+  ### Bug Fixes
+  - add dumb-init PID 1, right-size resources, fix subprocess exit race (#1501)
+  - add --ignore-path /dev/null to prettier in commitChanges and formatAndAmendLastCommit
+  - p0 — gate hitl forms behind featureFlags.pipeline, deduplicate per-feature
+
+  ### Refactors
+  - rename plugin identity from automaker to protolabs/studio
+  - [linear] test protoExtension (#1495)
+  - [linear] P1: HITL form system is brittle — repeated popups blocking alph (#1493)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.16.0
+  - @protolabs-ai/utils@0.16.0
+
 ## 0.15.3
 
 ### Patch Changes
