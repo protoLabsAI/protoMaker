@@ -57,6 +57,7 @@ interface UseNavigationProps {
   hideDesigns: boolean;
   hideDocs: boolean;
   hideFileEditor: boolean;
+  hideSystemView: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -84,6 +85,7 @@ export function useNavigation({
   hideDesigns,
   hideDocs,
   hideFileEditor,
+  hideSystemView,
   currentProject,
   projects,
   projectHistory,
@@ -174,18 +176,21 @@ export function useNavigation({
         shortcut: shortcuts.board,
       },
       {
-        id: 'system-view',
-        label: 'System View',
-        icon: Network,
-        shortcut: shortcuts.systemView,
-      },
-      {
         id: 'notes',
         label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
       },
     ];
+
+    if (!hideSystemView) {
+      projectItems.splice(1, 0, {
+        id: 'system-view',
+        label: 'System View',
+        icon: Network,
+        shortcut: shortcuts.systemView,
+      });
+    }
 
     if (!hideFileEditor) {
       projectItems.push({
@@ -288,6 +293,7 @@ export function useNavigation({
     hideDesigns,
     hideDocs,
     hideFileEditor,
+    hideSystemView,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,

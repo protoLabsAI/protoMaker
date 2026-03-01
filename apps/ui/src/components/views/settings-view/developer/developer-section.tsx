@@ -35,6 +35,10 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     description:
       'Enables HITL interrupt forms and pipeline gate cycling (TRIAGE, SPEC, PUBLISH). Off by default.',
   },
+  systemView: {
+    label: 'System View',
+    description: 'Show the System View (network/dependency graph) in the project sidebar.',
+  },
 };
 
 export function DeveloperSection() {
