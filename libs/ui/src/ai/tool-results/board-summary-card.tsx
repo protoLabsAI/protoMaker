@@ -83,9 +83,7 @@ const STATUS_ORDER = ['backlog', 'in_progress', 'review', 'blocked', 'done', 'in
 
 export function BoardSummaryCard({ output, state }: ToolResultRendererProps) {
   const isLoading =
-    state === 'input-streaming' ||
-    state === 'input-available' ||
-    state === 'approval-responded';
+    state === 'input-streaming' || state === 'input-available' || state === 'approval-responded';
 
   if (isLoading) {
     return (

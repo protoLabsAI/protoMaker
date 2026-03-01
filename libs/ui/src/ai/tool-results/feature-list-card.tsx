@@ -115,9 +115,7 @@ function FeatureRow({ feature }: { feature: CompactFeature }) {
 
 export function FeatureListCard({ output, state }: ToolResultRendererProps) {
   const isLoading =
-    state === 'input-streaming' ||
-    state === 'input-available' ||
-    state === 'approval-responded';
+    state === 'input-streaming' || state === 'input-available' || state === 'approval-responded';
 
   if (isLoading) {
     return (
@@ -143,7 +141,9 @@ export function FeatureListCard({ output, state }: ToolResultRendererProps) {
       <div className="flex items-center gap-1.5 border-b border-border/50 px-3 py-1.5">
         <List className="size-3.5 text-muted-foreground" />
         <span className="font-medium text-foreground/80">Features</span>
-        <span className="ml-auto text-muted-foreground">{features.length} result{features.length !== 1 ? 's' : ''}</span>
+        <span className="ml-auto text-muted-foreground">
+          {features.length} result{features.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Feature rows */}

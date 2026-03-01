@@ -50,10 +50,7 @@ function extractData(output: unknown): GetFeatureData | null {
   return null;
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; bg: string }
-> = {
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   backlog: { label: 'Backlog', color: 'text-muted-foreground', bg: 'bg-muted/60' },
   in_progress: { label: 'In Progress', color: 'text-blue-500', bg: 'bg-blue-500/10' },
   review: { label: 'Review', color: 'text-amber-500', bg: 'bg-amber-500/10' },
@@ -87,9 +84,7 @@ function truncate(text: string, maxLen = 120): string {
 
 export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
   const isLoading =
-    state === 'input-streaming' ||
-    state === 'input-available' ||
-    state === 'approval-responded';
+    state === 'input-streaming' || state === 'input-available' || state === 'approval-responded';
 
   if (isLoading) {
     return (
@@ -145,9 +140,7 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
 
       {/* Status + complexity row */}
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        <span
-          className={cn('rounded px-1.5 py-0.5 font-medium', statusCfg.bg, statusCfg.color)}
-        >
+        <span className={cn('rounded px-1.5 py-0.5 font-medium', statusCfg.bg, statusCfg.color)}>
           {statusCfg.label}
         </span>
         {complexityLabel && (
@@ -174,9 +167,7 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
 
       {/* Description */}
       {feature.description && (
-        <p className="mb-2 leading-relaxed text-foreground/70">
-          {truncate(feature.description)}
-        </p>
+        <p className="mb-2 leading-relaxed text-foreground/70">{truncate(feature.description)}</p>
       )}
 
       {/* Agent output preview: summary or error */}
@@ -185,7 +176,9 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
           <span className="text-[10px] font-medium uppercase tracking-wider text-green-600">
             Summary
           </span>
-          <p className="mt-0.5 leading-relaxed text-foreground/70">{truncate(feature.summary, 200)}</p>
+          <p className="mt-0.5 leading-relaxed text-foreground/70">
+            {truncate(feature.summary, 200)}
+          </p>
         </div>
       )}
       {feature.error && (
