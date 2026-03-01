@@ -62,12 +62,14 @@ import { createStashDropHandler } from './routes/stash-drop.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
+import type { FeatureLoader } from '../../services/feature-loader.js';
 
 export function createWorktreeRoutes(
   events: EventEmitter,
   settingsService?: SettingsService,
   worktreeLifecycleService?: WorktreeLifecycleService,
-  autoModeService?: AutoModeService
+  autoModeService?: AutoModeService,
+  featureLoader?: FeatureLoader
 ): Router {
   const router = Router();
 
@@ -86,7 +88,7 @@ export function createWorktreeRoutes(
   router.post(
     '/delete',
     validatePathParams('projectPath', 'worktreePath'),
-    createDeleteHandler(autoModeService)
+    createDeleteHandler(autoModeService, featureLoader)
   );
   router.post('/create-pr', createCreatePRHandler(settingsService));
   router.post('/pr-info', createPRInfoHandler());
