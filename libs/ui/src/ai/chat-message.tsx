@@ -10,12 +10,11 @@
 
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Bot, User } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
 import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
 import { ReasoningPart } from './reasoning-part.js';
 import { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
+import { ChatMessageMarkdown } from './chat-message-markdown.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -77,63 +76,27 @@ export function ChatMessageBubble({
   );
 }
 
-export function ChatMessageMarkdown({
-  content,
-  className,
-}: {
-  content: string;
-  className?: string;
-}) {
+/**
+ * StepStartPart — Subtle visual separator between agentic steps.
+ *
+ * Rendered whenever the message stream includes a `step-start` part, which
+ * signals a new reasoning/tool iteration. A thin rule with an optional label
+ * keeps the UI readable without being intrusive.
+ */
+export function StepStartPart({ stepIndex }: { stepIndex?: number }) {
   return (
     <div
-      className={cn(
-        'prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 prose-headings:mb-2 prose-headings:mt-3',
-        className
-      )}
+      data-slot="step-start"
+      className="my-2 flex items-center gap-2"
+      aria-label={stepIndex !== undefined ? `Step ${stepIndex + 1}` : 'New step'}
     >
-      <ReactMarkdown
-        rehypePlugins={[rehypeRaw]}
-        components={{
-          a: ({ ...props }) => (
-            <a
-              {...props}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline underline-offset-2 hover:text-primary/80"
-            />
-          ),
-          pre: ({ children: preChildren, ...props }) => (
-            <pre
-              {...props}
-              className="group/code relative my-2 overflow-x-auto rounded-md bg-background/50 p-3 text-xs"
-            >
-              {preChildren}
-            </pre>
-          ),
-          code: ({ className: codeClassName, children: codeChildren, ...props }) => {
-            // Detect fenced code blocks via language class (e.g. "language-typescript")
-            const langMatch = codeClassName?.match(/language-(\w+)/);
-            if (langMatch) {
-              return (
-                <code {...props} className={cn(codeClassName, 'text-xs')}>
-                  <span className="absolute right-2 top-1.5 select-none text-[10px] font-medium uppercase tracking-wider text-muted-foreground opacity-60">
-                    {langMatch[1]}
-                  </span>
-                  {codeChildren}
-                </code>
-              );
-            }
-            // Inline code
-            return (
-              <code {...props} className="rounded bg-background/50 px-1 py-0.5 text-xs">
-                {codeChildren}
-              </code>
-            );
-          },
-        }}
-      >
-        {content}
-      </ReactMarkdown>
+      <hr className="flex-1 border-border/30" />
+      {stepIndex !== undefined && (
+        <span className="select-none text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+          step {stepIndex + 1}
+        </span>
+      )}
+      <hr className="flex-1 border-border/30" />
     </div>
   );
 }
@@ -157,8 +120,20 @@ function isToolPart(part: Record<string, unknown>): boolean {
 /**
  * Render a single message part based on its type.
  */
-function MessagePartRenderer({ part, index }: { part: Record<string, unknown>; index: number }) {
+function MessagePartRenderer({
+  part,
+  index,
+  stepIndex,
+}: {
+  part: Record<string, unknown>;
+  index: number;
+  stepIndex?: number;
+}) {
   const type = part.type as string;
+
+  if (type === 'step-start') {
+    return <StepStartPart stepIndex={stepIndex} />;
+  }
 
   if (type === 'text') {
     const text = part.text as string;
@@ -204,7 +179,7 @@ function MessagePartRenderer({ part, index }: { part: Record<string, unknown>; i
     );
   }
 
-  // step-start, source-document, file, data-* — render nothing for now
+  // source-document, file, data-* — render nothing
   return null;
 }
 
@@ -240,18 +215,31 @@ export function ChatMessage({
     (p) =>
       (p.type === 'text' && (p as { text: string }).text) ||
       p.type === 'reasoning' ||
+      p.type === 'step-start' ||
       isToolPart(p as Record<string, unknown>) ||
       p.type === 'source-url'
   );
   if (!hasContent) return null;
 
+  // Track step-start parts to provide ordinal labels
+  let stepCounter = -1;
+
   return (
     <div data-slot="chat-message" className={cn(messageVariants({ role }), className)}>
       <ChatMessageAvatar role={role} />
       <ChatMessageBubble role={role}>
-        {parts.map((part, i) => (
-          <MessagePartRenderer key={i} part={part as Record<string, unknown>} index={i} />
-        ))}
+        {parts.map((part, i) => {
+          const p = part as Record<string, unknown>;
+          if (p.type === 'step-start') stepCounter += 1;
+          return (
+            <MessagePartRenderer
+              key={i}
+              part={p}
+              index={i}
+              stepIndex={p.type === 'step-start' ? stepCounter : undefined}
+            />
+          );
+        })}
       </ChatMessageBubble>
     </div>
   );

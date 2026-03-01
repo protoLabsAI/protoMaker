@@ -2,12 +2,16 @@ export {
   ChatMessage,
   ChatMessageAvatar,
   ChatMessageBubble,
-  ChatMessageMarkdown,
+  StepStartPart,
   messageVariants,
   bubbleVariants,
   avatarVariants,
   type MessageRole,
 } from './chat-message.js';
+
+export { ChatMessageMarkdown, type ChatMessageMarkdownProps } from './chat-message-markdown.js';
+
+export { CodeBlock, type CodeBlockProps } from './code-block.js';
 
 export { ChatMessageList } from './chat-message-list.js';
 
