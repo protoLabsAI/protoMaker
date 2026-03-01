@@ -78,10 +78,7 @@ function ExpandedImageDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={onClose}
     >
-      <div
-        className="relative max-h-[90vh] max-w-[90vw]"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="relative max-h-[90vh] max-w-[90vw]" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
           onClick={onClose}
@@ -90,11 +87,7 @@ function ExpandedImageDialog({
         >
           <X className="size-4" />
         </button>
-        <img
-          src={url}
-          alt={alt}
-          className="max-h-[85vh] max-w-[85vw] rounded-md object-contain"
-        />
+        <img src={url} alt={alt} className="max-h-[85vh] max-w-[85vw] rounded-md object-contain" />
       </div>
     </div>
   );
@@ -188,9 +181,7 @@ export function ImageCard({ output, state }: ToolResultRendererProps) {
                 </span>
               )}
               {metadata.format && <span>{metadata.format.toString().toUpperCase()}</span>}
-              {metadata.size && (
-                <span>{Math.round((metadata.size as number) / 1024)} KB</span>
-              )}
+              {metadata.size && <span>{Math.round((metadata.size as number) / 1024)} KB</span>}
             </div>
           )}
         </div>
