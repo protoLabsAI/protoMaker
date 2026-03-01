@@ -118,10 +118,7 @@ function ToolRow({ tool }: { tool: ToolInvocationItem }) {
   const Icon = display.icon;
 
   return (
-    <div
-      data-slot="task-block-tool-row"
-      className="flex items-center gap-2 px-3 py-1.5 text-xs"
-    >
+    <div data-slot="task-block-tool-row" className="flex items-center gap-2 px-3 py-1.5 text-xs">
       <Wrench className="size-3 shrink-0 text-muted-foreground" />
       <span className="flex-1 truncate text-foreground/70">
         {tool.title || formatToolName(tool.toolName)}
