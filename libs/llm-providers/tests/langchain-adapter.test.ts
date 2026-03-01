@@ -50,11 +50,14 @@ describe('createLangChainModel', () => {
     });
 
     it('passes adapter options to the model constructor', () => {
-      createLangChainModel({ model: 'claude-sonnet-4-6' }, {
-        temperature: 0.7,
-        streaming: false,
-        maxTokens: 1024,
-      });
+      createLangChainModel(
+        { model: 'claude-sonnet-4-6' },
+        {
+          temperature: 0.7,
+          streaming: false,
+          maxTokens: 1024,
+        }
+      );
       expect(mocks.chatAnthropicSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           model: 'claude-sonnet-4-6',

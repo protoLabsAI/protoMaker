@@ -69,6 +69,9 @@ export class ProviderFactory {
  * const model = createLangChainModel({ model: 'claude-sonnet-4-6' });
  * const response = await model.invoke([{ role: 'user', content: 'Hello' }]);
  */
-export function createLangChainModel(entry: PhaseModelEntry, options?: AdapterOptions): BaseChatModel {
+export function createLangChainModel(
+  entry: PhaseModelEntry,
+  options?: AdapterOptions
+): BaseChatModel {
   return ProviderFactory.getProviderForModel(entry, options);
 }
