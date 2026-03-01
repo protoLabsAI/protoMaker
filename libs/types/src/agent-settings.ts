@@ -200,10 +200,21 @@ export interface PhaseModelConfig {
   // Agent execution - the model that implements features in worktrees
   /** Model for agent feature execution (auto-mode and manual agent launches) */
   agentExecutionModel: PhaseModelEntry;
+
+  // Flow-specific models - per-flow model overrides for LangGraph flows
+  /**
+   * Per-flow model configuration for LangGraph flows.
+   * Keys are flow IDs (e.g. 'content-creation', 'antagonistic-review', 'project-planning').
+   * When a flow runs with a matching flowId, its model entry overrides the default.
+   */
+  flowModels?: Record<string, PhaseModelEntry>;
 }
 
-/** Keys of PhaseModelConfig for type-safe access */
-export type PhaseModelKey = keyof PhaseModelConfig;
+/**
+ * Keys of PhaseModelConfig for type-safe access to individual phase model entries.
+ * Excludes 'flowModels' which is a map of per-flow overrides, not a single PhaseModelEntry.
+ */
+export type PhaseModelKey = Exclude<keyof PhaseModelConfig, 'flowModels'>;
 
 /** Default phase model configuration - sensible defaults for each task type
  * Uses canonical prefixed model IDs for consistent routing.
@@ -235,6 +246,19 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 
   // Agent execution - default to sonnet for reliable feature implementation
   agentExecutionModel: { model: 'claude-sonnet' },
+};
+
+/**
+ * DEFAULT_FLOW_MODELS - Default per-flow model configuration for LangGraph flows.
+ *
+ * Provides sensible defaults for each known flow ID. Users can override
+ * individual flow models in their PhaseModelConfig.flowModels settings.
+ * Follows the DEFAULT_FEATURE_FLAGS pattern — this is the single source of truth.
+ */
+export const DEFAULT_FLOW_MODELS: Record<string, PhaseModelEntry> = {
+  'content-creation': { model: 'claude-sonnet' },
+  'antagonistic-review': { model: 'claude-sonnet' },
+  'project-planning': { model: 'claude-sonnet' },
 };
 
 // ============================================================================
