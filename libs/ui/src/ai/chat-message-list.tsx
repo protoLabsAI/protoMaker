@@ -1,8 +1,15 @@
 /**
- * ChatMessageList — Scrollable message container with auto-scroll.
+ * ChatMessageList — Scrollable message container with stick-to-bottom behaviour.
  *
- * Uses MutationObserver to auto-scroll on new content unless user has scrolled up.
- * Shows a "scroll to bottom" button when not at bottom.
+ * Automatically follows new content while the user is at the bottom.
+ * When the user scrolls up, auto-scroll pauses without interruption.
+ * A "scroll to bottom" button re-appears whenever the view is not at the bottom.
+ *
+ * Implementation notes:
+ *  - MutationObserver watches the content node for any DOM changes (streaming
+ *    tokens) and scrolls only when the user has NOT manually scrolled away.
+ *  - The messages.length effect only scrolls when the user is still at the
+ *    bottom, so a manually-scrolled-up view is never hijacked.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,14 +31,7 @@ export function ChatMessageList({
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const [userScrolled, setUserScrolled] = useState(false);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
-    setUserScrolled(false);
-  }, []);
+  const userScrolledRef = useRef(false);
 
   const checkIfAtBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -39,6 +39,16 @@ export function ChatMessageList({
     return el.scrollHeight - el.scrollTop - el.clientHeight < 50;
   }, []);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    userScrolledRef.current = false;
+    setIsAtBottom(true);
+  }, []);
+
+  // Track scroll position to show/hide the scroll-to-bottom button
+  // and determine whether auto-scroll should fire.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -46,23 +56,46 @@ export function ChatMessageList({
     const handleScroll = () => {
       const atBottom = checkIfAtBottom();
       setIsAtBottom(atBottom);
-      if (!atBottom) {
-        setUserScrolled(true);
-      } else {
-        setUserScrolled(false);
+      if (atBottom) {
+        userScrolledRef.current = false;
       }
+      // Only mark as "user scrolled" when moving away from bottom.
+      // We detect this by checking if the user is NOT at bottom; the ref
+      // is cleared whenever we scroll back to the bottom programmatically
+      // or the user scrolls back themselves.
     };
 
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
   }, [checkIfAtBottom]);
 
+  // Detect scroll-up gestures via wheel/touch to set the userScrolled flag.
+  // This ensures we can distinguish user intent from programmatic scrolling.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const markUserScrolled = () => {
+      if (!checkIfAtBottom()) {
+        userScrolledRef.current = true;
+      }
+    };
+
+    el.addEventListener('wheel', markUserScrolled, { passive: true });
+    el.addEventListener('touchmove', markUserScrolled, { passive: true });
+    return () => {
+      el.removeEventListener('wheel', markUserScrolled);
+      el.removeEventListener('touchmove', markUserScrolled);
+    };
+  }, [checkIfAtBottom]);
+
+  // Auto-scroll on streaming content changes (MutationObserver).
   useEffect(() => {
     const el = contentRef.current;
     if (!el) return;
 
     const observer = new MutationObserver(() => {
-      if (!userScrolled) {
+      if (!userScrolledRef.current) {
         scrollToBottom('smooth');
       }
     });
@@ -74,11 +107,17 @@ export function ChatMessageList({
     });
 
     return () => observer.disconnect();
-  }, [userScrolled, scrollToBottom]);
+  }, [scrollToBottom]);
 
+  // When a new message is appended, scroll to bottom only if the user
+  // has not manually scrolled away. This prevents hijacking reading position
+  // during long conversations / streaming.
   useEffect(() => {
-    scrollToBottom('instant');
-  }, [messages.length, scrollToBottom]);
+    if (!userScrolledRef.current) {
+      scrollToBottom('instant');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
 
   return (
     <div data-slot="chat-message-list" className={cn('relative flex-1 overflow-hidden', className)}>
