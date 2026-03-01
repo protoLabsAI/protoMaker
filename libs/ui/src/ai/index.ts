@@ -24,3 +24,14 @@ export { SuggestionList, type SuggestionItem } from './suggestion.js';
 export { ReasoningPart, type ReasoningPartProps } from './reasoning-part.js';
 
 export { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
+
+export {
+  toolResultRegistry,
+  type ToolResultRendererProps,
+  type ToolResultRenderer,
+  type ToolState,
+} from './tool-result-registry.js';
+
+export { BoardSummaryCard } from './tool-results/board-summary-card.js';
+export { FeatureListCard } from './tool-results/feature-list-card.js';
+export { FeatureDetailCard } from './tool-results/feature-detail-card.js';

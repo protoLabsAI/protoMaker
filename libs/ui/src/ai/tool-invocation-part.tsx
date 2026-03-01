@@ -1,7 +1,10 @@
 /**
  * ToolInvocationPart — Collapsible card for rendering tool calls in chat.
  *
- * Displays the tool name, state badge, and expandable input/output JSON.
+ * Displays the tool name, state badge, and expandable input/output.
+ * Uses the ToolResultRegistry to render custom UI for known tools,
+ * falling back to JSON preview for unknown tools.
+ *
  * Supports all AI SDK tool invocation states: streaming, available,
  * output-available, and output-error.
  */
@@ -9,6 +12,15 @@
 import { useState } from 'react';
 import { ChevronDown, Wrench, Loader2, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils.js';
+import { toolResultRegistry } from './tool-result-registry.js';
+import { BoardSummaryCard } from './tool-results/board-summary-card.js';
+import { FeatureListCard } from './tool-results/feature-list-card.js';
+import { FeatureDetailCard } from './tool-results/feature-detail-card.js';
+
+// Register custom renderers for the boardRead tool group
+toolResultRegistry.register('get_board_summary', BoardSummaryCard);
+toolResultRegistry.register('list_features', FeatureListCard);
+toolResultRegistry.register('get_feature', FeatureDetailCard);
 
 type ToolState =
   | 'input-streaming'
@@ -81,6 +93,10 @@ export function ToolInvocationPart({
   const isRunning =
     state === 'input-streaming' || state === 'input-available' || state === 'approval-responded';
 
+  // Look up a custom renderer for this tool
+  const CustomRenderer = toolResultRegistry.get(toolName);
+  const hasCustomRenderer = Boolean(CustomRenderer);
+
   return (
     <div
       data-slot="tool-invocation-part"
@@ -114,7 +130,23 @@ export function ToolInvocationPart({
       {isOpen && (
         <div className="border-t border-border/50 px-2.5 py-2">
           <JsonPreview data={input} label="Input" />
-          {state === 'output-available' && <JsonPreview data={output} label="Output" />}
+          {state === 'output-available' && (
+            <>
+              {CustomRenderer ? (
+                <div className="mt-1.5">
+                  <CustomRenderer output={output} state={state} toolName={toolName} />
+                </div>
+              ) : (
+                <JsonPreview data={output} label="Output" />
+              )}
+            </>
+          )}
+          {/* For loading states with a custom renderer, show the custom component inline */}
+          {isRunning && CustomRenderer && (
+            <div className="mt-1.5">
+              <CustomRenderer output={output} state={state} toolName={toolName} />
+            </div>
+          )}
           {state === 'output-error' && errorText && (
             <div className="mt-1.5">
               <span className="text-[10px] font-medium uppercase tracking-wider text-destructive">
