@@ -192,6 +192,32 @@ export {
   type MaintenanceDiscordBot,
 } from './maintenance/maintenance-flow.js';
 
+// Ceremony flows (standup, retro, project retro — replaces ceremony class hierarchy)
+export {
+  createStandupFlow,
+  type StandupFlowDeps,
+  type StandupProjectService,
+  type StandupDiscordBot,
+  type StandupMilestone,
+  type StandupProject,
+} from './ceremonies/standup-flow.js';
+
+export {
+  createRetroFlow,
+  type RetroFlowDeps,
+  type RetroFeatureLoader,
+  type RetroDiscordBot,
+  type RetroLinearClient,
+} from './ceremonies/retro-flow.js';
+
+export {
+  createProjectRetroFlow,
+  type ProjectRetroFlowDeps,
+  type ProjectRetroFeatureLoader,
+  type ProjectRetroDiscordBot,
+  type ProjectRetroLinearClient,
+} from './ceremonies/project-retro-flow.js';
+
 // Project planning flow (Linear-native HITL workflow)
 export {
   createProjectPlanningFlow,
