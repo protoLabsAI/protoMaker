@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { createLogger, setLogLevel, LogLevel } from '@protolabs-ai/utils';
 
 import type { ServiceContainer } from './services.js';
+import { initOtel } from '../lib/otel.js';
 
 const logger = createLogger('Server:Startup');
 
@@ -26,6 +27,8 @@ export async function runStartup(
   services: ServiceContainer,
   setRequestLoggingEnabled: (enabled: boolean) => void
 ): Promise<void> {
+  await initOtel();
+
   const {
     settingsService,
     featureLoader: _featureLoader,
