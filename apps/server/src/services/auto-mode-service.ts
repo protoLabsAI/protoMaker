@@ -239,6 +239,12 @@ const COOLDOWN_PERIOD_MS = 300_000; // 5 minutes
 const CONSECUTIVE_FAILURE_THRESHOLD = 2; // Pause after 2 consecutive failures (circuit breaker)
 const FAILURE_WINDOW_MS = 60000; // Failures within 1 minute count as consecutive
 
+// Auto-loop sleep interval constants — extracted for maintainability and easy tuning
+const SLEEP_INTERVAL_CAPACITY_MS = 5000; // Waiting while at max concurrency capacity
+const SLEEP_INTERVAL_IDLE_MS = 30000; // Sustained idle polling after idle event emitted
+const SLEEP_INTERVAL_NORMAL_MS = 2000; // Normal loop iteration delay
+const SLEEP_INTERVAL_ERROR_MS = 5000; // Backoff after a loop iteration error
+
 export class AutoModeService {
   private events: EventEmitter;
   private typedEventBus: TypedEventBus;
@@ -1010,7 +1016,7 @@ export class AutoModeService {
           logger.debug(
             `[AutoLoop] At capacity (${projectRunningCount} running + ${startingCount} starting = ${totalOccupied}/${projectState.config.maxConcurrency}), waiting...`
           );
-          await this.sleep(5000);
+          await this.sleep(SLEEP_INTERVAL_CAPACITY_MS);
           continue;
         }
 
@@ -1022,8 +1028,11 @@ export class AutoModeService {
         );
 
         if (pendingFeatures.length === 0) {
-          // Emit idle event only once when backlog is empty AND no features are running
-          if (projectRunningCount === 0 && !projectState.hasEmittedIdleEvent) {
+          // Emit idle event only once when backlog is empty, no agents are running,
+          // AND no features are in_progress (guards against the transition window where
+          // a feature has just finished but its status hasn't flipped to done yet).
+          const inProgress = await this.hasInProgressFeatures(projectPath, branchName);
+          if (projectRunningCount === 0 && !inProgress && !projectState.hasEmittedIdleEvent) {
             this.emitAutoModeEvent('auto_mode_idle', {
               message: 'No pending features - auto mode idle',
               projectPath,
@@ -1035,15 +1044,21 @@ export class AutoModeService {
             logger.info(
               `[AutoLoop] No pending features available, ${projectRunningCount} still running, waiting...`
             );
+          } else if (inProgress) {
+            logger.info(
+              `[AutoLoop] No pending features available but features still in_progress, waiting for status transition...`
+            );
           } else if (projectState.hasEmittedIdleEvent) {
             // Still idle — keep polling at reduced frequency so we pick up
             // features that become unblocked when dependencies complete.
-            logger.debug(`[AutoLoop] Still idle for ${worktreeDesc}, polling again in 30s...`);
+            logger.debug(
+              `[AutoLoop] Still idle for ${worktreeDesc}, polling again in ${SLEEP_INTERVAL_IDLE_MS / 1000}s...`
+            );
           }
           // Longer sleep when idle to reduce filesystem reads; pass abort signal
-          // so stopAutoLoopForProject() remains responsive even during 30s idle sleep
+          // so stopAutoLoopForProject() remains responsive even during idle sleep
           await this.sleep(
-            projectState.hasEmittedIdleEvent ? 30000 : 10000,
+            projectState.hasEmittedIdleEvent ? SLEEP_INTERVAL_IDLE_MS : 10000,
             projectState.abortController.signal
           );
           continue;
@@ -1177,10 +1192,10 @@ export class AutoModeService {
           logger.debug(`[AutoLoop] All pending features are already running or being started`);
         }
 
-        await this.sleep(2000);
+        await this.sleep(SLEEP_INTERVAL_NORMAL_MS);
       } catch (error) {
         logger.error(`[AutoLoop] Loop iteration error for ${projectPath}:`, error);
-        await this.sleep(5000);
+        await this.sleep(SLEEP_INTERVAL_ERROR_MS);
       }
     }
 
@@ -1210,6 +1225,37 @@ export class AutoModeService {
     branchName: string | null
   ): Promise<number> {
     return this.concurrencyManager.getRunningCountForWorktree(projectPath, branchName);
+  }
+
+  /**
+   * Check whether any features for this project/worktree are currently in `in_progress` status.
+   *
+   * This guard prevents a false-positive `auto_mode_idle` emission during the transition
+   * window where a feature's agent has finished (running count = 0) but its status on disk
+   * has not yet flipped from `in_progress` to `done`.
+   *
+   * @param projectPath - The project path
+   * @param branchName - The branch name, or null for main worktree
+   */
+  private async hasInProgressFeatures(
+    projectPath: string,
+    branchName: string | null
+  ): Promise<boolean> {
+    try {
+      const allFeatures = await this.featureLoader.getAll(projectPath);
+      return allFeatures.some((f) => {
+        if (f.status !== 'in_progress') return false;
+        // Apply the same worktree-scoping as loadPendingFeatures
+        if (branchName === null) {
+          // Main worktree: features with no branchName or explicitly 'main'
+          return !f.branchName || f.branchName === 'main';
+        }
+        return f.branchName === branchName;
+      });
+    } catch {
+      // If we can't load features, assume none are in_progress (non-fatal)
+      return false;
+    }
   }
 
   /**
