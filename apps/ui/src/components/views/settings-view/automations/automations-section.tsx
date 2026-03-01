@@ -17,12 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Automation, AutomationRunStatus } from '@protolabs-ai/types';
-import {
-  listAutomations,
-  createAutomation,
-  updateAutomation,
-  deleteAutomation,
-} from '@/lib/api';
+import { listAutomations, createAutomation, updateAutomation, deleteAutomation } from '@/lib/api';
 import { AutomationEditModal, type AutomationFormData } from './automation-edit-modal';
 
 function TriggerBadge({ automation }: { automation: Automation }) {
@@ -55,7 +50,10 @@ function RunStatusBadge({ status }: { status?: AutomationRunStatus }) {
   if (!status) {
     return <span className="text-xs text-muted-foreground/60">Never run</span>;
   }
-  const configs: Record<AutomationRunStatus, { icon: React.ReactNode; label: string; cls: string }> = {
+  const configs: Record<
+    AutomationRunStatus,
+    { icon: React.ReactNode; label: string; cls: string }
+  > = {
     success: {
       icon: <CheckCircle2 className="w-3 h-3" />,
       label: 'Success',
@@ -128,9 +126,7 @@ export function AutomationsSection() {
 
   const handleToggle = async (automation: Automation, enabled: boolean) => {
     // Optimistic update
-    setAutomations((prev) =>
-      prev.map((a) => (a.id === automation.id ? { ...a, enabled } : a))
-    );
+    setAutomations((prev) => prev.map((a) => (a.id === automation.id ? { ...a, enabled } : a)));
     try {
       await updateAutomation(automation.id, { enabled });
     } catch (err) {
@@ -291,7 +287,10 @@ export function AutomationsSection() {
                         {automation.isBuiltIn && (
                           <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
                         )}
-                        <span className="font-medium truncate max-w-[160px]" title={automation.name}>
+                        <span
+                          className="font-medium truncate max-w-[160px]"
+                          title={automation.name}
+                        >
                           {automation.name}
                         </span>
                       </div>
@@ -310,7 +309,9 @@ export function AutomationsSection() {
                       </span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-xs text-muted-foreground">{modelLabel(automation)}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {modelLabel(automation)}
+                      </span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <RunStatusBadge status={automation.lastRunStatus} />

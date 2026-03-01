@@ -353,11 +353,7 @@ export function AutomationEditModal({
               </Label>
               <p className="text-xs text-muted-foreground">Run this automation when triggered</p>
             </div>
-            <Switch
-              id="automation-enabled"
-              checked={enabled}
-              onCheckedChange={setEnabled}
-            />
+            <Switch id="automation-enabled" checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
           {error && (
