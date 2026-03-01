@@ -1,0 +1,97 @@
+// Grafana Alloy configuration for protoLabs Studio OTel pipeline
+// Receives OTLP on :4317 (gRPC) and :4318 (HTTP)
+// Exports traces to Tempo, logs to Loki, metrics to Mimir
+
+// ─── OTLP Receivers ──────────────────────────────────────────────────────────
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces  = [otelcol.processor.batch.default.input]
+    metrics = [otelcol.processor.batch.metrics.input]
+    logs    = [otelcol.processor.batch.logs.input]
+  }
+}
+
+// ─── Batch Processors ────────────────────────────────────────────────────────
+
+otelcol.processor.batch "default" {
+  timeout          = "5s"
+  send_batch_size  = 512
+
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.processor.batch "metrics" {
+  timeout          = "10s"
+  send_batch_size  = 1024
+
+  output {
+    metrics = [otelcol.exporter.prometheus.mimir.input]
+  }
+}
+
+otelcol.processor.batch "logs" {
+  timeout          = "5s"
+  send_batch_size  = 512
+
+  output {
+    logs = [otelcol.exporter.loki.default.input]
+  }
+}
+
+// ─── Trace Export: Tempo ─────────────────────────────────────────────────────
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// ─── Metrics Export: Mimir ───────────────────────────────────────────────────
+
+otelcol.exporter.prometheus "mimir" {
+  forward_to = [prometheus.remote_write.mimir.receiver]
+}
+
+prometheus.remote_write "mimir" {
+  endpoint {
+    url = "http://mimir:9009/api/v1/push"
+  }
+}
+
+// ─── Log Export: Loki ────────────────────────────────────────────────────────
+
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ─── Alloy Self-Metrics ──────────────────────────────────────────────────────
+
+prometheus.exporter.self "alloy" {}
+
+prometheus.scrape "alloy_self" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.remote_write.mimir.receiver]
+
+  scrape_interval = "30s"
+}
