@@ -28,10 +28,18 @@ export type { AvaConfig };
 
 const logger = createLogger('ChatRoutes');
 
-/** Map our internal aliases to AI SDK model IDs */
-function resolveAISDKModel(modelAlias?: string) {
-  const resolved = resolveModelString(modelAlias, 'sonnet');
-  return anthropic(resolved);
+/**
+ * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
+ * Chosen to allow meaningful multi-step reasoning without excessive cost.
+ */
+const THINKING_BUDGET_TOKENS = 10_000;
+
+/**
+ * Returns true when the resolved model ID supports Anthropic extended thinking.
+ * Currently all claude-opus and claude-sonnet models support this feature.
+ */
+function modelSupportsExtendedThinking(resolvedModelId: string): boolean {
+  return resolvedModelId.includes('opus') || resolvedModelId.includes('sonnet');
 }
 
 /**
@@ -109,7 +117,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const modelAlias =
         avaConfig.model || (req.headers['x-model-alias'] as string) || bodyModel || 'sonnet';
 
-      const aiModel = resolveAISDKModel(modelAlias);
+      const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
+      const aiModel = anthropic(resolvedModelId);
 
       // Conditionally load project context files
       let projectContext: string | undefined;
@@ -155,8 +164,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
           )
         : {};
 
+      // Enable extended thinking for models that support it (opus / sonnet).
+      // The thinking budget caps how many tokens the model may use for internal
+      // reasoning before producing its visible response.
+      const extendedThinking = modelSupportsExtendedThinking(resolvedModelId);
+
       logger.info(
-        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}`
+        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}, extendedThinking=${extendedThinking}`
       );
 
       const result = streamText({
@@ -165,6 +179,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
         system: systemPrompt,
         tools,
         stopWhen: stepCountIs(10),
+        ...(extendedThinking && {
+          providerOptions: {
+            anthropic: {
+              thinking: { type: 'enabled', budgetTokens: THINKING_BUDGET_TOKENS },
+            },
+          },
+        }),
         experimental_telemetry: {
           isEnabled: true,
           metadata: {
