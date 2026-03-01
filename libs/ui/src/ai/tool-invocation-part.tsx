@@ -74,8 +74,8 @@ const stateConfig: Record<ToolState, { label: string; color: string; icon: typeo
   'output-denied': { label: 'Denied', color: 'text-muted-foreground', icon: AlertTriangle },
 };
 
-function formatToolName(name: string): string {
-  // Convert snake_case or camelCase to readable form
+/** Convert snake_case or camelCase tool names to a human-readable form. */
+export function formatToolName(name: string): string {
   return name
     .replace(/_/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')

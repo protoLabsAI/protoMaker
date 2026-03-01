@@ -32,6 +32,13 @@ export { ReasoningPart, type ReasoningPartProps } from './reasoning-part.js';
 export { ToolInvocationPart, type ToolInvocationPartProps } from './tool-invocation-part.js';
 
 export {
+  TaskBlock,
+  type TaskBlockProps,
+  type ToolInvocationItem,
+  type TaskToolState,
+} from './task-block.js';
+
+export {
   toolResultRegistry,
   type ToolResultRendererProps,
   type ToolResultRenderer,
