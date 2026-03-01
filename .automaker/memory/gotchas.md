@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 671
-  referenced: 238
-  successfulFeatures: 238
+  loaded: 683
+  referenced: 239
+  successfulFeatures: 239
 ---
 # gotchas
 
@@ -473,3 +473,8 @@ usageStats:
 - **Situation:** Initial attempts to use `git commit --no-verify` failed in worktrees; only HUSKY=0 environment variable worked
 - **Root cause:** Worktrees appear to use different git process execution or hook invocation mechanisms than standard repos, causing Husky to ignore standard git flags
 - **How to avoid:** Using HUSKY=0 is a complete hook disable rather than a selective bypass, but it's the only approach that works reliably in worktrees
+
+#### [Gotcha] Git branch existence check assumes local checkout state and standard branch naming. Uses `git rev-parse --verify "<branch>"` which only detects local branches, not remote-tracking branches (refs/remotes/origin/*) (2026-03-01)
+- **Situation:** A feature with branchName='feature/foo' will report as orphaned even if 'origin/feature/foo' exists in refs. Conversely, if git fetch --prune hasn't run, stale local branches still report as existing
+- **Root cause:** Simple implementation chose `git rev-parse --verify` for directness. It's a reliable check for local branch state but incomplete for distributed workflows
+- **How to avoid:** Simplicity vs. coverage. Current approach works for features that always track local branches, fails silently for remote-only or pruned scenarios

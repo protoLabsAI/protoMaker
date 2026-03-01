@@ -203,6 +203,8 @@ export interface FeatureFlags {
    * interruptions. Off by default until the pipeline overhaul is complete.
    */
   pipeline: boolean;
+  /** System View — network/dependency graph view in the project sidebar */
+  systemView: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -212,6 +214,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   docs: false,
   fileEditor: false,
   pipeline: false,
+  systemView: false,
 };
 
 export interface GlobalSettings {

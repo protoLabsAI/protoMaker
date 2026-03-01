@@ -3742,3 +3742,22 @@ usageStats:
 - **Rejected:** Regular dependency (ensures version is installed but risks duplication/conflicts) or bundled (tight coupling, larger bundle, version mismatch with consumer's LangChain)
 - **Trade-offs:** Consumer must install @langchain/core themselves (less batteries-included) but gets flexibility and avoids version hell. Library can't guarantee it works with all versions.
 - **Breaking if changed:** If consumer doesn't install @langchain/core or installs incompatible version, adapter breaks at runtime with unclear error. Requires careful docs and peer version constraints.
+
+#### [Pattern] I/O Deduplication via Preloading: HealthMonitorService passes already-loaded features array to checkOrphanedFeatures() instead of calling FeatureLoader.getAll() again (2026-03-01)
+- **Problem solved:** checkProjectHealth() already calls features = getAll() early in the cycle. Rather than load again in detectOrphanedFeatures(), the result is threaded through the call hierarchy
+- **Why this works:** getAll() is expensive (disk I/O). Calling it twice per health check cycle wastes resources. Preloading forces intentional coordination between services
+- **Trade-offs:** Simpler call signatures vs. forcing caller to manage preload state and thread it through. Harder to use FeatureLoader.detectOrphanedFeatures() as a standalone utility without preloading first
+
+### Orphaned feature detection placed in FeatureLoader service, not HealthMonitorService (2026-03-01)
+- **Context:** Could have implemented detectOrphanedFeatures() as a private method entirely within HealthMonitorService, keeping all health check logic in one place
+- **Why:** FeatureLoader owns all concerns about features and branch state. HealthMonitorService owns health issue aggregation. Keeps responsibilities separated and allows FeatureLoader.detectOrphanedFeatures() to be tested independently and reused elsewhere
+- **Rejected:** Implementing branch detection logic directly in HealthMonitorService or as a standalone utility function
+- **Trade-offs:** Easier to test detection independently, but creates cross-service dependency. If FeatureLoader is removed/refactored, HealthMonitorService breaks
+- **Breaking if changed:** Any refactoring of FeatureLoader.detectOrphanedFeatures() signature changes both FeatureLoader.ts and HealthMonitorService.ts contract simultaneously
+
+### Orphaned features set `autoRemediable: false` intentionally. No auto-deletion of features with missing branches (2026-03-01)
+- **Context:** Spec requested detection only. Could delete features automatically when branch is gone, but that's destructive without explicit user intent
+- **Why:** Features are project state. Auto-deletion risks data loss if branch is temporarily unavailable (network, fetch not run, user rebasing). Safer to report and let user decide
+- **Rejected:** Setting `autoRemediable: true` and adding a remediation function that deletes the feature or clears branchName
+- **Trade-offs:** Users must manually clean up vs. automatic cleanup. Extensible later: comment says 'any future remediation action can be wired in separately'
+- **Breaking if changed:** If auto-remediation is later enabled, health check becomes a mutating operation, changing project state without audit trail

@@ -5,7 +5,7 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 251
+  loaded: 256
   referenced: 75
   successfulFeatures: 75
 ---
@@ -703,3 +703,8 @@ usageStats:
 - **Problem solved:** Adapter needs to route Claude models to ChatAnthropic, other models to appropriate providers. Model identification could be string-based or type-guard-based.
 - **Why this works:** Single source of truth for 'what is a Claude model'. Model identification logic is testable, versioned, and changes propagate automatically. Prevents duplicate/inconsistent checks across codebase.
 - **Trade-offs:** Adds import dependency on types package (tighter coupling) but gains centralized, testable model identity logic. Slightly slower lookup (function call vs string comparison) but negligible.
+
+#### [Pattern] Union type extension: Added 'orphaned_feature' to HealthIssueType discriminated union for type-safe issue categorization (2026-03-01)
+- **Problem solved:** HealthIssueType is a union of issue kinds. Downstream code pattern-matches on type to route issues (log, alert, auto-fix)
+- **Why this works:** Discriminated unions allow type-safe exhaustiveness checking. Adding a new issue type forces all pattern-match sites to handle it (or TypeScript errors)
+- **Trade-offs:** Type safety + discoverability vs. verbosity. Every new issue type requires updating HealthIssueType and all consumers that pattern-match

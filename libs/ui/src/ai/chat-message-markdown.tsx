@@ -104,8 +104,7 @@ export function ChatMessageMarkdown({ content, className, citations }: ChatMessa
         // Tighten default prose spacing to match chat density
         'prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5',
         'prose-headings:mb-2 prose-headings:mt-3',
-        // Tables
-        'prose-table:w-full prose-table:border-collapse prose-td:border prose-td:border-border/40 prose-td:px-2 prose-td:py-1 prose-th:border prose-th:border-border/40 prose-th:px-2 prose-th:py-1 prose-th:bg-muted/40',
+        // Table prose overrides removed — handled by component overrides below
         // Task lists — remove default bullet so the checkbox aligns cleanly
         '[&_li:has(>input[type=checkbox])]:list-none [&_li:has(>input[type=checkbox])]:pl-0',
         '[&_input[type=checkbox]]:mr-1.5 [&_input[type=checkbox]]:accent-primary',
@@ -171,6 +170,20 @@ export function ChatMessageMarkdown({ content, className, citations }: ChatMessa
               </code>
             );
           },
+
+          // ── Tables — explicit styling since prose-table variants may not apply ─
+          table: ({ children }) => (
+            <table className="my-2 w-full border-collapse text-xs">{children}</table>
+          ),
+          thead: ({ children }) => <thead className="border-b border-border/60">{children}</thead>,
+          th: ({ children }) => (
+            <th className="px-2 py-1.5 text-left text-xs font-medium text-muted-foreground">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="border-t border-border/30 px-2 py-1 text-xs">{children}</td>
+          ),
 
           // ── Strikethrough (del) — remark-gfm adds this ───────────────────
           del: ({ children }) => <del className="opacity-60 line-through">{children}</del>,

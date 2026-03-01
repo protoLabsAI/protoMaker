@@ -463,3 +463,9 @@ usageStats:
 - **Rejected:** Default `enabled: true` with opt-out option (assumes consent, requires users to find and disable, risky legally)
 - **Trade-offs:** Reduced telemetry coverage initially (only opt-in users tracked) but better user trust and legal compliance
 - **Breaking if changed:** If default changes to `enabled: true`, the app starts transmitting error data without user knowledge - GDPR violation
+
+
+#### [Gotcha] New child_process.exec() call introduced without timeout or resource limits. Promisified exec can hang indefinitely on a frozen git process (2026-03-01)
+- **Situation:** detectOrphanedFeatures() iterates features and runs `git rev-parse` for each. If git process hangs (network issue, repo corruption, FUSE filesystem), health check blocks indefinitely and may starve event loop
+- **Root cause:** Pattern mirrors existing health-monitor-service.ts usage of exec, but exec() was chosen for simplicity over execFile(). No timeout wrapper was added
+- **How to avoid:** Simpler code vs. robustness. Current approach safe in known-good repos but unsafe in edge cases (hung git, slow NFS, corrupted index)

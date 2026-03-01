@@ -45,6 +45,64 @@ export interface AvaToolsConfig {
   projectMgmt?: boolean;
   /** Enable orchestration tools (get_execution_order, set_feature_dependencies) */
   orchestration?: boolean;
+  /**
+   * Pre-approved destructive tool calls (HITL flow).
+   * Each entry contains the tool name and a stable JSON hash of the input args.
+   * When a destructive tool's args match an entry here, it executes immediately
+   * rather than returning a confirmation-required sentinel.
+   */
+  approvedActions?: Array<{ toolName: string; inputHash: string }>;
+}
+
+// ---------------------------------------------------------------------------
+// Destructive-tool helpers (HITL)
+// ---------------------------------------------------------------------------
+
+/**
+ * The set of tool names that require human-in-the-loop confirmation before
+ * executing. `start_auto_mode` is only gated when maxConcurrency > 1.
+ */
+export const DESTRUCTIVE_TOOLS = new Set(['delete_feature', 'stop_agent', 'update_project_spec']);
+
+/**
+ * Produce a stable JSON string for an input object so that two calls with the
+ * same arguments generate identical hashes regardless of key insertion order.
+ */
+function stableJson(obj: unknown): string {
+  if (typeof obj !== 'object' || obj === null) return JSON.stringify(obj);
+  const sorted = Object.fromEntries(
+    Object.entries(obj as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))
+  );
+  return JSON.stringify(sorted);
+}
+
+/**
+ * Returns true when the given (toolName, input) pair has been pre-approved by
+ * the user in this request.
+ */
+function isApproved(
+  toolName: string,
+  input: unknown,
+  approvedActions: AvaToolsConfig['approvedActions']
+): boolean {
+  if (!approvedActions || approvedActions.length === 0) return false;
+  const hash = stableJson(input);
+  return approvedActions.some((a) => a.toolName === toolName && a.inputHash === hash);
+}
+
+/**
+ * Build the HITL sentinel object returned when a destructive tool needs
+ * user confirmation before executing.
+ */
+function hitlSentinel(action: string, summary: string, input: unknown): Record<string, unknown> {
+  return {
+    __hitl: true,
+    action,
+    summary,
+    input,
+    message:
+      'This action requires user confirmation. Please confirm to proceed or reject to cancel.',
+  };
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -241,6 +299,10 @@ export function buildAvaTools(
         featureId: z.string().describe('The feature ID to delete'),
       }),
       execute: async ({ featureId }) => {
+        const input = { featureId };
+        if (!isApproved('delete_feature', input, config.approvedActions)) {
+          return hitlSentinel('delete_feature', `Delete feature "${featureId}"`, input);
+        }
         const success = await services.featureLoader.delete(projectPath, featureId);
         if (success) {
           services.events?.emit('feature:deleted', { projectPath, featureId });
@@ -290,6 +352,10 @@ export function buildAvaTools(
         sessionId: z.string().describe('ID of the session to stop'),
       }),
       execute: async ({ sessionId }) => {
+        const input = { sessionId };
+        if (!isApproved('stop_agent', input, config.approvedActions)) {
+          return hitlSentinel('stop_agent', `Stop agent session "${sessionId}"`, input);
+        }
         const deleted = await services.agentService.deleteSession(sessionId);
         return { success: deleted, sessionId };
       },
@@ -335,6 +401,18 @@ export function buildAvaTools(
           .describe('Restrict auto-mode to features belonging to this branch'),
       }),
       execute: async ({ maxConcurrency, branchName }) => {
+        // Require confirmation when running more than one worker in parallel
+        const isConcurrent = (maxConcurrency ?? 1) > 1;
+        if (isConcurrent) {
+          const input = { maxConcurrency, branchName };
+          if (!isApproved('start_auto_mode', input, config.approvedActions)) {
+            return hitlSentinel(
+              'start_auto_mode',
+              `Start auto mode with ${maxConcurrency} parallel workers`,
+              input
+            );
+          }
+        }
         const count = await services.autoModeService.startAutoLoopForProject(
           projectPath,
           branchName ?? null,
@@ -387,6 +465,10 @@ export function buildAvaTools(
         content: z.string().describe('Markdown content to write to spec.md'),
       }),
       execute: async ({ content }) => {
+        const input = { content };
+        if (!isApproved('update_project_spec', input, config.approvedActions)) {
+          return hitlSentinel('update_project_spec', 'Update project specification', input);
+        }
         const specDir = path.join(projectPath, '.automaker');
         const specPath = path.join(specDir, 'spec.md');
         await fs.mkdir(specDir, { recursive: true });

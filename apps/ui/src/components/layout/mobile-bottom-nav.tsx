@@ -2,6 +2,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { Grid, BarChart3, FileText, Settings, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-media-query';
+import { useAppStore } from '@/store/app-store';
 
 interface NavItem {
   id: string;
@@ -10,23 +11,34 @@ interface NavItem {
   path: string;
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   { id: 'board', icon: Grid, label: 'Board', path: '/board' },
-  { id: 'system-view', icon: BarChart3, label: 'System', path: '/system-view' },
   { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/chat' },
   { id: 'notes', icon: FileText, label: 'Notes', path: '/notes' },
   { id: 'settings', icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
+const systemViewItem: NavItem = {
+  id: 'system-view',
+  icon: BarChart3,
+  label: 'System',
+  path: '/system-view',
+};
+
 export function MobileBottomNav() {
   const navigate = useNavigate();
   const routerState = useRouterState();
   const isMobile = useIsMobile();
+  const { featureFlags } = useAppStore();
 
   // Don't render on desktop
   if (!isMobile) {
     return null;
   }
+
+  const navItems = featureFlags.systemView
+    ? [baseNavItems[0], systemViewItem, ...baseNavItems.slice(1)]
+    : baseNavItems;
 
   const currentPath = routerState.location.pathname;
 

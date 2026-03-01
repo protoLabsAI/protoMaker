@@ -98,7 +98,7 @@ protoLabs Studio is an autonomous AI development studio built as an npm workspac
 
 ## Brand Identity
 
-The product is publicly branded as **protoLabs Studio** (domain: **protoLabs.studio**). The codebase uses "Automaker" internally (`@protolabs-ai/*` packages, `.automaker/` directory) — this is intentional and should NOT be renamed in code.
+The product is publicly branded as **protoLabs.studio** (domain: **protoLabs.studio**). The codebase uses "Automaker" internally (`@protolabs-ai/*` packages, `.automaker/` directory) — this is intentional and should NOT be renamed in code.
 
 - **protoLabs** / **protoLabs Studio** = the AI-native development agency and product (always camelCase)
 - **protoMaker** = GitHub repo name only, preserves lineage — not a product name
