@@ -3011,15 +3011,33 @@ Address the follow-up instructions above. Review the previous work and make the 
   }
 
   /**
-   * Check if context exists for a feature
+   * Check if context exists for a feature.
+   *
+   * Guards against the stale context trap: if agent-output.md exists but
+   * hasn't been written to in over 2 hours, the session that created it is
+   * gone. Rename it to .stale so the next run starts fresh instead of trying
+   * to resume a dead Claude session (which handshakes, fails silently, and
+   * exits immediately).
    */
   async contextExists(projectPath: string, featureId: string): Promise<boolean> {
-    // Context is stored in .automaker directory
     const featureDir = getFeatureDir(projectPath, featureId);
     const contextPath = path.join(featureDir, 'agent-output.md');
 
     try {
       await secureFs.access(contextPath);
+
+      const stats = await secureFs.stat(contextPath);
+      const ageMs = Date.now() - stats.mtime.getTime();
+      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+      if (ageMs > TWO_HOURS_MS) {
+        logger.warn(
+          `[contextExists] agent-output.md for ${featureId} is ${Math.round(ageMs / 60000)}m old — stale session, renaming to .stale`
+        );
+        await secureFs.rename(contextPath, `${contextPath}.stale`);
+        return false;
+      }
+
       return true;
     } catch {
       return false;
@@ -3932,7 +3950,9 @@ Format your response as a structured markdown document.`;
             // Human intervention is required (e.g. fix .prettierignore, Husky config).
             const changeReason = feature.statusChangeReason ?? '';
             const isGitWorkflowBlock =
-              changeReason.includes('git commit') || changeReason.includes('git workflow failed');
+              changeReason.includes('git commit') ||
+              changeReason.includes('git workflow failed') ||
+              changeReason.includes('plan validation failed');
             if (isGitWorkflowBlock) {
               logger.warn(
                 `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +

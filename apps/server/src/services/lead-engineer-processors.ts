@@ -220,7 +220,10 @@ Keep it focused and actionable. If the feature description is too vague or uncle
         };
       }
 
-      ctx.escalationReason = `Plan rejected after ${ctx.planRetryCount} retries: ${gateResult.reason}`;
+      // Prefix with "plan validation failed:" so auto-mode's requeue guard
+      // can recognise this as a human-intervention-required block (not a
+      // transient dep issue) and prevent retry storms.
+      ctx.escalationReason = `plan validation failed: Plan rejected after ${ctx.planRetryCount} retries: ${gateResult.reason}`;
       return {
         nextState: 'ESCALATE',
         shouldContinue: true,

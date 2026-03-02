@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import {
   AlertCircle,
+  AlertTriangle,
   Lock,
   Hand,
   Sparkles,
@@ -135,6 +136,18 @@ function getWorkItemStateBadge(state: WorkItemState): {
   }
 }
 
+/**
+ * Returns true when a blocked feature's statusChangeReason indicates it needs
+ * human intervention (will not be auto-requeued by auto-mode).
+ */
+function isHumanInterventionRequired(reason: string): boolean {
+  return (
+    reason.includes('git commit') ||
+    reason.includes('git workflow failed') ||
+    reason.includes('plan validation failed')
+  );
+}
+
 interface CardBadgesProps {
   feature: Feature;
   onPRDClick?: () => void;
@@ -152,8 +165,10 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
   // costUsd is typed as unknown on the Feature interface; narrow with typeof guard
   const costUsd = typeof feature.costUsd === 'number' ? feature.costUsd : undefined;
   const hasCost = costUsd != null && costUsd > 0;
+  const isNeedsAction =
+    feature.status === 'blocked' && isHumanInterventionRequired(feature.statusChangeReason ?? '');
 
-  if (!hasError && !hasEpic && !hasDueDate && !hasCost && !hasWorkItemState) {
+  if (!hasError && !hasEpic && !hasDueDate && !hasCost && !hasWorkItemState && !isNeedsAction) {
     return null;
   }
 
@@ -253,6 +268,27 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs max-w-[250px]">
               <p>{feature.error}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+
+      {/* Needs Action badge — blocked features that won't auto-recover */}
+      {isNeedsAction && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                data-testid={`needs-action-badge-${feature.id}`}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                Needs Action
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs max-w-[280px]">
+              <p className="font-medium mb-0.5">Requires human intervention</p>
+              <p className="text-muted-foreground">{feature.statusChangeReason}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
