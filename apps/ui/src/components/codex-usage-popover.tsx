@@ -94,10 +94,10 @@ export function CodexUsagePopover() {
 
   // Derived status color/icon helper
   const getStatusInfo = (percentage: number) => {
-    if (percentage >= 75) return { color: 'text-red-500', icon: XCircle, bg: 'bg-red-500' };
+    if (percentage >= 75) return { color: 'text-red-500', icon: XCircle, bg: 'bg-status-error' };
     if (percentage >= 50)
-      return { color: 'text-orange-500', icon: AlertTriangle, bg: 'bg-orange-500' };
-    return { color: 'text-green-500', icon: CheckCircle, bg: 'bg-green-500' };
+      return { color: 'text-orange-500', icon: AlertTriangle, bg: 'bg-status-warning' };
+    return { color: 'text-green-500', icon: CheckCircle, bg: 'bg-status-success' };
   };
 
   // Helper component for the progress bar
@@ -187,9 +187,9 @@ export function CodexUsagePopover() {
     : 0;
 
   const getProgressBarColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-red-500';
-    if (percentage >= 50) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (percentage >= 80) return 'bg-status-error';
+    if (percentage >= 50) return 'bg-status-warning';
+    return 'bg-status-success';
   };
 
   const trigger = (
