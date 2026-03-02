@@ -5,6 +5,10 @@
  * then POST periodic data payloads. The latest reading for each sensor is stored
  * in-memory. Readings older than TTL_MS are considered stale.
  *
+ * Built-in sensors registered at startup:
+ *   builtin:websocket-clients — tracks connected WebSocket client count (detects headless mode)
+ *   builtin:electron-idle     — reports system idle time via Electron powerMonitor (Electron only)
+ *
  * Events emitted:
  *   sensor:registered   — when a new sensor is registered
  *   sensor:data-received — when a sensor reports a reading
@@ -15,6 +19,9 @@ import type { SensorConfig, SensorReading, SensorState } from '@protolabs-ai/typ
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('SensorRegistry');
+
+/** Polling interval for builtin:electron-idle (30 seconds) */
+const ELECTRON_IDLE_POLL_MS = 30_000;
 
 /** How long after the last reading a sensor is considered "stale" (5 minutes) */
 const STALE_TTL_MS = 5 * 60 * 1000;
@@ -27,8 +34,103 @@ export class SensorRegistryService {
   private readings = new Map<string, SensorReading>();
   private events?: EventEmitter;
 
+  /** Current tracked WebSocket client count for the builtin:websocket-clients sensor */
+  private _wsClientCount = 0;
+
+  /** Interval handle for the Electron idle time poller */
+  private _electronIdleInterval?: ReturnType<typeof setInterval>;
+
   constructor(events?: EventEmitter) {
     this.events = events;
+  }
+
+  /**
+   * Register both built-in sensors and start their reporting loops.
+   * Safe to call multiple times — re-registration is idempotent.
+   */
+  startBuiltinSensors(): void {
+    // ── builtin:websocket-clients ────────────────────────────────────────────
+    this.register({
+      id: 'builtin:websocket-clients',
+      name: 'WebSocket Clients',
+      description:
+        'Tracks the number of connected WebSocket UI clients. Count of 0 indicates headless (server-only) mode.',
+    });
+    // Report the initial count (0 at startup — clients haven't connected yet)
+    this._reportWebSocketClients();
+
+    // ── builtin:electron-idle ────────────────────────────────────────────────
+    this.register({
+      id: 'builtin:electron-idle',
+      name: 'Electron Idle Time',
+      description:
+        'Reports system idle time in seconds via Electron powerMonitor.getSystemIdleTime(). Only active when running inside Electron.',
+    });
+    this._startElectronIdlePoller();
+
+    logger.info('Built-in sensors registered (websocket-clients, electron-idle)');
+  }
+
+  /**
+   * Update the WebSocket client count and immediately report to the builtin sensor.
+   * Called by the WebSocket server whenever a client connects or disconnects.
+   */
+  notifyWebSocketClientCount(count: number): void {
+    this._wsClientCount = Math.max(0, count);
+    this._reportWebSocketClients();
+  }
+
+  /** Internal helper: report current WS client count to the builtin sensor */
+  private _reportWebSocketClients(): void {
+    this.report({
+      sensorId: 'builtin:websocket-clients',
+      data: { clientCount: this._wsClientCount },
+    });
+  }
+
+  /**
+   * Start a polling interval that reads system idle time from Electron's powerMonitor.
+   * If not running inside Electron the dynamic import fails silently and no readings
+   * are produced (the sensor stays offline / stale).
+   */
+  private _startElectronIdlePoller(): void {
+    if (this._electronIdleInterval) return; // already started
+
+    const poll = async () => {
+      try {
+        // Dynamic import: only works inside Electron renderer / main processes
+        const electron = await import('electron');
+        const powerMonitor =
+          electron.powerMonitor ?? (electron as unknown as Record<string, unknown>).default;
+        if (
+          powerMonitor &&
+          typeof (powerMonitor as { getSystemIdleTime?: () => number }).getSystemIdleTime ===
+            'function'
+        ) {
+          const idleSeconds = (
+            powerMonitor as { getSystemIdleTime: () => number }
+          ).getSystemIdleTime();
+          this.report({
+            sensorId: 'builtin:electron-idle',
+            data: { idleSeconds },
+          });
+        }
+      } catch {
+        // Electron not available — no-op (sensor remains offline / stale)
+      }
+    };
+
+    // Run once immediately, then on the interval
+    void poll();
+    this._electronIdleInterval = setInterval(() => void poll(), ELECTRON_IDLE_POLL_MS);
+  }
+
+  /** Stop built-in sensor polling loops (for clean shutdown). */
+  stopBuiltinSensors(): void {
+    if (this._electronIdleInterval) {
+      clearInterval(this._electronIdleInterval);
+      this._electronIdleInterval = undefined;
+    }
   }
 
   /**

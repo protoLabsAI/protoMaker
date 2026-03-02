@@ -44,6 +44,7 @@ import { WorktreeLifecycleService } from '../services/worktree-lifecycle-service
 import { DiscordBotService } from '../services/discord-bot-service.js';
 import { RoleRegistryService } from '../services/role-registry-service.js';
 import { SensorRegistryService } from '../services/sensor-registry-service.js';
+import { ContextAggregator } from '../services/context-aggregator.js';
 import { IntegrationRegistryService } from '../services/integration-registry-service.js';
 import {
   registerBuiltInIntegrations,
@@ -131,6 +132,7 @@ export interface ServiceContainer {
 
   // Sensor registry
   sensorRegistryService: SensorRegistryService;
+  contextAggregator: ContextAggregator;
   dynamicAgentExecutor: DynamicAgentExecutor;
   headsdownService: HeadsdownService;
 
@@ -338,6 +340,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
   // Sensor Registry (external sensor data ingestion)
   const sensorRegistryService = new SensorRegistryService(events);
+
+  // Context Aggregator (reads sensor readings → unified UserPresenceState)
+  const contextAggregator = new ContextAggregator(sensorRegistryService);
 
   // Role Registry (shared agent template registry)
   const roleRegistryService = new RoleRegistryService(events);
@@ -705,6 +710,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     claudeUsageService,
     mcpTestService,
     sensorRegistryService,
+    contextAggregator,
     featureHealthService,
     healthMonitorService,
     beadsService,

@@ -249,6 +249,17 @@ export function createChatRoutes(services: ServiceContainer): Router {
         } catch (err) {
           logger.warn('Failed to generate sitrep:', err);
         }
+
+        // Append presence section when userPresenceDetection feature flag is enabled
+        try {
+          const globalSettings = await services.settingsService.getGlobalSettings();
+          if (globalSettings.featureFlags?.userPresenceDetection) {
+            const presenceSection = services.contextAggregator.formatPresenceSection();
+            sitrep = sitrep ? `${sitrep}\n\n${presenceSection}` : presenceSection;
+          }
+        } catch (err) {
+          logger.warn('Failed to append presence section to sitrep:', err);
+        }
       }
 
       // Build Ava system prompt — enriched with project context, sitrep, and extension
