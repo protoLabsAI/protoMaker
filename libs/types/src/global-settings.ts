@@ -207,6 +207,8 @@ export interface FeatureFlags {
   pipeline: boolean;
   /** System View — network/dependency graph view in the project sidebar */
   systemView: boolean;
+  /** User Presence Detection — enables sensor-driven presence awareness (requires sensor hardware/agent) */
+  userPresenceDetection: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -218,6 +220,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   fileEditor: false,
   pipeline: false,
   systemView: false,
+  userPresenceDetection: false,
 };
 
 export interface GlobalSettings {

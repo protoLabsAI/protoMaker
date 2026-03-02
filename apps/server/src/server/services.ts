@@ -43,6 +43,7 @@ import { PRFeedbackService } from '../services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from '../services/worktree-lifecycle-service.js';
 import { DiscordBotService } from '../services/discord-bot-service.js';
 import { RoleRegistryService } from '../services/role-registry-service.js';
+import { SensorRegistryService } from '../services/sensor-registry-service.js';
 import { IntegrationRegistryService } from '../services/integration-registry-service.js';
 import {
   registerBuiltInIntegrations,
@@ -127,6 +128,9 @@ export interface ServiceContainer {
   agentService: AgentService;
   roleRegistryService: RoleRegistryService;
   agentFactoryService: AgentFactoryService;
+
+  // Sensor registry
+  sensorRegistryService: SensorRegistryService;
   dynamicAgentExecutor: DynamicAgentExecutor;
   headsdownService: HeadsdownService;
 
@@ -332,6 +336,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     healthMonitorService
   );
+  // Sensor Registry (external sensor data ingestion)
+  const sensorRegistryService = new SensorRegistryService(events);
+
   // Role Registry (shared agent template registry)
   const roleRegistryService = new RoleRegistryService(events);
   try {
@@ -697,6 +704,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     hitlFormService,
     claudeUsageService,
     mcpTestService,
+    sensorRegistryService,
     featureHealthService,
     healthMonitorService,
     beadsService,

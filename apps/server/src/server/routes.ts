@@ -85,6 +85,7 @@ import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createBeadsRoutes } from '../routes/beads/index.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
+import { createSensorRoutes } from '../routes/sensors/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -153,6 +154,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectPlanningService,
     contentFlowService,
     repoRoot,
+    sensorRegistryService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -399,6 +401,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Promotion orchestration routes
   app.use('/api/promotions', createPromotionsRoutes());
   logger.info('Promotion routes mounted at /api/promotions');
+
+  // Sensor registry routes (core sensor framework)
+  app.use('/api/sensors', createSensorRoutes(sensorRegistryService));
+  logger.info('Sensor routes mounted at /api/sensors');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

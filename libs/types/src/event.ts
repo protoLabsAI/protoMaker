@@ -352,6 +352,9 @@ export type EventType =
   | 'ava-gateway:alerts'
   | 'ava-gateway:heartbeat-ok'
   | 'ava-gateway:emergency-stop'
+  // Sensor registry events (core sensor framework)
+  | 'sensor:registered'
+  | 'sensor:data-received'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -723,6 +726,14 @@ export interface EventPayloadMap {
     phase?: PipelinePhase;
     spanId?: string;
     timestamp: string;
+  };
+
+  // Sensor framework events
+  'sensor:registered': { sensorId: string; name: string; registeredAt: string };
+  'sensor:data-received': {
+    sensorId: string;
+    data: Record<string, unknown>;
+    receivedAt: string;
   };
 }
 
