@@ -337,7 +337,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/projects',
     createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
   );
-  app.use('/api/scheduler', createSchedulerRoutes(schedulerService, settingsService));
+  app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   app.use('/api/discord', createDiscordRoutes(discordBotService));

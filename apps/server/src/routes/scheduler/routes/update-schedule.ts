@@ -4,12 +4,8 @@
 
 import type { Request, Response } from 'express';
 import type { SchedulerService } from '../../../services/scheduler-service.js';
-import type { SettingsService } from '../../../services/settings-service.js';
 
-export function createUpdateScheduleHandler(
-  schedulerService: SchedulerService,
-  settingsService: SettingsService
-) {
+export function createUpdateScheduleHandler(schedulerService: SchedulerService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const taskId = req.params.taskId as string;
@@ -25,14 +21,6 @@ export function createUpdateScheduleHandler(
         res.status(404).json({ success: false, error: `Task not found: ${taskId}` });
         return;
       }
-
-      // Persist to GlobalSettings
-      const settings = await settingsService.getGlobalSettings();
-      const maintenance = settings.maintenance ?? { enabled: true };
-      const tasks = maintenance.tasks ?? {};
-      tasks[taskId] = { ...tasks[taskId], cronExpression };
-      maintenance.tasks = tasks;
-      await settingsService.updateGlobalSettings({ maintenance });
 
       const task = schedulerService.getTask(taskId);
       res.json({

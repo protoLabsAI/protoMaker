@@ -4,12 +4,8 @@
 
 import type { Request, Response } from 'express';
 import type { SchedulerService } from '../../../services/scheduler-service.js';
-import type { SettingsService } from '../../../services/settings-service.js';
 
-export function createDisableTaskHandler(
-  schedulerService: SchedulerService,
-  settingsService: SettingsService
-) {
+export function createDisableTaskHandler(schedulerService: SchedulerService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const taskId = req.params.taskId as string;
@@ -19,14 +15,6 @@ export function createDisableTaskHandler(
         res.status(404).json({ success: false, error: `Task not found: ${taskId}` });
         return;
       }
-
-      // Persist to GlobalSettings
-      const settings = await settingsService.getGlobalSettings();
-      const maintenance = settings.maintenance ?? { enabled: true };
-      const tasks = maintenance.tasks ?? {};
-      tasks[taskId] = { ...tasks[taskId], enabled: false };
-      maintenance.tasks = tasks;
-      await settingsService.updateGlobalSettings({ maintenance });
 
       res.json({ success: true, taskId });
     } catch (error) {
