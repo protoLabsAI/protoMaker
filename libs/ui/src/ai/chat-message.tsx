@@ -29,6 +29,7 @@ import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
 import { AILoader } from './loader.js';
 import { MessageActions } from './message-actions.js';
+import { PlanPart, extractPlanData, type PlanData } from './plan-part.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -228,6 +229,22 @@ function extractCitations(parts: Array<Record<string, unknown>>): Citation[] {
 }
 
 /**
+ * Extract a plan from message parts.
+ * The server writes these as `data-plan` UIMessageChunks; the AI SDK
+ * surfaces them in the message's parts array as `{ type: 'data-plan', data: PlanData }`.
+ * Returns the first plan found, or null if none.
+ */
+function extractPlan(parts: Array<Record<string, unknown>>): PlanData | null {
+  for (const part of parts) {
+    if (part.type === 'data-plan') {
+      const plan = extractPlanData(part.data);
+      if (plan) return plan;
+    }
+  }
+  return null;
+}
+
+/**
  * Extract plain text from a group's 'other' segments (text parts only).
  * Used for the copy-to-clipboard action in MessageActions.
  */
@@ -284,8 +301,15 @@ function MessagePartRenderer({
     );
   }
 
+  // data-plan — render the plan card inline where it appears in the message.
+  if (type === 'data-plan') {
+    const plan = extractPlanData(part.data);
+    if (!plan) return null;
+    return <PlanPart plan={plan} />;
+  }
+
   // data-citations are consumed by extractCitations() — not rendered inline.
-  // source-document, file, data-* — render nothing.
+  // source-document, file, other data-* — render nothing.
   return null;
 }
 
@@ -359,7 +383,8 @@ export function ChatMessage({
       p.type === 'reasoning' ||
       p.type === 'step-start' ||
       isToolPart(p) ||
-      p.type === 'source-url'
+      p.type === 'source-url' ||
+      p.type === 'data-plan'
   );
   if (!hasContent) return null;
 
