@@ -25,6 +25,7 @@ import { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
 import { ExecutionOrderCard } from './tool-results/execution-order-card.js';
 import { ArtifactCard } from './tool-results/artifact-card.js';
 import { ImageCard } from './tool-results/image-card.js';
+import { WebPreviewCard } from './tool-results/web-preview-card.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
@@ -50,6 +51,7 @@ toolResultRegistry.register('get_execution_order', ExecutionOrderCard);
 // Register custom renderers for artifact and image generation tools
 toolResultRegistry.register('generate_artifact', ArtifactCard);
 toolResultRegistry.register('generate_image', ImageCard);
+toolResultRegistry.register('generate_html', WebPreviewCard);
 
 type ToolState =
   | 'input-streaming'

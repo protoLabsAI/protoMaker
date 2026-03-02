@@ -74,3 +74,4 @@ export { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
 export { ExecutionOrderCard } from './tool-results/execution-order-card.js';
 export { ArtifactCard } from './tool-results/artifact-card.js';
 export { ImageCard } from './tool-results/image-card.js';
+export { WebPreviewCard } from './tool-results/web-preview-card.js';
