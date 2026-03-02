@@ -158,7 +158,6 @@ protolabs-studio/
 │   ├── types/           # Core TypeScript definitions
 │   ├── utils/           # Logging, errors, image processing
 │   ├── git-utils/       # Git operations & worktree management
-│   ├── llm-providers/   # Multi-provider LLM abstraction
 │   ├── observability/   # Langfuse tracing & prompt management
 │   ├── tools/           # Unified tool definition & registry
 │   ├── flows/           # LangGraph state graph primitives
@@ -184,7 +183,7 @@ protolabs-studio/
 @protolabs-ai/types (no dependencies)
     ↓
 @protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver,
-spec-parser, pen-parser, tools, flows, llm-providers, observability
+spec-parser, pen-parser, tools, flows, observability
     ↓
 @protolabs-ai/git-utils, ui
     ↓

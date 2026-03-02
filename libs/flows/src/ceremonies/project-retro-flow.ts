@@ -10,12 +10,11 @@
  * Usage (server-side):
  * ```typescript
  * import { createProjectRetroFlow } from '@protolabs-ai/flows';
- * import { createLangChainModel } from '@protolabs-ai/llm-providers';
  * import { createBoardTools, createDiscordTools, createLinearTools } from '@protolabs-ai/tools';
  *
  * const flow = createProjectRetroFlow({
  *   featureLoader,
- *   model: createLangChainModel({ model: 'claude-sonnet-4-6' }),
+ *   model, // BaseChatModel instance
  *   discordBot,
  *   linearClient,
  *   projectPath: '/path/to/project',

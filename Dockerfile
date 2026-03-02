@@ -31,7 +31,6 @@ COPY libs/error-tracking/package*.json ./libs/error-tracking/
 COPY libs/git-utils/package*.json ./libs/git-utils/
 COPY libs/spec-parser/package*.json ./libs/spec-parser/
 COPY libs/flows/package*.json ./libs/flows/
-COPY libs/llm-providers/package*.json ./libs/llm-providers/
 COPY libs/observability/package*.json ./libs/observability/
 COPY libs/tools/package*.json ./libs/tools/
 COPY libs/pen-parser/package*.json ./libs/pen-parser/

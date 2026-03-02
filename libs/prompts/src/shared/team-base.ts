@@ -137,7 +137,7 @@ export const MONOREPO_STANDARDS = `## Monorepo Standards
 \`\`\`
 @protolabs-ai/types          (no deps)
 @protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver,
-  policy-engine, spec-parser, flows, llm-providers, observability
+  policy-engine, spec-parser, flows, observability
 @protolabs-ai/git-utils
 apps/server, apps/ui
 \`\`\`

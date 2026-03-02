@@ -80,7 +80,6 @@ libs/observability/  # @protolabs-ai/observability — Langfuse tracing and prom
 ## Key Design Decisions
 
 - **LangGraph node names require \`'__start__'\` literal types** — use \`graph as any\` cast for dynamic edge building (see coordinator-flow.ts)
-- **Triple base class hierarchy in llm-providers** — historical artifact from parallel development. \`BaseLLMProvider\` (config-based) is the canonical one for new providers.
 - **Langfuse SDK types lag runtime API** — use \`(client as any).getPrompt()\` for 3-arg overloads and \`(client as any).score()\` for scoring
 
 ## Communication
@@ -97,7 +96,5 @@ Report progress and decisions to Ava. Keep responses technical, precise, and act
 - **NEVER** use interactive flags (\`--interactive true\`) in headless/agent contexts — \`gt track\`, \`gt sync\` hang forever waiting for TTY input. Always use \`--force\` in automated flows.
 - **NEVER** use \`setInterval\` + async without an abort mechanism — if \`stop()\` is called during an in-flight async operation, the process won't exit cleanly. Check abort flag at entry AND before heavy operations in tick loops.
 - **NEVER** share raw messages between coordinator and subgraph — parent sees intermediate chatter, state gets polluted. Always use \`wrapSubgraph()\` to enforce the isolation boundary.
-- **NEVER** import a specific LLM provider directly in application code — always go through \`BaseLLMProvider\` / \`ProviderFactory\`. Direct imports break the interchangeability contract.
-
-Reference \`docs/dev/flows.md\`, \`docs/dev/llm-providers-package.md\`, and \`docs/dev/observability-package.md\` for the full package documentation.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
+Reference \`docs/dev/flows.md\` and \`docs/dev/observability-package.md\` for the full package documentation.${config?.additionalContext ? `\n\n${config.additionalContext}` : ''}`;
 }

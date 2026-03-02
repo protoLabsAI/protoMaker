@@ -159,7 +159,6 @@ automaker/
     ├── git-utils/    # Git operations & worktree management
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
-    ├── llm-providers/# Multi-provider LLM abstraction layer
     ├── observability/# Langfuse tracing, prompt versioning & cost tracking
     └── ui/           # Shared UI components (@protolabs-ai/ui) — atoms, molecules, theme
 ```

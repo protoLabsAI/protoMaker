@@ -149,11 +149,10 @@ function createReportToDiscordNode(deps: MaintenanceFlowDeps) {
  * Usage (server-side):
  * ```typescript
  * import { createMaintenanceFlow } from '@protolabs-ai/flows';
- * import { createLangChainModel } from '@protolabs-ai/llm-providers';
  *
  * const flow = createMaintenanceFlow({
  *   featureLoader,
- *   model: createLangChainModel({ model: 'claude-haiku-4-5-20251001' }),
+ *   model, // BaseChatModel instance
  *   discordBot,
  *   projectPath: '/path/to/project',
  *   discordChannelId: '1469080556720623699',

@@ -140,7 +140,7 @@ export function buildTemplates(
       canCreatePRs: true,
       trustLevel: 2,
       exposure: { cli: true, discord: true, allowedUsers },
-      tags: ['implementation', 'ai-agents', 'langgraph', 'llm-providers', 'observability', 'flows'],
+      tags: ['implementation', 'ai-agents', 'langgraph', 'observability', 'flows'],
       systemPrompt: resolvePersonaPrompt('sam', getSamPrompt(promptConfig), personaOverrides),
     },
     {
