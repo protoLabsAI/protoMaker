@@ -537,9 +537,6 @@ export class AutomationService {
       });
       logger.info('Event trigger wiring complete');
     }
-
-    // Apply per-task overrides from GlobalSettings.maintenance
-    await this.applyMaintenanceSettingsOverrides(deps.settingsService);
   }
 
   /**
@@ -689,51 +686,6 @@ export class AutomationService {
     };
     automations.push(automation);
     await this.writeAutomations(automations);
-  }
-
-  /**
-   * Apply per-task overrides from GlobalSettings.maintenance after the scheduler is populated.
-   * Supports master-switch (enabled: false disables all maintenance: tasks) and
-   * per-task cron expression and enabled/disabled overrides.
-   */
-  private async applyMaintenanceSettingsOverrides(settingsService: SettingsService): Promise<void> {
-    try {
-      const globalSettings = await settingsService.getGlobalSettings();
-      const maintenanceSettings = globalSettings.maintenance;
-      if (!maintenanceSettings) return;
-
-      if (maintenanceSettings.enabled === false) {
-        logger.info('Maintenance scheduler disabled via settings — disabling all tasks');
-        for (const task of this.schedulerService.getAllTasks()) {
-          if (task.id.startsWith('maintenance:')) {
-            await this.schedulerService.disableTask(task.id);
-          }
-        }
-      }
-
-      if (maintenanceSettings.tasks) {
-        for (const [taskId, override] of Object.entries(maintenanceSettings.tasks)) {
-          const task = this.schedulerService.getTask(taskId);
-          if (!task) {
-            logger.warn(`Settings override for unknown task: ${taskId}`);
-            continue;
-          }
-          if (override.cronExpression) {
-            await this.schedulerService.updateTaskSchedule(taskId, override.cronExpression);
-            logger.info(`Applied cron override for ${taskId}: ${override.cronExpression}`);
-          }
-          if (override.enabled === false) {
-            await this.schedulerService.disableTask(taskId);
-            logger.info(`Disabled ${taskId} via settings override`);
-          } else if (override.enabled === true && maintenanceSettings.enabled !== false) {
-            await this.schedulerService.enableTask(taskId);
-            logger.info(`Enabled ${taskId} via settings override`);
-          }
-        }
-      }
-    } catch (error) {
-      logger.warn('Failed to apply maintenance settings overrides:', error);
-    }
   }
 
   /**

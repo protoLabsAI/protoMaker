@@ -45,7 +45,7 @@ import type {
 } from './provider-settings.js';
 import type { EventHook } from './event-settings.js';
 import type { DiscordSettings, ErrorTrackingSettings } from './integration-settings.js';
-import type { MaintenanceSettings, ProjectRef, TrashedProjectRef } from './project-settings.js';
+import type { ProjectRef, TrashedProjectRef } from './project-settings.js';
 import type { TrustBoundaryConfig } from './workflow-settings.js';
 import type { PromotionConfig } from './promotion.js';
 
@@ -614,12 +614,6 @@ export interface GlobalSettings {
    * other instances. Defaults to 24.
    */
   prOwnershipStaleTtlHours?: number;
-
-  /**
-   * Maintenance scheduler settings.
-   * @see MaintenanceSettings in project-settings.ts
-   */
-  maintenance?: MaintenanceSettings;
 
   /**
    * Hivemind mesh configuration for multi-instance coordination.

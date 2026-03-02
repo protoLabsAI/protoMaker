@@ -1,7 +1,7 @@
 /**
  * Project Settings - Per-project overrides and project management types
  *
- * Covers worktree info, project references, chat sessions, maintenance settings,
+ * Covers worktree info, project references, chat sessions,
  * and the full ProjectSettings interface stored in .automaker/settings.json.
  */
 
@@ -96,33 +96,6 @@ export interface ChatSessionRef {
   updatedAt: string;
   /** Whether session is archived */
   archived: boolean;
-}
-
-// ============================================================================
-// Maintenance Settings - Maintenance scheduler configuration
-// ============================================================================
-
-/**
- * MaintenanceTaskOverride - Per-task override for maintenance scheduler
- */
-export interface MaintenanceTaskOverride {
-  /** Whether this task is enabled */
-  enabled?: boolean;
-  /** Custom cron expression override */
-  cronExpression?: string;
-}
-
-/**
- * MaintenanceSettings - Controls for the maintenance scheduler
- *
- * Allows users to enable/disable maintenance tasks and adjust schedules
- * without editing source code. Persisted in GlobalSettings.
- */
-export interface MaintenanceSettings {
-  /** Master switch for all maintenance tasks (default: true) */
-  enabled: boolean;
-  /** Per-task overrides keyed by task ID */
-  tasks?: Record<string, MaintenanceTaskOverride>;
 }
 
 // ============================================================================
