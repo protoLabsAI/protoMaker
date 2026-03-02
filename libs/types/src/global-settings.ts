@@ -207,7 +207,11 @@ export interface FeatureFlags {
   pipeline: boolean;
   /** System View — network/dependency graph view in the project sidebar */
   systemView: boolean;
-  /** User Presence Detection — enables sensor-driven presence awareness (requires sensor hardware/agent) */
+  /**
+   * User Presence Detection — enables sensor-driven presence awareness.
+   * Built-in sensors: tab visibility, user activity (idle/afk), connectivity.
+   * Reports readings to POST /api/sensors/report. Off by default.
+   */
   userPresenceDetection: boolean;
 }
 

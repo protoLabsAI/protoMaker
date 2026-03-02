@@ -7,6 +7,7 @@ import { useSettingsSync } from './hooks/use-settings-sync';
 import { useCursorStatusInit } from './hooks/use-cursor-status-init';
 import { useProviderAuthInit } from './hooks/use-provider-auth-init';
 import { usePWA } from './hooks/use-pwa';
+import { usePresence } from './hooks/use-presence';
 import { toast } from 'sonner';
 import './styles/global.css';
 import './styles/theme-imports';
@@ -61,6 +62,9 @@ export default function App() {
 
   // Initialize PWA (only registers in web mode, not Electron)
   const pwa = usePWA();
+
+  // Built-in presence sensors (tab visibility, user activity, connectivity)
+  usePresence();
 
   // Show toast notifications for PWA updates and offline readiness
   useEffect(() => {
