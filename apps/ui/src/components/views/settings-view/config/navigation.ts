@@ -21,6 +21,7 @@ import {
   UserCog,
   Users,
   Zap,
+  Radio,
 } from 'lucide-react';
 import {
   AnthropicIcon,
@@ -101,6 +102,7 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     label: 'Advanced',
     items: [
       { id: 'automations', label: 'Automations', icon: Zap },
+      { id: 'sensors', label: 'Sensors', icon: Radio },
       { id: 'developer', label: 'Developer', icon: Code2 },
     ],
   },
