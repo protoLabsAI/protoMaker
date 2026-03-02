@@ -21,6 +21,24 @@ import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { AgentService } from '../../services/agent-service.js';
 
 // ---------------------------------------------------------------------------
+// Plan types
+// ---------------------------------------------------------------------------
+
+/** A single step within a PlanData card */
+export interface PlanStep {
+  id: string;
+  title: string;
+  status: 'pending' | 'running' | 'done' | 'error';
+  detail?: string;
+}
+
+/** Structured plan data sent to the client as a data-plan stream chunk */
+export interface PlanData {
+  steps: PlanStep[];
+  status: 'pending' | 'running' | 'done';
+}
+
+// ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
@@ -206,6 +224,33 @@ export function buildAvaTools(
           return { error: `Feature '${featureId}' not found` };
         }
         return feature;
+      },
+    });
+
+    tools['create_plan'] = makeTool({
+      description:
+        'Create a structured plan card with titled steps. Use this to present a multi-step execution plan to the user as a visual card rather than plain text.',
+      inputSchema: z.object({
+        title: z.string().describe('Title of the plan'),
+        steps: z
+          .array(
+            z.object({
+              id: z.string().describe('Unique step identifier'),
+              title: z.string().describe('Short step title'),
+              status: z
+                .enum(['pending', 'running', 'done', 'error'])
+                .describe('Current status of the step'),
+              detail: z.string().optional().describe('Optional detail or description for the step'),
+            })
+          )
+          .describe('Ordered list of plan steps'),
+      }),
+      execute: async ({ title, steps }) => {
+        const planData: PlanData = {
+          steps,
+          status: 'pending',
+        };
+        return { title, ...planData };
       },
     });
   }

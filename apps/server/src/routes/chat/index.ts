@@ -35,6 +35,7 @@ import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
 import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.js';
 import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
+import type { PlanData } from './ava-tools.js';
 import type { ServiceContainer } from '../../server/services.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 
@@ -147,6 +148,30 @@ async function extractAndResolveCitations(
   }
 
   return citations;
+}
+
+// ── Plan extraction ───────────────────────────────────────────────────────────
+
+/** Matches a fenced ```plan ... ``` block in the assistant response text */
+const PLAN_BLOCK_PATTERN = /```plan\s*([\s\S]*?)```/;
+
+/**
+ * Scan the assistant response text for a ```plan JSON block.
+ * Returns a PlanData object when a valid plan block is found, or null otherwise.
+ * Gracefully ignores malformed JSON without throwing.
+ */
+function extractPlan(text: string): PlanData | null {
+  const match = text.match(PLAN_BLOCK_PATTERN);
+  if (!match) return null;
+  try {
+    const parsed = JSON.parse(match[1].trim()) as Record<string, unknown>;
+    if (parsed && Array.isArray(parsed['steps'])) {
+      return parsed as unknown as PlanData;
+    }
+  } catch {
+    // Invalid JSON in plan block — ignore silently
+  }
+  return null;
 }
 
 // ── Route factory ─────────────────────────────────────────────────────────────
@@ -322,6 +347,21 @@ export function createChatRoutes(services: ServiceContainer): Router {
               }
             } catch (err) {
               logger.warn('Citation extraction failed:', err);
+            }
+          }
+
+          // Extract and stream a plan block when the response contains one
+          if (fullText) {
+            try {
+              const plan = extractPlan(fullText);
+              if (plan) {
+                writer.write({
+                  type: 'data-plan',
+                  data: plan,
+                } as UIMessageChunk);
+              }
+            } catch (err) {
+              logger.warn('Plan extraction failed:', err);
             }
           }
         },
