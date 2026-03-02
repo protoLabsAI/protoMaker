@@ -3027,7 +3027,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       await secureFs.access(contextPath);
 
       const stats = await secureFs.stat(contextPath);
-      const ageMs = Date.now() - stats.mtimeMs;
+      const ageMs = Date.now() - stats.mtime.getTime();
       const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
       if (ageMs > TWO_HOURS_MS) {
