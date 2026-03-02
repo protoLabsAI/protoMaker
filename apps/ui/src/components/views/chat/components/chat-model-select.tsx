@@ -140,7 +140,10 @@ export function ChatModelSelect({
           <Cpu className="size-3 shrink-0" />
           {/* Tier color dot indicates current model tier */}
           <span
-            className={cn('size-1.5 rounded-full shrink-0', TIER_DOT_CLASSES[currentModel.tierColor])}
+            className={cn(
+              'size-1.5 rounded-full shrink-0',
+              TIER_DOT_CLASSES[currentModel.tierColor]
+            )}
             aria-hidden="true"
           />
           <span className="font-medium">{currentModel.label}</span>
