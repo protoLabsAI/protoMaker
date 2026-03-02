@@ -75,7 +75,9 @@ test.describe('ChatModelSelect — Enhanced combobox verification', () => {
 
     // ── Criterion 7: Selecting a model updates trigger ───────────────────────
     await trigger.evaluate((el) => (el as HTMLElement).click());
-    await page.getByRole('option', { name: /haiku/i }).evaluate((el) => (el as HTMLElement).click());
+    await page
+      .getByRole('option', { name: /haiku/i })
+      .evaluate((el) => (el as HTMLElement).click());
     await expect(listbox).not.toBeVisible();
     await expect(trigger).toContainText('Haiku');
   });
