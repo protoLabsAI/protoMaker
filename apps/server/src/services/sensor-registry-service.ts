@@ -99,6 +99,7 @@ export class SensorRegistryService {
     const poll = async () => {
       try {
         // Dynamic import: only works inside Electron renderer / main processes
+        // eslint-disable-next-line n/no-extraneous-import
         const electron = await import('electron');
         const powerMonitor =
           electron.powerMonitor ?? (electron as unknown as Record<string, unknown>).default;
