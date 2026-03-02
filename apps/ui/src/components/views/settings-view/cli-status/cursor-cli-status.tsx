@@ -34,7 +34,7 @@ export function CursorCliStatusSkeleton() {
       <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <SkeletonPulse className="w-9 h-9 rounded-xl" />
+            <SkeletonPulse className="w-9 h-9 rounded-lg" />
             <SkeletonPulse className="h-6 w-28" />
           </div>
           <SkeletonPulse className="w-9 h-9 rounded-lg" />
@@ -45,16 +45,16 @@ export function CursorCliStatusSkeleton() {
       </div>
       <div className="p-6 space-y-4">
         {/* Installation status skeleton */}
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-border/30 bg-muted/10">
-          <SkeletonPulse className="w-10 h-10 rounded-xl" />
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-border/30 bg-muted/10">
+          <SkeletonPulse className="w-10 h-10 rounded-lg" />
           <div className="flex-1 space-y-2">
             <SkeletonPulse className="h-4 w-36" />
             <SkeletonPulse className="h-3 w-28" />
           </div>
         </div>
         {/* Auth status skeleton */}
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-border/30 bg-muted/10">
-          <SkeletonPulse className="w-10 h-10 rounded-xl" />
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-border/30 bg-muted/10">
+          <SkeletonPulse className="w-10 h-10 rounded-lg" />
           <div className="flex-1 space-y-2">
             <SkeletonPulse className="h-4 w-28" />
             <SkeletonPulse className="h-3 w-32" />
@@ -77,7 +77,7 @@ export function CursorPermissionsSkeleton() {
     >
       <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <SkeletonPulse className="w-9 h-9 rounded-xl" />
+          <SkeletonPulse className="w-9 h-9 rounded-lg" />
           <div className="text-left">
             <SkeletonPulse className="h-6 w-32 mb-2" />
             <SkeletonPulse className="h-4 w-48" />
@@ -90,7 +90,7 @@ export function CursorPermissionsSkeleton() {
       </div>
       <div className="p-4 space-y-4">
         {/* Security Warning skeleton */}
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-border/30 bg-muted/10">
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-border/30 bg-muted/10">
           <SkeletonPulse className="w-5 h-5 rounded shrink-0 mt-0.5" />
           <div className="flex-1 space-y-2">
             <SkeletonPulse className="h-4 w-32" />
@@ -103,7 +103,7 @@ export function CursorPermissionsSkeleton() {
           <SkeletonPulse className="h-4 w-36" />
           <div className="grid gap-3">
             {[1, 2].map((i) => (
-              <div key={i} className="p-4 rounded-xl border border-border/30 bg-muted/10">
+              <div key={i} className="p-4 rounded-lg border border-border/30 bg-muted/10">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export function CursorPermissionsSkeleton() {
         {/* Config File Locations skeleton */}
         <div className="space-y-3">
           <SkeletonPulse className="h-4 w-40" />
-          <div className="p-4 rounded-xl border border-border/30 bg-muted/10 space-y-2">
+          <div className="p-4 rounded-lg border border-border/30 bg-muted/10 space-y-2">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <SkeletonPulse className="h-4 w-24" />
@@ -162,7 +162,7 @@ export function ModelConfigSkeleton() {
     >
       <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center gap-3 mb-2">
-          <SkeletonPulse className="w-9 h-9 rounded-xl" />
+          <SkeletonPulse className="w-9 h-9 rounded-lg" />
           <SkeletonPulse className="h-6 w-40" />
         </div>
         <div className="ml-12">
@@ -182,7 +182,7 @@ export function ModelConfigSkeleton() {
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="flex items-center justify-between p-3 rounded-xl border border-border/30 bg-muted/10"
+                className="flex items-center justify-between p-3 rounded-lg border border-border/30 bg-muted/10"
               >
                 <div className="flex items-center gap-3">
                   <SkeletonPulse className="w-5 h-5 rounded" />
@@ -299,8 +299,8 @@ export function CursorCliStatus({ status, isChecking, onRefresh }: CursorCliStat
         {status.installed ? (
           <div className="space-y-3">
             {/* Installation Status - Success */}
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="flex-1 min-w-0">
@@ -317,8 +317,8 @@ export function CursorCliStatus({ status, isChecking, onRefresh }: CursorCliStat
 
             {/* Authentication Status */}
             {status.authenticated ? (
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -343,8 +343,8 @@ export function CursorCliStatus({ status, isChecking, onRefresh }: CursorCliStat
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
                   <XCircle className="w-5 h-5 text-amber-500" />
                 </div>
                 <div className="flex-1">
@@ -367,8 +367,8 @@ export function CursorCliStatus({ status, isChecking, onRefresh }: CursorCliStat
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
                 <AlertCircle className="w-5 h-5 text-amber-500" />
               </div>
               <div className="flex-1">

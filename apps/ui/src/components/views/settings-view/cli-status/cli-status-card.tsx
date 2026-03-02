@@ -65,8 +65,8 @@ export function CliStatusCard({
       <div className="p-6 space-y-4">
         {status.success && status.status === 'installed' ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="flex-1 min-w-0">
@@ -96,8 +96,8 @@ export function CliStatusCard({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
                 <AlertCircle className="w-5 h-5 text-amber-500" />
               </div>
               <div className="flex-1">
@@ -112,7 +112,7 @@ export function CliStatusCard({
                 <p className="text-xs font-medium text-foreground/80">Installation Commands:</p>
                 <div className="space-y-2">
                   {status.installCommands.npm && (
-                    <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <div className="p-3 rounded-lg bg-accent/30 border border-border/50">
                       <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
                         npm
                       </p>
@@ -122,7 +122,7 @@ export function CliStatusCard({
                     </div>
                   )}
                   {status.installCommands.macos && (
-                    <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <div className="p-3 rounded-lg bg-accent/30 border border-border/50">
                       <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
                         macOS/Linux
                       </p>
@@ -132,7 +132,7 @@ export function CliStatusCard({
                     </div>
                   )}
                   {status.installCommands.windows && (
-                    <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <div className="p-3 rounded-lg bg-accent/30 border border-border/50">
                       <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
                         Windows (PowerShell)
                       </p>

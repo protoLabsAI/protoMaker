@@ -35,7 +35,7 @@ export function SkillsSection() {
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-border/30">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
             <Zap className="w-5 h-5 text-amber-500" />
           </div>
           <div>
@@ -73,7 +73,7 @@ export function SkillsSection() {
               <label
                 htmlFor="source-user"
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200',
+                  'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200',
                   sources.includes('user')
                     ? 'border-amber-500/50 bg-amber-500/10'
                     : 'border-border/50 bg-accent/20 hover:bg-accent/30'
@@ -101,7 +101,7 @@ export function SkillsSection() {
               <label
                 htmlFor="source-project"
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200',
+                  'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200',
                   sources.includes('project')
                     ? 'border-amber-500/50 bg-amber-500/10'
                     : 'border-border/50 bg-accent/20 hover:bg-accent/30'
@@ -130,7 +130,7 @@ export function SkillsSection() {
 
         {/* Help Text */}
         {enabled && (
-          <div className="rounded-xl border border-border/30 bg-muted/30 p-4 space-y-3">
+          <div className="rounded-lg border border-border/30 bg-muted/30 p-4 space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-md bg-brand-500/20 flex items-center justify-center shrink-0 mt-0.5">
                 <Sparkles className="w-3.5 h-3.5 text-brand-500" />

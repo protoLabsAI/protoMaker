@@ -227,7 +227,7 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-xl overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
@@ -235,7 +235,7 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
     >
       <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
             <GitBranch className="w-5 h-5 text-brand-500" />
           </div>
           <h2 className="text-lg font-semibold text-foreground tracking-tight">
@@ -248,7 +248,7 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
       </div>
       <div className="p-6 space-y-5">
         {/* Enable Git Worktree Isolation Toggle */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="project-use-worktrees"
             checked={effectiveUseWorktrees}
@@ -286,7 +286,7 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
         <div className="border-t border-border/30" />
 
         {/* Show Init Script Indicator Toggle */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="show-init-script-indicator"
             checked={showIndicator}
@@ -322,7 +322,7 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
 
         {/* Auto-dismiss Init Script Indicator Toggle */}
         {showIndicator && (
-          <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3 ml-6">
+          <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3 ml-6">
             <Checkbox
               id="auto-dismiss-indicator"
               checked={autoDismiss}
@@ -356,7 +356,7 @@ export function WorktreePreferencesSection({ project }: WorktreePreferencesSecti
         )}
 
         {/* Default Delete Branch Toggle */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="default-delete-branch"
             checked={defaultDeleteBranch}

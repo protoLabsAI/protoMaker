@@ -44,7 +44,7 @@ function CodexCliStatusSkeleton() {
       <div className="p-4 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <SkeletonPulse className="w-9 h-9 rounded-xl" />
+            <SkeletonPulse className="w-9 h-9 rounded-lg" />
             <SkeletonPulse className="h-6 w-36" />
           </div>
           <SkeletonPulse className="w-9 h-9 rounded-lg" />
@@ -55,8 +55,8 @@ function CodexCliStatusSkeleton() {
       </div>
       <div className="p-6 space-y-4">
         {/* Installation status skeleton */}
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-border/30 bg-muted/10">
-          <SkeletonPulse className="w-10 h-10 rounded-xl" />
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-border/30 bg-muted/10">
+          <SkeletonPulse className="w-10 h-10 rounded-lg" />
           <div className="flex-1 space-y-2">
             <SkeletonPulse className="h-4 w-40" />
             <SkeletonPulse className="h-3 w-32" />
@@ -64,8 +64,8 @@ function CodexCliStatusSkeleton() {
           </div>
         </div>
         {/* Auth status skeleton */}
-        <div className="flex items-center gap-3 p-4 rounded-xl border border-border/30 bg-muted/10">
-          <SkeletonPulse className="w-10 h-10 rounded-xl" />
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-border/30 bg-muted/10">
+          <SkeletonPulse className="w-10 h-10 rounded-lg" />
           <div className="flex-1 space-y-2">
             <SkeletonPulse className="h-4 w-28" />
             <SkeletonPulse className="h-3 w-36" />
@@ -173,8 +173,8 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
       <div className="p-6 space-y-4">
         {status.success && status.status === 'installed' ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="flex-1 min-w-0">
@@ -200,8 +200,8 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
             </div>
             {/* Authentication Status */}
             {authStatus?.authenticated ? (
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center border border-emerald-500/20 shrink-0">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -224,8 +224,8 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
                   <XCircle className="w-5 h-5 text-amber-500" />
                 </div>
                 <div className="flex-1">
@@ -252,8 +252,8 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center border border-amber-500/20 shrink-0 mt-0.5">
                 <AlertCircle className="w-5 h-5 text-amber-500" />
               </div>
               <div className="flex-1">
@@ -269,7 +269,7 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
                 <p className="text-xs font-medium text-foreground/80">Installation Commands:</p>
                 <div className="space-y-2">
                   {status.installCommands.npm && (
-                    <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <div className="p-3 rounded-lg bg-accent/30 border border-border/50">
                       <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
                         npm
                       </p>
@@ -279,7 +279,7 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
                     </div>
                   )}
                   {status.installCommands.macos && (
-                    <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <div className="p-3 rounded-lg bg-accent/30 border border-border/50">
                       <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
                         macOS/Linux
                       </p>
@@ -289,7 +289,7 @@ export function CodexCliStatus({ status, authStatus, isChecking, onRefresh }: Cl
                     </div>
                   )}
                   {status.installCommands.windows && (
-                    <div className="p-3 rounded-xl bg-accent/30 border border-border/50">
+                    <div className="p-3 rounded-lg bg-accent/30 border border-border/50">
                       <p className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">
                         Windows (PowerShell)
                       </p>

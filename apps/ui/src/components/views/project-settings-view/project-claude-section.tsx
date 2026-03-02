@@ -86,7 +86,7 @@ export function ProjectClaudeSection({ project }: ProjectClaudeSectionProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-xl overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
@@ -94,7 +94,7 @@ export function ProjectClaudeSection({ project }: ProjectClaudeSectionProps) {
     >
       <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
             <Bot className="w-5 h-5 text-brand-500" />
           </div>
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Claude Provider</h2>

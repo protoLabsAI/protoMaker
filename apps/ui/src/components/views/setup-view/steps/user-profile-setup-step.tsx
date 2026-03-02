@@ -25,7 +25,7 @@ export function UserProfileSetupStep({ onNext, onBack, onSkip }: UserProfileSetu
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-gradient-to-br from-card/80 via-card/70 to-card/80 backdrop-blur-xl p-8 space-y-6">
+      <div className="w-full max-w-md rounded-xl border border-border bg-gradient-to-br from-card/80 via-card/70 to-card/80 backdrop-blur-xl p-8 space-y-6">
         <div className="space-y-1">
           <h2 className="text-xl font-semibold text-foreground">Tell us about yourself</h2>
           <p className="text-sm text-muted-foreground">

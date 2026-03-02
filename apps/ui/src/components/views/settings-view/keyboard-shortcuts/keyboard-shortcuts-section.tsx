@@ -33,7 +33,7 @@ export function KeyboardShortcutsSection({ onOpenKeyboardMap }: KeyboardShortcut
         {/* Centered message directing to keyboard map */}
         <div className="flex flex-col items-center justify-center py-12 text-center space-y-5">
           <div className="relative">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/10 to-brand-600/5 flex items-center justify-center border border-brand-500/20">
+            <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-brand-500/10 to-brand-600/5 flex items-center justify-center border border-brand-500/20">
               <Keyboard className="w-10 h-10 text-brand-500/60" />
             </div>
             <div className="absolute inset-0 bg-brand-500/10 blur-2xl rounded-full -z-10" />

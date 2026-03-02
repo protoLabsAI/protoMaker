@@ -530,7 +530,7 @@ export function WelcomeView() {
       <div className="shrink-0 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="px-8 py-6">
           <div className="flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
-            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-brand-500/20 to-brand-600/10 border border-brand-500/20 flex items-center justify-center shadow-lg shadow-brand-500/10">
+            <div className="w-12 h-12 rounded-lg bg-linear-to-br from-brand-500/20 to-brand-600/10 border border-brand-500/20 flex items-center justify-center shadow-lg shadow-brand-500/10">
               <img src="/logo.png" alt="protoLabs Logo" className="w-8 h-8" />
             </div>
             <div>
@@ -558,7 +558,7 @@ export function WelcomeView() {
               <div className="absolute inset-0 rounded-xl bg-linear-to-br from-brand-500/5 via-transparent to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative p-6 h-full flex flex-col">
                 <div className="flex items-start gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/25 flex items-center justify-center group-hover:scale-105 group-hover:shadow-brand-500/40 transition-all duration-300 shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-linear-to-br from-brand-500 to-brand-600 shadow-lg shadow-brand-500/25 flex items-center justify-center group-hover:scale-105 group-hover:shadow-brand-500/40 transition-all duration-300 shrink-0">
                     <Plus className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -605,7 +605,7 @@ export function WelcomeView() {
               <div className="absolute inset-0 rounded-xl bg-linear-to-br from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative p-6 h-full flex flex-col">
                 <div className="flex items-start gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:scale-105 transition-all duration-300 shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-muted border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:scale-105 transition-all duration-300 shrink-0">
                     <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -675,7 +675,7 @@ export function WelcomeView() {
           {/* Empty State for No Projects */}
           {recentProjects.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in duration-500 delay-200">
-              <div className="w-20 h-20 rounded-2xl bg-muted/50 border border-border flex items-center justify-center mb-5">
+              <div className="w-20 h-20 rounded-lg bg-muted/50 border border-border flex items-center justify-center mb-5">
                 <Sparkles className="w-10 h-10 text-muted-foreground/50" />
               </div>
               <h3 className="text-xl font-semibold text-foreground mb-2">No projects yet</h3>
@@ -735,7 +735,7 @@ export function WelcomeView() {
             </div>
 
             {initStatus?.isNewProject && (
-              <div className="mt-5 p-4 rounded-xl bg-muted/50 border border-border">
+              <div className="mt-5 p-4 rounded-lg bg-muted/50 border border-border">
                 {isAnalyzing ? (
                   <div className="flex items-center gap-3">
                     <Spinner size="sm" />
@@ -781,7 +781,7 @@ export function WelcomeView() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
           data-testid="project-opening-overlay"
         >
-          <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border shadow-2xl">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-card border border-border shadow-2xl">
             <Spinner size="xl" />
             <p className="text-foreground font-medium">Initializing project...</p>
           </div>

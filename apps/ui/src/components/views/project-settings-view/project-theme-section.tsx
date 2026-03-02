@@ -139,7 +139,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-xl overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
@@ -147,7 +147,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
     >
       <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
             <Palette className="w-5 h-5 text-brand-500" />
           </div>
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Theme & Fonts</h2>
@@ -158,7 +158,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
       </div>
       <div className="p-6 space-y-6">
         {/* Use Global Theme Toggle */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="use-global-theme"
             checked={!hasCustomTheme}
@@ -222,7 +222,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
                     key={value}
                     onClick={() => handleThemeChange(value)}
                     className={cn(
-                      'group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl',
+                      'group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-lg',
                       'text-sm font-medium transition-all duration-200 ease-out',
                       isActive
                         ? [
@@ -252,7 +252,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
 
         {/* Info when using global theme */}
         {!hasCustomTheme && (
-          <div className="rounded-xl border border-border/30 bg-muted/30 p-4">
+          <div className="rounded-lg border border-border/30 bg-muted/30 p-4">
             <p className="text-sm text-muted-foreground">
               This project is using the global theme:{' '}
               <span className="font-medium text-foreground">{globalTheme}</span>
@@ -270,7 +270,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
           <div className="space-y-4">
             {/* UI Font */}
             <div className="space-y-3">
-              <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+              <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
                 <Checkbox
                   id="use-global-font-sans"
                   checked={!hasCustomFontSans}
@@ -311,7 +311,7 @@ export function ProjectThemeSection({ project }: ProjectThemeSectionProps) {
 
             {/* Code Font */}
             <div className="space-y-3">
-              <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+              <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
                 <Checkbox
                   id="use-global-font-mono"
                   checked={!hasCustomFontMono}

@@ -20,7 +20,7 @@ function OrchestratorNodeComponent({ data }: NodeProps & { data: OrchestratorNod
       {/* Breathing glow ring */}
       <motion.div
         className={cn(
-          'absolute -inset-2 rounded-2xl opacity-40',
+          'absolute -inset-2 rounded-xl opacity-40',
           statusColor === 'violet' && 'bg-violet-500/20',
           statusColor === 'red' && 'bg-red-500/20',
           statusColor === 'zinc' && 'bg-zinc-500/10'
@@ -41,7 +41,7 @@ function OrchestratorNodeComponent({ data }: NodeProps & { data: OrchestratorNod
 
       <div
         className={cn(
-          'relative w-[320px] h-[160px] rounded-2xl border backdrop-blur-md',
+          'relative w-[320px] h-[160px] rounded-xl border backdrop-blur-md',
           'bg-card/90 shadow-lg',
           statusColor === 'violet' && 'border-violet-500/40',
           statusColor === 'red' && 'border-red-500/40',

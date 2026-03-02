@@ -75,7 +75,7 @@ export function CodexUsageSection() {
     const resetLabel = formatCodexResetTime(limitWindow.resetsAt);
 
     return (
-      <div className="rounded-xl border border-border/60 bg-card/50 p-4">
+      <div className="rounded-lg border border-border/60 bg-card/50 p-4">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-foreground">{title}</p>
@@ -132,7 +132,7 @@ export function CodexUsageSection() {
       </div>
       <div className="p-6 space-y-4">
         {showAuthWarning && (
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
             <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
             <div className="text-sm text-amber-400">
               {CODEX_AUTH_WARNING} Run <span className="font-mono">{CODEX_LOGIN_COMMAND}</span>.
@@ -140,7 +140,7 @@ export function CodexUsageSection() {
           </div>
         )}
         {errorMessage && (
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+          <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
             <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />
             <div className="text-sm text-red-400">{errorMessage}</div>
           </div>
@@ -161,14 +161,14 @@ export function CodexUsageSection() {
           </div>
         )}
         {planType && (
-          <div className="rounded-xl border border-border/60 bg-secondary/20 p-4 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-border/60 bg-secondary/20 p-4 text-xs text-muted-foreground">
             <div>
               {PLAN_LABEL}: <span className="text-foreground">{formatCodexPlanType(planType)}</span>
             </div>
           </div>
         )}
         {!hasMetrics && !errorMessage && canFetchUsage && !isLoading && (
-          <div className="rounded-xl border border-border/60 bg-secondary/20 p-4 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-border/60 bg-secondary/20 p-4 text-xs text-muted-foreground">
             {CODEX_NO_USAGE_MESSAGE}
           </div>
         )}

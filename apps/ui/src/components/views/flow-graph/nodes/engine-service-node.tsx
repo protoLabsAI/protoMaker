@@ -89,7 +89,7 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
       {pipelineHighlight && (
         <motion.div
           className={cn(
-            'absolute -inset-2 rounded-xl border-2',
+            'absolute -inset-2 rounded-lg border-2',
             pipelineHighlight === 'processing' ? 'border-violet-400/60' : 'border-amber-400/60'
           )}
           animate={{
@@ -106,7 +106,7 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
       {/* Breathing glow when active */}
       {isActive && (
         <motion.div
-          className={cn('absolute -inset-1.5 rounded-xl opacity-30', colors.glow)}
+          className={cn('absolute -inset-1.5 rounded-lg opacity-30', colors.glow)}
           animate={{
             scale: [1, 1.06, 1],
             opacity: [0.2, 0.45, 0.2],
@@ -122,7 +122,7 @@ function EngineServiceNodeComponent({ data }: NodeProps & { data: EngineServiceN
 
       <div
         className={cn(
-          'relative w-[220px] h-[110px] rounded-xl border backdrop-blur-md bg-card/90',
+          'relative w-[220px] h-[110px] rounded-lg border backdrop-blur-md bg-card/90',
           colors.border,
           hasAssociatedFlow && 'cursor-pointer hover:border-violet-500/60 transition-colors'
         )}

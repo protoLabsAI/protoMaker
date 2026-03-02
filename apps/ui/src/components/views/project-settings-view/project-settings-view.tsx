@@ -94,7 +94,7 @@ export function ProjectSettingsView() {
       >
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center max-w-md">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-muted/50 flex items-center justify-center">
               <FolderOpen className="w-8 h-8 text-muted-foreground/50" />
             </div>
             <h2 className="text-lg font-semibold text-foreground mb-2">No Project Selected</h2>

@@ -301,7 +301,7 @@ function TemplateForm({ initial, onSave, onCancel, isSaving }: TemplateFormProps
   };
 
   return (
-    <div className="space-y-4 p-4 bg-muted/20 rounded-xl border border-border/30">
+    <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-border/30">
       <h3 className="text-sm font-semibold">{isEdit ? 'Edit Template' : 'New Template'}</h3>
 
       <div className="grid grid-cols-2 gap-3">
@@ -477,7 +477,7 @@ function PersonaCard({
   const isProtected = template.tier === 0;
 
   return (
-    <div className="rounded-xl bg-muted/30 border border-border/30 overflow-hidden">
+    <div className="rounded-lg bg-muted/30 border border-border/30 overflow-hidden">
       {/* Header row */}
       <div className="p-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -636,7 +636,7 @@ function SkillSyncPanel({ registeredNames, onSync, isSyncing }: SkillSyncPanelPr
   if (unsynced.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 overflow-hidden">
+    <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 overflow-hidden">
       <button
         type="button"
         className="w-full p-4 flex items-center gap-3 text-left hover:bg-amber-500/10 transition-colors"

@@ -60,7 +60,7 @@ export function SubagentsSection() {
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-border/30">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center">
             <Bot className="w-5 h-5 text-violet-500" />
           </div>
           <div>
@@ -98,7 +98,7 @@ export function SubagentsSection() {
               <label
                 htmlFor="subagent-source-user"
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200',
+                  'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200',
                   sources.includes('user')
                     ? 'border-violet-500/50 bg-violet-500/10'
                     : 'border-border/50 bg-accent/20 hover:bg-accent/30'
@@ -126,7 +126,7 @@ export function SubagentsSection() {
               <label
                 htmlFor="subagent-source-project"
                 className={cn(
-                  'flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all duration-200',
+                  'flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200',
                   sources.includes('project')
                     ? 'border-violet-500/50 bg-violet-500/10'
                     : 'border-border/50 bg-accent/20 hover:bg-accent/30'
@@ -175,7 +175,7 @@ export function SubagentsSection() {
             </div>
 
             {subagentsWithScope.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground border border-dashed border-border/50 rounded-xl">
+              <div className="text-center py-6 text-muted-foreground border border-dashed border-border/50 rounded-lg">
                 <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm font-medium">No agents found</p>
                 <p className="text-xs mt-1 max-w-sm mx-auto">
@@ -204,7 +204,7 @@ export function SubagentsSection() {
 
         {/* Help Text */}
         {enabled && (
-          <div className="rounded-xl border border-border/30 bg-muted/30 p-4 space-y-3">
+          <div className="rounded-lg border border-border/30 bg-muted/30 p-4 space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-md bg-brand-500/20 flex items-center justify-center shrink-0 mt-0.5">
                 <Sparkles className="w-3.5 h-3.5 text-brand-500" />

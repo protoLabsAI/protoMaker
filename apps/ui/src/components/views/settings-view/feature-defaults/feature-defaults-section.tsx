@@ -100,8 +100,8 @@ export function FeatureDefaultsSection({
       </div>
       <div className="p-6 space-y-5">
         {/* Default Feature Model Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
-          <div className="w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0 bg-brand-500/10">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
+          <div className="w-10 h-10 mt-0.5 rounded-lg flex items-center justify-center shrink-0 bg-brand-500/10">
             <Cpu className="w-5 h-5 text-brand-500" />
           </div>
           <div className="flex-1 space-y-2">
@@ -124,10 +124,10 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Planning Mode Default */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <div
             className={cn(
-              'w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0',
+              'w-10 h-10 mt-0.5 rounded-lg flex items-center justify-center shrink-0',
               defaultPlanningMode === 'skip'
                 ? 'bg-emerald-500/10'
                 : defaultPlanningMode === 'lite'
@@ -197,7 +197,7 @@ export function FeatureDefaultsSection({
         {/* Require Plan Approval Setting - only show when not skip */}
         {defaultPlanningMode !== 'skip' && (
           <>
-            <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+            <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
               <Checkbox
                 id="default-require-plan-approval"
                 checked={defaultRequirePlanApproval}
@@ -227,7 +227,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Automated Testing Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="default-skip-tests"
             checked={!defaultSkipTests}
@@ -254,7 +254,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Dependency Blocking Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="enable-dependency-blocking"
             checked={enableDependencyBlocking}
@@ -282,7 +282,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* Skip Verification in Auto Mode Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="skip-verification-auto-mode"
             checked={skipVerificationInAutoMode}
@@ -310,7 +310,7 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* AI Commit Messages Setting */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl hover:bg-accent/30 transition-colors duration-200 -mx-3">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 -mx-3">
           <Checkbox
             id="enable-ai-commit-messages"
             checked={enableAiCommitMessages}
@@ -338,8 +338,8 @@ export function FeatureDefaultsSection({
         <div className="border-t border-border/30" />
 
         {/* System Concurrency Limit (read-only) */}
-        <div className="group flex items-start space-x-3 p-3 rounded-xl -mx-3">
-          <div className="w-10 h-10 mt-0.5 rounded-xl flex items-center justify-center shrink-0 bg-muted/40">
+        <div className="group flex items-start space-x-3 p-3 rounded-lg -mx-3">
+          <div className="w-10 h-10 mt-0.5 rounded-lg flex items-center justify-center shrink-0 bg-muted/40">
             <Gauge className="w-5 h-5 text-muted-foreground" />
           </div>
           <div className="flex-1 space-y-1.5">

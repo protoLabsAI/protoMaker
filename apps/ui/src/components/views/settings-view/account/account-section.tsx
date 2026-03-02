@@ -82,9 +82,9 @@ export function AccountSection() {
       </div>
       <div className="p-6 space-y-4">
         {/* Default IDE */}
-        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/30 border border-border/30">
+        <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30 border border-border/30">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/30 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 border border-border/30 flex items-center justify-center shrink-0">
               <Code2 className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="min-w-0">
@@ -157,9 +157,9 @@ export function AccountSection() {
         </div>
 
         {/* Logout */}
-        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-muted/30 border border-border/30">
+        <div className="flex items-center justify-between gap-4 p-4 rounded-lg bg-muted/30 border border-border/30">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/30 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-muted/50 to-muted/30 border border-border/30 flex items-center justify-center shrink-0">
               <LogOut className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="min-w-0">

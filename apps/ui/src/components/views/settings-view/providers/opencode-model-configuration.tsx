@@ -441,7 +441,7 @@ export function OpencodeModelConfiguration({
                     return (
                       <div
                         key={model.id}
-                        className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors"
+                        className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <Checkbox
@@ -503,7 +503,7 @@ export function OpencodeModelConfiguration({
 
               {showDynamicProviderFilters && (
                 <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2 rounded-xl border border-border/60 bg-card/40 p-2">
+                  <div className="flex flex-wrap gap-2 rounded-lg border border-border/60 bg-card/40 p-2">
                     {sortedDynamicProviders.map((providerId) => {
                       const providerInfo = authenticatedProviders.find(
                         (provider) => provider.id === providerId
@@ -568,7 +568,7 @@ export function OpencodeModelConfiguration({
               )}
 
               {hasDynamicSearch && !hasFilteredDynamicProviders && (
-                <div className="rounded-xl border border-dashed border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
                   <p className="font-medium">{OPENCODE_PROVIDER_FILTER_EMPTY_LABEL}</p>
                   <p className="mt-1">{OPENCODE_PROVIDER_FILTER_EMPTY_HINT}</p>
                 </div>
@@ -626,7 +626,7 @@ export function OpencodeModelConfiguration({
                     </div>
                     <div className="grid gap-2">
                       {filteredModels.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
+                        <div className="rounded-lg border border-dashed border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground">
                           <p className="font-medium">{OPENCODE_PROVIDER_MODELS_EMPTY_LABEL}</p>
                           <p className="mt-1">{OPENCODE_PROVIDER_MODELS_EMPTY_HINT}</p>
                         </div>
@@ -637,7 +637,7 @@ export function OpencodeModelConfiguration({
                           return (
                             <div
                               key={model.id}
-                              className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors"
+                              className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-accent/30 transition-colors"
                             >
                               <div className="flex items-center gap-3">
                                 <Checkbox

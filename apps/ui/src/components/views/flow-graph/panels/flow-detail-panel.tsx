@@ -137,7 +137,7 @@ export function FlowDetailPanel({ graphId, featureId, onClose }: FlowDetailPanel
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-card border border-border rounded-xl p-8 shadow-2xl"
+            className="bg-card border border-border rounded-lg p-8 shadow-2xl"
             onClick={handlePaneClick}
           >
             <p className="text-muted-foreground">Loading flow definition...</p>
@@ -161,7 +161,7 @@ export function FlowDetailPanel({ graphId, featureId, onClose }: FlowDetailPanel
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-card border border-border rounded-xl p-8 shadow-2xl max-w-md"
+            className="bg-card border border-border rounded-lg p-8 shadow-2xl max-w-md"
             onClick={handlePaneClick}
           >
             <p className="text-red-400 mb-4">Failed to load flow definition</p>
@@ -190,7 +190,7 @@ export function FlowDetailPanel({ graphId, featureId, onClose }: FlowDetailPanel
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="absolute inset-8 bg-card border border-border rounded-xl shadow-2xl overflow-hidden flex flex-col"
+          className="absolute inset-8 bg-card border border-border rounded-lg shadow-2xl overflow-hidden flex flex-col"
           onClick={handlePaneClick}
         >
           {/* Header */}

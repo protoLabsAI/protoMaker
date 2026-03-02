@@ -25,7 +25,7 @@ export function ProjectActions({
       <button
         onClick={() => setShowNewProjectModal(true)}
         className={cn(
-          'group flex items-center justify-center flex-1 px-3 py-2.5 rounded-xl',
+          'group flex items-center justify-center flex-1 px-3 py-2.5 rounded-lg',
           'relative overflow-hidden',
           'text-muted-foreground hover:text-foreground',
           // Glass background with gradient on hover
@@ -45,7 +45,7 @@ export function ProjectActions({
       <button
         onClick={handleOpenFolder}
         className={cn(
-          'group flex items-center justify-center flex-1 px-3 py-2.5 rounded-xl',
+          'group flex items-center justify-center flex-1 px-3 py-2.5 rounded-lg',
           'relative overflow-hidden',
           'text-muted-foreground hover:text-foreground',
           // Glass background
@@ -66,7 +66,7 @@ export function ProjectActions({
       <button
         onClick={() => setShowTrashDialog(true)}
         className={cn(
-          'group flex items-center justify-center px-3 h-[42px] rounded-xl',
+          'group flex items-center justify-center px-3 h-[42px] rounded-lg',
           'relative',
           'text-muted-foreground hover:text-destructive',
           // Subtle background that turns red on hover

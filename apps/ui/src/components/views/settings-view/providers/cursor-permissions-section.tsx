@@ -102,7 +102,7 @@ export function CursorPermissionsSection({
         <CollapsibleContent>
           <div className="p-4 space-y-4">
             {/* Security Warning */}
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div className="text-sm text-amber-400/90">
                 <span className="font-medium">Security Notice</span>
@@ -128,7 +128,7 @@ export function CursorPermissionsSection({
                       <div
                         key={profile.id}
                         className={cn(
-                          'p-4 rounded-xl border transition-colors',
+                          'p-4 rounded-lg border transition-colors',
                           permissions.activeProfile === profile.id
                             ? 'border-brand-500/50 bg-brand-500/5'
                             : 'border-border/50 bg-card/50 hover:bg-accent/30'
@@ -199,7 +199,7 @@ export function CursorPermissionsSection({
                 {/* Config File Location */}
                 <div className="space-y-3">
                   <Label>Config File Locations</Label>
-                  <div className="p-4 rounded-xl border border-border/50 bg-card/30 space-y-2">
+                  <div className="p-4 rounded-lg border border-border/50 bg-card/30 space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium">Global Config</p>

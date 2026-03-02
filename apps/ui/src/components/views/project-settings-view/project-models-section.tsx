@@ -138,7 +138,7 @@ function PhaseOverrideItem({
   return (
     <div
       className={cn(
-        'flex items-center justify-between p-4 rounded-xl',
+        'flex items-center justify-between p-4 rounded-lg',
         'bg-accent/20 border',
         hasOverride ? 'border-brand-500/30 bg-brand-500/5' : 'border-border/30',
         'hover:bg-accent/30 transition-colors'
@@ -263,7 +263,7 @@ export function ProjectModelsSection({ project }: ProjectModelsSectionProps) {
   return (
     <div
       className={cn(
-        'rounded-2xl overflow-hidden',
+        'rounded-xl overflow-hidden',
         'border border-border/50',
         'bg-gradient-to-br from-card/90 via-card/70 to-card/80 backdrop-blur-xl',
         'shadow-sm shadow-black/5'
@@ -273,7 +273,7 @@ export function ProjectModelsSection({ project }: ProjectModelsSectionProps) {
       <div className="p-6 border-b border-border/50 bg-gradient-to-r from-transparent via-accent/5 to-transparent">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center border border-brand-500/20">
               <Workflow className="w-5 h-5 text-brand-500" />
             </div>
             <div>
