@@ -34,18 +34,18 @@ function classifyService(eventType: string): string {
 }
 
 const SERVICE_COLORS: Record<string, string> = {
-  features: 'text-amber-400',
-  agents: 'text-violet-400',
-  'auto-mode': 'text-blue-400',
-  'pr-feedback': 'text-emerald-400',
-  github: 'text-zinc-300',
-  linear: 'text-indigo-400',
-  discord: 'text-purple-400',
-  'signal-intake': 'text-orange-400',
-  projects: 'text-pink-400',
-  'lead-engineer': 'text-rose-400',
-  content: 'text-teal-400',
-  system: 'text-zinc-400',
+  features: 'text-status-warning',
+  agents: 'text-brand-400',
+  'auto-mode': 'text-primary',
+  'pr-feedback': 'text-status-success',
+  github: 'text-foreground-secondary',
+  linear: 'text-chart-5',
+  discord: 'text-brand-400',
+  'signal-intake': 'text-chart-1',
+  projects: 'text-chart-4',
+  'lead-engineer': 'text-destructive',
+  content: 'text-chart-3',
+  system: 'text-muted-foreground',
 };
 
 const MAX_EVENTS = 200;
@@ -190,8 +190,8 @@ export function EventsTab() {
           </span>
           {!paused && (
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-success opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-status-success" />
             </span>
           )}
         </div>
@@ -201,7 +201,7 @@ export function EventsTab() {
             title={showHistory ? 'Hide server history' : 'Load server history'}
             className={cn(
               'p-1 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground',
-              showHistory && 'text-violet-400'
+              showHistory && 'text-brand-400'
             )}
           >
             <History className="w-3 h-3" />
@@ -224,7 +224,7 @@ export function EventsTab() {
           className={cn(
             'text-[10px] px-1.5 py-0.5 rounded-md shrink-0',
             filter === null
-              ? 'bg-violet-500/15 text-violet-400'
+              ? 'bg-brand-500/15 text-brand-400'
               : 'text-muted-foreground hover:text-foreground'
           )}
         >
@@ -237,7 +237,7 @@ export function EventsTab() {
             className={cn(
               'text-[10px] px-1.5 py-0.5 rounded-md shrink-0',
               filter === svc
-                ? 'bg-violet-500/15 text-violet-400'
+                ? 'bg-brand-500/15 text-brand-400'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -256,7 +256,7 @@ export function EventsTab() {
             className={cn(
               'text-[10px] px-1.5 py-0.5 rounded-md shrink-0',
               timeRange === tr.ms
-                ? 'bg-blue-500/15 text-blue-400'
+                ? 'bg-primary/15 text-primary'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -299,7 +299,7 @@ export function EventsTab() {
               <span
                 className={cn(
                   'text-[10px] font-medium shrink-0 w-20 truncate',
-                  SERVICE_COLORS[event.service] || 'text-zinc-400'
+                  SERVICE_COLORS[event.service] || 'text-muted-foreground'
                 )}
               >
                 {event.service}

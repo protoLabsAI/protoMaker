@@ -656,15 +656,15 @@ export function DashboardView() {
 
                 {/* Open Project Card */}
                 <div
-                  className="group relative rounded-xl border border-border bg-card/80 backdrop-blur-sm hover:bg-card hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 cursor-pointer hover:-translate-y-1"
+                  className="group relative rounded-xl border border-border bg-card/80 backdrop-blur-sm hover:bg-card hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer hover:-translate-y-1"
                   onClick={handleOpenProject}
                   data-testid="open-project-card"
                 >
-                  <div className="absolute inset-0 rounded-xl bg-linear-to-br from-blue-500/5 via-transparent to-cyan-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 rounded-xl bg-linear-to-br from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <div className="relative p-4 sm:p-6 h-full flex flex-col">
                     <div className="flex items-start gap-3 sm:gap-4 flex-1">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:scale-105 transition-all duration-300 shrink-0">
-                        <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground group-hover:text-blue-500 transition-colors duration-300" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:scale-105 transition-all duration-300 shrink-0">
+                        <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-foreground mb-1.5">
@@ -677,7 +677,7 @@ export function DashboardView() {
                     </div>
                     <Button
                       variant="secondary"
-                      className="w-full mt-4 sm:mt-5 bg-secondary/80 hover:bg-secondary text-foreground border border-border hover:border-blue-500/30 transition-all"
+                      className="w-full mt-4 sm:mt-5 bg-secondary/80 hover:bg-secondary text-foreground border border-border hover:border-primary/30 transition-all"
                       data-testid="open-existing-project"
                     >
                       <FolderOpen className="w-4 h-4 mr-2" />
@@ -748,8 +748,8 @@ export function DashboardView() {
               {favoriteProjects.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 sm:gap-2.5 mb-3 sm:mb-4">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                      <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-status-warning/10 flex items-center justify-center">
+                      <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-status-warning fill-status-warning" />
                     </div>
                     <h3 className="text-base sm:text-lg font-semibold text-foreground">
                       Favorites
@@ -759,14 +759,14 @@ export function DashboardView() {
                     {favoriteProjects.map((project) => (
                       <div
                         key={project.id}
-                        className="group relative rounded-xl border border-yellow-500/30 bg-card/60 backdrop-blur-sm hover:bg-card hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/5 transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
+                        className="group relative rounded-xl border border-status-warning/30 bg-card/60 backdrop-blur-sm hover:bg-card hover:border-status-warning/50 hover:shadow-lg hover:shadow-status-warning/5 transition-all duration-300 cursor-pointer hover:-translate-y-0.5"
                         onClick={() => handleProjectClick(project)}
                         data-testid={`project-card-${project.id}`}
                       >
-                        <div className="absolute inset-0 rounded-xl bg-linear-to-br from-yellow-500/5 to-amber-600/5 opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                        <div className="absolute inset-0 rounded-xl bg-linear-to-br from-status-warning/5 to-status-warning/5 opacity-0 group-hover:opacity-100 transition-all duration-300" />
                         <div className="relative p-3 sm:p-4">
                           <div className="flex items-start gap-2.5 sm:gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center justify-center group-hover:bg-yellow-500/20 transition-all duration-300 shrink-0 overflow-hidden">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-status-warning/10 border border-status-warning/30 flex items-center justify-center group-hover:bg-status-warning/20 transition-all duration-300 shrink-0 overflow-hidden">
                               {project.customIconPath ? (
                                 <img
                                   src={getAuthenticatedImageUrl(
@@ -780,13 +780,13 @@ export function DashboardView() {
                                 (() => {
                                   const IconComponent = getIconComponent(project.icon);
                                   return (
-                                    <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                                    <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 text-status-warning" />
                                   );
                                 })()
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm sm:text-base font-medium text-foreground truncate group-hover:text-yellow-500 transition-colors duration-300">
+                              <p className="text-sm sm:text-base font-medium text-foreground truncate group-hover:text-status-warning transition-colors duration-300">
                                 {project.name}
                               </p>
                               <p className="text-xs text-muted-foreground/70 truncate mt-0.5 sm:mt-1">
@@ -801,10 +801,10 @@ export function DashboardView() {
                             <div className="flex items-center gap-0.5 sm:gap-1">
                               <button
                                 onClick={(e) => handleToggleFavorite(e, project.id)}
-                                className="p-1 sm:p-1.5 rounded-lg hover:bg-yellow-500/20 transition-colors"
+                                className="p-1 sm:p-1.5 rounded-lg hover:bg-status-warning/20 transition-colors"
                                 title="Remove from favorites"
                               >
-                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500" />
+                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-status-warning fill-status-warning" />
                               </button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -895,7 +895,7 @@ export function DashboardView() {
                                 className="p-1 sm:p-1.5 rounded-lg hover:bg-muted transition-colors"
                                 title="Add to favorites"
                               >
-                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground/50 hover:text-yellow-500 transition-colors" />
+                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground/50 hover:text-status-warning transition-colors" />
                               </button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

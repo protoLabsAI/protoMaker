@@ -194,7 +194,7 @@ export function IntegrationConfigDialog({
           <div className="space-y-6 py-2">
             {Object.entries(groupedFields).map(([group, fields]) => (
               <div key={group} className="space-y-3">
-                <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {group}
                 </h4>
                 <div className="space-y-3">
@@ -224,7 +224,7 @@ export function IntegrationConfigDialog({
           </div>
         )}
 
-        {saveError && <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>}
+        {saveError && <p className="text-sm text-destructive">{saveError}</p>}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -304,32 +304,33 @@ function SignalSourcesSection({
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Signal Sources</h4>
+      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        Signal Sources
+      </h4>
 
       {loading ? (
         <div className="flex items-center justify-center py-4">
           <Spinner />
         </div>
       ) : channels.length === 0 && !showAddForm ? (
-        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           No channels monitored. Add a Discord channel to start receiving signals.
         </p>
       ) : (
         <div className="space-y-2">
           {channels.map((channel, index) => (
-            <div
-              key={channel.channelId}
-              className="rounded-md border border-zinc-200 dark:border-zinc-700 p-3 space-y-2"
-            >
+            <div key={channel.channelId} className="rounded-md border border-border p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{channel.channelName}</p>
-                  <p className="text-xs text-zinc-400 truncate font-mono">{channel.channelId}</p>
+                  <p className="text-xs text-muted-foreground truncate font-mono">
+                    {channel.channelId}
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeChannel(index)}
-                  className="shrink-0 text-zinc-400 hover:text-red-500 transition-colors"
+                  className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
                   aria-label="Remove channel"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -338,7 +339,7 @@ function SignalSourcesSection({
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs text-zinc-500">Intent override</Label>
+                  <Label className="text-xs text-muted-foreground">Intent override</Label>
                   <Select
                     value={channel.intentOverride ?? 'auto'}
                     onValueChange={(v) =>
@@ -361,7 +362,7 @@ function SignalSourcesSection({
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs text-zinc-500">Auto-feature</Label>
+                  <Label className="text-xs text-muted-foreground">Auto-feature</Label>
                   <div className="flex items-center h-8">
                     <Switch
                       checked={channel.autoFeature}
@@ -372,7 +373,7 @@ function SignalSourcesSection({
               </div>
 
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-zinc-500">Enabled</Label>
+                <Label className="text-xs text-muted-foreground">Enabled</Label>
                 <Switch
                   checked={channel.enabled}
                   onCheckedChange={(v) => updateChannel(index, { enabled: v })}
@@ -384,7 +385,7 @@ function SignalSourcesSection({
       )}
 
       {showAddForm ? (
-        <div className="rounded-md border border-zinc-200 dark:border-zinc-700 p-3 space-y-2">
+        <div className="rounded-md border border-border p-3 space-y-2">
           <div className="space-y-1.5">
             <Label className="text-xs">Channel ID</Label>
             <Input
@@ -469,7 +470,9 @@ function DiscordProfileSection() {
   return (
     <>
       <div className="space-y-3">
-        <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Bot Identity</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Bot Identity
+        </h4>
         <div className="space-y-1.5">
           <Label className="text-sm">Discord username</Label>
           <Input
@@ -487,7 +490,7 @@ function DiscordProfileSection() {
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Notification Channels
         </h4>
         <div className="space-y-3">
@@ -585,7 +588,7 @@ function DiscordProfileSection() {
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           Trusted Users
         </h4>
         <div className="space-y-1.5">
@@ -596,7 +599,7 @@ function DiscordProfileSection() {
             onBlur={() => saveAllowedUsers()}
             placeholder="username1, username2"
           />
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             These users can interact with agents and trigger reaction abilities.
           </p>
         </div>
@@ -629,7 +632,7 @@ function FieldRenderer({
           <div>
             <Label className="text-sm">{field.label}</Label>
             {field.description && (
-              <p className="text-xs text-zinc-500 mt-0.5">{field.description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{field.description}</p>
             )}
           </div>
           <Switch checked={!!value} onCheckedChange={(v) => onChange(v)} />
@@ -640,7 +643,9 @@ function FieldRenderer({
       return (
         <div className="space-y-1.5">
           <Label className="text-sm">{field.label}</Label>
-          {field.description && <p className="text-xs text-zinc-500">{field.description}</p>}
+          {field.description && (
+            <p className="text-xs text-muted-foreground">{field.description}</p>
+          )}
           <div className="relative">
             <Input
               type={revealed ? 'text' : 'password'}
@@ -652,7 +657,7 @@ function FieldRenderer({
             <button
               type="button"
               onClick={onToggleReveal}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -664,7 +669,9 @@ function FieldRenderer({
       return (
         <div className="space-y-1.5">
           <Label className="text-sm">{field.label}</Label>
-          {field.description && <p className="text-xs text-zinc-500">{field.description}</p>}
+          {field.description && (
+            <p className="text-xs text-muted-foreground">{field.description}</p>
+          )}
           <Input
             type="number"
             value={value !== undefined ? String(value) : ''}
@@ -681,7 +688,9 @@ function FieldRenderer({
       return (
         <div className="space-y-1.5">
           <Label className="text-sm">{field.label}</Label>
-          {field.description && <p className="text-xs text-zinc-500">{field.description}</p>}
+          {field.description && (
+            <p className="text-xs text-muted-foreground">{field.description}</p>
+          )}
           <Select value={(value as string) ?? ''} onValueChange={(v) => onChange(v)}>
             <SelectTrigger>
               <SelectValue placeholder={field.placeholder ?? 'Select...'} />
@@ -703,7 +712,9 @@ function FieldRenderer({
       return (
         <div className="space-y-1.5">
           <Label className="text-sm">{field.label}</Label>
-          {field.description && <p className="text-xs text-zinc-500">{field.description}</p>}
+          {field.description && (
+            <p className="text-xs text-muted-foreground">{field.description}</p>
+          )}
           <Input
             type={field.type === 'url' ? 'url' : 'text'}
             value={(value as string) ?? ''}

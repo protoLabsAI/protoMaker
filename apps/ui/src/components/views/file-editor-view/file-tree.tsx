@@ -37,15 +37,15 @@ function getGitStatusColor(status: FileStatus | undefined): string {
   switch (code) {
     case 'A':
     case '?':
-      return 'text-green-500';
+      return 'text-status-success';
     case 'D':
-      return 'text-red-500';
+      return 'text-destructive';
     case 'M':
     case 'U':
-      return 'text-amber-500';
+      return 'text-status-warning';
     case 'R':
     case 'C':
-      return 'text-blue-400';
+      return 'text-primary';
     default:
       return '';
   }
@@ -127,9 +127,9 @@ function TreeNode({ entry, projectPath, gitStatusMap, depth }: TreeNodeProps) {
             <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
           )}
           {isExpanded ? (
-            <FolderOpen className="size-3.5 shrink-0 text-sky-400" />
+            <FolderOpen className="size-3.5 shrink-0 text-primary" />
           ) : (
-            <Folder className="size-3.5 shrink-0 text-sky-500" />
+            <Folder className="size-3.5 shrink-0 text-primary" />
           )}
           <span className="truncate">{entry.name}</span>
         </button>

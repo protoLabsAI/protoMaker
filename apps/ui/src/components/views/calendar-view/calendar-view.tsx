@@ -31,11 +31,11 @@ const MAX_DOTS_PER_DAY = 3;
 
 /** Color mapping for event types (used when event has no custom color) */
 const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
-  feature: 'bg-blue-500',
-  milestone: 'bg-violet-500',
-  custom: 'bg-emerald-500',
-  google: 'bg-red-500',
-  linear: 'bg-indigo-500',
+  feature: 'bg-chart-1',
+  milestone: 'bg-chart-2',
+  custom: 'bg-chart-3',
+  google: 'bg-chart-4',
+  linear: 'bg-chart-5',
 };
 
 /** Human-readable labels for event types */

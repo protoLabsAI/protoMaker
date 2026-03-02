@@ -598,15 +598,15 @@ export function WelcomeView() {
 
             {/* Open Project Card */}
             <div
-              className="group relative rounded-xl border border-border bg-card/80 backdrop-blur-sm hover:bg-card hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 cursor-pointer hover:-translate-y-1"
+              className="group relative rounded-xl border border-border bg-card/80 backdrop-blur-sm hover:bg-card hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer hover:-translate-y-1"
               onClick={handleOpenProject}
               data-testid="open-project-card"
             >
-              <div className="absolute inset-0 rounded-xl bg-linear-to-br from-blue-500/5 via-transparent to-cyan-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 rounded-xl bg-linear-to-br from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative p-6 h-full flex flex-col">
                 <div className="flex items-start gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:scale-105 transition-all duration-300 shrink-0">
-                    <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-blue-500 transition-colors duration-300" />
+                  <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:scale-105 transition-all duration-300 shrink-0">
+                    <FolderOpen className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-foreground mb-1.5">Open Project</h3>
@@ -617,7 +617,7 @@ export function WelcomeView() {
                 </div>
                 <Button
                   variant="secondary"
-                  className="w-full mt-5 bg-secondary/80 hover:bg-secondary text-foreground border border-border hover:border-blue-500/30 transition-all"
+                  className="w-full mt-5 bg-secondary/80 hover:bg-secondary text-foreground border border-border hover:border-primary/30 transition-all"
                   data-testid="open-existing-project"
                 >
                   <FolderOpen className="w-4 h-4 mr-2" />
@@ -725,7 +725,7 @@ export function WelcomeView() {
                     key={file}
                     className="flex items-center gap-2.5 text-sm text-muted-foreground"
                   >
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div className="w-2 h-2 rounded-full bg-status-success" />
                     <code className="text-xs bg-muted px-2.5 py-1 rounded-md font-mono">
                       {file}
                     </code>
