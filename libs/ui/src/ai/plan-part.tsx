@@ -158,9 +158,7 @@ export function PlanPart({ plan, className }: PlanPartProps) {
         aria-expanded={isOpen}
       >
         <span className="flex-1 truncate font-medium text-foreground/80">{plan.title}</span>
-        <span
-          className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', badge.className)}
-        >
+        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', badge.className)}>
           {badge.label}
         </span>
         <ChevronDown
