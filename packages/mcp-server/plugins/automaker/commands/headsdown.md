@@ -171,6 +171,12 @@ Display a unified dashboard:
 
 - PR #N: [title] ([status]: mergeable/conflicting/pending review)
 
+### Needs Action (blocked, requires human intervention)
+
+- [Feature] - [statusChangeReason]
+
+> These features will NOT auto-recover. Fix the root cause before continuing.
+
 ### Stale Features (no activity > 24h)
 
 - [Feature] - last updated [time ago]
@@ -321,6 +327,23 @@ PRs not updated in >7 days are stale. Log them and decide: close, rebase, or pin
 ## Phase 5: Board Grooming
 
 Keep the board clean and consistent. Act autonomously — don't present menus.
+
+### 5.0 Needs Action Features
+
+Scan all blocked features. For each, check `statusChangeReason`. Features with any of these patterns require **direct human or Ava intervention** — auto-mode will NOT retry them:
+
+- `git commit` — git workflow failure (format, hook, or staging issue)
+- `git workflow failed` — pipeline-level git failure
+- `plan validation failed` — plan too short or feature requirements unclear
+
+For each "Needs Action" feature:
+
+1. Read the full `statusChangeReason` to understand the root cause
+2. Fix it: rebase the worktree, fix formatting, clarify the feature description, or resolve the underlying issue
+3. Reset `failureCount: 0` and move back to `backlog`
+4. **Do NOT simply reset status and let auto-mode retry** — that will reproduce the same failure
+
+These are surfaced with an amber "Needs Action" badge in the UI. Never leave them sitting blocked.
 
 ### 5.1 Stale Feature Remediation
 
