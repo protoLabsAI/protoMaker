@@ -17,7 +17,6 @@ import {
   Webhook,
   Activity,
   Cog,
-  Timer,
   UserCog,
   Users,
   Zap,
@@ -95,7 +94,6 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
       { id: 'health', label: 'Health', icon: Activity },
       { id: 'personas', label: 'Personas', icon: Users },
       { id: 'workflow', label: 'Workflow', icon: Cog },
-      { id: 'maintenance', label: 'Maintenance', icon: Timer },
     ],
   },
   {
