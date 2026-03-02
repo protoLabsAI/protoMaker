@@ -21,7 +21,7 @@ import { Textarea } from '@protolabs-ai/ui/atoms';
 import { HotkeyButton } from '@protolabs-ai/ui/molecules';
 import { CalendarDays, ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
 import type { CalendarEvent, CalendarEventType } from '@protolabs-ai/types';
 import type { UpdateEventInput } from './use-calendar-events';
 

@@ -4,7 +4,7 @@ import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useTerminalStore } from '@/store/terminal-store';
 import type { InitScriptState } from '@/store/types';
-import { AnsiOutput } from '@/components/shared/ansi-output';
+import { AnsiOutput } from '@/components/views/board-view/components/ansi-output';
 
 interface InitScriptIndicatorProps {
   projectPath: string;

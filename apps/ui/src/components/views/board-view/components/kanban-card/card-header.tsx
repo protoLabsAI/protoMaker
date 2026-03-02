@@ -23,7 +23,7 @@ import {
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { CountUpTimer } from '@/components/shared/count-up-timer';
 import { formatModelName, DEFAULT_MODEL } from '@/lib/agent-context-parser';
-import { DeleteConfirmDialog } from '@/components/ui/delete-confirm-dialog';
+import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
 import { getProviderIconForModel } from '@/components/shared/provider-icon';
 
 interface CardHeaderProps {

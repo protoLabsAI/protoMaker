@@ -12,7 +12,10 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { Spinner } from '@protolabs-ai/ui/atoms';
-import { XtermLogViewer, type XtermLogViewerRef } from '@/components/shared/xterm-log-viewer';
+import {
+  XtermLogViewer,
+  type XtermLogViewerRef,
+} from '@/components/views/board-view/components/xterm-log-viewer';
 import { useDevServerLogs } from '../hooks/use-dev-server-logs';
 import type { WorktreeInfo } from '../types';
 

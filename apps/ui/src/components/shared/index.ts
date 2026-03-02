@@ -9,16 +9,11 @@ export {
 // Font Components
 export { FontSelector } from './font-selector';
 
-// Terminal and Log Components
-export { LogViewer } from './log-viewer';
-export { AnsiOutput } from './ansi-output';
-export { XtermLogViewer } from './xterm-log-viewer';
-
-// Git Components
-export { GitDiffPanel } from './git-diff-panel';
-
 // Provider Components
 export { ProviderIcon } from './provider-icon';
+
+// Dialog Components
+export { DeleteConfirmDialog } from './delete-confirm-dialog';
 
 // Input Components
 export { PathInput } from './path-input';
@@ -26,9 +21,6 @@ export { ImageDropZone } from './image-drop-zone';
 
 // Keyboard Components
 export { KeyboardMap } from './keyboard-map';
-
-// Progress Components
-export { TaskProgressPanel } from './task-progress-panel';
 
 // Editor Components
 export { JsonSyntaxEditor } from './json-syntax-editor';

@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from '@protolabs-ai/ui/atoms';
 import { FileText } from 'lucide-react';
-import { GitDiffPanel } from '@/components/shared/git-diff-panel';
+import { GitDiffPanel } from '@/components/views/board-view/components/git-diff-panel';
 
 interface WorktreeInfo {
   path: string;

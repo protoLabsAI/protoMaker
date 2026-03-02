@@ -9,9 +9,9 @@ import {
 import { List, FileText, GitBranch, ClipboardList } from 'lucide-react';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
-import { LogViewer } from '@/components/shared/log-viewer';
-import { GitDiffPanel } from '@/components/shared/git-diff-panel';
-import { TaskProgressPanel } from '@/components/shared/task-progress-panel';
+import { LogViewer } from '@/components/views/board-view/components/log-viewer';
+import { GitDiffPanel } from '@/components/views/board-view/components/git-diff-panel';
+import { TaskProgressPanel } from '@/components/views/board-view/components/task-progress-panel';
 import { Markdown } from '@protolabs-ai/ui/molecules';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { selectSummary } from '@/lib/summary-selection';
