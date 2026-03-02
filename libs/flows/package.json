@@ -1,6 +1,6 @@
 {
   "name": "@protolabs-ai/flows",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "type": "module",
   "description": "LangGraph state graph examples and patterns for AutoMaker",
   "main": "dist/index.js",
@@ -37,11 +37,11 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "@protolabs-ai/model-resolver": "^0.22.0",
-    "@protolabs-ai/observability": "^0.22.0",
-    "@protolabs-ai/prompts": "^0.22.0",
-    "@protolabs-ai/types": "^0.22.0",
-    "@protolabs-ai/utils": "^0.22.0",
+    "@protolabs-ai/model-resolver": "^0.23.0",
+    "@protolabs-ai/observability": "^0.23.0",
+    "@protolabs-ai/prompts": "^0.23.0",
+    "@protolabs-ai/types": "^0.23.0",
+    "@protolabs-ai/utils": "^0.23.0",
     "@langchain/anthropic": "^0.3.10",
     "@langchain/core": "^0.3.33",
     "@langchain/langgraph": "^0.2.26"

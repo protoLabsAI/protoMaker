@@ -1,5 +1,15 @@
 # @protolabs-ai/types
 
+## 0.23.0
+
+### Minor Changes
+
+- ### Features
+  - add global settings button to quick actions bar
+
+  ### Bug Fixes
+  - event-driven reconciliation — multi-project PR lookup, epic auto-promotion, stale reset (#1587)
+
 ## 0.22.0
 
 ### Minor Changes
