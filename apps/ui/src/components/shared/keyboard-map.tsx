@@ -162,21 +162,21 @@ const SHORTCUT_CATEGORIES: Record<keyof KeyboardShortcuts, 'navigation' | 'ui' |
 // Category colors
 const CATEGORY_COLORS = {
   navigation: {
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500/50',
-    text: 'text-blue-400',
+    bg: 'bg-status-info/20',
+    border: 'border-status-info/50',
+    text: 'text-status-info',
     label: 'Navigation',
   },
   ui: {
-    bg: 'bg-purple-500/20',
-    border: 'border-purple-500/50',
-    text: 'text-purple-400',
+    bg: 'bg-primary/20',
+    border: 'border-primary/50',
+    text: 'text-primary',
     label: 'UI Controls',
   },
   action: {
-    bg: 'bg-green-500/20',
-    border: 'border-green-500/50',
-    text: 'text-green-400',
+    bg: 'bg-status-success/20',
+    border: 'border-status-success/50',
+    text: 'text-status-success',
     label: 'Actions',
   },
 };
@@ -244,7 +244,7 @@ export function KeyboardMap({ onKeySelect, selectedKey, className }: KeyboardMap
           // Selected state
           isSelected && 'ring-2 ring-brand-500 ring-offset-2 ring-offset-background',
           // Modified indicator
-          isModified && 'ring-1 ring-yellow-500/50'
+          isModified && 'ring-1 ring-status-warning/50'
         )}
         data-testid={`keyboard-key-${keyDef.key}`}
       >
@@ -277,7 +277,7 @@ export function KeyboardMap({ onKeySelect, selectedKey, className }: KeyboardMap
           }
         </span>
         {isModified && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-yellow-500" />
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-status-warning" />
         )}
       </button>
     );
@@ -308,7 +308,7 @@ export function KeyboardMap({ onKeySelect, selectedKey, className }: KeyboardMap
                       {displayShortcut}
                     </kbd>
                     {mergedShortcuts[shortcut] !== DEFAULT_KEYBOARD_SHORTCUTS[shortcut] && (
-                      <span className="text-xs text-yellow-400">(custom)</span>
+                      <span className="text-xs text-status-warning">(custom)</span>
                     )}
                   </div>
                 );
@@ -338,8 +338,8 @@ export function KeyboardMap({ onKeySelect, selectedKey, className }: KeyboardMap
             <span className="text-muted-foreground">Available</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-yellow-500" />
-            <span className="text-yellow-400">Modified</span>
+            <div className="w-2 h-2 rounded-full bg-status-warning" />
+            <span className="text-status-warning">Modified</span>
           </div>
         </div>
 
@@ -628,7 +628,8 @@ export function ShortcutReferencePanel({ editable = false }: ShortcutReferencePa
                               onKeyDown={handleKeyDown}
                               className={cn(
                                 'w-12 h-7 text-center font-mono text-xs uppercase',
-                                shortcutError && 'border-red-500 focus-visible:ring-red-500'
+                                shortcutError &&
+                                  'border-status-error focus-visible:ring-status-error'
                               )}
                               placeholder="Key"
                               maxLength={1}
@@ -638,7 +639,7 @@ export function ShortcutReferencePanel({ editable = false }: ShortcutReferencePa
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 w-7 p-0 hover:bg-green-500/20 hover:text-green-400"
+                              className="h-7 w-7 p-0 hover:bg-status-success/20 hover:text-status-success"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSaveShortcut();
@@ -651,7 +652,7 @@ export function ShortcutReferencePanel({ editable = false }: ShortcutReferencePa
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 w-7 p-0 hover:bg-red-500/20 hover:text-red-400"
+                              className="h-7 w-7 p-0 hover:bg-status-error/20 hover:text-status-error"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleCancelEdit();
@@ -679,7 +680,7 @@ export function ShortcutReferencePanel({ editable = false }: ShortcutReferencePa
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-6 w-6 p-0 hover:bg-yellow-500/20 hover:text-yellow-400"
+                                    className="h-6 w-6 p-0 hover:bg-status-warning/20 hover:text-status-warning"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleResetShortcut(key);
@@ -695,7 +696,7 @@ export function ShortcutReferencePanel({ editable = false }: ShortcutReferencePa
                               </Tooltip>
                             )}
                             {isModified && !editable && (
-                              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                              <span className="w-2 h-2 rounded-full bg-status-warning" />
                             )}
                             {editable && !isModified && (
                               <Edit2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
@@ -710,7 +711,7 @@ export function ShortcutReferencePanel({ editable = false }: ShortcutReferencePa
               {editingShortcut &&
                 shortcutError &&
                 SHORTCUT_CATEGORIES[editingShortcut] === category && (
-                  <p className="text-xs text-red-400 mt-1">{shortcutError}</p>
+                  <p className="text-xs text-status-error mt-1">{shortcutError}</p>
                 )}
             </div>
           );

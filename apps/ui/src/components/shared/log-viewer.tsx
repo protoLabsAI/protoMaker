@@ -93,19 +93,19 @@ const getToolCategoryIcon = (category: ToolCategory | undefined) => {
 const getToolCategoryColor = (category: ToolCategory | undefined): string => {
   switch (category) {
     case 'read':
-      return 'text-blue-400 bg-blue-500/10 border-blue-500/30';
+      return 'text-status-info bg-status-info/10 border-status-info/30';
     case 'edit':
-      return 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+      return 'text-status-warning bg-status-warning/10 border-status-warning/30';
     case 'write':
-      return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+      return 'text-status-success bg-status-success/10 border-status-success/30';
     case 'bash':
-      return 'text-purple-400 bg-purple-500/10 border-purple-500/30';
+      return 'text-primary bg-primary/10 border-primary/30';
     case 'search':
-      return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
+      return 'text-status-info bg-status-info/10 border-status-info/30';
     case 'todo':
-      return 'text-green-400 bg-green-500/10 border-green-500/30';
+      return 'text-status-success bg-status-success/10 border-status-success/30';
     case 'task':
-      return 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30';
+      return 'text-primary bg-primary/10 border-primary/30';
     default:
       return 'text-muted-foreground bg-muted/30 border-border';
   }
@@ -145,7 +145,7 @@ function TodoListRenderer({ todos }: { todos: TodoItem[] }) {
   const getStatusIcon = (status: TodoItem['status']) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+        return <CheckCircle2 className="w-4 h-4 text-status-success" />;
       case 'in_progress':
         return <Spinner size="sm" />;
       case 'pending':
@@ -158,9 +158,9 @@ function TodoListRenderer({ todos }: { todos: TodoItem[] }) {
   const getStatusColor = (status: TodoItem['status']) => {
     switch (status) {
       case 'completed':
-        return 'text-emerald-300 line-through opacity-70';
+        return 'text-status-success line-through opacity-70';
       case 'in_progress':
-        return 'text-amber-300';
+        return 'text-status-warning';
       case 'pending':
         return 'text-muted-foreground';
       default:
@@ -172,13 +172,13 @@ function TodoListRenderer({ todos }: { todos: TodoItem[] }) {
     switch (status) {
       case 'completed':
         return (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 ml-auto">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-status-success/20 text-status-success ml-auto">
             Done
           </span>
         );
       case 'in_progress':
         return (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 ml-auto">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-status-warning/20 text-status-warning ml-auto">
             In Progress
           </span>
         );
@@ -194,8 +194,8 @@ function TodoListRenderer({ todos }: { todos: TodoItem[] }) {
           key={index}
           className={cn(
             'flex items-start gap-2 p-2 rounded-md transition-colors',
-            todo.status === 'in_progress' && 'bg-amber-500/5 border border-amber-500/20',
-            todo.status === 'completed' && 'bg-emerald-500/5',
+            todo.status === 'in_progress' && 'bg-status-warning/5 border border-status-warning/20',
+            todo.status === 'completed' && 'bg-status-success/5',
             todo.status === 'pending' && 'bg-muted/30'
           )}
         >
@@ -203,7 +203,7 @@ function TodoListRenderer({ todos }: { todos: TodoItem[] }) {
           <div className="flex-1 min-w-0">
             <p className={cn('text-sm', getStatusColor(todo.status))}>{todo.content}</p>
             {todo.status === 'in_progress' && todo.activeForm && (
-              <p className="text-xs text-amber-400/70 mt-0.5 italic">{todo.activeForm}</p>
+              <p className="text-xs text-status-warning/70 mt-0.5 italic">{todo.activeForm}</p>
             )}
           </div>
           {getStatusBadge(todo.status)}
@@ -676,7 +676,7 @@ export function LogViewer({ output, className }: LogViewerProps) {
               );
             })}
             {stats.errors > 0 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/30 flex items-center gap-1">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-status-error/10 text-status-error border border-status-error/30 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
                 {stats.errors}
               </span>

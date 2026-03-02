@@ -48,15 +48,15 @@ const getFileIcon = (status: string) => {
   switch (status) {
     case 'A':
     case '?':
-      return <FilePlus className="w-4 h-4 text-green-500" />;
+      return <FilePlus className="w-4 h-4 text-status-success" />;
     case 'D':
-      return <FileX className="w-4 h-4 text-red-500" />;
+      return <FileX className="w-4 h-4 text-status-error" />;
     case 'M':
     case 'U':
-      return <FilePen className="w-4 h-4 text-amber-500" />;
+      return <FilePen className="w-4 h-4 text-status-warning" />;
     case 'R':
     case 'C':
-      return <File className="w-4 h-4 text-blue-500" />;
+      return <File className="w-4 h-4 text-status-info" />;
     default:
       return <FileText className="w-4 h-4 text-muted-foreground" />;
   }
@@ -66,15 +66,15 @@ const getStatusBadgeColor = (status: string) => {
   switch (status) {
     case 'A':
     case '?':
-      return 'bg-green-500/20 text-green-400 border-green-500/30';
+      return 'bg-status-success/20 text-status-success border-status-success/30';
     case 'D':
-      return 'bg-red-500/20 text-red-400 border-red-500/30';
+      return 'bg-status-error/20 text-status-error border-status-error/30';
     case 'M':
     case 'U':
-      return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+      return 'bg-status-warning/20 text-status-warning border-status-warning/30';
     case 'R':
     case 'C':
-      return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      return 'bg-status-info/20 text-status-info border-status-info/30';
     default:
       return 'bg-muted text-muted-foreground border-border';
   }
@@ -224,16 +224,16 @@ function DiffLine({
 }) {
   const bgClass = {
     context: 'bg-transparent',
-    addition: 'bg-green-500/10',
-    deletion: 'bg-red-500/10',
-    header: 'bg-blue-500/10',
+    addition: 'bg-status-success/10',
+    deletion: 'bg-status-error/10',
+    header: 'bg-status-info/10',
   };
 
   const textClass = {
     context: 'text-foreground-secondary',
-    addition: 'text-green-400',
-    deletion: 'text-red-400',
-    header: 'text-blue-400',
+    addition: 'text-status-success',
+    deletion: 'text-status-error',
+    header: 'text-status-info',
   };
 
   const prefix = {
@@ -304,22 +304,22 @@ function FileDiffSection({
         </span>
         <div className="flex items-center gap-2 flex-shrink-0">
           {fileDiff.isNew && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-status-success/20 text-status-success">
               new
             </span>
           )}
           {fileDiff.isDeleted && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/20 text-red-400">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-status-error/20 text-status-error">
               deleted
             </span>
           )}
           {fileDiff.isRenamed && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-status-info/20 text-status-info">
               renamed
             </span>
           )}
-          {additions > 0 && <span className="text-xs text-green-400">+{additions}</span>}
-          {deletions > 0 && <span className="text-xs text-red-400">-{deletions}</span>}
+          {additions > 0 && <span className="text-xs text-status-success">+{additions}</span>}
+          {deletions > 0 && <span className="text-xs text-status-error">-{deletions}</span>}
         </div>
       </button>
       {isExpanded && (
@@ -460,8 +460,8 @@ export function GitDiffPanel({
               <span className="text-muted-foreground">
                 {files.length} {files.length === 1 ? 'file' : 'files'}
               </span>
-              {totalAdditions > 0 && <span className="text-green-400">+{totalAdditions}</span>}
-              {totalDeletions > 0 && <span className="text-red-400">-{totalDeletions}</span>}
+              {totalAdditions > 0 && <span className="text-status-success">+{totalAdditions}</span>}
+              {totalDeletions > 0 && <span className="text-status-error">-{totalDeletions}</span>}
             </>
           )}
         </div>
@@ -477,7 +477,7 @@ export function GitDiffPanel({
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-              <AlertCircle className="w-5 h-5 text-amber-500" />
+              <AlertCircle className="w-5 h-5 text-status-warning" />
               <span className="text-sm">{error}</span>
               <Button variant="ghost" size="sm" onClick={() => loadDiffs()} className="mt-2">
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -568,10 +568,10 @@ export function GitDiffPanel({
                     {files.length} {files.length === 1 ? 'file' : 'files'} changed
                   </span>
                   {totalAdditions > 0 && (
-                    <span className="text-green-400">+{totalAdditions} additions</span>
+                    <span className="text-status-success">+{totalAdditions} additions</span>
                   )}
                   {totalDeletions > 0 && (
-                    <span className="text-red-400">-{totalDeletions} deletions</span>
+                    <span className="text-status-error">-{totalDeletions} deletions</span>
                   )}
                 </div>
               </div>
