@@ -115,7 +115,7 @@ export function ChatModelSelect({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [onValueChange]);
 
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
