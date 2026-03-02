@@ -97,10 +97,13 @@ type StoredTrigger = StoredCronTrigger | StoredEventTrigger | StoredWebhookTrigg
 /**
  * Stored automation record — all fields from @protolabs-ai/types Automation except
  * modelConfig (flexible Record) and trigger (relaxed eventType).
+ * executionCount and failureCount are populated from SchedulerService at read time.
  */
 type StoredAutomation = Omit<Automation, 'modelConfig' | 'trigger'> & {
   trigger: StoredTrigger;
   modelConfig?: Record<string, unknown>;
+  executionCount?: number;
+  failureCount?: number;
 };
 
 /**
@@ -200,7 +203,20 @@ export class AutomationService {
   // ---------------------------------------------------------------------------
 
   async list(): Promise<StoredAutomation[]> {
-    return this.readAutomations();
+    const automations = await this.readAutomations();
+    return automations.map((automation) => {
+      if (automation.trigger.type !== 'cron') return automation;
+      const taskId = `${AUTOMATION_TASK_PREFIX}${automation.id}`;
+      const task = this.schedulerService.getTask(taskId);
+      if (!task) return automation;
+      return {
+        ...automation,
+        lastRunAt: task.lastRun ?? automation.lastRunAt,
+        nextRunAt: task.nextRun ?? automation.nextRunAt,
+        executionCount: task.executionCount,
+        failureCount: task.failureCount,
+      };
+    });
   }
 
   async get(id: string): Promise<StoredAutomation | undefined> {
@@ -403,6 +419,19 @@ export class AutomationService {
     };
 
     await this.appendRun(run);
+
+    // Persist lastRunAt and lastRunStatus on the automation record
+    const automations = await this.readAutomations();
+    const automationIndex = automations.findIndex((a) => a.id === id);
+    if (automationIndex !== -1) {
+      automations[automationIndex] = {
+        ...automations[automationIndex],
+        lastRunAt: completedAt,
+        lastRunStatus: status,
+        updatedAt: completedAt,
+      };
+      await this.writeAutomations(automations);
+    }
 
     return run;
   }
