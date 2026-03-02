@@ -25,7 +25,7 @@ export { ChatMessageMarkdown, type ChatMessageMarkdownProps } from './chat-messa
 
 export { CodeBlock, type CodeBlockProps } from './code-block.js';
 
-export { ChatMessageList } from './chat-message-list.js';
+export { ChatMessageList, type BranchInfo } from './chat-message-list.js';
 
 export { ChatInput } from './chat-input.js';
 
@@ -58,6 +58,8 @@ export {
   type MessageActionsProps,
   type FeedbackRating,
 } from './message-actions.js';
+
+export { MessageBranches, type MessageBranchesProps } from './message-branches.js';
 
 export { AILoader, type AILoaderProps } from './loader.js';
 

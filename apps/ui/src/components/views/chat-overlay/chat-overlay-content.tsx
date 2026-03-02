@@ -11,7 +11,8 @@
  * require value/onChange props to be threaded through the tree.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import type { UIMessage } from 'ai';
 import { History, X, Settings, ChevronUp, ChevronDown, SquarePen, ListOrdered } from 'lucide-react';
 import {
   ChatMessageList,
@@ -20,6 +21,7 @@ import {
   PromptInputProvider,
   QueueView,
   type QueueItem,
+  type BranchInfo,
 } from '@protolabs-ai/ui/ai';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
@@ -73,6 +75,15 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const [queueOpen, setQueueOpen] = useState(false);
   const [queuePaused, setQueuePaused] = useState(false);
 
+  // Branch state — tracks multiple response variants per assistant message.
+  // branchMap key: the ID of the first (original) assistant message variant.
+  // branchMap value: all variants in order (original first, newest last).
+  const [branchMap, setBranchMap] = useState<Map<string, UIMessage[]>>(new Map());
+  const [currentBranchIndex, setCurrentBranchIndex] = useState<Map<string, number>>(new Map());
+  // Set to the origId when a regeneration is in-flight, cleared when the new
+  // assistant message arrives and is added to the branch list.
+  const pendingBranchFor = useRef<string | null>(null);
+
   const suggestions = useContextualSuggestions(features ?? []);
 
   // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
@@ -98,17 +109,130 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     getOverlayAPI()?.resizeOverlay?.(next ? OVERLAY_HEIGHT_EXPANDED : OVERLAY_HEIGHT_DEFAULT);
   }, [expanded]);
 
-  // Regenerate: re-send the last user message text
+  // Regenerate: push the current last assistant response as a branch variant,
+  // then re-send the last user message to generate a new response.
   const handleRegenerate = useCallback(() => {
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
     const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-    if (lastUserMsg) {
-      const text = (lastUserMsg.parts ?? [])
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-        .map((p) => p.text)
-        .join('');
-      if (text) sendMessage({ text });
-    }
+    if (!lastAssistant || !lastUserMsg) return;
+
+    const origId = lastAssistant.id;
+
+    // Register the current response as the first branch (if not already tracked)
+    setBranchMap((prev) => {
+      if (prev.has(origId)) return prev;
+      const next = new Map(prev);
+      next.set(origId, [lastAssistant]);
+      return next;
+    });
+    setCurrentBranchIndex((prev) => {
+      if (prev.has(origId)) return prev;
+      const next = new Map(prev);
+      next.set(origId, 0);
+      return next;
+    });
+
+    // Mark that the next completed assistant message should be added to this branch
+    pendingBranchFor.current = origId;
+
+    // Re-send the last user message
+    const text = (lastUserMsg.parts ?? [])
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+    if (text) sendMessage({ text });
   }, [messages, sendMessage]);
+
+  // Detect when a regenerated response has finished streaming and add it to
+  // the appropriate branch list.
+  useEffect(() => {
+    if (!pendingBranchFor.current || isStreaming) return;
+
+    const origId = pendingBranchFor.current;
+    const currentBranches = branchMap.get(origId) ?? [];
+    const knownIds = new Set(currentBranches.map((b) => b.id));
+
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+    if (!lastAssistant || knownIds.has(lastAssistant.id)) return;
+
+    // New finished assistant message — add as latest branch and focus it
+    const newBranches = [...currentBranches, lastAssistant];
+    setBranchMap((prev) => {
+      const next = new Map(prev);
+      next.set(origId, newBranches);
+      return next;
+    });
+    setCurrentBranchIndex((prev) => {
+      const next = new Map(prev);
+      next.set(origId, newBranches.length - 1);
+      return next;
+    });
+    pendingBranchFor.current = null;
+  }, [messages, isStreaming, branchMap]);
+
+  // Clear branch state when starting a new chat session
+  useEffect(() => {
+    setBranchMap(new Map());
+    setCurrentBranchIndex(new Map());
+    pendingBranchFor.current = null;
+  }, [currentSessionId]);
+
+  // Navigate to the previous branch variant for a given message
+  const handlePreviousBranch = useCallback((origId: string) => {
+    setCurrentBranchIndex((prev) => {
+      const idx = prev.get(origId) ?? 0;
+      if (idx <= 0) return prev;
+      const next = new Map(prev);
+      next.set(origId, idx - 1);
+      return next;
+    });
+  }, []);
+
+  // Navigate to the next branch variant for a given message
+  const handleNextBranch = useCallback(
+    (origId: string) => {
+      setCurrentBranchIndex((prev) => {
+        const variants = branchMap.get(origId);
+        const idx = prev.get(origId) ?? 0;
+        if (!variants || idx >= variants.length - 1) return prev;
+        const next = new Map(prev);
+        next.set(origId, idx + 1);
+        return next;
+      });
+    },
+    [branchMap]
+  );
+
+  // Compute displayed messages — substitute branch variants at branch positions
+  // and trim the re-sent user+assistant pairs that accumulate after regenerations.
+  const displayedMessages = useMemo<UIMessage[]>(() => {
+    if (branchMap.size === 0) return messages;
+
+    let result = [...messages];
+    // Process each branch point (typically just one at a time in practice)
+    for (const [origId, variants] of branchMap) {
+      const idx = currentBranchIndex.get(origId) ?? variants.length - 1;
+      const origPos = result.findIndex((m) => m.id === origId);
+      if (origPos === -1) continue;
+      // Replace from the original position onwards with the selected variant
+      result = [...result.slice(0, origPos), variants[idx]];
+    }
+    return result;
+  }, [messages, branchMap, currentBranchIndex]);
+
+  // Build branchInfoMap for ChatMessageList — maps each displayed variant's ID
+  // to its branch navigation context so ChatMessage can show the nav bar.
+  const branchInfoMap = useMemo<Map<string, BranchInfo>>(() => {
+    const map = new Map<string, BranchInfo>();
+    for (const [origId, variants] of branchMap) {
+      const idx = currentBranchIndex.get(origId) ?? variants.length - 1;
+      // Tag all variants so the currently displayed one gets nav props
+      for (let i = 0; i < variants.length; i++) {
+        map.set(variants[i].id, { branchIndex: idx, branchCount: variants.length, origId });
+      }
+    }
+    return map;
+  }, [branchMap, currentBranchIndex]);
 
   // Thumbs up/down — no-op placeholders; wire to telemetry or feedback API as needed
   const handleThumbsUp = useCallback(() => {
@@ -264,16 +388,19 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
         {/* Chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
           <ChatMessageList
-            messages={messages}
+            messages={displayedMessages}
             emptyMessage="Ask Ava anything..."
             isStreaming={isStreaming}
             onRegenerate={handleRegenerate}
             onThumbsUp={handleThumbsUp}
             onThumbsDown={handleThumbsDown}
+            branchInfoMap={branchInfoMap}
+            onPreviousBranch={handlePreviousBranch}
+            onNextBranch={handleNextBranch}
           />
 
           {/* Contextual suggestions — shown only when no messages in current session */}
-          {messages.length === 0 && (
+          {displayedMessages.length === 0 && (
             <SuggestionList suggestions={suggestions} onSelect={handleSuggestionSelect} />
           )}
 

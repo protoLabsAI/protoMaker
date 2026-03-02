@@ -29,6 +29,7 @@ import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
 import { AILoader } from './loader.js';
 import { MessageActions } from './message-actions.js';
+import { MessageBranches } from './message-branches.js';
 import { PlanPart, extractPlanData, type PlanData } from './plan-part.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
@@ -340,6 +341,10 @@ export function ChatMessage({
   onRegenerate,
   onThumbsUp,
   onThumbsDown,
+  branchIndex,
+  branchCount,
+  onPreviousBranch,
+  onNextBranch,
 }: {
   message: UIMessage;
   className?: string;
@@ -353,6 +358,14 @@ export function ChatMessage({
   onThumbsUp?: () => void;
   /** Called when the user clicks Thumbs Down on an assistant message. */
   onThumbsDown?: () => void;
+  /** Zero-based index of the currently shown branch variant (for assistant messages). */
+  branchIndex?: number;
+  /** Total number of branch variants. When > 1, MessageBranches nav renders. */
+  branchCount?: number;
+  /** Called when the user clicks the Previous branch chevron. */
+  onPreviousBranch?: () => void;
+  /** Called when the user clicks the Next branch chevron. */
+  onNextBranch?: () => void;
 } & Partial<VariantProps<typeof messageVariants>>) {
   const role = message.role as MessageRole;
   const parts = message.parts ?? [];
@@ -464,14 +477,26 @@ export function ChatMessage({
                 {groupIdx === stepGroups.length - 1 && <MessageSources citations={citations} />}
               </ChatMessageBubble>
 
-              {/* MessageActions toolbar — assistant bubbles only */}
+              {/* MessageActions + branch navigation — assistant bubbles only */}
               {role === 'assistant' && (
-                <MessageActions
-                  text={bubbleText}
-                  onRegenerate={onRegenerate}
-                  onFeedback={onFeedback}
-                  className="mt-0.5 ml-1"
-                />
+                <div className="mt-0.5 ml-1 flex items-center gap-1">
+                  <MessageActions
+                    text={bubbleText}
+                    onRegenerate={onRegenerate}
+                    onFeedback={onFeedback}
+                  />
+                  {branchCount !== undefined &&
+                    branchCount > 1 &&
+                    onPreviousBranch &&
+                    onNextBranch && (
+                      <MessageBranches
+                        branchIndex={branchIndex ?? 0}
+                        branchCount={branchCount}
+                        onPrevious={onPreviousBranch}
+                        onNext={onNextBranch}
+                      />
+                    )}
+                </div>
               )}
             </div>
           </div>

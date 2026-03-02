@@ -20,6 +20,13 @@ import { Button } from '../atoms/button.js';
 import { ChatMessage } from './chat-message.js';
 import { ShimmerLoader } from './shimmer.js';
 
+/** Per-message branch info keyed by message ID. */
+export interface BranchInfo {
+  branchIndex: number;
+  branchCount: number;
+  origId: string;
+}
+
 export function ChatMessageList({
   messages,
   emptyMessage = 'Start a conversation...',
@@ -28,6 +35,9 @@ export function ChatMessageList({
   onRegenerate,
   onThumbsUp,
   onThumbsDown,
+  branchInfoMap,
+  onPreviousBranch,
+  onNextBranch,
 }: {
   messages: UIMessage[];
   emptyMessage?: string;
@@ -40,6 +50,12 @@ export function ChatMessageList({
   onThumbsUp?: () => void;
   /** Called when the user clicks Thumbs Down on an assistant message. */
   onThumbsDown?: () => void;
+  /** Branch info keyed by message ID — provided by the parent managing branch state. */
+  branchInfoMap?: Map<string, BranchInfo>;
+  /** Called with the origId when the user navigates to the previous branch. */
+  onPreviousBranch?: (origId: string) => void;
+  /** Called with the origId when the user navigates to the next branch. */
+  onNextBranch?: (origId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -152,15 +168,24 @@ export function ChatMessageList({
               <p className="text-sm text-muted-foreground">{emptyMessage}</p>
             </div>
           ) : (
-            messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                onRegenerate={onRegenerate}
-                onThumbsUp={onThumbsUp}
-                onThumbsDown={onThumbsDown}
-              />
-            ))
+            messages.map((message) => {
+              const branchInfo = branchInfoMap?.get(message.id);
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onRegenerate={onRegenerate}
+                  onThumbsUp={onThumbsUp}
+                  onThumbsDown={onThumbsDown}
+                  branchIndex={branchInfo?.branchIndex}
+                  branchCount={branchInfo?.branchCount}
+                  onPreviousBranch={
+                    branchInfo ? () => onPreviousBranch?.(branchInfo.origId) : undefined
+                  }
+                  onNextBranch={branchInfo ? () => onNextBranch?.(branchInfo.origId) : undefined}
+                />
+              );
+            })
           )}
           {showShimmer && <ShimmerLoader />}
         </div>
