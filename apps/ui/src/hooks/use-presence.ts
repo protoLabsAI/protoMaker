@@ -21,11 +21,11 @@ import { getServerUrlSync, getApiKey, getSessionToken } from '@/lib/http-api-cli
 const logger = createLogger('usePresence');
 
 // ─── Thresholds ────────────────────────────────────────────────────────────────
-const IDLE_THRESHOLD_MS = 60_000;      // 60 s  → active  ➜ idle
-const AFK_THRESHOLD_MS = 5 * 60_000;  // 5 min → idle    ➜ afk
-const REPORT_INTERVAL_MS = 30_000;    // periodic full report cadence
-const ACTIVITY_CHECK_MS = 10_000;     // how often we evaluate the activity window
-const ACTIVITY_DEBOUNCE_MS = 500;     // debounce window for input events
+const IDLE_THRESHOLD_MS = 60_000; // 60 s  → active  ➜ idle
+const AFK_THRESHOLD_MS = 5 * 60_000; // 5 min → idle    ➜ afk
+const REPORT_INTERVAL_MS = 30_000; // periodic full report cadence
+const ACTIVITY_CHECK_MS = 10_000; // how often we evaluate the activity window
+const ACTIVITY_DEBOUNCE_MS = 500; // debounce window for input events
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type ActivityStatus = 'active' | 'idle' | 'afk';
@@ -127,8 +127,7 @@ export function usePresence(): void {
 
     // ── visibilitychange ───────────────────────────────────────────────────────
     const handleVisibilityChange = (): void => {
-      const next: TabVisibility =
-        document.visibilityState === 'visible' ? 'visible' : 'hidden';
+      const next: TabVisibility = document.visibilityState === 'visible' ? 'visible' : 'hidden';
       if (next !== tabVisibilityRef.current) {
         tabVisibilityRef.current = next;
         sendReport(['builtin:tab-visibility']);
