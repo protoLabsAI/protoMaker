@@ -34,29 +34,31 @@ function formatDuration(startedAt: string, completedAt?: string): string {
 }
 
 function RunStatusBadge({ status }: { status: AutomationRunStatus }) {
-  const configs: Record<AutomationRunStatus, { icon: React.ReactNode; label: string; cls: string }> =
-    {
-      success: {
-        icon: <CheckCircle2 className="w-3 h-3" />,
-        label: 'Success',
-        cls: 'text-green-500',
-      },
-      failure: {
-        icon: <XCircle className="w-3 h-3" />,
-        label: 'Failed',
-        cls: 'text-destructive',
-      },
-      running: {
-        icon: <Loader2 className="w-3 h-3 animate-spin" />,
-        label: 'Running',
-        cls: 'text-blue-500',
-      },
-      cancelled: {
-        icon: <XCircle className="w-3 h-3" />,
-        label: 'Cancelled',
-        cls: 'text-muted-foreground',
-      },
-    };
+  const configs: Record<
+    AutomationRunStatus,
+    { icon: React.ReactNode; label: string; cls: string }
+  > = {
+    success: {
+      icon: <CheckCircle2 className="w-3 h-3" />,
+      label: 'Success',
+      cls: 'text-green-500',
+    },
+    failure: {
+      icon: <XCircle className="w-3 h-3" />,
+      label: 'Failed',
+      cls: 'text-destructive',
+    },
+    running: {
+      icon: <Loader2 className="w-3 h-3 animate-spin" />,
+      label: 'Running',
+      cls: 'text-blue-500',
+    },
+    cancelled: {
+      icon: <XCircle className="w-3 h-3" />,
+      label: 'Cancelled',
+      cls: 'text-muted-foreground',
+    },
+  };
   const cfg = configs[status];
   return (
     <span className={cn('flex items-center gap-1 text-xs', cfg.cls)}>
@@ -90,8 +92,7 @@ export function AutomationHistoryPanel({ automationId, colSpan }: AutomationHist
         const data = await getAutomationHistory(automationId);
         if (!cancelled) setRuns(data.slice(0, 10));
       } catch (err) {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : 'Failed to load run history');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load run history');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -130,9 +131,7 @@ export function AutomationHistoryPanel({ automationId, colSpan }: AutomationHist
                   <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">
                     Status
                   </th>
-                  <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">
-                    Error
-                  </th>
+                  <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Error</th>
                   <th className="text-left px-3 py-1.5 text-muted-foreground font-medium w-16">
                     Trace
                   </th>
