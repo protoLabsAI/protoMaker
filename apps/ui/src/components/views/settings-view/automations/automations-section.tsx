@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Switch } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
@@ -16,6 +16,7 @@ import {
   XCircle,
   Loader2,
   Play,
+  History,
 } from 'lucide-react';
 import type { Automation, AutomationRunStatus } from '@protolabs-ai/types';
 import {
@@ -26,6 +27,7 @@ import {
   runAutomation,
 } from '@/lib/api';
 import { AutomationEditModal, type AutomationFormData } from './automation-edit-modal';
+import { AutomationHistoryPanel } from './automation-history-panel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -205,6 +207,7 @@ export function AutomationsSection() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
   const fetchAutomations = useCallback(async () => {
     try {
@@ -399,107 +402,125 @@ export function AutomationsSection() {
                   <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground">
                     Enabled
                   </th>
-                  <th className="w-24 px-4 py-2.5" />
+                  <th className="w-28 px-4 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
                 {automations.map((automation) => {
                   const isRunning = runningIds.has(automation.id);
+                  const isHistoryExpanded = expandedHistoryId === automation.id;
                   return (
-                    <tr
-                      key={automation.id}
-                      className={cn(
-                        'hover:bg-muted/20 transition-colors',
-                        !automation.enabled && 'opacity-60'
-                      )}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          {automation.isBuiltIn && (
-                            <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
-                          )}
-                          <span
-                            className="font-medium truncate max-w-[160px]"
-                            title={automation.name}
-                          >
-                            {automation.name}
-                          </span>
-                        </div>
-                        {automation.description && (
-                          <p className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[160px]">
-                            {automation.description}
-                          </p>
+                    <React.Fragment key={automation.id}>
+                      <tr
+                        className={cn(
+                          'hover:bg-muted/20 transition-colors',
+                          !automation.enabled && 'opacity-60'
                         )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <TriggerBadge automation={automation} />
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="font-mono text-xs text-muted-foreground truncate max-w-[140px] block">
-                          {automation.flowId}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-xs text-muted-foreground">
-                          {modelLabel(automation)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <div className="flex flex-col gap-0.5">
-                          <RunStatusBadge status={automation.lastRunStatus} />
-                          {automation.lastRunAt && (
-                            <span className="text-xs text-muted-foreground/60">
-                              {timeAgo(automation.lastRunAt)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Switch
-                          checked={automation.enabled}
-                          onCheckedChange={(checked: boolean) => handleToggle(automation, checked)}
-                          aria-label={`${automation.enabled ? 'Disable' : 'Enable'} ${automation.name}`}
-                        />
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleRunNow(automation)}
-                            disabled={isRunning}
-                            title="Run now"
-                          >
-                            {isRunning ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Play className="w-3.5 h-3.5" />
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {automation.isBuiltIn && (
+                              <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
                             )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleEdit(automation)}
-                            title="Edit automation"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          {!automation.isBuiltIn && (
+                            <span
+                              className="font-medium truncate max-w-[160px]"
+                              title={automation.name}
+                            >
+                              {automation.name}
+                            </span>
+                          </div>
+                          {automation.description && (
+                            <p className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[160px]">
+                              {automation.description}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <TriggerBadge automation={automation} />
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <span className="font-mono text-xs text-muted-foreground truncate max-w-[140px] block">
+                            {automation.flowId}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <span className="text-xs text-muted-foreground">
+                            {modelLabel(automation)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <div className="flex flex-col gap-0.5">
+                            <RunStatusBadge status={automation.lastRunStatus} />
+                            {automation.lastRunAt && (
+                              <span className="text-xs text-muted-foreground/60">
+                                {timeAgo(automation.lastRunAt)}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Switch
+                            checked={automation.enabled}
+                            onCheckedChange={(checked: boolean) =>
+                              handleToggle(automation, checked)
+                            }
+                            aria-label={`${automation.enabled ? 'Disable' : 'Enable'} ${automation.name}`}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(automation)}
-                              title="Delete automation"
+                              className={cn('h-7 w-7', isHistoryExpanded && 'text-brand-500')}
+                              onClick={() =>
+                                setExpandedHistoryId(isHistoryExpanded ? null : automation.id)
+                              }
+                              title="Toggle run history"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <History className="w-3.5 h-3.5" />
                             </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleRunNow(automation)}
+                              disabled={isRunning}
+                              title="Run now"
+                            >
+                              {isRunning ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5" />
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleEdit(automation)}
+                              title="Edit automation"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            {!automation.isBuiltIn && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(automation)}
+                                title="Delete automation"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isHistoryExpanded && (
+                        <AutomationHistoryPanel automationId={automation.id} colSpan={7} />
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
