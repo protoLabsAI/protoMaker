@@ -76,10 +76,11 @@ export class SensorRegistryService {
    * Record a data reading from a sensor.
    * The sensor must already be registered.
    */
-  report(input: {
-    sensorId: string;
-    data: Record<string, unknown>;
-  }): { success: boolean; reading?: SensorReading; error?: string } {
+  report(input: { sensorId: string; data: Record<string, unknown> }): {
+    success: boolean;
+    reading?: SensorReading;
+    error?: string;
+  } {
     const sensor = this.sensors.get(input.sensorId);
     if (!sensor) {
       return {
@@ -130,7 +131,9 @@ export class SensorRegistryService {
   /**
    * Get the config and latest reading for a single sensor.
    */
-  get(sensorId: string): { sensor: SensorConfig; reading?: SensorReading; state: SensorState } | undefined {
+  get(
+    sensorId: string
+  ): { sensor: SensorConfig; reading?: SensorReading; state: SensorState } | undefined {
     const sensor = this.sensors.get(sensorId);
     if (!sensor) return undefined;
 

@@ -29,7 +29,11 @@ export function createSensorRoutes(sensorRegistryService: SensorRegistryService)
         description?: string;
       };
 
-      const result = sensorRegistryService.register({ id: id ?? '', name: name ?? '', description });
+      const result = sensorRegistryService.register({
+        id: id ?? '',
+        name: name ?? '',
+        description,
+      });
 
       if (!result.success) {
         res.status(400).json({ success: false, error: result.error });
