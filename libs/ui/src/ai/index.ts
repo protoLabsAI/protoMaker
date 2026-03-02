@@ -61,6 +61,17 @@ export {
 
 export { AILoader, type AILoaderProps } from './loader.js';
 
+export {
+  PlanPart,
+  PlanPartToolRenderer,
+  extractPlanData,
+  type PlanPartProps,
+  type PlanData,
+  type PlanStep,
+  type PlanStatus,
+  type PlanStepStatus,
+} from './plan-part.js';
+
 export { ShimmerLoader, type ShimmerLoaderProps } from './shimmer.js';
 
 export { BoardSummaryCard } from './tool-results/board-summary-card.js';
