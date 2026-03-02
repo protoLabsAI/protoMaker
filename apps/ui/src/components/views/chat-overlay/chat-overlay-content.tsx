@@ -12,12 +12,14 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { History, X, Settings, ChevronUp, ChevronDown, SquarePen } from 'lucide-react';
+import { History, X, Settings, ChevronUp, ChevronDown, SquarePen, ListOrdered } from 'lucide-react';
 import {
   ChatMessageList,
   ChatInput,
   SuggestionList,
   PromptInputProvider,
+  QueueView,
+  type QueueItem,
 } from '@protolabs-ai/ui/ai';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
@@ -68,6 +70,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [queuePaused, setQueuePaused] = useState(false);
 
   const suggestions = useContextualSuggestions(features ?? []);
 
@@ -160,6 +164,17 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             variant="ghost"
             size="icon"
             className="size-7"
+            onClick={() => setQueueOpen((v) => !v)}
+            title="Feature queue"
+            aria-label="Toggle feature queue"
+            data-testid="queue-panel-toggle"
+          >
+            <ListOrdered className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
             onClick={handleNewChat}
             title="New chat"
             aria-label="New chat"
@@ -216,6 +231,17 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
       {/* Main content area */}
       <div className="flex min-h-0 flex-1">
+        {/* Queue panel — slide in from left */}
+        {queueOpen && (
+          <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 animate-in slide-in-from-left duration-200">
+            <QueueView
+              items={[]}
+              paused={queuePaused}
+              onTogglePause={() => setQueuePaused((v) => !v)}
+            />
+          </div>
+        )}
+
         {/* Conversation list panel — slide in from left */}
         {historyOpen && (
           <ConversationList
