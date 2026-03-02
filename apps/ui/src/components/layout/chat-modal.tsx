@@ -30,6 +30,10 @@ export function ChatModal() {
       <DialogContent
         showCloseButton={false}
         className="max-w-2xl h-[70vh] p-0 gap-0 overflow-hidden"
+        onOpenAutoFocus={(e: Event) => {
+          e.preventDefault();
+          document.querySelector<HTMLTextAreaElement>('[data-slot="chat-input"] textarea')?.focus();
+        }}
       >
         <DialogTitle className="sr-only">Ava Chat</DialogTitle>
         <ChatOverlayContent {...chatSession} onHide={handleClose} isModal />

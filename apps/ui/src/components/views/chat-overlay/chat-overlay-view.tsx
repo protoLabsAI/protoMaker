@@ -42,6 +42,9 @@ export function ChatOverlayView() {
     const cleanup = bridge.onOverlayDidShow(() => {
       isHidingRef.current = false;
       setAnimClass('animate-in slide-in-from-top-2 fade-in duration-200');
+      requestAnimationFrame(() => {
+        document.querySelector<HTMLTextAreaElement>('[data-slot="chat-input"] textarea')?.focus();
+      });
     });
     return cleanup;
   }, []);
