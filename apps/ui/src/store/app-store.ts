@@ -78,6 +78,7 @@ export interface AppState {
   enableDependencyBlocking: boolean; // When true, show blocked badges and warnings for features with incomplete dependencies (default: true)
   skipVerificationInAutoMode: boolean; // When true, auto-mode grabs features even if dependencies are not verified (only checks they're not running)
   enableAiCommitMessages: boolean; // When true, auto-generate commit messages using AI when opening commit dialog
+  systemMaxConcurrency: number; // User-configurable system-wide maximum concurrent agents (default: 10)
   planUseSelectedWorktreeBranch: boolean; // When true, Plan dialog creates features on the currently selected worktree branch
   addFeatureUseSelectedWorktreeBranch: boolean; // When true, Add Feature dialog defaults to custom mode with selected worktree branch
 
@@ -227,6 +228,7 @@ export interface AppActions {
   setEnableDependencyBlocking: (enabled: boolean) => void;
   setSkipVerificationInAutoMode: (enabled: boolean) => Promise<void>;
   setEnableAiCommitMessages: (enabled: boolean) => Promise<void>;
+  setSystemMaxConcurrency: (max: number) => void;
   setPlanUseSelectedWorktreeBranch: (enabled: boolean) => Promise<void>;
   setAddFeatureUseSelectedWorktreeBranch: (enabled: boolean) => Promise<void>;
 
@@ -334,6 +336,7 @@ const initialState: AppState = {
   enableDependencyBlocking: true, // Default to enabled (show dependency blocking UI)
   skipVerificationInAutoMode: false, // Default to disabled (require dependencies to be verified)
   enableAiCommitMessages: true, // Default to enabled (auto-generate commit messages)
+  systemMaxConcurrency: 10, // Default to 10 concurrent agents (user-configurable)
   planUseSelectedWorktreeBranch: true, // Default to enabled (Plan creates features on selected worktree branch)
   addFeatureUseSelectedWorktreeBranch: false, // Default to disabled (Add Feature uses normal defaults)
   keyboardShortcuts: DEFAULT_KEYBOARD_SHORTCUTS, // Default keyboard shortcuts
@@ -988,6 +991,7 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   // Feature Default Settings actions
   setDefaultSkipTests: (skip) => set({ defaultSkipTests: skip }),
   setEnableDependencyBlocking: (enabled) => set({ enableDependencyBlocking: enabled }),
+  setSystemMaxConcurrency: (max) => set({ systemMaxConcurrency: max }),
   setSkipVerificationInAutoMode: async (enabled) => {
     set({ skipVerificationInAutoMode: enabled });
     // Sync to server settings file
