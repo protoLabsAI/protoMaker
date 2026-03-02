@@ -94,6 +94,27 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     getOverlayAPI()?.resizeOverlay?.(next ? OVERLAY_HEIGHT_EXPANDED : OVERLAY_HEIGHT_DEFAULT);
   }, [expanded]);
 
+  // Regenerate: re-send the last user message text
+  const handleRegenerate = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+    if (lastUserMsg) {
+      const text = (lastUserMsg.parts ?? [])
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('');
+      if (text) sendMessage({ text });
+    }
+  }, [messages, sendMessage]);
+
+  // Thumbs up/down — no-op placeholders; wire to telemetry or feedback API as needed
+  const handleThumbsUp = useCallback(() => {
+    // Positive feedback placeholder
+  }, []);
+
+  const handleThumbsDown = useCallback(() => {
+    // Negative feedback placeholder
+  }, []);
+
   const shortcutHint = isModal ? '\u2318K to close' : 'Esc to hide';
 
   // Escape key: close history panel if open, otherwise hide the overlay
@@ -216,7 +237,14 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
         {/* Chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <ChatMessageList messages={messages} emptyMessage="Ask Ava anything..." />
+          <ChatMessageList
+            messages={messages}
+            emptyMessage="Ask Ava anything..."
+            isStreaming={isStreaming}
+            onRegenerate={handleRegenerate}
+            onThumbsUp={handleThumbsUp}
+            onThumbsDown={handleThumbsDown}
+          />
 
           {/* Contextual suggestions — shown only when no messages in current session */}
           {messages.length === 0 && (
