@@ -51,3 +51,8 @@ export async function deleteAutomation(id: string): Promise<void> {
   const res = await apiFetch(`/api/automations/${id}`, 'DELETE');
   if (!res.ok) throw new Error(`Failed to delete automation: ${res.status}`);
 }
+
+export async function runAutomation(id: string): Promise<void> {
+  const res = await apiFetch(`/api/automations/${id}/run`, 'POST');
+  if (!res.ok) throw new Error(`Failed to run automation: ${res.status}`);
+}

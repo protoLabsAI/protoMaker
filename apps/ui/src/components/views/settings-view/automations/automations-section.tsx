@@ -15,19 +15,118 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Play,
 } from 'lucide-react';
 import type { Automation, AutomationRunStatus } from '@protolabs-ai/types';
-import { listAutomations, createAutomation, updateAutomation, deleteAutomation } from '@/lib/api';
+import {
+  listAutomations,
+  createAutomation,
+  updateAutomation,
+  deleteAutomation,
+  runAutomation,
+} from '@/lib/api';
 import { AutomationEditModal, type AutomationFormData } from './automation-edit-modal';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function cronToHuman(expression: string): string {
+  const parts = expression.trim().split(/\s+/);
+  if (parts.length !== 5) return expression;
+
+  const [min, hour, dom, month, dow] = parts;
+
+  if (expression.trim() === '* * * * *') return 'Every minute';
+
+  const minStep = min.match(/^\*\/(\d+)$/);
+  if (minStep && hour === '*' && dom === '*' && month === '*' && dow === '*') {
+    return `Every ${minStep[1]} minutes`;
+  }
+
+  if (hour === '*' && dom === '*' && month === '*' && dow === '*') {
+    const m = parseInt(min, 10);
+    if (!isNaN(m)) return m === 0 ? 'Every hour' : `Every hour at :${String(m).padStart(2, '0')}`;
+  }
+
+  const hourStep = hour.match(/^\*\/(\d+)$/);
+  if (hourStep && dom === '*' && month === '*' && dow === '*') {
+    return `Every ${hourStep[1]} hours`;
+  }
+
+  const h = parseInt(hour, 10);
+  const m = parseInt(min, 10);
+  const timeStr =
+    !isNaN(h) && !isNaN(m) ? `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` : null;
+
+  if (dom === '*' && month === '*' && dow === '*' && timeStr) {
+    return `Daily at ${timeStr}`;
+  }
+
+  if (dom === '*' && month === '*' && /^\d$/.test(dow)) {
+    const dayName = DAYS[parseInt(dow, 10)] ?? `day ${dow}`;
+    return timeStr ? `Every ${dayName} at ${timeStr}` : `Every ${dayName}`;
+  }
+
+  if (month === '*' && dow === '*' && /^\d+$/.test(dom)) {
+    const day = parseInt(dom, 10);
+    const suffix = day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th';
+    return timeStr
+      ? `Monthly on the ${day}${suffix} at ${timeStr}`
+      : `Monthly on the ${day}${suffix}`;
+  }
+
+  return expression;
+}
+
+function timeAgo(isoString: string): string {
+  const diffMs = Date.now() - new Date(isoString).getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}h ago`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  const diffMonth = Math.floor(diffDay / 30);
+  if (diffMonth < 12) return `${diffMonth}mo ago`;
+  return `${Math.floor(diffMonth / 12)}y ago`;
+}
+
+function timeFromNow(isoString: string): string {
+  const diffMs = new Date(isoString).getTime() - Date.now();
+  if (diffMs <= 0) return 'overdue';
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return 'in <1m';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `in ${diffMin}m`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `in ${diffHour}h`;
+  return `in ${Math.floor(diffHour / 24)}d`;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
 function TriggerBadge({ automation }: { automation: Automation }) {
   const { trigger } = automation;
   if (trigger.type === 'cron') {
     return (
-      <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-        <Clock className="w-3 h-3" />
-        {trigger.expression}
-      </span>
+      <div className="flex flex-col gap-0.5">
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="w-3 h-3 shrink-0" />
+          {cronToHuman(trigger.expression)}
+        </span>
+        {automation.nextRunAt && (
+          <span className="text-xs text-muted-foreground/60 pl-4">
+            {timeFromNow(automation.nextRunAt)}
+          </span>
+        )}
+      </div>
     );
   }
   if (trigger.type === 'event') {
@@ -95,12 +194,17 @@ function modelLabel(automation: Automation): string {
   return m;
 }
 
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
 export function AutomationsSection() {
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null);
+  const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
 
   const fetchAutomations = useCallback(async () => {
     try {
@@ -123,6 +227,8 @@ export function AutomationsSection() {
   const knownFlowIds = useMemo(() => {
     return Array.from(new Set(automations.map((a) => a.flowId).filter(Boolean)));
   }, [automations]);
+
+  const enabledCount = useMemo(() => automations.filter((a) => a.enabled).length, [automations]);
 
   const handleToggle = async (automation: Automation, enabled: boolean) => {
     // Optimistic update
@@ -156,6 +262,22 @@ export function AutomationsSection() {
     } catch (err) {
       console.error('Failed to delete automation:', err);
       await fetchAutomations();
+    }
+  };
+
+  const handleRunNow = async (automation: Automation) => {
+    setRunningIds((prev) => new Set(prev).add(automation.id));
+    try {
+      await runAutomation(automation.id);
+      await fetchAutomations();
+    } catch (err) {
+      console.error('Failed to run automation:', err);
+    } finally {
+      setRunningIds((prev) => {
+        const next = new Set(prev);
+        next.delete(automation.id);
+        return next;
+      });
     }
   };
 
@@ -214,7 +336,14 @@ export function AutomationsSection() {
             <div>
               <h2 className="text-lg font-semibold text-foreground tracking-tight">Automations</h2>
               <p className="text-sm text-muted-foreground/80">
-                Trigger-based automations that run flows on schedule or in response to events
+                {loading ? (
+                  'Trigger-based automations that run flows on schedule or in response to events'
+                ) : (
+                  <>
+                    {enabledCount}/{automations.length} enabled &middot; trigger-based automations
+                    that run flows on schedule or in response to events
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -270,85 +399,109 @@ export function AutomationsSection() {
                   <th className="text-right px-4 py-2.5 text-xs font-medium text-muted-foreground">
                     Enabled
                   </th>
-                  <th className="w-20 px-4 py-2.5" />
+                  <th className="w-24 px-4 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {automations.map((automation) => (
-                  <tr
-                    key={automation.id}
-                    className={cn(
-                      'hover:bg-muted/20 transition-colors',
-                      !automation.enabled && 'opacity-60'
-                    )}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        {automation.isBuiltIn && (
-                          <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
-                        )}
-                        <span
-                          className="font-medium truncate max-w-[160px]"
-                          title={automation.name}
-                        >
-                          {automation.name}
-                        </span>
-                      </div>
-                      {automation.description && (
-                        <p className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[160px]">
-                          {automation.description}
-                        </p>
+                {automations.map((automation) => {
+                  const isRunning = runningIds.has(automation.id);
+                  return (
+                    <tr
+                      key={automation.id}
+                      className={cn(
+                        'hover:bg-muted/20 transition-colors',
+                        !automation.enabled && 'opacity-60'
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <TriggerBadge automation={automation} />
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="font-mono text-xs text-muted-foreground truncate max-w-[140px] block">
-                        {automation.flowId}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-xs text-muted-foreground">
-                        {modelLabel(automation)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <RunStatusBadge status={automation.lastRunStatus} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Switch
-                        checked={automation.enabled}
-                        onCheckedChange={(checked: boolean) => handleToggle(automation, checked)}
-                        aria-label={`${automation.enabled ? 'Disable' : 'Enable'} ${automation.name}`}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleEdit(automation)}
-                          title="Edit automation"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        {!automation.isBuiltIn && (
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          {automation.isBuiltIn && (
+                            <Lock className="w-3 h-3 text-muted-foreground shrink-0" />
+                          )}
+                          <span
+                            className="font-medium truncate max-w-[160px]"
+                            title={automation.name}
+                          >
+                            {automation.name}
+                          </span>
+                        </div>
+                        {automation.description && (
+                          <p className="text-xs text-muted-foreground/70 mt-0.5 truncate max-w-[160px]">
+                            {automation.description}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <TriggerBadge automation={automation} />
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className="font-mono text-xs text-muted-foreground truncate max-w-[140px] block">
+                          {automation.flowId}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="text-xs text-muted-foreground">
+                          {modelLabel(automation)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <div className="flex flex-col gap-0.5">
+                          <RunStatusBadge status={automation.lastRunStatus} />
+                          {automation.lastRunAt && (
+                            <span className="text-xs text-muted-foreground/60">
+                              {timeAgo(automation.lastRunAt)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Switch
+                          checked={automation.enabled}
+                          onCheckedChange={(checked: boolean) => handleToggle(automation, checked)}
+                          aria-label={`${automation.enabled ? 'Disable' : 'Enable'} ${automation.name}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => handleDelete(automation)}
-                            title="Delete automation"
+                            className="h-7 w-7"
+                            onClick={() => handleRunNow(automation)}
+                            disabled={isRunning}
+                            title="Run now"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            {isRunning ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Play className="w-3.5 h-3.5" />
+                            )}
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleEdit(automation)}
+                            title="Edit automation"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          {!automation.isBuiltIn && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(automation)}
+                              title="Delete automation"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
