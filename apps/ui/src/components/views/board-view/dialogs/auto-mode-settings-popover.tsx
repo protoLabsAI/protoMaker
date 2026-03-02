@@ -146,8 +146,8 @@ export function AutoModeSettingsPopover({
               <div className="flex items-start gap-1.5 text-[10px] text-amber-500">
                 <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
                 <span>
-                  System limit: {systemMaxConcurrency} concurrent agents. Set{' '}
-                  AUTOMAKER_MAX_CONCURRENCY to increase.
+                  System limit: {systemMaxConcurrency} concurrent agents. Increase in Settings
+                  &rsaquo; Defaults.
                 </span>
               </div>
             )}

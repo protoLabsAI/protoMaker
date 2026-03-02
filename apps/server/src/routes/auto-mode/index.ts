@@ -39,7 +39,11 @@ export function createAutoModeRoutes(
   router.post('/stop', validatePathParams('projectPath'), createStopHandler(autoModeService));
 
   router.post('/stop-feature', createStopFeatureHandler(autoModeService));
-  router.post('/status', validatePathParams('projectPath?'), createStatusHandler(autoModeService));
+  router.post(
+    '/status',
+    validatePathParams('projectPath?'),
+    createStatusHandler(autoModeService, settingsService)
+  );
   router.post(
     '/run-feature',
     validatePathParams('projectPath'),

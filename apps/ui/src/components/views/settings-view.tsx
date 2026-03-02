@@ -68,6 +68,8 @@ export function SettingsView() {
     setDefaultFeatureModel,
     promptCustomization,
     setPromptCustomization,
+    systemMaxConcurrency,
+    setSystemMaxConcurrency,
   } = useAppStore();
   const { skipSandboxWarning, setSkipSandboxWarning } = useAIModelsStore();
   const { theme, setTheme } = useThemeStore();
@@ -157,6 +159,7 @@ export function SettingsView() {
             defaultRequirePlanApproval={defaultRequirePlanApproval}
             enableAiCommitMessages={enableAiCommitMessages}
             defaultFeatureModel={defaultFeatureModel}
+            systemMaxConcurrency={systemMaxConcurrency}
             onDefaultSkipTestsChange={setDefaultSkipTests}
             onEnableDependencyBlockingChange={setEnableDependencyBlocking}
             onSkipVerificationInAutoModeChange={setSkipVerificationInAutoMode}
@@ -164,6 +167,7 @@ export function SettingsView() {
             onDefaultRequirePlanApprovalChange={setDefaultRequirePlanApproval}
             onEnableAiCommitMessagesChange={setEnableAiCommitMessages}
             onDefaultFeatureModelChange={setDefaultFeatureModel}
+            onSystemMaxConcurrencyChange={setSystemMaxConcurrency}
           />
         );
       case 'worktrees':

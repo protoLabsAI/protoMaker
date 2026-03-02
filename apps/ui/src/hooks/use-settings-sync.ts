@@ -49,6 +49,7 @@ const SETTINGS_FIELDS_TO_SYNC = [
   'openTerminalMode', // Maps to terminalState.openTerminalMode
   'sidebarOpen',
   'maxConcurrency',
+  'systemMaxConcurrency',
   'autoModeByWorktree', // Per-worktree auto mode settings (only maxConcurrency is persisted)
   'defaultSkipTests',
   'enableDependencyBlocking',
@@ -800,6 +801,7 @@ export async function refreshSettingsFromServer(): Promise<boolean> {
       defaultSkipTests: serverSettings.defaultSkipTests,
       enableDependencyBlocking: serverSettings.enableDependencyBlocking,
       skipVerificationInAutoMode: serverSettings.skipVerificationInAutoMode,
+      systemMaxConcurrency: serverSettings.systemMaxConcurrency ?? 10,
       defaultPlanningMode: serverSettings.defaultPlanningMode,
       defaultRequirePlanApproval: serverSettings.defaultRequirePlanApproval,
       defaultFeatureModel: serverSettings.defaultFeatureModel

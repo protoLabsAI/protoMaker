@@ -274,6 +274,8 @@ export interface GlobalSettings {
   // Feature Generation Defaults
   /** Max features to generate concurrently */
   maxConcurrency: number;
+  /** User-configurable system-wide maximum concurrent agents (overrides env var default) */
+  systemMaxConcurrency?: number;
   /** Default: skip tests during feature generation */
   defaultSkipTests: boolean;
   /** Default: enable dependency blocking */
@@ -661,6 +663,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   theme: 'dark',
   sidebarOpen: true,
   maxConcurrency: DEFAULT_MAX_CONCURRENCY,
+  systemMaxConcurrency: 10,
   defaultSkipTests: true,
   enableDependencyBlocking: true,
   skipVerificationInAutoMode: false,
