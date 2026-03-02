@@ -23,7 +23,7 @@ const EDGE_LEGEND = [
           y1="4"
           x2="28"
           y2="4"
-          stroke="oklch(0.65 0.2 290 / 0.5)"
+          stroke="var(--flow-edge-delegation-color)"
           strokeWidth="1.5"
           strokeDasharray="4 3"
         />
@@ -34,8 +34,15 @@ const EDGE_LEGEND = [
     label: 'Workflow',
     render: () => (
       <svg width="28" height="8" className="shrink-0">
-        <line x1="0" y1="4" x2="28" y2="4" stroke="oklch(0.6 0.18 275 / 0.5)" strokeWidth="1.5" />
-        <circle r="2.5" fill="oklch(0.7 0.2 275)" opacity={0.8}>
+        <line
+          x1="0"
+          y1="4"
+          x2="28"
+          y2="4"
+          stroke="var(--flow-edge-workflow-color)"
+          strokeWidth="1.5"
+        />
+        <circle r="2.5" fill="var(--flow-edge-workflow-dot)" opacity={0.8}>
           <animateMotion dur="1.5s" repeatCount="indefinite" path="M0,4 L28,4" />
         </circle>
       </svg>
@@ -45,7 +52,14 @@ const EDGE_LEGEND = [
     label: 'Integration',
     render: () => (
       <svg width="28" height="8" className="shrink-0">
-        <line x1="0" y1="4" x2="28" y2="4" stroke="oklch(0.7 0.17 155 / 0.5)" strokeWidth="1" />
+        <line
+          x1="0"
+          y1="4"
+          x2="28"
+          y2="4"
+          stroke="var(--flow-edge-integration-color)"
+          strokeWidth="1"
+        />
       </svg>
     ),
   },
@@ -58,7 +72,7 @@ const EDGE_LEGEND = [
           y1="4"
           x2="28"
           y2="4"
-          stroke="oklch(0.65 0.15 250 / 0.4)"
+          stroke="var(--flow-edge-pipeline-color)"
           strokeWidth="1"
           strokeDasharray="2 2"
         />

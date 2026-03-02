@@ -91,7 +91,7 @@ export function FlowGraphCanvas({
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          color="oklch(0.4 0 0 / 0.15)"
+          color="var(--flow-canvas-dot-color)"
         />
         <Controls
           showInteractive={false}

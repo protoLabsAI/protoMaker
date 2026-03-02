@@ -36,7 +36,9 @@ function FlowEdgeComponent({
 
   const edgeData = data as FlowEdgeData | undefined;
   const isConditional = edgeData?.isConditional ?? false;
-  const strokeColor = isConditional ? 'oklch(0.65 0.18 40)' : 'oklch(0.65 0.2 290)';
+  const strokeColor = isConditional
+    ? 'var(--flow-edge-conditional-color)'
+    : 'var(--flow-edge-standard-color)';
 
   return (
     <>

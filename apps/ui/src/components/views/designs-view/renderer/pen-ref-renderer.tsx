@@ -50,10 +50,10 @@ export function PenRefRenderer({ node, onClick, style: externalStyle }: PenRefRe
       <div
         style={{
           padding: '8px',
-          background: '#fff3cd',
-          border: '1px dashed #ffc107',
+          background: 'var(--pen-ref-missing-bg)',
+          border: '1px dashed var(--pen-ref-missing-border)',
           borderRadius: '4px',
-          color: '#856404',
+          color: 'var(--pen-ref-missing-text)',
           ...externalStyle,
         }}
         data-node-id={node.id}

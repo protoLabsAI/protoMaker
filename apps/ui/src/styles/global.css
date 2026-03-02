@@ -35,6 +35,37 @@
   :root {
     /* Fallback to 100vh when not set by JS (desktop or unsupported browsers) */
     --visual-viewport-height: 100vh;
+
+    /* Flow graph node state tokens */
+    --flow-node-active-bg: oklch(0.55 0.25 290);
+    --flow-node-completed-bg: oklch(0.62 0.2 145);
+    --flow-node-pending-bg: oklch(0.37 0 0);
+    --flow-node-active-border: oklch(0.67 0.21 290);
+    --flow-node-pending-border: oklch(0.45 0 0);
+    --flow-node-active-shadow: oklch(0.55 0.2 290 / 0.5);
+
+    /* Flow graph edge color tokens */
+    --flow-edge-delegation-color: oklch(0.65 0.2 290 / 0.5);
+    --flow-edge-workflow-color: oklch(0.6 0.18 275 / 0.5);
+    --flow-edge-workflow-dot: oklch(0.7 0.2 275);
+    --flow-edge-integration-color: oklch(0.7 0.17 155 / 0.5);
+    --flow-edge-pipeline-color: oklch(0.65 0.15 250 / 0.4);
+    --flow-edge-conditional-color: oklch(0.65 0.18 40);
+    --flow-edge-standard-color: oklch(0.65 0.2 290);
+
+    /* Flow canvas background token */
+    --flow-canvas-dot-color: oklch(0.4 0 0 / 0.15);
+
+    /* Code editor selection token */
+    --editor-selection-bg: oklch(0.55 0.25 265 / 0.3);
+
+    /* Pen renderer placeholder/state tokens */
+    --pen-ref-missing-bg: oklch(0.97 0.05 85);
+    --pen-ref-missing-border: oklch(0.78 0.15 80);
+    --pen-ref-missing-text: oklch(0.5 0.12 75);
+    --pen-node-placeholder-bg: oklch(0.95 0 0);
+    --pen-node-placeholder-border: oklch(0.8 0 0);
+    --pen-node-selection-outline: oklch(0.6 0.2 245);
   }
 
   /* Apply monospace font to code elements */

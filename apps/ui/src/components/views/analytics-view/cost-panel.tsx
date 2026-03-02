@@ -9,12 +9,18 @@ interface CostPanelProps {
 }
 
 const MODEL_COLORS: Record<string, string> = {
-  sonnet: '#8b5cf6',
-  opus: '#f59e0b',
-  haiku: '#10b981',
+  sonnet: 'var(--chart-4)',
+  opus: 'var(--chart-1)',
+  haiku: 'var(--chart-2)',
 };
 
-const FALLBACK_COLORS = ['#6366f1', '#ec4899', '#06b6d4', '#f97316', '#84cc16'];
+const FALLBACK_COLORS = [
+  'var(--chart-1)',
+  'var(--chart-5)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+];
 
 function getModelColor(model: string, index: number): string {
   const key = model.toLowerCase();

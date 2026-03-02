@@ -67,7 +67,7 @@ const editorTheme = EditorView.theme({
     borderLeftColor: 'var(--primary)',
   },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
-    backgroundColor: 'oklch(0.55 0.25 265 / 0.3)',
+    backgroundColor: 'var(--editor-selection-bg)',
   },
   '.cm-activeLine': {
     backgroundColor: 'transparent',

@@ -36,7 +36,7 @@ export function PenNodeRenderer({ node }: PenNodeRendererProps) {
   // Wrapper style for selection outline
   const wrapperStyle = isSelected
     ? {
-        outline: '2px solid #3b82f6',
+        outline: '2px solid var(--pen-node-selection-outline)',
         outlineOffset: '2px',
       }
     : undefined;
@@ -68,8 +68,8 @@ export function PenNodeRenderer({ node }: PenNodeRendererProps) {
           onClick={handleClick}
           style={{
             padding: '8px',
-            background: '#f0f0f0',
-            border: '1px dashed #ccc',
+            background: 'var(--pen-node-placeholder-bg)',
+            border: '1px dashed var(--pen-node-placeholder-border)',
             borderRadius: '4px',
             ...wrapperStyle,
           }}

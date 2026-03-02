@@ -106,11 +106,17 @@ export function FlowDetailPanel({ graphId, featureId, onClose }: FlowDetailPanel
         style: {
           ...node.style,
           opacity: isCompleted ? 0.5 : 1,
-          backgroundColor: isActive ? '#8b5cf6' : isCompleted ? '#22c55e' : '#3f3f46',
+          backgroundColor: isActive
+            ? 'var(--flow-node-active-bg)'
+            : isCompleted
+              ? 'var(--flow-node-completed-bg)'
+              : 'var(--flow-node-pending-bg)',
           color: 'white',
-          borderColor: isActive ? '#a78bfa' : '#52525b',
+          borderColor: isActive
+            ? 'var(--flow-node-active-border)'
+            : 'var(--flow-node-pending-border)',
           borderWidth: isActive ? 2 : 1,
-          boxShadow: isActive ? '0 0 20px rgba(139, 92, 246, 0.5)' : undefined,
+          boxShadow: isActive ? '0 0 20px var(--flow-node-active-shadow)' : undefined,
         },
       };
     });
@@ -233,7 +239,7 @@ export function FlowDetailPanel({ graphId, featureId, onClose }: FlowDetailPanel
               >
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-violet-600 border-2 border-violet-400 shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
+                    <div className="w-3 h-3 rounded-full bg-violet-600 border-2 border-violet-400 shadow-[0_0_10px_var(--flow-node-active-shadow)]" />
                     <span className="text-muted-foreground">Active</span>
                   </div>
                   <div className="flex items-center gap-2">
