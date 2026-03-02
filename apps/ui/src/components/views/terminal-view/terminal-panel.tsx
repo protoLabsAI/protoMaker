@@ -1737,8 +1737,8 @@ export function TerminalPanel({
     >
       {/* Drop indicator overlay */}
       {isOver && isDropTarget && (
-        <div className="absolute inset-0 bg-green-500/10 z-10 pointer-events-none flex items-center justify-center">
-          <div className="px-3 py-2 bg-green-500/90 rounded-md text-white text-sm font-medium">
+        <div className="absolute inset-0 bg-status-success/10 z-10 pointer-events-none flex items-center justify-center">
+          <div className="px-3 py-2 bg-status-success/90 rounded-md text-white text-sm font-medium">
             Drop to swap
           </div>
         </div>
@@ -1746,8 +1746,8 @@ export function TerminalPanel({
 
       {/* Image drop overlay */}
       {isImageDragOver && (
-        <div className="absolute inset-0 bg-blue-500/20 z-20 pointer-events-none flex items-center justify-center border-2 border-dashed border-blue-400 rounded">
-          <div className="flex flex-col items-center gap-2 px-4 py-3 bg-blue-500/90 rounded-md text-white">
+        <div className="absolute inset-0 bg-status-info/20 z-20 pointer-events-none flex items-center justify-center border-2 border-dashed border-blue-400 rounded">
+          <div className="flex flex-col items-center gap-2 px-4 py-3 bg-status-info/90 rounded-md text-white">
             {isProcessingImage ? (
               <>
                 <Spinner size="lg" />
@@ -1804,7 +1804,7 @@ export function TerminalPanel({
             </button>
           )}
           {connectionStatus === 'reconnecting' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-500 flex items-center gap-1">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-status-warning/20 text-yellow-500 flex items-center gap-1">
               <Spinner size="xs" />
               Reconnecting...
             </span>
@@ -1824,8 +1824,8 @@ export function TerminalPanel({
               className={cn(
                 'text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1',
                 processExitCode === 0
-                  ? 'bg-green-500/20 text-green-500'
-                  : 'bg-yellow-500/20 text-yellow-500'
+                  ? 'bg-status-success/20 text-green-500'
+                  : 'bg-status-warning/20 text-yellow-500'
               )}
             >
               Exited ({processExitCode})
