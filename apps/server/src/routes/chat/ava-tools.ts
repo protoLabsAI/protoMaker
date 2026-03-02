@@ -19,6 +19,7 @@ import type { EventEmitter } from 'events';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { AgentService } from '../../services/agent-service.js';
+import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
 
 // ---------------------------------------------------------------------------
 // Plan types
@@ -48,6 +49,8 @@ export interface AvaToolsServices {
   agentService: AgentService;
   /** Optional event emitter used for board-write change notifications */
   events?: EventEmitter;
+  /** Optional sensor registry — required for get_presence_state tool */
+  sensorRegistryService?: SensorRegistryService;
 }
 
 export interface AvaToolsConfig {
@@ -63,6 +66,11 @@ export interface AvaToolsConfig {
   projectMgmt?: boolean;
   /** Enable orchestration tools (get_execution_order, set_feature_dependencies) */
   orchestration?: boolean;
+  /**
+   * When true, register the get_presence_state tool in the boardRead group.
+   * Only meaningful when the userPresenceDetection feature flag is enabled.
+   */
+  userPresenceDetection?: boolean;
   /**
    * Pre-approved destructive tool calls (HITL flow).
    * Each entry contains the tool name and a stable JSON hash of the input args.
@@ -253,6 +261,45 @@ export function buildAvaTools(
         return { title, ...planData };
       },
     });
+
+    // get_presence_state — only registered when userPresenceDetection flag is enabled
+    if (config.userPresenceDetection && services.sensorRegistryService) {
+      const sensorRegistry = services.sensorRegistryService;
+      tools['get_presence_state'] = makeTool({
+        description:
+          'Return the current user presence state and the list of active sensors. ' +
+          'Presence state is derived from the builtin:user-activity sensor and indicates ' +
+          'whether the user is active, idle, afk, or headless (no browser connected).',
+        inputSchema: z.object({}),
+        execute: async () => {
+          const userActivityEntry = sensorRegistry.get('builtin:user-activity');
+
+          let presenceStatus: string;
+          if (!userActivityEntry || userActivityEntry.state === 'offline') {
+            presenceStatus = 'headless';
+          } else {
+            const status = userActivityEntry.reading?.data?.status as string | undefined;
+            if (status === 'afk' || status === 'idle' || status === 'active') {
+              presenceStatus = status;
+            } else {
+              presenceStatus = 'headless';
+            }
+          }
+
+          const activeSensors = sensorRegistry
+            .getAll()
+            .filter((entry) => entry.state === 'active')
+            .map((entry) => ({
+              id: entry.sensor.id,
+              name: entry.sensor.name,
+              state: entry.state,
+              lastSeenAt: entry.sensor.lastSeenAt,
+            }));
+
+          return { presenceStatus, activeSensors };
+        },
+      });
+    }
   }
 
   // -----------------------------------------------------------------------

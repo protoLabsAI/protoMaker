@@ -86,6 +86,7 @@ import { FactStoreService } from '../services/fact-store-service.js';
 import { TrajectoryStoreService } from '../services/trajectory-store-service.js';
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
 import { ChannelRouter } from '../services/channel-router.js';
+import { NotificationRouter } from '../services/notification-router.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -180,6 +181,7 @@ export interface ServiceContainer {
   // Dev server & notifications
   devServerService: ReturnType<typeof getDevServerService>;
   notificationService: ReturnType<typeof getNotificationService>;
+  notificationRouter: NotificationRouter;
   actionableItemService: ReturnType<typeof getActionableItemService>;
   actionableItemBridge: ActionableItemBridgeService;
   integrityWatchdogService: DataIntegrityWatchdogService;
@@ -582,6 +584,32 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     { pm: pmAgent, projm: projmAgent, em: emAgent }
   );
 
+  // Notification Router — presence-aware routing for completion/failure/HITL events.
+  // Reads userPresenceDetection flag from settings; discord DM recipients from
+  // DISCORD_DM_RECIPIENTS env var (comma-separated usernames).
+  // Subscribes to feature:completed, feature:error, and hitl:form-requested in its constructor.
+  let presenceEnabled = false;
+  try {
+    const globalSettings = await settingsService.getGlobalSettings();
+    presenceEnabled = globalSettings.featureFlags?.userPresenceDetection ?? false;
+  } catch {
+    // Settings unavailable — safe default
+  }
+  const discordDmRecipientsEnv = process.env.DISCORD_DM_RECIPIENTS ?? '';
+  const discordDmRecipients = discordDmRecipientsEnv
+    ? discordDmRecipientsEnv
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  const notificationRouter = new NotificationRouter(
+    sensorRegistryService,
+    notificationService,
+    events,
+    discordBotService,
+    { enabled: presenceEnabled, discordRecipients: discordDmRecipients }
+  );
+
   // Issue Management Pipeline (failure → triage → GitHub issue → Discord)
   const triageService = new TriageService(events);
   const issueCreationService = new IssueCreationService(
@@ -717,6 +745,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     antagonisticReviewService,
     devServerService,
     notificationService,
+    notificationRouter,
     actionableItemService,
     actionableItemBridge,
     integrityWatchdogService,

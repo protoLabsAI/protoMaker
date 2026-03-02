@@ -264,6 +264,14 @@ export function createChatRoutes(services: ServiceContainer): Router {
       // Build tool set for this request — gated by per-project toolGroups config.
       // approvedActions carries pre-approved destructive-tool call identifiers for
       // the HITL confirmation flow.
+      // Read the userPresenceDetection flag from global settings (non-blocking fallback to false).
+      let userPresenceDetection = false;
+      try {
+        const globalSettings = await services.settingsService.getGlobalSettings();
+        userPresenceDetection = globalSettings.featureFlags?.userPresenceDetection ?? false;
+      } catch {
+        // Settings unavailable — safe default (flag disabled)
+      }
       const tools = projectPath
         ? buildAvaTools(
             projectPath,
@@ -271,9 +279,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
               featureLoader: services.featureLoader,
               autoModeService: services.autoModeService,
               agentService: services.agentService,
+              sensorRegistryService: userPresenceDetection
+                ? services.sensorRegistryService
+                : undefined,
             },
             {
               ...avaConfig.toolGroups,
+              userPresenceDetection,
               approvedActions: approvedActions ?? [],
             }
           )
