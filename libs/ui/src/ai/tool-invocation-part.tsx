@@ -23,6 +23,8 @@ import { AgentStatusCard } from './tool-results/agent-status-card.js';
 import { AgentOutputCard } from './tool-results/agent-output-card.js';
 import { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
 import { ExecutionOrderCard } from './tool-results/execution-order-card.js';
+import { ArtifactCard } from './tool-results/artifact-card.js';
+import { ImageCard } from './tool-results/image-card.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
@@ -44,6 +46,10 @@ toolResultRegistry.register('get_auto_mode_status', AutoModeStatusCard);
 
 // Register custom renderers for the orchestration tool group
 toolResultRegistry.register('get_execution_order', ExecutionOrderCard);
+
+// Register custom renderers for artifact and image generation tools
+toolResultRegistry.register('generate_artifact', ArtifactCard);
+toolResultRegistry.register('generate_image', ImageCard);
 
 type ToolState =
   | 'input-streaming'

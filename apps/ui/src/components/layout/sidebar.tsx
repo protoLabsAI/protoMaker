@@ -338,6 +338,7 @@ export function Sidebar() {
                 onDocs={() => getElectronAPI().openExternalLink('https://docs.protolabs.studio')}
                 onNewProject={() => setShowNewProjectModal(true)}
                 onOpenFolder={handleOpenFolder}
+                onSettings={() => navigate({ to: '/settings' })}
                 onClose={handleToggleSidebar}
               />
             </div>
