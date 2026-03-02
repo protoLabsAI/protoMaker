@@ -352,6 +352,7 @@ Execute on every activation. Focus on what only Ava can decide — crew members 
 
 **Ava monitors directly:**
 
+- **Needs Action features** (blocked, requires human intervention) — Highest priority. These features will NOT auto-recover. Check `statusChangeReason` for patterns: `git commit`, `git workflow failed`, `plan validation failed`. Fix the root cause yourself (rebase, reformat, clarify requirements), then reset the feature to backlog with `failureCount: 0`.
 - **Stuck agents** (running > 30min with no progress) — Decide: stop, send context, or let continue
 - **Blocked features** (3+ blocked) — Identify root cause, unblock
 - **Auto-mode health** — Features in backlog but auto-mode not running? Start it.

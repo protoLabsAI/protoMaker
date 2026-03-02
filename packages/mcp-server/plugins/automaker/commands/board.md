@@ -67,6 +67,14 @@ Display format:
 - Review: X features
 - Done: X features
 
+### [!] Needs Action (blocked — requires human intervention)
+| ID | Title | Reason |
+|----|-------|--------|
+| ghi-789 | Auth service | plan validation failed: Plan too short (<100 chars) |
+
+> These features carry an amber "Needs Action" badge in the UI. They will NOT auto-recover.
+> Fix the root cause (git issue, bad plan, unclear spec), reset failureCount to 0, move to backlog.
+
 ### Backlog
 | ID | Title | Dependencies |
 |----|-------|--------------|
@@ -79,6 +87,8 @@ Display format:
 
 ...
 ```
+
+**Detecting "Needs Action" features**: After `list_features`, filter for `status: "blocked"` where `statusChangeReason` contains any of: `git commit`, `git workflow failed`, `plan validation failed`. Always display this section first if any such features exist.
 
 ### Creating Features
 
