@@ -29,7 +29,6 @@ export type SettingsViewId =
   | 'developer'
   | 'danger'
   | 'workflow'
-  | 'maintenance'
   | 'automations'
   | 'sensors';
 

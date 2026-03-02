@@ -40,7 +40,6 @@ import { IntegrationsSection } from './settings-view/integrations';
 import { ProfileSection } from './settings-view/profile';
 import { PersonasSection } from './settings-view/personas';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
-import { MaintenanceSection } from './settings-view/maintenance';
 import { AutomationsSection } from './settings-view/automations/automations-section';
 import { SensorsSection } from './settings-view/sensors/sensors-section';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
@@ -191,8 +190,6 @@ export function SettingsView() {
         return <HealthSection />;
       case 'workflow':
         return <WorkflowSettingsPanel />;
-      case 'maintenance':
-        return <MaintenanceSection />;
       case 'automations':
         return <AutomationsSection />;
       case 'sensors':

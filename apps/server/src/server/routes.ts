@@ -55,7 +55,6 @@ import { createActionableItemsRoutes } from '../routes/actionable-items/index.js
 import { createEventHistoryRoutes } from '../routes/event-history/index.js';
 import { createBriefingRoutes } from '../routes/briefing/index.js';
 import { createSkillsRoutes } from '../routes/skills/index.js';
-import { createSchedulerRoutes } from '../routes/scheduler/index.js';
 import { createIntegrationRoutes } from '../routes/integrations/index.js';
 import { createDashboardRoutes } from '../routes/dashboard.js';
 import { createAuthorityRoutes } from '../routes/authority/index.js';
@@ -123,7 +122,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     briefingCursorService,
     projectService,
     projectLifecycleService,
-    schedulerService,
     automationService,
     avaGatewayService,
     discordBotService,
@@ -337,7 +335,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     '/api/projects',
     createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
   );
-  app.use('/api/scheduler', createSchedulerRoutes(schedulerService));
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   app.use('/api/discord', createDiscordRoutes(discordBotService));
