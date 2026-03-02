@@ -18,7 +18,7 @@
  */
 
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Bot, Loader2, User } from 'lucide-react';
+import { Bot, User } from 'lucide-react';
 import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
 import { ChainOfThought } from './chain-of-thought.js';
@@ -27,6 +27,8 @@ import { TaskBlock, type ToolInvocationItem, type TaskToolState } from './task-b
 import { ChatMessageMarkdown } from './chat-message-markdown.js';
 import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
+import { AILoader } from './loader.js';
+import { MessageActions } from './message-actions.js';
 
 const messageVariants = cva('flex gap-3 px-4 py-2', {
   variants: {
@@ -211,38 +213,6 @@ function isMessageStreaming(rawParts: Array<Record<string, unknown>>): boolean {
   return rawParts.some((p) => isToolPart(p) && !TERMINAL_TOOL_STATES.has(p.state as string));
 }
 
-// ---------------------------------------------------------------------------
-// Step progress indicator
-// ---------------------------------------------------------------------------
-
-/**
- * Shown at the top of the assistant bubble during long-running streaming
- * operations (multiple agentic steps or many tool calls).  Disappears once
- * the message finishes streaming.
- */
-function MessageProgressIndicator({
-  stepCount,
-  toolCount,
-  streaming,
-}: {
-  stepCount: number;
-  toolCount: number;
-  streaming: boolean;
-}) {
-  if (!streaming || stepCount < 1 || toolCount < 1) return null;
-  return (
-    <div
-      data-slot="message-progress-indicator"
-      className="mb-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground"
-    >
-      <Loader2 className="size-2.5 animate-spin" />
-      <span>
-        Step {stepCount} · {toolCount} tool{toolCount !== 1 ? 's' : ''} called
-      </span>
-    </div>
-  );
-}
-
 /**
  * Extract resolved citations from message parts.
  * The server writes these as `data-citations` UIMessageChunks; the AI SDK
@@ -255,6 +225,20 @@ function extractCitations(parts: Array<Record<string, unknown>>): Citation[] {
     }
   }
   return [];
+}
+
+/**
+ * Extract plain text from a group's 'other' segments (text parts only).
+ * Used for the copy-to-clipboard action in MessageActions.
+ */
+function extractGroupText(group: PartSegment[]): string {
+  return group
+    .filter(
+      (seg): seg is { kind: 'other'; part: Record<string, unknown>; partIndex: number } =>
+        seg.kind === 'other' && seg.part.type === 'text'
+    )
+    .map((seg) => seg.part.text as string)
+    .join('');
 }
 
 /**
@@ -329,6 +313,9 @@ export function ChatMessage({
   className,
   onToolApprove,
   onToolReject,
+  onRegenerate,
+  onThumbsUp,
+  onThumbsDown,
 }: {
   message: UIMessage;
   className?: string;
@@ -336,6 +323,12 @@ export function ChatMessage({
   onToolApprove?: (toolName: string, input: unknown) => void;
   /** Called when the user rejects a destructive tool call (HITL). Receives the tool name and input. */
   onToolReject?: (toolName: string, input: unknown) => void;
+  /** Called when the user clicks the Regenerate button on an assistant message. */
+  onRegenerate?: () => void;
+  /** Called when the user clicks Thumbs Up on an assistant message. */
+  onThumbsUp?: () => void;
+  /** Called when the user clicks Thumbs Down on an assistant message. */
+  onThumbsDown?: () => void;
 } & Partial<VariantProps<typeof messageVariants>>) {
   const role = message.role as MessageRole;
   const parts = message.parts ?? [];
@@ -379,65 +372,86 @@ export function ChatMessage({
 
   // Stats for the progress indicator
   const stepCount = rawParts.filter((p) => p.type === 'step-start').length;
-  const toolCount = rawParts.filter((p) => isToolPart(p)).length;
   const streaming = isMessageStreaming(rawParts);
+
+  // Build onFeedback handler from separate thumbs up/down callbacks
+  const onFeedback =
+    onThumbsUp || onThumbsDown
+      ? (rating: 'up' | 'down') => {
+          if (rating === 'up') onThumbsUp?.();
+          else onThumbsDown?.();
+        }
+      : undefined;
 
   return (
     <div data-slot="chat-message" className={cn('flex flex-col gap-1', className)}>
-      {stepGroups.map((group, groupIdx) => (
-        <div key={groupIdx} className={cn(messageVariants({ role }))}>
-          {/* Avatar only on first bubble; spacer div on subsequent for alignment */}
-          {groupIdx === 0 ? (
-            <ChatMessageAvatar role={role} />
-          ) : (
-            <div className="size-7 shrink-0" aria-hidden />
-          )}
-          <ChatMessageBubble role={role}>
-            {/* Progress indicator only on the last (active) bubble while streaming */}
-            {groupIdx === stepGroups.length - 1 && (
-              <MessageProgressIndicator
-                stepCount={stepCount}
-                toolCount={toolCount}
-                streaming={streaming}
-              />
+      {stepGroups.map((group, groupIdx) => {
+        const bubbleText = extractGroupText(group);
+        return (
+          <div key={groupIdx} className={cn(messageVariants({ role }))}>
+            {/* Avatar only on first bubble; spacer div on subsequent for alignment */}
+            {groupIdx === 0 ? (
+              <ChatMessageAvatar role={role} />
+            ) : (
+              <div className="size-7 shrink-0" aria-hidden />
             )}
+            <div className="flex flex-col">
+              <ChatMessageBubble role={role}>
+                {/* AILoader only on the last (active) bubble while streaming */}
+                {groupIdx === stepGroups.length - 1 && streaming && stepCount >= 1 && (
+                  <AILoader stepCount={stepCount} className="mb-1.5" />
+                )}
 
-            {group.map((seg, i) => {
-              // step-start segments are filtered out by groupByStep
-              if (seg.kind === 'step-start') return null;
+                {group.map((seg, i) => {
+                  // step-start segments are filtered out by groupByStep
+                  if (seg.kind === 'step-start') return null;
 
-              if (seg.kind === 'tool-group') {
-                if (seg.tools.length === 1) {
-                  const t = seg.tools[0];
-                  return (
-                    <ToolInvocationPart
-                      key={t.toolCallId}
-                      toolName={t.toolName}
-                      toolCallId={t.toolCallId}
-                      state={t.state as ToolInvocationPartProps['state']}
-                      input={t.input}
-                      output={t.output}
-                      errorText={t.errorText}
-                      title={t.title}
-                      onApprove={
-                        onToolApprove ? () => onToolApprove(t.toolName, t.input) : undefined
-                      }
-                      onReject={onToolReject ? () => onToolReject(t.toolName, t.input) : undefined}
-                    />
-                  );
-                }
-                return <TaskBlock key={seg.segKey} tools={seg.tools} />;
-              }
+                  if (seg.kind === 'tool-group') {
+                    if (seg.tools.length === 1) {
+                      const t = seg.tools[0];
+                      return (
+                        <ToolInvocationPart
+                          key={t.toolCallId}
+                          toolName={t.toolName}
+                          toolCallId={t.toolCallId}
+                          state={t.state as ToolInvocationPartProps['state']}
+                          input={t.input}
+                          output={t.output}
+                          errorText={t.errorText}
+                          title={t.title}
+                          onApprove={
+                            onToolApprove ? () => onToolApprove(t.toolName, t.input) : undefined
+                          }
+                          onReject={
+                            onToolReject ? () => onToolReject(t.toolName, t.input) : undefined
+                          }
+                        />
+                      );
+                    }
+                    return <TaskBlock key={seg.segKey} tools={seg.tools} />;
+                  }
 
-              // 'other': text, reasoning, source-url, data-citations, etc.
-              return <MessagePartRenderer key={i} part={seg.part} citations={citations} />;
-            })}
+                  // 'other': text, reasoning, source-url, data-citations, etc.
+                  return <MessagePartRenderer key={i} part={seg.part} citations={citations} />;
+                })}
 
-            {/* Sources section — only on the last bubble */}
-            {groupIdx === stepGroups.length - 1 && <MessageSources citations={citations} />}
-          </ChatMessageBubble>
-        </div>
-      ))}
+                {/* Sources section — only on the last bubble */}
+                {groupIdx === stepGroups.length - 1 && <MessageSources citations={citations} />}
+              </ChatMessageBubble>
+
+              {/* MessageActions toolbar — assistant bubbles only */}
+              {role === 'assistant' && (
+                <MessageActions
+                  text={bubbleText}
+                  onRegenerate={onRegenerate}
+                  onFeedback={onFeedback}
+                  className="mt-0.5 ml-1"
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

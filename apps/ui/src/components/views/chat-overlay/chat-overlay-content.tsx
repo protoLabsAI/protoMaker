@@ -12,12 +12,14 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { History, X, Settings, ChevronUp, ChevronDown, SquarePen } from 'lucide-react';
+import { History, X, Settings, ChevronUp, ChevronDown, SquarePen, ListOrdered } from 'lucide-react';
 import {
   ChatMessageList,
   ChatInput,
   SuggestionList,
   PromptInputProvider,
+  QueueView,
+  type QueueItem,
 } from '@protolabs-ai/ui/ai';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
@@ -68,6 +70,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [queuePaused, setQueuePaused] = useState(false);
 
   const suggestions = useContextualSuggestions(features ?? []);
 
@@ -93,6 +97,27 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     setExpanded(next);
     getOverlayAPI()?.resizeOverlay?.(next ? OVERLAY_HEIGHT_EXPANDED : OVERLAY_HEIGHT_DEFAULT);
   }, [expanded]);
+
+  // Regenerate: re-send the last user message text
+  const handleRegenerate = useCallback(() => {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+    if (lastUserMsg) {
+      const text = (lastUserMsg.parts ?? [])
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('');
+      if (text) sendMessage({ text });
+    }
+  }, [messages, sendMessage]);
+
+  // Thumbs up/down — no-op placeholders; wire to telemetry or feedback API as needed
+  const handleThumbsUp = useCallback(() => {
+    // Positive feedback placeholder
+  }, []);
+
+  const handleThumbsDown = useCallback(() => {
+    // Negative feedback placeholder
+  }, []);
 
   const shortcutHint = isModal ? '\u2318K to close' : 'Esc to hide';
 
@@ -134,6 +159,17 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             aria-label="Toggle conversation history"
           >
             <History className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setQueueOpen((v) => !v)}
+            title="Feature queue"
+            aria-label="Toggle feature queue"
+            data-testid="queue-panel-toggle"
+          >
+            <ListOrdered className="size-3.5" />
           </Button>
           <Button
             variant="ghost"
@@ -195,6 +231,17 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
       {/* Main content area */}
       <div className="flex min-h-0 flex-1">
+        {/* Queue panel — slide in from left */}
+        {queueOpen && (
+          <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 animate-in slide-in-from-left duration-200">
+            <QueueView
+              items={[]}
+              paused={queuePaused}
+              onTogglePause={() => setQueuePaused((v) => !v)}
+            />
+          </div>
+        )}
+
         {/* Conversation list panel — slide in from left */}
         {historyOpen && (
           <ConversationList
@@ -216,7 +263,14 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
 
         {/* Chat area */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <ChatMessageList messages={messages} emptyMessage="Ask Ava anything..." />
+          <ChatMessageList
+            messages={messages}
+            emptyMessage="Ask Ava anything..."
+            isStreaming={isStreaming}
+            onRegenerate={handleRegenerate}
+            onThumbsUp={handleThumbsUp}
+            onThumbsDown={handleThumbsDown}
+          />
 
           {/* Contextual suggestions — shown only when no messages in current session */}
           {messages.length === 0 && (

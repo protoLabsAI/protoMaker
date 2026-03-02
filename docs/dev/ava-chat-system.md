@@ -168,6 +168,9 @@ UIMessage.parts[]
 | `AgentOutputCard`    | `get_agent_output`          | `tool-results/agent-output-card.tsx`     |
 | `AutoModeStatusCard` | `get_auto_mode_status`      | `tool-results/auto-mode-status-card.tsx` |
 | `ExecutionOrderCard` | `get_execution_order`       | `tool-results/execution-order-card.tsx`  |
+| `ArtifactCard`       | `generate_artifact`         | `tool-results/artifact-card.tsx`         |
+| `ImageCard`          | `generate_image`            | `tool-results/image-card.tsx`            |
+| `WebPreviewCard`     | `generate_html`             | `tool-results/web-preview-card.tsx`      |
 
 ### Adding a New Tool Result Card
 

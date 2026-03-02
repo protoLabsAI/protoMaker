@@ -189,6 +189,8 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
  * New features should start behind a flag until ready for general availability.
  */
 export interface FeatureFlags {
+  /** Ava Anywhere — chat overlay, Cmd+K modal, /chat route, mobile chat tab */
+  avaChat: boolean;
   /** Calendar view in project sidebar */
   calendar: boolean;
   /** Designs/pen file viewer in project sidebar */
@@ -209,6 +211,7 @@ export interface FeatureFlags {
 
 /** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  avaChat: false,
   calendar: false,
   designs: false,
   docs: false,

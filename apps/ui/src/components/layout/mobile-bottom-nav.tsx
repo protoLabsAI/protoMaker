@@ -13,10 +13,16 @@ interface NavItem {
 
 const baseNavItems: NavItem[] = [
   { id: 'board', icon: Grid, label: 'Board', path: '/board' },
-  { id: 'chat', icon: MessageCircle, label: 'Chat', path: '/chat' },
   { id: 'notes', icon: FileText, label: 'Notes', path: '/notes' },
   { id: 'settings', icon: Settings, label: 'Settings', path: '/settings' },
 ];
+
+const chatNavItem: NavItem = {
+  id: 'chat',
+  icon: MessageCircle,
+  label: 'Chat',
+  path: '/chat',
+};
 
 const systemViewItem: NavItem = {
   id: 'system-view',
@@ -36,9 +42,13 @@ export function MobileBottomNav() {
     return null;
   }
 
-  const navItems = featureFlags.systemView
-    ? [baseNavItems[0], systemViewItem, ...baseNavItems.slice(1)]
-    : baseNavItems;
+  let navItems = [...baseNavItems];
+  if (featureFlags.avaChat) {
+    navItems.splice(1, 0, chatNavItem);
+  }
+  if (featureFlags.systemView) {
+    navItems.splice(1, 0, systemViewItem);
+  }
 
   const currentPath = routerState.location.pathname;
 

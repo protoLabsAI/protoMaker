@@ -11,6 +11,12 @@ export {
 
 export { ConfirmationCard, type ConfirmationCardProps } from './confirmation-card.js';
 
+export {
+  InlineFormCard,
+  type InlineFormCardProps,
+  type InlineFormCardState,
+} from './inline-form-card.js';
+
 export { InlineCitation, type Citation, type InlineCitationProps } from './inline-citation.js';
 
 export { MessageSources, type MessageSourcesProps } from './message-sources.js';
@@ -68,3 +74,12 @@ export { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
 export { ExecutionOrderCard } from './tool-results/execution-order-card.js';
 export { ArtifactCard } from './tool-results/artifact-card.js';
 export { ImageCard } from './tool-results/image-card.js';
+export { WebPreviewCard } from './tool-results/web-preview-card.js';
+
+export {
+  QueueView,
+  type QueueViewProps,
+  type QueueItem,
+  type QueueItemStatus,
+  type QueueItemComplexity,
+} from './queue-view.js';

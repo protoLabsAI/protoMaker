@@ -18,15 +18,28 @@ import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
 import { Button } from '../atoms/button.js';
 import { ChatMessage } from './chat-message.js';
+import { ShimmerLoader } from './shimmer.js';
 
 export function ChatMessageList({
   messages,
   emptyMessage = 'Start a conversation...',
   className,
+  isStreaming,
+  onRegenerate,
+  onThumbsUp,
+  onThumbsDown,
 }: {
   messages: UIMessage[];
   emptyMessage?: string;
   className?: string;
+  /** When true, shows a ShimmerLoader at the bottom if the last message has no text yet. */
+  isStreaming?: boolean;
+  /** Called when the user clicks Regenerate on an assistant message. */
+  onRegenerate?: () => void;
+  /** Called when the user clicks Thumbs Up on an assistant message. */
+  onThumbsUp?: () => void;
+  /** Called when the user clicks Thumbs Down on an assistant message. */
+  onThumbsDown?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -119,6 +132,17 @@ export function ChatMessageList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
+  // Determine if ShimmerLoader should be shown:
+  // Show when streaming and the last message has no text content yet (pending response).
+  const lastMessage = messages[messages.length - 1];
+  const lastMessageHasNoText =
+    !lastMessage ||
+    !(lastMessage.parts ?? []).some(
+      (p): p is { type: 'text'; text: string } =>
+        p.type === 'text' && !!(p as { type: 'text'; text: string }).text
+    );
+  const showShimmer = !!isStreaming && lastMessageHasNoText;
+
   return (
     <div data-slot="chat-message-list" className={cn('relative flex-1 overflow-hidden', className)}>
       <div ref={scrollRef} className="h-full overflow-y-auto">
@@ -128,8 +152,17 @@ export function ChatMessageList({
               <p className="text-sm text-muted-foreground">{emptyMessage}</p>
             </div>
           ) : (
-            messages.map((message) => <ChatMessage key={message.id} message={message} />)
+            messages.map((message) => (
+              <ChatMessage
+                key={message.id}
+                message={message}
+                onRegenerate={onRegenerate}
+                onThumbsUp={onThumbsUp}
+                onThumbsDown={onThumbsDown}
+              />
+            ))
           )}
+          {showShimmer && <ShimmerLoader />}
         </div>
       </div>
 
