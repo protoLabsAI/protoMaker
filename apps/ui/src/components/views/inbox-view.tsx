@@ -23,6 +23,7 @@ import {
   Bell,
   Clock,
   Trash2,
+  CheckCheck,
   CheckCircle,
   CircleDot,
   BellOff,
@@ -36,6 +37,7 @@ import {
   XCircle,
   HelpCircle,
 } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import type {
   ActionableItem,
   ActionableItemActionType,
@@ -385,34 +387,30 @@ export function InboxView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b">
-        <div className="flex items-center gap-3">
-          <Inbox className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Inbox</h1>
-          {pendingCounts.all > 0 && (
+      <PanelHeader
+        icon={Inbox}
+        title="Inbox"
+        badge={
+          pendingCounts.all > 0 ? (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
               {pendingCounts.all}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleMarkAllRead}>
-            Mark all read
-          </Button>
-          {!isCeremonyView && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDismissAll}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-1 h-3.5 w-3.5" />
-              Dismiss all
-            </Button>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+        actions={[
+          { icon: CheckCheck, label: 'Mark all read', onClick: handleMarkAllRead },
+          ...(!isCeremonyView
+            ? [
+                {
+                  icon: Trash2,
+                  label: 'Dismiss all',
+                  onClick: handleDismissAll,
+                  destructive: true,
+                } as const,
+              ]
+            : []),
+        ]}
+      />
 
       {/* Category tabs */}
       <div className="flex items-center gap-1 px-6 py-2 border-b overflow-x-auto">

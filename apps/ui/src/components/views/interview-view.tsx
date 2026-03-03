@@ -6,6 +6,7 @@ import { Card, CardContent } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Input } from '@protolabs-ai/ui/atoms';
 import { Bot, Send, User, Sparkles, FileText, ArrowLeft, CheckCircle } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn, generateUUID } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
@@ -390,47 +391,43 @@ export function InterviewView() {
 
   return (
     <div className="flex-1 flex flex-col content-bg min-h-0" data-testid="interview-view">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleGoBack}
-            className="h-8 w-8 p-0"
-            data-testid="interview-back-button"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <Sparkles className="w-5 h-5 text-primary" />
-          <div>
-            <h1 className="text-xl font-bold">New Project Interview</h1>
-            <p className="text-sm text-muted-foreground">
-              {isComplete
-                ? 'Specification generated!'
-                : `Question ${currentQuestionIndex + 1} of ${INTERVIEW_QUESTIONS.length}`}
-            </p>
+      <PanelHeader
+        icon={Sparkles}
+        title="New Project Interview"
+        badge={
+          <span className="text-xs text-muted-foreground">
+            {isComplete
+              ? 'Specification generated!'
+              : `Question ${currentQuestionIndex + 1} of ${INTERVIEW_QUESTIONS.length}`}
+          </span>
+        }
+        actions={[
+          {
+            icon: ArrowLeft,
+            label: 'Back',
+            onClick: handleGoBack,
+            testId: 'interview-back-button',
+          },
+        ]}
+        extra={
+          <div className="flex items-center gap-2">
+            {INTERVIEW_QUESTIONS.map((_, index) => (
+              <div
+                key={index}
+                className={cn(
+                  'w-2 h-2 rounded-full transition-colors',
+                  index < currentQuestionIndex
+                    ? 'bg-status-success'
+                    : index === currentQuestionIndex
+                      ? 'bg-primary'
+                      : 'bg-muted'
+                )}
+              />
+            ))}
+            {isComplete && <CheckCircle className="w-4 h-4 text-status-success ml-2" />}
           </div>
-        </div>
-
-        {/* Progress indicator */}
-        <div className="flex items-center gap-2">
-          {INTERVIEW_QUESTIONS.map((_, index) => (
-            <div
-              key={index}
-              className={cn(
-                'w-2 h-2 rounded-full transition-colors',
-                index < currentQuestionIndex
-                  ? 'bg-status-success'
-                  : index === currentQuestionIndex
-                    ? 'bg-primary'
-                    : 'bg-muted'
-              )}
-            />
-          ))}
-          {isComplete && <CheckCircle className="w-4 h-4 text-status-success ml-2" />}
-        </div>
-      </div>
+        }
+      />
 
       {/* Messages */}
       <div

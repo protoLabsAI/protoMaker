@@ -18,11 +18,13 @@ import {
   FileText,
   Trophy,
   CheckCircle,
+  CheckCheck,
   XCircle,
   Clock,
   SkipForward,
   Filter,
 } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import type { CeremonyAuditEntry, CeremonyAuditType } from '@protolabs-ai/types';
 import { cn } from '@/lib/utils';
 
@@ -195,26 +197,22 @@ export function CeremoniesView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b">
-        <div className="flex items-center gap-3">
-          <PartyPopper className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Ceremonies</h1>
-          {unreadCount > 0 && (
+      <PanelHeader
+        icon={PartyPopper}
+        title="Ceremonies"
+        badge={
+          unreadCount > 0 ? (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
               {unreadCount}
             </span>
-          )}
-        </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllRead}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Mark all read
-          </button>
-        )}
-      </div>
+          ) : undefined
+        }
+        actions={
+          unreadCount > 0
+            ? [{ icon: CheckCheck, label: 'Mark all read', onClick: markAllRead }]
+            : undefined
+        }
+      />
 
       {/* Type filter tabs */}
       <div className="flex items-center gap-1 px-6 py-2 border-b overflow-x-auto">

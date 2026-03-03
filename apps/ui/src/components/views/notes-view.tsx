@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import type { Editor } from '@tiptap/react';
 import { NotebookPen } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { useNotesStore, scheduleSave } from '@/store/notes-store';
 import { NotesTabBar } from './notes-view/notes-tab-bar';
 import { NotesToolbar } from './notes-view/notes-toolbar';
@@ -93,11 +94,7 @@ export function NotesView() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-        <NotebookPen className="size-4 text-primary" />
-        <h1 className="text-sm font-medium">Notes</h1>
-      </div>
+      <PanelHeader icon={NotebookPen} title="Notes" />
 
       {/* Tab bar */}
       <NotesTabBar

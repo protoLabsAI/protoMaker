@@ -11,7 +11,8 @@ import { useCalendarEvents } from './use-calendar-events';
 import { CreateEventDialog } from './create-event-dialog';
 import { EventDetailPanel } from './event-detail-panel';
 import { SkeletonPulse, Spinner } from '@protolabs-ai/ui/atoms';
-import { Calendar, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { Calendar, CalendarDays, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiPost } from '@/lib/api-fetch';
@@ -406,48 +407,23 @@ export function CalendarView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b">
-        <div className="flex items-center gap-3">
-          <Calendar className="h-5 w-5" />
-          <h1 className="text-lg font-semibold">Calendar</h1>
-          {events.length > 0 && (
+      <PanelHeader
+        icon={Calendar}
+        title="Calendar"
+        badge={
+          events.length > 0 ? (
             <span className="text-xs text-muted-foreground">
               {events.length} event{events.length !== 1 ? 's' : ''}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleNewEvent}
-            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex items-center gap-1"
-            data-testid="new-event-button"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New Event
-          </button>
-          <button
-            onClick={handleToday}
-            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          >
-            Today
-          </button>
-          <button
-            onClick={handlePrevMonth}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleNextMonth}
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-            aria-label="Next month"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+          ) : undefined
+        }
+        actions={[
+          { icon: Plus, label: 'New event', onClick: handleNewEvent, testId: 'new-event-button' },
+          { icon: CalendarDays, label: 'Today', onClick: handleToday },
+          { icon: ChevronLeft, label: 'Previous month', onClick: handlePrevMonth },
+          { icon: ChevronRight, label: 'Next month', onClick: handleNextMonth },
+        ]}
+      />
 
       {/* Google Calendar nudge */}
       <div className="px-6 pt-2">

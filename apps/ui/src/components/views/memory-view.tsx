@@ -20,6 +20,7 @@ import {
   MoreVertical,
   ArrowLeft,
 } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
   Dialog,
@@ -308,45 +309,32 @@ export function MemoryView() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="memory-view">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Brain className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <h1 className="text-xl font-bold">Memory Layer</h1>
-            <p className="text-sm text-muted-foreground">
-              View and edit AI memory files for this project
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Desktop: show actions inline */}
-          <div className="hidden lg:flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadMemoryFiles}
-              data-testid="refresh-memory-button"
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setIsCreateMemoryOpen(true)}
-              data-testid="create-memory-button"
-            >
-              <FilePlus className="w-4 h-4 mr-2" />
-              Create Memory File
-            </Button>
-          </div>
-          {/* Tablet/Mobile: show trigger for actions panel */}
+      <PanelHeader
+        icon={Brain}
+        title="Memory Layer"
+        actions={[
+          {
+            icon: RefreshCw,
+            label: 'Refresh',
+            onClick: loadMemoryFiles,
+            desktopOnly: true,
+            testId: 'refresh-memory-button',
+          },
+          {
+            icon: FilePlus,
+            label: 'New memory file',
+            onClick: () => setIsCreateMemoryOpen(true),
+            desktopOnly: true,
+            testId: 'create-memory-button',
+          },
+        ]}
+        extra={
           <HeaderActionsPanelTrigger
             isOpen={showActionsPanel}
             onToggle={() => setShowActionsPanel(!showActionsPanel)}
           />
-        </div>
-      </div>
+        }
+      />
 
       {/* Actions Panel (tablet/mobile) */}
       <HeaderActionsPanel

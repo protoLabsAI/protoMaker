@@ -6,6 +6,7 @@
 
 import { useState, useCallback } from 'react';
 import { GitPullRequest, RefreshCw, ExternalLink, GitMerge, X } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { getElectronAPI, type GitHubPR } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
@@ -106,25 +107,26 @@ export function GitHubPRsView() {
           selectedPR ? 'w-80' : 'flex-1'
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-status-info-bg">
-              <GitPullRequest className="h-5 w-5 text-status-info" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold">Pull Requests</h1>
-              <p className="text-xs text-muted-foreground">
-                {totalPRs === 0
-                  ? 'No pull requests found'
-                  : `${openPRs.length} open, ${mergedPRs.length} merged`}
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            {refreshing ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
-          </Button>
-        </div>
+        <PanelHeader
+          icon={GitPullRequest}
+          title="Pull Requests"
+          badge={
+            totalPRs > 0 ? (
+              <span className="text-xs text-muted-foreground">
+                {openPRs.length} open, {mergedPRs.length} merged
+              </span>
+            ) : undefined
+          }
+          actions={[
+            {
+              icon: RefreshCw,
+              label: 'Refresh',
+              onClick: handleRefresh,
+              disabled: refreshing,
+              loading: refreshing,
+            },
+          ]}
+        />
 
         {/* PR List */}
         <div className="flex-1 overflow-auto">

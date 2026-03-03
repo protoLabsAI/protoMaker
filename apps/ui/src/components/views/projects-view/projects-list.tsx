@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Plus, Loader2, Milestone, Layers } from 'lucide-react';
 import { Badge, Input, Textarea } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { Card } from '@protolabs-ai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
@@ -100,30 +101,22 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 px-6 py-4 border-b border-border/40">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10 flex items-center justify-center border border-violet-500/20">
-              <FolderKanban className="w-5 h-5 text-violet-500" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground tracking-tight">Projects</h1>
-              <p className="text-xs text-muted-foreground">
-                {projects.length} project{projects.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowNewProjectInput(!showNewProjectInput)}
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            New Project
-          </Button>
-        </div>
-      </div>
+      <PanelHeader
+        icon={FolderKanban}
+        title="Projects"
+        badge={
+          <span className="text-xs text-muted-foreground">
+            {projects.length} project{projects.length !== 1 ? 's' : ''}
+          </span>
+        }
+        actions={[
+          {
+            icon: Plus,
+            label: 'New project',
+            onClick: () => setShowNewProjectInput(!showNewProjectInput),
+          },
+        ]}
+      />
 
       {/* New Project Form */}
       {showNewProjectInput && (
