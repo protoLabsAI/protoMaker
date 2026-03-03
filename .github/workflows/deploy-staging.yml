@@ -252,34 +252,39 @@ jobs:
           ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
           RESTART_EXHAUSTED="${RESTART_EXHAUSTED:-false}"
 
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
           if [ "$STATUS" = "success" ]; then
             MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
+            WEBHOOK="${DISCORD_DEPLOY_WEBHOOK:-}"
           else
             case "$ROLLBACK_OUTCOME" in
               success)
-                MSG="Staging deploy FAILED: \`${COMMIT}\` - rolled back to previous version. Check GitHub Actions."
+                MSG="ALERT: Staging deploy FAILED: \`${COMMIT}\` - rolled back to previous version. ${RUN_URL}"
                 ;;
               failure)
-                MSG="Staging deploy FAILED: \`${COMMIT}\` - rollback FAILED. Manual intervention required."
+                MSG="ALERT: Staging deploy FAILED: \`${COMMIT}\` - rollback FAILED. Manual intervention required. ${RUN_URL}"
                 ;;
               *)
-                MSG="Staging deploy FAILED: \`${COMMIT}\` - no rollback performed. Check GitHub Actions."
+                MSG="ALERT: Staging deploy FAILED: \`${COMMIT}\` - no rollback performed. ${RUN_URL}"
                 ;;
             esac
 
             # Add restart exhaustion alert if detected
             if [ "$RESTART_EXHAUSTED" = "true" ]; then
-              MSG="${MSG}\n⚠️ **CRITICAL**: Server container exhausted restart attempts (5/5). Manual restart required."
+              MSG="${MSG}\n**CRITICAL**: Server container exhausted restart attempts (5/5). Manual restart required."
             fi
+            WEBHOOK="${DISCORD_ALERTS_WEBHOOK:-}"
           fi
 
-          # Post to #deployments channel via webhook if configured
-          if [ -n "${DISCORD_DEPLOY_WEBHOOK:-}" ]; then
+          # Post to the appropriate Discord channel
+          if [ -n "${WEBHOOK:-}" ]; then
             curl -sf -H "Content-Type: application/json" \
               -d "{\"content\": \"${MSG}\"}" \
-              "$DISCORD_DEPLOY_WEBHOOK" || true
+              "$WEBHOOK" || true
           fi
 
           echo "$MSG"
         env:
           DISCORD_DEPLOY_WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+          DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}

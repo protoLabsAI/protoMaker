@@ -10,7 +10,7 @@ From any Linear issue, a user can:
 - Press `W` then `O` to choose from their enabled tools
 - Click a button adjacent to the issue identifier in the UI
 
-Linear pre-fills the tool's prompt with: issue ID, description, comments, updates, linked references, and attached images. Teams can also configure custom prompt templates with variable interpolation (`{{issue.identifier}}`, `{{context}}`, etc.) to add standing instructions (e.g., "write a test spec before coding").
+Linear pre-fills the tool's prompt with: issue ID, description, comments, updates, linked references, and attached images. Teams can also configure custom prompt templates with variable interpolation (e.g., issue identifier, context variables) to add standing instructions (e.g., "write a test spec before coding").
 
 Supported tools at launch: Claude Code, Codex, Conductor, Cursor, GitHub Copilot, OpenCode, Replit, v0, Zed.
 
@@ -32,13 +32,15 @@ The deeplink feature is **entirely separate** from this flow. It is a client-sid
 **Opportunity — custom prompt template for protoLabs context:**
 Users who have protoLabs running can configure a Linear prompt template that includes instructions to use our MCP tools or reference the board. For example:
 
-```
-Issue: {{issue.identifier}} — {{issue.title}}
+```text
+Issue: [issue.identifier] — [issue.title]
 
-{{context}}
+[context]
 
 Use the protoLabs MCP tools to check the board status for this issue and continue implementation from where the agent left off.
 ```
+
+Linear uses double-curly-brace syntax for template variables (e.g., `issue.identifier`, `context`).
 
 This requires no code changes — it is a user-configurable template in Linear settings.
 
@@ -52,11 +54,11 @@ If Linear exposes a URL scheme for custom tools (e.g., `protolabs://open?issue=X
 
 | Item                                                      | Priority | Notes                                           |
 | --------------------------------------------------------- | -------- | ----------------------------------------------- |
-| Document custom prompt template guidance                  | Low      | Add to `linear-sync.md` usage tips              |
+| Document custom prompt template guidance                  | Low      | Add to `linear.md` usage tips                   |
 | Monitor Linear changelog for custom tool registration API | Low      | Required before we can appear in deeplink menu  |
 | Evaluate URL scheme handler (Electron)                    | Backlog  | Only relevant if Linear opens its tool registry |
 
 ## References
 
 - [Linear changelog: Deeplink to AI coding tools (2026-02-26)](https://linear.app/changelog/2026-02-26-deeplink-to-ai-coding-tools)
-- [Linear sync integration](./linear-sync.md)
+- [Linear integration](./linear.md)

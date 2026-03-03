@@ -10,7 +10,6 @@ import { register as registerChannelHandlers } from '../services/channel-handler
 import { register as registerLeadEngineer } from '../services/lead-engineer.module.js';
 import { register as registerWorktreeLifecycle } from '../services/worktree-lifecycle.module.js';
 import { register as registerDiscord } from '../services/discord.module.js';
-import { register as registerLinearAgent } from '../services/linear-agent.module.js';
 import { register as registerScheduler } from '../services/scheduler.module.js';
 import { register as registerInfrastructure } from '../services/infrastructure.module.js';
 
@@ -26,7 +25,6 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   await registerLeadEngineer(services);
   await registerWorktreeLifecycle(services);
   await registerDiscord(services);
-  await registerLinearAgent(services);
   await registerScheduler(services);
   await registerInfrastructure(services);
 

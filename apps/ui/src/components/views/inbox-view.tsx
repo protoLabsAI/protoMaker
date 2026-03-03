@@ -1,8 +1,13 @@
 /**
  * Inbox View - Full page view for unified actionable items.
  *
- * Displays HITL forms, approvals, notifications, escalations, pipeline gates,
- * and ceremony audit log with category filtering, status tabs, snooze, and bulk actions.
+ * Consolidated into 4 category tabs:
+ * - All: everything (including informational notifications)
+ * - Decisions: HITL forms, approvals, pipeline gates, reviews (human decision required)
+ * - Escalations: blocking issues needing attention
+ * - Ceremonies: standup/retro/delivery audit log
+ *
+ * With status filtering, snooze, and bulk actions.
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -49,26 +54,25 @@ import { getEffectivePriority } from '@protolabs-ai/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-type CategoryFilter =
-  | 'all'
-  | 'hitl_form'
-  | 'approval'
-  | 'notification'
-  | 'escalation'
-  | 'gate'
-  | 'review'
-  | 'ceremony';
+type CategoryFilter = 'all' | 'decisions' | 'escalation' | 'ceremony';
 type StatusFilter = 'pending' | 'snoozed' | 'acted' | 'dismissed' | 'all';
 
+/**
+ * Consolidated category tabs:
+ * - All: everything (including informational notifications)
+ * - Decisions: merges Forms + Approvals + Gates (all require a human decision)
+ * - Escalations: blocking issues needing attention
+ * - Ceremonies: standup/retro/delivery logs
+ */
 const CATEGORY_TABS: { value: CategoryFilter; label: string; icon: React.ReactNode }[] = [
   { value: 'all', label: 'All', icon: <Inbox className="h-3.5 w-3.5" /> },
-  { value: 'hitl_form', label: 'Forms', icon: <FileText className="h-3.5 w-3.5" /> },
-  { value: 'approval', label: 'Approvals', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
-  { value: 'notification', label: 'Notifications', icon: <Bell className="h-3.5 w-3.5" /> },
+  { value: 'decisions', label: 'Decisions', icon: <ShieldCheck className="h-3.5 w-3.5" /> },
   { value: 'escalation', label: 'Escalations', icon: <AlertTriangle className="h-3.5 w-3.5" /> },
-  { value: 'gate', label: 'Gates', icon: <CircleDot className="h-3.5 w-3.5" /> },
   { value: 'ceremony', label: 'Ceremonies', icon: <PartyPopper className="h-3.5 w-3.5" /> },
 ];
+
+/** Action types that map to the "Decisions" category tab */
+const DECISION_ACTION_TYPES = new Set(['hitl_form', 'approval', 'gate', 'review']);
 
 const STATUS_TABS: { value: StatusFilter; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -227,14 +231,15 @@ export function InboxView() {
     }
 
     // Category filter
-    if (categoryFilter !== 'all' && categoryFilter !== 'ceremony') {
-      filtered = filtered.filter((i) => i.actionType === categoryFilter);
-    }
-
-    // Hide all actionable items when ceremony tab is active
-    if (categoryFilter === 'ceremony') {
+    if (categoryFilter === 'decisions') {
+      filtered = filtered.filter((i) => DECISION_ACTION_TYPES.has(i.actionType));
+    } else if (categoryFilter === 'escalation') {
+      filtered = filtered.filter((i) => i.actionType === 'escalation');
+    } else if (categoryFilter === 'ceremony') {
+      // Hide all actionable items when ceremony tab is active
       return [];
     }
+    // 'all' shows everything — no filter needed
 
     // Sort by effective priority then by date
     return filtered.sort((a, b) => {
@@ -362,14 +367,18 @@ export function InboxView() {
     await api.actionableItems.dismiss(projectPath);
   }, [projectPath, dismissAll]);
 
-  // Pending counts per category for tab badges
+  // Pending counts per consolidated category for tab badges
   const pendingCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts: Record<string, number> = { all: 0, decisions: 0, escalation: 0, ceremony: 0 };
     for (const item of items) {
       if (item.status !== 'pending') continue;
-      counts[item.actionType] = (counts[item.actionType] ?? 0) + 1;
+      counts.all++;
+      if (DECISION_ACTION_TYPES.has(item.actionType)) {
+        counts.decisions++;
+      } else if (item.actionType === 'escalation') {
+        counts.escalation++;
+      }
     }
-    counts.all = items.filter((i) => i.status === 'pending').length;
     counts.ceremony = ceremonyUnreadCount;
     return counts;
   }, [items, ceremonyUnreadCount]);

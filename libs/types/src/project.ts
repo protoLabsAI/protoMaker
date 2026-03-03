@@ -14,6 +14,7 @@ export type PhaseComplexity = 'small' | 'medium' | 'large';
  * Status of a project in the orchestration pipeline
  */
 export type ProjectStatus =
+  | 'ongoing' // Persistent container, never completes (e.g., Bugs)
   | 'researching' // Deep research in progress
   | 'drafting' // PRD being created
   | 'reviewing' // PRD under review

@@ -14,7 +14,7 @@ const logger = createLogger('Server:Wiring');
  * DiscordDMChannel is registered here (not in escalation-channels.module.ts) because it
  * requires the Discord bot service to be initialized first.
  */
-export function register(container: ServiceContainer): void {
+export async function register(container: ServiceContainer): Promise<void> {
   const {
     events,
     settingsService,
@@ -79,8 +79,24 @@ export function register(container: ServiceContainer): void {
   headsdownService.setDiscordBotService(discordBotService);
 
   // Register Discord DM escalation channel (requires discordBotService)
+  // Read DM recipients from user profile settings
+  const dmRecipients: string[] = [];
+  try {
+    const globalSettings = await settingsService.getGlobalSettings();
+    const discordUsername = globalSettings.userProfile?.discord?.username;
+    if (discordUsername) {
+      dmRecipients.push(discordUsername);
+    }
+  } catch {
+    logger.warn('Failed to read userProfile for Discord DM recipients');
+  }
   escalationRouter.registerChannel(
-    new DiscordDMChannel(discordBotService, events, undefined, escalationRouter)
+    new DiscordDMChannel(
+      discordBotService,
+      events,
+      dmRecipients.length > 0 ? { recipients: dmRecipients } : undefined,
+      escalationRouter
+    )
   );
 
   // Start Discord channel signal monitoring when DISCORD_TOKEN is configured.

@@ -358,7 +358,7 @@ npm run dev:electron
 
 ### 5. Verify Setup
 
-Visit http://localhost:3007 to access the UI.
+Visit `http://localhost:3007` to access the UI.
 
 ## Production Setup
 

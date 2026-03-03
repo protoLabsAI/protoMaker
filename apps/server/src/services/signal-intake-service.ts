@@ -488,6 +488,7 @@ export class SignalIntakeService {
           category: 'Signal Intake',
           complexity: 'medium',
           workItemState: 'idea',
+          sourceChannel: sourceToChannel(signal.source),
         });
         this.updateRingBufferEntry(bufferEntry.id, 'created', gtmFeature.id);
 
@@ -550,6 +551,7 @@ export class SignalIntakeService {
         category: 'Signal Intake',
         complexity: 'medium',
         workItemState: 'idea',
+        sourceChannel: sourceToChannel(signal.source),
         // Store Linear issue ID if available
         ...(signal.source === 'linear' && signal.channelContext?.issueId
           ? { linearIssueId: signal.channelContext.issueId as string }

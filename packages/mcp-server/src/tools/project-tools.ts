@@ -157,6 +157,7 @@ export const projectTools: Tool[] = [
         status: {
           type: 'string',
           enum: [
+            'ongoing',
             'researching',
             'drafting',
             'reviewing',

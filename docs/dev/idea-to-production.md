@@ -8,42 +8,41 @@ Every piece of work flows through a 9-phase pipeline with two human gates. The p
 
 ```
 Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → VERIFY → PUBLISH
-                                         ⬆ GATE                                 ⬆ GATE
+                                         ^ GATE                                 ^ GATE
 ```
 
 GTM branch skips DESIGN and PLAN (content doesn't need architectural decomposition).
 
 ## Signal entry
 
-Work enters through five channels, all routed by `SignalIntakeService`:
+Work enters through four channels, all routed by `SignalIntakeService`:
 
-| Source                     | Classification  | Path                           |
-| -------------------------- | --------------- | ------------------------------ |
-| Linear issue (engineering) | ops             | Full pipeline or intake bridge |
-| Linear issue (marketing)   | gtm             | GTM pipeline (gated)           |
-| GitHub issue/PR event      | ops             | Lead Engineer state machine    |
-| MCP `create_feature`       | ops (fast path) | Direct to board, skip PM       |
-| MCP `process_idea`         | ops (full path) | PM Agent research + PRD        |
+| Source                | Classification  | Path                          |
+| --------------------- | --------------- | ----------------------------- |
+| GitHub issue/PR event | ops             | Lead Engineer state machine   |
+| Discord event         | ops / gtm       | Signal classification + route |
+| MCP `create_feature`  | ops (fast path) | Direct to board, skip PM      |
+| MCP `process_idea`    | ops (full path) | PM Agent research + PRD       |
 
 **GTM gate:** The entire GTM branch is controlled by the `gtmEnabled` global setting (default: `false`). When disabled, `SignalIntakeService` forces all signals to ops, content API routes return 403, and the UI hides GTM-related nodes. Enable via settings to activate GTM routing.
 
-**Fast path** skips the PM pipeline — feature goes straight to the board and Lead Engineer picks it up. Use when you know exactly what needs building.
+**Fast path** skips the PM pipeline -- feature goes straight to the board and Lead Engineer picks it up. Use when you know exactly what needs building.
 
 **Full path** routes through PM Agent for research, PRD generation, and CTO approval before decomposition.
 
 ### Signal intent classification
 
-`SignalIntakeService` applies a second classification layer — intent — independent of the ops/gtm routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
+`SignalIntakeService` applies a second classification layer -- intent -- independent of the ops/gtm routing. Intent identifies the nature of the signal so the Lead Engineer and downstream agents can handle it appropriately without re-classifying.
 
 **Type:** `SignalIntent` in `libs/types/src/signal-intent.ts`
 
-| Intent           | Description                                                                                    | Routing                                                                   |
-| ---------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `work_order`     | Concrete task ready for implementation (Linear new issue, MCP create_feature, UI board action) | Ops pipeline — normal execution                                           |
-| `idea`           | Vague concept needing PM refinement (MCP process_idea, Discord brainstorm channels)            | PM Agent research + PRD                                                   |
-| `feedback`       | Commentary on existing work (Linear comment on active issue, PR review)                        | Routes to running agent via `sendMessageToAgent()` or `followUpFeature()` |
-| `conversational` | Casual message or question — no work item created (Discord @mentions, social exchanges)        | GTM or acknowledged without feature creation                              |
-| `interrupt`      | Urgent signal requiring immediate human attention (SLA breach, emergency)                      | Bypasses PM pipeline entirely — creates HITL form directly                |
+| Intent           | Description                                                                              | Routing                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `work_order`     | Concrete task ready for implementation (MCP create_feature, UI board action)             | Ops pipeline -- normal execution                                          |
+| `idea`           | Vague concept needing PM refinement (MCP process_idea, Discord brainstorm channels)      | PM Agent research + PRD                                                   |
+| `feedback`       | Commentary on existing work (PR review, Discord discussion)                              | Routes to running agent via `sendMessageToAgent()` or `followUpFeature()` |
+| `conversational` | Casual message or question -- no work item created (Discord @mentions, social exchanges) | GTM or acknowledged without feature creation                              |
+| `interrupt`      | Urgent signal requiring immediate human attention (SLA breach, emergency)                | Bypasses PM pipeline entirely -- creates HITL form directly               |
 
 The `intent` field is threaded onto all `signal:routed` events. The interrupt fast-path uses `HITLFormService` (wired via `setHITLFormService()` at server startup).
 
@@ -117,7 +116,7 @@ The Lead Engineer state machine takes over. See the Lead Engineer section below 
 
 **Gate:** auto (ops) / manual (gtm) | **workItemState:** `done`
 
-PR merges to main (or epic branch). Board status updates to `done`. Linear issue auto-closes. Emits `feature:pr-merged`.
+PR merges to target branch (dev, epic, or main). Board status updates to `done`. Emits `feature:pr-merged`.
 
 ## Gate system
 
@@ -201,9 +200,9 @@ Defined in `apps/server/src/services/lead-engineer-service.ts`. This is the per-
 
 ```
 INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
-                    ↓         ↓
+                    |         |
                  (retry)   (CI fail → back to EXECUTE)
-                    ↓
+                    |
                  BLOCKED → ESCALATE (to Ava)
 ```
 
@@ -248,6 +247,18 @@ Verify CI, merge PR (squash/merge/rebase per settings). Emit `feature:pr-merged`
 
 Terminal state. Cleanup checkpoint, store metrics, update Langfuse traces.
 
+## Escalation routing
+
+When the Lead Engineer can't resolve a situation, signals are routed through the `EscalationRouter` to appropriate channels based on severity and signal type. See [Escalation routing](../agents/escalation-routing) for the full architecture.
+
+| Trigger                | Action                        |
+| ---------------------- | ----------------------------- |
+| Feature fails 3+ times | Escalate model, then flag Ava |
+| PR fails CI 3+ times   | Flag Ava with failure context |
+| Budget exceeded        | Stop agent, flag Ava          |
+| Circular dependency    | Flag Ava                      |
+| Unknown error          | Flag Ava for manual triage    |
+
 ## Fast-path supervisor rules
 
 Defined in `apps/server/src/services/lead-engineer-rules.ts`. Pure functions (no LLM) that react to events:
@@ -266,13 +277,12 @@ Defined in `apps/server/src/services/lead-engineer-rules.ts`. Pure functions (no
 
 ## Feature status system
 
-Six canonical statuses on the board (`libs/types/src/feature.ts`):
+Five canonical statuses on the board (`libs/types/src/feature.ts`):
 
 ```
 backlog → in_progress → review → done
-             ↓           ↓
-          blocked ← ← ← ┘
-
+             |           |
+          blocked < < < -+
 ```
 
 ### Pipeline phase to status mapping
@@ -295,31 +305,7 @@ Defined in `libs/dependency-resolver/src/resolver.ts`. Uses Kahn's algorithm wit
 
 **Foundation dependencies** (`isFoundation: true`) require the dependency to be `done` (merged to main).
 
-**Standard dependencies** allow `review` or `done` — work can start once the dependency has a PR up.
-
-## Linear integration
-
-Two bridges connect Linear to the board:
-
-**Intake bridge** (`linear-intake-bridge.ts`): Linear issue moved to "In Progress" → creates simple backlog feature with `linearIssueId`.
-
-**Approval bridge** (`linear-approval-bridge.ts`): Linear issue moved to "Approved" → creates epic feature with `workItemState: 'approved'`, triggers ProjM decomposition.
-
-Both bridges check for duplicates and skip user-assigned issues.
-
-## Escalation
-
-When the Lead Engineer can't resolve a situation:
-
-| Trigger                | Action                        |
-| ---------------------- | ----------------------------- |
-| Feature fails 3+ times | Escalate model, then flag Ava |
-| PR fails CI 3+ times   | Flag Ava with failure context |
-| Budget exceeded        | Stop agent, flag Ava          |
-| Circular dependency    | Flag Ava                      |
-| Unknown error          | Flag Ava for manual triage    |
-
-Escalations route through `EscalationRouter` to Discord channels.
+**Standard dependencies** allow `review` or `done` -- work can start once the dependency has a PR up.
 
 ## Observability
 
@@ -331,11 +317,9 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 **Components:**
 
-- `PipelinePillSelector` — horizontal row of chips, each showing feature title + status dot (violet=active, amber=gated, emerald=done). Auto-hides when ≤1 pipeline active.
-- `PipelineProgressBar` — unchanged, always shows the selected pipeline's 9-phase stepper.
-- `usePipelineProgress` hook — tracks a `Map<featureId, PipelineEntry>` internally. WebSocket events upsert by `featureId`. Exposes `pipelines` array + `selectedFeatureId` + `setSelectedFeatureId`.
-
-**Backward compatibility:** The hook still exposes `featureId`, `pipelineState`, `branch`, `awaitingGate` as convenience fields mirroring the selected pipeline, so existing consumers work unchanged.
+- `PipelinePillSelector` -- horizontal row of chips, each showing feature title + status dot (violet=active, amber=gated, emerald=done). Auto-hides when <=1 pipeline active.
+- `PipelineProgressBar` -- unchanged, always shows the selected pipeline's 9-phase stepper.
+- `usePipelineProgress` hook -- tracks a `Map<featureId, PipelineEntry>` internally. WebSocket events upsert by `featureId`. Exposes `pipelines` array + `selectedFeatureId` + `setSelectedFeatureId`.
 
 **Gate interaction:** Clicking the amber gate indicator on the progress bar or a gated pipeline-stage node opens the pending HITL form for the selected pipeline's feature (if one exists). The `Advance`/`Reject` buttons in the progress bar resolve the selected pipeline's gate.
 
@@ -354,6 +338,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 | `apps/server/src/services/auto-mode-service.ts`                          | Auto-loop and execution           |
 | `apps/server/src/services/pr-feedback-service.ts`                        | PR polling and remediation        |
 | `apps/server/src/services/hitl-form-service.ts`                          | HITL form creation and responses  |
+| `apps/server/src/services/escalation-router.ts`                          | Escalation signal routing         |
 | `apps/server/src/services/authority-agents/pm-agent.ts`                  | PM (research + PRD + HITL)        |
 | `apps/server/src/services/authority-agents/projm-agent.ts`               | ProjM (milestone planning)        |
 | `apps/server/src/services/authority-agents/em-agent.ts`                  | EM (capacity + execution)         |
@@ -364,7 +349,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 ## Next steps
 
-- [Engine architecture](../archived/engine-architecture) — ADR for the Lead Engineer design (archived)
-- [Project lifecycle](./project-lifecycle) — Linear-driven project state machine
-- [Feature status system](./feature-status-system) — Canonical 6-status details
-- [PR remediation loop](./pr-remediation-loop) — CI failure handling
+- [Escalation routing](../agents/escalation-routing) -- Escalation channel architecture and configuration
+- [Inbox system](./inbox-system) -- Unified actionable items inbox
+- [Feature status system](./feature-status-system) -- Canonical status details
+- [PR remediation loop](./pr-remediation-loop) -- CI failure handling

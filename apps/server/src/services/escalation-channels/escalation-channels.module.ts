@@ -10,7 +10,7 @@ import { LinearIssueChannel } from './linear-issue-channel.js';
  * Note: DiscordDMChannel is registered in discord.module.ts because it requires
  * the Discord bot service to be initialized first.
  */
-export function register(container: ServiceContainer): void {
+export async function register(container: ServiceContainer): Promise<void> {
   const { events, settingsService, featureLoader, repoRoot, escalationRouter, discordService } =
     container;
 
@@ -20,11 +20,23 @@ export function register(container: ServiceContainer): void {
   escalationRouter.registerChannel(
     new GitHubIssueChannel({ featureLoader, projectPath: repoRoot })
   );
+
+  // Read Linear team ID from project settings for escalation issue routing
+  let teamConfig: { defaultTeamId: string } | undefined;
+  try {
+    const projectSettings = await settingsService.getProjectSettings(repoRoot);
+    const teamId = projectSettings.integrations?.linear?.teamId;
+    if (teamId) {
+      teamConfig = { defaultTeamId: teamId };
+    }
+  } catch {
+    // Settings unavailable — channel will use its fallback
+  }
   escalationRouter.registerChannel(
     new LinearIssueChannel(
       settingsService,
       repoRoot,
-      undefined,
+      teamConfig,
       undefined,
       events,
       escalationRouter

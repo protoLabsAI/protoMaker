@@ -45,6 +45,12 @@ export enum EscalationSource {
   agent_needs_input = 'agent_needs_input',
   /** Feature blocked by dependency assigned to human */
   human_blocked_dependency = 'human_blocked_dependency',
+  /** Lead Engineer action executor escalation */
+  lead_engineer = 'lead_engineer',
+  /** Lead Engineer state machine escalation */
+  lead_engineer_state_machine = 'lead_engineer_state_machine',
+  /** Auto-mode health sweep detected issue */
+  auto_mode_health_sweep = 'auto_mode_health_sweep',
 }
 
 /**

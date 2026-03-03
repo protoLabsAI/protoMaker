@@ -2,7 +2,7 @@
 
 How we ensure AI agents and human contributors follow the design system. This page covers the shared component library, forbidden patterns, and enforcement mechanisms.
 
-> **Related docs:** [Design Philosophy](./design-philosophy) for visual decisions, [Frontend Philosophy](./frontend-philosophy) for implementation architecture, [Design System](../internal/design-system) for brand identity.
+> **Related docs:** [Design Philosophy](./design-philosophy) for visual decisions, [Frontend Philosophy](./frontend-philosophy) for implementation architecture, [Design System](./design-system) for brand identity.
 
 ## The problem
 

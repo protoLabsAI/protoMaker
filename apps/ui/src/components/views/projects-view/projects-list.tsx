@@ -23,6 +23,7 @@ interface ProjectSummary {
 }
 
 const PROJECT_STATUS_ORDER: Record<string, number> = {
+  ongoing: -1,
   researching: 0,
   drafting: 1,
   reviewing: 2,
@@ -33,6 +34,7 @@ const PROJECT_STATUS_ORDER: Record<string, number> = {
 };
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
+  ongoing: 'bg-[var(--status-in-progress)]',
   researching: 'bg-[var(--status-info)]',
   drafting: 'bg-[var(--status-warning)]',
   reviewing: 'bg-[var(--status-in-progress)]',
@@ -43,6 +45,7 @@ const PROJECT_STATUS_COLORS: Record<string, string> = {
 };
 
 const PROJECT_STATUS_LABELS: Record<string, string> = {
+  ongoing: 'Ongoing',
   researching: 'Researching',
   drafting: 'Drafting',
   reviewing: 'Reviewing',

@@ -43,7 +43,6 @@ export interface StateDivergence {
   summary: string;
 }
 import { DiscordMonitor, type DiscordBotServiceLike } from './discord-monitor.js';
-import { LinearMonitor } from './linear-monitor.js';
 import { GitHubMonitor } from './github-monitor.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
@@ -85,9 +84,6 @@ export class HeadsdownService {
   /** Discord monitor for detecting user messages */
   private discordMonitor: DiscordMonitor;
 
-  /** Linear monitor for detecting projects and issues */
-  private linearMonitor: LinearMonitor;
-
   /** GitHub monitor for detecting PRs needing review */
   private githubMonitor: GitHubMonitor;
 
@@ -108,7 +104,6 @@ export class HeadsdownService {
   ) {
     this.roleRegistry = roleRegistry;
     this.discordMonitor = new DiscordMonitor(events);
-    this.linearMonitor = new LinearMonitor(events);
     this.githubMonitor = new GitHubMonitor(events);
 
     // Subscribe to monitor events
@@ -202,16 +197,6 @@ export class HeadsdownService {
       logger.info(`Started Discord monitoring for agent ${agentId}`);
     }
 
-    // Start Linear monitoring if configured
-    if (config.monitors.linear) {
-      // Set settings service for token retrieval
-      if (config.projectPath) {
-        this.linearMonitor.setSettingsService(this.settingsService, config.projectPath);
-      }
-      await this.linearMonitor.startMonitoring(config.monitors.linear);
-      logger.info(`Started Linear monitoring for agent ${agentId}`);
-    }
-
     // Start GitHub monitoring if configured
     if (config.monitors.github && config.projectPath) {
       this.githubMonitor.setProjectPath(config.projectPath);
@@ -251,12 +236,6 @@ export class HeadsdownService {
         this.discordMonitor.stopMonitoring(channelId);
       }
       logger.info(`Stopped Discord monitoring for agent ${agentId}`);
-    }
-
-    // Stop Linear monitoring if configured
-    if (agent.monitoring.linear) {
-      this.linearMonitor.stopAll();
-      logger.info(`Stopped Linear monitoring for agent ${agentId}`);
     }
 
     // Stop GitHub monitoring if configured
@@ -592,7 +571,6 @@ export class HeadsdownService {
 
       // Monitoring state
       discord_monitoring_active: !!agent.monitoring.discord,
-      linear_monitoring_active: !!agent.monitoring.linear,
       github_monitoring_active: !!agent.monitoring.github,
 
       // Work availability (will be populated by monitors)

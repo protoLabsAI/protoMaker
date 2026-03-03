@@ -16,6 +16,8 @@ type BadgeVariant =
  */
 export function getProjectStatusVariant(status: string): BadgeVariant {
   switch (status) {
+    case 'ongoing':
+      return 'default';
     case 'researching':
       return 'info';
     case 'drafting':

@@ -784,4 +784,4 @@ Twitch chat interaction tools (see `libs/tools/src/domains/twitch/`).
 - [Notes Panel](./notes-panel) — AI editor features and agent integration
 - [Flows Package](./flows) — LangGraph flow architecture and patterns
 - [Shared Packages](./shared-packages) — Monorepo package overview
-- [Types Package](../libs/types/README.md) — Core TypeScript type definitions
+- [Shared Packages](./shared-packages) — Core TypeScript type definitions

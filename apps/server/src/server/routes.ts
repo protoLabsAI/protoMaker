@@ -62,7 +62,6 @@ import { createCosRoutes } from '../routes/cos/index.js';
 import { createCeremoniesRoutes } from '../routes/ceremonies/index.js';
 import { createAgentManagementRoutes } from '../routes/agents/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
-import { createLinearRoutes } from '../routes/linear/index.js';
 import { createDiscordRoutes } from '../routes/discord/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
 import { createKnowledgeRoutes } from '../routes/knowledge/index.js';
@@ -205,8 +204,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/webhooks', createWebhooksRoutes(events, settingsService));
   // Alerts webhook routes (unauthenticated - Grafana webhooks)
   app.use('/webhooks/alerts', createAlertsRoutes(settingsService, discordBotService));
-  // Linear agent routes (OAuth + webhook)
-  app.use('/api/linear', createLinearRoutes(settingsService, events, featureLoader, repoRoot));
   // Google Calendar OAuth + sync (unauthenticated — browser-initiated redirect flow)
   app.use(
     '/api/google-calendar',

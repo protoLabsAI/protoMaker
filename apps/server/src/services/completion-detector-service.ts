@@ -242,6 +242,9 @@ export class CompletionDetectorService {
     const project = await this.projectService!.getProject(projectPath, projectSlug);
     if (!project || project.status === 'completed') return;
 
+    // Ongoing projects never auto-complete — they are persistent containers
+    if (project.ongoing) return;
+
     const allCompleted = project.milestones.every((m) => m.status === 'completed');
     if (!allCompleted) return;
 

@@ -228,8 +228,10 @@ export class CeremonyService {
     this.ceremonyCounts.standup++;
     this.lastCeremonyAt = new Date().toISOString();
 
+    const correlationId = `standup-${projectSlug}-${milestoneSlug}-${Date.now()}`;
     try {
-      const model = new ChatAnthropic({ model: 'claude-sonnet-4-6' });
+      const modelId = ceremonySettings.retroModel?.model ?? 'claude-sonnet-4-6';
+      const model = new ChatAnthropic({ model: modelId });
       const flow = createStandupFlow({
         projectService: this.projectService,
         model,
@@ -240,9 +242,41 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'standup',
+        projectPath,
+        projectSlug,
+        milestoneSlug,
+        discordChannelId,
+        deliveryStatus: 'delivered',
+        payload: {
+          title: `Standup: ${milestoneTitle}`,
+          summary: `Milestone ${milestoneNumber} standup for ${projectTitle}`,
+        },
+      });
+      this.emitter?.emit('ceremony:fired', {
+        type: 'standup',
+        projectSlug,
+        milestoneSlug,
+        projectPath,
+      });
     } catch (err) {
       this.ceremonyCounts.discordPostFailures++;
       logger.warn(`Standup flow failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'standup',
+        projectPath,
+        projectSlug,
+        milestoneSlug,
+        discordChannelId,
+        deliveryStatus: 'failed',
+        errorMessage: err instanceof Error ? err.message : String(err),
+        payload: { title: `Standup: ${milestoneTitle}` },
+      });
     }
   }
 
@@ -267,8 +301,10 @@ export class CeremonyService {
     this.ceremonyCounts.milestoneRetro++;
     this.lastCeremonyAt = new Date().toISOString();
 
+    const correlationId = `retro-${projectSlug}-${milestoneSlug}-${Date.now()}`;
     try {
-      const model = new ChatAnthropic({ model: 'claude-sonnet-4-6' });
+      const modelId = ceremonySettings.retroModel?.model ?? 'claude-sonnet-4-6';
+      const model = new ChatAnthropic({ model: modelId });
       const flow = createRetroFlow({
         featureLoader: this.featureLoader,
         model,
@@ -282,9 +318,41 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'milestone_retro',
+        projectPath,
+        projectSlug,
+        milestoneSlug,
+        discordChannelId,
+        deliveryStatus: 'delivered',
+        payload: {
+          title: `Retro: ${milestoneTitle}`,
+          summary: `Milestone ${milestoneNumber} retro for ${projectTitle}`,
+        },
+      });
+      this.emitter?.emit('ceremony:fired', {
+        type: 'milestone_retro',
+        projectSlug,
+        milestoneSlug,
+        projectPath,
+      });
     } catch (err) {
       this.ceremonyCounts.discordPostFailures++;
       logger.warn(`Retro flow failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'milestone_retro',
+        projectPath,
+        projectSlug,
+        milestoneSlug,
+        discordChannelId,
+        deliveryStatus: 'failed',
+        errorMessage: err instanceof Error ? err.message : String(err),
+        payload: { title: `Retro: ${milestoneTitle}` },
+      });
     }
   }
 
@@ -316,8 +384,10 @@ export class CeremonyService {
     this.lastCeremonyAt = new Date().toISOString();
     logger.info(`Running project retro flow for "${projectTitle}"`);
 
+    const correlationId = `project-retro-${projectSlug}-${Date.now()}`;
     try {
-      const model = new ChatAnthropic({ model: 'claude-sonnet-4-6' });
+      const modelId = ceremonySettings.retroModel?.model ?? 'claude-sonnet-4-6';
+      const model = new ChatAnthropic({ model: modelId });
       const flow = createProjectRetroFlow({
         featureLoader: this.featureLoader,
         model,
@@ -337,9 +407,34 @@ export class CeremonyService {
         projectSlug,
         completedAt: new Date().toISOString(),
       };
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'project_retro',
+        projectPath,
+        projectSlug,
+        discordChannelId,
+        deliveryStatus: 'delivered',
+        payload: {
+          title: `Project Retro: ${projectTitle}`,
+          summary: `${payload.totalMilestones} milestones, ${payload.totalFeatures} features`,
+        },
+      });
+      this.emitter?.emit('ceremony:fired', { type: 'project_retro', projectSlug, projectPath });
     } catch (err) {
       this.ceremonyCounts.discordPostFailures++;
       logger.warn(`Project retro flow failed: ${err instanceof Error ? err.message : String(err)}`);
+      this.auditLog?.record({
+        id: correlationId,
+        timestamp: new Date().toISOString(),
+        ceremonyType: 'project_retro',
+        projectPath,
+        projectSlug,
+        discordChannelId,
+        deliveryStatus: 'failed',
+        errorMessage: err instanceof Error ? err.message : String(err),
+        payload: { title: `Project Retro: ${projectTitle}` },
+      });
     } finally {
       this.activeReflection = null;
     }
