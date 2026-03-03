@@ -126,12 +126,19 @@ export function DocumentsTab({ projectSlug }: { projectSlug: string }) {
             </div>
           ) : (
             orderedDocs.map((doc) => (
-              <button
+              <div
                 key={doc.id}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => handleSelect(doc)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleSelect(doc);
+                  }
+                }}
                 className={cn(
-                  'w-full text-left px-2 py-1.5 text-xs hover:bg-muted/30 transition-colors flex items-center gap-1.5 group',
+                  'w-full text-left px-2 py-1.5 text-xs hover:bg-muted/30 transition-colors flex items-center gap-1.5 group cursor-pointer',
                   selectedDocId === doc.id && 'bg-muted/40'
                 )}
               >
@@ -144,10 +151,11 @@ export function DocumentsTab({ projectSlug }: { projectSlug: string }) {
                     handleDelete(doc.id);
                   }}
                   className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity"
+                  aria-label={`Delete ${doc.title}`}
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
-              </button>
+              </div>
             ))
           )}
         </div>

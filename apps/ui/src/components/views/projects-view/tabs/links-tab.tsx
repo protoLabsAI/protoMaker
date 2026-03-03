@@ -135,6 +135,7 @@ export function LinksTab({ project }: { project: Project }) {
                 type="button"
                 onClick={() => removeLink.mutate(link.id)}
                 className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity"
+                aria-label={`Remove ${link.label}`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

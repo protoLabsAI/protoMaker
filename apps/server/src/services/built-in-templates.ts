@@ -225,6 +225,7 @@ export function buildTemplates(
         'project_delete_doc',
         'project_list_features',
         'list_features',
+        'get_feature',
         'update_feature',
         'create_feature',
         'query_board',

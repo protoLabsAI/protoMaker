@@ -6,11 +6,14 @@ import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { cn } from '@/lib/utils';
 import { HealthIndicator } from '../components/health-indicator';
+import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { toast } from 'sonner';
 import type { Project, ProjectHealth, ProjectStatusUpdate } from '@protolabs-ai/types';
 
 export function UpdatesTab({ project }: { project: Project }) {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const { data: globalSettings } = useGlobalSettings();
+  const authorName = globalSettings?.userProfile?.name || 'User';
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [health, setHealth] = useState<ProjectHealth>('on-track');
@@ -19,7 +22,7 @@ export function UpdatesTab({ project }: { project: Project }) {
   const addUpdate = useMutation({
     mutationFn: async () => {
       const api = getHttpApiClient();
-      return api.lifecycle.addStatusUpdate(projectPath, project.slug, health, body, 'User');
+      return api.lifecycle.addStatusUpdate(projectPath, project.slug, health, body, authorName);
     },
     onSuccess: () => {
       setBody('');
