@@ -1,6 +1,6 @@
 {
   "name": "@protolabs-ai/observability",
-  "version": "0.30.1",
+  "version": "0.31.0",
   "type": "module",
   "description": "Observability and tracing utilities for AutoMaker",
   "main": "dist/index.js",
@@ -33,8 +33,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabs-ai/types": "^0.30.1",
-    "@protolabs-ai/utils": "^0.30.1",
+    "@protolabs-ai/types": "^0.31.0",
+    "@protolabs-ai/utils": "^0.31.0",
     "langfuse": "^3.32.0",
     "zod": "^4.3.6"
   },

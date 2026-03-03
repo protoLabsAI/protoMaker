@@ -1,5 +1,18 @@
 # @protolabs-ai/platform
 
+## 0.31.0
+
+### Minor Changes
+
+- ### Features
+  - wire LLM release notes rewriter into auto-release pipeline
+  - add LLM-powered release notes rewriter with prompt template and docs
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.31.0
+
 ## 0.30.1
 
 ### Patch Changes
