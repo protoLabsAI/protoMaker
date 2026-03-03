@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useAppStore, type Feature } from '@/store/app-store';
 import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
@@ -37,6 +38,12 @@ export function BottomPanel() {
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
   const { data: agentCount } = useRunningAgentsCount();
+
+  const [time, setTime] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   if (isMobile) return null;
 
@@ -147,6 +154,11 @@ export function BottomPanel() {
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Clock */}
+        <span className="text-xs tabular-nums text-muted-foreground">
+          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
 
         {/* Ava Chat toggle */}
         {avaChat && (
