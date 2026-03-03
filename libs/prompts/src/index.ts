@@ -173,3 +173,7 @@ export type { LintResult, LintWarning, LintError, LintSummary } from './lint.js'
 // Content generation prompts
 export { getOutlinePlannerPrompt } from './content/outline-planner.js';
 export type { OutlinePlannerConfig } from './content/outline-planner.js';
+
+// Release notes rewriter
+export { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from './release-notes.js';
+export type { ReleaseNotesInput } from './release-notes.js';

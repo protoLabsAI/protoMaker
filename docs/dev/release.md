@@ -1,126 +1,141 @@
-# Release Command
+# Release Notes
 
-This command creates a git tag with a version bump and description of changes.
+## Overview
 
-## Usage
+protoLabs Studio uses an LLM-powered release notes rewriter to transform raw conventional commit messages into polished, user-facing release notes. The system has two components:
 
-```
-/release [major|minor|patch] [description]
-```
+1. **Prompt template** (`libs/prompts/src/release-notes.ts`) — reusable from any TypeScript context
+2. **CLI script** (`scripts/rewrite-release-notes.mjs`) — standalone runner for CI or manual use
 
-Examples:
-
-- `/release minor "✨ Added inventory drag and drop functionality"`
-- `/release patch "🐛 Fixed bug with item selection"`
-- `/release major "💥 Breaking: Refactored API endpoints"`
-- `/release minor "Version 0.20.0: Added new features and improvements"`
-
-## Steps to Execute
-
-### 1. Parse Version Type and Description
-
-- Extract the version type from the command: `major`, `minor`, or `patch`
-- Extract the description (rest of the command, if provided)
-- If no version type provided or invalid, show usage and exit
-- Description is optional - if not provided, will auto-generate from commits
-
-### 2. Generate Changelog from Commits
-
-- Find the last git tag (version tag):
-  ```bash
-  git describe --tags --abbrev=0
-  ```
-- If no previous tag exists, use the initial commit or handle gracefully
-- Get all commits between the last tag and HEAD:
-  ```bash
-  git log <last-tag>..HEAD --pretty=format:"%h %s" --no-merges
-  ```
-- Parse commit messages and generate a changelog description:
-  - Group commits by type (feature, fix, improvement, etc.) based on commit message patterns
-  - Use emojis to categorize changes (see Emoji Usage section)
-  - Format as a multi-line changelog with categorized entries
-  - If user provided a description, prepend it to the auto-generated changelog
-  - If no commits found, use a default message or prompt user
-
-### 3. Read Current Version
-
-- Read `app/package.json` to get the current version (e.g., "0.1.0")
-- Parse the version into major, minor, and patch components
-- Calculate the new version based on the type:
-  - **major**: `${major + 1}.0.0` (e.g., 0.1.0 → 1.0.0)
-  - **minor**: `${major}.${minor + 1}.0` (e.g., 0.1.0 → 0.2.0)
-  - **patch**: `${major}.${minor}.${patch + 1}` (e.g., 0.1.0 → 0.1.1)
-
-### 4. Create Git Tag
-
-- Create an annotated git tag with the new version and description:
-  ```bash
-  git tag -a v<new-version> -m "<description>"
-  ```
-- Example: `git tag -a v0.2.0 -m "✨ Added inventory drag and drop functionality"`
-
-### 5. Push Tag to Remote
-
-- Push the tag to remote:
-  ```bash
-  git push origin v<new-version>
-  ```
-
-## Emoji Usage
-
-You can use emojis in release notes to categorize changes:
-
-- ✨ **New features** - New functionality, features, additions
-- 🐛 **Bug fixes** - Bug fixes and error corrections
-- 🔧 **Improvements** - Refactoring, optimizations, code quality
-- ⚡ **Performance** - Performance improvements
-- 💥 **Breaking changes** - Breaking API changes, major refactors
-- 🎨 **UI/UX** - Visual and user experience updates
-- ⚙️ **Configuration** - Config and environment changes
-- 📝 **Documentation** - Documentation updates
-- 🏗️ **Infrastructure** - Build, deployment, infrastructure
-- 🎵 **Audio** - Sound effects, music, audio changes
-
-## Changelog Generation
-
-The release command automatically generates a changelog by analyzing commits between the last tag and HEAD:
-
-1. **Find Last Tag**: Uses `git describe --tags --abbrev=0` to find the most recent version tag
-2. **Get Commits**: Retrieves all commits between the last tag and HEAD using `git log <last-tag>..HEAD`
-3. **Parse and Categorize**: Analyzes commit messages to categorize changes:
-   - Looks for conventional commit patterns (feat:, fix:, refactor:, etc.)
-   - Detects emoji prefixes in commit messages
-   - Groups similar changes together
-4. **Generate Description**: Creates a formatted changelog with:
-   - User-provided description (if any) at the top
-   - Categorized list of changes with appropriate emojis
-   - Commit hash references for traceability
-
-### Example Generated Changelog
+## How It Works
 
 ```
-✨ Added inventory drag and drop functionality
-
-Changes since v0.1.0:
-
-✨ Features:
-- Add drag and drop support for inventory items (abc1234)
-- Implement new sidebar navigation (def5678)
-
-🐛 Bug Fixes:
-- Fix item selection bug in list view (ghi9012)
-- Resolve memory leak in component cleanup (jkl3456)
-
-🔧 Improvements:
-- Refactor API endpoint structure (mno7890)
-- Optimize database queries (pqr2345)
+git tags (v0.29.0..v0.30.1)
+    |
+    v
+git log --pretty=format:"%s"
+    |
+    v
+Filter (remove merge/chore/promote commits)
+    |
+    v
+Claude API (Haiku) + system prompt
+    |
+    v
+Themed, user-facing release notes
+    |
+    v
+(optional) Discord #dev webhook embed
 ```
 
-## Notes
+Raw commits like `feat(ui): wire file editor to upstream parity` become grouped, themed sections:
 
-- The tag message should describe what changed in this release
-- Use descriptive messages with emojis to categorize changes
-- Tags follow semantic versioning (e.g., v0.1.0, v0.2.0, v1.0.0)
-- Version is automatically calculated based on the type specified
-- If no previous tag exists, all commits from the repository start will be included
-- User-provided description (if any) will be prepended to the auto-generated changelog
+```markdown
+**File Editor**
+
+- File editor is now stable and removes its beta flag, matching upstream
+  feature parity with CodeMirror syntax highlighting, multi-tab support,
+  tree context menus, diff viewing, and support for 30+ languages.
+```
+
+## CLI Usage
+
+```bash
+# Auto-detect latest two tags
+node scripts/rewrite-release-notes.mjs
+
+# Specify versions explicitly
+node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0
+
+# Preview the prompt without calling Claude
+node scripts/rewrite-release-notes.mjs --dry-run
+
+# Generate and post to Discord #dev
+node scripts/rewrite-release-notes.mjs --post-discord
+```
+
+### Flags
+
+| Flag             | Description                                    |
+| ---------------- | ---------------------------------------------- |
+| `--dry-run`      | Print system + user prompt without calling API |
+| `--post-discord` | Post result to #dev via `DISCORD_DEV_WEBHOOK`  |
+
+### Environment Variables
+
+| Variable              | Required | Description                          |
+| --------------------- | -------- | ------------------------------------ |
+| `ANTHROPIC_API_KEY`   | Yes      | Anthropic API key for Claude calls   |
+| `DISCORD_DEV_WEBHOOK` | No       | Discord webhook URL for #dev channel |
+
+## Prompt Template
+
+The prompt lives in `libs/prompts/src/release-notes.ts` and exports:
+
+- `RELEASE_NOTES_SYSTEM_PROMPT` — system prompt defining voice, rules, and format
+- `buildReleaseNotesPrompt(input)` — builds the user prompt from version info and commits
+- `ReleaseNotesInput` — TypeScript interface for the input shape
+
+### Voice Guidelines
+
+The system prompt enforces:
+
+- Technical, direct, pragmatic tone — speak to builders
+- No marketing fluff or AI hype words ("revolutionizing", "game-changing")
+- 2-4 themed sections grouped by user impact (not raw commit categories)
+- Each item: one sentence, present tense, user-facing impact
+- Under 300 words total
+- Plain markdown (bold headers, bullet lists)
+- No emojis
+
+### Commit Filtering
+
+Both the prompt template and CLI script filter out:
+
+- `merge *` — merge commits
+- `chore: release*` — version bump commits
+- `promote*` — promotion commits
+
+If no meaningful commits remain after filtering, the prompt instructs Claude to write a brief maintenance release note.
+
+## Programmatic Usage
+
+```typescript
+import { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from '@protolabs-ai/prompts';
+
+const prompt = buildReleaseNotesPrompt({
+  version: 'v0.30.1',
+  previousVersion: 'v0.29.0',
+  commits: [
+    'feat: wire file editor to upstream parity',
+    'fix: dark mode for date picker and scrollbars',
+  ],
+});
+
+// Feed RELEASE_NOTES_SYSTEM_PROMPT as system prompt
+// and the returned prompt as user message to Claude
+```
+
+## CI Integration
+
+The `auto-release.yml` workflow posts raw GitHub-generated release notes to Discord. To enable LLM-rewritten notes instead, the "Post release notes to Discord" step can be replaced with:
+
+```yaml
+- name: Rewrite and post release notes
+  if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
+  run: node scripts/rewrite-release-notes.mjs --post-discord
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+```
+
+### Enabling/Disabling
+
+- **Enabled by default**: The CLI script is always available at `scripts/rewrite-release-notes.mjs`
+- **CI integration**: Requires adding the step above to `auto-release.yml` (not yet wired — currently posts raw notes)
+- **Manual runs**: Run the script locally with `ANTHROPIC_API_KEY` set
+- **Disable in CI**: Remove or comment out the rewrite step in `auto-release.yml`; the workflow falls back to GitHub's `generate-notes` API
+
+## Model Selection
+
+The CLI script uses `claude-haiku-4-5-20251001` (Haiku 4.5) for speed and cost efficiency. Release notes rewriting is a structured text task that does not require Sonnet or Opus capabilities. To change the model, edit the `model` field in the `callClaude()` function in `scripts/rewrite-release-notes.mjs`.

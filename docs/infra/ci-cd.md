@@ -4,18 +4,18 @@ protoLabs uses GitHub Actions for continuous integration and delivery. All workf
 
 ## Workflows Overview
 
-| Workflow                 | Trigger                   | Runner      | Purpose                             |
-| ------------------------ | ------------------------- | ----------- | ----------------------------------- |
-| `checks.yml`             | PR, push to main, weekly  | self-hosted | Format, lint, audit                 |
-| `test.yml`               | PR, push to main          | self-hosted | Unit tests                          |
-| `e2e-tests.yml`          | Push to main, manual      | self-hosted | End-to-end tests                    |
-| `pr-check.yml`           | PR, push to main          | self-hosted | Build verification                  |
-| `deploy-staging.yml`     | Push to staging, manual   | self-hosted | Auto-deploy staging environment     |
-| `deploy-main.yml`        | Push to main, manual      | self-hosted | Auto-deploy production environment  |
-| `auto-release.yml`       | staging→main PR merged    | self-hosted | Version bump + tag + GitHub Release |
-| `build-electron.yml`     | `v*` tag push             | matrix      | Multi-platform Electron builds      |
-| `generate-changelog.yml` | Release published, manual | self-hosted | AI changelog generation             |
-| `linear-sync.yml`        | PR merged to main         | self-hosted | Linear issue sync                   |
+| Workflow                | Trigger                  | Runner      | Purpose                             |
+| ----------------------- | ------------------------ | ----------- | ----------------------------------- |
+| `checks.yml`            | PR, push to main, weekly | self-hosted | Format, lint, audit                 |
+| `test.yml`              | PR, push to main         | self-hosted | Unit tests                          |
+| `e2e-tests.yml`         | Push to main, manual     | self-hosted | End-to-end tests                    |
+| `pr-check.yml`          | PR, push to main         | self-hosted | Build verification                  |
+| `deploy-staging.yml`    | Push to staging, manual  | self-hosted | Auto-deploy staging environment     |
+| `deploy-main.yml`       | Push to main, manual     | self-hosted | Auto-deploy production environment  |
+| `auto-release.yml`      | staging→main PR merged   | self-hosted | Version bump + tag + GitHub Release |
+| `build-electron.yml`    | `v*` tag push            | matrix      | Multi-platform Electron builds      |
+| `rewrite-release-notes` | Manual / CI step         | self-hosted | LLM-powered release notes rewriting |
+| `linear-sync.yml`       | PR merged to main        | self-hosted | Linear issue sync                   |
 
 > **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
 
@@ -231,22 +231,54 @@ Each platform job builds independently, then `upload-release` waits for all thre
 
 > **Note:** Linux uses `self-hosted` (not `ubuntu-latest`) — GitHub-hosted runner minutes are exhausted for large builds.
 
-## Changelog Generation (`generate-changelog.yml`)
+## Release Notes Rewriting
 
-Auto-generates changelogs when a GitHub Release is published.
+An LLM-powered release notes rewriter transforms raw conventional commits into polished, user-facing release notes. Available as both a reusable prompt template (`libs/prompts/src/release-notes.ts`) and a standalone CLI script (`scripts/rewrite-release-notes.mjs`).
 
-- Triggered on release publish or manual dispatch
-- Runs on self-hosted runner (requires Claude CLI for AI summarization)
-- Collects merged PRs since last release via `gh pr list`
-- Uses Claude CLI to categorize changes (features, bug fixes, docs, infra)
-- Updates `CHANGELOG.md` and the GitHub Release notes
-- Script: `scripts/generate-changelog.sh`
+### How It Works
+
+1. Fetches commits between two git tags via `git log`
+2. Filters out merge, chore, and promote commits
+3. Sends the remaining commits to Claude (Haiku 4.5) with a system prompt enforcing brand voice
+4. Returns themed, grouped release notes in plain markdown
+5. Optionally posts to Discord #dev as an embed
+
+### CLI Usage
+
+```bash
+# Auto-detect latest two tags
+node scripts/rewrite-release-notes.mjs
+
+# Specify versions
+node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0
+
+# Preview prompt without calling API
+node scripts/rewrite-release-notes.mjs --dry-run
+
+# Generate and post to Discord
+node scripts/rewrite-release-notes.mjs --post-discord
+```
+
+### CI Integration
+
+The `auto-release.yml` workflow currently posts raw GitHub-generated notes to Discord. To enable LLM-rewritten notes, replace the "Post release notes to Discord" step with:
+
+```yaml
+- name: Rewrite and post release notes
+  if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
+  run: node scripts/rewrite-release-notes.mjs --post-discord
+  env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+```
 
 ### Requirements
 
-- Self-hosted runner with Claude CLI installed and authenticated
-- `gh` CLI authenticated with repository access
-- `LINEAR_API_TOKEN` for fetching issue context (optional)
+- `ANTHROPIC_API_KEY` — required for Claude API calls
+- `DISCORD_DEV_WEBHOOK` — optional, required only for `--post-discord` flag
+- Git tags must exist locally (`git fetch origin --tags` if needed)
+
+See [release.md](../dev/release.md) for full documentation including voice guidelines and programmatic usage.
 
 ## Linear Issue Sync (`linear-sync.yml`)
 
@@ -379,7 +411,9 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 | `GH_PAT`                 | PAT for `auto-release.yml` tag push (enables `build-electron.yml` trigger) |
 | `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments)                                |
 | `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)                                        |
+| `DISCORD_DEV_WEBHOOK`    | Release notes posted to #dev (used by auto-release + rewrite script)       |
 | `LINEAR_API_TOKEN`       | Linear issue sync on PR merge                                              |
+| `ANTHROPIC_API_KEY`      | LLM release notes rewriting (Haiku 4.5)                                    |
 
 ## Self-Hosted Runner Capabilities
 
@@ -387,7 +421,7 @@ The `ava-staging` runner has access to resources that GitHub-hosted runners don'
 
 | Capability                 | What It Enables                                       |
 | -------------------------- | ----------------------------------------------------- |
-| Claude CLI (authenticated) | AI-assisted changelog generation                      |
+| Claude CLI (authenticated) | AI-assisted tasks, release notes rewriting            |
 | Anthropic API key          | Agent execution, code analysis                        |
 | protoLabs MCP server       | Board updates, feature status, agent orchestration    |
 | Docker (host)              | Staging deploys, integration tests against real infra |
