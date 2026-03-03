@@ -1,6 +1,8 @@
 import { useAppStore, type Feature } from '@/store/app-store';
+import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useRunningAgentsCount } from '@/hooks/queries/use-running-agents';
+import { isElectron, getOverlayAPI } from '@/lib/electron';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
 import {
   Bot,
@@ -13,6 +15,7 @@ import {
   LineChart,
   Radio,
   PanelBottomOpen,
+  MessageCircle,
   X,
 } from 'lucide-react';
 import { ActivityTab } from './activity-tab';
@@ -30,6 +33,9 @@ export function BottomPanel() {
   const toggleBottomPanel = useAppStore((s) => s.toggleBottomPanel);
   const setBottomPanelActiveTab = useAppStore((s) => s.setBottomPanelActiveTab);
   const features = useAppStore((s) => s.features);
+  const avaChat = useAppStore((s) => s.featureFlags.avaChat);
+  const chatModalOpen = useChatStore((s) => s.chatModalOpen);
+  const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
   const { data: agentCount } = useRunningAgentsCount();
 
   if (isMobile) return null;
@@ -141,6 +147,24 @@ export function BottomPanel() {
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Ava Chat toggle */}
+        {avaChat && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isElectron()) {
+                getOverlayAPI()?.toggleOverlay?.();
+              } else {
+                setChatModalOpen(!chatModalOpen);
+              }
+            }}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            title="Open Ava Chat"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+          </button>
+        )}
 
         {/* Panel toggle */}
         <PanelBottomOpen

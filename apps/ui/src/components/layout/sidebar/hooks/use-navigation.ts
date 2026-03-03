@@ -17,7 +17,6 @@ import {
   CalendarDays,
   FolderOpen,
   FolderKanban,
-  MessageCircle,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -56,7 +55,6 @@ interface UseNavigationProps {
   hideSpecEditor: boolean;
   hideContext: boolean;
   hideTerminal: boolean;
-  hideChat: boolean;
   hideCalendar: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
@@ -86,7 +84,6 @@ export function useNavigation({
   hideSpecEditor,
   hideContext,
   hideTerminal,
-  hideChat,
   hideCalendar,
   hideDesigns,
   hideDocs,
@@ -183,14 +180,6 @@ export function useNavigation({
         shortcut: shortcuts.board,
       },
     ];
-
-    if (!hideChat) {
-      projectItems.push({
-        id: 'chat',
-        label: 'Ava Chat',
-        icon: MessageCircle,
-      });
-    }
 
     projectItems.push({
       id: 'notes',
@@ -313,7 +302,6 @@ export function useNavigation({
     shortcuts,
     hideSpecEditor,
     hideContext,
-    hideChat,
     hideTerminal,
     hideCalendar,
     hideDesigns,
