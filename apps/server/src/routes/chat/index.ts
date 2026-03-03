@@ -223,9 +223,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
         ? await loadAvaConfig(projectPath)
         : { ...DEFAULT_AVA_CONFIG, toolGroups: { ...DEFAULT_AVA_CONFIG.toolGroups } };
 
-      // Model selection: AvaConfig.model > header > body > default (sonnet)
+      // Model selection: session picker (header/body) > AvaConfig.model > default (sonnet)
+      // The inline ChatModelSelect sends x-model-alias; config model is the fallback for new chats.
       const modelAlias =
-        avaConfig.model || (req.headers['x-model-alias'] as string) || bodyModel || 'sonnet';
+        (req.headers['x-model-alias'] as string) || bodyModel || avaConfig.model || 'sonnet';
 
       const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
       const aiModel = anthropic(resolvedModelId);

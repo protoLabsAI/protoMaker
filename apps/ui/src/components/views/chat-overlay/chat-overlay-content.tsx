@@ -329,7 +329,11 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
                 <Settings className="size-3.5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" sideOffset={6} className="w-72 p-0">
+            <PopoverContent
+              align="end"
+              sideOffset={6}
+              className="w-80 max-h-[70vh] overflow-y-auto p-0"
+            >
               <AvaSettingsPanel projectPath={currentProject?.path} />
             </PopoverContent>
           </Popover>
