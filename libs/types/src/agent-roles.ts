@@ -62,20 +62,6 @@ export interface DiscordMonitorConfig {
 }
 
 /**
- * Linear monitoring configuration
- */
-export interface LinearMonitorConfig {
-  /** Linear project IDs to monitor */
-  projectIds: string[];
-
-  /** Filter by labels (e.g., ["frontend", "ui"]) */
-  labels?: string[];
-
-  /** How often to poll Linear (ms, default: 30000) */
-  pollInterval?: number;
-}
-
-/**
  * GitHub monitoring configuration
  */
 export interface GitHubMonitorConfig {
@@ -91,7 +77,6 @@ export interface GitHubMonitorConfig {
  */
 export interface AgentMonitoring {
   discord?: DiscordMonitorConfig;
-  linear?: LinearMonitorConfig;
   github?: GitHubMonitorConfig;
 }
 

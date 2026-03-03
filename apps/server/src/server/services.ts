@@ -61,13 +61,8 @@ import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js
 import { FeatureHealthService } from '../services/feature-health-service.js';
 import { getAvaGatewayService } from '../services/ava-gateway-service.js';
 import { getDiscordService } from '../services/discord-service.js';
-import { LinearAgentService } from '../services/linear-agent-service.js';
-import { LinearAgentRouter } from '../services/linear-agent-router.js';
 import { TriageService } from '../services/triage-service.js';
 import { IssueCreationService } from '../services/issue-creation-service.js';
-import { linearApprovalHandler } from '../services/linear-approval-handler.js';
-import { LinearApprovalBridge } from '../services/linear-approval-bridge.js';
-import { LinearIntakeBridge } from '../services/linear-intake-bridge.js';
 import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from '../services/antagonistic-review-service.js';
 import { AgentScoringService } from '../services/agent-scoring-service.js';
@@ -91,7 +86,6 @@ import { JobExecutorService } from '../services/job-executor-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
-import { ProjectUpdateApprovalService } from '../services/project-update-approval-service.js';
 import { CeremonyAuditLogService } from '../services/ceremony-audit-service.js';
 import { CeremonyService, ceremonyService } from '../services/ceremony-service.js';
 import { LeadEngineerService } from '../services/lead-engineer-service.js';
@@ -101,7 +95,6 @@ import {
   getDataIntegrityWatchdogService,
 } from '../services/data-integrity-watchdog-service.js';
 import { ProjectPlanningService } from '../services/project-planning-service.js';
-import { linearSyncService } from '../services/linear-sync-service.js';
 import { changelogService } from '../services/changelog-service.js';
 
 const logger = createLogger('Server:Services');
@@ -216,7 +209,6 @@ export interface ServiceContainer {
   // Project management
   projectService: ProjectService;
   projectLifecycleService: ProjectLifecycleService;
-  projectUpdateApprovalService: ProjectUpdateApprovalService;
   completionDetectorService: CompletionDetectorService;
 
   // Ceremonies
@@ -231,8 +223,6 @@ export interface ServiceContainer {
   leadHandoffService: LeadHandoffService;
 
   // PR & worktree lifecycle
-  approvalBridge: LinearApprovalBridge;
-  intakeBridge: LinearIntakeBridge;
   prFeedbackService: PRFeedbackService;
   worktreeLifecycleService: WorktreeLifecycleService;
   githubStateChecker: GitHubStateChecker;
@@ -241,10 +231,6 @@ export interface ServiceContainer {
   // Issue management
   triageService: TriageService;
   issueCreationService: IssueCreationService;
-
-  // Linear agent
-  linearAgentService: LinearAgentService;
-  linearAgentRouter: LinearAgentRouter;
 
   // Project planning
   projectPlanningService: ProjectPlanningService | null;
@@ -500,15 +486,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     events
   );
 
-  // Project Update Approval Service (detects approval signals in Linear project updates)
-  const projectUpdateApprovalService = new ProjectUpdateApprovalService(
-    events,
-    projectLifecycleService,
-    projectService,
-    settingsService,
-    repoRoot
-  );
-
   // Ceremony Audit Log and Ceremony Service
   const ceremonyAuditLog = new CeremonyAuditLogService();
 
@@ -555,12 +532,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     hitlFormService
   );
-
-  // Linear approval detection + bridge to CoS pipeline
-  const approvalBridge = new LinearApprovalBridge(events, featureLoader);
-
-  // Linear intake bridge — transfers issues to board as simple features
-  const intakeBridge = new LinearIntakeBridge(events, featureLoader, repoRoot);
 
   // PR Feedback Service (monitors open PRs for review comments)
   const prFeedbackService = new PRFeedbackService(events, featureLoader);
@@ -623,16 +594,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService
   );
 
-  // Linear Agent Service and Router for Linear agent integration
-  const linearAgentService = new LinearAgentService();
-  const linearAgentRouter = new LinearAgentRouter(
-    events,
-    roleRegistryService,
-    linearAgentService,
-    settingsService,
-    repoRoot
-  );
-
   // Agent Discord Router for agent-to-Discord message routing
   const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService, roleRegistryService);
 
@@ -667,7 +628,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     const planningFlowConfig = await createLLMProjectPlanningConfig({ settingsService });
     projectPlanningService = new ProjectPlanningService(
       events,
-      linearAgentService,
       repoRoot,
       planningFlowConfig,
       settingsService
@@ -680,7 +640,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   }
 
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
-  integrationService.initialize(events, settingsService, featureLoader, ceremonyService);
+  integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
 
   // Wire contextFidelityService into leadEngineerService
@@ -693,14 +653,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Wire pipelineOrchestrator processors
   pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });
-
-  // Start projectUpdateApprovalService
-  projectUpdateApprovalService.start();
-
-  // Initialize Linear Sync Service — bidirectional sync between features/projects and Linear
-  linearSyncService.initialize(events, settingsService, featureLoader, projectService);
-  linearSyncService.setHITLFormService(hitlFormService);
-  linearSyncService.start();
 
   // Initialize Ceremony Service
   ceremonyService.initialize(
@@ -718,8 +670,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Initialize Changelog Service for generating changelogs on milestone/project completion
   changelogService.initialize(events, settingsService, featureLoader, projectService);
 
-  // Initialize Linear approval handler
-  linearApprovalHandler.initialize(settingsService, events);
+  // Issue Management Pipeline initialization
+  issueCreationService.initialize();
+
+  // Project Planning Service start (listens for planning events)
+  if (projectPlanningService) {
+    projectPlanningService.start();
+  }
 
   return {
     dataDir,
@@ -780,7 +737,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projmAgent,
     projectService,
     projectLifecycleService,
-    projectUpdateApprovalService,
     completionDetectorService,
     ceremonyAuditLog,
     ceremonyService,
@@ -789,16 +745,12 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
-    approvalBridge,
-    intakeBridge,
     prFeedbackService,
     worktreeLifecycleService,
     githubStateChecker,
     reconciliationService,
     triageService,
     issueCreationService,
-    linearAgentService,
-    linearAgentRouter,
     agentDiscordRouter,
     specGenerationMonitor,
     gitWorkflowService,

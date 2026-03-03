@@ -29,11 +29,11 @@ Monitor agent performance, trace LLM calls, and manage prompt versions.
 
 ## Project Management
 
-Track work from idea through implementation with bidirectional sync.
+Linear integration for issue tracking and escalation routing.
 
-| Integration             | Description                                                                                                                             | Status   |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| [Linear](./linear-sync) | Bidirectional issue sync, @mention agent routing, automated project planning with HITL checkpoints, and priority-based model selection. | Optional |
+| Integration        | Description                                                                                   | Status   |
+| ------------------ | --------------------------------------------------------------------------------------------- | -------- |
+| [Linear](./linear) | MCP-tool-only integration for issue management, plus escalation channel for critical signals. | Optional |
 
 ## Team Communication
 

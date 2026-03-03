@@ -45,10 +45,8 @@ export default defineConfig({
     ],
   ],
 
-  // Suppress dead link errors — the docs have several known broken links from removed pages.
-  // This was originally set to ignore ../relative links only; expanded to true since many
-  // internal links point to removed files (langfuse pages, testing.md, quality-scoring.md).
-  ignoreDeadLinks: true,
+  // Dead links are now fixed — keep false to catch future link rot.
+  ignoreDeadLinks: false,
 
   themeConfig: {
     logo: '/logo.svg',
@@ -109,18 +107,6 @@ export default defineConfig({
         {
           text: 'Infrastructure',
           items: generateSidebar('infra', '/infra'),
-        },
-      ],
-      '/security/': [
-        {
-          text: 'Security',
-          items: generateSidebar('security', '/security'),
-        },
-      ],
-      '/community/': [
-        {
-          text: 'Community',
-          items: generateSidebar('community', '/community'),
         },
       ],
       '/dev/': [

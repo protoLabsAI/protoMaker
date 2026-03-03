@@ -21,7 +21,7 @@ import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { LinearIntegrationConfig, ProjectIntegrations } from '@protolabs-ai/types';
 import type { Feature } from '@protolabs-ai/types';
-import type { CeremonyService } from './ceremony-service.js';
+
 import { LinearMCPClient } from './linear-mcp-client.js';
 
 const logger = createLogger('Integrations');
@@ -76,7 +76,6 @@ export class IntegrationService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
-  private ceremonyService: CeremonyService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -85,13 +84,11 @@ export class IntegrationService {
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader,
-    ceremonyService?: CeremonyService
+    featureLoader: FeatureLoader
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
-    this.ceremonyService = ceremonyService || null;
 
     // Subscribe to ProtoMaker events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -1015,10 +1012,7 @@ export class IntegrationService {
     projectId?: string;
     createdAt: string;
   }): Promise<void> {
-    // Secondary guard: skip issues not in an intake trigger state.
-    // The primary gate is in the webhook handler (linearApprovalHandler.onIssueStateChange),
-    // but this catch ensures the signal pipeline is not triggered even if the event
-    // arrives from another source (e.g., the polling monitor).
+    // Guard: skip issues not in an intake trigger state.
     const intakeTriggerStates = ['Todo'];
     if (
       payload.state?.name &&

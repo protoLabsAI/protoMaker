@@ -127,28 +127,6 @@ export interface LinearProjectPayload {
 }
 
 /**
- * LinearApprovalPayload - Payload for linear:approval:detected event
- *
- * Fired when a Linear issue comment contains approval keywords
- * (e.g., "approved", "LGTM", "looks good").
- * Used to trigger feature status transitions.
- */
-export interface LinearApprovalPayload {
-  /** Linear issue ID */
-  issueId: string;
-  /** Comment ID containing the approval */
-  commentId: string;
-  /** User who gave the approval */
-  userId: string;
-  /** User's display name */
-  userName: string;
-  /** Comment body text */
-  commentBody: string;
-  /** ISO 8601 timestamp of the comment */
-  createdAt: string;
-}
-
-/**
  * LinearSyncStartedPayload - Payload for linear:sync:started event
  *
  * Fired when a sync operation begins.

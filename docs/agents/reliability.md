@@ -418,4 +418,4 @@ Lead Engineer State Machine
 - [PR Remediation Loop](../dev/pr-remediation-loop.md) — Detailed CI failure handling
 - [Engine Architecture](../archived/engine-architecture.md) — Lead Engineer state machine ADR
 - [Idea to Production](../dev/idea-to-production.md) — Full pipeline with escalation points
-- [Langfuse Integration](../dev/langfuse-integration.md) — Tracing and cost tracking
+- [Langfuse Integration](../integrations/langfuse.md) — Tracing and cost tracking

@@ -198,7 +198,6 @@ export class IssueCreationService {
         githubIssueUrl: result.issueUrl,
       });
       await this.postDiscordNotification(feature, result, triage, projectPath);
-      await this.emitBugLinearSync(projectPath, feature, triage, failureCategory);
     }
   }
 
@@ -246,7 +245,6 @@ export class IssueCreationService {
         githubIssueUrl: result.issueUrl,
       });
       await this.postDiscordNotification(feature, result, triage, projectPath);
-      await this.emitBugLinearSync(projectPath, feature, triage);
     }
   }
 
@@ -293,7 +291,6 @@ export class IssueCreationService {
         githubIssueUrl: result.issueUrl,
       });
       await this.postDiscordNotification(feature, result, triage, projectPath);
-      await this.emitBugLinearSync(projectPath, feature, triage, 'test_failure');
     }
   }
 
@@ -506,41 +503,6 @@ export class IssueCreationService {
       });
     } catch (error) {
       logger.warn('Failed to post Discord notification:', error);
-    }
-  }
-
-  /**
-   * Emit bug:linear-sync event for Linear bug tracking when configured.
-   * Respects minLinearPriority threshold — only syncs bugs at or above the configured severity.
-   */
-  private async emitBugLinearSync(
-    projectPath: string,
-    feature: Feature,
-    triage: TriageResult,
-    failureCategory?: string
-  ): Promise<void> {
-    try {
-      const { getWorkflowSettings } = await import('../lib/settings-helpers.js');
-      const workflowSettings = await getWorkflowSettings(
-        projectPath,
-        this.settingsService,
-        '[BugTracking]'
-      );
-      const bugSettings = workflowSettings.bugs;
-
-      if (!bugSettings?.enabled) return;
-      if (triage.priority > (bugSettings.minLinearPriority ?? 3)) return;
-
-      this.events.emit('bug:linear-sync', {
-        projectPath,
-        title: `[Bug] ${feature.title || feature.id} — ${triage.reason}`,
-        description: `**Priority**: ${triage.priorityLabel}\n**Team**: ${triage.team}\n**Feature**: ${feature.id}\n**Reason**: ${triage.reason}`,
-        priority: triage.priority,
-        failureCategory: failureCategory || 'unknown',
-        featureId: feature.id,
-      });
-    } catch (error) {
-      logger.warn('[BugTracking] Failed to emit bug:linear-sync:', error);
     }
   }
 

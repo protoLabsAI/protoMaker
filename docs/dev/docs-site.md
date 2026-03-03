@@ -129,5 +129,3 @@ When onboarding a new project via SetupLab, add VitePress docs:
 4. Add to `.gitignore`: `docs/.vitepress/dist/` and `docs/.vitepress/cache/`
 5. Create `docs/index.md` with the VitePress home layout
 6. Existing markdown files work as-is — no restructuring needed
-
-See [Decision: VitePress](./docs-site-decision.md) for why VitePress was chosen.

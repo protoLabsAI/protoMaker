@@ -290,7 +290,7 @@ sudo systemctl disable automaker
 
 | Variable                           | Required | Description                                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `LINEAR_CLIENT_ID`                 | No       | Linear OAuth app client ID ([setup guide](/integrations/linear-sync))                            |
+| `LINEAR_CLIENT_ID`                 | No       | Linear OAuth app client ID ([setup guide](/integrations/linear))                                 |
 | `LINEAR_CLIENT_SECRET`             | No       | Linear OAuth app client secret                                                                   |
 | `LINEAR_REDIRECT_URI`              | No       | OAuth callback URL (default: `http://localhost:3008/api/linear/oauth/callback`)                  |
 | `LINEAR_WEBHOOK_SECRET`            | No       | Secret for verifying Linear webhook payloads                                                     |

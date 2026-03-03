@@ -380,7 +380,7 @@ Reflection LLM calls are traced in Langfuse with:
 - Tag: `feature:{id}`, `role:reflection`
 - Metadata: `featureId`, `featureName`, `agentRole: 'reflection'`
 
-See [Langfuse Integration — Reflection Tracing](./langfuse-integration.md#reflection-tracing) for details.
+See [Langfuse Integration](../integrations/langfuse.md) for details.
 
 ---
 

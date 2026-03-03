@@ -52,11 +52,11 @@ If Linear exposes a URL scheme for custom tools (e.g., `protolabs://open?issue=X
 
 | Item                                                      | Priority | Notes                                           |
 | --------------------------------------------------------- | -------- | ----------------------------------------------- |
-| Document custom prompt template guidance                  | Low      | Add to `linear-sync.md` usage tips              |
+| Document custom prompt template guidance                  | Low      | Add to `linear.md` usage tips                   |
 | Monitor Linear changelog for custom tool registration API | Low      | Required before we can appear in deeplink menu  |
 | Evaluate URL scheme handler (Electron)                    | Backlog  | Only relevant if Linear opens its tool registry |
 
 ## References
 
 - [Linear changelog: Deeplink to AI coding tools (2026-02-26)](https://linear.app/changelog/2026-02-26-deeplink-to-ai-coding-tools)
-- [Linear sync integration](./linear-sync.md)
+- [Linear integration](./linear.md)

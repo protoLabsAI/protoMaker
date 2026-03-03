@@ -25,8 +25,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     driftCheckInterval,
     leadEngineerService,
     pipelineOrchestrator,
-    approvalBridge,
-    intakeBridge,
     autoModeService,
     healthMonitorService,
     schedulerService,
@@ -34,7 +32,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     issueCreationService,
     hitlFormService,
     actionableItemBridge,
-    linearAgentRouter,
     agentDiscordRouter,
     dataDir,
   } = services;
@@ -62,8 +59,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   }
   leadEngineerService.destroy();
   pipelineOrchestrator.destroy();
-  approvalBridge.stop();
-  intakeBridge.stop();
   await autoModeService.shutdown();
   healthMonitorService.stopMonitoring();
   schedulerService.stop();
@@ -72,7 +67,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   issueCreationService.shutdown();
   hitlFormService.shutdown();
   actionableItemBridge.shutdown();
-  linearAgentRouter.stop();
   agentDiscordRouter.stop();
   await shutdownLangfuse();
   await shutdownOTEL();

@@ -347,41 +347,6 @@ export class DiscordDMChannel implements EscalationChannel {
   }
 
   /**
-   * Handle reaction event for acknowledgment
-   */
-  private handleReaction(payload: {
-    emoji: string;
-    userId: string;
-    username: string;
-    messageId: string;
-  }): void {
-    // Only process checkmark reactions
-    if (payload.emoji !== '✅') return;
-
-    // Find the acknowledgment entry for this message
-    for (const [_key, ack] of this.acknowledgments.entries()) {
-      if (ack.messageId === payload.messageId && !ack.acknowledgedBy) {
-        // Mark as acknowledged
-        ack.acknowledgedBy = payload.username;
-        ack.acknowledgedAt = new Date().toISOString();
-
-        logger.info(
-          `Escalation acknowledged by ${payload.username}: ${ack.signalDeduplicationKey}`
-        );
-
-        // Note: Would emit acknowledgment event here when event type is added
-        // this.events.emit('escalation:acknowledged', {
-        //   deduplicationKey: ack.signalDeduplicationKey,
-        //   acknowledgedBy: payload.username,
-        //   acknowledgedAt: ack.acknowledgedAt,
-        // });
-
-        break;
-      }
-    }
-  }
-
-  /**
    * Get acknowledgment status for a signal
    */
   getAcknowledgmentStatus(deduplicationKey: string): AcknowledgmentEntry | undefined {

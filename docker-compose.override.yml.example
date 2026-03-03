@@ -3,7 +3,7 @@ services:
     volumes:
       # Mount your workspace directory to /projects inside the container
       # Example: mount your local /workspace to /projects inside the container
-      - /Users/webdevcody/Workspace/automaker-workspace:/projects:rw
+      - /path/to/your/workspace:/projects:rw
 
       # ===== CLI Authentication (Optional) =====
       # Mount host CLI credentials to avoid re-authenticating in container

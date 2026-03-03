@@ -250,9 +250,6 @@ export type EventType =
   | 'ceremony:post-project-docs:failed'
   // Retro improvement events (reflection loop: REFLECT → REPEAT)
   | 'retro:improvements:created'
-  | 'retro:improvement:linear-sync'
-  // Bug tracking pipeline events (failure → triage → Linear)
-  | 'bug:linear-sync'
   // Bug triage workflow events (channel workflow → investigation → board feature)
   | 'bug:reported'
   | 'bug:reaction-triggered'

@@ -456,8 +456,6 @@ Stale = BOTH last commit AND last activity older than `prOwnershipStaleTtlHours`
 
 `instanceId` is auto-generated as a UUID on first startup if not set.
 
-For the full reference, see [Multi-Instance PR Coordination](./multi-instance-pr-coordination.md).
-
 ## Post-Agent Worktree Recovery
 
 The `WorktreeRecoveryService` runs after every agent exit (success or failure). It detects uncommitted changes in the worktree and automatically:
@@ -473,6 +471,5 @@ If recovery fails, the feature is marked `blocked` with a `statusChangeReason` p
 ## Learn More
 
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure and dependencies
-- [Multi-Instance PR Coordination](./multi-instance-pr-coordination.md) - Ownership model and stale decay
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Complete contribution guide
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message format

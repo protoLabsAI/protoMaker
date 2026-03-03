@@ -6,7 +6,7 @@ Rules and conventions for maintaining the protoLabs documentation site. This is 
 
 ### Section Map
 
-Every documentation page must belong to one of these 8 top-level sections:
+Every documentation page must belong to one of these 10 top-level sections:
 
 | Section          | Path               | Purpose                                  | Audience         |
 | ---------------- | ------------------ | ---------------------------------------- | ---------------- |
@@ -18,15 +18,16 @@ Every documentation page must belong to one of these 8 top-level sections:
 | Authority        | `authority/`       | Trust hierarchy, roles, team structure   | Team leads       |
 | Development      | `dev/`             | Contributing, architecture, processes    | Contributors     |
 | protoLabs        | `protolabs/`       | Agency setup pipeline and onboarding     | Agency operators |
+| Templates        | `templates/`       | Project starter templates                | New projects     |
+| Archived         | `archived/`        | Superseded docs, kept for SEO            | Reference only   |
 
 **Special locations:**
 
-| Path            | Purpose                                               |
-| --------------- | ----------------------------------------------------- |
-| `index.md`      | Homepage (VitePress `layout: home`)                   |
-| `README.md`     | GitHub-rendered table of contents (all pages linked)  |
-| `disclaimer.md` | Legal disclaimer (linked from footer)                 |
-| `archived/`     | Superseded docs (excluded from sidebar, kept for SEO) |
+| Path            | Purpose                                              |
+| --------------- | ---------------------------------------------------- |
+| `index.md`      | Homepage (VitePress `layout: home`)                  |
+| `README.md`     | GitHub-rendered table of contents (all pages linked) |
+| `disclaimer.md` | Legal disclaimer (linked from footer)                |
 
 ### IA Principles
 
@@ -50,12 +51,12 @@ These decisions were made during the 2026-02-12 restructuring and should be main
 
 The IA loosely follows the [Diataxis framework](https://diataxis.fr/) without being dogmatic about it:
 
-| Diataxis Type | Where It Lives                            |
-| ------------- | ----------------------------------------- |
-| Tutorials     | `getting-started/` (learning-oriented)    |
-| How-To Guides | `agents/`, `integrations/`, `protolabs/`  |
-| Reference     | `server/`, env var tables, API docs       |
-| Explanation   | `authority/`, `dev/docs-site-decision.md` |
+| Diataxis Type | Where It Lives                           |
+| ------------- | ---------------------------------------- |
+| Tutorials     | `getting-started/` (learning-oriented)   |
+| How-To Guides | `agents/`, `integrations/`, `protolabs/` |
+| Reference     | `server/`, env var tables, API docs      |
+| Explanation   | `authority/`, `dev/`                     |
 
 ## Content Guidelines
 
@@ -183,12 +184,12 @@ Note: VitePress can't be installed as a root devDependency due to a vite version
 
 Key settings:
 
-| Setting           | Current Value     | Purpose                                              |
-| ----------------- | ----------------- | ---------------------------------------------------- |
-| `title`           | `protoLabs`       | Site title in browser tab                            |
-| `srcExclude`      | `['archived/**']` | Hide archived docs from nav                          |
-| `ignoreDeadLinks` | Regex patterns    | Allow links to files outside docs/ (CLAUDE.md, etc.) |
-| `search.provider` | `local`           | Client-side full-text search (MiniSearch)            |
+| Setting           | Current Value     | Purpose                                             |
+| ----------------- | ----------------- | --------------------------------------------------- |
+| `title`           | `protoLabs`       | Site title in browser tab                           |
+| `srcExclude`      | `['archived/**']` | Hide archived docs from nav                         |
+| `ignoreDeadLinks` | `false`           | Fail build on broken links (enforced since 2026-03) |
+| `search.provider` | `local`           | Client-side full-text search (MiniSearch)           |
 
 ### `generateSidebar()` Function
 
@@ -203,5 +204,4 @@ Auto-generates sidebar items from directory contents:
 
 ## Related
 
-- [Docs Site](../internal/docs-site) — VitePress setup, deployment, and adding pages
-- [Docs Site Decision](../internal/docs-site-decision) — ADR: Why VitePress was chosen
+- [Docs Site](./docs-site) — VitePress setup, deployment, and adding pages

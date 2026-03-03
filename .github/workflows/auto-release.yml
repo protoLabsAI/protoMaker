@@ -31,6 +31,7 @@ jobs:
       pull-requests: write
     env:
       DISCORD_DEV_WEBHOOK: ${{ secrets.DISCORD_DEV_WEBHOOK }}
+      DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
 
     steps:
       - name: Verify GH_PAT is set
@@ -207,9 +208,21 @@ jobs:
 
       - name: Rewrite and post release notes to Discord
         if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
+        continue-on-error: true
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -1)
           node scripts/rewrite-release-notes.mjs "$VERSION" "$PREV_TAG" --post-discord
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Alert on release failure
+        if: failure()
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG="ALERT: Auto-release FAILED. Version bump or tag push may be incomplete. ${RUN_URL}"
+          if [ -n "${DISCORD_ALERTS_WEBHOOK:-}" ]; then
+            curl -sf -H "Content-Type: application/json" \
+              -d "{\"content\": \"${MSG}\"}" \
+              "$DISCORD_ALERTS_WEBHOOK" || true
+          fi

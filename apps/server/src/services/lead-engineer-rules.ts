@@ -406,7 +406,7 @@ export const classifiedRecovery: LeadFastPathRule = {
     // Only handle feature_escalated events from the state machine
     if (event.type !== 'feature_escalated') return [];
 
-    const inner = event.payload as Record<string, unknown> | undefined;
+    const inner = event.context as Record<string, unknown> | undefined;
     if (!inner) return [];
 
     const featureId = inner.featureId as string | undefined;
@@ -474,7 +474,7 @@ export const hitlFormResponse: LeadFastPathRule = {
     if (!response?.length) return [];
 
     const step0 = response[0];
-    const action = step0.action as string | undefined;
+    const action = step0.resolution as string | undefined;
     if (!action) return [];
 
     const ruleActions: LeadRuleAction[] = [];

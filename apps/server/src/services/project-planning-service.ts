@@ -22,11 +22,10 @@ import {
   type PlanningArtifact,
   type PlanningStage,
 } from '@protolabs-ai/flows';
+import type { ConversationSurface } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { LinearAgentService } from './linear-agent-service.js';
 import type { SettingsService } from './settings-service.js';
 import { LinearMCPClient } from './linear-mcp-client.js';
-import { LinearSurface } from './surfaces/linear-surface.js';
 
 const logger = createLogger('ProjectPlanningService');
 
@@ -105,9 +104,8 @@ interface ActivePlanning {
 
 export class ProjectPlanningService {
   private events: EventEmitter;
-  private agentService: LinearAgentService;
   private settingsService?: SettingsService;
-  private surface: LinearSurface;
+  private surface: ConversationSurface | null = null;
   private projectPath: string;
   private flowConfig: ProjectPlanningFlowConfig;
 
@@ -121,15 +119,12 @@ export class ProjectPlanningService {
 
   constructor(
     events: EventEmitter,
-    agentService: LinearAgentService,
     projectPath: string,
     flowConfig?: ProjectPlanningFlowConfig,
     settingsService?: SettingsService
   ) {
     this.events = events;
-    this.agentService = agentService;
     this.settingsService = settingsService;
-    this.surface = new LinearSurface(agentService);
     this.projectPath = projectPath;
 
     // If settingsService is provided, inject a real Linear issue creator
@@ -187,15 +182,13 @@ export class ProjectPlanningService {
       // Step 1: Create an agent session on a tracking issue or the project itself
       // For now, we create a proactive session. In the future, this could
       // be tied to a specific planning issue within the project.
-      const sessionId = await this.agentService.createSession(projectId);
+      const sessionId = `planning-${projectId}-${Date.now()}`;
 
-      // Step 2: Associate session with project for document creation
-      this.surface.setSessionProject(sessionId, projectId);
       this.projectToSession.set(projectId, sessionId);
 
       // Step 3: Acknowledge and set plan
-      await this.surface.acknowledge(sessionId, `Starting project planning for "${name}"...`);
-      await this.surface.updatePlan(sessionId, [...PLAN_STEPS]);
+      await this.surface?.acknowledge(sessionId, `Starting project planning for "${name}"...`);
+      await this.surface?.updatePlan?.(sessionId, [...PLAN_STEPS]);
 
       // Step 4: Create and compile the flow
       const flow = createProjectPlanningFlow(this.flowConfig);
@@ -255,7 +248,7 @@ export class ProjectPlanningService {
     logger.info(`Received response for planning session ${sessionId}: ${prompt?.substring(0, 80)}`);
 
     try {
-      await this.surface.acknowledge(sessionId, 'Processing your feedback...');
+      await this.surface?.acknowledge(sessionId, 'Processing your feedback...');
 
       // Parse the user's response into a HITL decision
       const hitlResponse = this.parseUserResponse(prompt || '', planning.state.stage as string);
@@ -271,11 +264,11 @@ export class ProjectPlanningService {
     } catch (error) {
       logger.error(`Failed to process response for session ${sessionId}:`, error);
       await this.surface
-        .reportError(
+        ?.reportError(
           sessionId,
           `Failed to process your response: ${error instanceof Error ? error.message : String(error)}`
         )
-        .catch((e) => logger.error('Failed to report error:', e));
+        .catch((e: unknown) => logger.error('Failed to report error:', e));
     }
   }
 
@@ -319,11 +312,11 @@ export class ProjectPlanningService {
     } catch (error) {
       logger.error(`Flow execution error for session ${sessionId}:`, error);
       await this.surface
-        .reportError(
+        ?.reportError(
           sessionId,
           `Planning flow error: ${error instanceof Error ? error.message : String(error)}`
         )
-        .catch((e) => logger.error('Failed to report error:', e));
+        .catch((e: unknown) => logger.error('Failed to report error:', e));
     }
   }
 
@@ -341,29 +334,31 @@ export class ProjectPlanningService {
     const artifact = this.getArtifactForStage(state, stage);
     if (!artifact) {
       logger.error(`No artifact found for stage ${stage}`);
-      await this.surface.reportError(sessionId, `Internal error: no artifact for stage ${stage}`);
+      await this.surface?.reportError(sessionId, `Internal error: no artifact for stage ${stage}`);
       return;
     }
 
     // Create or update the document in Linear
     let documentId = planning.documents[checkpoint];
     if (documentId) {
-      await this.surface.updateDocument(documentId, artifact.content, artifact.title);
+      await this.surface?.updateDocument?.(documentId, artifact.content, artifact.title);
     } else {
-      const doc = await this.surface.createDocument(sessionId, artifact.title, artifact.content);
-      documentId = doc.id;
-      planning.documents[checkpoint] = documentId;
+      const doc = await this.surface?.createDocument?.(sessionId, artifact.title, artifact.content);
+      if (doc) {
+        documentId = doc.id;
+        planning.documents[checkpoint] = documentId;
+      }
     }
 
     // Show progress
-    await this.surface.showProgress(sessionId, 'Review required', artifact.title);
+    await this.surface?.showProgress(sessionId, 'Review required', artifact.title);
 
     // Ask the user to review
     const revisionCount = (state.revisionCounts as Record<string, number>)?.[checkpoint] || 0;
     const revisionNote =
       revisionCount > 0 ? ` (revision ${revisionCount} — max 3 before auto-approve)` : '';
 
-    await this.surface.askQuestion(
+    await this.surface?.askQuestion(
       sessionId,
       `Please review the **${artifact.title}**${revisionNote}.\n\nThe document has been saved to your project. You can:\n- **Approve** to continue to the next step\n- **Revise** with specific feedback\n- **Cancel** to stop the planning process`,
       [
@@ -394,7 +389,7 @@ export class ProjectPlanningService {
 
     // Update plan to all completed
     const completedSteps = PLAN_STEPS.map((s) => ({ ...s, status: 'completed' as const }));
-    await this.surface.updatePlan(sessionId, completedSteps);
+    await this.surface?.updatePlan?.(sessionId, completedSteps);
 
     // Send final response
     const summary = [
@@ -410,7 +405,7 @@ export class ProjectPlanningService {
       'The project is now ready for execution. Issues have been created in Linear with proper dependencies.',
     ].join('\n');
 
-    await this.surface.sendResponse(sessionId, summary);
+    await this.surface?.sendResponse(sessionId, summary);
 
     // Cleanup
     this.activePlannings.delete(sessionId);
@@ -425,7 +420,7 @@ export class ProjectPlanningService {
     const errors = (state.errors as string[]) || [];
 
     logger.error(`Planning flow errored: ${errors.join(', ')}`);
-    await this.surface.reportError(
+    await this.surface?.reportError(
       sessionId,
       `Planning encountered errors:\n${errors.map((e) => `- ${e}`).join('\n')}`
     );
@@ -493,6 +488,6 @@ export class ProjectPlanningService {
       return { ...step, status: 'pending' as const };
     });
 
-    await this.surface.updatePlan(sessionId, steps);
+    await this.surface?.updatePlan?.(sessionId, steps);
   }
 }

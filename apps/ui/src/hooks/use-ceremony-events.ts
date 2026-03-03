@@ -47,6 +47,8 @@ export function useLoadCeremonyEntries(projectPath: string | null) {
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load ceremony log');
+          // Reset loadedRef so a retry is possible after a failed first load
+          loadedRef.current = null;
         }
       } finally {
         if (!cancelled) setLoading(false);

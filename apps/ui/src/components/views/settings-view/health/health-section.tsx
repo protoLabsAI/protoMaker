@@ -69,7 +69,7 @@ export function HealthSection() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch('/api/health/detailed', 'GET', { skipAuth: true });
+      const res = await apiFetch('/api/health/detailed', 'GET');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setMetrics(data);
