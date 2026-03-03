@@ -151,6 +151,9 @@ export type {
   CalendarEvent,
   CalendarEventsFile,
   CalendarQueryOptions,
+  JobStatus,
+  JobAction,
+  JobExecutionResult,
 } from './calendar.js';
 
 // Session types

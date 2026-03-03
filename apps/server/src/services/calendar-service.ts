@@ -14,46 +14,17 @@ import * as secureFs from '../lib/secure-fs.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import { LinearMCPClient } from './linear-mcp-client.js';
-import type { Feature } from '@protolabs-ai/types';
+import type {
+  Feature,
+  CalendarEvent,
+  CalendarEventType,
+  CalendarQueryOptions,
+} from '@protolabs-ai/types';
 
 const logger = createLogger('CalendarService');
 
-/**
- * Calendar event types
- */
-export type CalendarEventType =
-  | 'custom' // User-created events
-  | 'feature' // Feature due dates
-  | 'milestone' // Project milestone dates
-  | 'meeting' // Scheduled meetings
-  | 'deadline' // Hard deadlines
-  | 'google'; // Synced from Google Calendar
-
-/**
- * A calendar event
- */
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  date: string; // ISO date string (YYYY-MM-DD)
-  endDate?: string; // Optional end date for multi-day events
-  type: CalendarEventType;
-  description?: string;
-  color?: string; // Hex color for display
-  url?: string; // Optional link (e.g., to feature, PR, Linear issue)
-  sourceId?: string; // External source ID (e.g., Google Calendar event ID) for dedup
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Options for querying calendar events
- */
-export interface CalendarQueryOptions {
-  startDate?: string; // ISO date string
-  endDate?: string; // ISO date string
-  types?: CalendarEventType[]; // Filter by event types
-}
+// Re-export shared types for consumers that import from this module
+export type { CalendarEvent, CalendarEventType, CalendarQueryOptions };
 
 /**
  * Singleton service for managing calendar events
@@ -126,13 +97,14 @@ export class CalendarService {
   /**
    * Convert a feature with dueDate to a calendar event
    */
-  private featureToCalendarEvent(feature: Feature): CalendarEvent | null {
+  private featureToCalendarEvent(projectPath: string, feature: Feature): CalendarEvent | null {
     if (!feature.dueDate) {
       return null;
     }
 
     return {
       id: `feature-${feature.id}`,
+      projectPath,
       title: feature.title || `Feature: ${feature.id}`,
       date: feature.dueDate,
       type: 'feature',
@@ -187,7 +159,7 @@ export class CalendarService {
         const features = await this.featureLoader.getAll(projectPath);
 
         for (const feature of features) {
-          const event = this.featureToCalendarEvent(feature);
+          const event = this.featureToCalendarEvent(projectPath, feature);
           if (event && this.isDateInRange(event.date, startDate, endDate)) {
             allEvents.push(event);
           }
@@ -212,6 +184,7 @@ export class CalendarService {
 
             const event: CalendarEvent = {
               id: `milestone-${milestone.id}`,
+              projectPath,
               title: milestone.name,
               date: milestone.targetDate,
               type: 'milestone',
@@ -258,7 +231,7 @@ export class CalendarService {
    */
   async createEvent(
     projectPath: string,
-    data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>
+    data: Omit<CalendarEvent, 'id' | 'projectPath' | 'createdAt' | 'updatedAt'>
   ): Promise<CalendarEvent> {
     // Generate UUID-like ID
     const id = `event-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -267,6 +240,7 @@ export class CalendarService {
     const event: CalendarEvent = {
       ...data,
       id,
+      projectPath,
       createdAt: now,
       updatedAt: now,
     };
@@ -348,7 +322,7 @@ export class CalendarService {
   async upsertBySourceId(
     projectPath: string,
     sourceId: string,
-    data: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>
+    data: Omit<CalendarEvent, 'id' | 'projectPath' | 'createdAt' | 'updatedAt'>
   ): Promise<{ event: CalendarEvent; created: boolean }> {
     const events = await this.readCalendarFile(projectPath);
     const existingIndex = events.findIndex((e) => e.sourceId === sourceId);
@@ -375,6 +349,7 @@ export class CalendarService {
     const newEvent: CalendarEvent = {
       ...data,
       id,
+      projectPath,
       sourceId,
       createdAt: now,
       updatedAt: now,
@@ -383,6 +358,24 @@ export class CalendarService {
     await this.writeCalendarFile(projectPath, events);
     logger.info(`Created synced calendar event ${id} (sourceId: ${sourceId})`);
     return { event: newEvent, created: true };
+  }
+
+  /**
+   * Get pending job events that are due for execution.
+   * Returns job events where date + time <= now and jobStatus is 'pending'.
+   */
+  async getDueJobs(projectPath: string, now: Date): Promise<CalendarEvent[]> {
+    const events = await this.readCalendarFile(projectPath);
+    const nowMs = now.getTime();
+
+    return events.filter((event) => {
+      if (event.type !== 'job' || event.jobStatus !== 'pending') return false;
+      if (!event.time) return false;
+
+      // Parse date + time into a timestamp
+      const dueDate = new Date(`${event.date}T${event.time}:00`);
+      return dueDate.getTime() <= nowMs;
+    });
   }
 }
 

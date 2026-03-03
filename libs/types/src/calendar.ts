@@ -8,7 +8,30 @@
 /**
  * Type of calendar event
  */
-export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'linear';
+export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'linear' | 'job';
+
+/**
+ * Job execution status
+ */
+export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/**
+ * Job action types
+ */
+export type JobAction =
+  | { type: 'start-agent'; featureId: string }
+  | { type: 'run-automation'; automationId: string }
+  | { type: 'run-command'; command: string; cwd?: string };
+
+/**
+ * Result of a job execution
+ */
+export interface JobExecutionResult {
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  error?: string;
+}
 
 /**
  * Calendar event
@@ -31,6 +54,18 @@ export interface CalendarEvent {
 
   /** Event type */
   type: CalendarEventType;
+
+  /** Time in HH:mm 24h format (used by job events) */
+  time?: string;
+
+  /** Job action to execute (required when type is 'job') */
+  jobAction?: JobAction;
+
+  /** Job execution status (set automatically for job events) */
+  jobStatus?: JobStatus;
+
+  /** Job execution result (populated after execution) */
+  jobResult?: JobExecutionResult;
 
   /** Source ID from external system (e.g., Linear issue ID, Google Calendar event ID) */
   sourceId?: string;

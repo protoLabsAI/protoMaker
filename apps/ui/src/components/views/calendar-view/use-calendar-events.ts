@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiPost } from '@/lib/api-fetch';
-import type { CalendarEvent, CalendarEventType } from '@protolabs-ai/types';
+import type { CalendarEvent, CalendarEventType, JobAction } from '@protolabs-ai/types';
 
 interface CalendarListResponse {
   success: boolean;
@@ -34,6 +34,9 @@ export interface CreateEventInput {
   endDate?: string;
   description?: string;
   color?: string;
+  type?: CalendarEventType;
+  time?: string;
+  jobAction?: JobAction;
 }
 
 /** Fields for updating an existing calendar event */
@@ -43,6 +46,7 @@ export interface UpdateEventInput {
   endDate?: string;
   description?: string;
   color?: string;
+  time?: string;
 }
 
 interface UseCalendarEventsOptions {
@@ -65,6 +69,7 @@ interface UseCalendarEventsResult {
   createEvent: (input: CreateEventInput) => Promise<CalendarEvent | null>;
   updateEvent: (id: string, updates: UpdateEventInput) => Promise<CalendarEvent | null>;
   deleteEvent: (id: string) => Promise<boolean>;
+  runJob: (id: string) => Promise<boolean>;
 }
 
 /**
@@ -159,9 +164,11 @@ export function useCalendarEvents({
           title: input.title,
           date: input.date,
           endDate: input.endDate,
-          type: 'custom',
+          type: input.type ?? 'custom',
           description: input.description,
           color: input.color,
+          ...(input.time && { time: input.time }),
+          ...(input.jobAction && { jobAction: input.jobAction }),
         });
 
         if (result.success && result.event) {
@@ -223,6 +230,32 @@ export function useCalendarEvents({
     [projectPath, fetchEvents]
   );
 
+  const runJob = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!projectPath) return false;
+
+      setIsMutating(true);
+      try {
+        const result = await apiPost<{ success: boolean; error?: string }>(
+          '/api/calendar/run-job',
+          {
+            projectPath,
+            id,
+          }
+        );
+
+        if (result.success) {
+          await fetchEvents();
+          return true;
+        }
+        throw new Error(result.error ?? 'Failed to run job');
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [projectPath, fetchEvents]
+  );
+
   return {
     events,
     isLoading,
@@ -232,5 +265,6 @@ export function useCalendarEvents({
     createEvent,
     updateEvent,
     deleteEvent,
+    runJob,
   };
 }

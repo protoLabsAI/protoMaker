@@ -1604,6 +1604,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.description) eventData.description = args.description;
       if (args.color) eventData.color = args.color;
       if (args.url) eventData.url = args.url;
+      if (args.time) eventData.time = args.time;
+      if (args.jobAction) eventData.jobAction = args.jobAction;
       return apiCall('/calendar/create', eventData);
     }
 

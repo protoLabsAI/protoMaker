@@ -104,6 +104,8 @@ export interface AppState {
   // File Editor (in-app code editor) settings
   fileEditorFontFamily: string; // Monospace font family for the built-in code editor
   fileEditorFontSize: number; // Font size (px) for the built-in code editor
+  editorAutoSave: boolean; // Whether auto-save is enabled (default true)
+  editorAutoSaveDelay: number; // Auto-save debounce delay in ms (default 1000)
 
   // Skills Configuration
   enableSkills: boolean; // Enable Skills functionality (loads from .claude/skills/ directories)
@@ -253,6 +255,8 @@ export interface AppActions {
   // File Editor font settings
   setFileEditorFontFamily: (fontFamily: string) => void;
   setFileEditorFontSize: (fontSize: number) => void;
+  setEditorAutoSave: (enabled: boolean) => void;
+  setEditorAutoSaveDelay: (delay: number) => void;
 
   // Prompt Customization actions
   setPromptCustomization: (customization: PromptCustomization) => Promise<void>;
@@ -361,6 +365,8 @@ const initialState: AppState = {
       return 14;
     }
   })(),
+  editorAutoSave: true, // Auto-save enabled by default
+  editorAutoSaveDelay: 1000, // 1 second debounce
   enableSkills: true, // Skills enabled by default
   skillsSources: ['user', 'project'] as Array<'user' | 'project'>, // Load from both sources by default
   enableSubagents: true, // Subagents enabled by default
@@ -1101,6 +1107,8 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     }
     set({ fileEditorFontSize: fontSize });
   },
+  setEditorAutoSave: (enabled) => set({ editorAutoSave: enabled }),
+  setEditorAutoSaveDelay: (delay) => set({ editorAutoSaveDelay: delay }),
 
   // Prompt Customization actions
   setPromptCustomization: async (customization) => {

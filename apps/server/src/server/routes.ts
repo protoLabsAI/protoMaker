@@ -134,6 +134,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     authorityService,
     beadsService,
     calendarService,
+    jobExecutorService,
     googleCalendarSyncService,
     knowledgeStoreService,
     integrityWatchdogService,
@@ -282,7 +283,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/context', createContextRoutes(settingsService));
   app.use('/api/content', createContentRoutes(settingsService));
   app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
-  app.use('/api/calendar', createCalendarRoutes(calendarService));
+  app.use('/api/calendar', createCalendarRoutes(calendarService, jobExecutorService));
   app.use('/api/beads', createBeadsRoutes(beadsService));
   app.use('/api/mcp', createMCPRoutes(mcpTestService));
   app.use(

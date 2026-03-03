@@ -36,7 +36,16 @@ const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
   custom: 'bg-chart-3',
   google: 'bg-chart-4',
   linear: 'bg-chart-5',
+  job: 'bg-amber-500',
 };
+
+/** Status badge colors for job events */
+const JOB_STATUS_COLORS = {
+  pending: 'bg-muted-foreground/40 text-muted-foreground',
+  running: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
+  completed: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+  failed: 'bg-destructive/20 text-destructive',
+} as const;
 
 // ============================================================================
 // Helpers
@@ -126,6 +135,8 @@ interface EventRowProps {
 }
 
 function EventRow({ event, onClick }: EventRowProps) {
+  const isJob = event.type === 'job';
+
   return (
     <button
       type="button"
@@ -139,7 +150,20 @@ function EventRow({ event, onClick }: EventRowProps) {
         className={cn('inline-block h-1.5 w-1.5 rounded-full shrink-0', getEventDotClass(event))}
         style={getEventDotStyle(event)}
       />
+      {isJob && event.time && (
+        <span className="text-[10px] text-muted-foreground shrink-0">{event.time}</span>
+      )}
       <span className="text-[11px] leading-tight truncate">{event.title}</span>
+      {isJob && event.jobStatus && (
+        <span
+          className={cn(
+            'ml-auto text-[9px] px-1 py-px rounded-full shrink-0 font-medium',
+            JOB_STATUS_COLORS[event.jobStatus]
+          )}
+        >
+          {event.jobStatus}
+        </span>
+      )}
     </button>
   );
 }
@@ -312,7 +336,7 @@ export function CalendarView() {
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
 
-  const { events, isLoading, isMutating, error, createEvent, updateEvent, deleteEvent } =
+  const { events, isLoading, isMutating, error, createEvent, updateEvent, deleteEvent, runJob } =
     useCalendarEvents({
       projectPath,
       month: displayMonth.getMonth(),
@@ -393,6 +417,18 @@ export function CalendarView() {
       }
     },
     [deleteEvent]
+  );
+
+  const handleRunJob = useCallback(
+    async (id: string) => {
+      try {
+        await runJob(id);
+        toast.success('Job execution started');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to run job');
+      }
+    },
+    [runJob]
   );
 
   // No project selected state
@@ -506,6 +542,7 @@ export function CalendarView() {
         onOpenChange={setShowDetailPanel}
         onUpdate={handleUpdateEvent}
         onDelete={handleDeleteEvent}
+        onRunJob={handleRunJob}
         isMutating={isMutating}
       />
     </div>

@@ -9,7 +9,8 @@
 import { create } from 'zustand';
 import { apiPost } from '@/lib/api-fetch';
 
-const BINARY_EXTENSIONS = new Set([
+/** Extensions that cannot be displayed in a text editor */
+export const BINARY_EXTENSIONS = new Set([
   // Images
   'png',
   'jpg',
@@ -65,6 +66,9 @@ function generateTabId(): string {
   return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Maximum file size (bytes) that the editor will attempt to open */
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
 export interface FileEditorTab {
   id: string;
   /** Absolute file path */
@@ -79,8 +83,25 @@ export interface FileEditorTab {
   isLoading: boolean;
   /** True if the file is a binary format that cannot be edited */
   isBinary: boolean;
+  /** True if the file exceeds MAX_FILE_SIZE */
+  isTooLarge: boolean;
   /** Error message if loading failed */
   error?: string;
+  /** Current cursor line (1-based) */
+  cursorLine: number;
+  /** Current cursor column (1-based) */
+  cursorCol: number;
+}
+
+export type MarkdownViewMode = 'editor' | 'preview' | 'split';
+
+export interface GitFileDetailsInfo {
+  hash: string;
+  shortHash: string;
+  message: string;
+  author: string;
+  timestamp: string;
+  isoDate: string;
 }
 
 interface FileEditorStoreState {
@@ -90,6 +111,14 @@ interface FileEditorStoreState {
   expandedDirs: string[];
   /** Path scoping the file browser — null means the main project root */
   selectedWorktreePath: string | null;
+  /** Markdown view mode for .md files */
+  markdownViewMode: MarkdownViewMode;
+  /** Git details for the active file */
+  activeFileGitDetails: GitFileDetailsInfo | null;
+  /** Whether inline diff is shown */
+  showInlineDiff: boolean;
+  /** Unified diff content for the active file */
+  activeFileDiff: string | null;
 }
 
 interface FileEditorStoreActions {
@@ -107,6 +136,16 @@ interface FileEditorStoreActions {
   toggleDir: (relativePath: string) => void;
   /** Scope the file browser to a worktree path (null = main repo) */
   setSelectedWorktreePath: (path: string | null) => void;
+  /** Update cursor position for a tab */
+  updateTabCursor: (tabId: string, line: number, col: number) => void;
+  /** Set the markdown view mode */
+  setMarkdownViewMode: (mode: MarkdownViewMode) => void;
+  /** Set git details for the active file */
+  setActiveFileGitDetails: (details: GitFileDetailsInfo | null) => void;
+  /** Toggle inline diff display */
+  setShowInlineDiff: (show: boolean) => void;
+  /** Set the diff content for the active file */
+  setActiveFileDiff: (diff: string | null) => void;
 }
 
 export type FileEditorStore = FileEditorStoreState & FileEditorStoreActions;
@@ -116,6 +155,10 @@ export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
   activeTabId: null,
   expandedDirs: [],
   selectedWorktreePath: null,
+  markdownViewMode: 'editor',
+  activeFileGitDetails: null,
+  showInlineDiff: false,
+  activeFileDiff: null,
 
   openFile: async (filePath: string) => {
     const { tabs } = get();
@@ -137,6 +180,9 @@ export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
       savedContent: '',
       isLoading: !binary,
       isBinary: binary,
+      isTooLarge: false,
+      cursorLine: 1,
+      cursorCol: 1,
     };
 
     set((state) => ({
@@ -147,12 +193,30 @@ export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
     if (binary) return;
 
     try {
-      const result = await apiPost<{ success: boolean; content?: string; error?: string }>(
-        '/api/fs/read',
-        { filePath }
-      );
+      const result = await apiPost<{
+        success: boolean;
+        content?: string;
+        size?: number;
+        error?: string;
+      }>('/api/fs/read', { filePath });
 
       if (result.success && result.content !== undefined) {
+        const tooLarge =
+          typeof result.size === 'number'
+            ? result.size > MAX_FILE_SIZE
+            : new Blob([result.content]).size > MAX_FILE_SIZE;
+
+        if (tooLarge) {
+          set((state) => ({
+            tabs: state.tabs.map((t) =>
+              t.id === tabId
+                ? { ...t, isLoading: false, isTooLarge: true, error: 'File is too large to edit' }
+                : t
+            ),
+          }));
+          return;
+        }
+
         set((state) => ({
           tabs: state.tabs.map((t) =>
             t.id === tabId
@@ -237,4 +301,21 @@ export const useFileEditorStore = create<FileEditorStore>()((set, get) => ({
   setSelectedWorktreePath: (path: string | null) => {
     set({ selectedWorktreePath: path });
   },
+
+  updateTabCursor: (tabId: string, line: number, col: number) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id === tabId ? { ...t, cursorLine: line, cursorCol: col } : t
+      ),
+    }));
+  },
+
+  setMarkdownViewMode: (mode: MarkdownViewMode) => set({ markdownViewMode: mode }),
+
+  setActiveFileGitDetails: (details: GitFileDetailsInfo | null) =>
+    set({ activeFileGitDetails: details }),
+
+  setShowInlineDiff: (show: boolean) => set({ showInlineDiff: show }),
+
+  setActiveFileDiff: (diff: string | null) => set({ activeFileDiff: diff }),
 }));

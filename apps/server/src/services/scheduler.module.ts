@@ -28,8 +28,8 @@ export function register(container: ServiceContainer): void {
   schedulerService.initialize(events, dataDir);
   void schedulerService
     .start()
-    .then(() => {
-      return automationService.syncWithScheduler({
+    .then(async () => {
+      await automationService.syncWithScheduler({
         events,
         autoModeService,
         featureHealthService,
@@ -37,6 +37,15 @@ export function register(container: ServiceContainer): void {
         featureLoader,
         settingsService,
       });
+
+      // Register calendar job executor — scans for due jobs every minute
+      schedulerService.registerTask(
+        'job-executor:tick',
+        'Calendar Job Executor',
+        '* * * * *',
+        () => container.jobExecutorService.tick(),
+        true
+      );
     })
     .catch((err) => {
       logger.error('Scheduler startup or automation sync failed:', err);
