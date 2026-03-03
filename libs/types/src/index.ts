@@ -142,6 +142,7 @@ export type {
   LifecycleLaunchResult,
   LifecycleStatus,
   LifecycleCollectResult,
+  ProjectStats,
 } from './project.js';
 
 // Calendar types

@@ -57,6 +57,7 @@ export { ensureProjectDir } from './paths.js';
 export {
   // Path utilities
   getProjectsDir,
+  getProjectStatsPath,
   getProjectDir,
   getProjectFilePath,
   getProjectJsonPath,

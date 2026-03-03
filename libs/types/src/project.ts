@@ -614,6 +614,29 @@ export interface LifecycleCollectResult {
 }
 
 /**
+ * Slim stats record captured before a project is deleted.
+ * Persisted in .automaker/projects/stats.json so deletion history survives.
+ */
+export interface ProjectStats {
+  slug: string;
+  title: string;
+  goal: string;
+  status: ProjectStatus;
+  health?: ProjectHealth;
+  priority?: ProjectPriority;
+  lead?: string;
+  milestoneCount: number;
+  phaseCount: number;
+  linkedPhaseCount: number;
+  featureCount: number;
+  updateCount: number;
+  linkCount: number;
+  documentCount: number;
+  createdAt: string;
+  deletedAt: string;
+}
+
+/**
  * Discord channel mapping for a project
  * Stores the association between a project and its Discord channels
  */

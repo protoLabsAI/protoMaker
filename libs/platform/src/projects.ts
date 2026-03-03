@@ -83,6 +83,18 @@ export function getProjectsDir(projectPath: string): string {
 }
 
 /**
+ * Get the project stats file path (shared across all projects)
+ *
+ * Stats are captured before project deletion and appended to this file.
+ *
+ * @param projectPath - Absolute path to project directory
+ * @returns Absolute path to {projectPath}/.automaker/projects/stats.json
+ */
+export function getProjectStatsPath(projectPath: string): string {
+  return path.join(getProjectsDir(projectPath), 'stats.json');
+}
+
+/**
  * Get the directory for a specific project plan
  *
  * @param projectPath - Absolute path to project directory

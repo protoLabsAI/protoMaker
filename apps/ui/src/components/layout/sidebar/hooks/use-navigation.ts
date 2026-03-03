@@ -51,6 +51,7 @@ interface UseNavigationProps {
     designs: string;
     calendar: string;
     automations: string;
+    projects: string;
   };
   hideSpecEditor: boolean;
   hideContext: boolean;
@@ -152,11 +153,6 @@ export function useNavigation({
         shortcut: shortcuts.memory,
       },
       {
-        id: 'projects',
-        label: 'Projects',
-        icon: FolderKanban,
-      },
-      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
@@ -173,9 +169,6 @@ export function useNavigation({
         return false;
       }
       if (item.id === 'docs' && hideDocs) {
-        return false;
-      }
-      if (item.id === 'projects' && hideProjects) {
         return false;
       }
       return true;
@@ -205,6 +198,15 @@ export function useNavigation({
       icon: NotebookPen,
       shortcut: shortcuts.notes,
     });
+
+    if (!hideProjects) {
+      projectItems.push({
+        id: 'projects',
+        label: 'Projects',
+        icon: FolderKanban,
+        shortcut: shortcuts.projects,
+      });
+    }
 
     if (!hideSystemView) {
       projectItems.splice(1, 0, {

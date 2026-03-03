@@ -1,12 +1,12 @@
 /**
- * POST /delete endpoint - Delete a project plan
+ * POST /delete endpoint - Delete a project plan (with stats capture)
  */
 
 import type { Request, Response } from 'express';
-import { deleteProjectPlan, projectPlanExists } from '@protolabs-ai/platform';
+import type { ProjectService } from '../../../services/project-service.js';
 import { getErrorMessage, logError } from '../common.js';
 
-export function createDeleteHandler() {
+export function createDeleteHandler(projectService: ProjectService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, projectSlug } = req.body as {
@@ -23,16 +23,9 @@ export function createDeleteHandler() {
         return;
       }
 
-      // Check if project exists
-      const exists = await projectPlanExists(projectPath, projectSlug);
-      if (!exists) {
-        res.status(404).json({ success: false, error: `Project "${projectSlug}" not found` });
-        return;
-      }
-
-      const deleted = await deleteProjectPlan(projectPath, projectSlug);
+      const deleted = await projectService.deleteProject(projectPath, projectSlug);
       if (!deleted) {
-        res.status(500).json({ success: false, error: 'Failed to delete project' });
+        res.status(404).json({ success: false, error: `Project "${projectSlug}" not found` });
         return;
       }
 
