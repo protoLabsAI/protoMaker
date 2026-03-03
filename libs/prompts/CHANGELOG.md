@@ -1,5 +1,18 @@
 # @protolabs-ai/prompts
 
+## 0.29.0
+
+### Minor Changes
+
+- ### Features
+  - add clock to bottom ticker bar
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabs-ai/types@0.29.0
+  - @protolabs-ai/utils@0.29.0
+
 ## 0.28.0
 
 ### Minor Changes
