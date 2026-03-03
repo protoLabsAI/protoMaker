@@ -133,6 +133,7 @@ export async function simpleQuery(options: SimpleQueryOptions): Promise<SimpleQu
   }
 
   let responseText = '';
+  let thinkingText = '';
   let structuredOutput: Record<string, unknown> | undefined;
 
   // Build provider options
@@ -162,11 +163,13 @@ export async function simpleQuery(options: SimpleQueryOptions): Promise<SimpleQu
       throw new Error(errorMessage);
     }
 
-    // Extract text from assistant messages
+    // Extract text and thinking from assistant messages
     if (msg.type === 'assistant' && msg.message?.content) {
       for (const block of msg.message.content) {
         if (block.type === 'text' && block.text) {
           responseText += block.text;
+        } else if (block.type === 'thinking' && block.thinking) {
+          thinkingText += block.thinking;
         }
       }
     }
@@ -189,6 +192,14 @@ export async function simpleQuery(options: SimpleQueryOptions): Promise<SimpleQu
         throw new Error('Could not produce valid structured output after retries');
       }
     }
+  }
+
+  // When extended thinking is active (e.g. Opus), the model may put
+  // substantive content in thinking blocks and return only a brief
+  // summary in text. Use thinking content as fallback when text is
+  // too short to pass downstream validation gates.
+  if (responseText.length < 100 && thinkingText.length > responseText.length) {
+    responseText = thinkingText;
   }
 
   return { text: responseText, structured_output: structuredOutput };
