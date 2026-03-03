@@ -840,4 +840,4 @@ const toolContext: ToolContext = {
 - [MCP Tools Reference](../integrations/mcp-tools-reference.md) - Complete tool catalog
 - [Agent SDK Integration](../agents/sdk-integration.md) - How agents use tools
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure
-- [Testing Guide](./testing.md) - Comprehensive testing strategies
+- [Testing Patterns](./testing-patterns.md) - Test patterns and strategies

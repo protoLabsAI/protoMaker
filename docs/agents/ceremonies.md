@@ -391,3 +391,4 @@ For ceremonies to work:
 - [Architecture overview](./architecture) -- How ceremonies fit into the agent system
 - [MCP integration](./mcp-integration) -- Programmatic ceremony control
 - [Inbox system](../dev/inbox-system) -- Ceremony entries in the unified inbox
+- [Langfuse integration](../integrations/langfuse) -- Tracing and quality scoring

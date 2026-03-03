@@ -185,7 +185,7 @@ User Override (settings) → Langfuse (versioned) → Hardcoded Default
 2. **Langfuse** — If Langfuse is configured and has a versioned prompt for this key, use it
 3. **Hardcoded Default** — Fall back to the constant in `defaults.ts`
 
-For details on Langfuse prompt management and versioning, see [Langfuse Prompt Management](../dev/langfuse-prompts.md).
+For details on Langfuse prompt management and versioning, see [Langfuse Integration](../integrations/langfuse.md).
 
 ## Writing effective prompts
 
@@ -302,7 +302,7 @@ If Langfuse is configured, prompts can be versioned and A/B tested:
 2. The server fetches the latest version on startup
 3. User overrides still take priority over Langfuse versions
 
-See [Langfuse Prompt Management](../dev/langfuse-prompts.md) for the full workflow.
+See [Langfuse Integration](../integrations/langfuse.md) for the full workflow.
 
 ## Prompt template variables
 
@@ -339,5 +339,4 @@ These are rendered by `buildSystemPrompt()` in the agent factory. Templates can 
 - [Agent Philosophy](./philosophy.md) — Why the prompt system is designed this way
 - [Context System](./context-system.md) — How context files and memory flow into prompts
 - [Dynamic Role Registry](./dynamic-role-registry.md) — Template-based agent creation
-- [Langfuse Prompt Management](../dev/langfuse-prompts.md) — Versioned prompt management
-- [Langfuse Integration](../dev/langfuse-integration.md) — Server-side tracing and cost tracking
+- [Langfuse Integration](../integrations/langfuse.md) — Tracing, prompt versioning, and cost tracking

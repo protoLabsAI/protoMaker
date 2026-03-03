@@ -242,7 +242,7 @@ Trust tiers are defined in `libs/types/src/quarantine.ts`:
 | 3    | Maintainer  | Team member                           | Bypass          |
 | 4    | System      | Internal/MCP/CLI, full trust          | Bypass          |
 
-Trust tier management is available via API (`/api/quarantine/trust-tiers/`) and documented in `docs/security/quarantine-pipeline.md`.
+Trust tier management is available via API (`/api/quarantine/trust-tiers/`) and documented in `docs/server/quarantine-pipeline.md`.
 
 ### Implemented components
 
@@ -256,8 +256,8 @@ Trust tier management is available via API (`/api/quarantine/trust-tiers/`) and 
 | Feature creation quarantine gate     | `apps/server/src/routes/features.ts`             |
 | Unit tests                           | `apps/server/tests/unit/quarantine-*.test.ts`    |
 | Sanitization tests                   | `libs/utils/tests/sanitize.test.ts`              |
-| Pipeline documentation               | `docs/security/quarantine-pipeline.md`           |
-| Contribution model documentation     | `docs/community/contribution-model.md`           |
+| Pipeline documentation               | `docs/server/quarantine-pipeline.md`             |
+| Contribution model documentation     | `docs/dev/contribution-model.md`                 |
 
 ---
 
@@ -370,8 +370,8 @@ These items must be completed before the repository goes public. They represent 
 - Quarantine pipeline (QuarantineService, TrustTierService, sanitization utilities)
 - Quarantine API routes and MCP tools
 - Unit tests for quarantine and sanitization
-- Documentation: `docs/security/quarantine-pipeline.md`
-- Documentation: `docs/community/contribution-model.md`
+- Documentation: `docs/server/quarantine-pipeline.md`
+- Documentation: `docs/dev/contribution-model.md`
 - Auto-close GitHub issues via PR `Closes` keyword (PR #1067)
 
 **Definition of done for Phase 0:** Repository can be made public. External PRs are auto-closed. Issues are funneled through templates. No secrets in git history. Security reporting channel exists.

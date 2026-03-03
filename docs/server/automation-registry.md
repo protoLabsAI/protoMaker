@@ -256,7 +256,7 @@ The `modelConfig` object comes from the automation definition and is passed thro
 | `{DATA_DIR}/automations.json`     | Array of automation definitions (built-in + custom) |
 | `{DATA_DIR}/automation-runs.json` | Array of run records (capped at 50 per automation)  |
 
-`DATA_DIR` defaults to `./data`. See [Environment Variables](/getting-started/env-vars.md).
+`DATA_DIR` defaults to `./data`. See [Getting Started](/getting-started/) for environment setup.
 
 ## Key Files
 

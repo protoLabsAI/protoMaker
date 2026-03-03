@@ -7,16 +7,13 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 - **[Frontend Philosophy](./frontend-philosophy)** — Gold standard frontend decisions: tokens, components, theming, tooling
 - **[UI Architecture](./ui-architecture)** — React frontend structure, routing, state management
 - **[Shared Packages](./shared-packages)** — Monorepo package architecture and dependency chain
-- **[Feature Status System](./feature-status-system)** — The 6-status feature lifecycle
+- **[Feature Status System](./feature-status-system)** — The 5-status feature lifecycle
 
 ## AI Agent Infrastructure
 
 - **[Flows](./flows)** — LangGraph state graph primitives, coordinator pattern, Send() fan-out
 - **[Observability](./observability-package)** — Langfuse tracing, prompt versioning, cost tracking
-- **[Langfuse Integration](./langfuse-integration)** — Server-side tracing, agent scoring, API proxy routes
-- **[Langfuse Prompts](./langfuse-prompts)** — Three-layer prompt resolution, webhook sync, GitHub CI trigger
-- **[Content Pipeline](./content-pipeline)** — Content generation pipeline (blog, docs, training data)
-- **[Antagonistic Review](./antagonistic-review)** — Multi-perspective review with G-Eval scoring
+- **[Langfuse Integration](../integrations/langfuse)** — Tracing, prompt versioning, cost tracking
 
 ## Pipeline & Orchestration
 
@@ -38,8 +35,3 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 - **[Release](./release)** — Release process and Electron builds
 - **[Terminal](./terminal)** — Terminal feature documentation
 - **[Docs Standard](./docs-standard)** — IA rules, content guidelines, maintenance procedures
-
-## Multi-Instance
-
-- **[Hivemind Interfaces](./hivemind-interfaces)** — Service abstractions for multi-instance architecture
-- **[Multi-Instance PR Coordination](./multi-instance-pr-coordination)** — PR ownership watermarks, stale decay, and nudge rules

@@ -12,7 +12,7 @@ protoLabs is an **AI-native project** with a unique development workflow that is
 
 2. **AI agent workflow**: Features are implemented by AI agents that maintain consistency with the codebase's architecture, patterns, and conventions. Human-written code would need to be rewritten by agents anyway to maintain this consistency.
 
-3. **Quarantine pipeline**: All external input goes through a 4-stage validation pipeline (see [Quarantine pipeline](/security/quarantine-pipeline)) to prevent prompt injection and other attacks. Code contributions would bypass this security layer.
+3. **Quarantine pipeline**: All external input goes through a 4-stage validation pipeline (see [Quarantine pipeline](/server/quarantine-pipeline)) to prevent prompt injection and other attacks. Code contributions would bypass this security layer.
 
 4. **Feature coordination**: The AI agent system manages parallel feature implementation across multiple worktrees. External PRs would create merge conflicts and coordination challenges.
 
@@ -229,7 +229,7 @@ You can track releases at [github.com/proto-labs-ai/protomaker/releases](https:/
 
 ## Trust tier progression
 
-Your **trust tier** determines how strictly your submissions are validated (see [Quarantine pipeline](/security/quarantine-pipeline) for details).
+Your **trust tier** determines how strictly your submissions are validated (see [Quarantine pipeline](/server/quarantine-pipeline) for details).
 
 ### Initial tier (Tier 1: GitHub user)
 
@@ -421,7 +421,7 @@ Exception: If you spot a typo, you can submit an issue and the agent will fix it
 
 ## Related documentation
 
-- [Quarantine pipeline](/security/quarantine-pipeline) — How external submissions are validated
+- [Quarantine pipeline](/server/quarantine-pipeline) — How external submissions are validated
 - [Feature lifecycle](/dev/idea-to-production) — What happens after your idea is approved
 - [SECURITY.md](../../SECURITY.md) — Security vulnerability reporting process
 - [GitHub Issues](https://github.com/proto-labs-ai/protomaker/issues) — Submit your ideas here

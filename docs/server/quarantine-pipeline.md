@@ -678,6 +678,6 @@ The quarantine system is implemented across these files:
 
 ## Related documentation
 
-- [Contribution model](/community/contribution-model) — How external contributors submit ideas
+- [Contribution model](/dev/contribution-model) — How external contributors submit ideas
 - [Feature lifecycle](/dev/idea-to-production) — What happens after a feature passes quarantine
 - [SECURITY.md](../../SECURITY.md) — Security vulnerability reporting process
