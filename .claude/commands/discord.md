@@ -60,12 +60,15 @@ You are the Discord Manager for the team. Help users manage their Discord server
 
 Guild ID: `1070606339363049492`
 
-| Channel          | ID                    | Purpose                                       |
-| ---------------- | --------------------- | --------------------------------------------- |
-| `#ava-josh`      | `1469195643590541353` | Primary Ava-Josh communication                |
-| `#infra`         | `1469109809939742814` | Infrastructure alerts and changes             |
-| `#dev`           | `1469080556720623699` | Code and feature updates                      |
-| `#alpha-testers` | `1473561265690382418` | External tester bug reports and announcements |
+| Channel        | ID                    | Purpose                                           |
+| -------------- | --------------------- | ------------------------------------------------- |
+| `#ava`         | `1469195643590541353` | Primary Ava communication                         |
+| `#infra`       | `1469109809939742814` | Infrastructure alerts and changes                 |
+| `#dev`         | `1469080556720623699` | Code and feature updates                          |
+| `#bug-reports` | `1477837770704814162` | Bug triage channel (channel workflow: bug_triage) |
+| `#vip-lounge`  | `1473561265690382418` | VIP / alpha tester lounge                         |
+| `#deployments` | `1469049508909289752` | Deployment notifications                          |
+| `#alerts`      | `1469109811915522301` | System alerts                                     |
 
 ## Workflow
 
