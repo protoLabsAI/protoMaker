@@ -1,0 +1,10 @@
+{
+  "slug": "bugs",
+  "title": "Bugs",
+  "goal": "Persistent project for tracking all bug reports, investigations, and fixes. This is an ongoing project that is never archived.",
+  "status": "ongoing",
+  "ongoing": true,
+  "milestones": [],
+  "createdAt": "2026-03-03T20:50:26.903Z",
+  "updatedAt": "2026-03-03T20:50:26.903Z"
+}

@@ -49,13 +49,13 @@ docs/.vitepress/cache/
 .automaker/quarantine/
 
 # Instance-specific — each machine starts fresh
-.automaker/projects/
 .automaker/settings.json
 
-# Track shared knowledge (agent learning, skills, context, spec)
+# Track shared knowledge (agent learning, skills, context, spec, projects)
 !.automaker/context/
 !.automaker/skills/
 !.automaker/memory/
+!.automaker/projects/
 !.automaker/spec.md
 
 .worktrees/
