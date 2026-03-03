@@ -229,12 +229,14 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 
 ## Calendar (4 tools)
 
-| Tool                    | Description                 |
-| ----------------------- | --------------------------- |
-| `list_calendar_events`  | List calendar events        |
-| `create_calendar_event` | Create a new calendar event |
-| `update_calendar_event` | Update an existing event    |
-| `delete_calendar_event` | Delete a calendar event     |
+Manages calendar events across custom, feature, milestone, Google, and Linear sources. The calendar assistant agent (`/calendar-assistant`) has exclusive write access. See [Calendar API](../server/calendar-api) for full endpoint documentation.
+
+| Tool                    | Description                 | Required Params                       | Optional Params                                           |
+| ----------------------- | --------------------------- | ------------------------------------- | --------------------------------------------------------- |
+| `list_calendar_events`  | List calendar events        | `projectPath`, `startDate`, `endDate` | `types` (array)                                           |
+| `create_calendar_event` | Create a new calendar event | `projectPath`, `title`, `date`        | `endDate`, `type`, `description`, `color`, `url`          |
+| `update_calendar_event` | Update an existing event    | `projectPath`, `id`                   | `title`, `date`, `endDate`, `description`, `color`, `url` |
+| `delete_calendar_event` | Delete a calendar event     | `projectPath`, `id`                   | --                                                        |
 
 ## Quarantine & Trust (5 tools)
 

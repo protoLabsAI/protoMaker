@@ -1,21 +1,17 @@
 /**
  * Calendar View
  *
- * Monthly calendar grid with event dots using react-day-picker.
- * Shows colored dots for events on each day, with a popover for event details.
+ * Google Calendar-style month grid with event titles visible in each day cell.
  * Supports creating, editing, and deleting custom events.
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { DayPicker, getDefaultClassNames } from 'react-day-picker';
-import 'react-day-picker/style.css';
 import { useAppStore } from '@/store/app-store';
 import { useCalendarEvents } from './use-calendar-events';
 import { CreateEventDialog } from './create-event-dialog';
 import { EventDetailPanel } from './event-detail-panel';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
 import { SkeletonPulse, Spinner } from '@protolabs-ai/ui/atoms';
-import { Calendar, ChevronLeft, ChevronRight, ExternalLink, Plus, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiPost } from '@/lib/api-fetch';
@@ -26,8 +22,11 @@ import type { CreateEventInput, UpdateEventInput } from './use-calendar-events';
 // Constants
 // ============================================================================
 
-/** Maximum number of event dots shown per day cell before showing "+N" */
-const MAX_DOTS_PER_DAY = 3;
+/** Maximum number of event rows shown per day cell before showing "+N more" */
+const MAX_EVENTS_PER_DAY = 3;
+
+/** Weekday labels for the header row */
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /** Color mapping for event types (used when event has no custom color) */
 const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
@@ -36,15 +35,6 @@ const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
   custom: 'bg-chart-3',
   google: 'bg-chart-4',
   linear: 'bg-chart-5',
-};
-
-/** Human-readable labels for event types */
-const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
-  feature: 'Feature',
-  milestone: 'Milestone',
-  custom: 'Custom',
-  google: 'Google Calendar',
-  linear: 'Linear',
 };
 
 // ============================================================================
@@ -78,18 +68,7 @@ function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]
   return map;
 }
 
-/** Format a date string (YYYY-MM-DD) to a human-readable label */
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-/** Get the Tailwind background class for an event */
+/** Get the Tailwind background class for an event dot */
 function getEventDotClass(event: CalendarEvent): string {
   if (event.color) {
     return ''; // Custom color handled via inline style
@@ -105,109 +84,139 @@ function getEventDotStyle(event: CalendarEvent): React.CSSProperties | undefined
   return undefined;
 }
 
+/** Format a YYYY-MM-DD string to a date key */
+function toDateKey(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+/** Get today's date key */
+function getTodayKey(): string {
+  return toDateKey(new Date());
+}
+
+/**
+ * Build the 42-cell (6 weeks) grid for a given month.
+ * Returns an array of Date objects starting from the Sunday of the first week.
+ */
+function buildMonthGrid(year: number, month: number): Date[] {
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay(); // 0 = Sunday
+  const gridStart = new Date(year, month, 1 - startOffset);
+
+  const cells: Date[] = [];
+  for (let i = 0; i < 42; i++) {
+    cells.push(new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i));
+  }
+  return cells;
+}
+
+/** Format month/year for the header */
+function formatMonthYear(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
 // ============================================================================
 // Sub-components
 // ============================================================================
 
-interface EventDotProps {
+interface EventRowProps {
   event: CalendarEvent;
+  onClick: (event: CalendarEvent) => void;
 }
 
-function EventDot({ event }: EventDotProps) {
+function EventRow({ event, onClick }: EventRowProps) {
   return (
-    <span
-      className={cn('inline-block h-1.5 w-1.5 rounded-full shrink-0', getEventDotClass(event))}
-      style={getEventDotStyle(event)}
-      title={event.title}
-    />
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick(event);
+      }}
+      className="flex items-center gap-1 w-full rounded px-1 py-0.5 text-left hover:bg-accent/60 transition-colors cursor-pointer group"
+    >
+      <span
+        className={cn('inline-block h-1.5 w-1.5 rounded-full shrink-0', getEventDotClass(event))}
+        style={getEventDotStyle(event)}
+      />
+      <span className="text-[11px] leading-tight truncate">{event.title}</span>
+    </button>
   );
 }
 
-interface DayEventsPopoverContentProps {
-  dateStr: string;
+interface DayCellProps {
+  date: Date;
   events: CalendarEvent[];
+  isCurrentMonth: boolean;
+  isToday: boolean;
   onEventClick: (event: CalendarEvent) => void;
+  onDayClick: (date: Date) => void;
 }
 
-function DayEventsPopoverContent({ dateStr, events, onEventClick }: DayEventsPopoverContentProps) {
+function DayCell({
+  date,
+  events,
+  isCurrentMonth,
+  isToday,
+  onEventClick,
+  onDayClick,
+}: DayCellProps) {
+  const visibleEvents = events.slice(0, MAX_EVENTS_PER_DAY);
+  const overflowCount = events.length - MAX_EVENTS_PER_DAY;
+
   return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-muted-foreground mb-2">{formatDateLabel(dateStr)}</p>
-      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-        {events.map((event) => (
-          <button
-            key={event.id}
-            type="button"
-            onClick={() => onEventClick(event)}
-            className="flex items-start gap-2 rounded-md p-1.5 hover:bg-accent/50 w-full text-left transition-colors cursor-pointer"
-          >
-            <span
-              className={cn(
-                'mt-1 inline-block h-2 w-2 rounded-full shrink-0',
-                getEventDotClass(event)
-              )}
-              style={getEventDotStyle(event)}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-medium truncate">{event.title}</p>
-                {event.url && (
-                  <a
-                    href={event.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-muted-foreground">
-                  {EVENT_TYPE_LABELS[event.type] ?? event.type}
-                </span>
-                {event.endDate && event.endDate !== event.date && (
-                  <span className="text-[10px] text-muted-foreground/60">
-                    {event.date} - {event.endDate}
-                  </span>
-                )}
-              </div>
-              {event.description && (
-                <p className="text-[10px] text-muted-foreground/80 mt-0.5 line-clamp-2">
-                  {event.description}
-                </p>
-              )}
-            </div>
-          </button>
-        ))}
+    <div
+      onClick={() => onDayClick(date)}
+      className={cn(
+        'min-h-[5.5rem] border-t border-r p-1 cursor-pointer transition-colors hover:bg-accent/30',
+        !isCurrentMonth && 'bg-secondary/50'
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <span
+          className={cn(
+            'text-xs leading-5 w-6 h-6 flex items-center justify-center rounded-full',
+            isToday && 'bg-primary text-primary-foreground font-semibold',
+            !isToday && isCurrentMonth && 'text-foreground',
+            !isCurrentMonth && 'text-muted-foreground/50'
+          )}
+        >
+          {date.getDate()}
+        </span>
       </div>
+      {visibleEvents.length > 0 && (
+        <div className="mt-0.5 space-y-px">
+          {visibleEvents.map((event) => (
+            <EventRow key={event.id} event={event} onClick={onEventClick} />
+          ))}
+          {overflowCount > 0 && (
+            <span className="text-[10px] text-muted-foreground px-1">+{overflowCount} more</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function CalendarSkeleton() {
   return (
-    <div className="p-6 space-y-4">
-      {/* Month header skeleton */}
-      <div className="flex items-center justify-between">
-        <SkeletonPulse className="h-6 w-32" />
-        <div className="flex gap-2">
-          <SkeletonPulse className="h-8 w-8 rounded-md" />
-          <SkeletonPulse className="h-8 w-8 rounded-md" />
-        </div>
-      </div>
+    <div className="flex flex-col h-full">
       {/* Weekday header skeleton */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7">
         {Array.from({ length: 7 }).map((_, i) => (
-          <SkeletonPulse key={`wk-${i}`} className="h-4 w-full" />
+          <div key={`wk-${i}`} className="border-t border-r p-2">
+            <SkeletonPulse className="h-3 w-8 ml-auto" />
+          </div>
         ))}
       </div>
       {/* Day grid skeleton */}
-      {Array.from({ length: 5 }).map((_, row) => (
-        <div key={`row-${row}`} className="grid grid-cols-7 gap-1">
+      {Array.from({ length: 6 }).map((_, row) => (
+        <div key={`row-${row}`} className="grid grid-cols-7 flex-1">
           {Array.from({ length: 7 }).map((_, col) => (
-            <SkeletonPulse key={`day-${row}-${col}`} className="h-12 w-full rounded-md" />
+            <div key={`day-${row}-${col}`} className="border-t border-r p-1">
+              <SkeletonPulse className="h-4 w-4 rounded-full mb-1" />
+              <SkeletonPulse className="h-3 w-full mb-0.5" />
+              <SkeletonPulse className="h-3 w-3/4" />
+            </div>
           ))}
         </div>
       ))}
@@ -297,9 +306,6 @@ export function CalendarView() {
   const [displayMonth, setDisplayMonth] = useState<Date>(
     new Date(now.getFullYear(), now.getMonth())
   );
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  // Dialog state
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [createDefaultDate, setCreateDefaultDate] = useState<string | undefined>(undefined);
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null);
@@ -313,32 +319,23 @@ export function CalendarView() {
     });
 
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
-  const defaultClassNames = useMemo(() => getDefaultClassNames(), []);
-
-  const handleMonthChange = useCallback((month: Date) => {
-    setDisplayMonth(month);
-    setSelectedDate(null);
-  }, []);
+  const todayKey = useMemo(() => getTodayKey(), []);
+  const gridCells = useMemo(
+    () => buildMonthGrid(displayMonth.getFullYear(), displayMonth.getMonth()),
+    [displayMonth]
+  );
 
   const handlePrevMonth = useCallback(() => {
     setDisplayMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1));
-    setSelectedDate(null);
   }, []);
 
   const handleNextMonth = useCallback(() => {
     setDisplayMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1));
-    setSelectedDate(null);
   }, []);
 
   const handleToday = useCallback(() => {
     const today = new Date();
     setDisplayMonth(new Date(today.getFullYear(), today.getMonth()));
-    setSelectedDate(null);
-  }, []);
-
-  const handleDayClick = useCallback((date: Date) => {
-    const key = date.toISOString().split('T')[0];
-    setSelectedDate((prev) => (prev === key ? null : key));
   }, []);
 
   const handleNewEvent = useCallback(() => {
@@ -350,7 +347,12 @@ export function CalendarView() {
   const handleEventClick = useCallback((event: CalendarEvent) => {
     setDetailEvent(event);
     setShowDetailPanel(true);
-    setSelectedDate(null);
+  }, []);
+
+  const handleDayClick = useCallback((date: Date) => {
+    const key = toDateKey(date);
+    setCreateDefaultDate(key);
+    setShowCreateDialog(true);
   }, []);
 
   const handleCreateEvent = useCallback(
@@ -452,114 +454,62 @@ export function CalendarView() {
         <GoogleCalendarNudge projectPath={projectPath} />
       </div>
 
+      {/* Month/Year title */}
+      <div className="px-6 py-3">
+        <h2 className="text-base font-semibold">{formatMonthYear(displayMonth)}</h2>
+      </div>
+
       {/* Calendar body */}
-      <div className="flex-1 overflow-y-auto relative">
+      <div className="flex-1 flex flex-col overflow-hidden px-6 pb-4">
         {isLoading && events.length === 0 ? (
           <CalendarSkeleton />
         ) : error ? (
-          <div className="flex flex-col items-center justify-center py-16">
+          <div className="flex flex-col items-center justify-center flex-1">
             <Calendar className="h-10 w-10 text-destructive/30 mb-3" />
             <p className="text-sm text-destructive">{error}</p>
           </div>
         ) : (
-          <div className="p-4">
-            {/* Loading indicator overlay for subsequent fetches */}
+          <div className="flex flex-col flex-1 relative border-l border-b">
+            {/* Loading indicator for subsequent fetches */}
             {isLoading && events.length > 0 && (
-              <div className="absolute top-2 right-6 z-10">
+              <div className="absolute top-2 right-2 z-10">
                 <Spinner className="h-4 w-4" />
               </div>
             )}
 
-            <DayPicker
-              mode="single"
-              month={displayMonth}
-              onMonthChange={handleMonthChange}
-              fixedWeeks
-              showOutsideDays
-              hideNavigation
-              classNames={{
-                root: `${defaultClassNames.root} w-full`,
-                months: `${defaultClassNames.months} w-full`,
-                month: `${defaultClassNames.month} w-full`,
-                month_grid: 'w-full border-collapse',
-                weekdays: 'flex w-full',
-                weekday: 'flex-1 text-center text-xs font-medium text-muted-foreground py-2',
-                week: 'flex w-full',
-                day: 'flex-1 text-center p-0 relative',
-                day_button:
-                  'w-full min-h-[4rem] p-1 rounded-md text-sm transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-                today: 'font-bold text-primary',
-                selected: 'bg-accent text-accent-foreground',
-                outside: 'text-muted-foreground/40',
-                disabled: 'text-muted-foreground/30',
-              }}
-              components={{
-                DayButton: ({ day, modifiers, ...buttonProps }) => {
-                  const date = day.date;
-                  const dateStr = date.toISOString().split('T')[0];
-                  const dayEvents = eventsByDate.get(dateStr) ?? [];
-                  const isSelected = selectedDate === dateStr;
-                  const hasEvents = dayEvents.length > 0;
-                  const visibleDots = dayEvents.slice(0, MAX_DOTS_PER_DAY);
-                  const extraCount = dayEvents.length - MAX_DOTS_PER_DAY;
+            {/* Weekday header */}
+            <div className="grid grid-cols-7">
+              {WEEKDAY_LABELS.map((label) => (
+                <div
+                  key={label}
+                  className="border-t border-r py-1.5 px-2 text-right text-xs font-medium text-muted-foreground"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
 
-                  const buttonContent = (
-                    <button
-                      {...buttonProps}
-                      className={cn(
-                        'w-full min-h-[4rem] p-1 rounded-md text-sm transition-colors',
-                        'hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
-                        'flex flex-col items-center gap-0.5',
-                        isSelected && hasEvents && 'bg-accent text-accent-foreground',
-                        modifiers.today && 'font-bold text-primary',
-                        modifiers.outside && 'text-muted-foreground/40'
-                      )}
-                      onClick={(e) => {
-                        handleDayClick(date);
-                        buttonProps.onClick?.(e);
-                      }}
-                    >
-                      <span className="leading-tight">{date.getDate()}</span>
-                      {hasEvents && (
-                        <div className="flex items-center gap-0.5 mt-auto">
-                          {visibleDots.map((event) => (
-                            <EventDot key={event.id} event={event} />
-                          ))}
-                          {extraCount > 0 && (
-                            <span className="text-[8px] text-muted-foreground leading-none">
-                              +{extraCount}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
+            {/* Day grid - 6 rows of 7 cells */}
+            <div className="grid grid-cols-7 grid-rows-6 flex-1">
+              {gridCells.map((date, i) => {
+                const dateKey = toDateKey(date);
+                const dayEvents = eventsByDate.get(dateKey) ?? [];
+                const isCurrentMonth = date.getMonth() === displayMonth.getMonth();
+                const isToday = dateKey === todayKey;
 
-                  // Wrap in popover only when selected and has events
-                  if (isSelected && hasEvents) {
-                    return (
-                      <Popover open onOpenChange={() => setSelectedDate(null)}>
-                        <PopoverTrigger asChild>{buttonContent}</PopoverTrigger>
-                        <PopoverContent
-                          className="w-72 p-3"
-                          align="center"
-                          sideOffset={4}
-                          onOpenAutoFocus={(e) => e.preventDefault()}
-                        >
-                          <DayEventsPopoverContent
-                            dateStr={dateStr}
-                            events={dayEvents}
-                            onEventClick={handleEventClick}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    );
-                  }
-
-                  return buttonContent;
-                },
-              }}
-            />
+                return (
+                  <DayCell
+                    key={i}
+                    date={date}
+                    events={dayEvents}
+                    isCurrentMonth={isCurrentMonth}
+                    isToday={isToday}
+                    onEventClick={handleEventClick}
+                    onDayClick={handleDayClick}
+                  />
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

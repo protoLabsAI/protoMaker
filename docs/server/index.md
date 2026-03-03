@@ -12,6 +12,7 @@ The server is an Express 5 application with WebSocket streaming, organized into 
 - **[Providers](./providers)** — AI provider abstraction (Claude, Cursor, Codex, OpenCode)
 - **[Utilities](./utilities)** — Server utility functions and helpers
 - **[Automations](./automation-registry)** — Scheduled tasks, custom flows, run history, and the unified control plane
+- **[Calendar API](./calendar-api)** — Calendar events, Google Calendar sync, and MCP tools
 - **[Knowledge Store](./knowledge-store)** — SQLite FTS5 knowledge base for agent context retrieval
 
 ## Key Technologies

@@ -1586,7 +1586,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     // Calendar Management
     case 'list_calendar_events':
-      return apiCall('/calendar/events', {
+      return apiCall('/calendar/list', {
         projectPath: args.projectPath,
         startDate: args.startDate,
         endDate: args.endDate,
@@ -1595,37 +1595,34 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
     case 'create_calendar_event': {
       const eventData: Record<string, unknown> = {
+        projectPath: args.projectPath,
         title: args.title,
         date: args.date,
+        type: args.type || 'custom',
       };
       if (args.endDate) eventData.endDate = args.endDate;
-      if (args.type) eventData.type = args.type;
       if (args.description) eventData.description = args.description;
       if (args.color) eventData.color = args.color;
       if (args.url) eventData.url = args.url;
-      return apiCall('/calendar/events', {
-        projectPath: args.projectPath,
-        event: eventData,
-      });
+      return apiCall('/calendar/create', eventData);
     }
 
     case 'update_calendar_event': {
-      const updates: Record<string, unknown> = {};
-      if (args.title) updates.title = args.title;
-      if (args.date) updates.date = args.date;
-      if (args.endDate) updates.endDate = args.endDate;
-      if (args.description) updates.description = args.description;
-      if (args.color) updates.color = args.color;
-      if (args.url) updates.url = args.url;
-      return apiCall('/calendar/events/update', {
+      const updateBody: Record<string, unknown> = {
         projectPath: args.projectPath,
         id: args.id,
-        updates,
-      });
+      };
+      if (args.title) updateBody.title = args.title;
+      if (args.date) updateBody.date = args.date;
+      if (args.endDate) updateBody.endDate = args.endDate;
+      if (args.description) updateBody.description = args.description;
+      if (args.color) updateBody.color = args.color;
+      if (args.url) updateBody.url = args.url;
+      return apiCall('/calendar/update', updateBody);
     }
 
     case 'delete_calendar_event':
-      return apiCall('/calendar/events/delete', {
+      return apiCall('/calendar/delete', {
         projectPath: args.projectPath,
         id: args.id,
       });
