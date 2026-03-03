@@ -80,14 +80,6 @@ export function AutomakerLogo({ sidebarOpen, navigate }: AutomakerLogoProps) {
             filter="url(#iconShadow-collapsed)"
           />
         </svg>
-        <span className="text-[0.625rem] text-muted-foreground leading-none font-medium">
-          v{appVersion} {versionSuffix}
-        </span>
-        {demoMode && (
-          <span className="text-[0.5rem] font-bold uppercase tracking-wider text-brand-400 bg-brand-400/10 px-1.5 py-0.5 rounded">
-            Demo
-          </span>
-        )}
       </div>
 
       {/* Expanded logo - shown when sidebar is open */}

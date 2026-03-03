@@ -36,7 +36,7 @@ export function SidebarFooter({
         <button
           onClick={() => navigate({ to: '/settings' })}
           className={cn(
-            'group flex items-center w-full px-3 py-2.5 rounded-xl relative overflow-hidden titlebar-no-drag',
+            'group flex items-center w-full px-2.5 py-1.5 rounded-lg relative overflow-hidden titlebar-no-drag',
             'transition-all duration-200 ease-out',
             isActiveRoute('settings')
               ? [
@@ -59,7 +59,7 @@ export function SidebarFooter({
         >
           <Settings
             className={cn(
-              'w-[18px] h-[18px] shrink-0 transition-all duration-200',
+              'w-4 h-4 shrink-0 transition-all duration-200',
               isActiveRoute('settings')
                 ? 'text-brand-500 drop-shadow-sm'
                 : 'group-hover:text-brand-400 group-hover:rotate-90 group-hover:scale-110'

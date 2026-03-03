@@ -45,35 +45,20 @@ export function SidebarNavigation({
       ) : currentProject ? (
         // Navigation sections when project is selected
         navSections.map((section, sectionIdx) => (
-          <div key={sectionIdx} className={sectionIdx > 0 && sidebarOpen ? 'mt-6' : ''}>
-            {/* Section Label */}
-            {section.label && sidebarOpen && (
+          <div key={sectionIdx}>
+            {/* Thin separator between sections */}
+            {sectionIdx > 0 && (
               <div
                 className={cn(
-                  'px-3 mb-2 transition-opacity duration-200',
-                  contentReady ? 'opacity-100' : 'opacity-0'
+                  'h-px bg-border/30 mx-2 my-1',
+                  sidebarOpen && 'transition-opacity duration-200',
+                  sidebarOpen && !contentReady && 'opacity-0'
                 )}
-              >
-                <span className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">
-                  {section.label}
-                </span>
-              </div>
-            )}
-            {/* Separator for sections without label (visual separation) */}
-            {!section.label && sectionIdx > 0 && sidebarOpen && (
-              <div
-                className={cn(
-                  'h-px bg-border/40 mx-3 mb-4 transition-opacity duration-200',
-                  contentReady ? 'opacity-100' : 'opacity-0'
-                )}
-              ></div>
-            )}
-            {(section.label || sectionIdx > 0) && !sidebarOpen && (
-              <div className="h-px bg-border/30 mx-2 my-1.5"></div>
+              />
             )}
 
             {/* Nav Items */}
-            <div className="space-y-1.5">
+            <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = isActiveRoute(item.id);
                 const Icon = item.icon;
@@ -86,7 +71,7 @@ export function SidebarNavigation({
                       navigate({ to: `/${item.id}` as unknown as '/' });
                     }}
                     className={cn(
-                      'group flex items-center w-full px-3 py-2.5 rounded-xl relative overflow-hidden titlebar-no-drag',
+                      'group flex items-center w-full px-2.5 py-1.5 rounded-lg relative overflow-hidden titlebar-no-drag',
                       'transition-all duration-200 ease-out',
                       isActive
                         ? [
@@ -109,7 +94,12 @@ export function SidebarNavigation({
                     title={!sidebarOpen ? item.label : undefined}
                     data-testid={`nav-${item.id}`}
                   >
-                    <div className="relative">
+                    <div
+                      className={cn(
+                        'relative transition-opacity duration-200',
+                        sidebarOpen && !contentReady ? 'opacity-0' : 'opacity-100'
+                      )}
+                    >
                       {item.isLoading ? (
                         <Spinner
                           size="md"
@@ -121,7 +111,7 @@ export function SidebarNavigation({
                       ) : (
                         <Icon
                           className={cn(
-                            'w-[18px] h-[18px] shrink-0 transition-all duration-200',
+                            'w-4 h-4 shrink-0 transition-all duration-200',
                             isActive
                               ? 'text-brand-500 drop-shadow-sm'
                               : 'group-hover:text-brand-400 group-hover:scale-110'
