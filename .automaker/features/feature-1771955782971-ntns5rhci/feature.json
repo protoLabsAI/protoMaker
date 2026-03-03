@@ -1,0 +1,100 @@
+{
+  "category": "KnowledgeStoreService Modularization",
+  "description": "**Milestone:** KnowledgeStoreService Modularization\n\nCreate apps/server/src/services/knowledge-embedding-orchestrator.ts and move all embedding orchestration logic from KnowledgeStoreService: the embeddings table management, runBackgroundHype(), averageEmbeddings(), getHypeStatus(), and the EmbeddingService lifecycle. The ML model EmbeddingService stays as-is. KnowledgeStoreService delegates. After this phase, knowledge-store-service.ts should be under 300 lines — primarily schema/migration, initialization, and delegation.\n\n**Files to Modify:**\n- apps/server/src/services/knowledge-store-service.ts\n- apps/server/src/services/knowledge-embedding-orchestrator.ts\n- apps/server/src/routes/knowledge/routes/hype-status.ts\n\n**Acceptance Criteria:**\n- [ ] knowledge-embedding-orchestrator.ts exists with HyPE and embedding lifecycle\n- [ ] knowledge-store-service.ts is under 300 lines\n- [ ] HyPE background generation continues to work end-to-end\n- [ ] getHypeStatus() returns correct counts\n- [ ] npm run build:server succeeds\n- [ ] npm run test:server passes\n\n**Complexity:** large",
+  "title": "Extract KnowledgeEmbeddingOrchestrator",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/knowledgestoreservic-extract-knowledgeemb",
+  "isFoundation": false,
+  "id": "feature-1771955782971-ntns5rhci",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** KnowledgeStoreService Modularization\n\nCreate apps/server/src/services/knowledge-embedding-orchestrator.ts and move all embedding orchestration logic from KnowledgeStoreService: the embeddings table management, runBackgroundHype(), averageEmbeddings(), getHypeStatus(), and the EmbeddingService lifecycle. The ML model EmbeddingService stays as-is. KnowledgeStoreService delegates. After this phase, knowledge-store-service.ts should be under 300 lines — primarily schema/migration, initialization, and delegation.\n\n**Files to Modify:**\n- apps/server/src/services/knowledge-store-service.ts\n- apps/server/src/services/knowledge-embedding-orchestrator.ts\n- apps/server/src/routes/knowledge/routes/hype-status.ts\n\n**Acceptance Criteria:**\n- [ ] knowledge-embedding-orchestrator.ts exists with HyPE and embedding lifecycle\n- [ ] knowledge-store-service.ts is under 300 lines\n- [ ] HyPE background generation continues to work end-to-end\n- [ ] getHypeStatus() returns correct counts\n- [ ] npm run build:server succeeds\n- [ ] npm run test:server passes\n\n**Complexity:** large",
+      "timestamp": "2026-02-24T17:56:22.971Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T17:56:22.971Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T17:56:22.971Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T19:44:28.457Z"
+    },
+    {
+      "from": "verified",
+      "to": "backlog",
+      "timestamp": "2026-02-24T19:54:43.287Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-02-24T20:19:42.748Z"
+    }
+  ],
+  "dependencies": [],
+  "updatedAt": "2026-02-24T20:48:13.857Z",
+  "costUsd": 6.24447075,
+  "lastSessionId": "4b43dafc-b0f0-485e-ab8e-691622633ccb",
+  "lastTraceId": "e5dab85f-2874-4d33-bf2e-516d1091ae65",
+  "executionHistory": [
+    {
+      "id": "3eb63611-3280-4139-94f6-621d1ab979db",
+      "startedAt": "2026-02-24T19:44:28.471Z",
+      "completedAt": "2026-02-24T19:54:12.161Z",
+      "durationMs": 583690,
+      "costUsd": 3.697100250000001,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "adbac77f-a413-469c-9291-229ecd73abbc",
+      "startedAt": "2026-02-24T20:14:28.786Z",
+      "completedAt": "2026-02-24T20:15:09.974Z",
+      "durationMs": 41188,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "ed416f78-ff96-4b1e-8fdf-ad481d07821c",
+      "startedAt": "2026-02-24T20:15:11.123Z",
+      "completedAt": "2026-02-24T20:19:30.960Z",
+      "durationMs": 259837,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "ae45cd87-7adc-4d41-a1b2-e176c82bae1b",
+      "startedAt": "2026-02-24T20:19:32.294Z",
+      "completedAt": "2026-02-24T20:28:16.326Z",
+      "durationMs": 524032,
+      "costUsd": 1.5857734999999993,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "4ff5a866-e581-4298-ba13-b75ac27cdaa1",
+      "startedAt": "2026-02-24T20:44:28.846Z",
+      "completedAt": "2026-02-24T20:48:13.860Z",
+      "durationMs": 225014,
+      "costUsd": 0.9615969999999994,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

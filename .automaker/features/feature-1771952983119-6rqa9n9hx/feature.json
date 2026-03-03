@@ -1,0 +1,85 @@
+{
+  "category": "Signal Intake",
+  "description": "Landing page: add email capture / waitlist form\n\nAdd a waitlist/email capture form to the landing page for early access signups. Options:\\\\n- Simple email collection with form submission to a backend/service\\\\n- Integration with Mailchimp, Resend, or similar\\\\n- Thank you state after submission\\\\n\\\\nShould be prominent in the hero section and/or a dedicated CTA section.",
+  "title": "[linear] Landing page: add email capture / waitlist form",
+  "status": "verified",
+  "complexity": "medium",
+  "workItemState": "research",
+  "id": "feature-1771952983119-6rqa9n9hx",
+  "branchName": "feature/linear-landing-page-add-email-capture",
+  "descriptionHistory": [
+    {
+      "description": "Landing page: add email capture / waitlist form\n\nAdd a waitlist/email capture form to the landing page for early access signups. Options:\\\\n- Simple email collection with form submission to a backend/service\\\\n- Integration with Mailchimp, Resend, or similar\\\\n- Thank you state after submission\\\\n\\\\nShould be prominent in the hero section and/or a dedicated CTA section.",
+      "timestamp": "2026-02-24T17:09:43.119Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T17:09:43.120Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T17:09:43.120Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T17:56:50.655Z"
+    }
+  ],
+  "pipelineState": {
+    "currentPhase": "RESEARCH",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-24T17:09:43.123Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-24T17:09:45.131Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-24T17:09:43.123Z",
+    "traceId": "f2742c9e-59aa-4556-b5fc-72d68820130c",
+    "phaseSpanIds": {
+      "TRIAGE": "2af7cf51-ac6b-4013-843d-210f5fe9dd71",
+      "RESEARCH": "9fd19ed7-c851-435a-8010-7ecd686ec7f4"
+    },
+    "awaitingGatePhase": null
+  },
+  "updatedAt": "2026-02-24T18:28:58.527Z",
+  "costUsd": 2.1351602499999998,
+  "lastSessionId": "02eda21f-9495-4e33-8f84-9c39f11fd24b",
+  "lastTraceId": "2acb52de-42c4-4368-8d3b-0f6c45ad020f",
+  "executionHistory": [
+    {
+      "id": "81f1150e-ca97-409d-9e71-b593be81eebd",
+      "startedAt": "2026-02-24T17:56:50.667Z",
+      "completedAt": "2026-02-24T18:01:34.575Z",
+      "durationMs": 283908,
+      "costUsd": 1.6973134999999995,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "20f7ccec-c2b6-479a-8fc1-917cfb7f5138",
+      "startedAt": "2026-02-24T18:26:50.959Z",
+      "completedAt": "2026-02-24T18:28:58.537Z",
+      "durationMs": 127578,
+      "costUsd": 0.4378467500000003,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "category": "Signal Intake",
+  "description": "License selection and legal review\n\nDecide on licensing strategy:\\\\n- Open source license for engine/tools packages (MIT? Apache 2.0?)\\\\n- License for web app and desktop app (if different)\\\\n- Review all dependency licenses for compatibility\\\\n- Add LICENSE file to repo\\\\n- Add license headers to source files if needed\\\\n- Terms of service / privacy policy for hosted version (if applicable)",
+  "title": "[linear] License selection and legal review",
+  "status": "verified",
+  "complexity": "medium",
+  "workItemState": "research",
+  "id": "feature-1771953021548-bnntoc4sd",
+  "branchName": "feature/linear-license-selection-and-legal",
+  "descriptionHistory": [
+    {
+      "description": "License selection and legal review\n\nDecide on licensing strategy:\\\\n- Open source license for engine/tools packages (MIT? Apache 2.0?)\\\\n- License for web app and desktop app (if different)\\\\n- Review all dependency licenses for compatibility\\\\n- Add LICENSE file to repo\\\\n- Add license headers to source files if needed\\\\n- Terms of service / privacy policy for hosted version (if applicable)",
+      "timestamp": "2026-02-24T17:10:21.548Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T17:10:21.548Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T17:10:21.548Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T18:21:52.080Z"
+    }
+  ],
+  "pipelineState": {
+    "currentPhase": "RESEARCH",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-24T17:10:21.550Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-24T17:10:23.559Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-24T17:10:21.550Z",
+    "traceId": "d1d6f1e7-4222-4e9b-9b0c-f73c613c867f",
+    "phaseSpanIds": {
+      "TRIAGE": "b7e7fa1f-8394-4d3d-8664-29fa047fab42",
+      "RESEARCH": "80869f90-1822-40d3-a904-1defb3e9de14"
+    },
+    "awaitingGatePhase": null
+  },
+  "updatedAt": "2026-02-24T18:53:06.657Z",
+  "costUsd": 1.9918544999999996,
+  "lastSessionId": "0c88051b-c254-471e-9e26-9a0cc207c6e0",
+  "lastTraceId": "4c617c38-9de6-4a93-a5fd-d8be23d1d606",
+  "executionHistory": [
+    {
+      "id": "bb0ae1dc-2603-4f37-8dd2-15e62e746701",
+      "startedAt": "2026-02-24T18:21:52.087Z",
+      "completedAt": "2026-02-24T18:26:12.071Z",
+      "durationMs": 259984,
+      "costUsd": 1.5912409999999997,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "3a37532d-9973-4769-b0fb-bee4ad2d6277",
+      "startedAt": "2026-02-24T18:51:52.414Z",
+      "completedAt": "2026-02-24T18:53:06.664Z",
+      "durationMs": 74250,
+      "costUsd": 0.40061349999999996,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "category": "Failure Triage & Constraint Engineering",
+  "description": "**Milestone:** Failure Triage & Constraint Engineering\n\nAdd a constraints object to AgentTemplateSchema that allows each template to declaratively flag which safety constraint blocks it needs (worktreeSafety, portProtection, processGuard, monorepoStandards) and any forbidden tool patterns. Update buildSystemPrompt() in dynamic-agent-executor.ts to read these flags and render the corresponding prompt fragments from team-base.ts. Update all built-in templates (pr-maintainer, board-janitor, and any others) to explicitly declare their constraint sets.\n\nCurrently WORKTREE_SAFETY, PORT_PROTECTION, PROCESS_GUARD are hardcoded into getEngineeringBase() and composed into agent prompts regardless of template settings. After this change, constraint injection is template-driven and auditable in code. The shared base still includes them by default for engineering agents, but templates can now override or extend.\n\n**Files to Modify:**\n- libs/types/src/agent-templates.ts\n- apps/server/src/services/dynamic-agent-executor.ts\n- apps/server/src/services/built-in-templates.ts\n\n**Acceptance Criteria:**\n- [ ] AgentTemplateSchema has a constraints object with worktreeSafety, portProtection, processGuard, monorepoStandards boolean flags and forbiddenPatterns string array\n- [ ] buildSystemPrompt() renders constraint blocks from template.constraints flags\n- [ ] All built-in templates explicitly declare their constraint sets\n- [ ] No existing agent behavior changes (constraints still applied, just now declarative)\n- [ ] npm run build:packages passes\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** medium",
+  "title": "Template-Driven Constraint Declarations",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/failure-triage-template-driven",
+  "isFoundation": false,
+  "id": "feature-1771911528001-zjsu9mw21",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Failure Triage & Constraint Engineering\n\nAdd a constraints object to AgentTemplateSchema that allows each template to declaratively flag which safety constraint blocks it needs (worktreeSafety, portProtection, processGuard, monorepoStandards) and any forbidden tool patterns. Update buildSystemPrompt() in dynamic-agent-executor.ts to read these flags and render the corresponding prompt fragments from team-base.ts. Update all built-in templates (pr-maintainer, board-janitor, and any others) to explicitly declare their constraint sets.\n\nCurrently WORKTREE_SAFETY, PORT_PROTECTION, PROCESS_GUARD are hardcoded into getEngineeringBase() and composed into agent prompts regardless of template settings. After this change, constraint injection is template-driven and auditable in code. The shared base still includes them by default for engineering agents, but templates can now override or extend.\n\n**Files to Modify:**\n- libs/types/src/agent-templates.ts\n- apps/server/src/services/dynamic-agent-executor.ts\n- apps/server/src/services/built-in-templates.ts\n\n**Acceptance Criteria:**\n- [ ] AgentTemplateSchema has a constraints object with worktreeSafety, portProtection, processGuard, monorepoStandards boolean flags and forbiddenPatterns string array\n- [ ] buildSystemPrompt() renders constraint blocks from template.constraints flags\n- [ ] All built-in templates explicitly declare their constraint sets\n- [ ] No existing agent behavior changes (constraints still applied, just now declarative)\n- [ ] npm run build:packages passes\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** medium",
+      "timestamp": "2026-02-24T05:38:48.001Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T05:38:48.001Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T05:38:48.001Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T05:49:34.436Z"
+    }
+  ],
+  "dependencies": [
+    "feature-1771911527998-tny5dbiix"
+  ],
+  "updatedAt": "2026-02-24T05:57:19.661Z",
+  "costUsd": 3.553213,
+  "lastSessionId": "69fafb8c-8488-448d-a7d1-82e6214c411a",
+  "lastTraceId": "8ff266a4-274a-4ae3-bc6b-ac1986848b82",
+  "executionHistory": [
+    {
+      "id": "4e1f6ad6-6bfe-4621-8be1-85b5c6c2e985",
+      "startedAt": "2026-02-24T05:49:34.441Z",
+      "completedAt": "2026-02-24T05:57:19.664Z",
+      "durationMs": 465223,
+      "costUsd": 3.553213,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

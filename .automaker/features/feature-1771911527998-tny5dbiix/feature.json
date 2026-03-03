@@ -1,0 +1,57 @@
+{
+  "category": "Failure Triage & Constraint Engineering",
+  "description": "**Milestone:** Failure Triage & Constraint Engineering\n\nConnect the existing but unused FailureCategory/FailureAnalysis types from libs/types/src/failure.ts to the EscalateProcessor in lead-engineer-service.ts. Create a small FailureClassifierService that pattern-matches escalation reason strings to structured categories and recovery strategies. Store the FailureAnalysis result on the escalation event and in the feature's blocked metadata so humans reviewing escalations can see a structured root-cause classification rather than a free-text string.\n\nThe failure.ts types are fully defined: FailureCategory enum (transient, rate_limit, quota, validation, tool_error, test_failure, merge_conflict, dependency, authentication, unknown), RecoveryStrategy union, and FailureAnalysis interface (category, isRetryable, suggestedDelay, maxRetries, recoveryStrategy, explanation). The classifyError() utility in @automaker/utils already exists. This phase is purely about connecting them.\n\n**Files to Modify:**\n- apps/server/src/services/failure-classifier-service.ts\n- apps/server/src/services/lead-engineer-service.ts\n\n**Acceptance Criteria:**\n- [ ] EscalateProcessor calls failure classifier and attaches FailureAnalysis to escalation event\n- [ ] All 9+ escalation reason strings map to a non-unknown FailureCategory\n- [ ] Escalation events include structured recovery strategy\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** small",
+  "title": "Wire Structured Failure Classification",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/failure-triage-wire-structured",
+  "isFoundation": true,
+  "id": "feature-1771911527998-tny5dbiix",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Failure Triage & Constraint Engineering\n\nConnect the existing but unused FailureCategory/FailureAnalysis types from libs/types/src/failure.ts to the EscalateProcessor in lead-engineer-service.ts. Create a small FailureClassifierService that pattern-matches escalation reason strings to structured categories and recovery strategies. Store the FailureAnalysis result on the escalation event and in the feature's blocked metadata so humans reviewing escalations can see a structured root-cause classification rather than a free-text string.\n\nThe failure.ts types are fully defined: FailureCategory enum (transient, rate_limit, quota, validation, tool_error, test_failure, merge_conflict, dependency, authentication, unknown), RecoveryStrategy union, and FailureAnalysis interface (category, isRetryable, suggestedDelay, maxRetries, recoveryStrategy, explanation). The classifyError() utility in @automaker/utils already exists. This phase is purely about connecting them.\n\n**Files to Modify:**\n- apps/server/src/services/failure-classifier-service.ts\n- apps/server/src/services/lead-engineer-service.ts\n\n**Acceptance Criteria:**\n- [ ] EscalateProcessor calls failure classifier and attaches FailureAnalysis to escalation event\n- [ ] All 9+ escalation reason strings map to a non-unknown FailureCategory\n- [ ] Escalation events include structured recovery strategy\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** small",
+      "timestamp": "2026-02-24T05:38:48.000Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T05:38:48.000Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T05:38:48.000Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T05:42:32.248Z"
+    }
+  ],
+  "updatedAt": "2026-02-24T06:14:39.051Z",
+  "costUsd": 3.0409262500000005,
+  "lastSessionId": "1856963a-4b0b-4f52-9a38-ba26c1eed9b3",
+  "lastTraceId": "0537ded2-9a49-454a-9077-349d66ada443",
+  "executionHistory": [
+    {
+      "id": "c435826c-0dd8-4e08-99fc-4c4d17afeec0",
+      "startedAt": "2026-02-24T05:42:32.253Z",
+      "completedAt": "2026-02-24T05:48:59.382Z",
+      "durationMs": 387129,
+      "costUsd": 2.4110417500000003,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "7ca06f73-6312-4eb4-9744-d041dce3d92f",
+      "startedAt": "2026-02-24T06:12:32.564Z",
+      "completedAt": "2026-02-24T06:14:39.053Z",
+      "durationMs": 126489,
+      "costUsd": 0.6298845000000002,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

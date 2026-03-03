@@ -1,0 +1,86 @@
+{
+  "category": "Signal Intake",
+  "description": "Refactor: decompose http-api-client.ts (3,480 lines)\n\napps/ui/src/lib/http-api-client.ts is a 3,480-line god object. Should be split into domain-specific clients (features, agents, auto-mode, projects, git, calendar, etc.) with a shared base client handling auth and error handling. Target: no single file over 400 lines.",
+  "title": "[linear] Refactor: decompose http-api-client.ts (3,480 lines)",
+  "status": "verified",
+  "complexity": "medium",
+  "workItemState": "research",
+  "linearIssueId": "29046b42-bcaf-4b85-812b-caf191722e73",
+  "id": "feature-1772037490561-1xa0r0pel",
+  "branchName": "feature/linear-refactor-decompose-http-api",
+  "descriptionHistory": [
+    {
+      "description": "Refactor: decompose http-api-client.ts (3,480 lines)\n\napps/ui/src/lib/http-api-client.ts is a 3,480-line god object. Should be split into domain-specific clients (features, agents, auto-mode, projects, git, calendar, etc.) with a shared base client handling auth and error handling. Target: no single file over 400 lines.",
+      "timestamp": "2026-02-25T16:38:10.562Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-25T16:38:10.562Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-25T16:38:10.562Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-25T17:47:55.253Z"
+    }
+  ],
+  "pipelineState": {
+    "currentPhase": "RESEARCH",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-25T16:38:10.565Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-25T16:38:10.662Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-25T16:38:10.565Z",
+    "traceId": "2a82b345-b2da-45dc-8ef3-53aff83aee51",
+    "phaseSpanIds": {
+      "TRIAGE": "3331917e-7663-422c-9738-984a8085e67e",
+      "RESEARCH": "aee021ae-a90d-4d3b-ae64-1a477304a121"
+    },
+    "awaitingGatePhase": null
+  },
+  "updatedAt": "2026-02-25T18:22:21.304Z",
+  "costUsd": 16.181552499999995,
+  "lastSessionId": "403cc83c-96d4-443b-b26c-16e65d5dd4ed",
+  "lastTraceId": "d041992d-2ba4-410d-abd6-695055b6bc00",
+  "executionHistory": [
+    {
+      "id": "36d2bb56-dd3f-4a51-8119-7d58db24960a",
+      "startedAt": "2026-02-25T18:12:22.981Z",
+      "completedAt": "2026-02-25T18:20:01.667Z",
+      "durationMs": 458686,
+      "costUsd": 2.741574499999999,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "701dc2cb-c3f8-4159-a027-c3ac4e18db60",
+      "startedAt": "2026-02-25T17:47:55.279Z",
+      "completedAt": "2026-02-25T18:22:23.147Z",
+      "durationMs": 2067868,
+      "costUsd": 16.181552499999995,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

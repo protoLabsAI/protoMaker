@@ -20,6 +20,7 @@ docs/.vitepress/cache/
 .automaker/**/authority/
 .automaker/**/analysis.json
 .automaker/**/*.bak*
+.automaker/**/handoff-*.json
 .automaker/.backups/
 .automaker/events/
 .automaker/execution-state.json
@@ -30,8 +31,8 @@ docs/.vitepress/cache/
 .automaker/worktree-init.sh
 .automaker/prd-output.json
 
-# Feature data is runtime-managed by the server — never git-track
-.automaker/features/
+# Feature board state — shared across instances (runtime artifacts excluded above)
+!.automaker/features/
 
 # Runtime data — never git-track
 .automaker/trajectory/

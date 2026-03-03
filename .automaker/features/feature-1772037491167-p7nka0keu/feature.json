@@ -1,0 +1,103 @@
+{
+  "category": "Signal Intake",
+  "description": "Refactor: split settings.ts types into domain files (2,485 lines)\n\nlibs/types/src/settings.ts is 2,485 lines of type definitions. Should be split by domain: git-settings.ts, agent-settings.ts, ui-settings.ts, integration-settings.ts, etc., with a barrel re-export. Target: no single file over 400 lines.",
+  "title": "[linear] Refactor: split settings.ts types into domain files (2,485 lines)",
+  "status": "verified",
+  "complexity": "medium",
+  "workItemState": "research",
+  "linearIssueId": "321f8e39-3d93-4f98-a1f9-76b7cfd98fa5",
+  "id": "feature-1772037491167-p7nka0keu",
+  "branchName": "feature/linear-refactor-split-settingsts-types",
+  "descriptionHistory": [
+    {
+      "description": "Refactor: split settings.ts types into domain files (2,485 lines)\n\nlibs/types/src/settings.ts is 2,485 lines of type definitions. Should be split by domain: git-settings.ts, agent-settings.ts, ui-settings.ts, integration-settings.ts, etc., with a barrel re-export. Target: no single file over 400 lines.",
+      "timestamp": "2026-02-25T16:38:11.167Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-25T16:38:11.167Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-25T16:38:11.167Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-25T18:07:17.894Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-02-25T18:16:47.596Z"
+    }
+  ],
+  "pipelineState": {
+    "currentPhase": "RESEARCH",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-25T16:38:11.169Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-25T16:38:13.183Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-25T16:38:11.169Z",
+    "traceId": "dec10900-b9b4-4ea4-a0aa-6147b8ec9427",
+    "phaseSpanIds": {
+      "TRIAGE": "8fb81cb2-2cc3-4872-90fc-9794840af3dd",
+      "RESEARCH": "7fb79336-2de3-435b-9f33-39affab23a07"
+    },
+    "awaitingGatePhase": null
+  },
+  "updatedAt": "2026-02-25T18:28:10.314Z",
+  "lastTraceId": "9fb370f1-c886-4492-b690-b409b19baa0d",
+  "executionHistory": [
+    {
+      "id": "25048cdc-0f45-4f80-98dc-44a265fd4880",
+      "startedAt": "2026-02-25T18:07:17.936Z",
+      "completedAt": "2026-02-25T18:12:28.237Z",
+      "durationMs": 310301,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Agent loop detected (TodoWrite:86f357c2). Aborting for retry with recovery guidance.",
+      "trigger": "manual"
+    },
+    {
+      "id": "99d1e8b1-8dd9-4110-bf46-afe623f2e7ca",
+      "startedAt": "2026-02-25T18:12:33.241Z",
+      "completedAt": "2026-02-25T18:16:44.756Z",
+      "durationMs": 251515,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Agent loop detected (TodoWrite:108337b7). Aborting for retry with recovery guidance.",
+      "trigger": "manual"
+    },
+    {
+      "id": "d056dd88-accc-455e-960f-c8ff8b219883",
+      "startedAt": "2026-02-25T18:16:49.820Z",
+      "completedAt": "2026-02-25T18:28:10.421Z",
+      "durationMs": 680601,
+      "costUsd": 3.7545595000000005,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 3.7545595000000005,
+  "lastSessionId": "26639ecb-7886-44fa-827e-bb39f77f2c20"
+}

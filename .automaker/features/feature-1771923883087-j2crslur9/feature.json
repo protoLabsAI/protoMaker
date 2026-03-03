@@ -1,0 +1,105 @@
+{
+  "category": "Knowledge Store Foundation",
+  "description": "**Milestone:** Knowledge Store Foundation\n\nImplement chunk parsing and ingestion in KnowledgeStoreService. Add MemoryChunker utility to libs/utils/src/memory-chunker.ts that: (1) parses .md files, splits into chunks on ## headings (each chunk = heading + content up to 500 tokens, preserving frontmatter tags and importance for the first chunk only), (2) falls back to paragraph-based splitting for files with no ## headings. Add ingestMemoryFiles(projectPath) that reads all .md files from .automaker/memory/, calls MemoryChunker, upserts chunks into SQLite (by source_file+chunk_index). Add ingestContextFiles(projectPath) for .automaker/context/. Add ingestReflections(projectPath) that walks all .automaker/features/{id}/reflection.md files. Add rebuildIndex(projectPath) that clears and re-ingests all sources. Add a file watcher in the service that calls rebuildIndex debounced 2s after any .automaker/memory/*.md write. Export MemoryChunker from @automaker/utils.\n\n**Files to Modify:**\n- libs/utils/src/memory-chunker.ts\n- libs/utils/src/index.ts\n- apps/server/src/services/knowledge-store-service.ts\n\n**Acceptance Criteria:**\n- [ ] MemoryChunker splits architecture.md (375KB) into correct header-based chunks\n- [ ] ingestMemoryFiles() populates SQLite with chunks from all .automaker/memory/*.md files\n- [ ] ingestContextFiles() ingests .automaker/context/*.md files\n- [ ] ingestReflections() ingests all feature reflection.md files\n- [ ] Chunk upsert uses INSERT OR REPLACE on (source_file, chunk_index) key\n- [ ] File watcher triggers rebuildIndex debounced after memory writes\n- [ ] npm run build:packages && npm run build:server passes\n\n**Complexity:** medium",
+  "title": "Chunk Ingestion Pipeline",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/knowledge-store-chunk-ingestion",
+  "isFoundation": false,
+  "id": "feature-1771923883087-j2crslur9",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Knowledge Store Foundation\n\nImplement chunk parsing and ingestion in KnowledgeStoreService. Add MemoryChunker utility to libs/utils/src/memory-chunker.ts that: (1) parses .md files, splits into chunks on ## headings (each chunk = heading + content up to 500 tokens, preserving frontmatter tags and importance for the first chunk only), (2) falls back to paragraph-based splitting for files with no ## headings. Add ingestMemoryFiles(projectPath) that reads all .md files from .automaker/memory/, calls MemoryChunker, upserts chunks into SQLite (by source_file+chunk_index). Add ingestContextFiles(projectPath) for .automaker/context/. Add ingestReflections(projectPath) that walks all .automaker/features/{id}/reflection.md files. Add rebuildIndex(projectPath) that clears and re-ingests all sources. Add a file watcher in the service that calls rebuildIndex debounced 2s after any .automaker/memory/*.md write. Export MemoryChunker from @automaker/utils.\n\n**Files to Modify:**\n- libs/utils/src/memory-chunker.ts\n- libs/utils/src/index.ts\n- apps/server/src/services/knowledge-store-service.ts\n\n**Acceptance Criteria:**\n- [ ] MemoryChunker splits architecture.md (375KB) into correct header-based chunks\n- [ ] ingestMemoryFiles() populates SQLite with chunks from all .automaker/memory/*.md files\n- [ ] ingestContextFiles() ingests .automaker/context/*.md files\n- [ ] ingestReflections() ingests all feature reflection.md files\n- [ ] Chunk upsert uses INSERT OR REPLACE on (source_file, chunk_index) key\n- [ ] File watcher triggers rebuildIndex debounced after memory writes\n- [ ] npm run build:packages && npm run build:server passes\n\n**Complexity:** medium",
+      "timestamp": "2026-02-24T09:04:43.087Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T09:04:43.087Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T09:04:43.087Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T09:17:47.301Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-02-24T09:49:24.924Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-02-24T10:27:53.028Z"
+    }
+  ],
+  "dependencies": [
+    "feature-1771923883084-aki6y7kkh"
+  ],
+  "updatedAt": "2026-02-24T10:36:42.044Z",
+  "lastTraceId": "1fee10a7-30fa-49a9-91b2-db7befb73258",
+  "executionHistory": [
+    {
+      "id": "6341a95c-ee1e-4549-a09b-01047965e3a1",
+      "startedAt": "2026-02-24T09:17:47.305Z",
+      "completedAt": "2026-02-24T09:21:23.627Z",
+      "durationMs": 216322,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Agent loop detected (TodoWrite:79aa1e84). Aborting for retry with recovery guidance.",
+      "trigger": "manual"
+    },
+    {
+      "id": "1c2e6d07-3b54-4d88-9499-67ce3c71c14f",
+      "startedAt": "2026-02-24T09:21:28.913Z",
+      "completedAt": "2026-02-24T09:27:07.555Z",
+      "durationMs": 338642,
+      "costUsd": 2.387943749999999,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "d223344b-93e7-40b2-9595-4392bf4295e8",
+      "startedAt": "2026-02-24T09:47:47.657Z",
+      "completedAt": "2026-02-24T09:49:18.192Z",
+      "durationMs": 90535,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "f4f7fe6e-1fca-478f-8917-cb66b0693716",
+      "startedAt": "2026-02-24T09:49:19.584Z",
+      "completedAt": "2026-02-24T09:49:25.223Z",
+      "durationMs": 5639,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "13b58acf-4caf-4d25-b65b-8bb2db62ad69",
+      "startedAt": "2026-02-24T10:29:10.929Z",
+      "completedAt": "2026-02-24T10:36:42.055Z",
+      "durationMs": 451126,
+      "costUsd": 1.7375677499999993,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 4.125511499999998,
+  "lastSessionId": "450ef9f9-ccd1-4808-bd60-635c5c458293",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown"
+}

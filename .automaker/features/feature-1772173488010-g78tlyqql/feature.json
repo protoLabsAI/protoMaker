@@ -1,0 +1,104 @@
+{
+  "category": "Signal Intake",
+  "description": "# Fix: WorktreeGuard Commit Fails with HUSKY/lint-staged — Normalize HUSKY=0 Pattern\n\n## Situation\n\nThe Automaker server manages agent worktrees via a set of services that must commit code on behalf of AI agents. These commits happen in git worktrees under `.worktrees/`, which are excluded from `.prettierignore` and `.gitignore`. Five files currently issue `git commit` calls with varying approaches to bypassing Husky hooks:\n\n| File | HUSKY=0 in shared execEnv? | HUSKY=0 at call site? |\n|---|---|---|\n| `apps/server/src/services/git-workflow-service.ts` | ✅ Yes (line 97–101) | — |\n| `apps/server/src/lib/worktree-guard.ts` | ✅ Yes (`guardEnv`, line 62) | — |\n| `apps/server/src/routes/worktree/create-pr.ts` | ✅ Yes (via `common.ts`) | — |\n| `apps/server/src/routes/worktree/common.ts` | ✅ Yes (exported `execEnv`, line 105) | — |\n| `apps/server/src/services/worktree-recovery-service.ts` | ❌ **No** (line 42) | ✅ Yes (line 138 — compensating spread) |\n\nThree consecutive features (`k5yo1ccaq`, `dwtmmw3za`, `sl35xd5t4`) all failed to auto-commit because Husky/lint-staged intercepted the `git commit --no-verify` call in worktrees, causing lint-staged to revert all staged changes and produce an empty commit. This required manual rescue via `HUSKY=0 git -C <worktree> commit -m \"message\"`.\n\nThe official Husky bypass is the `HUSKY=0` environment variable — not `--no-verify`, which Husky ignores in some configurations.\n\n## Problem\n\n**Primary issue (now resolved in most files):** `git commit --no-verify` alone does not reliably bypass Husky. When Husky runs lint-staged, lint-staged tries to format staged files inside `.worktrees/`, which are excluded by `.prettierignore`. Prettier returns a non-zero exit code, lint-staged reverts all staged changes, and the commit produces nothing. Three features were blocked as a result and required manual operator rescue.\n\n**Remaining inconsistency (one file):** `worktree-recovery-service.ts` defines its module-level `execEnv` **without** `HUSKY: '0'`:\n\n```typescript\n// apps/server/src/services/worktree-recovery-service.ts (line 42) — CURRENT\nconst execEnv = { ...process.env, PATH: extendedPath };\n```\n\nIt compensates by explicitly spreading `HUSKY: '0'` directly on the one known commit call (line 138). This is functionally correct today, but:\n\n1. **It is inconsistent** with every other file in the codebase, where `HUSKY: '0'` lives in the shared `execEnv` object.\n2. **It is a latent footgun.** If a developer adds a new `git commit` call to `worktree-recovery-service.ts` in the future and follows the established pattern of passing `{ env: execEnv }`, they will silently miss `HUSKY=0` and reproduce the original bug.\n3. **It violates the single-source-of-truth principle** for exec environment configuration in this codebase.\n\nThis matters because `WorktreeRecoveryService` is the **last line of defense** — it runs after every agent exit to rescue uncommitted work. A silent Husky bypass failure here means the feature gets marked `blocked` with no automated recovery path.\n\n## Approach\n\n### Change\n\nAdd `HUSKY: '0'` to the module-level `execEnv` constant in `worktree-recovery-service.ts` (line 42), making the existing call-site spread redundant (but harmless):\n\n```typescript\n// apps/server/src/services/worktree-recovery-service.ts (line 42) — AFTER\nconst execEnv = { ...process.env, PATH: extendedPath, HUSKY: '0' };\n```\n\nThe explicit spread at the commit call site (line 138) may be left in place or removed — either is correct. Leaving it provides belt-and-suspenders safety; removing it reduces noise. **Preference: leave it in place** to document intent at the call site.\n\n### Why this is the right pattern\n\nAll other files in the codebase follow the same pattern:\n- Build a module-level `execEnv` that extends `process.env` with an extended `PATH` + all required overrides (`HUSKY: '0'`, etc.)\n- Pass `{ env: execEnv }` to every `execAsync` / `execFileAsync` call\n- No per-call env spreading required\n\nCentralizing `HUSKY: '0'` in the shared env object means future developers cannot accidentally miss it.\n\n### No other changes needed\n\n- `git-workflow-service.ts` — already correct\n- `worktree-guard.ts` — already correct\n- `create-pr.ts` — already correct (inherits from `common.ts`)\n- `common.ts` — already correct\n- No new types, services, routes, or `EventType` registrations required\n- No build order changes required (this is a server-only change)\n\n## Results\n\n### Acceptance Criteria\n\n- [ ] `apps/server/src/services/worktree-recovery-service.ts` line 42 includes `HUSKY: '0'` in the module-level `execEnv` object\n- [ ] All five git-committing files follow the consistent pattern: `HUSKY: '0'` in module-level `execEnv`\n- [ ] Server builds successfully after the change (`npm run build:server`)\n- [ ] No TypeScript errors introduced\n- [ ] Agent features can auto-commit from worktrees without manual rescue\n- [ ] `WorktreeRecoveryService` recovery commits succeed end-to-end when Husky is active in the root repository\n\n### Definition of Done\n\nA code reviewer reading `worktree-recovery-service.ts` sees `HUSKY: '0'` in the module-level `execEnv` and has no doubt that all git operations in this file bypass Husky, consistent with the rest of the codebase.\n\n## Constraints\n\n### In Scope\n- One-line edit to `apps/server/src/services/worktree-recovery-service.ts`\n- Optionally retain or remove the redundant `HUSKY: '0'` spread at line 138 (non-breaking either way)\n\n### Out of Scope\n- Modifying `.prettierignore` or lint-staged config\n- Changing how `--no-verify` is used (keep it; belt-and-suspenders is fine)\n- Rewriting `execEnv` construction across other files (already correct)\n- Adding test coverage for Husky bypass behavior (integration-only concern; not unit-testable without process-level env mocking)\n- Any changes to the three failed features (`k5yo1ccaq`, `dwtmmw3za`, `sl35xd5t4`) — those were manually rescued\n\n### Dependencies\n- None. This is a standalone server change with no package dependencies.\n\n### Risks\n- **Risk:** Extremely low. This adds a key to an environment object that already has the key added at the call site. Net behavioral change is zero for existing code paths.\n- **Risk of not fixing:** Medium-high. Any new git commit call added to `worktree-recovery-service.ts` in the future, following the standard pattern, silently loses the HUSKY bypass and reproduces the original three-feature failure scenario.\n\n### Non-Goals\n- Diagnosing why `--no-verify` is insufficient in some Husky configurations (known Husky behavior; `HUSKY=0` is the documented solution)\n- Preventing all possible future Husky-related failures (this fix normalizes the established pattern; future deviations are a code review concern)",
+  "title": "[linear] Fix: WorktreeGuard commit fails with HUSKY/lint-staged — use HUSKY=0 env var",
+  "status": "done",
+  "complexity": "small",
+  "workItemState": "approved",
+  "linearIssueId": "3efe662e-4be0-4a16-8ec5-b4e3aecce5c9",
+  "id": "feature-1772173488010-g78tlyqql",
+  "branchName": "feature/linear-fix-worktreeguard-commit-fails",
+  "descriptionHistory": [
+    {
+      "description": "Fix: WorktreeGuard commit fails with HUSKY/lint-staged — use HUSKY=0 env var\n\n## Problem\n\nThree consecutive features (k5yo1ccaq, dwtmmw3za, sl35xd5t4) all hit the same git commit failure in worktrees. The agent completes its work but `git commit --no-verify` fails with \"uncommitted work in worktree.\"\n\n**Root cause:** The git workflow system calls `git commit --no-verify` but Husky ignores `--no-verify` in some configurations. lint-staged runs, tries to format staged files in `.worktrees/`, but `.prettierignore` excludes `.worktrees/` — lint-staged marks format check as failed, reverts all staged changes, and the commit produces nothing.\n\n**Why** `HUSKY=0` works: `HUSKY=0` is the officially supported Husky bypass env var — disables Husky completely regardless of git flags.\n\n## Files to fix\n\nSearch for `git commit` in the git workflow service — likely `apps/server/src/lib/git-workflow-service.ts` or similar. Change `git commit --no-verify` → `HUSKY=0 git commit`.\n\n## Workaround (current)\n\nWhen an agent fails to commit: `HUSKY=0 git -C <worktree> commit -m \"message\"`\n\n## Acceptance Criteria\n\n- [ ] Find git workflow code that calls `git commit`\n- [ ] Replace with `HUSKY=0 git commit`\n- [ ] Agent features successfully auto-commit without manual rescue",
+      "timestamp": "2026-02-27T06:24:48.012Z",
+      "source": "initial"
+    },
+    {
+      "description": "# Fix: WorktreeGuard Commit Fails with HUSKY/lint-staged — Normalize HUSKY=0 Pattern\n\n## Situation\n\nThe Automaker server manages agent worktrees via a set of services that must commit code on behalf of AI agents. These commits happen in git worktrees under `.worktrees/`, which are excluded from `.prettierignore` and `.gitignore`. Five files currently issue `git commit` calls with varying approaches to bypassing Husky hooks:\n\n| File | HUSKY=0 in shared execEnv? | HUSKY=0 at call site? |\n|---|---|---|\n| `apps/server/src/services/git-workflow-service.ts` | ✅ Yes (line 97–101) | — |\n| `apps/server/src/lib/worktree-guard.ts` | ✅ Yes (`guardEnv`, line 62) | — |\n| `apps/server/src/routes/worktree/create-pr.ts` | ✅ Yes (via `common.ts`) | — |\n| `apps/server/src/routes/worktree/common.ts` | ✅ Yes (exported `execEnv`, line 105) | — |\n| `apps/server/src/services/worktree-recovery-service.ts` | ❌ **No** (line 42) | ✅ Yes (line 138 — compensating spread) |\n\nThree consecutive features (`k5yo1ccaq`, `dwtmmw3za`, `sl35xd5t4`) all failed to auto-commit because Husky/lint-staged intercepted the `git commit --no-verify` call in worktrees, causing lint-staged to revert all staged changes and produce an empty commit. This required manual rescue via `HUSKY=0 git -C <worktree> commit -m \"message\"`.\n\nThe official Husky bypass is the `HUSKY=0` environment variable — not `--no-verify`, which Husky ignores in some configurations.\n\n## Problem\n\n**Primary issue (now resolved in most files):** `git commit --no-verify` alone does not reliably bypass Husky. When Husky runs lint-staged, lint-staged tries to format staged files inside `.worktrees/`, which are excluded by `.prettierignore`. Prettier returns a non-zero exit code, lint-staged reverts all staged changes, and the commit produces nothing. Three features were blocked as a result and required manual operator rescue.\n\n**Remaining inconsistency (one file):** `worktree-recovery-service.ts` defines its module-level `execEnv` **without** `HUSKY: '0'`:\n\n```typescript\n// apps/server/src/services/worktree-recovery-service.ts (line 42) — CURRENT\nconst execEnv = { ...process.env, PATH: extendedPath };\n```\n\nIt compensates by explicitly spreading `HUSKY: '0'` directly on the one known commit call (line 138). This is functionally correct today, but:\n\n1. **It is inconsistent** with every other file in the codebase, where `HUSKY: '0'` lives in the shared `execEnv` object.\n2. **It is a latent footgun.** If a developer adds a new `git commit` call to `worktree-recovery-service.ts` in the future and follows the established pattern of passing `{ env: execEnv }`, they will silently miss `HUSKY=0` and reproduce the original bug.\n3. **It violates the single-source-of-truth principle** for exec environment configuration in this codebase.\n\nThis matters because `WorktreeRecoveryService` is the **last line of defense** — it runs after every agent exit to rescue uncommitted work. A silent Husky bypass failure here means the feature gets marked `blocked` with no automated recovery path.\n\n## Approach\n\n### Change\n\nAdd `HUSKY: '0'` to the module-level `execEnv` constant in `worktree-recovery-service.ts` (line 42), making the existing call-site spread redundant (but harmless):\n\n```typescript\n// apps/server/src/services/worktree-recovery-service.ts (line 42) — AFTER\nconst execEnv = { ...process.env, PATH: extendedPath, HUSKY: '0' };\n```\n\nThe explicit spread at the commit call site (line 138) may be left in place or removed — either is correct. Leaving it provides belt-and-suspenders safety; removing it reduces noise. **Preference: leave it in place** to document intent at the call site.\n\n### Why this is the right pattern\n\nAll other files in the codebase follow the same pattern:\n- Build a module-level `execEnv` that extends `process.env` with an extended `PATH` + all required overrides (`HUSKY: '0'`, etc.)\n- Pass `{ env: execEnv }` to every `execAsync` / `execFileAsync` call\n- No per-call env spreading required\n\nCentralizing `HUSKY: '0'` in the shared env object means future developers cannot accidentally miss it.\n\n### No other changes needed\n\n- `git-workflow-service.ts` — already correct\n- `worktree-guard.ts` — already correct\n- `create-pr.ts` — already correct (inherits from `common.ts`)\n- `common.ts` — already correct\n- No new types, services, routes, or `EventType` registrations required\n- No build order changes required (this is a server-only change)\n\n## Results\n\n### Acceptance Criteria\n\n- [ ] `apps/server/src/services/worktree-recovery-service.ts` line 42 includes `HUSKY: '0'` in the module-level `execEnv` object\n- [ ] All five git-committing files follow the consistent pattern: `HUSKY: '0'` in module-level `execEnv`\n- [ ] Server builds successfully after the change (`npm run build:server`)\n- [ ] No TypeScript errors introduced\n- [ ] Agent features can auto-commit from worktrees without manual rescue\n- [ ] `WorktreeRecoveryService` recovery commits succeed end-to-end when Husky is active in the root repository\n\n### Definition of Done\n\nA code reviewer reading `worktree-recovery-service.ts` sees `HUSKY: '0'` in the module-level `execEnv` and has no doubt that all git operations in this file bypass Husky, consistent with the rest of the codebase.\n\n## Constraints\n\n### In Scope\n- One-line edit to `apps/server/src/services/worktree-recovery-service.ts`\n- Optionally retain or remove the redundant `HUSKY: '0'` spread at line 138 (non-breaking either way)\n\n### Out of Scope\n- Modifying `.prettierignore` or lint-staged config\n- Changing how `--no-verify` is used (keep it; belt-and-suspenders is fine)\n- Rewriting `execEnv` construction across other files (already correct)\n- Adding test coverage for Husky bypass behavior (integration-only concern; not unit-testable without process-level env mocking)\n- Any changes to the three failed features (`k5yo1ccaq`, `dwtmmw3za`, `sl35xd5t4`) — those were manually rescued\n\n### Dependencies\n- None. This is a standalone server change with no package dependencies.\n\n### Risks\n- **Risk:** Extremely low. This adds a key to an environment object that already has the key added at the call site. Net behavioral change is zero for existing code paths.\n- **Risk of not fixing:** Medium-high. Any new git commit call added to `worktree-recovery-service.ts` in the future, following the standard pattern, silently loses the HUSKY bypass and reproduces the original three-feature failure scenario.\n\n### Non-Goals\n- Diagnosing why `--no-verify` is insufficient in some Husky configurations (known Husky behavior; `HUSKY=0` is the documented solution)\n- Preventing all possible future Husky-related failures (this fix normalizes the established pattern; future deviations are a code review concern)",
+      "timestamp": "2026-02-27T06:29:32.096Z",
+      "source": "edit"
+    }
+  ],
+  "createdAt": "2026-02-27T06:24:48.012Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-27T06:24:48.012Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-27T06:24:48.174Z"
+    }
+  ],
+  "featureType": "code",
+  "pipelineState": {
+    "currentPhase": "SPEC_REVIEW",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-27T06:24:48.013Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-27T06:24:50.028Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      },
+      {
+        "from": "RESEARCH",
+        "to": "SPEC",
+        "timestamp": "2026-02-27T06:28:43.950Z",
+        "triggeredBy": "auto"
+      },
+      {
+        "from": "SPEC",
+        "to": "SPEC_REVIEW",
+        "timestamp": "2026-02-27T06:29:56.193Z",
+        "triggeredBy": "user"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-27T06:24:48.013Z",
+    "traceId": "d5927f97-0da6-4aef-b0bb-89843ac30e7a",
+    "phaseSpanIds": {
+      "TRIAGE": "ebaf98ff-c4d4-40bd-a182-e713ca43cb82",
+      "RESEARCH": "c6cbee4f-3407-47a0-932d-91a960c34241",
+      "SPEC": "e804763b-dd5f-44a3-b3b4-3f51c18d4c48",
+      "SPEC_REVIEW": "8469dcba-d008-47d3-8ea7-e73c24b9c05e"
+    },
+    "phaseDurations": {
+      "RESEARCH": 232888,
+      "SPEC": 48858
+    },
+    "awaitingGatePhase": null
+  },
+  "updatedAt": "2026-02-27T06:27:26.423Z",
+  "costUsd": 0.9251299999999999,
+  "lastSessionId": "2417805e-dc94-4de5-a941-ca06910628d2",
+  "lastTraceId": "b1028fc2-30f9-4fcc-b81e-993dcffd7be2",
+  "executionHistory": [
+    {
+      "id": "db814e1b-768b-4b50-8c07-c2a4e8ab5b6f",
+      "startedAt": "2026-02-27T06:24:48.647Z",
+      "completedAt": "2026-02-27T06:27:26.450Z",
+      "durationMs": 157803,
+      "costUsd": 0.9251299999999999,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "prdMetadata": {
+    "generatedAt": "2026-02-27T06:29:32.096Z",
+    "model": "claude-sonnet-4-6"
+  }
+}

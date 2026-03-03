@@ -1,0 +1,57 @@
+{
+  "category": "Knowledge Store Foundation",
+  "description": "**Milestone:** Knowledge Store Foundation\n\nAdd KnowledgeChunk, KnowledgeSearchResult, KnowledgeStoreStats, and KnowledgeStoreSettings types to libs/types/src/knowledge.ts and export from libs/types/src/index.ts. Implement KnowledgeStoreService in apps/server/src/services/knowledge-store-service.ts using better-sqlite3. Schema: chunks table (id TEXT PK, source_type TEXT, source_file TEXT, project_path TEXT, chunk_index INT, heading TEXT, content TEXT, tags TEXT, importance REAL, created_at TEXT, updated_at TEXT) plus a FTS5 virtual table 'chunks_fts' that indexes heading+content. Methods: initialize(projectPath), getStats(), close(). The SQLite file lives at {projectPath}/.automaker/knowledge.db. Use WAL mode for concurrent read performance.\n\n**Files to Modify:**\n- libs/types/src/knowledge.ts\n- libs/types/src/index.ts\n- apps/server/src/services/knowledge-store-service.ts\n\n**Acceptance Criteria:**\n- [ ] KnowledgeChunk, KnowledgeSearchResult, KnowledgeStoreStats types defined and exported from @automaker/types\n- [ ] KnowledgeStoreService.initialize() creates knowledge.db with correct schema in .automaker/\n- [ ] FTS5 virtual table created with heading+content columns\n- [ ] WAL mode enabled\n- [ ] npm run build:packages && npm run build:server passes with zero type errors\n\n**Complexity:** medium",
+  "title": "Types, Schema & KnowledgeStoreService",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/knowledge-store-types-schema",
+  "isFoundation": true,
+  "id": "feature-1771923883084-aki6y7kkh",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Knowledge Store Foundation\n\nAdd KnowledgeChunk, KnowledgeSearchResult, KnowledgeStoreStats, and KnowledgeStoreSettings types to libs/types/src/knowledge.ts and export from libs/types/src/index.ts. Implement KnowledgeStoreService in apps/server/src/services/knowledge-store-service.ts using better-sqlite3. Schema: chunks table (id TEXT PK, source_type TEXT, source_file TEXT, project_path TEXT, chunk_index INT, heading TEXT, content TEXT, tags TEXT, importance REAL, created_at TEXT, updated_at TEXT) plus a FTS5 virtual table 'chunks_fts' that indexes heading+content. Methods: initialize(projectPath), getStats(), close(). The SQLite file lives at {projectPath}/.automaker/knowledge.db. Use WAL mode for concurrent read performance.\n\n**Files to Modify:**\n- libs/types/src/knowledge.ts\n- libs/types/src/index.ts\n- apps/server/src/services/knowledge-store-service.ts\n\n**Acceptance Criteria:**\n- [ ] KnowledgeChunk, KnowledgeSearchResult, KnowledgeStoreStats types defined and exported from @automaker/types\n- [ ] KnowledgeStoreService.initialize() creates knowledge.db with correct schema in .automaker/\n- [ ] FTS5 virtual table created with heading+content columns\n- [ ] WAL mode enabled\n- [ ] npm run build:packages && npm run build:server passes with zero type errors\n\n**Complexity:** medium",
+      "timestamp": "2026-02-24T09:04:43.086Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T09:04:43.086Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T09:04:43.086Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T09:09:34.935Z"
+    }
+  ],
+  "updatedAt": "2026-02-24T09:44:13.446Z",
+  "costUsd": 5.198520750000001,
+  "lastSessionId": "7904de28-7db2-4617-8d8e-7fe8e32ce2d7",
+  "lastTraceId": "ac823ad1-738b-44ad-8653-bae27b53659a",
+  "executionHistory": [
+    {
+      "id": "b2817c29-9ba9-490f-ab7b-4c4571da8f51",
+      "startedAt": "2026-02-24T09:09:34.946Z",
+      "completedAt": "2026-02-24T09:17:15.050Z",
+      "durationMs": 460104,
+      "costUsd": 3.642233250000001,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    },
+    {
+      "id": "8b6be1ed-fb88-4412-baff-05f43b57c3b5",
+      "startedAt": "2026-02-24T09:39:35.198Z",
+      "completedAt": "2026-02-24T09:44:13.456Z",
+      "durationMs": 278258,
+      "costUsd": 1.5562874999999998,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

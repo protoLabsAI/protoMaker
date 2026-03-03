@@ -1,0 +1,59 @@
+{
+  "category": "Memory Maintenance Pipeline",
+  "description": "**Milestone:** Memory Maintenance Pipeline\n\nModify the appendLearning() flow in libs/utils/src/memory-loader.ts to check for near-duplicates before writing. Before appending a new learning, call KnowledgeStoreService.search() with the learning content as query, filtered to source_file matching the target category. If top result score exceeds dedup threshold (configurable, default BM25 score > -0.5 in SQLite BM25 scale — note SQLite FTS5 BM25 returns negative values, lower = more relevant), skip the append and log 'Deduplicated learning: similar entry already exists in {category}'. Also add a KnowledgeStoreService.findSimilarChunks(projectPath, text, sourceFile) helper for this. Update recordLearningsFromFeature() in apps/server/src/services/auto-mode-service.ts to pass a dedup flag. Run a full index rebuild after successful dedup-checked appends so the new chunk is immediately searchable.\n\n**Files to Modify:**\n- libs/utils/src/memory-loader.ts\n- apps/server/src/services/knowledge-store-service.ts\n- apps/server/src/services/auto-mode-service.ts\n\n**Acceptance Criteria:**\n- [ ] appendLearning() checks FTS5 for near-duplicates before writing\n- [ ] Duplicate learnings are skipped with a log message (not silently dropped)\n- [ ] findSimilarChunks() returns top matches filtered by source_file\n- [ ] Index rebuilt after successful append so new chunk is immediately searchable\n- [ ] Dedup threshold is configurable (knowledgeDedupThreshold in settings)\n- [ ] npm run build:packages && npm run build:server passes\n\n**Complexity:** medium",
+  "title": "Learning Deduplication",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/memory-maintenance-learning-deduplicati",
+  "isFoundation": true,
+  "id": "feature-1771923883094-qk1scij9m",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Memory Maintenance Pipeline\n\nModify the appendLearning() flow in libs/utils/src/memory-loader.ts to check for near-duplicates before writing. Before appending a new learning, call KnowledgeStoreService.search() with the learning content as query, filtered to source_file matching the target category. If top result score exceeds dedup threshold (configurable, default BM25 score > -0.5 in SQLite BM25 scale — note SQLite FTS5 BM25 returns negative values, lower = more relevant), skip the append and log 'Deduplicated learning: similar entry already exists in {category}'. Also add a KnowledgeStoreService.findSimilarChunks(projectPath, text, sourceFile) helper for this. Update recordLearningsFromFeature() in apps/server/src/services/auto-mode-service.ts to pass a dedup flag. Run a full index rebuild after successful dedup-checked appends so the new chunk is immediately searchable.\n\n**Files to Modify:**\n- libs/utils/src/memory-loader.ts\n- apps/server/src/services/knowledge-store-service.ts\n- apps/server/src/services/auto-mode-service.ts\n\n**Acceptance Criteria:**\n- [ ] appendLearning() checks FTS5 for near-duplicates before writing\n- [ ] Duplicate learnings are skipped with a log message (not silently dropped)\n- [ ] findSimilarChunks() returns top matches filtered by source_file\n- [ ] Index rebuilt after successful append so new chunk is immediately searchable\n- [ ] Dedup threshold is configurable (knowledgeDedupThreshold in settings)\n- [ ] npm run build:packages && npm run build:server passes\n\n**Complexity:** medium",
+      "timestamp": "2026-02-24T09:04:43.095Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T09:04:43.095Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T09:04:43.095Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T11:05:46.198Z"
+    }
+  ],
+  "dependencies": [],
+  "updatedAt": "2026-02-24T11:14:56.936Z",
+  "lastTraceId": "0f669190-cd43-4462-8727-7d512c11eda9",
+  "executionHistory": [
+    {
+      "id": "dc8438c8-0bd5-4822-8b45-3d7d5b39fed1",
+      "startedAt": "2026-02-24T11:05:46.204Z",
+      "completedAt": "2026-02-24T11:08:09.317Z",
+      "durationMs": 143113,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Agent loop detected (TodoWrite:46d9a14f). Aborting for retry with recovery guidance.",
+      "trigger": "manual"
+    },
+    {
+      "id": "83826d46-43ea-44ea-8302-f67d9f81ecc7",
+      "startedAt": "2026-02-24T11:08:14.602Z",
+      "completedAt": "2026-02-24T11:14:56.940Z",
+      "durationMs": 402338,
+      "costUsd": 2.51592775,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 2.51592775,
+  "lastSessionId": "42188b64-1e6f-4ca2-b233-465d44e6a247"
+}

@@ -1,0 +1,50 @@
+{
+  "category": "Trajectory Store & Learning Flywheel",
+  "description": "**Milestone:** Trajectory Store & Learning Flywheel\n\nAdd a verifyPlan(feature, planText) method to the existing AntagonisticReviewService that routes the plan through the existing LangGraph antagonistic-review flow. Wire it into PlanProcessor as an optional gate: for features with complexity 'large' or 'architectural', call verifyPlan() after plan generation and before returning success. If the critic returns a 'block' verdict, treat it as a plan rejection (same path as validatePlan() failure). If it returns 'concern', append the concerns to the plan output as annotated warnings.\n\nReuse the existing graph.ts and review nodes (ava-review.ts, jon-review.ts). The plan text is passed as the 'document' to review. Return a PlanVerificationResult with avaVerdict, jonVerdict, consensus, concerns[], and recommendations[].\n\n**Files to Modify:**\n- libs/types/src/lead-engineer.ts\n- apps/server/src/services/antagonistic-review-service.ts\n- apps/server/src/services/lead-engineer-service.ts\n\n**Acceptance Criteria:**\n- [ ] PlanVerificationResult type added to libs/types/src/lead-engineer.ts\n- [ ] AntagonisticReviewService.verifyPlan() executes the review flow and returns structured verdict\n- [ ] PlanProcessor calls verifyPlan() for large/architectural complexity features only\n- [ ] Block verdict triggers plan rejection with descriptive escalation reason\n- [ ] Concern verdict appends annotated warnings to planOutput without blocking\n- [ ] Small/medium features bypass verification (no performance regression)\n- [ ] npm run build:packages passes\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** medium",
+  "title": "Antagonistic Plan Verification Gate",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/trajectory-store-antagonistic-plan",
+  "isFoundation": false,
+  "id": "feature-1771911528005-sjiptccyf",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Trajectory Store & Learning Flywheel\n\nAdd a verifyPlan(feature, planText) method to the existing AntagonisticReviewService that routes the plan through the existing LangGraph antagonistic-review flow. Wire it into PlanProcessor as an optional gate: for features with complexity 'large' or 'architectural', call verifyPlan() after plan generation and before returning success. If the critic returns a 'block' verdict, treat it as a plan rejection (same path as validatePlan() failure). If it returns 'concern', append the concerns to the plan output as annotated warnings.\n\nReuse the existing graph.ts and review nodes (ava-review.ts, jon-review.ts). The plan text is passed as the 'document' to review. Return a PlanVerificationResult with avaVerdict, jonVerdict, consensus, concerns[], and recommendations[].\n\n**Files to Modify:**\n- libs/types/src/lead-engineer.ts\n- apps/server/src/services/antagonistic-review-service.ts\n- apps/server/src/services/lead-engineer-service.ts\n\n**Acceptance Criteria:**\n- [ ] PlanVerificationResult type added to libs/types/src/lead-engineer.ts\n- [ ] AntagonisticReviewService.verifyPlan() executes the review flow and returns structured verdict\n- [ ] PlanProcessor calls verifyPlan() for large/architectural complexity features only\n- [ ] Block verdict triggers plan rejection with descriptive escalation reason\n- [ ] Concern verdict appends annotated warnings to planOutput without blocking\n- [ ] Small/medium features bypass verification (no performance regression)\n- [ ] npm run build:packages passes\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** medium",
+      "timestamp": "2026-02-24T05:38:48.005Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T05:38:48.005Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T05:38:48.005Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T06:28:47.883Z"
+    }
+  ],
+  "dependencies": [
+    "feature-1771911528004-6lsf5p16z"
+  ],
+  "updatedAt": "2026-02-24T06:35:07.742Z",
+  "costUsd": 2.557388249999999,
+  "lastSessionId": "7dfdcc30-7279-4f5d-bfbc-c6fe5a1a06bb",
+  "lastTraceId": "19bfb5bc-4364-41a1-b35a-00dd67f34b12",
+  "executionHistory": [
+    {
+      "id": "406f1d1d-2685-4445-8529-41eedf0195d4",
+      "startedAt": "2026-02-24T06:28:47.896Z",
+      "completedAt": "2026-02-24T06:35:07.746Z",
+      "durationMs": 379850,
+      "costUsd": 2.557388249999999,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

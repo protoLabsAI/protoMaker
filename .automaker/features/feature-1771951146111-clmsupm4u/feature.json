@@ -1,0 +1,48 @@
+{
+  "category": "Uncategorized",
+  "description": "**Bug Report**\n\nAuto-mode picked up a `done` feature in the mythxengine project and spawned an agent on it. The feature had already been merged but auto-mode re-executed it.\n\n**Root Cause**\n\nIn `apps/server/src/services/auto-mode-service.ts` line ~4739, the eligibility check has a planSpec fallback that ignores feature status:\n\n```typescript\nconst isEligibleStatus =\n  canonicalStatus === 'backlog' ||\n  (feature.planSpec?.status === 'approved' &&\n    (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));\n```\n\nWhen a feature is moved to `done` but its `planSpec.tasksCompleted` hasn't been updated to match `tasksTotal`, the second condition evaluates to `true` — bypassing the `backlog` gate entirely.\n\n**Fix**\n\nAdd explicit exclusion of terminal statuses before the planSpec check:\n\n```typescript\nconst isEligibleStatus =\n  canonicalStatus === 'backlog' ||\n  (canonicalStatus !== 'done' && canonicalStatus !== 'verified' &&\n   canonicalStatus !== 'review' && canonicalStatus !== 'in_progress' &&\n   canonicalStatus !== 'blocked' &&\n   feature.planSpec?.status === 'approved' &&\n   (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));\n```\n\n**Files to Modify:**\n- `apps/server/src/services/auto-mode-service.ts` (~line 4739)\n\n**Acceptance Criteria:**\n- [ ] Features with status `done`, `verified`, `review`, `in_progress`, or `blocked` are never eligible for auto-mode execution regardless of planSpec state\n- [ ] `backlog` features continue to be picked up normally\n- [ ] planSpec fallback still works for backlog features with approved plans\n- [ ] `npm run build:server` passes",
+  "title": "Bug: Auto-mode respawns agents on done features via stale planSpec",
+  "status": "verified",
+  "complexity": "small",
+  "priority": 1,
+  "id": "feature-1771951146111-clmsupm4u",
+  "branchName": "feature/bug-auto-mode-respawns-agents-on-done",
+  "descriptionHistory": [
+    {
+      "description": "**Bug Report**\n\nAuto-mode picked up a `done` feature in the mythxengine project and spawned an agent on it. The feature had already been merged but auto-mode re-executed it.\n\n**Root Cause**\n\nIn `apps/server/src/services/auto-mode-service.ts` line ~4739, the eligibility check has a planSpec fallback that ignores feature status:\n\n```typescript\nconst isEligibleStatus =\n  canonicalStatus === 'backlog' ||\n  (feature.planSpec?.status === 'approved' &&\n    (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));\n```\n\nWhen a feature is moved to `done` but its `planSpec.tasksCompleted` hasn't been updated to match `tasksTotal`, the second condition evaluates to `true` — bypassing the `backlog` gate entirely.\n\n**Fix**\n\nAdd explicit exclusion of terminal statuses before the planSpec check:\n\n```typescript\nconst isEligibleStatus =\n  canonicalStatus === 'backlog' ||\n  (canonicalStatus !== 'done' && canonicalStatus !== 'verified' &&\n   canonicalStatus !== 'review' && canonicalStatus !== 'in_progress' &&\n   canonicalStatus !== 'blocked' &&\n   feature.planSpec?.status === 'approved' &&\n   (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));\n```\n\n**Files to Modify:**\n- `apps/server/src/services/auto-mode-service.ts` (~line 4739)\n\n**Acceptance Criteria:**\n- [ ] Features with status `done`, `verified`, `review`, `in_progress`, or `blocked` are never eligible for auto-mode execution regardless of planSpec state\n- [ ] `backlog` features continue to be picked up normally\n- [ ] planSpec fallback still works for backlog features with approved plans\n- [ ] `npm run build:server` passes",
+      "timestamp": "2026-02-24T16:39:06.111Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T16:39:06.112Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T16:39:06.112Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T16:48:25.889Z"
+    }
+  ],
+  "isFoundation": true,
+  "updatedAt": "2026-02-24T16:51:56.577Z",
+  "costUsd": 1.2087435000000004,
+  "lastSessionId": "1a12cb2d-8e43-4602-871d-2e9279acfb60",
+  "lastTraceId": "bdc50c81-3516-453b-a6ab-a94a5fae24bf",
+  "executionHistory": [
+    {
+      "id": "7facbe9a-09ee-4e21-a97d-2be05b4af4a6",
+      "startedAt": "2026-02-24T16:48:25.900Z",
+      "completedAt": "2026-02-24T16:51:56.582Z",
+      "durationMs": 210682,
+      "costUsd": 1.2087435000000004,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

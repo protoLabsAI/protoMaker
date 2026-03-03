@@ -1,0 +1,48 @@
+{
+  "category": "Chunked Retrieval Engine",
+  "description": "**Milestone:** Chunked Retrieval Engine\n\nCreate apps/server/src/routes/knowledge/ route module. Add POST /api/knowledge/search (body: {projectPath, query, maxResults?, maxTokens?, sourceTypes?}) that calls KnowledgeStoreService.search() and returns results. Add POST /api/knowledge/stats (body: {projectPath}) that returns KnowledgeStoreStats (chunk count by source type, db size, last rebuilt timestamp, index health). Add POST /api/knowledge/rebuild (body: {projectPath}) that calls rebuildIndex() and returns stats. Wire these routes into apps/server/src/index.ts under the knowledge router. Also initialize KnowledgeStoreService for the project path on server startup (call initialize + rebuildIndex if db doesn't exist) in the appropriate server init location.\n\n**Files to Modify:**\n- apps/server/src/routes/knowledge/index.ts\n- apps/server/src/routes/knowledge/routes/search.ts\n- apps/server/src/routes/knowledge/routes/stats.ts\n- apps/server/src/routes/knowledge/routes/rebuild.ts\n- apps/server/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] POST /api/knowledge/search returns ranked chunks with scores and source metadata\n- [ ] POST /api/knowledge/stats returns chunk counts by source type and db file size\n- [ ] POST /api/knowledge/rebuild triggers full re-ingestion and returns updated stats\n- [ ] Routes follow existing route handler pattern (createLogger, Request/Response types)\n- [ ] Server initializes knowledge store on startup for the configured project path\n- [ ] npm run build:server && npm run test:server passes\n\n**Complexity:** medium",
+  "title": "Knowledge API Routes",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/chunked-retrieval-knowledge-api-routes",
+  "isFoundation": false,
+  "id": "feature-1771923883091-4dwp5zjyl",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Chunked Retrieval Engine\n\nCreate apps/server/src/routes/knowledge/ route module. Add POST /api/knowledge/search (body: {projectPath, query, maxResults?, maxTokens?, sourceTypes?}) that calls KnowledgeStoreService.search() and returns results. Add POST /api/knowledge/stats (body: {projectPath}) that returns KnowledgeStoreStats (chunk count by source type, db size, last rebuilt timestamp, index health). Add POST /api/knowledge/rebuild (body: {projectPath}) that calls rebuildIndex() and returns stats. Wire these routes into apps/server/src/index.ts under the knowledge router. Also initialize KnowledgeStoreService for the project path on server startup (call initialize + rebuildIndex if db doesn't exist) in the appropriate server init location.\n\n**Files to Modify:**\n- apps/server/src/routes/knowledge/index.ts\n- apps/server/src/routes/knowledge/routes/search.ts\n- apps/server/src/routes/knowledge/routes/stats.ts\n- apps/server/src/routes/knowledge/routes/rebuild.ts\n- apps/server/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] POST /api/knowledge/search returns ranked chunks with scores and source metadata\n- [ ] POST /api/knowledge/stats returns chunk counts by source type and db file size\n- [ ] POST /api/knowledge/rebuild triggers full re-ingestion and returns updated stats\n- [ ] Routes follow existing route handler pattern (createLogger, Request/Response types)\n- [ ] Server initializes knowledge store on startup for the configured project path\n- [ ] npm run build:server && npm run test:server passes\n\n**Complexity:** medium",
+      "timestamp": "2026-02-24T09:04:43.092Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T09:04:43.092Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T09:04:43.092Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-24T10:54:48.566Z"
+    }
+  ],
+  "dependencies": [],
+  "updatedAt": "2026-02-24T10:59:41.437Z",
+  "costUsd": 2.6048217499999997,
+  "lastSessionId": "832b52f3-6a7f-41a1-a414-5fa0cda7c2cf",
+  "lastTraceId": "4a3ff74d-afdd-4978-9d67-29990ddf7261",
+  "executionHistory": [
+    {
+      "id": "d71b0c32-e7d3-4444-91ef-74a3e1c0379a",
+      "startedAt": "2026-02-24T10:54:48.574Z",
+      "completedAt": "2026-02-24T10:59:41.440Z",
+      "durationMs": 292866,
+      "costUsd": 2.6048217499999997,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

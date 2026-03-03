@@ -1,0 +1,97 @@
+{
+  "category": "Signal Intake",
+  "description": "# [linear] fix(ci): disable npm publish in changeset-release.yml — auto-release owns the release pipeline\n\n## Situation\nThis feature was requested but PRD generation encountered an issue.\n\n## Problem\nfix(ci): disable npm publish in changeset-release.yml — auto-release owns the release pipeline\n\n## Problem\n\n`changeset-release.yml` (the \"Version & Release\" workflow) fires on every push to `main`. When it finds no changesets (which is always the case now — `auto-release.yml` cleans them up before version bump), it falls through to `changeset publish` and tries to publish all `@protolabs-ai/*` packages to npm.\n\nThis fails with 404s for every package because:\n\n1. We don't have `NPM_TOKEN` configured (packages aren't published to npm)\n2. All packages show as \"not yet published\" so changeset tries to publish all of them\n\nThe failure is non-blocking (auto-release handles releases correctly via the `v*` tag → `build-electron.yml` pipeline), but it:\n\n* Creates a red CI run on every release\n* Adds noise to the Actions tab\n* Could confuse future contributors\n\n## Root cause\n\n`changeset-release.yml` was set up to publish packages to npm as part of the changeset workflow. `auto-release.yml` now owns the full release lifecycle (version bump → tag → GitHub Release → Electron builds). The publish step in `changeset-release.yml` is now dead code.\n\n## Fix\n\nOne of:\n\n1. Remove the `publish` config from `changeset-release.yml` so it only creates the version-bump PR but never publishes\n2. Delete `changeset-release.yml` entirely — `auto-release.yml` already handles everything and our guard (`!startsWith(head_commit.message, 'chore: release v')`) already skips the second run\n\nOption 2 is cleaner given the architecture. Verify `auto-release.yml` covers all cases before deleting.\n\n## Evidence\n\nRun `22509254138` on 2026-02-28: Version & Release failed with 16 `npm warn Received 404` lines followed by publish attempt with no NPM_TOKEN.\n\n## Approach\nTo be determined after manual review.\n\n## Results\n- Feature is implemented as described\n- Tests pass\n\n## Constraints\n- Needs manual review and refinement\n\n## Research Notes\nHere is the structured research summary for this feature:\n\n---\n\n## Research Summary\n\n### Status: **Fix Already Implemented — Needs PR**\n\nThe fix has already been applied in commit `b5045a82` on branch `fix/delete-changeset-release`. No PR exists yet.\n\n---\n\n### Problem Confirmed\n\nThe deleted `changeset-release.yml` (\"Version & Release\" workflow) was 80 lines long and did the following on every push to `main`:\n\n1. Triggered on `push: branches: [main]` — fired on every commit\n2. Had a guard to skip when the commit message started with `chore: release v` — but `auto-release.yml` *already* consumes and cleans up changesets before committing, so the guard never mattered\n3. Ran `changesets/action@v1.7.0` with `publish: npm run changeset:publish` — which tried to publish all `@protolabs-ai/*` packages to npm\n4. Configured npm auth with `secrets.NPM_TOKEN` — a secret that doesn't exist in the repo\n5. This caused 16 `npm warn Received 404` lines + a failed publish attempt on every release\n\n---\n\n",
+  "title": "[linear] fix(ci): disable npm publish in changeset-release.yml — auto-release owns the release pipeline",
+  "status": "done",
+  "complexity": "medium",
+  "workItemState": "approved",
+  "linearIssueId": "0f812f8f-e9d2-4ff1-ab72-dd6c326b5983",
+  "id": "feature-1772245589045-s76h0u3xy",
+  "branchName": "feature/linear-fixci-disable-npm-publish-in",
+  "descriptionHistory": [
+    {
+      "description": "fix(ci): disable npm publish in changeset-release.yml — auto-release owns the release pipeline\n\n## Problem\n\n`changeset-release.yml` (the \"Version & Release\" workflow) fires on every push to `main`. When it finds no changesets (which is always the case now — `auto-release.yml` cleans them up before version bump), it falls through to `changeset publish` and tries to publish all `@protolabs-ai/*` packages to npm.\n\nThis fails with 404s for every package because:\n\n1. We don't have `NPM_TOKEN` configured (packages aren't published to npm)\n2. All packages show as \"not yet published\" so changeset tries to publish all of them\n\nThe failure is non-blocking (auto-release handles releases correctly via the `v*` tag → `build-electron.yml` pipeline), but it:\n\n* Creates a red CI run on every release\n* Adds noise to the Actions tab\n* Could confuse future contributors\n\n## Root cause\n\n`changeset-release.yml` was set up to publish packages to npm as part of the changeset workflow. `auto-release.yml` now owns the full release lifecycle (version bump → tag → GitHub Release → Electron builds). The publish step in `changeset-release.yml` is now dead code.\n\n## Fix\n\nOne of:\n\n1. Remove the `publish` config from `changeset-release.yml` so it only creates the version-bump PR but never publishes\n2. Delete `changeset-release.yml` entirely — `auto-release.yml` already handles everything and our guard (`!startsWith(head_commit.message, 'chore: release v')`) already skips the second run\n\nOption 2 is cleaner given the architecture. Verify `auto-release.yml` covers all cases before deleting.\n\n## Evidence\n\nRun `22509254138` on 2026-02-28: Version & Release failed with 16 `npm warn Received 404` lines followed by publish attempt with no NPM_TOKEN.",
+      "timestamp": "2026-02-28T02:26:29.045Z",
+      "source": "initial"
+    },
+    {
+      "description": "# [linear] fix(ci): disable npm publish in changeset-release.yml — auto-release owns the release pipeline\n\n## Situation\nThis feature was requested but PRD generation encountered an issue.\n\n## Problem\nfix(ci): disable npm publish in changeset-release.yml — auto-release owns the release pipeline\n\n## Problem\n\n`changeset-release.yml` (the \"Version & Release\" workflow) fires on every push to `main`. When it finds no changesets (which is always the case now — `auto-release.yml` cleans them up before version bump), it falls through to `changeset publish` and tries to publish all `@protolabs-ai/*` packages to npm.\n\nThis fails with 404s for every package because:\n\n1. We don't have `NPM_TOKEN` configured (packages aren't published to npm)\n2. All packages show as \"not yet published\" so changeset tries to publish all of them\n\nThe failure is non-blocking (auto-release handles releases correctly via the `v*` tag → `build-electron.yml` pipeline), but it:\n\n* Creates a red CI run on every release\n* Adds noise to the Actions tab\n* Could confuse future contributors\n\n## Root cause\n\n`changeset-release.yml` was set up to publish packages to npm as part of the changeset workflow. `auto-release.yml` now owns the full release lifecycle (version bump → tag → GitHub Release → Electron builds). The publish step in `changeset-release.yml` is now dead code.\n\n## Fix\n\nOne of:\n\n1. Remove the `publish` config from `changeset-release.yml` so it only creates the version-bump PR but never publishes\n2. Delete `changeset-release.yml` entirely — `auto-release.yml` already handles everything and our guard (`!startsWith(head_commit.message, 'chore: release v')`) already skips the second run\n\nOption 2 is cleaner given the architecture. Verify `auto-release.yml` covers all cases before deleting.\n\n## Evidence\n\nRun `22509254138` on 2026-02-28: Version & Release failed with 16 `npm warn Received 404` lines followed by publish attempt with no NPM_TOKEN.\n\n## Approach\nTo be determined after manual review.\n\n## Results\n- Feature is implemented as described\n- Tests pass\n\n## Constraints\n- Needs manual review and refinement\n\n## Research Notes\nHere is the structured research summary for this feature:\n\n---\n\n## Research Summary\n\n### Status: **Fix Already Implemented — Needs PR**\n\nThe fix has already been applied in commit `b5045a82` on branch `fix/delete-changeset-release`. No PR exists yet.\n\n---\n\n### Problem Confirmed\n\nThe deleted `changeset-release.yml` (\"Version & Release\" workflow) was 80 lines long and did the following on every push to `main`:\n\n1. Triggered on `push: branches: [main]` — fired on every commit\n2. Had a guard to skip when the commit message started with `chore: release v` — but `auto-release.yml` *already* consumes and cleans up changesets before committing, so the guard never mattered\n3. Ran `changesets/action@v1.7.0` with `publish: npm run changeset:publish` — which tried to publish all `@protolabs-ai/*` packages to npm\n4. Configured npm auth with `secrets.NPM_TOKEN` — a secret that doesn't exist in the repo\n5. This caused 16 `npm warn Received 404` lines + a failed publish attempt on every release\n\n---\n\n",
+      "timestamp": "2026-02-28T02:29:46.798Z",
+      "source": "edit"
+    }
+  ],
+  "createdAt": "2026-02-28T02:26:29.046Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-28T02:26:29.046Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-28T06:27:03.024Z"
+    }
+  ],
+  "featureType": "code",
+  "pipelineState": {
+    "currentPhase": "SPEC",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-28T02:26:29.050Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-28T02:26:33.485Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      },
+      {
+        "from": "RESEARCH",
+        "to": "SPEC",
+        "timestamp": "2026-02-28T02:28:50.686Z",
+        "triggeredBy": "auto"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-28T02:26:29.050Z",
+    "traceId": "1f2fd8c5-13cd-4817-80aa-da1da674827e",
+    "phaseSpanIds": {
+      "TRIAGE": "69a5371a-8ea3-4008-b448-d7611b0241c8",
+      "RESEARCH": "944bba52-1b66-41e3-b54b-5fe76efedc24",
+      "SPEC": "56934b96-0e18-4813-bc9b-534c55c79ff4"
+    },
+    "phaseDurations": {
+      "RESEARCH": 136438,
+      "SPEC": 56440
+    }
+  },
+  "prdMetadata": {
+    "generatedAt": "2026-02-28T02:29:46.798Z",
+    "model": "claude-sonnet-4-6"
+  },
+  "updatedAt": "2026-02-28T06:29:17.283Z",
+  "model": "claude-sonnet-4-6",
+  "costUsd": 0.7115269999999998,
+  "lastSessionId": "ca952e34-91fb-4654-af8d-43be0cbfcaaf",
+  "lastTraceId": "35eee717-064c-4b5e-b6f4-89b7308a0f2b",
+  "executionHistory": [
+    {
+      "id": "55a58522-d5a1-445f-b088-5854b2e2b464",
+      "startedAt": "2026-02-28T06:27:03.503Z",
+      "completedAt": "2026-02-28T06:29:17.309Z",
+      "durationMs": 133806,
+      "costUsd": 0.7115269999999998,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}

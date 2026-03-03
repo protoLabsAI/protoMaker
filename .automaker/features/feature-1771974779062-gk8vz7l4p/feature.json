@@ -1,0 +1,61 @@
+{
+  "category": "Dashboards + Loki Log Aggregation",
+  "description": "**Milestone:** Dashboards + Loki Log Aggregation\n\nCreate 4 provisioned Grafana dashboards as JSON files: 1) System Health — CPU, memory, disk, network from node-exporter. 2) Deploy Pipeline — deploy frequency, success rate, duration, rollback count (from CI webhook or custom metrics). 3) Agent Performance — active agents, execution duration, cost by model, success/failure rate, tokens used. 4) Feature Velocity — features completed per day, cycle time, backlog depth, throughput. Add a dashboard provisioning config. Each dashboard should use variables for time range and include meaningful panel titles and descriptions.\n\n**Files to Modify:**\n- monitoring/grafana/provisioning/dashboards/dashboard.yml\n- monitoring/grafana/provisioning/dashboards/system-health.json\n- monitoring/grafana/provisioning/dashboards/deploy-pipeline.json\n- monitoring/grafana/provisioning/dashboards/agent-performance.json\n- monitoring/grafana/provisioning/dashboards/feature-velocity.json\n\n**Acceptance Criteria:**\n- [ ] All 4 dashboards auto-load on Grafana startup\n- [ ] System Health shows CPU, memory, disk, network panels\n- [ ] Deploy Pipeline shows deploy frequency and success rate\n- [ ] Agent Performance shows cost tracking and model distribution\n- [ ] Feature Velocity shows throughput and cycle time\n- [ ] No manual Grafana UI configuration required\n\n**Complexity:** large",
+  "title": "Pre-Provisioned Grafana Dashboards",
+  "status": "verified",
+  "isEpic": false,
+  "branchName": "feature/dashboards-loki-log-pre-provisioned",
+  "isFoundation": false,
+  "id": "feature-1771974779062-gk8vz7l4p",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Dashboards + Loki Log Aggregation\n\nCreate 4 provisioned Grafana dashboards as JSON files: 1) System Health — CPU, memory, disk, network from node-exporter. 2) Deploy Pipeline — deploy frequency, success rate, duration, rollback count (from CI webhook or custom metrics). 3) Agent Performance — active agents, execution duration, cost by model, success/failure rate, tokens used. 4) Feature Velocity — features completed per day, cycle time, backlog depth, throughput. Add a dashboard provisioning config. Each dashboard should use variables for time range and include meaningful panel titles and descriptions.\n\n**Files to Modify:**\n- monitoring/grafana/provisioning/dashboards/dashboard.yml\n- monitoring/grafana/provisioning/dashboards/system-health.json\n- monitoring/grafana/provisioning/dashboards/deploy-pipeline.json\n- monitoring/grafana/provisioning/dashboards/agent-performance.json\n- monitoring/grafana/provisioning/dashboards/feature-velocity.json\n\n**Acceptance Criteria:**\n- [ ] All 4 dashboards auto-load on Grafana startup\n- [ ] System Health shows CPU, memory, disk, network panels\n- [ ] Deploy Pipeline shows deploy frequency and success rate\n- [ ] Agent Performance shows cost tracking and model distribution\n- [ ] Feature Velocity shows throughput and cycle time\n- [ ] No manual Grafana UI configuration required\n\n**Complexity:** large",
+      "timestamp": "2026-02-24T23:12:59.063Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-24T23:12:59.063Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-24T23:12:59.063Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-25T01:25:40.901Z"
+    }
+  ],
+  "dependencies": [
+    "feature-1771974779061-azqkua3if"
+  ],
+  "updatedAt": "2026-02-25T01:32:20.985Z",
+  "lastTraceId": "731afdf4-27cb-404c-8fbf-02e8a1e3f179",
+  "executionHistory": [
+    {
+      "id": "46c78783-dfab-4b2f-9941-e46f505e27e3",
+      "startedAt": "2026-02-25T01:25:40.938Z",
+      "completedAt": "2026-02-25T01:29:43.469Z",
+      "durationMs": 242531,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "2fd2103b-caf1-433a-bf5e-2c5d5a316db6",
+      "startedAt": "2026-02-25T01:29:44.476Z",
+      "completedAt": "2026-02-25T01:32:20.989Z",
+      "durationMs": 156513,
+      "costUsd": 1.2489922500000001,
+      "model": "claude-sonnet-4-5-20250929",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 1.2489922500000001,
+  "lastSessionId": "f57c8974-4d87-4499-9d9a-126cee14816f"
+}

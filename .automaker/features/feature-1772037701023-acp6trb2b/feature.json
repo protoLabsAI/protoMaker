@@ -1,0 +1,76 @@
+{
+  "category": "Signal Intake",
+  "description": "Bug: dev server crashes repeatedly when agent runs on large files\n\nDev server crashes 3+ times per session when an agent works on large files (e.g. 7,462-line auto-mode-service.ts). Memory is ruled out: 74% free, server at 300MB RSS, 16GB heap. No macOS crash reports. No OOM signals in logs. Looks like a clean process exit from an uncaught exception.\n\nReproduce: start auto-mode with TypedEventBus extraction feature and wait \\~5 min.\n\nNeeded: uncaught exception handler that logs stack trace before exit, and process exit code logging.",
+  "title": "[linear] Bug: dev server crashes repeatedly when agent runs on large files",
+  "status": "verified",
+  "complexity": "medium",
+  "workItemState": "research",
+  "linearIssueId": "562eee31-e628-4ffb-ba1a-2a6985e23c94",
+  "id": "feature-1772037701023-acp6trb2b",
+  "branchName": "feature/linear-bug-dev-server-crashes",
+  "descriptionHistory": [
+    {
+      "description": "Bug: dev server crashes repeatedly when agent runs on large files\n\nDev server crashes 3+ times per session when an agent works on large files (e.g. 7,462-line auto-mode-service.ts). Memory is ruled out: 74% free, server at 300MB RSS, 16GB heap. No macOS crash reports. No OOM signals in logs. Looks like a clean process exit from an uncaught exception.\n\nReproduce: start auto-mode with TypedEventBus extraction feature and wait \\~5 min.\n\nNeeded: uncaught exception handler that logs stack trace before exit, and process exit code logging.",
+      "timestamp": "2026-02-25T16:41:41.029Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-02-25T16:41:41.029Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-02-25T16:41:41.029Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-02-25T18:28:54.173Z"
+    }
+  ],
+  "pipelineState": {
+    "currentPhase": "RESEARCH",
+    "branch": "ops",
+    "phaseHistory": [
+      {
+        "from": null,
+        "to": "TRIAGE",
+        "timestamp": "2026-02-25T16:41:41.031Z",
+        "triggeredBy": "system",
+        "reason": "Pipeline initiated for ops branch"
+      },
+      {
+        "from": "TRIAGE",
+        "to": "RESEARCH",
+        "timestamp": "2026-02-25T16:41:43.041Z",
+        "triggeredBy": "system",
+        "reason": "Detected via authority:pm-research-started"
+      }
+    ],
+    "awaitingGate": false,
+    "startedAt": "2026-02-25T16:41:41.031Z",
+    "traceId": "0023568b-1f90-48a6-99e3-cb80be7c426e",
+    "phaseSpanIds": {
+      "TRIAGE": "cd319dbd-5b55-4e23-8309-e62e2a1b419f",
+      "RESEARCH": "b3d18168-6000-449f-ba18-8fe39b5e5221"
+    },
+    "awaitingGatePhase": null
+  },
+  "updatedAt": "2026-02-25T18:32:10.046Z",
+  "costUsd": 1.1293662500000001,
+  "lastSessionId": "bb68b763-d774-493c-89a5-9f6a6345319b",
+  "lastTraceId": "baaac694-53c2-4f40-b2a4-100bbadc54c1",
+  "executionHistory": [
+    {
+      "id": "a02768e1-bd90-4763-a64b-460bf3b71d31",
+      "startedAt": "2026-02-25T18:28:54.695Z",
+      "completedAt": "2026-02-25T18:32:10.397Z",
+      "durationMs": 195702,
+      "costUsd": 1.1293662500000001,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ]
+}
