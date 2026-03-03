@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 📚 Documentation
+  - name: Documentation
     url: https://docs.protolabs.studio
     about: Please check the documentation for guides, API references, and troubleshooting help
-  - name: 💬 Discord Community
-    url: https://discord.gg/jjem7aEDKU
-    about: Join our Discord server for questions, discussions, and community support
+  - name: Discord Community
+    url: https://protolabs.studio
+    about: Join our Discord server for questions, discussions, and community support (invite link TBA)

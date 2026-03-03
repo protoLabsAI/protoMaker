@@ -34,7 +34,7 @@ jobs:
 
             - 💡 **Submit your idea** using the [Idea Submission](https://github.com/${context.repo.owner}/${context.repo.repo}/issues/new?template=idea_submission.yml) template — if accepted, our AI agents will implement it
             - 🐛 **Report a bug** using the [Bug Report](https://github.com/${context.repo.owner}/${context.repo.repo}/issues/new?template=bug_report.yml) template
-            - 💬 **Join the discussion** on [Discord](https://discord.gg/jjem7aEDKU) to share feedback
+            - **Join the discussion** on Discord (invite link TBA) to share feedback
 
             You're welcome to fork the repository and use your changes privately — that's what MIT is for. We just can't merge external code back in.
 

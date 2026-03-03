@@ -73,7 +73,7 @@ Participate in conversations about features, architecture, and the future of pro
 
 - **GitHub Issues:** Comment on existing issues with your thoughts
 - **GitHub Discussions:** Share ideas, ask questions, or help others
-- **Discord:** Join our [Discord server](https://discord.gg/jjem7aEDKU) for real-time chat
+- **Discord:** Join our Discord server (invite link TBA) for real-time chat
 
 ### 4. Improve Documentation
 
@@ -133,7 +133,7 @@ Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) for:
 
 **Report violations:**
 
-- Discord: DM `@webdevcody`
+- Discord: DM `@josh`
 - Email: conduct@protolabs.studio
 
 ## Security Issues
@@ -226,10 +226,10 @@ While we don't accept code contributions, we value all forms of contribution:
 
 Need help using protoMaker or have questions?
 
-- 📚 **Documentation:** [https://docs.protolabs.studio](https://docs.protolabs.studio)
-- 💬 **Discord:** [https://discord.gg/jjem7aEDKU](https://discord.gg/jjem7aEDKU)
-- 🐛 **Bug Reports:** [Submit an issue](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
-- 💡 **Feature Ideas:** [Submit an idea](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
+- **Documentation:** [https://docs.protolabs.studio](https://docs.protolabs.studio)
+- **Discord:** Discord invite link TBA
+- **Bug Reports:** [Submit an issue](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
+- **Feature Ideas:** [Submit an idea](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
 
 ## Thank You
 

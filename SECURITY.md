@@ -10,7 +10,7 @@ We take the security of protoMaker seriously. If you discover a security vulnera
 
 Instead, please report security issues through one of these channels:
 
-1. **Discord (Preferred):** Join our [Discord server](https://discord.gg/jjem7aEDKU) and send a direct message to `@webdevcody`
+1. **Discord (Preferred):** Join our Discord server (invite link TBA) and send a direct message to `@josh`
 2. **Email:** Send details to security@protolabs.studio
 
 ### What to Include
@@ -82,14 +82,14 @@ Security updates are released as part of regular releases. Critical security fix
 To stay informed about security updates:
 
 - Watch the [GitHub repository](https://github.com/proto-labs-ai/protoMaker) for release notifications
-- Join our [Discord server](https://discord.gg/jjem7aEDKU) for announcements
+- Join our Discord server (invite link TBA) for announcements
 - Check the [release notes](https://github.com/proto-labs-ai/protoMaker/releases) regularly
 
 ## Contact
 
 For any security-related questions or concerns:
 
-- **Discord:** [https://discord.gg/jjem7aEDKU](https://discord.gg/jjem7aEDKU) (DM `@webdevcody`)
+- **Discord:** Discord invite link TBA (DM `@josh`)
 - **Email:** security@protolabs.studio
 
 ---
