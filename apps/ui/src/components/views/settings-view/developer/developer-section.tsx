@@ -26,10 +26,6 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     label: 'Docs',
     description: 'Show the Docs viewer in the project sidebar.',
   },
-  fileEditor: {
-    label: 'File Editor',
-    description: 'Show the File Editor (tabbed code editor) in the project sidebar.',
-  },
   pipeline: {
     label: 'Authority Pipeline + HITL',
     description:

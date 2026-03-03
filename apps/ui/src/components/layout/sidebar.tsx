@@ -257,7 +257,7 @@ export function Sidebar() {
     hideTerminal,
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,
-    hideFileEditor: !featureFlags.fileEditor,
+    hideFileEditor: false,
     hideSystemView: !featureFlags.systemView,
     currentProject,
     projects,

@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Button } from '@protolabs-ai/ui/atoms';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { Code, Eye, Columns2 } from 'lucide-react';
 import { Markdown } from '@protolabs-ai/ui/molecules';
 import type { MarkdownViewMode } from '../use-file-editor-store';
@@ -23,23 +23,25 @@ const modes: { value: MarkdownViewMode; icon: typeof Code; label: string }[] = [
 
 export function MarkdownViewToolbar({ mode, onChange }: MarkdownViewToolbarProps) {
   return (
-    <div className="flex items-center gap-0.5 rounded-md bg-muted/50 p-0.5">
-      {modes.map(({ value, icon: Icon, label }) => (
-        <Tooltip key={value}>
-          <TooltipTrigger asChild>
-            <Button
-              variant={mode === value ? 'secondary' : 'ghost'}
-              size="sm"
-              className={cn('h-6 w-6 p-0', mode !== value && 'opacity-60')}
-              onClick={() => onChange(value)}
-            >
-              <Icon className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{label}</TooltipContent>
-        </Tooltip>
-      ))}
-    </div>
+    <TooltipProvider>
+      <div className="flex items-center gap-0.5 rounded-md bg-muted/50 p-0.5">
+        {modes.map(({ value, icon: Icon, label }) => (
+          <Tooltip key={value}>
+            <TooltipTrigger asChild>
+              <Button
+                variant={mode === value ? 'secondary' : 'ghost'}
+                size="sm"
+                className={cn('h-6 w-6 p-0', mode !== value && 'opacity-60')}
+                onClick={() => onChange(value)}
+              >
+                <Icon className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{label}</TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { FolderOpen, FileCode, Settings, GitCompareArrows } from 'lucide-react';
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { apiPost } from '@/lib/api-fetch';
 import { useFileEditorStore } from './use-file-editor-store';
@@ -184,19 +184,21 @@ export function FileEditorView() {
           )}
 
           {/* Inline diff toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={showInlineDiff ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-7 w-7 p-0"
-                onClick={() => setShowInlineDiff(!showInlineDiff)}
-              >
-                <GitCompareArrows className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Toggle inline diff</TooltipContent>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={showInlineDiff ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setShowInlineDiff(!showInlineDiff)}
+                >
+                  <GitCompareArrows className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Toggle inline diff</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Editor settings */}
           <Popover>
