@@ -171,7 +171,7 @@ export function useNavigation({
     const projectItems: NavItem[] = [
       {
         id: 'board',
-        label: 'Kanban Board',
+        label: 'Board',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
       },
