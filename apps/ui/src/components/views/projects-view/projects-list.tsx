@@ -1,15 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FolderKanban, Plus, Loader2, Milestone, Layers } from 'lucide-react';
-import { Badge, Input, Textarea } from '@protolabs-ai/ui/atoms';
+import { FolderKanban, Plus, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Input, Textarea } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
-import { Card } from '@protolabs-ai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { getProjectStatusVariant } from './lib/status-variants';
 
 interface ProjectSummary {
   slug: string;
@@ -23,12 +22,43 @@ interface ProjectSummary {
   }>;
 }
 
+const PROJECT_STATUS_ORDER: Record<string, number> = {
+  researching: 0,
+  drafting: 1,
+  reviewing: 2,
+  approved: 3,
+  scaffolded: 4,
+  active: 5,
+  completed: 6,
+};
+
+const PROJECT_STATUS_COLORS: Record<string, string> = {
+  researching: 'bg-[var(--status-info)]',
+  drafting: 'bg-[var(--status-warning)]',
+  reviewing: 'bg-[var(--status-in-progress)]',
+  approved: 'bg-[var(--status-success)]',
+  scaffolded: 'bg-[var(--status-info)]',
+  active: 'bg-[var(--status-warning)]',
+  completed: 'bg-[var(--status-done)]',
+};
+
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  researching: 'Researching',
+  drafting: 'Drafting',
+  reviewing: 'Reviewing',
+  approved: 'Approved',
+  scaffolded: 'Scaffolded',
+  active: 'Active',
+  completed: 'Completed',
+};
+
 export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void }) {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   const queryClient = useQueryClient();
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const { data: listData, isLoading: isLoadingList } = useQuery({
     queryKey: ['projects-list', projectPath],
@@ -98,32 +128,50 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
   const projects = projectDetails || [];
   const isLoading = isLoadingList || isLoadingDetails;
 
+  // Group projects by status
+  const statusGroups = useMemo(() => {
+    const groups: Record<string, ProjectSummary[]> = {};
+    for (const project of projects) {
+      const status = project.status || 'drafting';
+      if (!groups[status]) groups[status] = [];
+      groups[status].push(project);
+    }
+
+    return Object.entries(groups)
+      .sort(([a], [b]) => (PROJECT_STATUS_ORDER[a] ?? 99) - (PROJECT_STATUS_ORDER[b] ?? 99))
+      .map(([status, items]) => ({ status, items }));
+  }, [projects]);
+
+  const toggleGroup = useCallback((status: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 px-6 py-4 border-b border-border/40">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500/20 to-violet-600/10 flex items-center justify-center border border-violet-500/20">
-              <FolderKanban className="w-5 h-5 text-violet-500" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground tracking-tight">Projects</h1>
-              <p className="text-xs text-muted-foreground">
-                {projects.length} project{projects.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowNewProjectInput(!showNewProjectInput)}
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            New Project
-          </Button>
-        </div>
-      </div>
+      <PanelHeader
+        icon={FolderKanban}
+        title="Projects"
+        badge={
+          <span className="text-xs text-muted-foreground">
+            {projects.length} project{projects.length !== 1 ? 's' : ''}
+          </span>
+        }
+        actions={[
+          {
+            icon: Plus,
+            label: 'New project',
+            onClick: () => setShowNewProjectInput(!showNewProjectInput),
+          },
+        ]}
+      />
 
       {/* New Project Form */}
       {showNewProjectInput && (
@@ -165,72 +213,112 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
       )}
 
       {/* Project List */}
-      <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner className="w-5 h-5" />
           </div>
         ) : projects.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
             <FolderKanban className="w-10 h-10 text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">No projects yet.</p>
+            <p className="text-sm">No projects yet.</p>
             <p className="text-xs text-muted-foreground/70 mt-1">
               Create a new project to start planning with PRDs and milestones.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {projects.map((project) => {
-              const phaseCount =
-                project.milestones?.reduce((sum, ms) => sum + (ms.phases?.length || 0), 0) || 0;
+          <div>
+            {statusGroups.map(({ status, items }) => {
+              const isExpanded = !collapsedGroups.has(status);
 
               return (
-                <Card
-                  key={project.slug}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onSelect(project.slug)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onSelect(project.slug);
-                    }
-                  }}
-                  className={cn(
-                    'py-3 px-4 cursor-pointer hover:bg-card/80 transition-colors',
-                    'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none'
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-foreground truncate">
-                        {project.title}
-                      </h3>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        {project.milestones && project.milestones.length > 0 && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Milestone className="w-3 h-3" />
-                            {project.milestones.length} milestone
-                            {project.milestones.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {phaseCount > 0 && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Layers className="w-3 h-3" />
-                            {phaseCount} phase{phaseCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Badge
-                      variant={getProjectStatusVariant(project.status)}
-                      size="sm"
-                      className="uppercase tracking-wider shrink-0"
-                    >
-                      {project.status}
-                    </Badge>
-                  </div>
-                </Card>
+                <div key={status}>
+                  {/* Status group header */}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(status)}
+                    className={cn(
+                      'flex items-center gap-2 w-full px-3 py-2 text-left',
+                      'bg-muted/50 hover:bg-muted/70 transition-colors duration-200',
+                      'border-b border-border/50',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+                    )}
+                    aria-expanded={isExpanded}
+                  >
+                    <span className="text-muted-foreground">
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        'w-2.5 h-2.5 rounded-full shrink-0',
+                        PROJECT_STATUS_COLORS[status] || 'bg-muted-foreground'
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="font-medium text-sm">
+                      {PROJECT_STATUS_LABELS[status] || status}
+                    </span>
+                    <span className="text-xs text-muted-foreground">({items.length})</span>
+                  </button>
+
+                  {/* Project rows */}
+                  {isExpanded &&
+                    items.map((project) => {
+                      const milestoneCount = project.milestones?.length || 0;
+                      const phaseCount =
+                        project.milestones?.reduce(
+                          (sum, ms) => sum + (ms.phases?.length || 0),
+                          0
+                        ) || 0;
+
+                      return (
+                        <div
+                          key={project.slug}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onSelect(project.slug)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onSelect(project.slug);
+                            }
+                          }}
+                          className={cn(
+                            'flex items-center w-full border-b border-border/50',
+                            'hover:bg-accent/50 cursor-pointer transition-colors duration-200',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+                          )}
+                        >
+                          {/* Title + goal */}
+                          <div className="flex-1 min-w-0 pl-3 pr-3 py-3">
+                            <span className="font-medium text-sm truncate block">
+                              {project.title}
+                            </span>
+                            {project.goal && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                {project.goal}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Milestone / phase counts */}
+                          <div className="w-32 shrink-0 flex items-center gap-3 text-xs text-muted-foreground pr-3">
+                            {milestoneCount > 0 && <span>{milestoneCount} ms</span>}
+                            {phaseCount > 0 && <span>{phaseCount} ph</span>}
+                          </div>
+
+                          {/* Navigate chevron */}
+                          <div className="w-[40px] shrink-0 flex items-center justify-center text-muted-foreground">
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               );
             })}
           </div>

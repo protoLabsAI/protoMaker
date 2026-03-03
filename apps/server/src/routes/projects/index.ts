@@ -60,7 +60,7 @@ export function createProjectsRoutes(
     '/delete',
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
-    createDeleteHandler()
+    createDeleteHandler(projectService)
   );
   router.post(
     '/create-features',

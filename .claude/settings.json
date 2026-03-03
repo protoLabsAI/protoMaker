@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/guard-bash.sh"
+            "command": "\"$(git rev-parse --show-toplevel)/.claude/hooks/guard-bash.sh\""
           }
         ]
       }
@@ -52,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/evaluate-session.js"
+            "command": "node \"$(git rev-parse --show-toplevel)/.claude/hooks/evaluate-session.js\""
           }
         ]
       }

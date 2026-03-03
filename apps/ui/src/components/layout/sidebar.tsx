@@ -255,7 +255,6 @@ export function Sidebar() {
     hideSpecEditor,
     hideContext,
     hideTerminal,
-    hideChat: !featureFlags.avaChat,
     hideCalendar: !featureFlags.calendar,
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,

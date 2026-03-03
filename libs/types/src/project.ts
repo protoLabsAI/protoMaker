@@ -190,6 +190,9 @@ export interface Project {
   /** Display color (hex) */
   color?: string;
 
+  /** Ongoing projects never complete — they are persistent containers (e.g., Bugs) */
+  ongoing?: boolean;
+
   /** External links */
   links?: ProjectLink[];
 
@@ -424,6 +427,9 @@ export interface CreateProjectInput {
   /** Display color (hex) */
   color?: string;
 
+  /** Create an ongoing project (never completes) */
+  ongoing?: boolean;
+
   /** Optional initial milestones */
   milestones?: Array<{
     title: string;
@@ -611,6 +617,29 @@ export interface LifecycleStatus {
 export interface LifecycleCollectResult {
   issuesCollected: number;
   issuesAssigned: number;
+}
+
+/**
+ * Slim stats record captured before a project is deleted.
+ * Persisted in .automaker/projects/stats.json so deletion history survives.
+ */
+export interface ProjectStats {
+  slug: string;
+  title: string;
+  goal: string;
+  status: ProjectStatus;
+  health?: ProjectHealth;
+  priority?: ProjectPriority;
+  lead?: string;
+  milestoneCount: number;
+  phaseCount: number;
+  linkedPhaseCount: number;
+  featureCount: number;
+  updateCount: number;
+  linkCount: number;
+  documentCount: number;
+  createdAt: string;
+  deletedAt: string;
 }
 
 /**

@@ -32,3 +32,18 @@ export function useProjectUpdate(projectSlug: string) {
     },
   });
 }
+
+export function useProjectDelete() {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectSlug: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.deleteProject(projectPath, projectSlug);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
+    },
+  });
+}

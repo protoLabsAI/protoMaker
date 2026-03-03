@@ -314,7 +314,7 @@ export function KanbanBoard({
   return (
     <div
       className={cn(
-        'flex-1 overflow-x-auto px-5 pt-4 pb-4 relative',
+        'flex-1 overflow-x-auto px-3 pt-4 pb-4 relative',
         'transition-opacity duration-200',
         className
       )}

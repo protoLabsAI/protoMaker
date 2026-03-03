@@ -15,10 +15,10 @@ export interface ResponsiveKanbanConfig {
  */
 const DEFAULT_CONFIG: ResponsiveKanbanConfig = {
   columnWidth: 288, // 18rem = 288px (w-72)
-  columnMinWidth: 280, // Minimum column width - ensures usability
+  columnMinWidth: 260, // Minimum column width - tighter fit
   columnMaxWidth: Infinity, // No max width - columns scale evenly to fill viewport
-  gap: 20, // gap-5 = 20px
-  padding: 40, // px-5 on both sides = 40px (matches gap between columns)
+  gap: 12, // gap-3 = 12px
+  padding: 24, // px-3 on both sides = 24px
 };
 
 // Sidebar transition duration (matches sidebar.tsx)

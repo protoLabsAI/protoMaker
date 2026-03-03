@@ -21,6 +21,7 @@ import {
   AlertCircle,
   ListChecks,
 } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn, generateUUID } from '@/lib/utils';
 
@@ -738,29 +739,20 @@ ${Object.entries(projectAnalysis.filesByExtension)
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="analysis-view">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-card backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Search className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <h1 className="text-xl font-bold">Project Analysis</h1>
-            <p className="text-sm text-muted-foreground">{currentProject.name}</p>
-          </div>
-        </div>
-        <Button onClick={runAnalysis} disabled={isAnalyzing} data-testid="analyze-project-button">
-          {isAnalyzing ? (
-            <>
-              <Spinner size="sm" className="mr-2" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Analyze Project
-            </>
-          )}
-        </Button>
-      </div>
+      <PanelHeader
+        icon={Search}
+        title="Project Analysis"
+        actions={[
+          {
+            icon: RefreshCw,
+            label: 'Analyze project',
+            onClick: runAnalysis,
+            disabled: isAnalyzing,
+            loading: isAnalyzing,
+            testId: 'analyze-project-button',
+          },
+        ]}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-hidden p-4">

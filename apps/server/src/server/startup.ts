@@ -123,6 +123,26 @@ export async function runStartup(
     });
   }
 
+  // Ensure default projects exist (e.g., the persistent "bugs" project)
+  try {
+    const settings = await settingsService.getGlobalSettings();
+    const projectPaths = [
+      ...(settings.projects?.map((p) => p.path) ?? []),
+      ...(settings.autoModeAlwaysOn?.projects?.map((p) => p.projectPath) ?? []),
+    ];
+    const uniquePaths = [...new Set(projectPaths)];
+
+    for (const projectPath of uniquePaths) {
+      try {
+        await services.projectService.ensureBugsProject(projectPath);
+      } catch (err) {
+        logger.warn(`[STARTUP] Failed to ensure bugs project for ${projectPath}:`, err);
+      }
+    }
+  } catch (err) {
+    logger.warn('[STARTUP] Failed to ensure default projects:', err);
+  }
+
   // Reconcile stuck features (in_progress, interrupted, pipeline_* with no running agent)
   try {
     const settings = await settingsService.getGlobalSettings();

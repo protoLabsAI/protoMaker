@@ -3,8 +3,8 @@ import { createLogger } from '@protolabs-ai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { Card, CardContent } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
 import { File, Folder, FolderOpen, ChevronRight, ChevronDown, Code, RefreshCw } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 
@@ -214,20 +214,11 @@ export function CodeView() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="code-view">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-card backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Code className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <h1 className="text-xl font-bold">Code Explorer</h1>
-            <p className="text-sm text-muted-foreground">{currentProject.name}</p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={loadTree} data-testid="refresh-tree">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
-        </Button>
-      </div>
+      <PanelHeader
+        icon={Code}
+        title="Code Explorer"
+        actions={[{ icon: RefreshCw, label: 'Refresh', onClick: loadTree, testId: 'refresh-tree' }]}
+      />
 
       {/* Split View */}
       <div className="flex-1 flex overflow-hidden">

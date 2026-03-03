@@ -1705,6 +1705,7 @@ export class DiscordBotService {
         description: message.content,
         status: 'backlog',
         category: 'Bug Reports',
+        projectSlug: 'bugs',
       });
 
       // 3. Create investigation thread

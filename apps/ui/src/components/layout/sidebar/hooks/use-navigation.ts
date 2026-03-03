@@ -17,7 +17,6 @@ import {
   CalendarDays,
   FolderOpen,
   FolderKanban,
-  MessageCircle,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -51,11 +50,11 @@ interface UseNavigationProps {
     designs: string;
     calendar: string;
     automations: string;
+    projects: string;
   };
   hideSpecEditor: boolean;
   hideContext: boolean;
   hideTerminal: boolean;
-  hideChat: boolean;
   hideCalendar: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
@@ -85,7 +84,6 @@ export function useNavigation({
   hideSpecEditor,
   hideContext,
   hideTerminal,
-  hideChat,
   hideCalendar,
   hideDesigns,
   hideDocs,
@@ -152,11 +150,6 @@ export function useNavigation({
         shortcut: shortcuts.memory,
       },
       {
-        id: 'projects',
-        label: 'Projects',
-        icon: FolderKanban,
-      },
-      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
@@ -175,9 +168,6 @@ export function useNavigation({
       if (item.id === 'docs' && hideDocs) {
         return false;
       }
-      if (item.id === 'projects' && hideProjects) {
-        return false;
-      }
       return true;
     });
 
@@ -191,20 +181,21 @@ export function useNavigation({
       },
     ];
 
-    if (!hideChat) {
-      projectItems.push({
-        id: 'chat',
-        label: 'Ava Chat',
-        icon: MessageCircle,
-      });
-    }
-
     projectItems.push({
       id: 'notes',
       label: 'Notes',
       icon: NotebookPen,
       shortcut: shortcuts.notes,
     });
+
+    if (!hideProjects) {
+      projectItems.push({
+        id: 'projects',
+        label: 'Projects',
+        icon: FolderKanban,
+        shortcut: shortcuts.projects,
+      });
+    }
 
     if (!hideSystemView) {
       projectItems.splice(1, 0, {
@@ -311,7 +302,6 @@ export function useNavigation({
     shortcuts,
     hideSpecEditor,
     hideContext,
-    hideChat,
     hideTerminal,
     hideCalendar,
     hideDesigns,

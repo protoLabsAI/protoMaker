@@ -220,12 +220,12 @@ export interface FeatureFlags {
 /** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   avaChat: false,
-  calendar: false,
+  calendar: true,
   designs: false,
   docs: false,
   fileEditor: false,
   pipeline: false,
-  projects: false,
+  projects: true,
   systemView: false,
   userPresenceDetection: false,
 };

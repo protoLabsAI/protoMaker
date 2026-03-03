@@ -17,6 +17,7 @@ import type {
   ProjectStatusUpdate,
   ProjectDocument,
   ProjectDocumentsFile,
+  ProjectStats,
 } from '@protolabs-ai/types';
 import {
   createLogger,
@@ -31,6 +32,7 @@ import {
 import { secureFs } from '@protolabs-ai/platform';
 import {
   getProjectsDir,
+  getProjectStatsPath,
   getProjectDir,
   getProjectJsonPath,
   getProjectDocsPath,
@@ -152,6 +154,23 @@ export class ProjectService {
   }
 
   /**
+   * Ensure the persistent "bugs" project exists, creating it if not.
+   */
+  async ensureBugsProject(projectPath: string): Promise<Project> {
+    const existing = await this.getProject(projectPath, 'bugs');
+    if (existing) return existing;
+
+    return this.createProject(projectPath, {
+      slug: 'bugs',
+      title: 'Bugs',
+      goal: 'Persistent project for tracking all bug reports, investigations, and fixes.',
+      ongoing: true,
+      priority: 'high',
+      color: '#ef4444',
+    });
+  }
+
+  /**
    * Update an existing project
    */
   async updateProject(
@@ -162,6 +181,10 @@ export class ProjectService {
     const existing = await this.getProject(projectPath, projectSlug);
     if (!existing) {
       return null;
+    }
+
+    if (updates.status === 'completed' && existing.ongoing) {
+      throw new Error('Cannot complete an ongoing project');
     }
 
     const updated: Project = {
@@ -198,14 +221,69 @@ export class ProjectService {
   }
 
   /**
-   * Delete a project and all its files
+   * Delete a project and all its files.
+   * Captures a slim stats record to stats.json before removing the directory.
    */
   async deleteProject(projectPath: string, projectSlug: string): Promise<boolean> {
     const projectDir = getProjectDir(projectPath, projectSlug);
 
+    // Load project data before deletion
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) {
+      return false;
+    }
+
+    // Count linked features
+    let featureCount = 0;
+    try {
+      const { features, epics } = await this.getProjectFeatures(projectPath, projectSlug);
+      featureCount = features.length + epics.length;
+    } catch {
+      // Feature loader may fail if no features dir — count stays 0
+    }
+
+    // Count documents
+    let documentCount = 0;
+    try {
+      const docsFile = await this.readDocsFile(projectPath, projectSlug);
+      documentCount = Object.keys(docsFile.docs).length;
+    } catch {
+      // docs.json may not exist
+    }
+
+    // Count linked phases (phases with a featureId set)
+    const linkedPhaseCount = project.milestones.reduce(
+      (acc, m) => acc + m.phases.filter((p) => p.featureId).length,
+      0
+    );
+
+    // Build stats record
+    const stats: ProjectStats = {
+      slug: project.slug,
+      title: project.title,
+      goal: project.goal,
+      status: project.status,
+      health: project.health,
+      priority: project.priority,
+      lead: project.lead,
+      milestoneCount: project.milestones.length,
+      phaseCount: project.milestones.reduce((acc, m) => acc + m.phases.length, 0),
+      linkedPhaseCount,
+      featureCount,
+      updateCount: (project.updates ?? []).length,
+      linkCount: (project.links ?? []).length,
+      documentCount,
+      createdAt: project.createdAt,
+      deletedAt: new Date().toISOString(),
+    };
+
+    // Persist stats
+    await this.appendProjectStats(projectPath, stats);
+
+    // Delete project directory
     try {
       await secureFs.rm(projectDir, { recursive: true, force: true });
-      logger.info(`Deleted project: ${projectSlug}`);
+      logger.info(`Deleted project: ${projectSlug} (stats preserved)`);
       return true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -213,6 +291,27 @@ export class ProjectService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Get stats for all deleted projects
+   */
+  async getDeletedProjectStats(projectPath: string): Promise<ProjectStats[]> {
+    const statsPath = getProjectStatsPath(projectPath);
+    try {
+      const raw = await secureFs.readFile(statsPath, 'utf-8');
+      const content = typeof raw === 'string' ? raw : raw.toString('utf-8');
+      return JSON.parse(content) as ProjectStats[];
+    } catch {
+      return [];
+    }
+  }
+
+  private async appendProjectStats(projectPath: string, stats: ProjectStats): Promise<void> {
+    const statsPath = getProjectStatsPath(projectPath);
+    const existing = await this.getDeletedProjectStats(projectPath);
+    existing.push(stats);
+    await secureFs.writeFile(statsPath, JSON.stringify(existing, null, 2));
   }
 
   /**

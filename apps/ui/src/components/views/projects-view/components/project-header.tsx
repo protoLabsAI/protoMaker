@@ -1,11 +1,21 @@
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { Badge } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
 import { getProjectStatusVariant } from '../lib/status-variants';
+import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
 import type { Project, ProjectHealth } from '@protolabs-ai/types';
 
-export function ProjectHeader({ project, onBack }: { project: Project; onBack: () => void }) {
+interface ProjectHeaderProps {
+  project: Project;
+  onBack: () => void;
+  onDelete?: () => void;
+}
+
+export function ProjectHeader({ project, onBack, onDelete }: ProjectHeaderProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   return (
     <div className="shrink-0 px-6 py-4 border-b border-border/40">
       <div className="flex items-center gap-3">
@@ -39,7 +49,31 @@ export function ProjectHeader({ project, onBack }: { project: Project; onBack: (
             <ExternalLink className="w-4 h-4" />
           </a>
         )}
+        {onDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowDeleteDialog(true)}
+            className="text-muted-foreground hover:text-destructive"
+            aria-label="Delete project"
+            data-testid="delete-project-button"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )}
       </div>
+
+      {onDelete && (
+        <DeleteConfirmDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          onConfirm={onDelete}
+          title={`Delete "${project.title}"?`}
+          description="The project directory will be removed. A stats summary is preserved for historical reference. Linked board features are not affected."
+          testId="delete-project-dialog"
+          confirmTestId="confirm-delete-project"
+        />
+      )}
     </div>
   );
 }

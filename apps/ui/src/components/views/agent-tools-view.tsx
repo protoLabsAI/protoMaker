@@ -6,6 +6,7 @@ import { Button } from '@protolabs-ai/ui/atoms';
 import { Input } from '@protolabs-ai/ui/atoms';
 import { Label } from '@protolabs-ai/ui/atoms';
 import { Terminal, CheckCircle, XCircle, Play, File, Pencil, Wrench } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
@@ -177,16 +178,7 @@ export function AgentToolsView() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden content-bg" data-testid="agent-tools-view">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b border-border bg-card/80 backdrop-blur-md">
-        <Wrench className="w-5 h-5 text-primary" />
-        <div>
-          <h1 className="text-xl font-bold">Agent Tools</h1>
-          <p className="text-sm text-muted-foreground">
-            Test file system and terminal tools for {currentProject.name}
-          </p>
-        </div>
-      </div>
+      <PanelHeader icon={Wrench} title="Agent Tools" />
 
       {/* Tools Grid */}
       <div className="flex-1 overflow-y-auto p-4">

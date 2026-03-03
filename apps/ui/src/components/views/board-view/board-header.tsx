@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Switch } from '@protolabs-ai/ui/atoms';
 import { Label, Kbd, KbdGroup } from '@protolabs-ai/ui/atoms';
-import { Wand2, GitBranch, ClipboardCheck, DollarSign, Sparkles } from 'lucide-react';
+import { LayoutGrid, Wand2, GitBranch, ClipboardCheck, DollarSign, Sparkles } from 'lucide-react';
 import { ConflictBadge } from './components/conflict-badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
 import { UsagePopover } from '@/components/usage-popover';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useSetupStore } from '@/store/setup-store';
@@ -133,160 +134,171 @@ export function BoardHeader({
   const isTablet = useIsTablet();
 
   return (
-    <div className="flex items-center justify-between gap-5 p-4 border-b border-border bg-card/80 backdrop-blur-md">
-      <div className="flex items-center gap-4">
-        <BoardSearchBar
-          searchQuery={searchQuery}
-          onSearchChange={onSearchChange}
-          isCreatingSpec={isCreatingSpec}
-          creatingSpecProjectPath={creatingSpecProjectPath}
-          currentProjectPath={projectPath}
-        />
-        {isMounted && <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />}
-        <BoardControls isMounted={isMounted} onShowBoardBackground={onShowBoardBackground} />
-      </div>
-      <div className="flex gap-4 items-center">
-        {/* Project cost - show if any features have cost data */}
-        {isMounted && !isTablet && totalProjectCost > 0 && (
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 px-2 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
-                  <DollarSign className="w-3.5 h-3.5" />
-                  {formatCostUsd(totalProjectCost)}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs">
-                <p>Cumulative agent cost for this project</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
-        {/* Sync Conflict Badge - shows only when conflicts exist */}
-        {isMounted && !isTablet && <ConflictBadge />}
-
-        {/* Usage Popover - show if either provider is authenticated, only on desktop */}
-        {isMounted && !isTablet && (showClaudeUsage || showCodexUsage) && <UsagePopover />}
-
-        {/* Tablet/Mobile view: show hamburger menu with all controls */}
-        {isMounted && isTablet && (
-          <HeaderMobileMenu
-            isOpen={showActionsPanel}
-            onToggle={() => setShowActionsPanel(!showActionsPanel)}
-            isWorktreePanelVisible={isWorktreePanelVisible}
-            onWorktreePanelToggle={handleWorktreePanelToggle}
-            maxConcurrency={maxConcurrency}
-            runningAgentsCount={runningAgentsCount}
-            onConcurrencyChange={onConcurrencyChange}
-            isAutoModeRunning={isAutoModeRunning}
-            onAutoModeToggle={onAutoModeToggle}
-            skipVerificationInAutoMode={skipVerificationInAutoMode}
-            onSkipVerificationChange={setSkipVerificationInAutoMode}
-            onOpenPlanDialog={onOpenPlanDialog}
-            showClaudeUsage={showClaudeUsage}
-            showCodexUsage={showCodexUsage}
-          />
-        )}
-
-        {/* Desktop view: show full controls */}
-        {/* Worktrees Toggle - only show after mount to prevent hydration issues */}
-        {isMounted && !isTablet && (
-          <div className={controlContainerClass} data-testid="worktrees-toggle-container">
-            <GitBranch className="w-4 h-4 text-muted-foreground" />
-            <Label
-              htmlFor="worktrees-toggle"
-              className="text-xs font-medium cursor-pointer whitespace-nowrap"
-            >
-              Worktree Bar
-            </Label>
-            <Switch
-              id="worktrees-toggle"
-              checked={isWorktreePanelVisible}
-              onCheckedChange={handleWorktreePanelToggle}
-              data-testid="worktrees-toggle"
+    <PanelHeader
+      icon={LayoutGrid}
+      title="Board"
+      extra={
+        <div className="flex items-center gap-4 flex-1">
+          {/* Left group: search + view toggle + board controls */}
+          <div className="flex items-center gap-4 flex-1">
+            <BoardSearchBar
+              searchQuery={searchQuery}
+              onSearchChange={onSearchChange}
+              isCreatingSpec={isCreatingSpec}
+              creatingSpecProjectPath={creatingSpecProjectPath}
+              currentProjectPath={projectPath}
             />
-            <WorktreeSettingsPopover
-              addFeatureUseSelectedWorktreeBranch={addFeatureUseSelectedWorktreeBranch}
-              onAddFeatureUseSelectedWorktreeBranchChange={setAddFeatureUseSelectedWorktreeBranch}
-            />
+            {isMounted && <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />}
+            <BoardControls isMounted={isMounted} onShowBoardBackground={onShowBoardBackground} />
           </div>
-        )}
 
-        {/* Auto Mode Toggle - only show after mount to prevent hydration issues */}
-        {isMounted && !isTablet && (
-          <div className={controlContainerClass} data-testid="auto-mode-toggle-container">
-            <Label
-              htmlFor="auto-mode-toggle"
-              className="text-xs font-medium cursor-pointer whitespace-nowrap"
-            >
-              Auto Mode
-            </Label>
-            <span
-              className="text-[10px] font-medium text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded"
-              data-testid="auto-mode-max-concurrency"
-              title="Max concurrent agents"
-            >
-              {maxConcurrency}
-            </span>
-            <Switch
-              id="auto-mode-toggle"
-              checked={isAutoModeRunning}
-              onCheckedChange={onAutoModeToggle}
-              data-testid="auto-mode-toggle"
-            />
-            <AutoModeSettingsPopover
-              skipVerificationInAutoMode={skipVerificationInAutoMode}
-              onSkipVerificationChange={setSkipVerificationInAutoMode}
-              maxConcurrency={maxConcurrency}
-              runningAgentsCount={runningAgentsCount}
-              onConcurrencyChange={onConcurrencyChange}
-            />
-          </div>
-        )}
+          {/* Right group: cost, conflicts, usage, worktree, auto-mode, plan, ava */}
+          <div className="flex gap-4 items-center">
+            {/* Project cost - show if any features have cost data */}
+            {isMounted && !isTablet && totalProjectCost > 0 && (
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 px-2 h-8 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+                      <DollarSign className="w-3.5 h-3.5" />
+                      {formatCostUsd(totalProjectCost)}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    <p>Cumulative agent cost for this project</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
-        {/* Plan Button with Settings - only show on desktop, tablet/mobile has it in the panel */}
-        {isMounted && !isTablet && (
-          <div className={controlContainerClass} data-testid="plan-button-container">
-            {hasPendingPlan && (
+            {/* Sync Conflict Badge - shows only when conflicts exist */}
+            {isMounted && !isTablet && <ConflictBadge />}
+
+            {/* Usage Popover - show if either provider is authenticated, only on desktop */}
+            {isMounted && !isTablet && (showClaudeUsage || showCodexUsage) && <UsagePopover />}
+
+            {/* Tablet/Mobile view: show hamburger menu with all controls */}
+            {isMounted && isTablet && (
+              <HeaderMobileMenu
+                isOpen={showActionsPanel}
+                onToggle={() => setShowActionsPanel(!showActionsPanel)}
+                isWorktreePanelVisible={isWorktreePanelVisible}
+                onWorktreePanelToggle={handleWorktreePanelToggle}
+                maxConcurrency={maxConcurrency}
+                runningAgentsCount={runningAgentsCount}
+                onConcurrencyChange={onConcurrencyChange}
+                isAutoModeRunning={isAutoModeRunning}
+                onAutoModeToggle={onAutoModeToggle}
+                skipVerificationInAutoMode={skipVerificationInAutoMode}
+                onSkipVerificationChange={setSkipVerificationInAutoMode}
+                onOpenPlanDialog={onOpenPlanDialog}
+                showClaudeUsage={showClaudeUsage}
+                showCodexUsage={showCodexUsage}
+              />
+            )}
+
+            {/* Desktop view: show full controls */}
+            {/* Worktrees Toggle - only show after mount to prevent hydration issues */}
+            {isMounted && !isTablet && (
+              <div className={controlContainerClass} data-testid="worktrees-toggle-container">
+                <GitBranch className="w-4 h-4 text-muted-foreground" />
+                <Label
+                  htmlFor="worktrees-toggle"
+                  className="text-xs font-medium cursor-pointer whitespace-nowrap"
+                >
+                  Worktree Bar
+                </Label>
+                <Switch
+                  id="worktrees-toggle"
+                  checked={isWorktreePanelVisible}
+                  onCheckedChange={handleWorktreePanelToggle}
+                  data-testid="worktrees-toggle"
+                />
+                <WorktreeSettingsPopover
+                  addFeatureUseSelectedWorktreeBranch={addFeatureUseSelectedWorktreeBranch}
+                  onAddFeatureUseSelectedWorktreeBranchChange={
+                    setAddFeatureUseSelectedWorktreeBranch
+                  }
+                />
+              </div>
+            )}
+
+            {/* Auto Mode Toggle - only show after mount to prevent hydration issues */}
+            {isMounted && !isTablet && (
+              <div className={controlContainerClass} data-testid="auto-mode-toggle-container">
+                <Label
+                  htmlFor="auto-mode-toggle"
+                  className="text-xs font-medium cursor-pointer whitespace-nowrap"
+                >
+                  Auto Mode
+                </Label>
+                <span
+                  className="text-[10px] font-medium text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded"
+                  data-testid="auto-mode-max-concurrency"
+                  title="Max concurrent agents"
+                >
+                  {maxConcurrency}
+                </span>
+                <Switch
+                  id="auto-mode-toggle"
+                  checked={isAutoModeRunning}
+                  onCheckedChange={onAutoModeToggle}
+                  data-testid="auto-mode-toggle"
+                />
+                <AutoModeSettingsPopover
+                  skipVerificationInAutoMode={skipVerificationInAutoMode}
+                  onSkipVerificationChange={setSkipVerificationInAutoMode}
+                  maxConcurrency={maxConcurrency}
+                  runningAgentsCount={runningAgentsCount}
+                  onConcurrencyChange={onConcurrencyChange}
+                />
+              </div>
+            )}
+
+            {/* Plan Button with Settings - only show on desktop, tablet/mobile has it in the panel */}
+            {isMounted && !isTablet && (
+              <div className={controlContainerClass} data-testid="plan-button-container">
+                {hasPendingPlan && (
+                  <button
+                    onClick={onOpenPendingPlan || onOpenPlanDialog}
+                    className="flex items-center gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors"
+                    data-testid="plan-review-button"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={onOpenPlanDialog}
+                  className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                  data-testid="plan-backlog-button"
+                >
+                  <Wand2 className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Plan</span>
+                </button>
+                <PlanSettingsPopover
+                  planUseSelectedWorktreeBranch={planUseSelectedWorktreeBranch}
+                  onPlanUseSelectedWorktreeBranchChange={setPlanUseSelectedWorktreeBranch}
+                />
+              </div>
+            )}
+
+            {/* Ava Anywhere discoverability hint — Electron only */}
+            {isMounted && !isTablet && isElectron() && (
               <button
-                onClick={onOpenPendingPlan || onOpenPlanDialog}
-                className="flex items-center gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors"
-                data-testid="plan-review-button"
+                onClick={() => getOverlayAPI()?.toggleOverlay?.()}
+                className="flex items-center gap-1.5 px-3 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                title="Open Ava Anywhere"
+                data-testid="ava-anywhere-hint"
               >
-                <ClipboardCheck className="w-4 h-4" />
+                <Sparkles className="size-3.5" />
+                <KbdGroup>
+                  <Kbd>{formatShortcut(avaAnywhereShortcut, true)}</Kbd>
+                </KbdGroup>
               </button>
             )}
-            <button
-              onClick={onOpenPlanDialog}
-              className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-              data-testid="plan-backlog-button"
-            >
-              <Wand2 className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Plan</span>
-            </button>
-            <PlanSettingsPopover
-              planUseSelectedWorktreeBranch={planUseSelectedWorktreeBranch}
-              onPlanUseSelectedWorktreeBranchChange={setPlanUseSelectedWorktreeBranch}
-            />
           </div>
-        )}
-
-        {/* Ava Anywhere discoverability hint — Electron only */}
-        {isMounted && !isTablet && isElectron() && (
-          <button
-            onClick={() => getOverlayAPI()?.toggleOverlay?.()}
-            className="flex items-center gap-1.5 px-3 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-            title="Open Ava Anywhere"
-            data-testid="ava-anywhere-hint"
-          >
-            <Sparkles className="size-3.5" />
-            <KbdGroup>
-              <Kbd>{formatShortcut(avaAnywhereShortcut, true)}</Kbd>
-            </KbdGroup>
-          </button>
-        )}
-      </div>
-    </div>
+        </div>
+      }
+    />
   );
 }

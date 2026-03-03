@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Library } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { DocsFileTree } from './docs-view/docs-file-tree';
 import { DocsContentPanel } from './docs-view/docs-content-panel';
 
@@ -18,11 +19,7 @@ export function DocsView() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-        <Library className="size-4 text-primary" />
-        <h1 className="text-sm font-medium">Docs</h1>
-      </div>
+      <PanelHeader icon={Library} title="Docs" />
 
       {/* Two-panel layout */}
       <div className="flex flex-1 overflow-hidden">

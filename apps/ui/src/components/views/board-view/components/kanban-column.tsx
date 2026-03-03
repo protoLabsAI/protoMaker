@@ -88,7 +88,7 @@ export const KanbanColumn = memo(function KanbanColumn({
       {/* Column Content */}
       <div
         className={cn(
-          'relative z-10 flex-1 overflow-y-auto p-2',
+          'relative z-10 flex-1 overflow-y-auto p-1.5',
           !disableItemSpacing && 'space-y-2.5',
           hideScrollbar &&
             '[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]',

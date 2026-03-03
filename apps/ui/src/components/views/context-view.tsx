@@ -26,6 +26,7 @@ import {
   MoreVertical,
   ArrowLeft,
 } from 'lucide-react';
+import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import {
   useKeyboardShortcuts,
@@ -680,48 +681,33 @@ export function ContextView() {
         data-testid="file-import-input"
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <BookOpen className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <h1 className="text-xl font-bold">Context Files</h1>
-            <p className="text-sm text-muted-foreground">
-              Add context files to include in AI prompts
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Desktop: show actions inline */}
-          <div className="hidden lg:flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleImportClick}
-              disabled={isUploading}
-              data-testid="import-file-button"
-            >
-              <FileUp className="w-4 h-4 mr-2" />
-              Import File
-            </Button>
-            <HotkeyButton
-              size="sm"
-              onClick={() => setIsCreateMarkdownOpen(true)}
-              hotkey={shortcuts.addContextFile}
-              hotkeyActive={false}
-              data-testid="create-markdown-button"
-            >
-              <FilePlus className="w-4 h-4 mr-2" />
-              Create Markdown
-            </HotkeyButton>
-          </div>
-          {/* Tablet/Mobile: show trigger for actions panel */}
+      <PanelHeader
+        icon={BookOpen}
+        title="Context Files"
+        actions={[
+          {
+            icon: FileUp,
+            label: 'Import file',
+            onClick: handleImportClick,
+            disabled: isUploading,
+            desktopOnly: true,
+            testId: 'import-file-button',
+          },
+          {
+            icon: FilePlus,
+            label: 'New file',
+            onClick: () => setIsCreateMarkdownOpen(true),
+            desktopOnly: true,
+            testId: 'create-markdown-button',
+          },
+        ]}
+        extra={
           <HeaderActionsPanelTrigger
             isOpen={showActionsPanel}
             onToggle={() => setShowActionsPanel(!showActionsPanel)}
           />
-        </div>
-      </div>
+        }
+      />
 
       {/* Actions Panel (tablet/mobile) */}
       <HeaderActionsPanel

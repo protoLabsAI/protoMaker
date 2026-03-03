@@ -53,14 +53,14 @@ export function SidebarHeader({
       )}
       {/* Project switcher row */}
       {currentProject && (
-        <div className={cn('flex items-center', sidebarOpen ? 'px-2 pt-3 pb-1 gap-1' : 'pt-1')}>
+        <div className={cn('flex items-center', sidebarOpen ? 'px-2 pt-2 pb-0.5 gap-1' : 'pt-1')}>
           <Popover open={projectListOpen} onOpenChange={setProjectListOpen}>
             <PopoverTrigger asChild>
               <button
                 className={cn(
-                  'flex items-center gap-3 text-left flex-1 min-w-0',
+                  'flex items-center gap-2 text-left flex-1 min-w-0',
                   'rounded-lg transition-colors duration-150',
-                  sidebarOpen ? 'px-2 py-1.5' : 'justify-center px-2 py-2',
+                  sidebarOpen ? 'px-2 py-1' : 'justify-center px-2 py-1.5',
                   'hover:bg-accent/50 cursor-pointer'
                 )}
                 title="Switch project"
@@ -74,11 +74,11 @@ export function SidebarHeader({
                         currentProject.path
                       )}
                       alt={currentProject.name}
-                      className="w-8 h-8 rounded-lg object-cover ring-1 ring-border/50"
+                      className="w-6 h-6 rounded-md object-cover ring-1 ring-border/50"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-                      <IconComponent className="w-5 h-5 text-brand-500" />
+                    <div className="w-6 h-6 rounded-md bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+                      <IconComponent className="w-3.5 h-3.5 text-brand-500" />
                     </div>
                   )}
                 </div>

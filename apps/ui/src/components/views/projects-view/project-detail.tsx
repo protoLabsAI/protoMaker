@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
+import { toast } from 'sonner';
 import { ProjectHeader } from './components/project-header';
-import { useProject } from './hooks/use-project';
+import { useProject, useProjectDelete } from './hooks/use-project';
 import { OverviewTab } from './tabs/overview-tab';
 import { PrdTab } from './tabs/prd-tab';
 import { MilestonesTab } from './tabs/milestones-tab';
@@ -28,6 +29,23 @@ export function ProjectDetail({
   onBack: () => void;
 }) {
   const { data: project, isLoading } = useProject(projectSlug);
+  const deleteMutation = useProjectDelete();
+
+  const handleDelete = () => {
+    deleteMutation.mutate(projectSlug, {
+      onSuccess: (res) => {
+        if (res.success) {
+          toast.success(`Deleted project "${project?.title ?? projectSlug}"`);
+          onBack();
+        } else {
+          toast.error(res.error ?? 'Failed to delete project');
+        }
+      },
+      onError: () => {
+        toast.error('Failed to delete project');
+      },
+    });
+  };
 
   if (isLoading) {
     return (
@@ -47,7 +65,7 @@ export function ProjectDetail({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      <ProjectHeader project={project as Project} onBack={onBack} />
+      <ProjectHeader project={project as Project} onBack={onBack} onDelete={handleDelete} />
 
       <div className="flex-1 overflow-y-auto px-6">
         <Tabs defaultValue="overview" className="flex flex-col h-full">
