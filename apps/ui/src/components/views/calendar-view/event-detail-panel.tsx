@@ -19,10 +19,10 @@ import { Input } from '@protolabs-ai/ui/atoms';
 import { Label } from '@protolabs-ai/ui/atoms';
 import { Textarea } from '@protolabs-ai/ui/atoms';
 import { HotkeyButton } from '@protolabs-ai/ui/molecules';
-import { CalendarDays, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { CalendarDays, Clock, ExternalLink, Pencil, Play, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
-import type { CalendarEvent, CalendarEventType } from '@protolabs-ai/types';
+import type { CalendarEvent, CalendarEventType, JobStatus } from '@protolabs-ai/types';
 import type { UpdateEventInput } from './use-calendar-events';
 
 // ============================================================================
@@ -36,6 +36,22 @@ const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
   custom: 'Custom',
   google: 'Google Calendar',
   linear: 'Linear',
+  job: 'Scheduled Job',
+};
+
+/** Job status badge styles */
+const JOB_STATUS_STYLES: Record<JobStatus, string> = {
+  pending: 'bg-muted text-muted-foreground',
+  running: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
+  completed: 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+  failed: 'bg-destructive/20 text-destructive',
+};
+
+/** Job action type labels */
+const JOB_ACTION_LABELS: Record<string, string> = {
+  'start-agent': 'Start Agent',
+  'run-automation': 'Run Automation',
+  'run-command': 'Run Command',
 };
 
 /** Preset color options for custom events */
@@ -75,6 +91,7 @@ interface EventDetailPanelProps {
   onOpenChange: (open: boolean) => void;
   onUpdate: (id: string, updates: UpdateEventInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onRunJob?: (id: string) => Promise<void>;
   isMutating?: boolean;
 }
 
@@ -127,6 +144,141 @@ function ReadOnlyEventDetail({ event }: { event: CalendarEvent }) {
         </a>
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// Job event detail view
+// ============================================================================
+
+function JobEventDetail({
+  event,
+  onRunJob,
+  onDelete,
+  isMutating,
+}: {
+  event: CalendarEvent;
+  onRunJob?: (id: string) => Promise<void>;
+  onDelete: () => Promise<void>;
+  isMutating: boolean;
+}) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const isPending = event.jobStatus === 'pending';
+
+  return (
+    <>
+      <div className="py-4 space-y-4">
+        {/* Type badge */}
+        <div className="flex items-center gap-2">
+          <Play className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span className="text-sm font-medium text-muted-foreground">Scheduled Job</span>
+          {event.jobStatus && (
+            <span
+              className={cn(
+                'text-xs px-2 py-0.5 rounded-full font-medium',
+                JOB_STATUS_STYLES[event.jobStatus]
+              )}
+            >
+              {event.jobStatus}
+            </span>
+          )}
+        </div>
+
+        {/* Schedule */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Schedule</Label>
+          <p className="text-sm">
+            {formatDate(event.date)}
+            {event.time && (
+              <span className="ml-2 inline-flex items-center gap-1 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {event.time}
+              </span>
+            )}
+          </p>
+        </div>
+
+        {/* Action details */}
+        {event.jobAction && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Action</Label>
+            <p className="text-sm font-medium">
+              {JOB_ACTION_LABELS[event.jobAction.type] ?? event.jobAction.type}
+            </p>
+            <div className="text-xs text-muted-foreground font-mono bg-muted/50 rounded px-2 py-1">
+              {event.jobAction.type === 'start-agent' && `Feature: ${event.jobAction.featureId}`}
+              {event.jobAction.type === 'run-automation' &&
+                `Automation: ${event.jobAction.automationId}`}
+              {event.jobAction.type === 'run-command' && (
+                <>
+                  <div>$ {event.jobAction.command}</div>
+                  {event.jobAction.cwd && (
+                    <div className="opacity-60">cwd: {event.jobAction.cwd}</div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        {event.description && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Description</Label>
+            <p className="text-sm whitespace-pre-wrap">{event.description}</p>
+          </div>
+        )}
+
+        {/* Execution result */}
+        {event.jobResult && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Execution Result</Label>
+            <div className="text-xs space-y-0.5 bg-muted/50 rounded px-2 py-1.5">
+              <div>Started: {new Date(event.jobResult.startedAt).toLocaleString()}</div>
+              <div>Completed: {new Date(event.jobResult.completedAt).toLocaleString()}</div>
+              <div>Duration: {(event.jobResult.durationMs / 1000).toFixed(1)}s</div>
+              {event.jobResult.error && (
+                <div className="text-destructive mt-1 font-mono">{event.jobResult.error}</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="text-destructive hover:text-destructive mr-auto"
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Delete
+        </Button>
+        {isPending && onRunJob && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onRunJob(event.id)}
+            disabled={isMutating}
+            data-testid="run-job-now-button"
+          >
+            <Play className="h-4 w-4 mr-1" />
+            Run Now
+          </Button>
+        )}
+      </DialogFooter>
+
+      <DeleteConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={onDelete}
+        title="Delete Job"
+        description={`Are you sure you want to delete "${event.title}"? This action cannot be undone.`}
+        testId="delete-job-confirm-dialog"
+        confirmTestId="confirm-delete-job"
+      />
+    </>
   );
 }
 
@@ -394,11 +546,13 @@ export function EventDetailPanel({
   onOpenChange,
   onUpdate,
   onDelete,
+  onRunJob,
   isMutating = false,
 }: EventDetailPanelProps) {
   if (!event) return null;
 
   const isCustom = event.type === 'custom';
+  const isJob = event.type === 'job';
 
   const handleUpdate = async (updates: UpdateEventInput) => {
     await onUpdate(event.id, updates);
@@ -414,7 +568,7 @@ export function EventDetailPanel({
       <DialogContent className="sm:max-w-md" data-testid="event-detail-panel">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CalendarDays className="h-5 w-5" />
+            {isJob ? <Play className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />}
             {event.title}
           </DialogTitle>
           <DialogDescription>
@@ -424,7 +578,14 @@ export function EventDetailPanel({
           </DialogDescription>
         </DialogHeader>
 
-        {isCustom ? (
+        {isJob ? (
+          <JobEventDetail
+            event={event}
+            onRunJob={onRunJob}
+            onDelete={handleDelete}
+            isMutating={isMutating}
+          />
+        ) : isCustom ? (
           <EditableEventDetail
             event={event}
             onSave={handleUpdate}

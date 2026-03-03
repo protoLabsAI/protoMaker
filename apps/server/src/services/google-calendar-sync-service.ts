@@ -228,7 +228,7 @@ export class GoogleCalendarSyncService {
           : endRaw.substring(0, 10)
         : undefined;
 
-      const eventData: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'> = {
+      const eventData: Omit<CalendarEvent, 'id' | 'projectPath' | 'createdAt' | 'updatedAt'> = {
         title: gEvent.summary || '(No title)',
         date,
         endDate: endDate !== date ? endDate : undefined,

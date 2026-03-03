@@ -88,6 +88,7 @@ import { TrajectoryStoreService } from '../services/trajectory-store-service.js'
 import { LeadHandoffService } from '../services/lead-handoff-service.js';
 import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
+import { JobExecutorService } from '../services/job-executor-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -147,6 +148,7 @@ export interface ServiceContainer {
   calendarService: typeof calendarService;
   schedulerService: ReturnType<typeof getSchedulerService>;
   automationService: AutomationService;
+  jobExecutorService: JobExecutorService;
 
   // Auto-mode
   autoModeService: AutoModeService;
@@ -644,6 +646,15 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Automation Service — manages automation registry and cron/manual execution
   const automationService = new AutomationService(schedulerService, dataDir);
 
+  // Job Executor Service — executes one-time scheduled jobs from the calendar
+  const jobExecutorService = new JobExecutorService(
+    calendarService,
+    autoModeService,
+    automationService,
+    settingsService,
+    events
+  );
+
   // Spec Generation Monitor for detecting and cleaning up stalled spec regeneration jobs
   const specGenerationMonitor = getSpecGenerationMonitor(events, {
     checkIntervalMs: 30000, // Check every 30 seconds
@@ -734,6 +745,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     calendarService,
     schedulerService,
     automationService,
+    jobExecutorService,
     autoModeService,
     hitlFormService,
     claudeUsageService,

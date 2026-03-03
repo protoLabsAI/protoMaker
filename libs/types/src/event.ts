@@ -358,6 +358,10 @@ export type EventType =
   // Sensor registry events (core sensor framework)
   | 'sensor:registered'
   | 'sensor:data-received'
+  // Calendar job events (one-time scheduled actions)
+  | 'job:started'
+  | 'job:completed'
+  | 'job:failed'
   // Server lifecycle events
   | 'server:shutdown';
 

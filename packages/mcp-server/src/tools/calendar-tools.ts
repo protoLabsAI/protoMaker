@@ -34,7 +34,7 @@ export const calendarTools: Tool[] = [
           type: 'array',
           items: {
             type: 'string',
-            enum: ['custom', 'feature_due_date', 'milestone'],
+            enum: ['custom', 'feature_due_date', 'milestone', 'job'],
           },
           description: 'Optional array of event types to filter by. If omitted, returns all types.',
         },
@@ -67,7 +67,7 @@ export const calendarTools: Tool[] = [
         },
         type: {
           type: 'string',
-          enum: ['custom', 'milestone'],
+          enum: ['custom', 'milestone', 'job'],
           description: 'Event type (default: "custom")',
         },
         description: {
@@ -81,6 +81,26 @@ export const calendarTools: Tool[] = [
         url: {
           type: 'string',
           description: 'Optional URL associated with the event',
+        },
+        time: {
+          type: 'string',
+          description: 'Time in HH:mm 24h format (required for job events, e.g., "14:30")',
+        },
+        jobAction: {
+          type: 'object',
+          description:
+            'Action to execute (required for job events). One of: { type: "start-agent", featureId: "..." }, { type: "run-automation", automationId: "..." }, { type: "run-command", command: "...", cwd?: "..." }',
+          properties: {
+            type: {
+              type: 'string',
+              enum: ['start-agent', 'run-automation', 'run-command'],
+            },
+            featureId: { type: 'string' },
+            automationId: { type: 'string' },
+            command: { type: 'string' },
+            cwd: { type: 'string' },
+          },
+          required: ['type'],
         },
       },
       required: ['projectPath', 'title', 'date'],
