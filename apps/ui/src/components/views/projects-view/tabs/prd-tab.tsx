@@ -4,11 +4,11 @@ import Markdown from 'react-markdown';
 import type { Project } from '@protolabs-ai/types';
 
 const SPARC_SECTIONS = [
-  { key: 'situation', label: 'Situation', color: 'text-blue-400' },
-  { key: 'problem', label: 'Problem', color: 'text-rose-400' },
-  { key: 'approach', label: 'Approach', color: 'text-emerald-400' },
-  { key: 'results', label: 'Results', color: 'text-amber-400' },
-  { key: 'constraints', label: 'Constraints', color: 'text-violet-400' },
+  { key: 'situation', label: 'Situation', color: 'text-[var(--status-info)]' },
+  { key: 'problem', label: 'Problem', color: 'text-[var(--status-error)]' },
+  { key: 'approach', label: 'Approach', color: 'text-[var(--status-success)]' },
+  { key: 'results', label: 'Results', color: 'text-[var(--status-warning)]' },
+  { key: 'constraints', label: 'Constraints', color: 'text-[color:var(--primary)]' },
 ] as const;
 
 function CollapsibleSection({

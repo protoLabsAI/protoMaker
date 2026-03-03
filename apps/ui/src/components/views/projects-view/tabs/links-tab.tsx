@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Plus, Trash2, ExternalLink, Link as LinkIcon } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button, Card, Input } from '@protolabs-ai/ui/atoms';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Project, ProjectLink } from '@protolabs-ai/types';
 
@@ -57,31 +56,18 @@ export function LinksTab({ project }: { project: Project }) {
 
       {/* Add form */}
       {showForm && (
-        <div className="border border-border/30 rounded-lg p-3 space-y-2 bg-muted/10">
-          <input
-            type="text"
+        <Card className="p-3 space-y-2">
+          <Input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Label..."
-            className={cn(
-              'w-full px-2.5 py-1.5 rounded text-sm',
-              'bg-background border border-border/50',
-              'text-foreground placeholder:text-muted-foreground/50',
-              'focus:outline-none focus:ring-1 focus:ring-violet-500/30'
-            )}
             autoFocus
           />
-          <input
+          <Input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://..."
-            className={cn(
-              'w-full px-2.5 py-1.5 rounded text-sm',
-              'bg-background border border-border/50',
-              'text-foreground placeholder:text-muted-foreground/50',
-              'focus:outline-none focus:ring-1 focus:ring-violet-500/30'
-            )}
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -103,7 +89,7 @@ export function LinksTab({ project }: { project: Project }) {
               Add
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Links list */}
@@ -115,10 +101,7 @@ export function LinksTab({ project }: { project: Project }) {
       ) : (
         <div className="space-y-1.5">
           {links.map((link: ProjectLink) => (
-            <div
-              key={link.id}
-              className="flex items-center gap-2 border border-border/20 rounded-lg px-3 py-2 group"
-            >
+            <Card key={link.id} className="flex-row items-center gap-2 px-3 py-2 group">
               <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <span className="text-sm text-foreground block truncate">{link.label}</span>
@@ -126,7 +109,7 @@ export function LinksTab({ project }: { project: Project }) {
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] text-blue-400 hover:text-blue-300 truncate block"
+                  className="text-[10px] text-[var(--status-info)] hover:text-[var(--status-info)]/80 truncate block"
                 >
                   {link.url}
                 </a>
@@ -134,12 +117,12 @@ export function LinksTab({ project }: { project: Project }) {
               <button
                 type="button"
                 onClick={() => removeLink.mutate(link.id)}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity"
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                 aria-label={`Remove ${link.label}`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
-            </div>
+            </Card>
           ))}
         </div>
       )}

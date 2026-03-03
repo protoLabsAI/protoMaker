@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Plus, Trash2, FileText } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button, Card, Input, Textarea } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useProjectDocs } from '../hooks/use-project-docs';
@@ -103,7 +103,7 @@ export function DocumentsTab({ projectSlug }: { projectSlug: string }) {
   return (
     <div className="flex h-full min-h-[400px] py-4 gap-3">
       {/* Document sidebar */}
-      <div className="w-48 shrink-0 border border-border/30 rounded-lg overflow-hidden flex flex-col">
+      <Card className="w-48 shrink-0 overflow-hidden py-0">
         <div className="px-2 py-2 border-b border-border/20 flex items-center justify-between">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
             Documents
@@ -150,7 +150,7 @@ export function DocumentsTab({ projectSlug }: { projectSlug: string }) {
                     e.stopPropagation();
                     handleDelete(doc.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
                   aria-label={`Delete ${doc.title}`}
                 >
                   <Trash2 className="w-3 h-3" />
@@ -159,26 +159,25 @@ export function DocumentsTab({ projectSlug }: { projectSlug: string }) {
             ))
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Editor area */}
-      <div className="flex-1 border border-border/30 rounded-lg overflow-hidden flex flex-col">
+      <Card className="flex-1 overflow-hidden py-0">
         {selectedDoc ? (
           <>
             <div className="px-3 py-2 border-b border-border/20">
-              <input
-                type="text"
+              <Input
                 value={editTitle}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full text-sm font-medium bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50"
+                className="border-none shadow-none bg-transparent font-medium focus-visible:ring-0"
                 placeholder="Document title..."
               />
             </div>
             <div className="flex-1 overflow-y-auto p-3">
-              <textarea
+              <Textarea
                 value={editContent}
                 onChange={(e) => handleContentChange(e.target.value)}
-                className="w-full h-full text-sm bg-transparent border-none outline-none resize-none text-foreground/90 placeholder:text-muted-foreground/40"
+                className="w-full h-full border-none shadow-none bg-transparent focus-visible:ring-0"
                 placeholder="Start writing..."
               />
             </div>
@@ -188,7 +187,7 @@ export function DocumentsTab({ projectSlug }: { projectSlug: string }) {
             <p className="text-sm text-muted-foreground">Select a document or create a new one.</p>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

@@ -2,9 +2,9 @@ import { cn } from '@/lib/utils';
 import type { ProjectHealth } from '@protolabs-ai/types';
 
 const HEALTH_CONFIG: Record<ProjectHealth, { color: string; label: string }> = {
-  'on-track': { color: 'bg-green-500', label: 'On Track' },
-  'at-risk': { color: 'bg-yellow-500', label: 'At Risk' },
-  'off-track': { color: 'bg-red-500', label: 'Off Track' },
+  'on-track': { color: 'bg-[var(--status-success)]', label: 'On Track' },
+  'at-risk': { color: 'bg-[var(--status-warning)]', label: 'At Risk' },
+  'off-track': { color: 'bg-[var(--status-error)]', label: 'Off Track' },
 };
 
 export function HealthIndicator({

@@ -1,23 +1,15 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Plus, Loader2, Milestone, Layers } from 'lucide-react';
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Badge, Input, Textarea } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Card } from '@protolabs-ai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-const STATUS_COLORS: Record<string, string> = {
-  researching: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  drafting: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  reviewing: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-  approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  scaffolded: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  active: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-};
+import { getProjectStatusVariant } from './lib/status-variants';
 
 interface ProjectSummary {
   slug: string;
@@ -136,30 +128,17 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
       {/* New Project Form */}
       {showNewProjectInput && (
         <div className="shrink-0 px-6 py-4 border-b border-border/40 bg-muted/20 space-y-3">
-          <input
-            type="text"
+          <Input
             placeholder="Project title..."
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            className={cn(
-              'w-full px-3 py-2 rounded-lg text-sm',
-              'bg-background border border-border/50',
-              'text-foreground placeholder:text-muted-foreground/50',
-              'focus:outline-none focus:ring-2 focus:ring-violet-500/30'
-            )}
             autoFocus
           />
-          <textarea
+          <Textarea
             placeholder="Describe the project goal..."
             value={newDescription}
             onChange={(e) => setNewDescription(e.target.value)}
             rows={3}
-            className={cn(
-              'w-full px-3 py-2 rounded-lg text-sm resize-none',
-              'bg-background border border-border/50',
-              'text-foreground placeholder:text-muted-foreground/50',
-              'focus:outline-none focus:ring-2 focus:ring-violet-500/30'
-            )}
           />
           <div className="flex items-center justify-end gap-2">
             <Button
@@ -204,17 +183,22 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
             {projects.map((project) => {
               const phaseCount =
                 project.milestones?.reduce((sum, ms) => sum + (ms.phases?.length || 0), 0) || 0;
-              const statusClass = STATUS_COLORS[project.status] || 'bg-muted text-muted-foreground';
 
               return (
-                <button
+                <Card
                   key={project.slug}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelect(project.slug)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onSelect(project.slug);
+                    }
+                  }}
                   className={cn(
-                    'w-full text-left rounded-lg border border-border/40 p-4',
-                    'bg-card/50 hover:bg-card/80 transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-violet-500/30'
+                    'py-3 px-4 cursor-pointer hover:bg-card/80 transition-colors',
+                    'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none'
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -239,13 +223,14 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
                       </div>
                     </div>
                     <Badge
-                      variant="outline"
-                      className={cn('text-[10px] uppercase tracking-wider shrink-0', statusClass)}
+                      variant={getProjectStatusVariant(project.status)}
+                      size="sm"
+                      className="uppercase tracking-wider shrink-0"
                     >
                       {project.status}
                     </Badge>
                   </div>
-                </button>
+                </Card>
               );
             })}
           </div>

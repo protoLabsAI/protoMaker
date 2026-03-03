@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { Plus, Trash2, MessageSquare } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button, Card, Textarea } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { cn } from '@/lib/utils';
 import { HealthIndicator } from '../components/health-indicator';
 import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { toast } from 'sonner';
@@ -59,40 +65,31 @@ export function UpdatesTab({ project }: { project: Project }) {
 
       {/* Post form */}
       {showForm && (
-        <div className="border border-border/30 rounded-lg p-3 space-y-3 bg-muted/10">
+        <Card className="p-3 space-y-3">
           <div>
             <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1.5">
               Health Status
             </span>
-            <div className="flex gap-2">
-              {(['on-track', 'at-risk', 'off-track'] as ProjectHealth[]).map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => setHealth(h)}
-                  className={cn(
-                    'px-3 py-1 rounded text-xs border transition-colors',
-                    health === h
-                      ? 'border-foreground/30 bg-foreground/10'
-                      : 'border-border/30 hover:bg-muted/40'
-                  )}
-                >
-                  <HealthIndicator health={h} size="sm" />
-                </button>
-              ))}
-            </div>
+            <Select value={health} onValueChange={(v) => setHealth(v as ProjectHealth)}>
+              <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectValue>
+                  <HealthIndicator health={health} size="sm" />
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {(['on-track', 'at-risk', 'off-track'] as ProjectHealth[]).map((h) => (
+                  <SelectItem key={h} value={h}>
+                    <HealthIndicator health={h} size="sm" />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <textarea
+          <Textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="What's the current status? Any blockers or wins?"
             rows={3}
-            className={cn(
-              'w-full px-2.5 py-1.5 rounded text-sm resize-none',
-              'bg-background border border-border/50',
-              'text-foreground placeholder:text-muted-foreground/50',
-              'focus:outline-none focus:ring-1 focus:ring-violet-500/30'
-            )}
           />
           <div className="flex justify-end gap-2">
             <Button
@@ -113,7 +110,7 @@ export function UpdatesTab({ project }: { project: Project }) {
               Post
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Updates timeline */}
@@ -125,7 +122,7 @@ export function UpdatesTab({ project }: { project: Project }) {
       ) : (
         <div className="space-y-3">
           {updates.map((update: ProjectStatusUpdate) => (
-            <div key={update.id} className="border border-border/20 rounded-lg px-3 py-2.5 group">
+            <Card key={update.id} className="px-3 py-2.5 group">
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
                   <HealthIndicator health={update.health} size="sm" />
@@ -138,14 +135,15 @@ export function UpdatesTab({ project }: { project: Project }) {
                   <button
                     type="button"
                     onClick={() => removeUpdate.mutate(update.id)}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                    aria-label="Remove status update"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               </div>
               <p className="text-sm text-foreground/90 whitespace-pre-wrap">{update.body}</p>
-            </div>
+            </Card>
           ))}
         </div>
       )}

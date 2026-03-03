@@ -1,15 +1,7 @@
 import { Badge } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
+import { getMilestoneStatusVariant } from '../lib/status-variants';
 import type { Project } from '@protolabs-ai/types';
-
-const MILESTONE_STATUS_COLORS: Record<string, string> = {
-  stub: 'bg-muted text-muted-foreground',
-  planning: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  planned: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-  pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  'in-progress': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-};
 
 export function MilestonesTab({ project }: { project: Project }) {
   if (!project.milestones || project.milestones.length === 0) {
@@ -28,8 +20,6 @@ export function MilestonesTab({ project }: { project: Project }) {
         const totalPhases = ms.phases?.length ?? 0;
         const linkedPhases = ms.phases?.filter((p) => p.featureId).length ?? 0;
         const progressPct = totalPhases > 0 ? Math.round((linkedPhases / totalPhases) * 100) : 0;
-        const statusClass = MILESTONE_STATUS_COLORS[ms.status] || 'bg-muted text-muted-foreground';
-
         return (
           <div key={i} className="border border-border/30 rounded-lg overflow-hidden">
             <div className="px-3 py-2.5 bg-muted/20">
@@ -40,8 +30,9 @@ export function MilestonesTab({ project }: { project: Project }) {
                     <span className="text-[10px] text-muted-foreground">{ms.targetDate}</span>
                   )}
                   <Badge
-                    variant="outline"
-                    className={cn('text-[10px] uppercase tracking-wider', statusClass)}
+                    variant={getMilestoneStatusVariant(ms.status)}
+                    size="sm"
+                    className="uppercase tracking-wider"
                   >
                     {ms.status}
                   </Badge>
@@ -56,7 +47,7 @@ export function MilestonesTab({ project }: { project: Project }) {
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex-1 h-1.5 bg-muted/40 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all"
+                      className="h-full bg-[var(--status-success)] rounded-full transition-all"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>

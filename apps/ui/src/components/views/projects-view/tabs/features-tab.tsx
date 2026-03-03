@@ -1,17 +1,10 @@
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Badge, Card } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectFeatures } from '../hooks/use-project-features';
+import { getFeatureStatusVariant } from '../lib/status-variants';
 import type { Feature } from '@protolabs-ai/types';
-
-const FEATURE_STATUS_COLORS: Record<string, string> = {
-  backlog: 'bg-muted text-muted-foreground',
-  in_progress: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  review: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-  blocked: 'bg-red-500/20 text-red-400 border-red-500/30',
-  done: 'bg-green-500/20 text-green-400 border-green-500/30',
-};
 
 export function FeaturesTab({ projectSlug }: { projectSlug: string }) {
   const { data, isLoading } = useProjectFeatures(projectSlug);
@@ -70,16 +63,9 @@ export function FeaturesTab({ projectSlug }: { projectSlug: string }) {
 }
 
 function FeatureCard({ feature, isEpic = false }: { feature: Feature; isEpic?: boolean }) {
-  const statusClass =
-    (feature.status && FEATURE_STATUS_COLORS[feature.status]) || 'bg-muted text-muted-foreground';
-
   return (
-    <div
-      className={cn(
-        'border border-border/30 rounded-lg px-3 py-2 flex items-center gap-2',
-        isEpic && 'bg-muted/10 border-l-2',
-        isEpic && feature.epicColor && `border-l-[${feature.epicColor}]`
-      )}
+    <Card
+      className={cn('py-2 px-3 flex-row items-center gap-2', isEpic && 'bg-muted/10 border-l-2')}
       style={isEpic && feature.epicColor ? { borderLeftColor: feature.epicColor } : undefined}
     >
       <div className="flex-1 min-w-0">
@@ -91,9 +77,13 @@ function FeatureCard({ feature, isEpic = false }: { feature: Feature; isEpic?: b
       {feature.complexity && (
         <span className="text-[10px] text-muted-foreground">{feature.complexity}</span>
       )}
-      <Badge variant="outline" className={cn('text-[10px] uppercase tracking-wider', statusClass)}>
+      <Badge
+        variant={getFeatureStatusVariant(feature.status ?? '')}
+        size="sm"
+        className="uppercase tracking-wider"
+      >
         {feature.status}
       </Badge>
-    </div>
+    </Card>
   );
 }
