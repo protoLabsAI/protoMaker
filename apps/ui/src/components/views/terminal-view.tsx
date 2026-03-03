@@ -1489,7 +1489,7 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
           <div className="p-4 rounded-full bg-brand-500/10 mb-4">
             <TerminalIcon className="h-12 w-12 text-brand-500" />
           </div>
-          <p className="text-muted-foreground max-w-md mb-6">
+          <p className="text-muted-foreground max-w-md mb-4">
             Create a new terminal session to start executing commands.
             {currentProject && (
               <span className="block mt-2 text-sm">
@@ -1498,6 +1498,11 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
               </span>
             )}
           </p>
+
+          <Button variant="outline" size="sm" onClick={() => createTerminal()} className="mb-6">
+            <Plus className="h-4 w-4 mr-2" />
+            New Terminal
+          </Button>
 
           {status?.platform && (
             <p className="text-xs text-muted-foreground">
