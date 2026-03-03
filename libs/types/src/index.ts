@@ -116,6 +116,12 @@ export type {
 export type {
   PhaseComplexity,
   ProjectStatus,
+  ProjectHealth,
+  ProjectPriority,
+  ProjectLink,
+  ProjectStatusUpdate,
+  ProjectDocument,
+  ProjectDocumentsFile,
   MilestoneStatus,
   Phase,
   Milestone,

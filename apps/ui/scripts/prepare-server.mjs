@@ -42,6 +42,7 @@ const LOCAL_PACKAGES = [
   '@protolabs-ai/observability',
   '@protolabs-ai/git-utils',
   '@protolabs-ai/error-tracking',
+  '@protolabs-ai/tools',
 ];
 
 console.log('🔧 Preparing server for Electron bundling...\n');

@@ -23,6 +23,59 @@ export type ProjectStatus =
   | 'completed'; // All features done
 
 /**
+ * Project health indicator for status updates
+ */
+export type ProjectHealth = 'on-track' | 'at-risk' | 'off-track';
+
+/**
+ * Project priority level
+ */
+export type ProjectPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
+
+/**
+ * External link attached to a project
+ */
+export interface ProjectLink {
+  id: string;
+  label: string;
+  url: string;
+  createdAt: string;
+}
+
+/**
+ * Status update posted to a project timeline
+ */
+export interface ProjectStatusUpdate {
+  id: string;
+  health: ProjectHealth;
+  body: string;
+  author: string;
+  createdAt: string;
+}
+
+/**
+ * A rich-text document within a project
+ */
+export interface ProjectDocument {
+  id: string;
+  title: string;
+  content: string;
+  author?: string;
+  createdAt: string;
+  updatedAt: string;
+  wordCount?: number;
+}
+
+/**
+ * Persistent file format for project documents (stored as docs.json)
+ */
+export interface ProjectDocumentsFile {
+  version: 1;
+  docOrder: string[];
+  docs: Record<string, ProjectDocument>;
+}
+
+/**
  * Status of a milestone
  */
 export type MilestoneStatus =
@@ -112,6 +165,36 @@ export interface Project {
 
   /** High-level goal/description */
   goal: string;
+
+  /** Rich-text description (HTML from TipTap) */
+  description?: string;
+
+  /** Project lead */
+  lead?: string;
+
+  /** Team members */
+  members?: string[];
+
+  /** Start date (YYYY-MM-DD) */
+  startDate?: string;
+
+  /** Target completion date (YYYY-MM-DD) */
+  targetDate?: string;
+
+  /** Project health indicator */
+  health?: ProjectHealth;
+
+  /** Priority level */
+  priority?: ProjectPriority;
+
+  /** Display color (hex) */
+  color?: string;
+
+  /** External links */
+  links?: ProjectLink[];
+
+  /** Status update timeline */
+  updates?: ProjectStatusUpdate[];
 
   /** Current status in the orchestration pipeline */
   status: ProjectStatus;
@@ -317,6 +400,30 @@ export interface CreateProjectInput {
   /** High-level goal/description */
   goal: string;
 
+  /** Rich-text description (HTML) */
+  description?: string;
+
+  /** Project lead */
+  lead?: string;
+
+  /** Team members */
+  members?: string[];
+
+  /** Start date (YYYY-MM-DD) */
+  startDate?: string;
+
+  /** Target completion date (YYYY-MM-DD) */
+  targetDate?: string;
+
+  /** Project health indicator */
+  health?: ProjectHealth;
+
+  /** Priority level */
+  priority?: ProjectPriority;
+
+  /** Display color (hex) */
+  color?: string;
+
   /** Optional initial milestones */
   milestones?: Array<{
     title: string;
@@ -348,6 +455,36 @@ export interface UpdateProjectInput {
 
   /** Update goal */
   goal?: string;
+
+  /** Rich-text description (HTML) */
+  description?: string;
+
+  /** Project lead */
+  lead?: string;
+
+  /** Team members */
+  members?: string[];
+
+  /** Start date (YYYY-MM-DD) */
+  startDate?: string;
+
+  /** Target completion date (YYYY-MM-DD) */
+  targetDate?: string;
+
+  /** Project health indicator */
+  health?: ProjectHealth;
+
+  /** Priority level */
+  priority?: ProjectPriority;
+
+  /** Display color (hex) */
+  color?: string;
+
+  /** External links */
+  links?: ProjectLink[];
+
+  /** Status update timeline */
+  updates?: ProjectStatusUpdate[];
 
   /** Update status */
   status?: ProjectStatus;

@@ -60,6 +60,7 @@ export {
   getProjectDir,
   getProjectFilePath,
   getProjectJsonPath,
+  getProjectDocsPath,
   getResearchFilePath,
   getPrdFilePath,
   getMilestonesDir,

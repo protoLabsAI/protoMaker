@@ -21,7 +21,7 @@ import type {
   IntegrationStatusResponse,
   SystemHealthResponse,
 } from './api-types';
-import type { DiscordChannelSignalConfig } from '@protolabs-ai/types';
+import type { DiscordChannelSignalConfig, ProjectHealth } from '@protolabs-ai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
@@ -309,5 +309,61 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         error?: string;
       }> =>
         this.post('/api/projects/lifecycle/launch', { projectPath, projectSlug, maxConcurrency }),
+
+      // --- Shared tool routes (mounted via Express adapter) ---
+
+      addLink: (projectPath: string, projectSlug: string, label: string, url: string) =>
+        this.post('/api/projects/tools/project_add_link', { projectPath, projectSlug, label, url }),
+      removeLink: (projectPath: string, projectSlug: string, linkId: string) =>
+        this.post('/api/projects/tools/project_remove_link', { projectPath, projectSlug, linkId }),
+      addStatusUpdate: (
+        projectPath: string,
+        projectSlug: string,
+        health: ProjectHealth,
+        body: string,
+        author: string
+      ) =>
+        this.post('/api/projects/tools/project_add_update', {
+          projectPath,
+          projectSlug,
+          health,
+          body,
+          author,
+        }),
+      removeStatusUpdate: (projectPath: string, projectSlug: string, updateId: string) =>
+        this.post('/api/projects/tools/project_remove_update', {
+          projectPath,
+          projectSlug,
+          updateId,
+        }),
+      listDocs: (projectPath: string, projectSlug: string) =>
+        this.post('/api/projects/tools/project_list_docs', { projectPath, projectSlug }),
+      getDoc: (projectPath: string, projectSlug: string, docId: string) =>
+        this.post('/api/projects/tools/project_get_doc', { projectPath, projectSlug, docId }),
+      createDoc: (projectPath: string, projectSlug: string, title: string, content?: string) =>
+        this.post('/api/projects/tools/project_create_doc', {
+          projectPath,
+          projectSlug,
+          title,
+          content,
+        }),
+      updateDoc: (
+        projectPath: string,
+        projectSlug: string,
+        docId: string,
+        title?: string,
+        content?: string
+      ) =>
+        this.post('/api/projects/tools/project_update_doc', {
+          projectPath,
+          projectSlug,
+          docId,
+          title,
+          content,
+        }),
+      deleteDoc: (projectPath: string, projectSlug: string, docId: string) =>
+        this.post('/api/projects/tools/project_delete_doc', { projectPath, projectSlug, docId }),
+      getProjectFeatures: (projectPath: string, projectSlug: string) =>
+        this.post('/api/projects/tools/project_list_features', { projectPath, projectSlug }),
     };
   };

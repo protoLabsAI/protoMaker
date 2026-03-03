@@ -28,3 +28,5 @@ export { createGitHubTools } from './github-tools.js';
 export type { GitHubDeps, PullRequest } from './github-tools.js';
 export { createClaudeCodeTool } from './claude-code-tool.js';
 export type { ClaudeCodeDeps } from './claude-code-tool.js';
+export { createProjectTools } from './project-tools.js';
+export type { ProjectDeps } from './project-tools.js';

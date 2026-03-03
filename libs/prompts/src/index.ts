@@ -164,6 +164,7 @@ export { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 export { getBoardJanitorPrompt } from './agents/board-janitor.js';
 export { getFrankPrompt } from './agents/frank.js';
 export { getKaiPrompt } from './agents/kai.js';
+export { getPmPrompt } from './agents/pm-prompt.js';
 
 // Prompt quality linter
 export { lintPrompt, lintAllPrompts } from './lint.js';

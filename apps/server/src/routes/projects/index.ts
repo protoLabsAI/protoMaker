@@ -24,6 +24,7 @@ import { createCreateFeaturesHandler } from './routes/create-features.js';
 import { createArchiveHandler } from './routes/archive.js';
 import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
+import { createProjectTools, toExpressRouter } from '@protolabs-ai/tools';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,
@@ -78,6 +79,11 @@ export function createProjectsRoutes(
   if (lifecycleService) {
     router.use('/lifecycle', createLifecycleRoutes(lifecycleService, projectService, events));
   }
+
+  // Mount shared project tools via Express adapter (links, updates, docs, features)
+  const projectTools = createProjectTools({ projectService });
+  const toolRouter = toExpressRouter(projectTools, { basePath: '/tools' });
+  router.use(toolRouter);
 
   return router;
 }

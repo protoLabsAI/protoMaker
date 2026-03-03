@@ -8,10 +8,15 @@
 import path from 'path';
 import type {
   Project,
+  Feature,
   CreateProjectInput,
   UpdateProjectInput,
   CreateFeaturesFromProjectOptions,
   CreateFeaturesResult,
+  ProjectLink,
+  ProjectStatusUpdate,
+  ProjectDocument,
+  ProjectDocumentsFile,
 } from '@protolabs-ai/types';
 import {
   createLogger,
@@ -28,6 +33,7 @@ import {
   getProjectsDir,
   getProjectDir,
   getProjectJsonPath,
+  getProjectDocsPath,
   getProjectFilePath,
   getMilestonesDir,
   getMilestoneDir,
@@ -36,11 +42,18 @@ import {
   ensureMilestoneDir,
 } from '@protolabs-ai/platform';
 import type { FeatureLoader } from './feature-loader.js';
+import type { CalendarService } from './calendar-service.js';
 
 const logger = createLogger('ProjectService');
 
 export class ProjectService {
+  private calendarService?: CalendarService;
+
   constructor(private featureLoader: FeatureLoader) {}
+
+  setCalendarService(calendarService: CalendarService): void {
+    this.calendarService = calendarService;
+  }
 
   /**
    * List all projects in a project path
@@ -119,6 +132,21 @@ export class ProjectService {
       }
     }
 
+    // Sync milestone target dates to calendar events
+    if (this.calendarService && project.milestones) {
+      for (const milestone of project.milestones) {
+        if (milestone.targetDate) {
+          const sourceId = `project:${project.slug}/milestone:${slugify(milestone.title)}`;
+          await this.calendarService.upsertBySourceId(projectPath, sourceId, {
+            title: `${milestone.title} (${project.title})`,
+            date: milestone.targetDate,
+            type: 'milestone',
+            description: milestone.description,
+          });
+        }
+      }
+    }
+
     logger.info(`Created project: ${project.slug}`);
     return project;
   }
@@ -149,6 +177,21 @@ export class ProjectService {
     // Update project.md
     const mdPath = getProjectFilePath(projectPath, projectSlug);
     await secureFs.writeFile(mdPath, generateProjectMarkdown(updated));
+
+    // Sync milestone target dates to calendar events
+    if (this.calendarService && updated.milestones) {
+      for (const milestone of updated.milestones) {
+        if (milestone.targetDate) {
+          const sourceId = `project:${projectSlug}/milestone:${slugify(milestone.title)}`;
+          await this.calendarService.upsertBySourceId(projectPath, sourceId, {
+            title: `${milestone.title} (${updated.title})`,
+            date: milestone.targetDate,
+            type: 'milestone',
+            description: milestone.description,
+          });
+        }
+      }
+    }
 
     logger.info(`Updated project: ${projectSlug}`);
     return updated;
@@ -207,6 +250,7 @@ export class ProjectService {
           status: initialStatus,
           isEpic: true,
           branchName: `epic/${slugify(milestone.title, 30)}`,
+          projectSlug,
         });
         epicId = epicFeature.id;
         epicIds.push(epicId);
@@ -233,6 +277,7 @@ export class ProjectService {
           branchName,
           epicId,
           dependencies,
+          projectSlug,
         });
 
         featureIds.push(feature.id);
@@ -261,6 +306,210 @@ export class ProjectService {
       epicIds,
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Links
+  // ---------------------------------------------------------------------------
+
+  async addLink(
+    projectPath: string,
+    projectSlug: string,
+    label: string,
+    url: string
+  ): Promise<ProjectLink> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) throw new Error(`Project "${projectSlug}" not found`);
+
+    const link: ProjectLink = {
+      id: `link-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      label,
+      url,
+      createdAt: new Date().toISOString(),
+    };
+
+    const links = [...(project.links ?? []), link];
+    await this.updateProject(projectPath, projectSlug, { links });
+    return link;
+  }
+
+  async removeLink(projectPath: string, projectSlug: string, linkId: string): Promise<Project> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) throw new Error(`Project "${projectSlug}" not found`);
+
+    const links = (project.links ?? []).filter((l) => l.id !== linkId);
+    const updated = await this.updateProject(projectPath, projectSlug, { links });
+    return updated!;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Status Updates
+  // ---------------------------------------------------------------------------
+
+  async addStatusUpdate(
+    projectPath: string,
+    projectSlug: string,
+    health: ProjectStatusUpdate['health'],
+    body: string,
+    author: string
+  ): Promise<ProjectStatusUpdate> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) throw new Error(`Project "${projectSlug}" not found`);
+
+    const update: ProjectStatusUpdate = {
+      id: `update-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      health,
+      body,
+      author,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updates = [...(project.updates ?? []), update];
+    await this.updateProject(projectPath, projectSlug, { updates });
+    return update;
+  }
+
+  async removeStatusUpdate(
+    projectPath: string,
+    projectSlug: string,
+    updateId: string
+  ): Promise<Project> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) throw new Error(`Project "${projectSlug}" not found`);
+
+    const updates = (project.updates ?? []).filter((u) => u.id !== updateId);
+    const updated = await this.updateProject(projectPath, projectSlug, { updates });
+    return updated!;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Documents (stored in separate docs.json)
+  // ---------------------------------------------------------------------------
+
+  private async readDocsFile(
+    projectPath: string,
+    projectSlug: string
+  ): Promise<ProjectDocumentsFile> {
+    const docsPath = getProjectDocsPath(projectPath, projectSlug);
+    try {
+      const raw = await secureFs.readFile(docsPath, 'utf-8');
+      const content = typeof raw === 'string' ? raw : raw.toString('utf-8');
+      return JSON.parse(content) as ProjectDocumentsFile;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return { version: 1, docOrder: [], docs: {} };
+      }
+      throw error;
+    }
+  }
+
+  private async writeDocsFile(
+    projectPath: string,
+    projectSlug: string,
+    file: ProjectDocumentsFile
+  ): Promise<void> {
+    const docsPath = getProjectDocsPath(projectPath, projectSlug);
+    await secureFs.writeFile(docsPath, JSON.stringify(file, null, 2));
+  }
+
+  async listDocs(projectPath: string, projectSlug: string): Promise<ProjectDocumentsFile> {
+    return this.readDocsFile(projectPath, projectSlug);
+  }
+
+  async getDoc(
+    projectPath: string,
+    projectSlug: string,
+    docId: string
+  ): Promise<ProjectDocument | null> {
+    const file = await this.readDocsFile(projectPath, projectSlug);
+    return file.docs[docId] ?? null;
+  }
+
+  async createDoc(
+    projectPath: string,
+    projectSlug: string,
+    title: string,
+    content?: string,
+    author?: string
+  ): Promise<ProjectDocument> {
+    const file = await this.readDocsFile(projectPath, projectSlug);
+    const now = new Date().toISOString();
+    const doc: ProjectDocument = {
+      id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      content: content ?? '',
+      author,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    file.docs[doc.id] = doc;
+    file.docOrder.push(doc.id);
+    await this.writeDocsFile(projectPath, projectSlug, file);
+    logger.info(`Created doc "${title}" in project ${projectSlug}`);
+    return doc;
+  }
+
+  async updateDoc(
+    projectPath: string,
+    projectSlug: string,
+    docId: string,
+    updates: { title?: string; content?: string }
+  ): Promise<ProjectDocument> {
+    const file = await this.readDocsFile(projectPath, projectSlug);
+    const existing = file.docs[docId];
+    if (!existing) throw new Error(`Document "${docId}" not found in project "${projectSlug}"`);
+
+    const updated: ProjectDocument = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    if (updates.content !== undefined) {
+      updated.wordCount = updates.content
+        .replace(/<[^>]*>/g, '')
+        .split(/\s+/)
+        .filter(Boolean).length;
+    }
+    file.docs[docId] = updated;
+    await this.writeDocsFile(projectPath, projectSlug, file);
+    return updated;
+  }
+
+  async deleteDoc(projectPath: string, projectSlug: string, docId: string): Promise<void> {
+    const file = await this.readDocsFile(projectPath, projectSlug);
+    if (!file.docs[docId])
+      throw new Error(`Document "${docId}" not found in project "${projectSlug}"`);
+
+    delete file.docs[docId];
+    file.docOrder = file.docOrder.filter((id) => id !== docId);
+    await this.writeDocsFile(projectPath, projectSlug, file);
+    logger.info(`Deleted doc "${docId}" from project ${projectSlug}`);
+  }
+
+  async reorderDocs(projectPath: string, projectSlug: string, docOrder: string[]): Promise<void> {
+    const file = await this.readDocsFile(projectPath, projectSlug);
+    file.docOrder = docOrder;
+    await this.writeDocsFile(projectPath, projectSlug, file);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Project Features
+  // ---------------------------------------------------------------------------
+
+  async getProjectFeatures(
+    projectPath: string,
+    projectSlug: string
+  ): Promise<{ features: Feature[]; epics: Feature[] }> {
+    const allFeatures = await this.featureLoader.getAll(projectPath);
+    const projectFeatures = allFeatures.filter((f) => f.projectSlug === projectSlug);
+    const epics = projectFeatures.filter((f) => f.isEpic);
+    const features = projectFeatures.filter((f) => !f.isEpic);
+    return { features, epics };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Linear Integration
+  // ---------------------------------------------------------------------------
 
   /**
    * Find a local project by its Linear project ID

@@ -118,6 +118,17 @@ export function getProjectJsonPath(projectPath: string, projectSlug: string): st
 }
 
 /**
+ * Get the project documents file path
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param projectSlug - Project slug
+ * @returns Absolute path to {projectPath}/.automaker/projects/{projectSlug}/docs.json
+ */
+export function getProjectDocsPath(projectPath: string, projectSlug: string): string {
+  return path.join(getProjectDir(projectPath, projectSlug), 'docs.json');
+}
+
+/**
  * Get the deep research results file path
  *
  * @param projectPath - Absolute path to project directory

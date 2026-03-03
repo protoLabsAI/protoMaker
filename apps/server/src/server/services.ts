@@ -491,6 +491,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
 
   const projectService = new ProjectService(featureLoader);
+  projectService.setCalendarService(calendarService);
 
   // Project Lifecycle Service (Linear as source of truth)
   const projectLifecycleService = new ProjectLifecycleService(

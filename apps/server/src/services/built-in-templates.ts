@@ -18,6 +18,7 @@ import {
   getPrMaintainerPrompt,
   getBoardJanitorPrompt,
   getFrankPrompt,
+  getPmPrompt,
 } from '@protolabs-ai/prompts';
 import type { RoleRegistryService } from './role-registry-service.js';
 
@@ -194,6 +195,48 @@ export function buildTemplates(
       trustLevel: 1,
       exposure: { cli: false, discord: false },
       tags: ['planning', 'product', 'requirements'],
+    },
+    {
+      name: 'project-manager',
+      displayName: 'Project Manager',
+      description:
+        'Manages the project board, tracks milestones, posts status updates, and produces distilled reports for Ava. Owns project lifecycle from planning through delivery.',
+      role: 'product-manager',
+      tier: 0,
+      model: 'sonnet',
+      maxTurns: 80,
+      canUseBash: false,
+      canModifyFiles: false,
+      canCommit: false,
+      canCreatePRs: false,
+      trustLevel: 2,
+      tools: [
+        'project_list',
+        'project_get',
+        'project_update',
+        'project_add_link',
+        'project_remove_link',
+        'project_add_update',
+        'project_remove_update',
+        'project_list_docs',
+        'project_get_doc',
+        'project_create_doc',
+        'project_update_doc',
+        'project_delete_doc',
+        'project_list_features',
+        'list_features',
+        'get_feature',
+        'update_feature',
+        'create_feature',
+        'query_board',
+      ],
+      exposure: { cli: true, discord: true, allowedUsers },
+      tags: ['project', 'board', 'management', 'reports', 'milestones'],
+      systemPrompt: resolvePersonaPrompt(
+        'project-manager',
+        getPmPrompt(promptConfig),
+        personaOverrides
+      ),
     },
     {
       name: 'engineering-manager',
