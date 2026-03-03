@@ -1,19 +1,27 @@
 import { useState } from 'react';
-import { Calendar, User, Users, Target, Flag } from 'lucide-react';
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Calendar, User, Users, Target } from 'lucide-react';
+import { Badge, Card, Input } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { HealthIndicator } from '../components/health-indicator';
+import { getProjectStatusVariant } from '../lib/status-variants';
 import { useProjectUpdate } from '../hooks/use-project';
 import type { Project, ProjectHealth, ProjectPriority } from '@protolabs-ai/types';
 import { toast } from 'sonner';
 
-const PRIORITY_LABELS: Record<string, { label: string; color: string }> = {
-  urgent: { label: 'Urgent', color: 'text-red-400' },
-  high: { label: 'High', color: 'text-orange-400' },
-  medium: { label: 'Medium', color: 'text-yellow-400' },
-  low: { label: 'Low', color: 'text-blue-400' },
-  none: { label: 'None', color: 'text-muted-foreground' },
+const PRIORITY_CONFIG: Record<ProjectPriority, string> = {
+  urgent: 'Urgent',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  none: 'None',
 };
 
 function PropertyRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -79,63 +87,65 @@ export function OverviewTab({ project }: { project: Project }) {
       {/* Properties Grid */}
       <div className="border border-border/30 rounded-lg divide-y divide-border/20 px-3">
         <PropertyRow label="Status">
-          <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+          <Badge
+            variant={getProjectStatusVariant(project.status)}
+            size="sm"
+            className="uppercase tracking-wider"
+          >
             {project.status}
           </Badge>
         </PropertyRow>
 
         <PropertyRow label="Health">
-          <div className="flex items-center gap-2">
-            {(['on-track', 'at-risk', 'off-track'] as ProjectHealth[]).map((h) => (
-              <button
-                key={h}
-                type="button"
-                onClick={() => handleHealthChange(h)}
-                className={cn(
-                  'px-2 py-0.5 rounded text-[10px] border transition-colors',
-                  project.health === h
-                    ? 'border-foreground/30 bg-foreground/10'
-                    : 'border-transparent hover:bg-muted/40'
-                )}
-              >
-                <HealthIndicator health={h} size="sm" />
-              </button>
-            ))}
-          </div>
+          <Select
+            value={project.health ?? 'on-track'}
+            onValueChange={(v) => handleHealthChange(v as ProjectHealth)}
+          >
+            <SelectTrigger className="h-8 w-40 text-xs">
+              <SelectValue>
+                <HealthIndicator
+                  health={(project.health ?? 'on-track') as ProjectHealth}
+                  size="sm"
+                />
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {(['on-track', 'at-risk', 'off-track'] as ProjectHealth[]).map((h) => (
+                <SelectItem key={h} value={h}>
+                  <HealthIndicator health={h} size="sm" />
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </PropertyRow>
 
         <PropertyRow label="Priority">
-          <div className="flex items-center gap-1.5">
-            {(['urgent', 'high', 'medium', 'low', 'none'] as ProjectPriority[]).map((p) => {
-              const config = PRIORITY_LABELS[p];
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => handlePriorityChange(p)}
-                  className={cn(
-                    'px-2 py-0.5 rounded text-[10px] border transition-colors',
-                    project.priority === p
-                      ? 'border-foreground/30 bg-foreground/10'
-                      : 'border-transparent hover:bg-muted/40',
-                    config.color
-                  )}
-                >
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
+          <Select
+            value={project.priority ?? 'none'}
+            onValueChange={(v) => handlePriorityChange(v as ProjectPriority)}
+          >
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(PRIORITY_CONFIG) as [ProjectPriority, string][]).map(
+                ([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                )
+              )}
+            </SelectContent>
+          </Select>
         </PropertyRow>
 
         <PropertyRow label="Lead">
           {editingField === 'lead' ? (
             <div className="flex items-center gap-2">
-              <input
-                type="text"
+              <Input
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="text-sm bg-background border border-border/50 rounded px-2 py-0.5 w-40"
+                className="h-8 w-40 text-sm"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') saveEdit('lead');
@@ -169,11 +179,11 @@ export function OverviewTab({ project }: { project: Project }) {
           <span className="flex items-center gap-1.5 text-sm text-foreground/80">
             <Calendar className="w-3.5 h-3.5" />
             {editingField === 'startDate' ? (
-              <input
+              <Input
                 type="date"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="text-sm bg-background border border-border/50 rounded px-2 py-0.5"
+                className="h-8 w-40 text-sm"
                 autoFocus
                 onBlur={() => saveEdit('startDate')}
               />
@@ -193,11 +203,11 @@ export function OverviewTab({ project }: { project: Project }) {
           <span className="flex items-center gap-1.5 text-sm text-foreground/80">
             <Target className="w-3.5 h-3.5" />
             {editingField === 'targetDate' ? (
-              <input
+              <Input
                 type="date"
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="text-sm bg-background border border-border/50 rounded px-2 py-0.5"
+                className="h-8 w-40 text-sm"
                 autoFocus
                 onBlur={() => saveEdit('targetDate')}
               />
@@ -216,22 +226,22 @@ export function OverviewTab({ project }: { project: Project }) {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="border border-border/30 rounded-lg p-3 text-center">
+        <Card className="py-3 px-4 text-center">
           <div className="text-lg font-semibold text-foreground">{milestoneCount}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
             Milestones
           </div>
-        </div>
-        <div className="border border-border/30 rounded-lg p-3 text-center">
+        </Card>
+        <Card className="py-3 px-4 text-center">
           <div className="text-lg font-semibold text-foreground">{phaseCount}</div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Phases</div>
-        </div>
-        <div className="border border-border/30 rounded-lg p-3 text-center">
+        </Card>
+        <Card className="py-3 px-4 text-center">
           <div className="text-lg font-semibold text-foreground">
             {phaseCount > 0 ? Math.round((completedPhases / phaseCount) * 100) : 0}%
           </div>
           <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Complete</div>
-        </div>
+        </Card>
       </div>
     </div>
   );

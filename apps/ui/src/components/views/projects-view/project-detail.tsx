@@ -1,3 +1,12 @@
+import {
+  LayoutDashboard,
+  FileText,
+  Milestone,
+  Layers,
+  FileEdit,
+  ExternalLink,
+  MessageSquare,
+} from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { ProjectHeader } from './components/project-header';
@@ -43,13 +52,34 @@ export function ProjectDetail({
       <div className="flex-1 overflow-y-auto px-6">
         <Tabs defaultValue="overview" className="flex flex-col h-full">
           <TabsList className="mt-3 mb-1">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="prd">PRD</TabsTrigger>
-            <TabsTrigger value="milestones">Milestones</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="links">Links</TabsTrigger>
-            <TabsTrigger value="updates">Updates</TabsTrigger>
+            <TabsTrigger value="overview">
+              <LayoutDashboard />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="prd">
+              <FileText />
+              PRD
+            </TabsTrigger>
+            <TabsTrigger value="milestones">
+              <Milestone />
+              Milestones
+            </TabsTrigger>
+            <TabsTrigger value="features">
+              <Layers />
+              Features
+            </TabsTrigger>
+            <TabsTrigger value="documents">
+              <FileEdit />
+              Documents
+            </TabsTrigger>
+            <TabsTrigger value="links">
+              <ExternalLink />
+              Links
+            </TabsTrigger>
+            <TabsTrigger value="updates">
+              <MessageSquare />
+              Updates
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">

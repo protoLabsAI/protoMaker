@@ -1,23 +1,11 @@
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Badge } from '@protolabs-ai/ui/atoms';
 import { Button } from '@protolabs-ai/ui/atoms';
-import { cn } from '@/lib/utils';
 import { HealthIndicator } from './health-indicator';
+import { getProjectStatusVariant } from '../lib/status-variants';
 import type { Project, ProjectHealth } from '@protolabs-ai/types';
 
-const STATUS_COLORS: Record<string, string> = {
-  researching: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  drafting: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  reviewing: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-  approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  scaffolded: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-  active: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  completed: 'bg-green-500/20 text-green-400 border-green-500/30',
-};
-
 export function ProjectHeader({ project, onBack }: { project: Project; onBack: () => void }) {
-  const statusClass = STATUS_COLORS[project.status] || 'bg-muted text-muted-foreground';
-
   return (
     <div className="shrink-0 px-6 py-4 border-b border-border/40">
       <div className="flex items-center gap-3">
@@ -30,8 +18,9 @@ export function ProjectHeader({ project, onBack }: { project: Project; onBack: (
               {project.title}
             </h1>
             <Badge
-              variant="outline"
-              className={cn('text-[10px] uppercase tracking-wider shrink-0', statusClass)}
+              variant={getProjectStatusVariant(project.status)}
+              size="sm"
+              className="uppercase tracking-wider shrink-0"
             >
               {project.status}
             </Badge>
