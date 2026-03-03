@@ -122,20 +122,16 @@ function TreeNode({
     async (relativePath: string) => {
       setLoading(true);
       try {
-        const res = await fetch('/api/fs/browse-project-files', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ projectPath, relativePath }),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as { success: boolean; entries: BrowseEntry[] };
-          if (data.success) {
-            const sorted = [...data.entries].sort((a, b) => {
-              if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-              return a.name.localeCompare(b.name);
-            });
-            setChildren(sorted);
-          }
+        const data = await apiPost<{ success: boolean; entries: BrowseEntry[] }>(
+          '/api/fs/browse-project-files',
+          { projectPath, relativePath }
+        );
+        if (data.success) {
+          const sorted = [...data.entries].sort((a, b) => {
+            if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+            return a.name.localeCompare(b.name);
+          });
+          setChildren(sorted);
         }
       } finally {
         setLoading(false);
@@ -276,16 +272,10 @@ export function FileTree({ projectPath, gitStatusMap, onMutation }: FileTreeProp
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/fs/browse-project-files', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath }),
-      });
-      if (!res.ok) {
-        setError('Failed to load project files');
-        return;
-      }
-      const data = (await res.json()) as { success: boolean; entries: BrowseEntry[] };
+      const data = await apiPost<{ success: boolean; entries: BrowseEntry[] }>(
+        '/api/fs/browse-project-files',
+        { projectPath }
+      );
       if (data.success) {
         const sorted = [...data.entries].sort((a, b) => {
           if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
