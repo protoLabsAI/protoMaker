@@ -38,8 +38,8 @@ function isFailureCategory(value: unknown): value is FailureCategory {
   return typeof value === 'string' && FAILURE_CATEGORIES.includes(value);
 }
 
-/** Discord channel ID for #bugs-and-issues (set via initialize or env) */
-const BUGS_CHANNEL_ID = process.env.DISCORD_BUGS_CHANNEL_ID || '';
+/** Discord channel ID for #bugs-and-issues (fallback from env) */
+const ENV_BUGS_CHANNEL_ID = process.env.DISCORD_BUGS_CHANNEL_ID || '';
 
 interface IssueCreationResult {
   success: boolean;
@@ -197,7 +197,7 @@ export class IssueCreationService {
         githubIssueNumber: result.issueNumber,
         githubIssueUrl: result.issueUrl,
       });
-      await this.postDiscordNotification(feature, result, triage);
+      await this.postDiscordNotification(feature, result, triage, projectPath);
       await this.emitBugLinearSync(projectPath, feature, triage, failureCategory);
     }
   }
@@ -245,7 +245,7 @@ export class IssueCreationService {
         githubIssueNumber: result.issueNumber,
         githubIssueUrl: result.issueUrl,
       });
-      await this.postDiscordNotification(feature, result, triage);
+      await this.postDiscordNotification(feature, result, triage, projectPath);
       await this.emitBugLinearSync(projectPath, feature, triage);
     }
   }
@@ -292,7 +292,7 @@ export class IssueCreationService {
         githubIssueNumber: result.issueNumber,
         githubIssueUrl: result.issueUrl,
       });
-      await this.postDiscordNotification(feature, result, triage);
+      await this.postDiscordNotification(feature, result, triage, projectPath);
       await this.emitBugLinearSync(projectPath, feature, triage, 'test_failure');
     }
   }
@@ -455,13 +455,29 @@ export class IssueCreationService {
   /**
    * Post notification to Discord #bugs-and-issues channel
    */
+  /**
+   * Resolve bugs channel ID from integration config, falling back to env var.
+   */
+  private async getBugsChannelId(projectPath: string): Promise<string> {
+    try {
+      const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+      return projectSettings?.integrations?.discord?.channels?.bugs || ENV_BUGS_CHANNEL_ID;
+    } catch {
+      return ENV_BUGS_CHANNEL_ID;
+    }
+  }
+
   private async postDiscordNotification(
     feature: Feature,
     result: IssueCreationResult,
-    triage: TriageResult
+    triage: TriageResult,
+    projectPath?: string
   ): Promise<void> {
-    if (!BUGS_CHANNEL_ID) {
-      logger.debug('No DISCORD_BUGS_CHANNEL_ID configured, skipping Discord notification');
+    const bugsChannelId = projectPath
+      ? await this.getBugsChannelId(projectPath)
+      : ENV_BUGS_CHANNEL_ID;
+    if (!bugsChannelId) {
+      logger.debug('No bugs channel configured, skipping Discord notification');
       return;
     }
 
@@ -485,7 +501,7 @@ export class IssueCreationService {
 
       this.events.emit('integration:discord', {
         action: 'send_message',
-        channelId: BUGS_CHANNEL_ID,
+        channelId: bugsChannelId,
         content: message,
       });
     } catch (error) {

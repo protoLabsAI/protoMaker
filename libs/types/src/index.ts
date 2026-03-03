@@ -290,6 +290,9 @@ export type {
   // Project integration types
   ReactionAbility,
   DiscordChannelSignalConfig,
+  ChannelWorkflow,
+  ChannelWorkflowType,
+  DiscordChannelMap,
   LinearIntegrationConfig,
   DiscordIntegrationConfig,
   GoogleIntegrationConfig,

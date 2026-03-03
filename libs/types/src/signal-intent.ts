@@ -27,8 +27,20 @@
  *                    Bypasses the PM pipeline entirely. Creates a HITL form
  *                    directly so a human can respond and triage.
  *                    Example: "Production is down, need someone NOW."
+ *
+ *   bug_report     - A bug report submitted via a channel workflow or reaction.
+ *                    Routes through the bug triage pipeline: creates a board
+ *                    feature, spawns an investigation thread, and runs AI
+ *                    follow-up questions to classify severity and category.
+ *                    Example: "Login fails when I click the submit button."
  */
-export type SignalIntent = 'work_order' | 'feedback' | 'conversational' | 'idea' | 'interrupt';
+export type SignalIntent =
+  | 'work_order'
+  | 'feedback'
+  | 'conversational'
+  | 'idea'
+  | 'interrupt'
+  | 'bug_report';
 
 import type { SignalChannel } from './signal-channel.js';
 

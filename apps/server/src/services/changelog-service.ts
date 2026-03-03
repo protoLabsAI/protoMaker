@@ -445,7 +445,10 @@ export class ChangelogService {
           featureId: 'changelog',
           feature: { id: 'changelog', title } as Feature,
           serverId: discordConfig.serverId,
-          channelId: ceremonySettings.discordChannelId || discordConfig.channelId,
+          channelId:
+            discordConfig.channels?.ceremonies ||
+            ceremonySettings.discordChannelId ||
+            discordConfig.channelId,
           webhookId: discordConfig.webhookId,
           webhookToken: discordConfig.webhookToken,
           action: 'send_message',

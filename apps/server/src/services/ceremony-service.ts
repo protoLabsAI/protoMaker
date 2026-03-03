@@ -195,6 +195,18 @@ export class CeremonyService {
   // Private event handlers — delegate to LangGraph flows
   // ---------------------------------------------------------------------------
 
+  /**
+   * Resolve the ceremony Discord channel ID.
+   * Prefers DiscordIntegrationConfig.channels.ceremonies, falls back to CeremonySettings.discordChannelId.
+   */
+  private async getCeremonyChannelId(projectPath: string): Promise<string | undefined> {
+    if (!this.settingsService) return undefined;
+    const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+    const discordConfig = projectSettings.integrations?.discord;
+    const ceremonySettings = projectSettings.ceremonySettings;
+    return discordConfig?.channels?.ceremonies || ceremonySettings?.discordChannelId;
+  }
+
   private async handleMilestoneStarted(payload: MilestoneEventPayload): Promise<void> {
     if (!this.projectService || !this.settingsService || !this.emitter) return;
 
@@ -205,7 +217,7 @@ export class CeremonyService {
       logger.debug('Ceremonies disabled, skipping standup');
       return;
     }
-    const discordChannelId = ceremonySettings.discordChannelId;
+    const discordChannelId = await this.getCeremonyChannelId(projectPath);
     if (!discordChannelId) {
       logger.debug('No Discord channel configured, skipping standup');
       return;
@@ -244,7 +256,7 @@ export class CeremonyService {
       logger.debug('Milestone retros disabled, skipping');
       return;
     }
-    const discordChannelId = ceremonySettings.discordChannelId;
+    const discordChannelId = await this.getCeremonyChannelId(projectPath);
     if (!discordChannelId) {
       logger.debug('No Discord channel configured, skipping retro');
       return;
@@ -292,7 +304,7 @@ export class CeremonyService {
       logger.debug('Project retros disabled, skipping');
       return;
     }
-    const discordChannelId = ceremonySettings.discordChannelId;
+    const discordChannelId = await this.getCeremonyChannelId(projectPath);
     if (!discordChannelId) {
       logger.debug('No Discord channel configured, skipping project retro');
       return;

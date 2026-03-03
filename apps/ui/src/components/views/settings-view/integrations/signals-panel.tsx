@@ -43,6 +43,10 @@ const INTENT_STYLES: Record<SignalIntent, { label: string; className: string }> 
     label: 'Interrupt',
     className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
   },
+  bug_report: {
+    label: 'Bug Report',
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  },
 };
 
 const STATUS_STYLES: Record<RecentSignal['status'], { dot: string; label: string }> = {

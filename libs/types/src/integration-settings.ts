@@ -225,6 +225,76 @@ export interface DiscordChannelSignalConfig {
 }
 
 // ============================================================================
+// Channel Workflows - Context-based message routing by Discord channel
+// ============================================================================
+
+/**
+ * ChannelWorkflowType - The type of workflow to run for messages in a channel.
+ *
+ * - 'bug_triage': Creates a board feature, spawns an investigation thread,
+ *   and runs AI follow-up questions to classify severity and category.
+ * - 'idea_intake': Replaces `!idea` prefix — submits ideas from channel context.
+ * - 'agent_conversation': Routes messages to a configured agent role via
+ *   AgentDiscordRouter for conversational AI.
+ */
+export type ChannelWorkflowType = 'bug_triage' | 'idea_intake' | 'agent_conversation';
+
+/**
+ * ChannelWorkflow - Maps a Discord channel to a workflow that runs for every message.
+ *
+ * When a message arrives in the configured channel, the workflow fires automatically
+ * instead of requiring prefix commands. The channel determines the behavior.
+ */
+export interface ChannelWorkflow {
+  /** Discord channel ID */
+  channelId: string;
+  /** Human-readable channel name */
+  channelName: string;
+  /** Which workflow to run for messages in this channel */
+  workflow: ChannelWorkflowType;
+  /** For 'agent_conversation': which agent role to use (e.g., 'ava', 'product-manager') */
+  agentRole?: string;
+  /** Create a thread for each incoming message */
+  createThread: boolean;
+  /** For 'bug_triage': use AI investigation (vs quick categorize) */
+  aiInvestigation: boolean;
+  /** Whether this workflow is active */
+  enabled: boolean;
+}
+
+// ============================================================================
+// Discord Channel Map - Consolidated channel ID configuration
+// ============================================================================
+
+/**
+ * DiscordChannelMap - Consolidated Discord channel ID configuration.
+ *
+ * Single source of truth for all channel IDs used by the Discord integration.
+ * Replaces scattered env vars (DISCORD_CHANNEL_*) and UserProfile.discord.channels.
+ * Falls back to env vars when fields are not set.
+ */
+export interface DiscordChannelMap {
+  /** Primary coordination channel */
+  primary?: string;
+  /** Dev updates / code review channel */
+  dev?: string;
+  /** Infrastructure alerts channel */
+  infra?: string;
+  /** Bug reports channel */
+  bugs?: string;
+  /** Suggestions / ideas channel */
+  suggestions?: string;
+  /** Project planning channel */
+  projectPlanning?: string;
+  /** Agent logs channel */
+  agentLogs?: string;
+  /** Ceremony announcements channel */
+  ceremonies?: string;
+  /** Content briefs channel */
+  contentBriefs?: string;
+}
+
+// ============================================================================
 // Discord Integration - Per-project Discord communication integration
 // ============================================================================
 
@@ -263,6 +333,10 @@ export interface DiscordIntegrationConfig {
   reactionAbilities?: ReactionAbility[];
   /** Discord channel signal sources - channels monitored for incoming signals */
   signalChannels?: DiscordChannelSignalConfig[];
+  /** Channel workflows - context-based routing by channel */
+  channelWorkflows?: ChannelWorkflow[];
+  /** Consolidated channel ID map (replaces env vars) */
+  channels?: DiscordChannelMap;
 }
 
 /** Default Discord integration settings - disabled by default */

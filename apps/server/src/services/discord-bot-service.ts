@@ -33,7 +33,7 @@ import {
   Events,
 } from 'discord.js';
 import { createLogger } from '@protolabs-ai/utils';
-import type { ReactionAbility } from '@protolabs-ai/types';
+import type { ReactionAbility, ChannelWorkflow } from '@protolabs-ai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -41,6 +41,7 @@ import type { PMAuthorityAgent } from './authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
 import type { SettingsService } from './settings-service.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
 
 interface AuthorityAgents {
   pm?: PMAuthorityAgent;
@@ -54,12 +55,14 @@ import * as path from 'node:path';
 
 const logger = createLogger('DiscordBot');
 
-/** Channel IDs — configured via environment variables */
-const CHANNELS = {
+/** Fallback channel IDs from environment variables */
+const ENV_CHANNELS = {
   suggestions: process.env.DISCORD_CHANNEL_SUGGESTIONS || '',
   projectPlanning: process.env.DISCORD_CHANNEL_PROJECT_PLANNING || '',
   agentLogs: process.env.DISCORD_CHANNEL_AGENT_LOGS || '',
   codeReview: process.env.DISCORD_CHANNEL_CODE_REVIEW || '',
+  bugs: process.env.DISCORD_BUGS_CHANNEL_ID || '',
+  infra: process.env.DISCORD_CHANNEL_INFRA || '',
 } as const;
 
 /** Guild ID — configured via environment variable */
@@ -101,6 +104,12 @@ export class DiscordBotService {
 
   /** Map Discord user IDs to their assigned AI agents for message routing */
   private userRouting: Map<string, { agentId: string; enabled: boolean }> = new Map();
+
+  /** Track bug investigation threads: threadId → bug context */
+  private bugThreads = new Map<
+    string,
+    { featureId: string; reportedBy: string; channelId: string }
+  >();
 
   /** Message debounce buffer to batch rapid messages from the same user */
   private messageBuffer: Map<string, { messages: Message[]; timer: NodeJS.Timeout }> = new Map();
@@ -413,8 +422,13 @@ export class DiscordBotService {
       return;
     }
 
-    // Handle CTO replies in review threads
+    // Handle thread replies (bug investigations, then review threads)
     if (message.channel.isThread()) {
+      const bugData = this.bugThreads.get(message.channelId);
+      if (bugData) {
+        await this.handleBugThreadReply(message, bugData);
+        return;
+      }
       const featureId = this.reviewThreads.get(message.channelId);
       if (featureId) {
         await this.handleThreadReply(message, featureId);
@@ -422,7 +436,14 @@ export class DiscordBotService {
       }
     }
 
-    // Handle !idea prefix command
+    // Channel workflow routing (context-based, replaces prefix commands)
+    const workflow = await this.getChannelWorkflow(message.channelId);
+    if (workflow?.enabled) {
+      await this.dispatchChannelWorkflow(message, workflow);
+      return;
+    }
+
+    // Handle !idea prefix command (fallback for non-workflow channels)
     if (content.startsWith(IDEA_PREFIX)) {
       await this.handleBangIdeaCommand(message, content);
       return;
@@ -996,6 +1017,11 @@ export class DiscordBotService {
       if (type === 'authority:awaiting-approval') {
         void this.postApprovalRequest(data);
       }
+
+      // Bug reaction triggered — run bug workflow on the reacted message
+      if (type === 'bug:reaction-triggered') {
+        void this.handleBugReactionTriggered(data);
+      }
     });
   }
 
@@ -1102,7 +1128,7 @@ export class DiscordBotService {
         channel = (await this.client.channels.fetch(pending.channelId)) as TextChannel;
       }
       if (!channel) {
-        channel = (await this.client.channels.fetch(CHANNELS.suggestions)) as TextChannel;
+        channel = (await this.client.channels.fetch(ENV_CHANNELS.suggestions)) as TextChannel;
       }
       if (!channel?.isTextBased()) return;
 
@@ -1165,7 +1191,7 @@ export class DiscordBotService {
     if (!this.client) return;
 
     try {
-      const channelId = pending?.threadId || pending?.channelId || CHANNELS.suggestions;
+      const channelId = pending?.threadId || pending?.channelId || ENV_CHANNELS.suggestions;
       const channel = (await this.client.channels.fetch(channelId)) as TextChannel | ThreadChannel;
       if (!channel?.isTextBased()) return;
 
@@ -1190,7 +1216,9 @@ export class DiscordBotService {
     if (!this.client) return;
 
     try {
-      const channel = (await this.client.channels.fetch(CHANNELS.projectPlanning)) as TextChannel;
+      const channel = (await this.client.channels.fetch(
+        ENV_CHANNELS.projectPlanning
+      )) as TextChannel;
       if (!channel?.isTextBased()) return;
 
       const milestoneTitle = (data.milestoneTitle as string) || 'Unknown';
@@ -1229,7 +1257,9 @@ export class DiscordBotService {
     if (!this.client) return;
 
     try {
-      const channel = (await this.client.channels.fetch(CHANNELS.projectPlanning)) as TextChannel;
+      const channel = (await this.client.channels.fetch(
+        ENV_CHANNELS.projectPlanning
+      )) as TextChannel;
       if (!channel?.isTextBased()) return;
 
       const proposal = data.proposal as Record<string, unknown>;
@@ -1313,7 +1343,7 @@ export class DiscordBotService {
       try {
         const feature = await this.featureLoader.get(approval.projectPath, approval.featureId);
         const channel = this.client?.channels.cache.get(
-          this.pendingIdeas.get(approval.featureId)?.channelId || CHANNELS.suggestions
+          this.pendingIdeas.get(approval.featureId)?.channelId || ENV_CHANNELS.suggestions
         ) as TextChannel;
         if (channel) {
           await channel.send(
@@ -1338,7 +1368,7 @@ export class DiscordBotService {
         });
 
         const feature = await this.featureLoader.get(approval.projectPath, approval.featureId);
-        const channel = this.client?.channels.cache.get(CHANNELS.suggestions) as TextChannel;
+        const channel = this.client?.channels.cache.get(ENV_CHANNELS.suggestions) as TextChannel;
         if (channel) {
           await channel.send(`❌ **Rejected:** "${feature?.title || approval.featureId}"`);
         }
@@ -1625,6 +1655,302 @@ export class DiscordBotService {
       logger.warn(`Failed to fetch guild member ${userId} for reaction ability role check:`, error);
       return false;
     }
+  }
+
+  // ============================================================================
+  // Channel Workflow Engine
+  // ============================================================================
+
+  /**
+   * Look up a channel workflow for the given channel ID from integration settings.
+   */
+  private async getChannelWorkflow(channelId: string): Promise<ChannelWorkflow | undefined> {
+    const config = await this.getConfig();
+    if (!config?.channelWorkflows?.length) return undefined;
+    return config.channelWorkflows.find((w) => w.channelId === channelId);
+  }
+
+  /**
+   * Dispatch a message to the appropriate channel workflow handler.
+   */
+  private async dispatchChannelWorkflow(
+    message: Message,
+    workflow: ChannelWorkflow
+  ): Promise<void> {
+    switch (workflow.workflow) {
+      case 'bug_triage':
+        await this.handleBugWorkflow(message, workflow);
+        break;
+      case 'agent_conversation':
+        await this.handleAgentConversationWorkflow(message, workflow);
+        break;
+      case 'idea_intake':
+        // Reuse existing !idea logic without the prefix
+        await this.handleBangIdeaCommand(message, `!idea ${message.content}`);
+        break;
+    }
+  }
+
+  /**
+   * Handle bug triage workflow: create feature, spawn thread, start AI investigation.
+   */
+  private async handleBugWorkflow(message: Message, workflow: ChannelWorkflow): Promise<void> {
+    try {
+      // 1. React to acknowledge
+      await message.react('\uD83D\uDC1B'); // bug emoji
+
+      // 2. Create feature on the board
+      const feature = await this.featureLoader.create(this.projectPath, {
+        title: message.content.slice(0, 100),
+        description: message.content,
+        status: 'backlog',
+        category: 'Bug Reports',
+      });
+
+      // 3. Create investigation thread
+      const thread = await (message.channel as TextChannel).threads.create({
+        name: `Bug: ${message.content.slice(0, 90)}`,
+        autoArchiveDuration: 1440,
+        type: ChannelType.PublicThread,
+        startMessage: message.id,
+      });
+
+      // 4. Post initial response
+      await thread.send(
+        `**Bug Report Received**\n` +
+          `**Feature ID:** \`${feature.id}\`\n` +
+          `<@${message.author.id}>\n\n` +
+          `I'll investigate this. Let me ask a few questions to understand the issue better...`
+      );
+
+      // 5. Track for thread replies
+      this.bugThreads.set(thread.id, {
+        featureId: feature.id,
+        reportedBy: message.author.id,
+        channelId: message.channelId,
+      });
+
+      // 6. Emit event
+      this.events.emit('bug:reported', {
+        projectPath: this.projectPath,
+        featureId: feature.id,
+        threadId: thread.id,
+        channelId: message.channelId,
+        reportedBy: message.author.id,
+        content: message.content,
+      });
+
+      // 7. If AI investigation enabled, run first round of questions
+      if (workflow.aiInvestigation) {
+        await this.runBugInvestigation(
+          thread.id,
+          feature.id,
+          message.content,
+          message.author.username
+        );
+      }
+    } catch (error) {
+      logger.error('Failed to handle bug workflow:', error);
+    }
+  }
+
+  /**
+   * Handle agent_conversation workflow: route message to configured agent role.
+   */
+  private async handleAgentConversationWorkflow(
+    message: Message,
+    workflow: ChannelWorkflow
+  ): Promise<void> {
+    if (!workflow.agentRole) {
+      logger.warn(`Channel workflow for ${workflow.channelId} has no agentRole configured`);
+      return;
+    }
+
+    // Emit as a routed message for AgentDiscordRouter to handle
+    this.events.emit('discord:user-message:routed', {
+      projectPath: this.projectPath,
+      userId: message.author.id,
+      username: message.author.username,
+      routedToAgent: workflow.agentRole,
+      channelId: message.channelId,
+      content: message.content,
+    });
+  }
+
+  /**
+   * Run AI bug investigation using simpleQuery.
+   * Loads thread history for multi-turn conversation context.
+   */
+  private async runBugInvestigation(
+    threadId: string,
+    featureId: string,
+    content: string,
+    username: string
+  ): Promise<void> {
+    try {
+      const systemPrompt = this.getBugTriagePrompt(featureId);
+
+      // Load thread history for multi-turn
+      const messages = await this.readMessages(threadId, 50);
+      const history = messages
+        .reverse()
+        .map((msg) => {
+          const role = msg.author.bot ? 'Assistant' : msg.author.username;
+          return `${role}: ${msg.content}`;
+        })
+        .join('\n\n');
+
+      const fullPrompt = history
+        ? `${systemPrompt}\n\n## Conversation History\n\n${history}`
+        : systemPrompt;
+
+      const result = await simpleQuery({
+        prompt: content,
+        systemPrompt: fullPrompt,
+        cwd: this.projectPath,
+        allowedTools: [],
+      });
+
+      if (result.text?.trim()) {
+        await this.sendChunkedMessage(threadId, result.text);
+      }
+    } catch (error) {
+      logger.error(`Bug investigation failed for feature ${featureId}:`, error);
+    }
+  }
+
+  /**
+   * Build the bug triage system prompt for AI investigation.
+   */
+  private getBugTriagePrompt(featureId: string): string {
+    return [
+      'You are a bug triage investigator for protoLabs Studio.',
+      `You are investigating bug report for feature ID: ${featureId}.`,
+      '',
+      'Your job is to gather enough information to classify the bug.',
+      'Ask structured follow-up questions to understand:',
+      '',
+      '1. What were you doing when the bug occurred?',
+      '2. What happened vs what you expected?',
+      '3. Can you reproduce it consistently?',
+      '4. Environment (browser, OS, version)?',
+      '5. Any error messages or screenshots?',
+      '',
+      'After 2-3 rounds of questions (or when you have enough info), provide a structured assessment:',
+      '',
+      '**Severity:** P1 (critical) / P2 (high) / P3 (medium) / P4 (low)',
+      '**Category:** frontend / backend / infra / design / docs',
+      '**Reproduction Steps:** numbered list',
+      '**Recommended Fix Approach:** brief description',
+      '',
+      'Keep questions concise. One message at a time.',
+      'Do not use emojis.',
+    ].join('\n');
+  }
+
+  /**
+   * Handle bug:reaction-triggered event — fetch the original message and run bug workflow.
+   */
+  private async handleBugReactionTriggered(data: Record<string, unknown>): Promise<void> {
+    if (!this.client) return;
+
+    const channelId = data.channelId as string;
+    const messageId = data.messageId as string;
+
+    if (!channelId || !messageId) return;
+
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return;
+
+      const message = await channel.messages.fetch(messageId);
+      if (!message) return;
+
+      // Build a synthetic workflow config for bug triage
+      const workflow: ChannelWorkflow = {
+        channelId,
+        channelName: 'channel' in channel ? (channel as TextChannel).name : 'unknown',
+        workflow: 'bug_triage',
+        createThread: true,
+        aiInvestigation: true,
+        enabled: true,
+      };
+
+      await this.handleBugWorkflow(message, workflow);
+    } catch (error) {
+      logger.error(`Failed to handle bug reaction trigger in channel ${channelId}:`, error);
+    }
+  }
+
+  /**
+   * Handle replies in bug investigation threads.
+   */
+  private async handleBugThreadReply(
+    message: Message,
+    bugData: { featureId: string; reportedBy: string; channelId: string }
+  ): Promise<void> {
+    try {
+      await this.runBugInvestigation(
+        message.channelId,
+        bugData.featureId,
+        message.content,
+        message.author.username
+      );
+    } catch (error) {
+      logger.error(`Bug thread reply handling failed for ${bugData.featureId}:`, error);
+    }
+  }
+
+  /**
+   * Send a message to a Discord channel/thread, splitting at 2000 chars.
+   */
+  private async sendChunkedMessage(channelId: string, content: string): Promise<void> {
+    if (!this.client) return;
+
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel | ThreadChannel;
+      if (!channel?.isTextBased()) return;
+
+      const maxLen = 2000;
+      if (content.length <= maxLen) {
+        await channel.send(content);
+        return;
+      }
+
+      // Split on newlines near the limit, fall back to hard split
+      let remaining = content;
+      while (remaining.length > 0) {
+        if (remaining.length <= maxLen) {
+          await channel.send(remaining);
+          break;
+        }
+
+        let splitAt = remaining.lastIndexOf('\n', maxLen);
+        if (splitAt <= 0) splitAt = maxLen;
+
+        await channel.send(remaining.slice(0, splitAt));
+        remaining = remaining.slice(splitAt).trimStart();
+      }
+    } catch (error) {
+      logger.error(`Failed to send chunked message to ${channelId}:`, error);
+    }
+  }
+
+  /**
+   * Get consolidated channel IDs from integration config, falling back to env vars.
+   */
+  private async getChannels(): Promise<Record<string, string>> {
+    const config = await this.getConfig();
+    return {
+      suggestions: config?.channels?.suggestions || ENV_CHANNELS.suggestions,
+      projectPlanning: config?.channels?.projectPlanning || ENV_CHANNELS.projectPlanning,
+      agentLogs: config?.channels?.agentLogs || ENV_CHANNELS.agentLogs,
+      codeReview: config?.channels?.dev || ENV_CHANNELS.codeReview,
+      bugs: config?.channels?.bugs || ENV_CHANNELS.bugs,
+      infra: config?.channels?.infra || ENV_CHANNELS.infra,
+      ceremonies: config?.channels?.ceremonies || '',
+      contentBriefs: config?.channels?.contentBriefs || '',
+    };
   }
 
   /**

@@ -973,6 +973,17 @@ export class IntegrationService {
 
     if (!this.emitter) return;
 
+    // bug_report intent triggers the bug triage workflow directly
+    if (payload.intent === 'bug_report') {
+      this.emitter.emit('bug:reaction-triggered', {
+        messageContent: payload.messageContent,
+        channelId: payload.channelId,
+        messageId: payload.messageId,
+        userId: payload.userId,
+        username: payload.username,
+      });
+    }
+
     this.emitter.emit('signal:received', {
       source: 'discord',
       content: payload.messageContent,

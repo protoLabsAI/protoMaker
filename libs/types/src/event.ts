@@ -258,6 +258,9 @@ export type EventType =
   | 'retro:improvement:linear-sync'
   // Bug tracking pipeline events (failure → triage → Linear)
   | 'bug:linear-sync'
+  // Bug triage workflow events (channel workflow → investigation → board feature)
+  | 'bug:reported'
+  | 'bug:reaction-triggered'
   // Docs update detector events
   | 'docs:update-needed'
   // Settings change events
@@ -726,6 +729,23 @@ export interface EventPayloadMap {
     phase?: PipelinePhase;
     spanId?: string;
     timestamp: string;
+  };
+
+  // Bug triage workflow events
+  'bug:reported': {
+    projectPath: string;
+    featureId: string;
+    threadId: string;
+    channelId: string;
+    reportedBy: string;
+    content: string;
+  };
+  'bug:reaction-triggered': {
+    messageContent: string;
+    channelId: string;
+    messageId: string;
+    userId: string;
+    username: string;
   };
 
   // Sensor framework events
