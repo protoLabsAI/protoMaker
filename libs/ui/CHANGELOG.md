@@ -1,5 +1,16 @@
 # @protolabs-ai/ui
 
+## 0.32.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - use GH_PAT for version sync PRs to trigger staging deploy
+  - git-track feature.json files for cross-instance board sync
+
+  ### Refactors
+  - we have many references to `npm run dev:web` throughout our docs and int
+
 ## 0.32.0
 
 ### Minor Changes
