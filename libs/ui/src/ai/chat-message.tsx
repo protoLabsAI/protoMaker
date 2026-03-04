@@ -490,7 +490,14 @@ export function ChatMessage({
                         />
                       );
                     }
-                    return <TaskBlock key={seg.segKey} tools={seg.tools} />;
+                    return (
+                      <TaskBlock
+                        key={seg.segKey}
+                        tools={seg.tools}
+                        onToolApprove={onToolApprove}
+                        onToolReject={onToolReject}
+                      />
+                    );
                   }
 
                   // 'other': text, reasoning, source-url, data-citations, etc.

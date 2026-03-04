@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { ChevronDown, Loader2, Check, AlertTriangle, Wrench } from 'lucide-react';
 import { cn } from '../lib/utils.js';
 import { formatToolName } from './tool-invocation-part.js';
+import { ConfirmationCard } from './confirmation-card.js';
 
 export type TaskToolState =
   | 'input-streaming'
@@ -40,6 +41,10 @@ export interface ToolInvocationItem {
 export interface TaskBlockProps {
   tools: ToolInvocationItem[];
   className?: string;
+  /** Called when user approves a destructive tool call (HITL flow) */
+  onToolApprove?: (approvalId: string) => void;
+  /** Called when user rejects a destructive tool call (HITL flow) */
+  onToolReject?: (approvalId: string) => void;
 }
 
 /** Human-readable action labels for known tool names */
@@ -140,11 +145,15 @@ function ToolRow({ tool }: { tool: ToolInvocationItem }) {
  * TaskBlock renders multiple tool invocations from one agentic step as a
  * unified, collapsible activity feed. It auto-collapses when all tools finish.
  */
-export function TaskBlock({ tools, className }: TaskBlockProps) {
+export function TaskBlock({ tools, className, onToolApprove, onToolReject }: TaskBlockProps) {
   const allDone = tools.length > 0 && tools.every((t) => DONE_STATES.includes(t.state));
+  const hasApprovalPending = tools.some(
+    (t) => t.state === 'approval-requested' || t.state === 'output-denied'
+  );
 
-  // Default collapsed — user opens to inspect details
+  // Default collapsed — but auto-expand when approval is needed
   const [isOpen, setIsOpen] = useState(false);
+  const effectiveOpen = isOpen || hasApprovalPending;
 
   const title = inferBlockTitle(tools);
   const completedCount = tools.filter((t) => DONE_STATES.includes(t.state)).length;
@@ -157,6 +166,7 @@ export function TaskBlock({ tools, className }: TaskBlockProps) {
       className={cn(
         'my-1.5 rounded-md border border-border/50 bg-muted/30 text-xs',
         hasError && 'border-destructive/30',
+        hasApprovalPending && 'border-yellow-500/40',
         className
       )}
     >
@@ -165,7 +175,7 @@ export function TaskBlock({ tools, className }: TaskBlockProps) {
         type="button"
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left"
         onClick={() => setIsOpen((o) => !o)}
-        aria-expanded={isOpen}
+        aria-expanded={effectiveOpen}
         aria-label={`${title} — ${completedCount} of ${tools.length} done`}
       >
         <Wrench className="size-3.5 shrink-0 text-muted-foreground" />
@@ -188,17 +198,39 @@ export function TaskBlock({ tools, className }: TaskBlockProps) {
         <ChevronDown
           className={cn(
             'size-3 shrink-0 text-muted-foreground transition-transform',
-            isOpen && 'rotate-180'
+            effectiveOpen && 'rotate-180'
           )}
         />
       </button>
 
-      {/* Tool rows (expanded view) */}
-      {isOpen && (
+      {/* Tool rows (expanded view) — auto-expands when approval is needed */}
+      {effectiveOpen && (
         <div className="border-t border-border/50 pt-0.5 pb-1">
-          {tools.map((tool) => (
-            <ToolRow key={tool.toolCallId} tool={tool} />
-          ))}
+          {tools.map((tool) => {
+            // Render ConfirmationCard for tools awaiting approval
+            if (tool.state === 'approval-requested' || tool.state === 'output-denied') {
+              return (
+                <ConfirmationCard
+                  key={tool.toolCallId}
+                  toolName={tool.toolName}
+                  input={tool.input}
+                  state={tool.state === 'output-denied' ? 'output-denied' : 'approval-requested'}
+                  onApprove={
+                    onToolApprove && tool.approvalId
+                      ? () => onToolApprove(tool.approvalId!)
+                      : undefined
+                  }
+                  onReject={
+                    onToolReject && tool.approvalId
+                      ? () => onToolReject(tool.approvalId!)
+                      : undefined
+                  }
+                  className="mx-2 my-1"
+                />
+              );
+            }
+            return <ToolRow key={tool.toolCallId} tool={tool} />;
+          })}
         </div>
       )}
     </div>
