@@ -55,7 +55,9 @@ export function TerminalSettingsPopover({
   const setTerminalFontFamily = useTerminalStore((state) => state.setTerminalFontFamily);
   const setTerminalScrollbackLines = useTerminalStore((state) => state.setTerminalScrollbackLines);
   const setTerminalLineHeight = useTerminalStore((state) => state.setTerminalLineHeight);
-  const setTerminalScreenReaderMode = useTerminalStore((state) => state.setTerminalScreenReaderMode);
+  const setTerminalScreenReaderMode = useTerminalStore(
+    (state) => state.setTerminalScreenReaderMode
+  );
 
   return (
     <Popover>
@@ -139,8 +141,7 @@ export function TerminalSettingsPopover({
                   <SelectItem key={option.value} value={option.value}>
                     <span
                       style={{
-                        fontFamily:
-                          option.value === DEFAULT_FONT_VALUE ? undefined : option.value,
+                        fontFamily: option.value === DEFAULT_FONT_VALUE ? undefined : option.value,
                       }}
                     >
                       {option.label}
