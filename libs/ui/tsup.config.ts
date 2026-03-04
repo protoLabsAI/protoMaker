@@ -10,6 +10,7 @@ export default defineConfig({
     'src/ai/index.ts',
   ],
   format: ['esm'],
+  external: [/^@rjsf\//],
   dts: {
     resolve: true,
   },

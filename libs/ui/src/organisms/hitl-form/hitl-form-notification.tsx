@@ -1,29 +1,30 @@
 /**
  * HITL Form Notification Badge — Shows count of pending forms.
  * Can be placed in the sidebar or toolbar.
+ *
+ * Presentational component — connect to your store in the consuming app.
  */
 
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Badge } from '../../atoms/badge.js';
 import { ClipboardList } from 'lucide-react';
-import { useHITLFormStore } from '@/store/hitl-form-store';
 
-export function HITLFormNotification() {
-  const pendingForms = useHITLFormStore((s) => s.pendingForms);
-  const openForm = useHITLFormStore((s) => s.openForm);
+export interface HITLFormNotificationProps {
+  pendingCount: number;
+  onOpen: () => void;
+}
 
-  if (pendingForms.length === 0) return null;
-
-  const nextForm = pendingForms[0];
+export function HITLFormNotification({ pendingCount, onOpen }: HITLFormNotificationProps) {
+  if (pendingCount === 0) return null;
 
   return (
     <button
-      onClick={() => openForm(nextForm)}
+      onClick={onOpen}
       className="relative inline-flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      title={`${pendingForms.length} form(s) waiting for input`}
+      title={`${pendingCount} form(s) waiting for input`}
     >
       <ClipboardList className="h-4 w-4" />
       <Badge variant="destructive" className="h-5 min-w-5 px-1 text-xs">
-        {pendingForms.length}
+        {pendingCount}
       </Badge>
     </button>
   );

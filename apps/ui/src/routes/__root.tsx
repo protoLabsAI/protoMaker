@@ -40,7 +40,7 @@ import { queryClient } from '@/lib/query-client';
 import { Toaster } from 'sonner';
 import { type ThemeOption, themeOptions } from '@/config/theme-options';
 import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
-import { HITLFormDialog } from '@protolabs-ai/ui/organisms';
+import { HITLFormDialog } from '@/components/shared/hitl-form/hitl-form-dialog';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
 import { LoadingState } from '@protolabs-ai/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';

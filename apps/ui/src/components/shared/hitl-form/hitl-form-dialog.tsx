@@ -19,8 +19,7 @@ import { Loader2, Send, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { HITLFormStepRenderer } from './hitl-form-step';
-import { HITLFormWizard } from './hitl-form-wizard';
+import { HITLFormStepRenderer, HITLFormWizard } from '@protolabs-ai/ui/organisms';
 
 export function HITLFormDialog() {
   const {
@@ -28,6 +27,10 @@ export function HITLFormDialog() {
     isDialogOpen,
     isSubmitting,
     stepData,
+    currentStep,
+    nextStep,
+    prevStep,
+    setStepData,
     closeDialog,
     deferForm,
     clearDraft,
@@ -224,7 +227,17 @@ export function HITLFormDialog() {
             </div>
           </div>
         ) : (
-          <HITLFormWizard form={activeForm} onSubmit={handleSubmit} onCancel={handleCancel} />
+          <HITLFormWizard
+            form={activeForm}
+            currentStep={currentStep}
+            stepData={stepData}
+            isSubmitting={isSubmitting}
+            onNextStep={nextStep}
+            onPrevStep={prevStep}
+            onStepDataChange={setStepData}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+          />
         )}
 
         <details className="group">

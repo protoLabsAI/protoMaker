@@ -1,24 +1,39 @@
 /**
  * HITL Form Wizard — Multi-step form navigation with step indicator,
  * data accumulation, and per-step validation.
+ *
+ * Presentational component — all state management is provided via props.
  */
 
 import { useRef, useCallback } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '../../atoms/button.js';
 import { ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
-import { useHITLFormStore } from '@/store/hitl-form-store';
-import { HITLFormStepRenderer } from './hitl-form-step';
+import { HITLFormStepRenderer } from './hitl-form-step.js';
 import type { HITLFormRequest } from '@protolabs-ai/types';
 
-interface HITLFormWizardProps {
+export interface HITLFormWizardProps {
   form: HITLFormRequest;
+  currentStep: number;
+  stepData: Record<string, unknown>[];
+  isSubmitting: boolean;
+  onNextStep: (data: Record<string, unknown>) => void;
+  onPrevStep: () => void;
+  onStepDataChange: (stepIndex: number, data: Record<string, unknown>) => void;
   onSubmit: (allData: Record<string, unknown>[]) => void;
   onCancel: () => void;
 }
 
-export function HITLFormWizard({ form, onSubmit, onCancel }: HITLFormWizardProps) {
-  const { currentStep, stepData, nextStep, prevStep, setStepData, isSubmitting } =
-    useHITLFormStore();
+export function HITLFormWizard({
+  form,
+  currentStep,
+  stepData,
+  isSubmitting,
+  onNextStep,
+  onPrevStep,
+  onStepDataChange,
+  onSubmit,
+  onCancel,
+}: HITLFormWizardProps) {
   const submitRef = useRef<(() => void) | null>(null);
 
   const totalSteps = form.steps.length;
@@ -34,17 +49,17 @@ export function HITLFormWizard({ form, onSubmit, onCancel }: HITLFormWizardProps
         allData[currentStep] = data;
         onSubmit(allData);
       } else {
-        nextStep(data);
+        onNextStep(data);
       }
     },
-    [isLastStep, currentStep, stepData, nextStep, onSubmit]
+    [isLastStep, currentStep, stepData, onNextStep, onSubmit]
   );
 
   const handleStepChange = useCallback(
     (data: Record<string, unknown>) => {
-      setStepData(currentStep, data);
+      onStepDataChange(currentStep, data);
     },
-    [currentStep, setStepData]
+    [currentStep, onStepDataChange]
   );
 
   const handleNext = useCallback(() => {
@@ -86,7 +101,7 @@ export function HITLFormWizard({ form, onSubmit, onCancel }: HITLFormWizardProps
       <div className="flex justify-between pt-2 border-t">
         <div>
           {!isFirstStep && (
-            <Button variant="outline" size="sm" onClick={prevStep} disabled={isSubmitting}>
+            <Button variant="outline" size="sm" onClick={onPrevStep} disabled={isSubmitting}>
               <ChevronLeft className="mr-1 h-4 w-4" />
               Back
             </Button>

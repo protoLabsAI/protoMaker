@@ -10,6 +10,7 @@ import { EditProjectDialog } from './components/edit-project-dialog';
 import { NotificationBell } from './components/notification-bell';
 import { ActionableItemsInbox } from './components/actionable-items-inbox';
 import { HITLFormNotification } from '@protolabs-ai/ui/organisms';
+import { useHITLFormStore } from '@/store/hitl-form-store';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { OnboardingDialog } from '@/components/layout/sidebar/dialogs';
 import { useProjectCreation } from '@/components/layout/sidebar/hooks';
@@ -37,6 +38,8 @@ function getOSAbbreviation(os: string): string {
 
 export function ProjectSwitcher() {
   const navigate = useNavigate();
+  const hitlPendingForms = useHITLFormStore((s) => s.pendingForms);
+  const hitlOpenForm = useHITLFormStore((s) => s.openForm);
   const { hideWiki } = SIDEBAR_FEATURE_FLAGS;
   const {
     projects,
@@ -345,7 +348,10 @@ export function ProjectSwitcher() {
           {/* Inbox & Notifications */}
           <div className="flex items-center justify-center gap-1 mt-2">
             <ActionableItemsInbox projectPath={currentProject?.path ?? null} />
-            <HITLFormNotification />
+            <HITLFormNotification
+              pendingCount={hitlPendingForms.length}
+              onOpen={() => hitlPendingForms[0] && hitlOpenForm(hitlPendingForms[0])}
+            />
             <NotificationBell projectPath={currentProject?.path ?? null} />
           </div>
           <div className="w-full h-px bg-border mt-3" />
