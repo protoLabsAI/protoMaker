@@ -239,7 +239,7 @@ export class PRFeedbackService {
           const trackedSince =
             feature.prTrackedSince && typeof feature.prTrackedSince === 'string'
               ? new Date(feature.prTrackedSince).getTime()
-              : (lastPolledAt || Date.now());
+              : lastPolledAt || Date.now();
 
           this.trackedPRs.set(feature.id, {
             featureId: feature.id,

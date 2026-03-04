@@ -260,10 +260,7 @@ export class PRStatusChecker {
     try {
       const { stdout } = await execFileAsync(
         'gh',
-        [
-          'api',
-          `repos/{owner}/{repo}/branches/${baseBranch}/protection/required_status_checks`,
-        ],
+        ['api', `repos/{owner}/{repo}/branches/${baseBranch}/protection/required_status_checks`],
         {
           cwd: pr.projectPath,
           timeout: 15_000,
