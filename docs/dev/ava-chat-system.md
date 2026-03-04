@@ -30,6 +30,150 @@ ChatMessageList                          POST /api/chat
 6. Server extracts `[[feature:id]]` / `[[doc:path]]` citations, writes as `data-citations` chunk
 7. Client renders each step as its own bubble with custom tool result cards
 
+## Architecture Pipeline
+
+The full end-to-end pipeline from a user's chat input through tool execution, agent delegation, and response streaming:
+
+### Full Request Flow
+
+```
+Chat UI (ChatInput)
+  │  { messages, projectPath, model? }
+  ▼
+POST /api/chat
+  ├── loadAvaConfig(projectPath)
+  │     → AvaConfig { model, toolGroups, mcpServers, subagentTrust,
+  │                   sitrepInjection, contextInjection, systemPromptExtension }
+  ├── getSitrep(projectPath)           [if sitrepInjection: true]
+  ├── loadContextFiles(projectPath)    [if contextInjection: true]
+  ├── buildAvaSystemPrompt()
+  │     → AVA_BASE_PROMPT (personas.ts)
+  │     + ava-prompt.md               (UI chat surface)
+  │     + CLAUDE.md                   (project root)
+  │     + sitrep                      (live board state)
+  │     + systemPromptExtension       (user custom text)
+  ├── buildAvaTools(projectPath, services, config)
+  │     → tool set gated by config.toolGroups flags
+  │     → execute_dynamic_agent tool  [if agentDelegation enabled]
+  └── streamText({ tools, maxSteps: 10 })
+        │
+        ├── [text chunk]  → SSE text delta → ChatMessageMarkdown
+        ├── [reasoning]   → SSE reasoning delta → ChainOfThought
+        ├── [tool-call]   → SSE tool-call → ToolInvocationPart (input-streaming)
+        │     ├── needsApproval?  → approval-requested → ConfirmationCard
+        │     │     User approves → re-request with approvedActions
+        │     │     User rejects  → result = "denied"
+        │     └── tool executes  → SSE tool-result → ToolInvocationPart (output-available)
+        ├── [step-start]  → groupByStep() splits into separate bubbles
+        └── [done]        → extractCitations() → data-citations chunk
+```
+
+### Ava Tool Delegation
+
+When Ava invokes `execute_dynamic_agent`, the call passes through the full agent stack:
+
+```
+streamText tool call: execute_dynamic_agent
+  │  { role, feature_id?, prompt, trust? }
+  ▼
+ava-tools.ts: execute_dynamic_agent handler
+  ├── RoleRegistryService.get(role)        → AgentTemplate
+  ├── AgentFactoryService.createFromTemplate(role, projectPath)
+  │     → AgentConfig (resolved capabilities, tools, system prompt)
+  └── DynamicAgentExecutor.execute(config, options)
+        ├── Builds system prompt with capability constraints
+        ├── Filters disallowed tools per template
+        ├── ClaudeProvider.executeQuery()
+        │     → @anthropic-ai/claude-agent-sdk query()
+        │           Cost tracking, session resume, context compaction
+        └── Streams progress events via WebSocket → AgentOutputCard
+              { type: 'agent:text' | 'agent:tool-use' | 'agent:complete' }
+```
+
+The inner agent runs in a worktree-isolated environment with its own tool set (defined by the role template) and cannot exceed the capabilities granted by `subagentTrust`.
+
+### SDK Integration Points
+
+The Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) exposes three hook types that protoLabs wires into `DynamicAgentExecutor`:
+
+| Hook           | Trigger                                 | protoLabs Use                                      |
+| -------------- | --------------------------------------- | -------------------------------------------------- |
+| `PostToolUse`  | After every tool execution              | Log cost accumulation, emit `agent:tool-result` WS |
+| `Notification` | SDK informational events (context, etc) | Surface warnings in agent output log               |
+| `SubagentStop` | Inner agent session ends                | Mark sub-run complete, aggregate cost into parent  |
+
+**`canUseTool` gate:** When `subagentTrust` is set below the tool's required trust level, the SDK's `canUseTool` callback returns `false`, preventing the inner agent from calling that tool. This is how Ava enforces that delegated agents cannot exceed their granted permissions.
+
+**Custom MCP servers:** If `AvaConfig.mcpServers` lists server entries, they are passed to the SDK via `createChatOptions({ mcpServers })` before the inner agent runs. This lets Ava-delegated agents access project-specific MCP tools (e.g., GitHub, filesystem) without exposing them to the outer Ava loop.
+
+### Prompt Chain
+
+The Ava system prompt is assembled in layers by `buildAvaSystemPrompt()` in `personas.ts`:
+
+```
+Layer 1: AVA_BASE_PROMPT          — Fixed persona header (always injected)
+Layer 2: ava-prompt.md            — UI chat body: tool guidance, HITL awareness, citations
+Layer 3: CLAUDE.md                — Project-level instructions (if file exists at root)
+Layer 4: sitrep                   — Live board state: feature counts, running agents
+Layer 5: systemPromptExtension    — User-supplied custom text from AvaConfig
+```
+
+Each layer is optional except Layer 1 (base prompt) and Layer 2 (chat prompt body). If `sitrepInjection: false` in AvaConfig, Layer 4 is omitted. If `contextInjection: false`, CLAUDE.md and `.automaker/context/` files are omitted.
+
+### HITL Detailed Flow
+
+```
+1. streamText emits tool-call for a destructive tool (delete_feature, stop_agent, etc.)
+2. ava-tools.ts: needsApproval(toolName, approvedActions) → true
+3. Server returns partial result: { __hitl: true, action, summary, inputHash }
+4. SSE tool-result → ToolInvocationPart state = 'approval-requested'
+5. Client renders ConfirmationCard inline (no modal, inline in message bubble)
+6. User clicks Approve:
+     → useChat re-sends messages with approvedActions: [{ toolName, inputHash }]
+     → Server finds matching hash → executes tool → returns real result
+     → ToolInvocationPart state = 'output-available'
+7. User clicks Reject:
+     → Client marks tool result = "denied"
+     → ToolInvocationPart state = 'output-denied'
+     → Ava receives "denied" in next step, acknowledges to user
+```
+
+The `inputHash` is a stable JSON hash of the tool arguments. This ensures approvals are scoped to the exact invocation — re-approving a different set of arguments requires a new approval.
+
+### AvaConfig Reference
+
+Full set of supported fields, including newer delegation and trust fields:
+
+```typescript
+interface AvaConfig {
+  // Model
+  model: 'haiku' | 'sonnet' | 'opus';
+
+  // Tool access gates
+  toolGroups: {
+    boardRead: boolean; // get_board_summary, list_features, get_feature
+    boardWrite: boolean; // create_feature, update_feature, move_feature, delete_feature
+    agentControl: boolean; // list_running_agents, start_agent, stop_agent, get_agent_output
+    autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
+    projectMgmt: boolean; // get_project_spec, update_project_spec
+    orchestration: boolean; // get_execution_order, set_feature_dependencies
+  };
+
+  // Context injection
+  sitrepInjection: boolean; // Inject live board state into system prompt
+  contextInjection: boolean; // Inject .automaker/context/ files into prompt
+
+  // Custom prompt
+  systemPromptExtension: string; // Appended after all other prompt layers
+
+  // Agent delegation
+  mcpServers?: Record<string, MCPServerConfig>; // Custom MCP servers for inner agents
+  subagentTrust?: 'high' | 'standard' | 'restricted'; // Max trust granted to delegated agents
+}
+```
+
+All fields default to enabled. `mcpServers` and `subagentTrust` are optional — omitting them uses the system defaults (standard trust, no extra MCP servers). See `apps/server/src/routes/chat/ava-config.ts`.
+
 ## Server API
 
 ### `POST /api/chat`
@@ -361,3 +505,10 @@ apps/ui/src/components/views/chat-overlay/
   conversation-list.tsx             # Session history sidebar
   ava-settings-panel.tsx            # Config popover
 ```
+
+## See Also
+
+- [Ava Chat Server API](../server/ava-chat.md) — SDK hooks, MCP server config, trust model, tool progress WebSocket events
+- [Ava Delegation Flow](../agents/ava-delegation.md) — how `execute_dynamic_agent` routes through role registry and `DynamicAgentExecutor`
+- [Dynamic Role Registry](../agents/dynamic-role-registry.md) — agent template schema and registration
+- [SDK Integration](../agents/sdk-integration.md) — Claude Agent SDK query options and session management
