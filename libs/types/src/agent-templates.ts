@@ -158,6 +158,29 @@ const HeadsdownConfigSchema = z.object({
 });
 
 /**
+ * MCP Server Configuration Schema for agent templates.
+ *
+ * Defines connection details for Model Context Protocol servers
+ * that an agent is allowed to use. Supports stdio, SSE, and HTTP transports.
+ */
+export const MCPServerConfigSchema = z.object({
+  /** Unique name identifying this server (used as the key in provider configs) */
+  name: z.string(),
+  /** Transport type: stdio (default), sse, or http */
+  type: z.enum(['stdio', 'sse', 'http']).optional(),
+  /** For stdio: command to execute (e.g., 'node', 'npx') */
+  command: z.string().optional(),
+  /** For stdio: arguments to pass to the command */
+  args: z.array(z.string()).optional(),
+  /** For stdio: environment variables to set */
+  env: z.record(z.string(), z.string()).optional(),
+  /** For sse/http: URL endpoint */
+  url: z.string().optional(),
+  /** For sse/http: headers to include in requests */
+  headers: z.record(z.string(), z.string()).optional(),
+});
+
+/**
  * Agent Template Schema — the complete configuration for an agent type.
  *
  * This is the single source of truth for agent identity, capabilities,
@@ -185,6 +208,8 @@ export const AgentTemplateSchema = z.object({
   tools: z.array(z.string()).optional(),
   /** Denied tools (denylist, overrides tools allowlist) */
   disallowedTools: z.array(z.string()).optional(),
+  /** MCP servers available to this agent for extended tool capabilities */
+  mcpServers: z.array(MCPServerConfigSchema).optional(),
   /** Can this agent execute bash commands */
   canUseBash: z.boolean().optional(),
   /** Can this agent modify files */
@@ -272,6 +297,8 @@ export type GitHubAssignment = z.infer<typeof GitHubAssignmentSchema>;
 export type AgentHeadsdownConfig = z.infer<typeof HeadsdownConfigSchema>;
 export type DesiredStateCondition = z.infer<typeof DesiredStateConditionSchema>;
 export type StateOperator = z.infer<typeof StateOperatorSchema>;
+/** Inferred TypeScript type for an MCP server entry in agent templates */
+export type AgentMCPServerConfig = z.infer<typeof MCPServerConfigSchema>;
 
 /** The known built-in roles */
 export const KNOWN_AGENT_ROLES = KNOWN_ROLES;
