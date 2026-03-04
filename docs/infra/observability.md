@@ -1,13 +1,13 @@
 # Observability
 
-protoLabs Studio ships two complementary OTel integrations for production tracing:
+protoLabs Studio uses a single unified OTel NodeSDK with two span processors:
 
-| Integration                     | File                    | What it captures                                                            |
-| ------------------------------- | ----------------------- | --------------------------------------------------------------------------- |
-| **OTLP + Auto-instrumentation** | `src/lib/otel.ts`       | Express HTTP spans, pg queries, fs operations — all standard server traffic |
-| **Langfuse Span Processor**     | `src/lib/otel-setup.ts` | AI SDK calls (`streamText`, `generateText`) via `experimental_telemetry`    |
+| Processor                 | What it captures                                                            |
+| ------------------------- | --------------------------------------------------------------------------- |
+| **BatchSpanProcessor**    | Express HTTP spans, pg queries, fs operations — all standard server traffic |
+| **LangfuseSpanProcessor** | AI SDK calls (`streamText`, `generateText`) via `experimental_telemetry`    |
 
-Both exporters send to Langfuse and share the same credentials.
+Both processors live in one `NodeSDK` instance (`src/lib/otel.ts`) and share the same Langfuse credentials. Agent execution is additionally traced via `TracedProvider` (Langfuse SDK) and Claude subprocess telemetry (`CLAUDE_CODE_ENABLE_TELEMETRY`).
 
 For self-hosted local observability, see [Local OTel Stack](#local-otel-stack-grafana-alloy) below.
 
@@ -31,24 +31,32 @@ The staging `docker-compose.staging.yml` maps all four from the host environment
 - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-protolabs-server}
 ```
 
-## OTLP HTTP Exporter (`otel.ts`)
+## Unified OTel SDK (`otel.ts`)
 
-Called as the first operation in `runStartup()`. Configures NodeSDK with:
+Called as the first operation in `runStartup()`. Configures a single `NodeSDK` with:
 
-- **Exporter**: `OTLPTraceExporter` pointing to `${LANGFUSE_BASE_URL}/api/public/otel`
-  (the exporter auto-appends `/v1/traces` to the base URL)
+- **BatchSpanProcessor** + `OTLPTraceExporter` pointing to `${LANGFUSE_BASE_URL}/api/public/otel/v1/traces` (full URL required — `OTLPTraceExporter` only auto-appends `/v1/traces` when using `OTEL_EXPORTER_OTLP_ENDPOINT` env var, not the programmatic `url` option)
+- **LangfuseSpanProcessor** from `@langfuse/otel` — captures AI SDK `experimental_telemetry` spans with enriched LLM metadata (model, tokens, cost)
 - **Auth**: HTTP `Authorization: Basic <base64(publicKey:secretKey)>` header
 - **Instrumentation**: `getNodeAutoInstrumentations()` — covers Express HTTP, pg, fs, and other common Node.js modules
 
+Only one `NodeSDK` can register the global TracerProvider per process. Using two separate `NodeSDK` instances causes the second to silently no-op. Both processors are registered in a single SDK to ensure both are active.
+
 ### No-op behavior
 
-If `LANGFUSE_PUBLIC_KEY` or `LANGFUSE_SECRET_KEY` are missing, `initOtel()` logs a single info line and returns without registering the SDK. No error is thrown.
+If `LANGFUSE_PUBLIC_KEY` or `LANGFUSE_SECRET_KEY` are missing, `initOtel()` logs a WARN-level message and returns without registering the SDK. No error is thrown.
 
-## AI SDK Telemetry (`otel-setup.ts`)
+## Agent Tracing (Three Layers)
 
-Initialized separately during the same startup sequence. Uses `LangfuseSpanProcessor` from `@langfuse/otel` to capture AI SDK spans when `experimental_telemetry: { isEnabled: true }` is passed to `streamText` / `generateText` calls.
+| Layer                      | What                                                                    | How                                                                  |
+| -------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **TracedProvider**         | Top-level agent run (latency, tokens, tool spans, cost)                 | `ProviderFactory.wrapWithTracing()` wraps provider with Langfuse SDK |
+| **LangfuseSpanProcessor**  | AI SDK calls (`streamText`, `generateText`) in `/api/chat`, `/api/ai/*` | `experimental_telemetry: { isEnabled: true }` on each call           |
+| **Claude subprocess OTel** | Per-turn token usage, API request costs, tool result timings            | `CLAUDE_CODE_ENABLE_TELEMETRY=1` passed in subprocess env            |
 
-Example:
+The Claude Agent SDK runs as a `claude -p` subprocess. The parent process traces the message stream via TracedProvider. The subprocess emits its own OTel spans (if Langfuse credentials are configured) as separate traces, correlated by `featureId` resource attribute.
+
+### AI SDK telemetry example
 
 ```typescript
 const result = await streamText({
@@ -65,18 +73,17 @@ const result = await streamText({
 3. Filter by `Service Name = protolabs-server` to isolate server traffic
 4. Click any trace to inspect spans, durations, and attributes
 
-Langfuse shows both OTLP HTTP spans (from `otel.ts`) and AI SDK spans (from `otel-setup.ts`) in the same project — they share credentials and will appear together in the traces list.
+All spans land in the same Langfuse project — OTLP HTTP spans and AI SDK spans share credentials and appear together in the traces list.
 
 ## Graceful Shutdown
 
-Both SDKs are flushed during graceful shutdown (`shutdown.ts`):
+The OTel SDK and Langfuse client are flushed during graceful shutdown (`shutdown.ts`):
 
 ```
 SIGTERM / SIGINT
   -> gracefulShutdown()
-    -> shutdownLangfuse()   // flushes Langfuse client queue
-    -> shutdownOTEL()       // flushes AI SDK span processor (otel-setup.ts)
-    -> shutdownOtel()       // flushes OTLP batch processor (otel.ts)
+    -> shutdownLangfuse()   // flushes Langfuse SDK client queue (TracedProvider traces)
+    -> shutdownOtel()       // flushes both span processors (OTLP batch + Langfuse)
     -> server.close()
 ```
 

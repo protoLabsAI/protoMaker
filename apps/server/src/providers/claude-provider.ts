@@ -183,6 +183,20 @@ function buildEnv(
     }
   }
 
+  // Pass OTel telemetry config to subprocess for per-turn trace visibility.
+  // The Claude CLI emits claude_code.token.usage, claude_code.api_request,
+  // claude_code.tool_result spans to the configured OTel endpoint.
+  // These land as separate traces in Langfuse, correlated by featureId resource attribute.
+  const langfusePublicKey = process.env.LANGFUSE_PUBLIC_KEY;
+  const langfuseSecretKey = process.env.LANGFUSE_SECRET_KEY;
+  const langfuseBaseUrl = process.env.LANGFUSE_BASE_URL;
+  if (langfusePublicKey && langfuseSecretKey && langfuseBaseUrl) {
+    env['CLAUDE_CODE_ENABLE_TELEMETRY'] = '1';
+    env['OTEL_EXPORTER_OTLP_ENDPOINT'] = `${langfuseBaseUrl}/api/public/otel`;
+    env['OTEL_EXPORTER_OTLP_HEADERS'] =
+      `Authorization=Basic ${Buffer.from(`${langfusePublicKey}:${langfuseSecretKey}`).toString('base64')}`;
+  }
+
   return env;
 }
 

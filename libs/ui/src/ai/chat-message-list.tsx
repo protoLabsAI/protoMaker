@@ -35,9 +35,12 @@ export function ChatMessageList({
   onRegenerate,
   onThumbsUp,
   onThumbsDown,
+  onToolApprove,
+  onToolReject,
   branchInfoMap,
   onPreviousBranch,
   onNextBranch,
+  getToolProgressLabel,
 }: {
   messages: UIMessage[];
   emptyMessage?: string;
@@ -50,12 +53,18 @@ export function ChatMessageList({
   onThumbsUp?: () => void;
   /** Called when the user clicks Thumbs Down on an assistant message. */
   onThumbsDown?: () => void;
+  /** Called when the user approves a destructive tool call (HITL). */
+  onToolApprove?: (toolName: string, input: unknown) => void;
+  /** Called when the user rejects a destructive tool call (HITL). */
+  onToolReject?: (toolName: string, input: unknown) => void;
   /** Branch info keyed by message ID — provided by the parent managing branch state. */
   branchInfoMap?: Map<string, BranchInfo>;
   /** Called with the origId when the user navigates to the previous branch. */
   onPreviousBranch?: (origId: string) => void;
   /** Called with the origId when the user navigates to the next branch. */
   onNextBranch?: (origId: string) => void;
+  /** Returns a live progress label for a running tool, keyed by toolCallId. */
+  getToolProgressLabel?: (toolCallId: string) => string | undefined;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -177,12 +186,15 @@ export function ChatMessageList({
                   onRegenerate={onRegenerate}
                   onThumbsUp={onThumbsUp}
                   onThumbsDown={onThumbsDown}
+                  onToolApprove={onToolApprove}
+                  onToolReject={onToolReject}
                   branchIndex={branchInfo?.branchIndex}
                   branchCount={branchInfo?.branchCount}
                   onPreviousBranch={
                     branchInfo ? () => onPreviousBranch?.(branchInfo.origId) : undefined
                   }
                   onNextBranch={branchInfo ? () => onNextBranch?.(branchInfo.origId) : undefined}
+                  getToolProgressLabel={getToolProgressLabel}
                 />
               );
             })

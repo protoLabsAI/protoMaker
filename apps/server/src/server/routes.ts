@@ -8,7 +8,8 @@ import type { ServiceContainer } from './services.js';
 
 import { authMiddleware } from '../lib/auth.js';
 import { requireJsonContentType } from '../middleware/require-json-content-type.js';
-import { initOTEL } from '../lib/otel-setup.js';
+// Note: OTel is initialized in startup.ts via initOtel() — a single unified NodeSDK
+// with both OTLP exporter and LangfuseSpanProcessor. No separate init needed here.
 import { cleanupStaleValidations } from '../routes/github/routes/validation-common.js';
 
 import { createAuthRoutes } from '../routes/auth/index.js';
@@ -189,8 +190,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Require Content-Type: application/json for all API POST/PUT/PATCH requests
   app.use('/api', requireJsonContentType);
 
-  // Initialize OTEL for AI SDK telemetry → Langfuse tracing
-  initOTEL().catch((err) => logger.warn('OTEL init failed (non-fatal):', err));
+  // OTel is initialized in startup.ts — single unified NodeSDK covers both
+  // OTLP HTTP export and AI SDK telemetry via LangfuseSpanProcessor.
 
   // --- UNAUTHENTICATED ROUTES (must come before authMiddleware) ---
   app.use('/api/health', createHealthRoutes());

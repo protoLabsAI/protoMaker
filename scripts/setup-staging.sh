@@ -94,6 +94,12 @@ GH_TOKEN=${GH_TOKEN:-}
 CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
 CURSOR_AUTH_TOKEN=${CURSOR_AUTH_TOKEN:-}
 
+# ── Observability (Langfuse) ────────────────────────────────────────────────
+# Required for agent trace visibility. Without these, all tracing silently no-ops.
+LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://cloud.langfuse.com}
+
 # ── Container User ───────────────────────────────────────────────────────────
 UID=$uid
 GID=$gid

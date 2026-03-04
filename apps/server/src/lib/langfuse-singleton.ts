@@ -35,7 +35,9 @@ export function getLangfuseInstance(): LangfuseClient {
     if (instance.isAvailable()) {
       logger.info('Langfuse singleton initialized (tracing enabled)');
     } else {
-      logger.info('Langfuse singleton initialized (tracing disabled — missing credentials)');
+      logger.warn(
+        'Langfuse singleton initialized but DISABLED — missing LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY. Agent traces will NOT be recorded.'
+      );
     }
   }
   return instance;

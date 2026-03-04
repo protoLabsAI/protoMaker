@@ -5,7 +5,7 @@
  * and syncing between useChat's live state and the Zustand store.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useChatStore } from '@/store/chat-store';
@@ -54,10 +54,19 @@ export function useChatSession({
   // Track session switch to avoid saving stale messages
   const activeSessionRef = useRef(currentSessionId);
 
-  // Merge projectPath into transport body
+  // HITL: pending approved actions for the next request
+  const [approvedActions, setApprovedActions] = useState<
+    Array<{ toolName: string; inputHash: string }>
+  >([]);
+
+  // Merge projectPath and approvedActions into transport body
   const transportBody = useMemo(
-    () => ({ ...body, ...(projectPath !== undefined ? { projectPath } : {}) }),
-    [body, projectPath]
+    () => ({
+      ...body,
+      ...(projectPath !== undefined ? { projectPath } : {}),
+      ...(approvedActions.length > 0 ? { approvedActions } : {}),
+    }),
+    [body, projectPath, approvedActions]
   );
 
   // AI SDK v6 requires transport instead of api/headers/body
@@ -131,6 +140,33 @@ export function useChatSession({
     [currentSessionId, updateModel]
   );
 
+  // HITL: approve a destructive tool call and re-send for execution.
+  // Uses wildcard '*' so the approval covers any invocation of the tool name,
+  // since the model may regenerate slightly different input args on retry.
+  const approveToolAction = useCallback(
+    (toolName: string, _input: unknown) => {
+      setApprovedActions((prev) => [...prev, { toolName, inputHash: '*' }]);
+      // Send a follow-up message so the model re-invokes the tool (now approved)
+      sendMessage({ text: 'Approved. Please proceed.' });
+    },
+    [sendMessage]
+  );
+
+  // HITL: reject a destructive tool call
+  const rejectToolAction = useCallback(
+    (_toolName: string, _input: unknown) => {
+      sendMessage({ text: 'Rejected. Do not proceed with this action.' });
+    },
+    [sendMessage]
+  );
+
+  // Clear approved actions after each completed request cycle
+  useEffect(() => {
+    if (!isStreaming && approvedActions.length > 0) {
+      setApprovedActions([]);
+    }
+  }, [isStreaming]); // intentionally omits approvedActions — only clear on stream end
+
   // Ensure there's always a session (scoped to project when projectId provided)
   useEffect(() => {
     if (!currentSessionId || !visibleSessions.find((s) => s.id === currentSessionId)) {
@@ -150,6 +186,10 @@ export function useChatSession({
     isStreaming,
     error,
     setMessages,
+
+    // HITL
+    approveToolAction,
+    rejectToolAction,
 
     // Session management
     sessions: visibleSessions,

@@ -41,6 +41,8 @@ export interface AvaConfig {
   contextInjection: boolean;
   /** Additional text appended to Ava's base system prompt (empty = no extension) */
   systemPromptExtension: string;
+  /** When true, destructive tools execute immediately without HITL confirmation */
+  autoApproveTools: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,10 +62,19 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
     autoMode: true,
     projectMgmt: true,
     orchestration: true,
+    agentDelegation: true,
+    notes: true,
+    metrics: true,
+    prWorkflow: true,
+    promotion: true,
+    contextFiles: true,
+    projects: true,
+    briefing: true,
   },
   sitrepInjection: true,
   contextInjection: true,
   systemPromptExtension: '',
+  autoApproveTools: false,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

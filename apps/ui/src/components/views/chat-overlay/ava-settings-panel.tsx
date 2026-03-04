@@ -43,6 +43,18 @@ const TOOL_GROUP_ENTRIES: Array<{
     label: 'Orchestration',
     description: 'Manage feature dependencies and order',
   },
+  {
+    key: 'agentDelegation',
+    label: 'Agent Delegation',
+    description: 'Delegate tasks to specialized agents',
+  },
+  { key: 'notes', label: 'Notes', description: 'Read and write project notes' },
+  { key: 'metrics', label: 'Metrics', description: 'View project and capacity metrics' },
+  { key: 'prWorkflow', label: 'PR Workflow', description: 'Check PR status, feedback, and merge' },
+  { key: 'promotion', label: 'Promotion', description: 'List staging candidates and promote' },
+  { key: 'contextFiles', label: 'Context Files', description: 'Manage agent context files' },
+  { key: 'projects', label: 'Projects', description: 'List, view, and create projects' },
+  { key: 'briefing', label: 'Briefing', description: 'Daily briefing and event digest' },
 ];
 
 // ── Model options ─────────────────────────────────────────────────────────────
@@ -246,6 +258,18 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
           description="Injects live board status into prompt."
           checked={data.sitrepInjection}
           onChange={(checked) => handleToggle('sitrepInjection', checked)}
+        />
+      </div>
+
+      <hr className="border-border" />
+
+      {/* Auto-approve destructive tools */}
+      <div className="space-y-3">
+        <ToggleRow
+          label="Auto-approve Tools"
+          description="Skip confirmation for destructive actions (merge, delegate, promote)."
+          checked={data.autoApproveTools}
+          onChange={(checked) => saveMutation.mutate({ autoApproveTools: checked })}
         />
       </div>
 

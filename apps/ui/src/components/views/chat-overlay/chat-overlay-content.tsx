@@ -32,6 +32,7 @@ import { AvaSettingsPanel } from './ava-settings-panel';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { useAppStore } from '@/store/app-store';
 import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
+import { useToolProgress } from '@/hooks/use-tool-progress';
 import { getOverlayAPI } from '@/lib/electron';
 
 const OVERLAY_HEIGHT_DEFAULT = 600;
@@ -61,6 +62,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     handleSwitchSession,
     handleDeleteSession,
     handleModelChange,
+    approveToolAction,
+    rejectToolAction,
     historyOpen,
     toggleHistory,
     setHistoryOpen,
@@ -85,6 +88,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const pendingBranchFor = useRef<string | null>(null);
 
   const suggestions = useContextualSuggestions(features ?? []);
+  const { getProgressLabel } = useToolProgress();
 
   // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
   // ChatInput clears the input immediately after calling this.
@@ -398,9 +402,12 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
             onRegenerate={handleRegenerate}
             onThumbsUp={handleThumbsUp}
             onThumbsDown={handleThumbsDown}
+            onToolApprove={approveToolAction}
+            onToolReject={rejectToolAction}
             branchInfoMap={branchInfoMap}
             onPreviousBranch={handlePreviousBranch}
             onNextBranch={handleNextBranch}
+            getToolProgressLabel={getProgressLabel}
           />
 
           {/* Contextual suggestions — shown only when no messages in current session */}

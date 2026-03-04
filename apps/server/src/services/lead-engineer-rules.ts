@@ -535,6 +535,44 @@ export const hitlFormResponse: LeadFastPathRule = {
   },
 };
 
+/**
+ * missingCIChecks — PR waiting >30min for required CI checks that have never registered.
+ * Surfaces a diagnostic warning with the missing check names and a suggested cause
+ * (e.g., a CI workflow configured to only trigger on PRs targeting a different base branch).
+ */
+export const missingCIChecks: LeadFastPathRule = {
+  name: 'missingCIChecks',
+  description:
+    'PR waiting >30min for required CI checks that never registered → log diagnostic warning',
+  triggers: ['pr:missing-ci-checks'],
+
+  evaluate(_worldState, _eventType, payload): LeadRuleAction[] {
+    const event = payload as Record<string, unknown> | null;
+    if (!event) return [];
+
+    const featureId = event.featureId as string | undefined;
+    const prNumber = event.prNumber as number | undefined;
+    const baseBranch = event.baseBranch as string | undefined;
+    const missingChecks = event.missingChecks as string[] | undefined;
+    const waitingMinutes = event.waitingMinutes as number | undefined;
+    const possibleCause = event.possibleCause as string | undefined;
+
+    if (!featureId || !prNumber || !missingChecks?.length) return [];
+
+    return [
+      {
+        type: 'log',
+        level: 'warn',
+        message:
+          `PR #${prNumber} (feature ${featureId}) has been waiting ${waitingMinutes ?? '?'} min — ` +
+          `required CI checks have never registered: [${missingChecks.join(', ')}]. ` +
+          `Base branch: ${baseBranch ?? 'unknown'}. ` +
+          `Possible cause: ${possibleCause ?? 'CI workflow may target a different branch'}`,
+      },
+    ];
+  },
+};
+
 // ────────────────────────── Exports ──────────────────────────
 
 /** Default set of fast-path rules */
@@ -552,6 +590,7 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   remediationStalled,
   classifiedRecovery,
   hitlFormResponse,
+  missingCIChecks,
 ];
 
 /**

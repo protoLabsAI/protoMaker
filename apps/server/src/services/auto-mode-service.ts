@@ -3798,6 +3798,7 @@ Format your response as a structured markdown document.`;
     // Fetch all open PRs once — guards against re-executing features that already have open PRs.
     // Prevents the SPEC_REVIEW gate (or dep-unblocking) from launching duplicate agents.
     const openPrBranches = new Map<string, number>(); // branch → PR number
+    let openPrsFetchFailed = false;
     try {
       const { stdout: prJson } = await execAsync(
         'gh pr list --state open --json number,headRefName --limit 200',
@@ -3809,8 +3810,13 @@ Format your response as a structured markdown document.`;
         `[loadPendingFeatures] Found ${openPrBranches.size} open PR(s) — these branches are excluded from re-execution`
       );
     } catch (err) {
+      openPrsFetchFailed = true;
       logger.warn('[loadPendingFeatures] Could not fetch open PRs (non-fatal):', err);
     }
+
+    // Build a secondary index of open PR numbers for prNumber-based lookups.
+    // This catches cases where feature.branchName doesn't exactly match the PR's headRefName.
+    const openPrNumbers = new Set<number>(openPrBranches.values());
 
     // Fetch recently merged PRs to reconcile blocked/review features whose PRs already landed.
     // Catches drift from: webhook disabled, server down during merge, or feature blocked before PR was created.
@@ -3918,9 +3924,46 @@ Format your response as a structured markdown document.`;
         if (satisfied) {
           // Guard: if deps are satisfied but feature already has an open PR, sync to 'review'
           // rather than 'backlog' — this prevents duplicate agent launches after SPEC_REVIEW gate
-          const existingPr = feature.branchName
+          const existingPrByBranch = feature.branchName
             ? openPrBranches.get(feature.branchName)
             : undefined;
+          // Secondary check: if feature already has a stored prNumber and it appears in the
+          // open-PR set, treat it as having an open PR even when branchName lookup misses.
+          const existingPrByNumber =
+            !existingPrByBranch && feature.prNumber && openPrNumbers.has(feature.prNumber)
+              ? feature.prNumber
+              : undefined;
+          // Fallback: when the bulk PR fetch failed, verify the stored prNumber directly via
+          // a single gh pr view call to prevent duplicate agent launches on transient API errors.
+          let existingPrFallback: number | undefined;
+          if (
+            !existingPrByBranch &&
+            !existingPrByNumber &&
+            openPrsFetchFailed &&
+            feature.prNumber
+          ) {
+            try {
+              const { stdout: prStateRaw } = await execAsync(
+                `gh pr view ${feature.prNumber} --json state --jq '.state'`,
+                { cwd: projectPath, timeout: 10000 }
+              );
+              if (prStateRaw.trim() === 'OPEN') {
+                existingPrFallback = feature.prNumber;
+                logger.info(
+                  `[loadPendingFeatures] Feature ${feature.id} PR #${feature.prNumber} confirmed open via direct check (bulk fetch had failed)`
+                );
+              }
+            } catch (verifyErr) {
+              // If we still can't verify, be conservative: assume the PR is open to avoid
+              // launching a duplicate agent that will fail with "PR already exists".
+              existingPrFallback = feature.prNumber;
+              logger.warn(
+                `[loadPendingFeatures] Could not verify PR #${feature.prNumber} for feature ${feature.id} — ` +
+                  `assuming open to prevent duplicate agent launch: ${verifyErr}`
+              );
+            }
+          }
+          const existingPr = existingPrByBranch ?? existingPrByNumber ?? existingPrFallback;
           if (existingPr) {
             logger.info(
               `[loadPendingFeatures] Feature ${feature.id} deps satisfied but has open PR #${existingPr} — syncing to review`
@@ -4022,17 +4065,58 @@ Format your response as a structured markdown document.`;
           // Guard: if feature already has an open PR, sync it to 'review' and skip execution.
           // Prevents duplicate agent launches when SPEC_REVIEW gate or dep-unblocking races
           // with an existing in-flight PR.
-          const existingPr = feature.branchName
+          // Pre-flight check per feature description: if a feature already has a prNumber
+          // and that PR is still open on GitHub, skip agent launch and move to review instead.
+          const existingPrByBranchFilter = feature.branchName
             ? openPrBranches.get(feature.branchName)
             : undefined;
-          if (existingPr) {
+          // Secondary check: if feature has a stored prNumber, look it up in the open PR number
+          // set — catches cases where branchName doesn't exactly match the PR's headRefName.
+          const existingPrByNumberFilter =
+            !existingPrByBranchFilter && feature.prNumber && openPrNumbers.has(feature.prNumber)
+              ? feature.prNumber
+              : undefined;
+          // Fallback: when the bulk PR fetch failed, verify the stored prNumber directly.
+          // This is the primary safeguard against the re-launch cycle: even if the gh pr list
+          // call returned a 502, we can still check the individual PR to avoid wasted runs.
+          let existingPrFallbackFilter: number | undefined;
+          if (
+            !existingPrByBranchFilter &&
+            !existingPrByNumberFilter &&
+            openPrsFetchFailed &&
+            feature.prNumber
+          ) {
+            try {
+              const { stdout: prStateRaw } = await execAsync(
+                `gh pr view ${feature.prNumber} --json state --jq '.state'`,
+                { cwd: projectPath, timeout: 10000 }
+              );
+              if (prStateRaw.trim() === 'OPEN') {
+                existingPrFallbackFilter = feature.prNumber;
+                logger.info(
+                  `[loadPendingFeatures] Feature ${feature.id} PR #${feature.prNumber} confirmed open via direct check — skipping agent launch`
+                );
+              }
+            } catch (verifyErr) {
+              // If we still can't verify, be conservative: assume the PR is open to avoid
+              // launching a duplicate agent that will fail with "PR already exists".
+              existingPrFallbackFilter = feature.prNumber;
+              logger.warn(
+                `[loadPendingFeatures] Could not verify PR #${feature.prNumber} for feature ${feature.id} — ` +
+                  `assuming open to prevent duplicate agent launch: ${verifyErr}`
+              );
+            }
+          }
+          const existingPrFilter =
+            existingPrByBranchFilter ?? existingPrByNumberFilter ?? existingPrFallbackFilter;
+          if (existingPrFilter) {
             logger.info(
-              `[loadPendingFeatures] ⏭ Feature ${feature.id} has open PR #${existingPr} — syncing to review, skipping execution`
+              `[loadPendingFeatures] ⏭ Feature ${feature.id} has open PR #${existingPrFilter} — syncing to review, skipping execution`
             );
             try {
               await this.featureLoader.update(projectPath, feature.id, {
                 status: 'review',
-                prNumber: existingPr,
+                prNumber: existingPrFilter,
               });
               this.events.emit('feature:status-changed', {
                 projectPath,

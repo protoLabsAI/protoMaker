@@ -1,0 +1,47 @@
+name: Chromatic
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - staging
+    paths:
+      - 'libs/ui/**'
+      - 'apps/ui/**'
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  chromatic:
+    name: Run Chromatic Visual Tests
+    runs-on: ubuntu-latest
+    # Non-blocking: errors here do not block PR merges
+    continue-on-error: true
+    # Only run for PRs from the same repository (not forks)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Full history is required by Chromatic to determine the baseline build
+          fetch-depth: 0
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          skip-native-rebuild: 'true'
+
+      - name: Build Storybook
+        run: npm run build-storybook --workspace=apps/ui
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Publish to Chromatic
+        run: npx chromatic --storybook-build-dir=apps/ui/storybook-static --exit-zero-on-changes
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

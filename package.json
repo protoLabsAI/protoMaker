@@ -108,6 +108,7 @@
     "@changesets/cli": "^2.29.8",
     "@commitlint/cli": "^20.4.2",
     "@commitlint/config-conventional": "^20.4.2",
+    "chromatic": "^11.0.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "husky": "9.1.7",
     "lint-staged": "16.2.7",

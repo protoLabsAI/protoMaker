@@ -4,21 +4,15 @@
  * Sets up global theme integration and accessibility auditing for all stories.
  * - Theme switcher toolbar addon cycles through all 6 themes
  * - Themes are applied as CSS classes on document root
- * - All theme CSS files are imported for proper styling
+ * - @storybook/addon-a11y wired via main.ts; a11y panel active for all stories
  */
 
 import type { Preview } from '@storybook/react-vite';
 import React from 'react';
 import { themeOptions } from '../src/config/theme-options';
 
-// Import global styles and all theme CSS files
+// Import global styles (theme CSS files loaded when themes are implemented)
 import '../src/styles/global.css';
-import '../src/styles/themes/catppuccin.css';
-import '../src/styles/themes/dracula.css';
-import '../src/styles/themes/monokai.css';
-import '../src/styles/themes/nord.css';
-import '../src/styles/themes/studio-dark.css';
-import '../src/styles/themes/studio-light.css';
 
 const preview: Preview = {
   parameters: {

@@ -42,6 +42,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.70.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.212.0",
     "@opentelemetry/sdk-node": "^0.212.0",
+    "@opentelemetry/sdk-trace-base": "^2.0.0",
     "@protolabs-ai/dependency-resolver": "^0.33.1",
     "@protolabs-ai/error-tracking": "^0.6.27",
     "@protolabs-ai/flows": "^0.33.1",

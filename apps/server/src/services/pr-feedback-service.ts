@@ -51,6 +51,9 @@ const CI_POLL_INTERVAL_MS = 60_000;
 /** Max time to wait for CI checks to complete (10 minutes) */
 const CI_MAX_WAIT_MS = 10 * 60 * 1000;
 
+/** How long a PR must be tracked before we alert on permanently missing required CI checks */
+const MISSING_CI_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
 export class PRFeedbackService {
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
@@ -67,6 +70,9 @@ export class PRFeedbackService {
 
   /** Collected evaluation decisions during remediation, keyed by featureId */
   private collectedDecisions = new Map<string, FeedbackThreadDecision[]>();
+
+  /** PRs for which a missing-CI-checks diagnostic has been emitted (prevents repeated alerts) */
+  private missingCICheckAlerted = new Set<string>();
 
   private readonly feedbackAggregator: FeedbackAggregator;
   private readonly threadResolver: ThreadResolver;
@@ -174,6 +180,7 @@ export class PRFeedbackService {
     this.trackedPRs.clear();
     this.remediatingFeatures.clear();
     this.collectedDecisions.clear();
+    this.missingCICheckAlerted.clear();
     this.initialized = false;
   }
 
@@ -188,6 +195,7 @@ export class PRFeedbackService {
     }
     this.remediatingFeatures.delete(featureId);
     this.collectedDecisions.delete(featureId);
+    this.missingCICheckAlerted.delete(featureId);
   }
 
   /**
@@ -230,6 +238,7 @@ export class PRFeedbackService {
             lastCheckedAt: lastPolledAt,
             reviewState: 'pending',
             iterationCount: feature.prIterationCount || 0,
+            trackedSince: lastPolledAt || Date.now(),
           });
 
           logger.info(
@@ -267,6 +276,7 @@ export class PRFeedbackService {
       lastCheckedAt: 0,
       reviewState: 'pending',
       iterationCount: existing?.iterationCount || 0,
+      trackedSince: existing?.trackedSince ?? Date.now(),
     });
 
     void this.featureLoader.update(projectPath, featureId, {
@@ -301,6 +311,7 @@ export class PRFeedbackService {
         lastCheckedAt: 0,
         reviewState: 'pending',
         iterationCount: feature.prIterationCount || 0,
+        trackedSince: Date.now(),
       });
 
       logger.info(
@@ -358,6 +369,7 @@ export class PRFeedbackService {
 
   private async pollAllPRs(): Promise<void> {
     await this.pollCIStatus();
+    await this.pollMissingCIChecks();
 
     for (const [featureId, pr] of this.trackedPRs) {
       if (Date.now() - pr.lastCheckedAt < POLL_INTERVAL_MS * 0.8) continue;
@@ -1134,6 +1146,58 @@ export class PRFeedbackService {
       }
     } catch (error) {
       logger.error(`Failed to handle CI failure for PR #${data.prNumber}:`, error);
+    }
+  }
+
+  /**
+   * Detect PRs that have been waiting longer than MISSING_CI_THRESHOLD_MS for required
+   * status checks that have never been registered. This catches misconfigured CI workflows
+   * (e.g., a workflow that only triggers on PRs targeting 'main' when the PR targets 'dev').
+   *
+   * Emits 'pr:missing-ci-checks' once per PR to avoid repeated alert storms.
+   */
+  private async pollMissingCIChecks(): Promise<void> {
+    const now = Date.now();
+
+    for (const [featureId, pr] of this.trackedPRs) {
+      // Skip if already alerted for this PR
+      if (this.missingCICheckAlerted.has(featureId)) continue;
+
+      const age = now - (pr.trackedSince ?? now);
+      if (age < MISSING_CI_THRESHOLD_MS) continue;
+
+      try {
+        const result = await prStatusChecker.fetchMissingRequiredChecks(pr);
+        if (!result || result.missingChecks.length === 0) continue;
+
+        const waitingMinutes = Math.round(age / 60_000);
+        const message =
+          `PR #${pr.prNumber} (feature ${featureId}) has been waiting ${waitingMinutes} minutes ` +
+          `but required CI checks have never registered. ` +
+          `Missing: [${result.missingChecks.join(', ')}]. ` +
+          `Base branch: ${result.baseBranch}. ` +
+          `Possible cause: CI workflow may only trigger on PRs targeting a different branch (e.g., 'main'), ` +
+          `but this PR targets '${result.baseBranch}'.`;
+
+        logger.warn(message);
+
+        // Mark as alerted so we don't spam this event on every poll cycle
+        this.missingCICheckAlerted.add(featureId);
+
+        this.events.emit('pr:missing-ci-checks', {
+          projectPath: pr.projectPath,
+          featureId,
+          prNumber: pr.prNumber,
+          prUrl: pr.prUrl,
+          baseBranch: result.baseBranch,
+          missingChecks: result.missingChecks,
+          requiredChecks: result.requiredChecks,
+          waitingMinutes,
+          possibleCause: `CI workflow may only trigger on PRs targeting a different branch than '${result.baseBranch}'`,
+        });
+      } catch (error) {
+        logger.debug(`Failed to check for missing CI checks on PR #${pr.prNumber}: ${error}`);
+      }
     }
   }
 

@@ -1,10 +1,13 @@
 /**
- * OpenTelemetry SDK — OTLP HTTP Exporter + Auto-Instrumentation
+ * OpenTelemetry SDK — Unified OTLP + Langfuse Span Processor
  *
- * Initializes the OTEL NodeSDK with:
- * - OTLP HTTP exporter pointing to the Langfuse OTel endpoint
- * - Auto-instrumentation for Express HTTP, pg, and fs
- * - Basic Auth from LANGFUSE_PUBLIC_KEY:LANGFUSE_SECRET_KEY
+ * Single NodeSDK instance with two span processors:
+ * 1. BatchSpanProcessor → OTLP HTTP exporter (Langfuse OTel endpoint) for infra traces
+ * 2. LangfuseSpanProcessor → enriched LLM trace capture for AI SDK calls
+ *
+ * Only one NodeSDK can register the global TracerProvider — creating two
+ * separate instances causes the second to silently no-op. This unified
+ * setup ensures both processors are active under a single TracerProvider.
  *
  * Called at the top of runStartup() before service initialization begins.
  * Gracefully no-ops if LANGFUSE_PUBLIC_KEY is not set.
@@ -17,7 +20,7 @@ const logger = createLogger('OTel');
 let sdkInstance: { shutdown: () => Promise<void> } | null = null;
 
 /**
- * Initialize OTel with OTLP HTTP exporter and auto-instrumentation.
+ * Initialize OTel with both OTLP HTTP exporter and Langfuse span processor.
  * No-ops gracefully if Langfuse credentials are missing.
  */
 export async function initOtel(): Promise<void> {
@@ -26,7 +29,9 @@ export async function initOtel(): Promise<void> {
   const baseUrl = process.env.LANGFUSE_BASE_URL ?? 'https://cloud.langfuse.com';
 
   if (!publicKey || !secretKey) {
-    logger.info('OTel: Skipping — missing LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY');
+    logger.warn(
+      'OTel: Skipping — LANGFUSE_PUBLIC_KEY or LANGFUSE_SECRET_KEY not set. Agent traces will NOT be recorded.'
+    );
     return;
   }
 
@@ -38,20 +43,31 @@ export async function initOtel(): Promise<void> {
   try {
     // Dynamic imports to avoid loading OTel when not configured
     const { OTLPTraceExporter } = await import('@opentelemetry/exporter-trace-otlp-http');
+    const { BatchSpanProcessor } = await import('@opentelemetry/sdk-trace-base');
     const { getNodeAutoInstrumentations } =
       await import('@opentelemetry/auto-instrumentations-node');
+    const { LangfuseSpanProcessor } = await import('@langfuse/otel');
     const { NodeSDK } = await import('@opentelemetry/sdk-node');
 
-    // OTLP exporter — OTLPTraceExporter auto-appends /v1/traces to the base URL
-    const exporter = new OTLPTraceExporter({
-      url: `${baseUrl}/api/public/otel`,
+    // OTLP exporter — full URL required (OTLPTraceExporter only auto-appends
+    // /v1/traces when using OTEL_EXPORTER_OTLP_ENDPOINT env var, not the `url` option)
+    const otlpExporter = new OTLPTraceExporter({
+      url: `${baseUrl}/api/public/otel/v1/traces`,
       headers: {
         Authorization: `Basic ${Buffer.from(`${publicKey}:${secretKey}`).toString('base64')}`,
       },
     });
 
+    // Langfuse span processor — enriched LLM trace capture for AI SDK
+    // experimental_telemetry spans (streamText, generateText) get model/token/cost parsing
+    const langfuseProcessor = new LangfuseSpanProcessor({
+      publicKey,
+      secretKey,
+      baseUrl: baseUrl || 'https://cloud.langfuse.com',
+    });
+
     const sdk = new NodeSDK({
-      traceExporter: exporter,
+      spanProcessors: [new BatchSpanProcessor(otlpExporter), langfuseProcessor],
       // Auto-instruments Express HTTP, pg, fs, and other common Node.js modules
       instrumentations: [getNodeAutoInstrumentations()],
     });
@@ -59,7 +75,7 @@ export async function initOtel(): Promise<void> {
     sdk.start();
     sdkInstance = sdk;
     logger.info(
-      `OTel: Initialized — traces will be exported to ${baseUrl}/api/public/otel as ${process.env.OTEL_SERVICE_NAME}`
+      `OTel: Initialized — OTLP exporter + LangfuseSpanProcessor active (${baseUrl}/api/public/otel/v1/traces, service=${process.env.OTEL_SERVICE_NAME})`
     );
   } catch (error) {
     logger.warn('OTel: Failed to initialize —', error);

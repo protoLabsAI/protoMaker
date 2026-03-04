@@ -107,12 +107,12 @@ export function ConfirmationCard({
         data-slot="confirmation-card"
         data-state="denied"
         className={cn(
-          'my-1 flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground',
+          'my-1 flex max-w-full items-center gap-2 overflow-hidden rounded-md border border-border/50 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground',
           className
         )}
       >
         <ShieldX className="size-3.5 shrink-0" />
-        <span className="font-medium">Action denied</span>
+        <span className="shrink-0 font-medium">Action denied</span>
         <span className="text-muted-foreground/40">—</span>
         <span className="truncate text-muted-foreground/70">{summary}</span>
       </div>
@@ -126,7 +126,7 @@ export function ConfirmationCard({
         data-slot="confirmation-card"
         data-state="responded"
         className={cn(
-          'my-1 flex items-center gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2.5 text-xs',
+          'my-1 flex max-w-full items-center gap-2 overflow-hidden rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2.5 text-xs',
           className
         )}
       >
@@ -144,19 +144,19 @@ export function ConfirmationCard({
       data-slot="confirmation-card"
       data-state="approval-requested"
       className={cn(
-        'my-1 rounded-md border border-yellow-500/40 bg-yellow-500/5 text-xs',
+        'my-1 max-w-full overflow-hidden rounded-md border border-yellow-500/40 bg-yellow-500/5 text-xs',
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-start gap-2.5 px-3 py-2.5">
+      <div className="flex items-start gap-2 px-3 py-2.5">
         <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-yellow-500" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-foreground/90">Confirmation required</p>
           <p className="mt-0.5 truncate text-muted-foreground">{summary}</p>
         </div>
-        <span className="shrink-0 rounded bg-yellow-500/15 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-yellow-600 dark:text-yellow-400">
-          Destructive
+        <span className="shrink-0 rounded bg-yellow-500/15 px-1 py-0.5 text-[9px] font-medium uppercase tracking-wider text-yellow-600 dark:text-yellow-400">
+          HITL
         </span>
       </div>
 
