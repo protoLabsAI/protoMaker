@@ -7,7 +7,8 @@
  *
  * Per-request enrichment:
  * - Loads AvaConfig from <projectPath>/.automaker/ava-config.json
- * - Injects project context via loadContextFiles when contextInjection is true
+ * - Injects project root CLAUDE.md + Ava skill prompt when contextInjection is true
+ *   (NOT .automaker/context/ — that's for dev agents, not the orchestrator)
  * - Fetches a live sitrep via getSitrep() when sitrepInjection is true
  * - Builds tool set from buildAvaTools() gated by config.toolGroups
  * - Passes tools to streamText with maxSteps: 10
@@ -28,14 +29,17 @@ import {
   type ModelMessage,
   type UIMessageChunk,
 } from 'ai';
+import fs from 'fs/promises';
+import path from 'path';
 import { anthropic } from '@ai-sdk/anthropic';
-import { createLogger, loadContextFiles } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabs-ai/utils';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
 import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
 import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.js';
 import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
 import type { PlanData } from './ava-tools.js';
+import { ToolProgressEmitter } from './tool-progress.js';
 import type { ServiceContainer } from '../../server/services.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 
@@ -48,6 +52,58 @@ const logger = createLogger('ChatRoutes');
  * Chosen to allow meaningful multi-step reasoning without excessive cost.
  */
 const THINKING_BUDGET_TOKENS = 10_000;
+
+/**
+ * Load Ava-level context: project root CLAUDE.md + Ava skill prompt body.
+ *
+ * Unlike dev agents (which load .automaker/context/ + .automaker/memory/),
+ * Ava is the orchestrator and needs the project-level instructions and her
+ * own operational prompt — not the internal agent plumbing.
+ *
+ * @param projectPath - Absolute path to the project root
+ * @returns Combined context string, or undefined when no context is found
+ */
+export async function loadAvaContext(projectPath: string): Promise<string | undefined> {
+  const contextParts: string[] = [];
+
+  // 1. Project root CLAUDE.md
+  try {
+    const claudeMd = await fs.readFile(path.join(projectPath, 'CLAUDE.md'), 'utf-8');
+    if (claudeMd.trim()) {
+      contextParts.push(`# Project Instructions (CLAUDE.md)\n\n${claudeMd}`);
+    }
+  } catch {
+    // No CLAUDE.md at project root — that's fine
+  }
+
+  // 2. Ava skill prompt (strip frontmatter)
+  try {
+    const avaSkillPath = path.resolve(
+      projectPath,
+      'packages/mcp-server/plugins/automaker/commands/ava.md'
+    );
+    const avaSkillRaw = await fs.readFile(avaSkillPath, 'utf-8');
+    // Strip YAML frontmatter (--- ... ---)
+    const fmEnd = avaSkillRaw.indexOf('\n---', 4);
+    const body = fmEnd !== -1 ? avaSkillRaw.slice(fmEnd + 4).trim() : avaSkillRaw.trim();
+    if (body) {
+      contextParts.push(body);
+    }
+  } catch {
+    // Ava skill file not found — continue without it
+  }
+
+  return contextParts.length > 0 ? contextParts.join('\n\n---\n\n') : undefined;
+}
+
+/**
+ * Strip YAML frontmatter delimited by --- ... --- from a markdown string.
+ * Exported for testing.
+ */
+export function stripFrontmatter(raw: string): string {
+  const fmEnd = raw.indexOf('\n---', 4);
+  return fmEnd !== -1 ? raw.slice(fmEnd + 4).trim() : raw.trim();
+}
 
 /**
  * Returns true when the resolved model ID supports Anthropic extended thinking.
@@ -178,6 +234,7 @@ function extractPlan(text: string): PlanData | null {
 
 export function createChatRoutes(services: ServiceContainer): Router {
   const router = Router();
+  const toolProgressEmitter = new ToolProgressEmitter(services.events);
 
   /**
    * POST /api/chat
@@ -231,15 +288,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
       const aiModel = anthropic(resolvedModelId);
 
-      // Conditionally load project context files
+      // Load Ava-level context (project root CLAUDE.md + Ava skill prompt)
       let projectContext: string | undefined;
       if (avaConfig.contextInjection && projectPath) {
-        try {
-          const contextResult = await loadContextFiles({ projectPath });
-          projectContext = contextResult.formattedPrompt || undefined;
-        } catch (err) {
-          logger.warn('Failed to load context files:', err);
-        }
+        projectContext = await loadAvaContext(projectPath);
       }
 
       // Conditionally fetch live sitrep
@@ -291,6 +343,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
               featureLoader: services.featureLoader,
               autoModeService: services.autoModeService,
               agentService: services.agentService,
+              roleRegistryService: services.roleRegistryService,
+              agentFactoryService: services.agentFactoryService,
+              dynamicAgentExecutor: services.dynamicAgentExecutor,
+              metricsService: services.metricsService,
+              settingsService: services.settingsService,
+              projectService: services.projectService,
+              toolProgressEmitter,
               sensorRegistryService: userPresenceDetection
                 ? services.sensorRegistryService
                 : undefined,
@@ -299,6 +358,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
               ...avaConfig.toolGroups,
               userPresenceDetection,
               approvedActions: approvedActions ?? [],
+              autoApproveTools: avaConfig.autoApproveTools,
             }
           )
         : {};

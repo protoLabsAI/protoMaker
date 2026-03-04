@@ -38,7 +38,8 @@ export type EventType =
   | 'hitl:form-requested'
   | 'hitl:form-responded'
   | 'actionable-item:created'
-  | 'actionable-item:status-changed';
+  | 'actionable-item:status-changed'
+  | 'chat:tool-progress';
 
 export type EventCallback = (payload: unknown) => void;
 

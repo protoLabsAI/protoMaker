@@ -16,10 +16,27 @@ import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
 import type { EventEmitter } from 'events';
+import type { NotesWorkspace } from '@protolabs-ai/types';
+import {
+  getNotesWorkspacePath,
+  ensureNotesDir,
+  getAutomakerDir,
+  secureFs,
+} from '@protolabs-ai/platform';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { AgentService } from '../../services/agent-service.js';
 import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
+import type { RoleRegistryService } from '../../services/role-registry-service.js';
+import type { AgentFactoryService } from '../../services/agent-factory-service.js';
+import type { DynamicAgentExecutor } from '../../services/dynamic-agent-executor.js';
+import type { MetricsService } from '../../services/metrics-service.js';
+import type { ProjectService } from '../../services/project-service.js';
+import type { SettingsService } from '../../services/settings-service.js';
+import type { ToolProgressEmitter } from './tool-progress.js';
+import { githubMergeService } from '../../services/github-merge-service.js';
+import { getEventHistoryService } from '../../services/event-history-service.js';
+import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
 
 // ---------------------------------------------------------------------------
 // Plan types
@@ -51,6 +68,20 @@ export interface AvaToolsServices {
   events?: EventEmitter;
   /** Optional sensor registry — required for get_presence_state tool */
   sensorRegistryService?: SensorRegistryService;
+  /** Agent template registry — required for agentDelegation tools */
+  roleRegistryService?: RoleRegistryService;
+  /** Agent factory — required for agentDelegation tools */
+  agentFactoryService?: AgentFactoryService;
+  /** Dynamic agent executor — required for execute_dynamic_agent */
+  dynamicAgentExecutor?: DynamicAgentExecutor;
+  /** Metrics service — required for metrics tools */
+  metricsService?: MetricsService;
+  /** Settings service — used for global settings access */
+  settingsService?: SettingsService;
+  /** Project service — required for projects tools */
+  projectService?: ProjectService;
+  /** Tool progress emitter — optional, enables real-time progress labels in chat */
+  toolProgressEmitter?: ToolProgressEmitter;
 }
 
 export interface AvaToolsConfig {
@@ -66,6 +97,22 @@ export interface AvaToolsConfig {
   projectMgmt?: boolean;
   /** Enable orchestration tools (get_execution_order, set_feature_dependencies) */
   orchestration?: boolean;
+  /** Enable agent delegation tools (execute_dynamic_agent, list_agent_templates) */
+  agentDelegation?: boolean;
+  /** Enable notes tools (list_note_tabs, read_note_tab, write_note_tab) */
+  notes?: boolean;
+  /** Enable metrics tools (get_project_metrics, get_capacity_metrics) */
+  metrics?: boolean;
+  /** Enable PR workflow tools (check_pr_status, get_pr_feedback, merge_pr) */
+  prWorkflow?: boolean;
+  /** Enable promotion tools (list_staging_candidates, promote_to_staging) */
+  promotion?: boolean;
+  /** Enable context file tools (list_context_files, get_context_file, create_context_file) */
+  contextFiles?: boolean;
+  /** Enable project orchestration tools (list_projects, get_project, create_project) */
+  projects?: boolean;
+  /** Enable briefing tools (get_briefing, get_board_summary_extended) */
+  briefing?: boolean;
   /**
    * When true, register the get_presence_state tool in the boardRead group.
    * Only meaningful when the userPresenceDetection feature flag is enabled.
@@ -78,6 +125,8 @@ export interface AvaToolsConfig {
    * rather than returning a confirmation-required sentinel.
    */
   approvedActions?: Array<{ toolName: string; inputHash: string }>;
+  /** When true, all destructive tools are auto-approved without HITL confirmation */
+  autoApproveTools?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,7 +137,14 @@ export interface AvaToolsConfig {
  * The set of tool names that require human-in-the-loop confirmation before
  * executing. `start_auto_mode` is only gated when maxConcurrency > 1.
  */
-export const DESTRUCTIVE_TOOLS = new Set(['delete_feature', 'stop_agent', 'update_project_spec']);
+export const DESTRUCTIVE_TOOLS = new Set([
+  'delete_feature',
+  'stop_agent',
+  'update_project_spec',
+  'merge_pr',
+  'promote_to_staging',
+  'execute_dynamic_agent',
+]);
 
 /**
  * Produce a stable JSON string for an input object so that two calls with the
@@ -109,11 +165,15 @@ function stableJson(obj: unknown): string {
 function isApproved(
   toolName: string,
   input: unknown,
-  approvedActions: AvaToolsConfig['approvedActions']
+  approvedActions: AvaToolsConfig['approvedActions'],
+  autoApproveTools?: boolean
 ): boolean {
+  if (autoApproveTools) return true;
   if (!approvedActions || approvedActions.length === 0) return false;
   const hash = stableJson(input);
-  return approvedActions.some((a) => a.toolName === toolName && a.inputHash === hash);
+  return approvedActions.some(
+    (a) => a.toolName === toolName && (a.inputHash === '*' || a.inputHash === hash)
+  );
 }
 
 /**
@@ -158,6 +218,26 @@ function makeTool<TSchema extends z.ZodType<any>>(config: {
   execute: (input: z.infer<TSchema>) => Promise<unknown>;
 }): Tool {
   return config as unknown as Tool;
+}
+
+// ---------------------------------------------------------------------------
+// Tool progress label formatting
+// ---------------------------------------------------------------------------
+
+const TOOL_LABEL_MAP: Record<string, string> = {
+  Read: 'Reading file',
+  Edit: 'Editing file',
+  Write: 'Writing file',
+  Bash: 'Running command',
+  Grep: 'Searching code',
+  Glob: 'Finding files',
+  WebFetch: 'Fetching URL',
+  WebSearch: 'Searching web',
+};
+
+/** Convert an inner-agent tool name to a human-readable progress label. */
+function formatToolLabel(toolName: string): string {
+  return TOOL_LABEL_MAP[toolName] ?? `Using ${toolName}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -392,7 +472,7 @@ export function buildAvaTools(
       }),
       execute: async ({ featureId }) => {
         const input = { featureId };
-        if (!isApproved('delete_feature', input, config.approvedActions)) {
+        if (!isApproved('delete_feature', input, config.approvedActions, config.autoApproveTools)) {
           return hitlSentinel('delete_feature', `Delete feature "${featureId}"`, input);
         }
         const success = await services.featureLoader.delete(projectPath, featureId);
@@ -445,7 +525,7 @@ export function buildAvaTools(
       }),
       execute: async ({ sessionId }) => {
         const input = { sessionId };
-        if (!isApproved('stop_agent', input, config.approvedActions)) {
+        if (!isApproved('stop_agent', input, config.approvedActions, config.autoApproveTools)) {
           return hitlSentinel('stop_agent', `Stop agent session "${sessionId}"`, input);
         }
         const deleted = await services.agentService.deleteSession(sessionId);
@@ -497,7 +577,9 @@ export function buildAvaTools(
         const isConcurrent = (maxConcurrency ?? 1) > 1;
         if (isConcurrent) {
           const input = { maxConcurrency, branchName };
-          if (!isApproved('start_auto_mode', input, config.approvedActions)) {
+          if (
+            !isApproved('start_auto_mode', input, config.approvedActions, config.autoApproveTools)
+          ) {
             return hitlSentinel(
               'start_auto_mode',
               `Start auto mode with ${maxConcurrency} parallel workers`,
@@ -558,7 +640,9 @@ export function buildAvaTools(
       }),
       execute: async ({ content }) => {
         const input = { content };
-        if (!isApproved('update_project_spec', input, config.approvedActions)) {
+        if (
+          !isApproved('update_project_spec', input, config.approvedActions, config.autoApproveTools)
+        ) {
           return hitlSentinel('update_project_spec', 'Update project specification', input);
         }
         const specDir = path.join(projectPath, '.automaker');
@@ -608,12 +692,650 @@ export function buildAvaTools(
     });
   }
 
+  // -----------------------------------------------------------------------
+  // agentDelegation – delegate work to dynamic agents
+  // -----------------------------------------------------------------------
+  if (config.agentDelegation) {
+    tools['list_agent_templates'] = makeTool({
+      description: 'List all registered agent templates (roles) available for delegation.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (!services.roleRegistryService) {
+          return { error: 'Role registry service not available' };
+        }
+        const templates = services.roleRegistryService.list();
+        return templates.map((t) => ({
+          name: t.name,
+          role: t.role,
+          description: t.description,
+          model: t.model,
+        }));
+      },
+    });
+
+    tools['execute_dynamic_agent'] = makeTool({
+      description:
+        'Execute a dynamic agent with a specific role and prompt. The agent runs in the project worktree and returns its output. Use for delegating specialized tasks to domain-expert agents.',
+      inputSchema: z.object({
+        role: z.string().describe('Agent role/template name (e.g. "researcher", "kai", "matt")'),
+        prompt: z.string().describe('Task prompt for the agent'),
+        model: z
+          .string()
+          .optional()
+          .describe('Model override (haiku, sonnet, opus). Defaults to template setting.'),
+      }),
+      execute: async ({ role, prompt, model }) => {
+        const input = { role, prompt, model };
+        if (
+          !isApproved(
+            'execute_dynamic_agent',
+            input,
+            config.approvedActions,
+            config.autoApproveTools
+          )
+        ) {
+          return hitlSentinel(
+            'execute_dynamic_agent',
+            `Execute ${role} agent: "${prompt.slice(0, 80)}${prompt.length > 80 ? '...' : ''}"`,
+            input
+          );
+        }
+        if (
+          !services.roleRegistryService ||
+          !services.agentFactoryService ||
+          !services.dynamicAgentExecutor
+        ) {
+          return { error: 'Agent delegation services not available' };
+        }
+        const template = services.roleRegistryService.resolve(role);
+        if (!template) {
+          return { error: `No agent template found for role "${role}"` };
+        }
+        const agentConfig = services.agentFactoryService.createFromTemplate(
+          template.name,
+          projectPath,
+          model ? { model: model as 'haiku' | 'sonnet' | 'opus' } : undefined
+        );
+
+        // Wire tool progress emitter — stream inner-agent activity to the chat UI
+        const emitter = services.toolProgressEmitter;
+        const toolCallId =
+          // AI SDK passes toolCallId at runtime via ToolExecutionOptions
+          (arguments[1] as { toolCallId?: string } | undefined)?.toolCallId ?? '';
+        const agentLabel = role;
+
+        const result = await services.dynamicAgentExecutor.execute(agentConfig, {
+          prompt,
+          ...(emitter &&
+            toolCallId && {
+              onToolUse: (innerTool: string) => {
+                emitter.emitProgress(
+                  toolCallId,
+                  `${agentLabel} -- ${formatToolLabel(innerTool)}`,
+                  innerTool
+                );
+              },
+              onText: () => {
+                emitter.emitProgress(toolCallId, `${agentLabel} -- Composing response`);
+              },
+            }),
+        });
+
+        // Cleanup rate-limit tracking
+        if (emitter && toolCallId) emitter.clear(toolCallId);
+
+        return {
+          success: result.success,
+          output: result.output,
+          error: result.error,
+          durationMs: result.durationMs,
+          templateName: result.templateName,
+          model: result.model,
+        };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // notes – read/write project notes workspace
+  // -----------------------------------------------------------------------
+  if (config.notes) {
+    tools['list_note_tabs'] = makeTool({
+      description:
+        'List all note tabs in the project notes workspace. Returns tab names, IDs, and metadata.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const wsPath = getNotesWorkspacePath(projectPath);
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          const workspace = JSON.parse(raw as string) as NotesWorkspace;
+          const tabs = workspace.tabOrder.map((id) => {
+            const tab = workspace.tabs[id];
+            return tab
+              ? { id: tab.id, name: tab.name, wordCount: tab.metadata?.wordCount ?? 0 }
+              : { id, name: '(unknown)', wordCount: 0 };
+          });
+          return { tabs, activeTabId: workspace.activeTabId };
+        } catch {
+          return { tabs: [], activeTabId: null };
+        }
+      },
+    });
+
+    tools['read_note_tab'] = makeTool({
+      description: 'Read the content of a specific note tab by its ID or name.',
+      inputSchema: z.object({
+        tabId: z.string().optional().describe('Tab ID to read'),
+        name: z.string().optional().describe('Tab name to search for (case-insensitive)'),
+      }),
+      execute: async ({ tabId, name }) => {
+        const wsPath = getNotesWorkspacePath(projectPath);
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          const workspace = JSON.parse(raw as string) as NotesWorkspace;
+          let tab;
+          if (tabId) {
+            tab = workspace.tabs[tabId];
+          } else if (name) {
+            tab = Object.values(workspace.tabs).find(
+              (t) => t.name.toLowerCase() === name.toLowerCase()
+            );
+          }
+          if (!tab) return { error: 'Tab not found' };
+          return { id: tab.id, name: tab.name, content: tab.content, metadata: tab.metadata };
+        } catch {
+          return { error: 'Notes workspace not found' };
+        }
+      },
+    });
+
+    tools['write_note_tab'] = makeTool({
+      description:
+        'Write content to a note tab. Creates the tab if it does not exist. Content is HTML (Tiptap format).',
+      inputSchema: z.object({
+        tabId: z.string().optional().describe('Tab ID to write to (omit to create a new tab)'),
+        name: z.string().optional().describe('Tab name (required when creating a new tab)'),
+        content: z.string().describe('HTML content to write'),
+      }),
+      execute: async ({ tabId, name, content }) => {
+        await ensureNotesDir(projectPath);
+        const wsPath = getNotesWorkspacePath(projectPath);
+        let workspace: NotesWorkspace;
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          workspace = JSON.parse(raw as string) as NotesWorkspace;
+        } catch {
+          const defaultId = crypto.randomUUID();
+          workspace = {
+            version: 1,
+            workspaceVersion: 0,
+            activeTabId: defaultId,
+            tabOrder: [defaultId],
+            tabs: {
+              [defaultId]: {
+                id: defaultId,
+                name: 'Notes',
+                content: '',
+                permissions: { agentRead: true, agentWrite: true },
+                metadata: { createdAt: Date.now(), updatedAt: Date.now() },
+              },
+            },
+          };
+        }
+
+        const now = Date.now();
+        if (tabId && workspace.tabs[tabId]) {
+          workspace.tabs[tabId].content = content;
+          workspace.tabs[tabId].metadata.updatedAt = now;
+          workspace.tabs[tabId].metadata.wordCount = content.split(/\s+/).length;
+        } else {
+          const newId = tabId ?? crypto.randomUUID();
+          workspace.tabs[newId] = {
+            id: newId,
+            name: name ?? 'Untitled',
+            content,
+            permissions: { agentRead: true, agentWrite: true },
+            metadata: { createdAt: now, updatedAt: now, wordCount: content.split(/\s+/).length },
+          };
+          workspace.tabOrder.push(newId);
+        }
+        workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+        await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+        return { success: true, tabId: tabId ?? workspace.tabOrder[workspace.tabOrder.length - 1] };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // metrics – project and capacity metrics
+  // -----------------------------------------------------------------------
+  if (config.metrics) {
+    tools['get_project_metrics'] = makeTool({
+      description:
+        'Get project metrics including cycle time, cost, success rate, throughput, and token usage.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (!services.metricsService) {
+          return { error: 'Metrics service not available' };
+        }
+        return services.metricsService.getProjectMetrics(projectPath);
+      },
+    });
+
+    tools['get_capacity_metrics'] = makeTool({
+      description:
+        'Get capacity metrics including concurrency, backlog size, utilization, and estimated completion time.',
+      inputSchema: z.object({
+        maxConcurrency: z
+          .number()
+          .int()
+          .min(1)
+          .optional()
+          .describe('Max concurrent agents to calculate utilization against (default: 3)'),
+      }),
+      execute: async ({ maxConcurrency }) => {
+        if (!services.metricsService) {
+          return { error: 'Metrics service not available' };
+        }
+        return services.metricsService.getCapacityMetrics(projectPath, maxConcurrency);
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // prWorkflow – PR status, feedback, and merging
+  // -----------------------------------------------------------------------
+  if (config.prWorkflow) {
+    tools['check_pr_status'] = makeTool({
+      description:
+        'Check the CI/check status of a pull request. Returns passed, failed, and pending check counts.',
+      inputSchema: z.object({
+        prNumber: z.number().int().describe('PR number to check'),
+      }),
+      execute: async ({ prNumber }) => {
+        return githubMergeService.checkPRStatus(projectPath, prNumber);
+      },
+    });
+
+    tools['merge_pr'] = makeTool({
+      description:
+        'Merge a pull request. Supports merge, squash, and rebase strategies. Can wait for CI checks.',
+      inputSchema: z.object({
+        prNumber: z.number().int().describe('PR number to merge'),
+        strategy: z
+          .enum(['merge', 'squash', 'rebase'])
+          .optional()
+          .describe("Merge strategy (default: 'squash')"),
+        waitForCI: z
+          .boolean()
+          .optional()
+          .describe('Wait for CI checks to pass before merging (default: true)'),
+      }),
+      execute: async ({ prNumber, strategy, waitForCI }) => {
+        const input = { prNumber, strategy, waitForCI };
+        if (!isApproved('merge_pr', input, config.approvedActions, config.autoApproveTools)) {
+          return hitlSentinel('merge_pr', `Merge PR #${prNumber} (${strategy ?? 'squash'})`, input);
+        }
+        return githubMergeService.mergePR(
+          projectPath,
+          prNumber,
+          strategy ?? 'squash',
+          waitForCI ?? true
+        );
+      },
+    });
+
+    tools['get_pr_feedback'] = makeTool({
+      description:
+        'Get review feedback for a PR including CodeRabbit comments and review thread summaries.',
+      inputSchema: z.object({
+        prNumber: z.number().int().describe('PR number to get feedback for'),
+      }),
+      execute: async ({ prNumber }) => {
+        try {
+          const { exec: execCb } = await import('child_process');
+          const { promisify } = await import('util');
+          const execP = promisify(execCb);
+          const { stdout } = await execP(
+            `gh pr view ${prNumber} --json number,url,state,reviewDecision,reviews,statusCheckRollup,headRefName`,
+            { cwd: projectPath }
+          );
+          const prData = JSON.parse(stdout);
+          return {
+            prNumber: prData.number,
+            url: prData.url,
+            state: prData.state,
+            reviewDecision: prData.reviewDecision,
+            branch: prData.headRefName,
+            reviews: (prData.reviews ?? []).map(
+              (r: { author: { login: string }; state: string; body: string }) => ({
+                author: r.author?.login,
+                state: r.state,
+                body: r.body?.slice(0, 500),
+              })
+            ),
+            checks: (prData.statusCheckRollup ?? []).map(
+              (c: { name: string; status: string; conclusion: string }) => ({
+                name: c.name,
+                status: c.status,
+                conclusion: c.conclusion,
+              })
+            ),
+          };
+        } catch (err) {
+          return {
+            error: `Failed to fetch PR feedback: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // promotion – staging candidate listing and promotion
+  // -----------------------------------------------------------------------
+  if (config.promotion) {
+    tools['list_staging_candidates'] = makeTool({
+      description:
+        'List commits on dev that have not been merged into staging. These are candidates for promotion.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        try {
+          const { exec: execCb } = await import('child_process');
+          const { promisify } = await import('util');
+          const execP = promisify(execCb);
+          // Fetch latest remote state
+          await execP('git fetch origin dev staging', { cwd: projectPath }).catch(() => {});
+          const { stdout } = await execP(
+            'git log origin/staging..origin/dev --oneline --no-merges --format="%h %s"',
+            { cwd: projectPath }
+          );
+          const commits = stdout
+            .trim()
+            .split('\n')
+            .filter(Boolean)
+            .map((line) => {
+              const [hash, ...rest] = line.split(' ');
+              return { hash, message: rest.join(' ') };
+            });
+          return { count: commits.length, commits };
+        } catch (err) {
+          return {
+            error: `Failed to list staging candidates: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+
+    tools['promote_to_staging'] = makeTool({
+      description:
+        'Promote dev to staging by creating a merge PR from dev into staging. Requires user confirmation.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const input = {};
+        if (
+          !isApproved('promote_to_staging', input, config.approvedActions, config.autoApproveTools)
+        ) {
+          return hitlSentinel('promote_to_staging', 'Promote dev to staging', input);
+        }
+        try {
+          const { exec: execCb } = await import('child_process');
+          const { promisify } = await import('util');
+          const execP = promisify(execCb);
+          const { stdout } = await execP(
+            'gh pr create --base staging --head dev --title "chore: promote dev to staging" --body "Automated promotion from dev to staging" --no-maintainer-edit',
+            { cwd: projectPath }
+          );
+          return { success: true, prUrl: stdout.trim() };
+        } catch (err) {
+          return {
+            error: `Failed to create promotion PR: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // contextFiles – read/write .automaker/context/ files
+  // -----------------------------------------------------------------------
+  if (config.contextFiles) {
+    tools['list_context_files'] = makeTool({
+      description:
+        'List all context files in .automaker/context/. These files are injected into agent prompts.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const contextDir = path.join(getAutomakerDir(projectPath), 'context');
+        try {
+          const entries = await fs.readdir(contextDir);
+          const files = entries.filter((e) => e.endsWith('.md'));
+          return { files, directory: contextDir };
+        } catch {
+          return { files: [], directory: contextDir };
+        }
+      },
+    });
+
+    tools['get_context_file'] = makeTool({
+      description: 'Read the content of a specific context file from .automaker/context/.',
+      inputSchema: z.object({
+        filename: z.string().describe('Filename to read (e.g. "CLAUDE.md", "pr-ownership.md")'),
+      }),
+      execute: async ({ filename }) => {
+        const filePath = path.join(getAutomakerDir(projectPath), 'context', filename);
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          return { filename, content, path: filePath };
+        } catch {
+          return { error: `Context file "${filename}" not found` };
+        }
+      },
+    });
+
+    tools['create_context_file'] = makeTool({
+      description:
+        'Create or overwrite a context file in .automaker/context/. Content will be injected into agent prompts.',
+      inputSchema: z.object({
+        filename: z.string().describe('Filename (e.g. "coding-standards.md")'),
+        content: z.string().describe('Markdown content for the context file'),
+      }),
+      execute: async ({ filename, content }) => {
+        const contextDir = path.join(getAutomakerDir(projectPath), 'context');
+        await fs.mkdir(contextDir, { recursive: true });
+        const filePath = path.join(contextDir, filename);
+        await fs.writeFile(filePath, content, 'utf-8');
+        return { success: true, filename, path: filePath };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // projects – project orchestration
+  // -----------------------------------------------------------------------
+  if (config.projects) {
+    tools['list_projects'] = makeTool({
+      description: 'List all project plans in this workspace.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        if (!services.projectService) {
+          return { error: 'Project service not available' };
+        }
+        const slugs = await services.projectService.listProjects(projectPath);
+        const projects = [];
+        for (const slug of slugs) {
+          const project = await services.projectService.getProject(projectPath, slug);
+          if (project) {
+            projects.push({
+              slug,
+              title: project.title,
+              status: project.status,
+              goal: project.goal,
+            });
+          }
+        }
+        return { projects };
+      },
+    });
+
+    tools['get_project'] = makeTool({
+      description: 'Get full details of a specific project plan by its slug.',
+      inputSchema: z.object({
+        slug: z.string().describe('Project slug identifier'),
+      }),
+      execute: async ({ slug }) => {
+        if (!services.projectService) {
+          return { error: 'Project service not available' };
+        }
+        const project = await services.projectService.getProject(projectPath, slug);
+        if (!project) {
+          return { error: `Project "${slug}" not found` };
+        }
+        return project;
+      },
+    });
+
+    tools['create_project'] = makeTool({
+      description:
+        'Create a new project plan. Provide a title, goal, and optionally a SPARC PRD and milestones.',
+      inputSchema: z.object({
+        title: z.string().describe('Project title'),
+        goal: z.string().describe('High-level goal or objective'),
+        slug: z
+          .string()
+          .optional()
+          .describe('URL-friendly slug (auto-generated from title if omitted)'),
+      }),
+      execute: async ({ title, goal, slug }) => {
+        if (!services.projectService) {
+          return { error: 'Project service not available' };
+        }
+        const finalSlug =
+          slug ??
+          title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+        const project = await services.projectService.createProject(projectPath, {
+          title,
+          goal,
+          slug: finalSlug,
+        });
+        return { slug: project.slug, title: project.title, status: project.status };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // briefing – daily briefing and extended board summary
+  // -----------------------------------------------------------------------
+  if (config.briefing) {
+    tools['get_briefing'] = makeTool({
+      description:
+        'Get a briefing digest of recent events grouped by severity. Shows what happened since the last briefing acknowledgement.',
+      inputSchema: z.object({
+        timeRange: z
+          .enum(['1h', '6h', '24h', '7d'])
+          .optional()
+          .describe("Time range to look back (default: '24h')"),
+      }),
+      execute: async ({ timeRange }) => {
+        const eventHistoryService = getEventHistoryService();
+        const briefingCursorService = getBriefingCursorService();
+        const since = await briefingCursorService.getCursor(projectPath);
+        const sinceDate =
+          since ?? new Date(Date.now() - getTimeRangeMs(timeRange ?? '24h')).toISOString();
+        const events = await eventHistoryService.getEventsSince(projectPath, sinceDate);
+
+        const grouped: Record<string, unknown[]> = {
+          critical: [],
+          error: [],
+          warning: [],
+          info: [],
+        };
+        for (const event of events) {
+          const severity = event.severity ?? 'info';
+          if (!grouped[severity]) grouped[severity] = [];
+          grouped[severity].push({
+            id: event.id,
+            trigger: event.trigger,
+            featureName: event.featureName,
+            error: event.error,
+            timestamp: event.timestamp,
+          });
+        }
+
+        // Update cursor to now
+        await briefingCursorService.setCursor(projectPath, new Date().toISOString());
+
+        return {
+          since: sinceDate,
+          totalEvents: events.length,
+          summary: Object.fromEntries(
+            Object.entries(grouped).map(([k, v]) => [k, (v as unknown[]).length])
+          ),
+          signals: grouped,
+        };
+      },
+    });
+
+    tools['get_board_summary_extended'] = makeTool({
+      description:
+        'Get an extended board summary with feature details, recent activity, and health indicators.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        const features = await services.featureLoader.getAll(projectPath);
+        const byStatus: Record<string, number> = {};
+        const blocked: Array<{ id: string; title: string; reason?: string }> = [];
+        const inProgress: Array<{ id: string; title: string; complexity?: string }> = [];
+        const recentDone: Array<{ id: string; title: string }> = [];
+
+        for (const f of features) {
+          const status = f.status ?? 'unknown';
+          byStatus[status] = (byStatus[status] ?? 0) + 1;
+          if (status === 'blocked') {
+            blocked.push({ id: f.id, title: f.title ?? '', reason: f.statusChangeReason });
+          } else if (status === 'in_progress') {
+            inProgress.push({ id: f.id, title: f.title ?? '', complexity: f.complexity });
+          } else if (status === 'done') {
+            recentDone.push({ id: f.id, title: f.title ?? '' });
+          }
+        }
+
+        return {
+          total: features.length,
+          byStatus,
+          blocked: blocked.slice(0, 10),
+          inProgress: inProgress.slice(0, 10),
+          recentDone: recentDone.slice(0, 5),
+        };
+      },
+    });
+  }
+
   return tools;
 }
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Convert a time range string to milliseconds.
+ */
+function getTimeRangeMs(range: string): number {
+  switch (range) {
+    case '1h':
+      return 60 * 60 * 1000;
+    case '6h':
+      return 6 * 60 * 60 * 1000;
+    case '24h':
+      return 24 * 60 * 60 * 1000;
+    case '7d':
+      return 7 * 24 * 60 * 60 * 1000;
+    default:
+      return 24 * 60 * 60 * 1000;
+  }
+}
 
 /**
  * Topological sort of features based on their `dependencies` array.
