@@ -1,66 +1,28 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createLogger } from '@protolabs-ai/utils/logger';
-import {
-  X,
-  SplitSquareHorizontal,
-  SplitSquareVertical,
-  GripHorizontal,
-  Terminal,
-  ZoomIn,
-  ZoomOut,
-  Copy,
-  ClipboardPaste,
-  CheckSquare,
-  Trash2,
-  ImageIcon,
-  Settings,
-  RotateCcw,
-  Search,
-  ChevronUp,
-  ChevronDown,
-  Maximize2,
-  Minimize2,
-  ArrowDown,
-  GitBranch,
-} from 'lucide-react';
+import { Copy, ClipboardPaste, CheckSquare, Trash2, ImageIcon, ArrowDown } from 'lucide-react';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs-ai/ui/atoms';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useAppStore } from '@/store/app-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { DEFAULT_KEYBOARD_SHORTCUTS, type KeyboardShortcuts } from '@/store/types';
 import { useShallow } from 'zustand/react/shallow';
 import { matchesShortcutWithCode } from '@/hooks/use-keyboard-shortcuts';
-import {
-  getTerminalTheme,
-  TERMINAL_FONT_OPTIONS,
-  getTerminalFontFamily,
-} from '@/config/terminal-themes';
-import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
+import { getTerminalTheme, getTerminalFontFamily } from '@/config/terminal-themes';
 import { toast } from 'sonner';
 import { getElectronAPI } from '@/lib/electron';
 import { getApiKey, getSessionToken, getServerUrlSync } from '@/lib/http-api-client';
+import {
+  TerminalToolbar,
+  MIN_FONT_SIZE,
+  MAX_FONT_SIZE,
+  DEFAULT_FONT_SIZE,
+} from './terminal-toolbar';
 
 const logger = createLogger('Terminal');
 const NO_STORE_CACHE_MODE: RequestCache = 'no-store';
-
-// Font size constraints
-const MIN_FONT_SIZE = 8;
-const MAX_FONT_SIZE = 32;
-const DEFAULT_FONT_SIZE = 14;
 
 // Resize constraints
 const RESIZE_DEBOUNCE_MS = 100; // Short debounce for responsive feel
@@ -437,6 +399,19 @@ export function TerminalPanel({
     searchAddonRef.current?.clearDecorations();
     xtermRef.current?.focus();
   }, []);
+
+  // Handle search query changes from the toolbar — updates state and triggers live search
+  const handleSearchQueryChange = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      if (searchAddonRef.current && query) {
+        searchAddonRef.current.findNext(query, searchOptions);
+      } else if (searchAddonRef.current) {
+        searchAddonRef.current.clearDecorations();
+      }
+    },
+    [searchOptions]
+  );
 
   // Handle pane navigation keyboard shortcuts at container level (capture phase)
   // This ensures we intercept before xterm can process the event
@@ -1763,388 +1738,43 @@ export function TerminalPanel({
         </div>
       )}
 
-      {/* Header bar with drag handle - uses app theme CSS variables */}
-      <div className="flex items-center h-7 px-1 shrink-0 bg-card border-b border-border">
-        {/* Drag handle */}
-        <button
-          ref={setDragRef}
-          {...dragAttributes}
-          {...dragListeners}
-          className={cn(
-            'p-1 rounded cursor-grab active:cursor-grabbing mr-1 transition-colors text-muted-foreground hover:text-foreground hover:bg-accent',
-            isDragging && 'cursor-grabbing'
-          )}
-          title="Drag to swap terminals"
-        >
-          <GripHorizontal className="h-3 w-3" />
-        </button>
-
-        {/* Terminal icon and label */}
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
-          <span className="text-xs truncate text-foreground">{shellName}</span>
-          {/* Branch name indicator - show when terminal was opened from worktree */}
-          {branchName && (
-            <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-500 shrink-0">
-              <GitBranch className="h-2.5 w-2.5 shrink-0" />
-              <span>{branchName}</span>
-            </span>
-          )}
-          {/* Font size indicator - only show when not default */}
-          {fontSize !== DEFAULT_FONT_SIZE && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                resetZoom();
-              }}
-              className="text-[10px] px-1 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-accent"
-              title="Click to reset zoom (Ctrl+0)"
-            >
-              {fontSize}px
-            </button>
-          )}
-          {connectionStatus === 'reconnecting' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-status-warning/20 text-yellow-500 flex items-center gap-1">
-              <Spinner size="xs" />
-              Reconnecting...
-            </span>
-          )}
-          {connectionStatus === 'disconnected' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/20 text-destructive">
-              Disconnected
-            </span>
-          )}
-          {connectionStatus === 'auth_failed' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/20 text-destructive">
-              Auth Failed
-            </span>
-          )}
-          {processExitCode !== null && (
-            <span
-              className={cn(
-                'text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1',
-                processExitCode === 0
-                  ? 'bg-status-success/20 text-green-500'
-                  : 'bg-status-warning/20 text-yellow-500'
-              )}
-            >
-              Exited ({processExitCode})
-            </span>
-          )}
-        </div>
-
-        {/* Zoom and action buttons */}
-        <div className="flex items-center gap-0.5">
-          {/* Zoom controls */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              zoomOut();
-            }}
-            title="Zoom Out (Ctrl+-)"
-            disabled={fontSize <= MIN_FONT_SIZE}
-          >
-            <ZoomOut className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              zoomIn();
-            }}
-            title="Zoom In (Ctrl++)"
-            disabled={fontSize >= MAX_FONT_SIZE}
-          >
-            <ZoomIn className="h-3 w-3" />
-          </Button>
-
-          {/* Settings popover */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                onClick={(e) => e.stopPropagation()}
-                title="Terminal Settings"
-              >
-                <Settings className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-64 p-3"
-              align="end"
-              side="bottom"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Font Size</Label>
-                    <span className="text-xs text-muted-foreground">{fontSize}px</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Slider
-                      value={[fontSize]}
-                      min={MIN_FONT_SIZE}
-                      max={MAX_FONT_SIZE}
-                      step={1}
-                      onValueChange={([value]) => onFontSizeChange(value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 shrink-0"
-                      onClick={() => resetZoom()}
-                      disabled={fontSize === DEFAULT_FONT_SIZE}
-                      title="Reset to default"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Run on New Terminal</Label>
-                  <Input
-                    value={defaultRunScript}
-                    onChange={(e) => setTerminalDefaultRunScript(e.target.value)}
-                    placeholder="e.g., claude"
-                    className="h-7 text-xs"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Command to run when creating a new terminal
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Font Family</Label>
-                  <Select
-                    value={fontFamily || DEFAULT_FONT_VALUE}
-                    onValueChange={(value) => {
-                      setTerminalFontFamily(value);
-                      toast.info('Font family changed', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                  >
-                    <SelectTrigger className="w-full h-8 text-xs">
-                      <SelectValue placeholder="Default (Menlo / Monaco)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TERMINAL_FONT_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span
-                            style={{
-                              fontFamily:
-                                option.value === DEFAULT_FONT_VALUE ? undefined : option.value,
-                            }}
-                          >
-                            {option.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Scrollback</Label>
-                    <span className="text-xs text-muted-foreground">
-                      {(scrollbackLines / 1000).toFixed(0)}k lines
-                    </span>
-                  </div>
-                  <Slider
-                    value={[scrollbackLines]}
-                    min={1000}
-                    max={100000}
-                    step={1000}
-                    onValueChange={([value]) => {
-                      setTerminalScrollbackLines(value);
-                    }}
-                    onValueCommit={() => {
-                      toast.info('Scrollback changed', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                    className="flex-1"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Line Height</Label>
-                    <span className="text-xs text-muted-foreground">{lineHeight.toFixed(1)}</span>
-                  </div>
-                  <Slider
-                    value={[lineHeight]}
-                    min={1.0}
-                    max={2.0}
-                    step={0.1}
-                    onValueChange={([value]) => {
-                      setTerminalLineHeight(value);
-                    }}
-                    onValueCommit={() => {
-                      toast.info('Line height changed', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                    className="flex-1"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs font-medium">Screen Reader</Label>
-                    <p className="text-[10px] text-muted-foreground">Enable accessibility mode</p>
-                  </div>
-                  <Switch
-                    checked={screenReaderMode}
-                    onCheckedChange={(checked) => {
-                      setTerminalScreenReaderMode(checked);
-                      toast.info(checked ? 'Screen reader enabled' : 'Screen reader disabled', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                  />
-                </div>
-
-                <div className="text-[10px] text-muted-foreground border-t pt-2">
-                  <p>Zoom: Ctrl++ / Ctrl+- / Ctrl+0</p>
-                  <p>Or use Ctrl+scroll wheel</p>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <div className="w-px h-3 mx-0.5 bg-border" />
-
-          {/* Split/close buttons */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSplitHorizontal();
-            }}
-            title="Split Right (Alt+D)"
-          >
-            <SplitSquareHorizontal className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSplitVertical();
-            }}
-            title="Split Down (Alt+S)"
-          >
-            <SplitSquareVertical className="h-3 w-3" />
-          </Button>
-          {onToggleMaximize && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-muted-foreground hover:text-foreground"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleMaximize();
-              }}
-              title={isMaximized ? 'Restore' : 'Maximize'}
-            >
-              {isMaximized ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
-            </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            title="Close Terminal (Alt+W)"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Search bar */}
-      {showSearch && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-card border-b border-border shrink-0">
-          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              // Auto-search as user types
-              if (searchAddonRef.current && e.target.value) {
-                searchAddonRef.current.findNext(e.target.value, searchOptions);
-              } else if (searchAddonRef.current) {
-                searchAddonRef.current.clearDecorations();
-              }
-            }}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                  searchPrevious();
-                } else {
-                  searchNext();
-                }
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                closeSearch();
-              }
-            }}
-            placeholder="Search..."
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none min-w-0"
-          />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground shrink-0"
-            onClick={searchPrevious}
-            disabled={!searchQuery}
-            title="Previous Match (Shift+Enter)"
-          >
-            <ChevronUp className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground shrink-0"
-            onClick={searchNext}
-            disabled={!searchQuery}
-            title="Next Match (Enter)"
-          >
-            <ChevronDown className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 text-muted-foreground hover:text-foreground shrink-0"
-            onClick={closeSearch}
-            title="Close (Escape)"
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      )}
+      <TerminalToolbar
+        shellName={shellName}
+        branchName={branchName}
+        fontSize={fontSize}
+        connectionStatus={connectionStatus}
+        processExitCode={processExitCode}
+        isMaximized={isMaximized}
+        isDragging={isDragging}
+        showSearch={showSearch}
+        searchQuery={searchQuery}
+        searchInputRef={searchInputRef}
+        defaultRunScript={defaultRunScript}
+        fontFamily={fontFamily}
+        scrollbackLines={scrollbackLines}
+        lineHeight={lineHeight}
+        screenReaderMode={screenReaderMode}
+        dragRef={setDragRef}
+        dragAttributes={dragAttributes}
+        dragListeners={dragListeners}
+        onClose={onClose}
+        onSplitHorizontal={onSplitHorizontal}
+        onSplitVertical={onSplitVertical}
+        onToggleMaximize={onToggleMaximize}
+        onFontSizeChange={onFontSizeChange}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetZoom={resetZoom}
+        onSearchQueryChange={handleSearchQueryChange}
+        onSearchNext={searchNext}
+        onSearchPrevious={searchPrevious}
+        onCloseSearch={closeSearch}
+        onSetDefaultRunScript={setTerminalDefaultRunScript}
+        onSetFontFamily={setTerminalFontFamily}
+        onSetScrollbackLines={setTerminalScrollbackLines}
+        onSetLineHeight={setTerminalLineHeight}
+        onSetScreenReaderMode={setTerminalScreenReaderMode}
+      />
 
       {/* Terminal container - uses terminal theme */}
       <div
