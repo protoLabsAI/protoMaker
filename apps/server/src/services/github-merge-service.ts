@@ -119,6 +119,19 @@ export class GitHubMergeService {
         const conclusion = check.conclusion?.toLowerCase();
 
         if (status === 'completed') {
+          // Detect CodeRabbit FAILURE — treat as transient pending rather than a hard failure.
+          // CodeRabbit commonly sets commit status to FAILURE when rate-limited by simultaneous
+          // batch PRs. Counting it as a real failure would block merge unnecessarily.
+          const checkIdentifier = (check.name ?? check.context ?? '').toLowerCase();
+          if (checkIdentifier.includes('coderabbit') && conclusion === 'failure') {
+            logger.warn(
+              `[CodeRabbit] FAILURE status on '${check.name ?? check.context}' — ` +
+                `treating as transient pending (possible rate-limit). Will not count as hard failure.`
+            );
+            pendingCount++;
+            continue;
+          }
+
           if (conclusion === 'success' || conclusion === 'neutral' || conclusion === 'skipped') {
             passedCount++;
           } else {

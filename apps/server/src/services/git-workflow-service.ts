@@ -8,6 +8,7 @@
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { createLogger } from '@protolabs-ai/utils';
 import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 import type {
@@ -22,6 +23,7 @@ import { validatePRState } from '@protolabs-ai/types';
 import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
+import { buildPROwnershipWatermark } from '../routes/github/utils/pr-ownership.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -551,7 +553,9 @@ export class GitWorkflowService {
               projectPath,
               feature,
               branchName,
-              prBaseBranch
+              prBaseBranch,
+              settings.instanceId,
+              settings.teamId
             );
             result.prUrl = prResult.prUrl;
             result.prNumber = prResult.prNumber;
@@ -804,6 +808,78 @@ export class GitWorkflowService {
     if (body.includes('💡')) return 'suggestion';
 
     return 'info';
+  }
+
+  /**
+   * Validate that GitHub Actions workflows are configured to trigger on the PR base branch.
+   *
+   * This is a purely advisory check that logs a warning when CI workflows exist but their
+   * `branches:` filter does not mention `prBaseBranch`. If CI never triggers on that branch,
+   * checks will remain "pending" indefinitely and features will time out in REVIEW state.
+   *
+   * Does NOT block PR creation — failures here are logged and swallowed.
+   */
+  private async validateCIWorkflowTriggers(
+    projectPath: string,
+    prBaseBranch: string
+  ): Promise<void> {
+    try {
+      const workflowDir = path.join(projectPath, '.github', 'workflows');
+
+      // List workflow files (non-fatal if the directory doesn't exist)
+      let workflowFiles: string[] = [];
+      try {
+        const { stdout } = await execAsync(`ls "${workflowDir}"`, { env: execEnv });
+        workflowFiles = stdout
+          .trim()
+          .split('\n')
+          .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+      } catch {
+        // No .github/workflows/ directory — nothing to validate
+        return;
+      }
+
+      if (workflowFiles.length === 0) return;
+
+      let anyWorkflowTriggersBranch = false;
+      const misconfiguredFiles: string[] = [];
+
+      for (const file of workflowFiles) {
+        try {
+          const filePath = path.join(workflowDir, file);
+          const { stdout: content } = await execAsync(`cat "${filePath}"`, { env: execEnv });
+
+          // Text-based check: does the file mention the base branch in a branches list?
+          // Handles common YAML patterns: `- dev`, `"dev"`, `'dev'`
+          const branchMentioned =
+            content.includes(`- ${prBaseBranch}`) ||
+            content.includes(`"${prBaseBranch}"`) ||
+            content.includes(`'${prBaseBranch}'`);
+
+          if (branchMentioned) {
+            anyWorkflowTriggersBranch = true;
+          } else if (content.includes('branches:')) {
+            // Workflow has an explicit branches filter but doesn't mention prBaseBranch
+            misconfiguredFiles.push(file);
+          }
+        } catch {
+          // Ignore individual file read errors
+        }
+      }
+
+      if (!anyWorkflowTriggersBranch && misconfiguredFiles.length > 0) {
+        logger.warn(
+          `[CI Validation] ⚠️  CI workflows may not trigger on branch '${prBaseBranch}'.\n` +
+            `  Affected workflow files: ${misconfiguredFiles.join(', ')}\n` +
+            `  This means CI checks will stay "pending" indefinitely on PRs targeting '${prBaseBranch}',\n` +
+            `  causing features to time out in REVIEW state.\n` +
+            `  Fix: add '- ${prBaseBranch}' to the 'branches:' list in each workflow's push/pull_request trigger.`
+        );
+      }
+    } catch (err) {
+      // Validation is advisory — never let it crash the workflow
+      logger.debug(`[CI Validation] Skipped: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   /**
@@ -1208,7 +1284,9 @@ export class GitWorkflowService {
     projectPath: string,
     feature: Feature,
     branchName: string,
-    baseBranch: string
+    baseBranch: string,
+    instanceId?: string,
+    teamId?: string
   ): Promise<{
     prUrl: string | null;
     prNumber?: number;
@@ -1223,7 +1301,21 @@ export class GitWorkflowService {
     }
 
     const title = feature.title || extractTitleFromDescription(feature.description);
-    const body = buildPRBody(feature);
+    let body = buildPRBody(feature);
+
+    // Always append ownership watermark so the PR Maintainer crew never silently skips managed PRs.
+    // If instanceId was not configured, generate a transient fallback and warn.
+    const effectiveInstanceId = instanceId || `transient-${randomUUID().slice(0, 8)}`;
+    if (!instanceId) {
+      logger.warn(
+        `[GitWorkflow] No instanceId in settings — using transient ID "${effectiveInstanceId}" for PR watermark. ` +
+          'Configure instanceId in global settings to ensure consistent PR ownership tracking.'
+      );
+    }
+    body = `${body}\n\n${buildPROwnershipWatermark(effectiveInstanceId, teamId ?? '')}`;
+    logger.debug(
+      `[GitWorkflow] Appended ownership watermark to PR body (instance=${effectiveInstanceId})`
+    );
 
     // Detect repository info by checking remotes
     // We need to explicitly set --repo to avoid gh defaulting to wrong upstream
@@ -1265,6 +1357,11 @@ export class GitWorkflowService {
     const targetRepo = originRepo || upstreamRepo;
     const headRef = branchName; // No cross-fork PR - target our own repo
     const repoArg = targetRepo ? ` --repo "${targetRepo}"` : '';
+
+    // Validate CI workflow triggers before creating/returning PR.
+    // Logs a warning (non-blocking) if CI workflows don't include the base branch —
+    // which would cause checks to stay "pending" indefinitely on the new PR.
+    await this.validateCIWorkflowTriggers(projectPath, baseBranch);
 
     try {
       const listCmd = `gh pr list${repoArg} --head "${headRef}" --json number,title,url,state --limit 1`;

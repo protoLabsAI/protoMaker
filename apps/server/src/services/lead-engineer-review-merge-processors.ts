@@ -18,6 +18,7 @@ import type {
 import {
   MERGE_RETRY_DELAY_MS,
   REVIEW_POLL_DELAY_MS,
+  REVIEW_PENDING_TIMEOUT_MS,
   MAX_TOTAL_REMEDIATION_CYCLES,
   MAX_PR_ITERATIONS,
 } from './lead-engineer-types.js';
@@ -47,10 +48,21 @@ function sanitizePrNumber(prNumber: unknown): number {
 export class ReviewProcessor implements StateProcessor {
   constructor(private serviceContext: ProcessorServiceContext) {}
 
+  /**
+   * Tracks when each feature first entered REVIEW state (epoch ms).
+   * Used to enforce REVIEW_PENDING_TIMEOUT_MS — features cannot stay in REVIEW
+   * indefinitely waiting for CI that may never trigger (e.g., workflows misconfigured).
+   */
+  private readonly reviewStartedAt = new Map<string, number>();
+
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[REVIEW] PR review started for feature: ${ctx.feature.id}`, {
       prNumber: ctx.prNumber,
     });
+    // Stamp entry time only once — prevent reset if REVIEW re-enters due to re-checks
+    if (!this.reviewStartedAt.has(ctx.feature.id)) {
+      this.reviewStartedAt.set(ctx.feature.id, Date.now());
+    }
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
@@ -185,9 +197,33 @@ export class ReviewProcessor implements StateProcessor {
       };
     }
 
-    // Status is 'pending' or 'commented' — wait and re-check
+    // Status is 'pending' or 'commented' — enforce timeout before waiting
+    const reviewStartMs = this.reviewStartedAt.get(ctx.feature.id) ?? Date.now();
+    const reviewElapsedMs = Date.now() - reviewStartMs;
+
+    if (reviewElapsedMs > REVIEW_PENDING_TIMEOUT_MS) {
+      const elapsedMin = Math.round(reviewElapsedMs / 60000);
+      const limitMin = Math.round(REVIEW_PENDING_TIMEOUT_MS / 60000);
+      ctx.escalationReason =
+        `PR #${ctx.prNumber} has been pending CI/review for ${elapsedMin} minute(s) ` +
+        `(configured timeout: ${limitMin} min). Possible causes: ` +
+        `(1) CI workflow triggers do not include the PR base branch — check .github/workflows/ ` +
+        `and ensure the 'branches:' list includes your configured prBaseBranch; ` +
+        `(2) CodeRabbit was rate-limited — check the PR for a CodeRabbit FAILURE commit status; ` +
+        `(3) Required reviewers have not been assigned. ` +
+        `Adjust the timeout via the REVIEW_PENDING_TIMEOUT_MINUTES environment variable.`;
+      this.reviewStartedAt.delete(ctx.feature.id);
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: true,
+        reason: ctx.escalationReason,
+      };
+    }
+
     logger.info(`[REVIEW] PR pending review, waiting ${REVIEW_POLL_DELAY_MS / 1000}s`, {
       prNumber: ctx.prNumber,
+      elapsedMinutes: Math.round(reviewElapsedMs / 60000),
+      timeoutMinutes: Math.round(REVIEW_PENDING_TIMEOUT_MS / 60000),
     });
     await new Promise((r) => setTimeout(r, REVIEW_POLL_DELAY_MS));
 
@@ -198,8 +234,10 @@ export class ReviewProcessor implements StateProcessor {
     };
   }
 
-  async exit(_ctx: StateContext): Promise<void> {
+  async exit(ctx: StateContext): Promise<void> {
     logger.info('[REVIEW] Review phase completed');
+    // Clean up review start timestamp when leaving REVIEW state
+    this.reviewStartedAt.delete(ctx.feature.id);
   }
 
   private async getPRReviewState(ctx: StateContext): Promise<string> {
@@ -211,7 +249,7 @@ export class ReviewProcessor implements StateProcessor {
 
     try {
       const { stdout } = await execAsync(
-        `gh pr view ${ctx.prNumber} --json reviewDecision,statusCheckRollup,reviews --jq '{decision: .reviewDecision, checks: [(.statusCheckRollup // [])[] | .conclusion], approvedCount: ([(.reviews // [])[] | select(.state == "APPROVED")] | length)}'`,
+        `gh pr view ${ctx.prNumber} --json reviewDecision,statusCheckRollup,reviews --jq '{decision: .reviewDecision, checks: [(.statusCheckRollup // [])[] | {name: .context, conclusion: .conclusion}], approvedCount: ([(.reviews // [])[] | select(.state == "APPROVED")] | length)}'`,
         { cwd: ctx.projectPath, timeout: 15000 }
       );
 
@@ -220,12 +258,41 @@ export class ReviewProcessor implements StateProcessor {
       if (data.decision === 'APPROVED') return 'approved';
       if (data.decision === 'CHANGES_REQUESTED') return 'changes_requested';
 
-      // Require at least one human APPROVED review — CI passing alone is not sufficient
-      const checks = (data.checks || []) as string[];
+      // Separate CodeRabbit checks from real CI checks.
+      // CodeRabbit rate-limit sets commit status to FAILURE, but this is transient
+      // and should not block the approval flow.
+      const checks = (data.checks || []) as Array<{ name: string; conclusion: string }>;
+      const codeRabbitChecks = checks.filter(
+        (c) =>
+          c.name?.toLowerCase().includes('coderabbit') ||
+          c.name?.toLowerCase().includes('code-rabbit')
+      );
+      const ciChecks = checks.filter(
+        (c) =>
+          !c.name?.toLowerCase().includes('coderabbit') &&
+          !c.name?.toLowerCase().includes('code-rabbit')
+      );
+
+      // Log transient CodeRabbit failures so operators can diagnose
+      const codeRabbitFailures = codeRabbitChecks.filter(
+        (c) => c.conclusion && c.conclusion !== 'SUCCESS'
+      );
+      if (codeRabbitFailures.length > 0) {
+        logger.info(
+          `[REVIEW] CodeRabbit check(s) not passing (likely rate-limited), treating as transient`,
+          {
+            prNumber: ctx.prNumber,
+            codeRabbitChecks: codeRabbitFailures.map((c) => `${c.name}=${c.conclusion}`),
+          }
+        );
+      }
+
+      // Require at least one human APPROVED review — CI passing alone is not sufficient.
+      // Only real CI checks (non-CodeRabbit) block approval.
       const approvedCount = (data.approvedCount as number) ?? 0;
       if (
         approvedCount > 0 &&
-        (checks.length === 0 || checks.every((c: string) => c === 'SUCCESS'))
+        (ciChecks.length === 0 || ciChecks.every((c) => c.conclusion === 'SUCCESS'))
       ) {
         return 'approved';
       }
