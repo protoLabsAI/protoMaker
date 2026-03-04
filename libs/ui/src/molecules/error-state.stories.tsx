@@ -65,7 +65,8 @@ export const CustomTitle: Story = {
 export const NetworkError: Story = {
   args: {
     title: 'Network Error',
-    error: 'A network error occurred while fetching your data. Please check your internet connection and try again.',
+    error:
+      'A network error occurred while fetching your data. Please check your internet connection and try again.',
     onRetry: () => {},
     retryText: 'Retry Connection',
   },
