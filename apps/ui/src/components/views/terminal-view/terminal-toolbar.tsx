@@ -7,8 +7,6 @@ import {
   Terminal,
   ZoomIn,
   ZoomOut,
-  RotateCcw,
-  Settings,
   Search,
   ChevronUp,
   ChevronDown,
@@ -19,22 +17,8 @@ import {
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@protolabs-ai/ui/atoms';
 import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
-import { TERMINAL_FONT_OPTIONS } from '@/config/terminal-themes';
-import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
-import { toast } from 'sonner';
+import { TerminalSettingsPopover } from './terminal-settings-popover';
 
 // Font size constraints — exported so terminal-panel can import them
 export const MIN_FONT_SIZE = 8;
@@ -55,13 +39,6 @@ export interface TerminalToolbarProps {
   showSearch: boolean;
   searchQuery: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
-
-  // Terminal settings (from store, passed as props — no direct store access in this component)
-  defaultRunScript: string;
-  fontFamily: string | null | undefined;
-  scrollbackLines: number;
-  lineHeight: number;
-  screenReaderMode: boolean;
 
   // Drag-and-drop refs / attributes
   dragRef: (node: HTMLButtonElement | null) => void;
@@ -85,13 +62,6 @@ export interface TerminalToolbarProps {
   onSearchNext: () => void;
   onSearchPrevious: () => void;
   onCloseSearch: () => void;
-
-  // Settings callbacks (wrapping store setters)
-  onSetDefaultRunScript: (value: string) => void;
-  onSetFontFamily: (value: string) => void;
-  onSetScrollbackLines: (value: number) => void;
-  onSetLineHeight: (value: number) => void;
-  onSetScreenReaderMode: (value: boolean) => void;
 }
 
 export function TerminalToolbar({
@@ -105,11 +75,6 @@ export function TerminalToolbar({
   showSearch,
   searchQuery,
   searchInputRef,
-  defaultRunScript,
-  fontFamily,
-  scrollbackLines,
-  lineHeight,
-  screenReaderMode,
   dragRef,
   dragAttributes,
   dragListeners,
@@ -125,11 +90,6 @@ export function TerminalToolbar({
   onSearchNext,
   onSearchPrevious,
   onCloseSearch,
-  onSetDefaultRunScript,
-  onSetFontFamily,
-  onSetScrollbackLines,
-  onSetLineHeight,
-  onSetScreenReaderMode,
 }: TerminalToolbarProps) {
   return (
     <>
@@ -233,166 +193,12 @@ export function TerminalToolbar({
             <ZoomIn className="h-3 w-3" />
           </Button>
 
-          {/* Settings popover */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                onClick={(e) => e.stopPropagation()}
-                title="Terminal Settings"
-              >
-                <Settings className="h-3 w-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-64 p-3"
-              align="end"
-              side="bottom"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Font Size</Label>
-                    <span className="text-xs text-muted-foreground">{fontSize}px</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Slider
-                      value={[fontSize]}
-                      min={MIN_FONT_SIZE}
-                      max={MAX_FONT_SIZE}
-                      step={1}
-                      onValueChange={([value]) => onFontSizeChange(value)}
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 shrink-0"
-                      onClick={() => onResetZoom()}
-                      disabled={fontSize === DEFAULT_FONT_SIZE}
-                      title="Reset to default"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Run on New Terminal</Label>
-                  <Input
-                    value={defaultRunScript}
-                    onChange={(e) => onSetDefaultRunScript(e.target.value)}
-                    placeholder="e.g., claude"
-                    className="h-7 text-xs"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Command to run when creating a new terminal
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium">Font Family</Label>
-                  <Select
-                    value={fontFamily || DEFAULT_FONT_VALUE}
-                    onValueChange={(value) => {
-                      onSetFontFamily(value);
-                      toast.info('Font family changed', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                  >
-                    <SelectTrigger className="w-full h-8 text-xs">
-                      <SelectValue placeholder="Default (Menlo / Monaco)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TERMINAL_FONT_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span
-                            style={{
-                              fontFamily:
-                                option.value === DEFAULT_FONT_VALUE ? undefined : option.value,
-                            }}
-                          >
-                            {option.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Scrollback</Label>
-                    <span className="text-xs text-muted-foreground">
-                      {(scrollbackLines / 1000).toFixed(0)}k lines
-                    </span>
-                  </div>
-                  <Slider
-                    value={[scrollbackLines]}
-                    min={1000}
-                    max={100000}
-                    step={1000}
-                    onValueChange={([value]) => {
-                      onSetScrollbackLines(value);
-                    }}
-                    onValueCommit={() => {
-                      toast.info('Scrollback changed', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                    className="flex-1"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-medium">Line Height</Label>
-                    <span className="text-xs text-muted-foreground">{lineHeight.toFixed(1)}</span>
-                  </div>
-                  <Slider
-                    value={[lineHeight]}
-                    min={1.0}
-                    max={2.0}
-                    step={0.1}
-                    onValueChange={([value]) => {
-                      onSetLineHeight(value);
-                    }}
-                    onValueCommit={() => {
-                      toast.info('Line height changed', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                    className="flex-1"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs font-medium">Screen Reader</Label>
-                    <p className="text-[10px] text-muted-foreground">Enable accessibility mode</p>
-                  </div>
-                  <Switch
-                    checked={screenReaderMode}
-                    onCheckedChange={(checked) => {
-                      onSetScreenReaderMode(checked);
-                      toast.info(checked ? 'Screen reader enabled' : 'Screen reader disabled', {
-                        description: 'Restart terminal for changes to take effect',
-                      });
-                    }}
-                  />
-                </div>
-
-                <div className="text-[10px] text-muted-foreground border-t pt-2">
-                  <p>Zoom: Ctrl++ / Ctrl+- / Ctrl+0</p>
-                  <p>Or use Ctrl+scroll wheel</p>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          {/* Settings popover — self-contained, accesses store directly */}
+          <TerminalSettingsPopover
+            fontSize={fontSize}
+            onFontSizeChange={onFontSizeChange}
+            onResetZoom={onResetZoom}
+          />
 
           <div className="w-px h-3 mx-0.5 bg-border" />
 
