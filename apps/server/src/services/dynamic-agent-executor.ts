@@ -17,6 +17,7 @@ import {
 } from '../providers/simple-query-service.js';
 import type { AgentConfig } from './agent-factory-service.js';
 import type { EventEmitter } from '../lib/events.js';
+import { buildDefaultHooks } from '../lib/agent-hooks.js';
 
 const fsModule: SkillsFsModule = {
   readFile: (p, enc) => fsp.readFile(p, enc as BufferEncoding) as Promise<string>,
@@ -31,6 +32,24 @@ const fsModule: SkillsFsModule = {
 };
 
 const logger = createLogger('DynamicAgentExecutor');
+
+/**
+ * Merge two hooks records, concatenating arrays for shared keys.
+ * Base hooks are listed first; override hooks are appended.
+ */
+function mergeHooks(
+  base: Record<string, HookCallbackMatcher[]>,
+  override?: Partial<Record<string, HookCallbackMatcher[]>>
+): Record<string, HookCallbackMatcher[]> {
+  if (!override) return base;
+  const merged: Record<string, HookCallbackMatcher[]> = { ...base };
+  for (const [key, matchers] of Object.entries(override)) {
+    if (matchers) {
+      merged[key] = [...(merged[key] ?? []), ...matchers];
+    }
+  }
+  return merged;
+}
 
 /** Result of an agent execution */
 export interface ExecutionResult {
@@ -122,6 +141,19 @@ export class DynamicAgentExecutor {
         agentRole: config.templateName,
       };
 
+      // Build default hooks (lifecycle + notification) and merge with caller-provided hooks
+      const defaultHooks = buildDefaultHooks({
+        agentLabel: config.templateName,
+        logger,
+        events: this.events,
+        config: {
+          name: config.templateName,
+          role: config.role,
+          projectPath: config.projectPath,
+        },
+      });
+      const mergedHooks = mergeHooks(defaultHooks, options.hooks);
+
       if (options.onText || options.onToolUse) {
         // Streaming execution
         const result = await streamingQuery({
@@ -134,7 +166,7 @@ export class DynamicAgentExecutor {
           abortController: options.abortController,
           onText: options.onText,
           onToolUse: options.onToolUse,
-          hooks: options.hooks,
+          hooks: mergedHooks,
           canUseTool: options.canUseTool,
           traceContext,
         });
@@ -149,7 +181,7 @@ export class DynamicAgentExecutor {
           maxTurns: config.maxTurns,
           allowedTools,
           abortController: options.abortController,
-          hooks: options.hooks,
+          hooks: mergedHooks,
           canUseTool: options.canUseTool,
           traceContext,
         });

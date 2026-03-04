@@ -34,6 +34,7 @@ import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
+import { buildProgressHooks } from '../../lib/agent-hooks.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
 import { getEventHistoryService } from '../../services/event-history-service.js';
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
@@ -659,17 +660,18 @@ export function buildAvaTools(
         const emitter = services.toolProgressEmitter;
         const agentLabel = role;
 
+        // Build PostToolUse progress hooks to replace manual onToolUse progress emission.
+        // The hook fires natively after each tool execution; onText remains for text generation.
+        const progressHooks =
+          emitter && toolCallId
+            ? { PostToolUse: buildProgressHooks({ emitter, toolCallId, agentLabel }) }
+            : undefined;
+
         const result = await services.dynamicAgentExecutor.execute(agentConfig, {
           prompt,
+          hooks: progressHooks,
           ...(emitter &&
             toolCallId && {
-              onToolUse: (innerTool: string) => {
-                emitter.emitProgress(
-                  toolCallId,
-                  `${agentLabel} -- ${formatToolLabel(innerTool)}`,
-                  innerTool
-                );
-              },
               onText: () => {
                 emitter.emitProgress(toolCallId, `${agentLabel} -- Composing response`);
               },
