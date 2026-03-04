@@ -32,6 +32,7 @@ import {
 } from 'ai';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createLogger } from '@protolabs-ai/utils';
 import { resolveModelString } from '@protolabs-ai/model-resolver';
@@ -77,21 +78,38 @@ export async function loadAvaContext(projectPath: string): Promise<string | unde
     // No CLAUDE.md at project root — that's fine
   }
 
-  // 2. Ava skill prompt (strip frontmatter)
+  // 2. Ava UI prompt — prefer the UI-specific ava-prompt.md (co-located with this module),
+  //    fall back to the CLI skill file for backward compatibility.
   try {
-    const avaSkillPath = path.resolve(
-      projectPath,
-      'packages/mcp-server/plugins/automaker/commands/ava.md'
-    );
-    const avaSkillRaw = await fs.readFile(avaSkillPath, 'utf-8');
-    // Strip YAML frontmatter (--- ... ---)
-    const fmEnd = avaSkillRaw.indexOf('\n---', 4);
-    const body = fmEnd !== -1 ? avaSkillRaw.slice(fmEnd + 4).trim() : avaSkillRaw.trim();
-    if (body) {
-      contextParts.push(body);
+    // Resolve relative to the compiled module so this works in both src and dist.
+    // dist/routes/chat → ../../.. → apps/server → src/routes/chat/ava-prompt.md
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+    const uiPromptPath = path.join(__dirname, '../../../src/routes/chat/ava-prompt.md');
+
+    let avaPromptRaw: string | null = null;
+
+    try {
+      avaPromptRaw = await fs.readFile(uiPromptPath, 'utf-8');
+    } catch {
+      // ava-prompt.md not found — fall back to CLI skill file
+    }
+
+    if (avaPromptRaw === null) {
+      // Fallback: CLI skill file (strips YAML frontmatter)
+      const cliSkillPath = path.resolve(
+        projectPath,
+        'packages/mcp-server/plugins/automaker/commands/ava.md'
+      );
+      const cliSkillRaw = await fs.readFile(cliSkillPath, 'utf-8');
+      const fmEnd = cliSkillRaw.indexOf('\n---', 4);
+      avaPromptRaw = fmEnd !== -1 ? cliSkillRaw.slice(fmEnd + 4).trim() : cliSkillRaw.trim();
+    }
+
+    if (avaPromptRaw?.trim()) {
+      contextParts.push(avaPromptRaw.trim());
     }
   } catch {
-    // Ava skill file not found — continue without it
+    // Ava prompt not found — continue without it
   }
 
   return contextParts.length > 0 ? contextParts.join('\n\n---\n\n') : undefined;

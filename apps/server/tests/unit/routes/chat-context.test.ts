@@ -26,6 +26,10 @@ const AVA_SKILL_PATH = path.resolve(
   'packages/mcp-server/plugins/automaker/commands/ava.md'
 );
 
+// The UI prompt path is resolved using import.meta.url relative to the compiled module.
+// In tests it resolves from the source tree: src/routes/chat/ava-prompt.md
+const AVA_UI_PROMPT_FILENAME = 'ava-prompt.md';
+
 describe('loadAvaContext', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -142,10 +146,14 @@ describe('loadAvaContext', () => {
 
     await loadAvaContext(PROJECT_PATH);
 
-    // Should only attempt the two known paths
-    expect(readFileCalls).toHaveLength(2);
+    // Should attempt: CLAUDE.md, ava-prompt.md (UI prompt), CLI skill fallback
+    // Total: 3 paths when both prompt files are missing
+    expect(readFileCalls.length).toBeGreaterThanOrEqual(2);
     expect(readFileCalls[0]).toBe(CLAUDE_MD_PATH);
-    expect(readFileCalls[1]).toBe(AVA_SKILL_PATH);
+    // Second path is the UI-specific ava-prompt.md
+    expect(readFileCalls[1]).toContain(AVA_UI_PROMPT_FILENAME);
+    // Third path (fallback) is the CLI skill file
+    expect(readFileCalls[2]).toBe(AVA_SKILL_PATH);
     // Must never touch .automaker/context/ or .automaker/memory/
     for (const call of readFileCalls) {
       expect(call).not.toContain('.automaker/context');

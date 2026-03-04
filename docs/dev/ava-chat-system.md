@@ -238,6 +238,30 @@ The chat route scans assistant text for `[[feature:id]]` and `[[doc:path]]` patt
 
 ### Ava's System Prompt
 
+The Ava system prompt is assembled from two sources by `buildAvaSystemPrompt()` in `personas.ts`:
+
+1. **`AVA_BASE_PROMPT`** — the fixed persona header (always injected)
+2. **`projectContext`** — loaded by `loadAvaContext()`, which reads:
+   - `CLAUDE.md` at the project root (project-specific instructions)
+   - The Ava prompt body (see below)
+
+#### Prompt File Separation
+
+The Ava UI chat and the `/ava` CLI skill use **separate prompt files**:
+
+| Surface              | File                                                    | Purpose                                                                                                                                   |
+| -------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **UI chat**          | `apps/server/src/routes/chat/ava-prompt.md`             | UI-tailored prompt: tool groups, HITL guidance, citation syntax, SDK hook awareness. No CLI delegation tree or MCP-specific instructions. |
+| **CLI `/ava` skill** | `packages/mcp-server/plugins/automaker/commands/ava.md` | Full CLI skill with frontmatter, MCP tool access list, delegation tree, agent supervision protocol, and bash-based path resolution.       |
+
+`loadAvaContext()` resolves the UI prompt path using `import.meta.url` (relative to the compiled module). If `ava-prompt.md` is not found, it falls back to the CLI skill file for backward compatibility.
+
+**Editing guidance:**
+
+- To change Ava's behavior in the **web chat UI** → edit `apps/server/src/routes/chat/ava-prompt.md`
+- To change Ava's behavior in the **Claude Code `/ava` command** → edit `packages/mcp-server/plugins/automaker/commands/ava.md`
+- Changes to one file do **not** affect the other
+
 Ava is instructed to use citation syntax when referencing entities:
 
 ```
@@ -314,10 +338,14 @@ libs/ui/src/ai/
 
 apps/server/src/routes/chat/
   index.ts                          # POST /api/chat endpoint
+  ava-prompt.md                     # Ava UI chat system prompt (UI surface only)
   ava-tools.ts                      # Tool definitions + HITL gating
   ava-config.ts                     # Per-project config load/save
   personas.ts                       # System prompt builder
   sitrep.ts                         # Live board state injection
+
+packages/mcp-server/plugins/automaker/commands/
+  ava.md                            # CLI /ava skill prompt (Claude Code only — unchanged)
 
 apps/ui/src/routes/
   chat.tsx                          # Full-screen /chat route (featureFlags.avaChat)
