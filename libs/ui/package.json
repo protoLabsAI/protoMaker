@@ -105,10 +105,18 @@
     "tailwindcss": ">=4"
   },
   "peerDependenciesMeta": {
-    "@rjsf/core": { "optional": true },
-    "@rjsf/shadcn": { "optional": true },
-    "@rjsf/utils": { "optional": true },
-    "@rjsf/validator-ajv8": { "optional": true }
+    "@rjsf/core": {
+      "optional": true
+    },
+    "@rjsf/shadcn": {
+      "optional": true
+    },
+    "@rjsf/utils": {
+      "optional": true
+    },
+    "@rjsf/validator-ajv8": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.1",
