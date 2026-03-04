@@ -49,9 +49,10 @@ export async function initOtel(): Promise<void> {
     const { LangfuseSpanProcessor } = await import('@langfuse/otel');
     const { NodeSDK } = await import('@opentelemetry/sdk-node');
 
-    // OTLP exporter — OTLPTraceExporter auto-appends /v1/traces to the base URL
+    // OTLP exporter — full URL required (OTLPTraceExporter only auto-appends
+    // /v1/traces when using OTEL_EXPORTER_OTLP_ENDPOINT env var, not the `url` option)
     const otlpExporter = new OTLPTraceExporter({
-      url: `${baseUrl}/api/public/otel`,
+      url: `${baseUrl}/api/public/otel/v1/traces`,
       headers: {
         Authorization: `Basic ${Buffer.from(`${publicKey}:${secretKey}`).toString('base64')}`,
       },
@@ -74,7 +75,7 @@ export async function initOtel(): Promise<void> {
     sdk.start();
     sdkInstance = sdk;
     logger.info(
-      `OTel: Initialized — OTLP exporter + LangfuseSpanProcessor active (${baseUrl}, service=${process.env.OTEL_SERVICE_NAME})`
+      `OTel: Initialized — OTLP exporter + LangfuseSpanProcessor active (${baseUrl}/api/public/otel/v1/traces, service=${process.env.OTEL_SERVICE_NAME})`
     );
   } catch (error) {
     logger.warn('OTel: Failed to initialize —', error);
