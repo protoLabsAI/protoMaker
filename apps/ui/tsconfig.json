@@ -9,7 +9,8 @@
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@protolabs-ai/ui/organisms": ["../../libs/ui/src/organisms/index.ts"]
     },
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
