@@ -444,16 +444,16 @@ npm run build:electron   →  Vite build + electron-builder for desktop
 
 Current gaps between philosophy and implementation. These are tracked as future work — don't fix opportunistically, fix deliberately.
 
-| Debt                 | Current                                                                    | Target                                                                 | Priority |
-| -------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------- |
-| Monolithic terminal  | `terminal-panel.tsx` (2,251 lines)                                         | Decompose into sub-components like board-view already has              | High     |
-| Storybook coverage   | 27 stories in `libs/ui/` (25 atoms + 2 ai); 5 legacy stories in `apps/ui/` | Stories for all UI primitives, interaction tests, Chromatic CI         | High     |
-| UI package gaps      | 25 atoms extracted to `@protolabs-ai/ui`; molecules/organisms pending      | Full extraction of all primitives to `libs/ui/`                        | Medium   |
-| Static theme files   | 8 hand-written CSS files in `libs/ui/src/themes/`                          | Generate from TypeScript config                                        | Medium   |
-| Minimal a11y         | Relies on Radix defaults, no linting or testing                            | `eslint-plugin-jsx-a11y`, Storybook `addon-a11y`, skip-to-content link | Medium   |
-| Loose files          | 5 components at `src/components/` root level                               | Move to `shared/` or `layout/`                                         | Low      |
-| No typography tokens | Font sizes, line heights are ad-hoc Tailwind classes                       | Formalize as semantic tokens                                           | Low      |
-| No spacing tokens    | Spacing uses Tailwind defaults only                                        | Define semantic spacing scale if needed                                | Low      |
+| Debt                 | Current                                                                                                                                                                                                | Target                                                                                 | Priority |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | -------- |
+| Monolithic terminal  | `terminal-panel.tsx` decomposed: `TerminalToolbar`, `TerminalSettingsPopover`, and `TerminalContextMenu` (keyboard shortcut map) extracted; barrel at `terminal-view/index.ts`; panel now ~1,718 lines | Further decomposition toward sub-800-line target remains (WebSocket, xterm init hooks) | Low      |
+| Storybook coverage   | 27 stories in `libs/ui/` (25 atoms + 2 ai); 5 legacy stories in `apps/ui/`                                                                                                                             | Stories for all UI primitives, interaction tests, Chromatic CI                         | High     |
+| UI package gaps      | 25 atoms extracted to `@protolabs-ai/ui`; molecules/organisms pending                                                                                                                                  | Full extraction of all primitives to `libs/ui/`                                        | Medium   |
+| Static theme files   | 8 hand-written CSS files in `libs/ui/src/themes/`                                                                                                                                                      | Generate from TypeScript config                                                        | Medium   |
+| Minimal a11y         | Relies on Radix defaults, no linting or testing                                                                                                                                                        | `eslint-plugin-jsx-a11y`, Storybook `addon-a11y`, skip-to-content link                 | Medium   |
+| Loose files          | 5 components at `src/components/` root level                                                                                                                                                           | Move to `shared/` or `layout/`                                                         | Low      |
+| No typography tokens | Font sizes, line heights are ad-hoc Tailwind classes                                                                                                                                                   | Formalize as semantic tokens                                                           | Low      |
+| No spacing tokens    | Spacing uses Tailwind defaults only                                                                                                                                                                    | Define semantic spacing scale if needed                                                | Low      |
 
 ## What we do NOT adopt
 
