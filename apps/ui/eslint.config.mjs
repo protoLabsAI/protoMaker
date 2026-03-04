@@ -5,6 +5,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 import js from '@eslint/js';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 const eslintConfig = defineConfig([
   js.configs.recommended,
@@ -135,6 +136,25 @@ const eslintConfig = defineConfig([
           'ts-nocheck': 'allow-with-description',
         },
       ],
+    },
+  },
+  {
+    files: ['**/*.tsx', '**/*.jsx'],
+    plugins: {
+      'jsx-a11y': jsxA11y,
+    },
+    rules: {
+      ...jsxA11y.configs.recommended.rules,
+      // Disabled: crashes with minimatch@10 (root override). Other a11y rules remain active.
+      'jsx-a11y/label-has-associated-control': 'off',
+      // Downgraded to warnings for baseline — existing codebase has many pre-existing violations.
+      // Future A11y tasks should fix these incrementally.
+      'jsx-a11y/click-events-have-key-events': 'warn',
+      'jsx-a11y/no-static-element-interactions': 'warn',
+      'jsx-a11y/no-autofocus': 'warn',
+      'jsx-a11y/no-noninteractive-element-interactions': 'warn',
+      'jsx-a11y/interactive-supports-focus': 'warn',
+      'jsx-a11y/no-noninteractive-tabindex': 'warn',
     },
   },
   globalIgnores([
