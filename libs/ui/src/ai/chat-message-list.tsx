@@ -19,6 +19,8 @@ import { cn } from '../lib/utils.js';
 import { Button } from '../atoms/button.js';
 import { ChatMessage } from './chat-message.js';
 import { ShimmerLoader } from './shimmer.js';
+import { SubagentApprovalCard } from './subagent-approval-card.js';
+import type { PendingSubagentApproval } from './subagent-approval-card.js';
 
 /** Per-message branch info keyed by message ID. */
 export interface BranchInfo {
@@ -26,6 +28,9 @@ export interface BranchInfo {
   branchCount: number;
   origId: string;
 }
+
+// Re-export so consumers can import from this module
+export type { PendingSubagentApproval };
 
 export function ChatMessageList({
   messages,
@@ -41,6 +46,9 @@ export function ChatMessageList({
   onPreviousBranch,
   onNextBranch,
   getToolProgressLabel,
+  pendingSubagentApprovals,
+  onSubagentApprove,
+  onSubagentDeny,
 }: {
   messages: UIMessage[];
   emptyMessage?: string;
@@ -65,6 +73,12 @@ export function ChatMessageList({
   onNextBranch?: (origId: string) => void;
   /** Returns a live progress label for a running tool, keyed by toolCallId. */
   getToolProgressLabel?: (toolCallId: string) => string | undefined;
+  /** Pending subagent tool approvals from the gated trust model. */
+  pendingSubagentApprovals?: PendingSubagentApproval[];
+  /** Called when the user approves a subagent tool call. Receives the approvalId. */
+  onSubagentApprove?: (approvalId: string) => void;
+  /** Called when the user denies a subagent tool call. Receives the approvalId. */
+  onSubagentDeny?: (approvalId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -216,6 +230,23 @@ export function ChatMessageList({
             })
           )}
           {showShimmer && <ShimmerLoader />}
+
+          {/* Subagent tool approval cards (gated trust model) */}
+          {pendingSubagentApprovals && pendingSubagentApprovals.length > 0 && (
+            <div className="px-4">
+              {pendingSubagentApprovals.map((approval) => (
+                <SubagentApprovalCard
+                  key={approval.approvalId}
+                  approvalId={approval.approvalId}
+                  toolName={approval.toolName}
+                  toolInput={approval.toolInput}
+                  receivedAt={approval.receivedAt}
+                  onApprove={onSubagentApprove}
+                  onDeny={onSubagentDeny}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
