@@ -27,6 +27,11 @@ import { ArtifactCard } from './tool-results/artifact-card.js';
 import { ImageCard } from './tool-results/image-card.js';
 import { WebPreviewCard } from './tool-results/web-preview-card.js';
 import { PlanPartToolRenderer } from './plan-part.js';
+import { DynamicAgentCard } from './tool-results/dynamic-agent-card.js';
+import { MetricsCard } from './tool-results/metrics-card.js';
+import { BriefingCard } from './tool-results/briefing-card.js';
+import { PromotionCandidatesCard } from './tool-results/promotion-candidates-card.js';
+import { PRStatusCard } from './tool-results/pr-status-card.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
@@ -57,6 +62,23 @@ toolResultRegistry.register('generate_html', WebPreviewCard);
 // Register custom renderer for the planning tool
 toolResultRegistry.register('create_plan', PlanPartToolRenderer);
 
+// Register custom renderers for the agentDelegation tool group
+toolResultRegistry.register('execute_dynamic_agent', DynamicAgentCard);
+
+// Register custom renderers for the metrics tool group
+toolResultRegistry.register('get_project_metrics', MetricsCard);
+toolResultRegistry.register('get_capacity_metrics', MetricsCard);
+
+// Register custom renderers for the briefing tool group
+toolResultRegistry.register('get_briefing', BriefingCard);
+
+// Register custom renderers for the promotion tool group
+toolResultRegistry.register('list_staging_candidates', PromotionCandidatesCard);
+
+// Register custom renderers for the prWorkflow tool group
+toolResultRegistry.register('check_pr_status', PRStatusCard);
+toolResultRegistry.register('get_pr_feedback', PRStatusCard);
+
 type ToolState =
   | 'input-streaming'
   | 'input-available'
@@ -75,6 +97,8 @@ export interface ToolInvocationPartProps {
   errorText?: string;
   title?: string;
   className?: string;
+  /** Live progress label streamed via WebSocket during tool execution. */
+  progressLabel?: string;
   /** Called when user approves a destructive tool call (HITL flow) */
   onApprove?: () => void;
   /** Called when user rejects a destructive tool call (HITL flow) */
@@ -106,11 +130,11 @@ function JsonPreview({ data, label }: { data: unknown; label: string }) {
   if (!json || json === '{}' || json === 'undefined') return null;
 
   return (
-    <div className="mt-1.5">
+    <div className="mt-1.5 min-w-0">
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <pre className="mt-0.5 overflow-x-auto rounded bg-background/50 p-2 font-mono text-[11px] leading-relaxed text-foreground/80">
+      <pre className="mt-0.5 max-w-full overflow-x-auto whitespace-pre-wrap break-all rounded bg-background/50 p-2 font-mono text-[11px] leading-relaxed text-foreground/80">
         {json}
       </pre>
     </div>
@@ -125,6 +149,7 @@ export function ToolInvocationPart({
   errorText,
   title,
   className,
+  progressLabel,
   onApprove,
   onReject,
 }: ToolInvocationPartProps) {
@@ -161,7 +186,7 @@ export function ToolInvocationPart({
     <div
       data-slot="tool-invocation-part"
       className={cn(
-        'my-1 rounded-md border border-border/50 bg-muted/30 text-xs',
+        'my-1 max-w-full overflow-hidden rounded-md border border-border/50 bg-muted/30 text-xs',
         state === 'output-error' && 'border-destructive/30',
         className
       )}
@@ -178,7 +203,9 @@ export function ToolInvocationPart({
         </span>
         <span className={cn('flex items-center gap-1', config.color)}>
           <StateIcon className={cn('size-3', isRunning && 'animate-spin')} />
-          <span className="text-[10px]">{config.label}</span>
+          <span className="max-w-[200px] truncate text-[10px]">
+            {isRunning && progressLabel ? progressLabel : config.label}
+          </span>
         </span>
         <ChevronDown
           className={cn(
@@ -188,7 +215,7 @@ export function ToolInvocationPart({
         />
       </button>
       {isOpen && (
-        <div className="border-t border-border/50 px-2.5 py-2">
+        <div className="min-w-0 border-t border-border/50 px-2.5 py-2">
           <JsonPreview data={input} label="Input" />
           {state === 'output-available' && (
             <>
@@ -212,7 +239,7 @@ export function ToolInvocationPart({
               <span className="text-[10px] font-medium uppercase tracking-wider text-destructive">
                 Error
               </span>
-              <pre className="mt-0.5 overflow-x-auto rounded bg-destructive/5 p-2 font-mono text-[11px] leading-relaxed text-destructive">
+              <pre className="mt-0.5 max-w-full overflow-x-auto whitespace-pre-wrap break-all rounded bg-destructive/5 p-2 font-mono text-[11px] leading-relaxed text-destructive">
                 {errorText}
               </pre>
             </div>

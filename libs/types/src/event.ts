@@ -229,6 +229,7 @@ export type EventType =
   | 'pr:thread-evaluated' // Fired when a single PR review thread is evaluated for resolution status
   | 'pr:threads-resolved' // Fired when all PR review threads are marked as resolved
   | 'pr:merge-blocked-critical-threads' // Fired when merge is blocked due to critical review threads
+  | 'pr:missing-ci-checks' // Fired when required CI checks have never been registered after threshold wait
   // Worktree recovery events
   | 'worktree:drift-detected'
   | 'worktree:phantom-pruned'
@@ -354,6 +355,8 @@ export type EventType =
   | 'job:started'
   | 'job:completed'
   | 'job:failed'
+  // Chat tool progress events (real-time sideband for Ava tool execution)
+  | 'chat:tool-progress'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -742,6 +745,14 @@ export interface EventPayloadMap {
     messageId: string;
     userId: string;
     username: string;
+  };
+
+  // Chat tool progress events (real-time sideband for Ava tool execution)
+  'chat:tool-progress': {
+    toolCallId: string;
+    label: string;
+    toolName?: string;
+    timestamp: string;
   };
 
   // Sensor framework events

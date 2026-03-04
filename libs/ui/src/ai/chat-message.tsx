@@ -43,11 +43,11 @@ const messageVariants = cva('flex gap-3 px-4 py-2', {
   defaultVariants: { role: 'assistant' },
 });
 
-const bubbleVariants = cva('rounded-lg px-3 py-2 text-sm max-w-[85%]', {
+const bubbleVariants = cva('rounded-lg px-3 py-2 text-sm max-w-[85%] overflow-hidden', {
   variants: {
     role: {
       user: 'bg-primary text-primary-foreground ml-auto',
-      assistant: 'bg-muted text-foreground mr-auto',
+      assistant: 'bg-muted text-foreground mr-auto w-full',
       system: 'bg-accent text-accent-foreground text-xs italic',
     },
   },
@@ -345,6 +345,7 @@ export function ChatMessage({
   branchCount,
   onPreviousBranch,
   onNextBranch,
+  getToolProgressLabel,
 }: {
   message: UIMessage;
   className?: string;
@@ -366,6 +367,8 @@ export function ChatMessage({
   onPreviousBranch?: () => void;
   /** Called when the user clicks the Next branch chevron. */
   onNextBranch?: () => void;
+  /** Returns a live progress label for a running tool, keyed by toolCallId. */
+  getToolProgressLabel?: (toolCallId: string) => string | undefined;
 } & Partial<VariantProps<typeof messageVariants>>) {
   const role = message.role as MessageRole;
   const parts = message.parts ?? [];
@@ -421,6 +424,21 @@ export function ChatMessage({
         }
       : undefined;
 
+  /** Find the live progress label for the first running tool in a step group. */
+  const getActiveToolProgressLabel = (group: PartSegment[]): string | undefined => {
+    if (!getToolProgressLabel) return undefined;
+    for (const seg of group) {
+      if (seg.kind !== 'tool-group') continue;
+      for (const tool of seg.tools) {
+        if (!TERMINAL_TOOL_STATES.has(tool.state)) {
+          const label = getToolProgressLabel(tool.toolCallId);
+          if (label) return label;
+        }
+      }
+    }
+    return undefined;
+  };
+
   return (
     <div data-slot="chat-message" className={cn('flex flex-col gap-1', className)}>
       {stepGroups.map((group, groupIdx) => {
@@ -433,11 +451,15 @@ export function ChatMessage({
             ) : (
               <div className="size-7 shrink-0" aria-hidden />
             )}
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-1 flex-col">
               <ChatMessageBubble role={role}>
                 {/* AILoader only on the last (active) bubble while streaming */}
                 {groupIdx === stepGroups.length - 1 && streaming && stepCount >= 1 && (
-                  <AILoader stepCount={stepCount} className="mb-1.5" />
+                  <AILoader
+                    stepCount={stepCount}
+                    label={getActiveToolProgressLabel(group)}
+                    className="mb-1.5"
+                  />
                 )}
 
                 {group.map((seg, i) => {
@@ -457,6 +479,7 @@ export function ChatMessage({
                           output={t.output}
                           errorText={t.errorText}
                           title={t.title}
+                          progressLabel={getToolProgressLabel?.(t.toolCallId)}
                           onApprove={
                             onToolApprove ? () => onToolApprove(t.toolName, t.input) : undefined
                           }

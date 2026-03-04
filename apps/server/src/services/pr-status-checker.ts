@@ -25,6 +25,8 @@ export interface TrackedPR {
   reviewState: 'pending' | 'changes_requested' | 'approved' | 'commented';
   iterationCount: number;
   lastProcessedReviewAt?: number;
+  /** Timestamp (ms) when this PR was first tracked — used for missing CI check detection */
+  trackedSince: number;
   ciMonitoring?: {
     headSha: string;
     startedAt: number;
@@ -74,6 +76,14 @@ export interface FailedCheck {
   name: string;
   conclusion: string;
   output: string;
+}
+
+/** Result of checking for required status checks that are missing from a PR */
+export interface MissingChecksResult {
+  baseBranch: string;
+  requiredChecks: string[];
+  presentChecks: string[];
+  missingChecks: string[];
 }
 
 export class PRStatusChecker {
@@ -287,6 +297,69 @@ export class PRStatusChecker {
     } catch (error) {
       logger.debug(`Failed to fetch failed checks for ${headSha}: ${error}`);
       return [];
+    }
+  }
+
+  /**
+   * Fetch required status checks for a PR's base branch and identify which checks
+   * are missing (never registered) on the PR's current head commit.
+   *
+   * Returns null if branch protection is not configured, has no required checks,
+   * or if the necessary information cannot be retrieved.
+   */
+  async fetchMissingRequiredChecks(pr: TrackedPR): Promise<MissingChecksResult | null> {
+    try {
+      // Fetch PR base branch name and head commit SHA
+      const { stdout: prJson } = await execFileAsync(
+        'gh',
+        ['pr', 'view', String(pr.prNumber), '--json', 'baseRefName,headRefOid'],
+        { cwd: pr.projectPath, timeout: 15_000, encoding: 'utf-8' }
+      );
+
+      const prData = JSON.parse(prJson) as { baseRefName: string; headRefOid: string };
+      const { baseRefName, headRefOid } = prData;
+
+      if (!baseRefName || !headRefOid) return null;
+
+      // Fetch required status checks from branch protection
+      let requiredChecks: string[] = [];
+      try {
+        const { stdout: protectionJson } = await execFileAsync(
+          'gh',
+          ['api', `repos/{owner}/{repo}/branches/${baseRefName}/protection/required_status_checks`],
+          { cwd: pr.projectPath, timeout: 15_000, encoding: 'utf-8' }
+        );
+        const protection = JSON.parse(protectionJson) as {
+          contexts?: string[];
+          checks?: Array<{ context: string }>;
+        };
+        // GitHub returns either `contexts` (legacy API) or `checks` (new API format)
+        if (protection.checks && protection.checks.length > 0) {
+          requiredChecks = protection.checks.map((c) => c.context);
+        } else if (protection.contexts && protection.contexts.length > 0) {
+          requiredChecks = protection.contexts;
+        }
+      } catch {
+        // Branch protection not configured or no required checks — not an error condition
+        return null;
+      }
+
+      if (requiredChecks.length === 0) return null;
+
+      // Fetch check runs currently registered for this PR's head commit
+      const checkRuns = await this.fetchCICheckRuns(pr, headRefOid);
+      const presentChecks = checkRuns.map((c) => c.name);
+      const missingChecks = requiredChecks.filter((req) => !presentChecks.includes(req));
+
+      return {
+        baseBranch: baseRefName,
+        requiredChecks,
+        presentChecks,
+        missingChecks,
+      };
+    } catch (error) {
+      logger.debug(`Failed to fetch missing required checks for PR #${pr.prNumber}: ${error}`);
+      return null;
     }
   }
 
