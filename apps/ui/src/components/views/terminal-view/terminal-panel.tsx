@@ -129,28 +129,16 @@ export function TerminalPanel({
   // Get current project for image saving
   const currentProject = useAppStore((state) => state.currentProject);
 
-  // Get terminal settings from store - grouped with shallow comparison to reduce re-renders
-  const { defaultRunScript, screenReaderMode, fontFamily, scrollbackLines, lineHeight } =
-    useTerminalStore(
-      useShallow((state) => ({
-        defaultRunScript: state.terminalState.defaultRunScript,
-        screenReaderMode: state.terminalState.screenReaderMode,
-        fontFamily: state.terminalState.fontFamily,
-        scrollbackLines: state.terminalState.scrollbackLines,
-        lineHeight: state.terminalState.lineHeight,
-      }))
-    );
-
-  // Action setters are stable references, can use individual selectors
-  const setTerminalDefaultRunScript = useTerminalStore(
-    (state) => state.setTerminalDefaultRunScript
+  // Get terminal settings from store that are needed to drive xterm directly
+  // (font family and line height must be applied to the xterm instance reactively)
+  // Other settings (defaultRunScript, scrollbackLines, screenReaderMode, fontFamily for display)
+  // are now managed inside TerminalSettingsPopover which accesses the store on its own.
+  const { fontFamily, lineHeight } = useTerminalStore(
+    useShallow((state) => ({
+      fontFamily: state.terminalState.fontFamily,
+      lineHeight: state.terminalState.lineHeight,
+    }))
   );
-  const setTerminalScreenReaderMode = useTerminalStore(
-    (state) => state.setTerminalScreenReaderMode
-  );
-  const setTerminalFontFamily = useTerminalStore((state) => state.setTerminalFontFamily);
-  const setTerminalScrollbackLines = useTerminalStore((state) => state.setTerminalScrollbackLines);
-  const setTerminalLineHeight = useTerminalStore((state) => state.setTerminalLineHeight);
 
   // Detect platform on mount
   useEffect(() => {
@@ -1749,11 +1737,6 @@ export function TerminalPanel({
         showSearch={showSearch}
         searchQuery={searchQuery}
         searchInputRef={searchInputRef}
-        defaultRunScript={defaultRunScript}
-        fontFamily={fontFamily}
-        scrollbackLines={scrollbackLines}
-        lineHeight={lineHeight}
-        screenReaderMode={screenReaderMode}
         dragRef={setDragRef}
         dragAttributes={dragAttributes}
         dragListeners={dragListeners}
@@ -1769,11 +1752,6 @@ export function TerminalPanel({
         onSearchNext={searchNext}
         onSearchPrevious={searchPrevious}
         onCloseSearch={closeSearch}
-        onSetDefaultRunScript={setTerminalDefaultRunScript}
-        onSetFontFamily={setTerminalFontFamily}
-        onSetScrollbackLines={setTerminalScrollbackLines}
-        onSetLineHeight={setTerminalLineHeight}
-        onSetScreenReaderMode={setTerminalScreenReaderMode}
       />
 
       {/* Terminal container - uses terminal theme */}
