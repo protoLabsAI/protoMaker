@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Organisms Extraction\n\nPopulate libs/ui/src/organisms/ by migrating hitl-form/* and protolabs-report/* from apps/ui/src/components/shared/. Update all import paths.\n\n## Phases\n1. Migrate hitl-form to organisms\n2. Migrate protolabs-report to organisms",
   "title": "[Epic] Organisms Extraction",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#EF4444",
   "branchName": "epic/organisms-extraction",
@@ -22,10 +22,16 @@
       "to": "backlog",
       "timestamp": "2026-03-04T00:07:41.253Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-04T23:47:37.030Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772582861246-o49cnzjzl"
-  ]
+  ],
+  "completedAt": "2026-03-04T23:47:37.030Z"
 }

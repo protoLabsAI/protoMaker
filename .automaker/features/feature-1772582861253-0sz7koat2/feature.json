@@ -2,7 +2,7 @@
   "category": "Organisms Extraction",
   "description": "**Milestone:** Organisms Extraction\n\nMove the hitl-form directory (wizard, dialog, notification, step components) from apps/ui/src/components/shared/hitl-form/ to libs/ui/src/organisms/hitl-form/. Update the organisms index.ts to export these. Update all import paths in apps/ui that reference the old location. Ensure no circular dependencies are introduced (organisms can depend on atoms and molecules but not on app-level code).\n\n**Files to Modify:**\n- libs/ui/src/organisms/hitl-form/\n- libs/ui/src/organisms/index.ts\n- apps/ui/src/components/shared/hitl-form/\n\n**Acceptance Criteria:**\n- [ ] hitl-form components moved to libs/ui/src/organisms/hitl-form/\n- [ ] Old apps/ui/shared/hitl-form/ directory removed\n- [ ] All import paths updated — no remaining references to old path\n- [ ] npm run typecheck passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Migrate hitl-form to organisms",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772582861253-3kjo5o48h",
   "branchName": "feature/organisms-extraction-migrate-hitl-form",
@@ -23,10 +23,32 @@
       "to": "backlog",
       "timestamp": "2026-03-04T00:07:41.254Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-04T23:24:39.332Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-04T23:40:27.698Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772582861246-o49cnzjzl"
-  ]
+  ],
+  "updatedAt": "2026-03-04T23:08:31.938Z",
+  "model": "claude-sonnet-4-6",
+  "costUsd": 4.274418699999998,
+  "lastSessionId": "6faef068-9ebe-4f9e-96d8-e528f4361d5a",
+  "lastTraceId": "4ebce3a9-982d-4d62-88f6-0d3ab6ea3ad0",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1720",
+  "prNumber": 1720,
+  "prCreatedAt": "2026-03-04T23:24:39.331Z",
+  "reviewStartedAt": "2026-03-04T23:24:39.332Z",
+  "prTrackedSince": "2026-03-04T23:24:39.333Z",
+  "prLastPolledAt": "2026-03-04T23:39:39.101Z",
+  "completedAt": "2026-03-04T23:40:27.698Z"
 }

@@ -1,8 +1,8 @@
 {
   "category": "Organisms Extraction",
-  "description": "**Milestone:** Organisms Extraction\n\nMove the protolabs-report directory (dialog, results, index components) from apps/ui/src/components/shared/protolabs-report/ to libs/ui/src/organisms/protolabs-report/. Export from organisms index. Update all import paths. Run typecheck to verify no broken imports.\n\n**Files to Modify:**\n- libs/ui/src/organisms/protolabs-report/\n- libs/ui/src/organisms/index.ts\n- apps/ui/src/components/shared/protolabs-report/\n\n**Acceptance Criteria:**\n- [ ] protolabs-report components moved to libs/ui/src/organisms/protolabs-report/\n- [ ] Old apps/ui/shared/protolabs-report/ directory removed\n- [ ] All import paths updated\n- [ ] npm run typecheck passes\n- [ ] Tech debt table updated — UI package gaps marked complete\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "description": "**Milestone:** Organisms Extraction\n\nMove the protolabs-report results component from `apps/ui/src/components/shared/protolabs-report/` to `libs/ui/src/organisms/protolabs-report/`. The dialog component stays in apps/ui because it has app-level dependencies.\n\n## CRITICAL: Lessons from hitl-form Migration\n\nThe previous migration (hitl-form) failed CI because the agent:\n1. Used `@protolabs-ai/ui/atoms` imports inside `libs/ui/` — **self-reference breaks tsup**. Use relative imports: `../../atoms/button.js`\n2. Copied app-level dependencies (`@/store/*`, `@/lib/electron`) into `libs/ui/` — **libs cannot import from apps**\n3. Forgot `.js` extensions on relative imports — **required by nodenext module resolution**\n\n## Migration Rules\n\n### What goes to organisms (`libs/ui/src/organisms/protolabs-report/`):\n- `protolabs-report-results.tsx` — **presentational** (takes data as props, renders UI)\n  - Change `import { Button } from '@protolabs-ai/ui/atoms'` → `import { Button } from '../../atoms/button.js'`\n  - Change `import { Badge } from '@protolabs-ai/ui/atoms'` → `import { Badge } from '../../atoms/badge.js'`\n  - Change `import { cn } from '@/lib/utils'` → `import { cn } from '../../lib/cn.js'`\n  - Keep `import type { ... } from '@protolabs-ai/types'` (external dep, fine)\n  - Keep `lucide-react` imports (already a dependency)\n\n### What stays in apps/ui (`apps/ui/src/components/shared/protolabs-report/`):\n- `protolabs-report-dialog.tsx` — **connected** (uses `getElectronAPI()`, `toast`, app-level utils)\n  - Update its import of results component: `import { ProtoLabsReportResults } from '@protolabs-ai/ui/organisms'`\n\n### organisms index.ts:\n- Add to `libs/ui/src/organisms/index.ts`: `export { ProtoLabsReportResults } from './protolabs-report/index.js'`\n\n## Files to Modify\n- `libs/ui/src/organisms/protolabs-report/protolabs-report-results.tsx` (MOVE + fix imports)\n- `libs/ui/src/organisms/protolabs-report/index.ts` (CREATE — barrel export)\n- `libs/ui/src/organisms/index.ts` (UPDATE — add re-export)\n- `apps/ui/src/components/shared/protolabs-report/protolabs-report-dialog.tsx` (UPDATE — import from organisms)\n- `apps/ui/src/components/shared/protolabs-report/index.ts` (UPDATE — keep dialog, remove results export if needed)\n\n## Acceptance Criteria\n- [ ] Results component in organisms with relative imports only\n- [ ] Dialog stays in apps/ui, imports results from `@protolabs-ai/ui/organisms`\n- [ ] All `.js` extensions on relative imports in organisms\n- [ ] No `@protolabs-ai/ui/atoms` self-references in organisms code\n- [ ] No `@/` app-level imports in organisms code\n- [ ] `npm run build:packages` passes (tsup builds organisms)\n- [ ] `npm run typecheck` passes",
   "title": "Migrate protolabs-report to organisms",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772582861253-3kjo5o48h",
   "branchName": "feature/organisms-extraction-migrate-protolabs",
@@ -14,6 +14,11 @@
       "description": "**Milestone:** Organisms Extraction\n\nMove the protolabs-report directory (dialog, results, index components) from apps/ui/src/components/shared/protolabs-report/ to libs/ui/src/organisms/protolabs-report/. Export from organisms index. Update all import paths. Run typecheck to verify no broken imports.\n\n**Files to Modify:**\n- libs/ui/src/organisms/protolabs-report/\n- libs/ui/src/organisms/index.ts\n- apps/ui/src/components/shared/protolabs-report/\n\n**Acceptance Criteria:**\n- [ ] protolabs-report components moved to libs/ui/src/organisms/protolabs-report/\n- [ ] Old apps/ui/shared/protolabs-report/ directory removed\n- [ ] All import paths updated\n- [ ] npm run typecheck passes\n- [ ] Tech debt table updated — UI package gaps marked complete\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
       "timestamp": "2026-03-04T00:07:41.254Z",
       "source": "initial"
+    },
+    {
+      "description": "**Milestone:** Organisms Extraction\n\nMove the protolabs-report results component from `apps/ui/src/components/shared/protolabs-report/` to `libs/ui/src/organisms/protolabs-report/`. The dialog component stays in apps/ui because it has app-level dependencies.\n\n## CRITICAL: Lessons from hitl-form Migration\n\nThe previous migration (hitl-form) failed CI because the agent:\n1. Used `@protolabs-ai/ui/atoms` imports inside `libs/ui/` — **self-reference breaks tsup**. Use relative imports: `../../atoms/button.js`\n2. Copied app-level dependencies (`@/store/*`, `@/lib/electron`) into `libs/ui/` — **libs cannot import from apps**\n3. Forgot `.js` extensions on relative imports — **required by nodenext module resolution**\n\n## Migration Rules\n\n### What goes to organisms (`libs/ui/src/organisms/protolabs-report/`):\n- `protolabs-report-results.tsx` — **presentational** (takes data as props, renders UI)\n  - Change `import { Button } from '@protolabs-ai/ui/atoms'` → `import { Button } from '../../atoms/button.js'`\n  - Change `import { Badge } from '@protolabs-ai/ui/atoms'` → `import { Badge } from '../../atoms/badge.js'`\n  - Change `import { cn } from '@/lib/utils'` → `import { cn } from '../../lib/cn.js'`\n  - Keep `import type { ... } from '@protolabs-ai/types'` (external dep, fine)\n  - Keep `lucide-react` imports (already a dependency)\n\n### What stays in apps/ui (`apps/ui/src/components/shared/protolabs-report/`):\n- `protolabs-report-dialog.tsx` — **connected** (uses `getElectronAPI()`, `toast`, app-level utils)\n  - Update its import of results component: `import { ProtoLabsReportResults } from '@protolabs-ai/ui/organisms'`\n\n### organisms index.ts:\n- Add to `libs/ui/src/organisms/index.ts`: `export { ProtoLabsReportResults } from './protolabs-report/index.js'`\n\n## Files to Modify\n- `libs/ui/src/organisms/protolabs-report/protolabs-report-results.tsx` (MOVE + fix imports)\n- `libs/ui/src/organisms/protolabs-report/index.ts` (CREATE — barrel export)\n- `libs/ui/src/organisms/index.ts` (UPDATE — add re-export)\n- `apps/ui/src/components/shared/protolabs-report/protolabs-report-dialog.tsx` (UPDATE — import from organisms)\n- `apps/ui/src/components/shared/protolabs-report/index.ts` (UPDATE — keep dialog, remove results export if needed)\n\n## Acceptance Criteria\n- [ ] Results component in organisms with relative imports only\n- [ ] Dialog stays in apps/ui, imports results from `@protolabs-ai/ui/organisms`\n- [ ] All `.js` extensions on relative imports in organisms\n- [ ] No `@protolabs-ai/ui/atoms` self-references in organisms code\n- [ ] No `@/` app-level imports in organisms code\n- [ ] `npm run build:packages` passes (tsup builds organisms)\n- [ ] `npm run typecheck` passes",
+      "timestamp": "2026-03-04T23:36:57.456Z",
+      "source": "edit"
     }
   ],
   "createdAt": "2026-03-04T00:07:41.254Z",
@@ -23,10 +28,32 @@
       "to": "backlog",
       "timestamp": "2026-03-04T00:07:41.254Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-04T23:44:20.194Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-04T23:47:36.991Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772582861253-0sz7koat2"
-  ]
+  ],
+  "updatedAt": "2026-03-04T23:40:35.610Z",
+  "model": "claude-sonnet-4-6",
+  "costUsd": 0.96983,
+  "lastSessionId": "c0c3b53e-a6d8-4e49-9a8c-ece185901e60",
+  "lastTraceId": "44f4eee1-c73a-4c5f-a8cb-173d716ed03e",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1721",
+  "prNumber": 1721,
+  "prCreatedAt": "2026-03-04T23:44:20.193Z",
+  "reviewStartedAt": "2026-03-04T23:44:20.194Z",
+  "prTrackedSince": "2026-03-04T23:44:20.196Z",
+  "prLastPolledAt": "2026-03-04T23:46:37.674Z",
+  "completedAt": "2026-03-04T23:47:36.991Z"
 }
