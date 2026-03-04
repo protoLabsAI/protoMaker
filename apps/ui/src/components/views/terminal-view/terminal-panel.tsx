@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { createLogger } from '@protolabs-ai/utils/logger';
-import { Copy, ClipboardPaste, CheckSquare, Trash2, ImageIcon, ArrowDown } from 'lucide-react';
+import { ImageIcon, ArrowDown } from 'lucide-react';
 import { Button } from '@protolabs-ai/ui/atoms';
 import { Spinner } from '@protolabs-ai/ui/atoms';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ import {
   MAX_FONT_SIZE,
   DEFAULT_FONT_SIZE,
 } from './terminal-toolbar';
+import { TerminalContextMenu } from './terminal-keyboard-map';
 
 const logger = createLogger('Terminal');
 const NO_STORE_CACHE_MODE: RequestCache = 'no-store';
@@ -105,9 +106,6 @@ export function TerminalPanel({
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [isMac, setIsMac] = useState(false);
   const isMacRef = useRef(false);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-  const [focusedMenuIndex, setFocusedMenuIndex] = useState(0);
-  const focusedMenuIndexRef = useRef(0);
   const [isImageDragOver, setIsImageDragOver] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const hasRunInitialCommandRef = useRef(false);
@@ -441,6 +439,11 @@ export function TerminalPanel({
   // Close context menu
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
+  }, []);
+
+  // Focus the xterm instance (passed to TerminalContextMenu for Escape-key restore)
+  const focusXterm = useCallback(() => {
+    xtermRef.current?.focus();
   }, []);
 
   // Handle context menu action
@@ -1397,86 +1400,6 @@ export function TerminalPanel({
     return () => container.removeEventListener('wheel', handleWheel);
   }, [zoomIn, zoomOut]);
 
-  // Context menu actions for keyboard navigation
-  const menuActions = ['copy', 'paste', 'selectAll', 'clear'] as const;
-
-  // Keep ref in sync with state for use in event handlers
-  useEffect(() => {
-    focusedMenuIndexRef.current = focusedMenuIndex;
-  }, [focusedMenuIndex]);
-
-  // Close context menu on click outside or scroll, handle keyboard navigation
-  useEffect(() => {
-    if (!contextMenu) return;
-
-    // Reset focus index and focus menu when opened
-    setFocusedMenuIndex(0);
-    focusedMenuIndexRef.current = 0;
-    requestAnimationFrame(() => {
-      const firstButton =
-        contextMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]');
-      firstButton?.focus();
-    });
-
-    const handleClick = () => closeContextMenu();
-    const handleScroll = () => closeContextMenu();
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const updateFocusIndex = (newIndex: number) => {
-        focusedMenuIndexRef.current = newIndex;
-        setFocusedMenuIndex(newIndex);
-      };
-
-      switch (e.key) {
-        case 'Escape':
-          e.preventDefault();
-          e.stopPropagation();
-          closeContextMenu();
-          xtermRef.current?.focus();
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          e.stopPropagation();
-          updateFocusIndex((focusedMenuIndexRef.current + 1) % menuActions.length);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          e.stopPropagation();
-          updateFocusIndex(
-            (focusedMenuIndexRef.current - 1 + menuActions.length) % menuActions.length
-          );
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
-          e.stopPropagation();
-          handleContextMenuAction(menuActions[focusedMenuIndexRef.current]);
-          break;
-        case 'Tab':
-          e.preventDefault();
-          e.stopPropagation();
-          closeContextMenu();
-          break;
-      }
-    };
-
-    document.addEventListener('click', handleClick);
-    document.addEventListener('scroll', handleScroll, true);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('click', handleClick);
-      document.removeEventListener('scroll', handleScroll, true);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [contextMenu, closeContextMenu, handleContextMenuAction]);
-
-  // Focus the correct menu item when navigation changes
-  useEffect(() => {
-    if (!contextMenu || !contextMenuRef.current) return;
-    const buttons = contextMenuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
-    buttons[focusedMenuIndex]?.focus();
-  }, [focusedMenuIndex, contextMenu]);
-
   // Handle right-click context menu with boundary checking
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -1782,78 +1705,14 @@ export function TerminalPanel({
         </Button>
       )}
 
-      {/* Context menu */}
-      {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          role="menu"
-          aria-label="Terminal context menu"
-          className="fixed z-50 min-w-[160px] rounded-md border border-border bg-popover p-1 shadow-md animate-in fade-in-0 zoom-in-95"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            role="menuitem"
-            tabIndex={focusedMenuIndex === 0 ? 0 : -1}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none',
-              focusedMenuIndex === 0
-                ? 'bg-accent text-accent-foreground'
-                : 'hover:bg-accent hover:text-accent-foreground'
-            )}
-            onClick={() => handleContextMenuAction('copy')}
-          >
-            <Copy className="h-4 w-4" />
-            <span className="flex-1 text-left">Copy</span>
-            <span className="text-xs text-muted-foreground">{isMac ? '⌘C' : 'Ctrl+C'}</span>
-          </button>
-          <button
-            role="menuitem"
-            tabIndex={focusedMenuIndex === 1 ? 0 : -1}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none',
-              focusedMenuIndex === 1
-                ? 'bg-accent text-accent-foreground'
-                : 'hover:bg-accent hover:text-accent-foreground'
-            )}
-            onClick={() => handleContextMenuAction('paste')}
-          >
-            <ClipboardPaste className="h-4 w-4" />
-            <span className="flex-1 text-left">Paste</span>
-            <span className="text-xs text-muted-foreground">{isMac ? '⌘V' : 'Ctrl+V'}</span>
-          </button>
-          <div role="separator" className="my-1 h-px bg-border" />
-          <button
-            role="menuitem"
-            tabIndex={focusedMenuIndex === 2 ? 0 : -1}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none',
-              focusedMenuIndex === 2
-                ? 'bg-accent text-accent-foreground'
-                : 'hover:bg-accent hover:text-accent-foreground'
-            )}
-            onClick={() => handleContextMenuAction('selectAll')}
-          >
-            <CheckSquare className="h-4 w-4" />
-            <span className="flex-1 text-left">Select All</span>
-            <span className="text-xs text-muted-foreground">{isMac ? '⌘A' : 'Ctrl+A'}</span>
-          </button>
-          <button
-            role="menuitem"
-            tabIndex={focusedMenuIndex === 3 ? 0 : -1}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-popover-foreground cursor-default outline-none',
-              focusedMenuIndex === 3
-                ? 'bg-accent text-accent-foreground'
-                : 'hover:bg-accent hover:text-accent-foreground'
-            )}
-            onClick={() => handleContextMenuAction('clear')}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="flex-1 text-left">Clear</span>
-          </button>
-        </div>
-      )}
+      {/* Context menu — keyboard shortcut map display */}
+      <TerminalContextMenu
+        contextMenu={contextMenu}
+        isMac={isMac}
+        onClose={closeContextMenu}
+        onAction={handleContextMenuAction}
+        focusXterm={focusXterm}
+      />
     </div>
   );
 }
