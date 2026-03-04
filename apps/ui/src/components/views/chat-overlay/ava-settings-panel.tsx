@@ -13,7 +13,7 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Settings, Loader2, ChevronRight } from 'lucide-react';
+import { Settings, Loader2, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getHttpApiClient } from '@/lib/http-api-client';
@@ -224,6 +224,16 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
       <div className="flex items-center gap-2 border-b border-border pb-3">
         <Settings className="size-4 text-muted-foreground" />
         <span className="text-sm font-medium">Ava Settings</span>
+        {data.subagentTrust === 'gated' && (
+          <span
+            data-slot="gated-badge"
+            title="Gated (review) mode is active — sub-agent tool calls require approval"
+            className="ml-auto flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+          >
+            <AlertTriangle className="size-3" />
+            Gated
+          </span>
+        )}
       </div>
 
       {/* Default Model */}
@@ -314,6 +324,47 @@ export function AvaSettingsPanel({ projectPath }: AvaSettingsPanelProps) {
           checked={data.autoApproveTools}
           onChange={(checked) => saveMutation.mutate({ autoApproveTools: checked })}
         />
+      </div>
+
+      <hr className="border-border" />
+
+      {/* Subagent Trust */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-foreground">Subagent Trust</p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            data-slot="trust-full"
+            onClick={() => saveMutation.mutate({ subagentTrust: 'full' })}
+            className={cn(
+              'flex-1 rounded-md border px-3 py-2 text-[11px] transition-colors text-left',
+              (data.subagentTrust ?? 'full') === 'full'
+                ? 'border-primary/40 bg-primary/10 text-foreground'
+                : 'border-border bg-muted/30 text-muted-foreground'
+            )}
+          >
+            <p className="font-medium">Full (autonomous)</p>
+            <p className="mt-0.5 text-muted-foreground leading-tight">
+              Sub-agents run without interruption.
+            </p>
+          </button>
+          <button
+            type="button"
+            data-slot="trust-gated"
+            onClick={() => saveMutation.mutate({ subagentTrust: 'gated' })}
+            className={cn(
+              'flex-1 rounded-md border px-3 py-2 text-[11px] transition-colors text-left',
+              data.subagentTrust === 'gated'
+                ? 'border-amber-500/40 bg-amber-500/10 text-foreground'
+                : 'border-border bg-muted/30 text-muted-foreground'
+            )}
+          >
+            <p className="font-medium">Gated (review)</p>
+            <p className="mt-0.5 text-muted-foreground leading-tight">
+              Each tool call paused for approval.
+            </p>
+          </button>
+        </div>
       </div>
 
       {/* MCP Servers — only shown when servers are configured */}
