@@ -17,7 +17,7 @@ import type {
   StateProcessor,
   StateTransitionResult,
 } from './lead-engineer-types.js';
-import { EXECUTE_TIMEOUT_MS } from './lead-engineer-types.js';
+import { EXECUTE_TIMEOUT_MS, MAX_AGENT_RETRIES, MAX_INFRA_RETRIES } from './lead-engineer-types.js';
 import type { VerifiedTrajectory } from '@protolabs-ai/types';
 
 const execAsync = promisify(exec);
@@ -31,10 +31,51 @@ const logger = createLogger('LeadEngineerService');
  * Waits for completion via event listener with a 30-minute timeout.
  */
 export class ExecuteProcessor implements StateProcessor {
-  private readonly MAX_RETRIES = 3;
   private readonly MAX_BUDGET_USD = 10.0;
 
   constructor(private serviceContext: ProcessorServiceContext) {}
+
+  /**
+   * Resolve the effective max agent retries for this project.
+   * Reads from project workflow settings when the settings service is available,
+   * falling back to the module-level constant so behaviour is unchanged for
+   * projects that haven't customised this value.
+   */
+  private async resolveMaxAgentRetries(projectPath: string): Promise<number> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = settings.workflow?.pipeline?.maxAgentRetries;
+        if (typeof configured === 'number' && configured > 0) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — fall back to constant */
+    }
+    return MAX_AGENT_RETRIES;
+  }
+
+  /**
+   * Resolve the effective max infra retries for this project.
+   * Reads from project workflow settings when the settings service is available,
+   * falling back to the module-level constant so behaviour is unchanged for
+   * projects that haven't customised this value.
+   */
+  private async resolveMaxInfraRetries(projectPath: string): Promise<number> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = settings.workflow?.pipeline?.maxInfraRetries;
+        if (typeof configured === 'number' && configured > 0) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — fall back to constant */
+    }
+    return MAX_INFRA_RETRIES;
+  }
 
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[EXECUTE] Starting execution for feature: ${ctx.feature.id}`, {
@@ -55,9 +96,10 @@ export class ExecuteProcessor implements StateProcessor {
       };
     }
 
-    // Check retry limit
-    if (ctx.retryCount >= this.MAX_RETRIES) {
-      ctx.escalationReason = `Max retries exceeded (${this.MAX_RETRIES})`;
+    // Check agent retry limit (configurable via workflow settings, falls back to module constant)
+    const maxAgentRetries = await this.resolveMaxAgentRetries(ctx.projectPath);
+    if (ctx.retryCount >= maxAgentRetries) {
+      ctx.escalationReason = `Max agent retries exceeded (${maxAgentRetries})`;
       return {
         nextState: 'ESCALATE',
         shouldContinue: true,
@@ -270,24 +312,34 @@ export class ExecuteProcessor implements StateProcessor {
         };
       }
 
-      // Classify failure: infrastructure errors should escalate immediately
-      // rather than burning agent retries on unrecoverable issues
+      // ── Classify the failure into one of three categories ──────────────────
+      //
+      //  1. FATAL infrastructure failures  → escalate immediately (human required)
+      //  2. TRANSIENT infrastructure failures → retry the specific step without
+      //     re-running the agent (does not consume an agent retry slot)
+      //  3. Agent failures (bad code, logic errors) → retry the full agent
+      //     with accumulated context
+      //
+      // This ensures compute budget is not wasted re-running agents when only
+      // a post-flight step (git push, PR creation) failed transiently.
+      // ───────────────────────────────────────────────────────────────────────
+
       const errorMsg = (result.error || '').toLowerCase();
-      const isInfraFailure =
+
+      // Fatal: unrecoverable without human intervention
+      const isFatalInfraFailure =
         errorMsg.includes('permission denied') ||
-        errorMsg.includes('lock file') ||
         errorMsg.includes('enospc') ||
         errorMsg.includes('no space left') ||
-        errorMsg.includes('worktree') ||
-        errorMsg.includes('git push failed') ||
         errorMsg.includes('authentication failed') ||
         errorMsg.includes('could not resolve host') ||
         errorMsg.includes('connection refused') ||
+        errorMsg.includes('worktree') ||
         errorMsg.includes('timed out');
 
-      if (isInfraFailure) {
+      if (isFatalInfraFailure) {
         ctx.escalationReason = `Infrastructure failure (not retryable): ${result.error}`;
-        logger.warn('[EXECUTE] Infrastructure failure detected, escalating immediately', {
+        logger.warn('[EXECUTE] Fatal infrastructure failure detected, escalating immediately', {
           featureId: ctx.feature.id,
           error: result.error,
         });
@@ -298,16 +350,63 @@ export class ExecuteProcessor implements StateProcessor {
         };
       }
 
+      // Transient: lightweight step failures (git push lock, gh CLI error, etc.)
+      // Retry without re-running the agent; uses a separate counter so agent
+      // retries are preserved for actual code-quality failures.
+      const isTransientInfraFailure =
+        errorMsg.includes('lock file') ||
+        errorMsg.includes('git push failed') ||
+        errorMsg.includes('failed to create pull request') ||
+        errorMsg.includes('pr creation failed') ||
+        errorMsg.includes('gh: ');
+
+      if (isTransientInfraFailure) {
+        // Resolve configurable infra retry limit (falls back to module constant)
+        const maxInfraRetries = await this.resolveMaxInfraRetries(ctx.projectPath);
+        ctx.infraRetryCount++;
+        if (ctx.infraRetryCount <= maxInfraRetries) {
+          logger.warn(
+            '[EXECUTE] Transient infrastructure failure, retrying step (no agent re-run)',
+            {
+              featureId: ctx.feature.id,
+              infraRetryCount: ctx.infraRetryCount,
+              maxInfraRetries,
+              error: result.error,
+            }
+          );
+          return {
+            nextState: 'EXECUTE',
+            shouldContinue: true,
+            reason: `Transient infra failure (attempt ${ctx.infraRetryCount}/${maxInfraRetries}): ${result.error || 'unknown'}`,
+          };
+        }
+
+        // Infrastructure retries exhausted — escalate
+        ctx.escalationReason = `Infrastructure step failed after ${maxInfraRetries} retries: ${result.error}`;
+        logger.warn('[EXECUTE] Infrastructure retries exhausted, escalating', {
+          featureId: ctx.feature.id,
+          infraRetryCount: ctx.infraRetryCount,
+          error: result.error,
+        });
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: false,
+          reason: ctx.escalationReason,
+        };
+      }
+
+      // Agent failure: re-run the agent with accumulated context
       ctx.retryCount++;
-      logger.warn('[EXECUTE] Agent execution failed, will retry', {
+      logger.warn('[EXECUTE] Agent execution failed, will retry with context', {
         retryCount: ctx.retryCount,
+        maxAgentRetries,
         error: result.error,
       });
 
       return {
         nextState: 'EXECUTE',
         shouldContinue: true,
-        reason: `Execution failed: ${result.error || 'unknown'}`,
+        reason: `Agent failed: ${result.error || 'unknown'}`,
       };
     }
 

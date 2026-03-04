@@ -26,6 +26,22 @@ export const MAX_TOTAL_REMEDIATION_CYCLES = 4;
 export const MERGE_RETRY_DELAY_MS = 60 * 1000; // 60 seconds
 export const REVIEW_POLL_DELAY_MS = 30 * 1000; // 30 seconds
 
+// ────────────────────────── Retry limits ──────────────────────────
+
+/**
+ * Maximum number of full agent re-runs (burns compute budget).
+ * Triggered when the agent produces bad code or logic errors.
+ * Centralised here so it can be adjusted without touching processor logic.
+ */
+export const MAX_AGENT_RETRIES = 3;
+
+/**
+ * Maximum number of retries for lightweight infrastructure steps
+ * (e.g. git push blocked by a lock file, gh CLI transient error).
+ * These retries do NOT re-run the agent, so they are cheap.
+ */
+export const MAX_INFRA_RETRIES = 3;
+
 // ────────────────────────── Service Context ──────────────────────────
 
 /**
@@ -98,7 +114,13 @@ export interface StateContext {
   feature: Feature;
   projectPath: string;
   options: ExecuteOptions;
+  /** Number of full agent re-runs triggered by agent-level failures (bad code, logic errors). */
   retryCount: number;
+  /**
+   * Number of lightweight infrastructure step retries (git push lock, gh CLI error, etc.).
+   * These do NOT re-run the agent, so they do not consume compute budget.
+   */
+  infraRetryCount: number;
   planRequired: boolean;
   assignedPersona?: AgentRole;
   planOutput?: string;

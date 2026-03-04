@@ -123,6 +123,19 @@ export interface WorkflowSettings {
     maxAgentCostUsd: number;
     /** Enable antagonistic plan review for large/architectural features (default: true) */
     antagonisticPlanReview?: boolean;
+    /**
+     * Maximum number of full agent re-runs triggered by agent-level failures
+     * (e.g. bad code, logic errors). Each retry burns compute budget.
+     * (default: 3)
+     */
+    maxAgentRetries?: number;
+    /**
+     * Maximum number of retries for lightweight infrastructure steps
+     * (e.g. git push blocked by a lock file, gh CLI transient error).
+     * These retries do NOT re-run the agent, so they are cheap.
+     * (default: 3)
+     */
+    maxInfraRetries?: number;
   };
   retro: {
     /** Enable automatic retrospective generation on project completion (default: true) */
@@ -171,6 +184,8 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     maxAgentRuntimeMinutes: 45,
     maxAgentCostUsd: 15,
     antagonisticPlanReview: true,
+    maxAgentRetries: 3,
+    maxInfraRetries: 3,
   },
   retro: {
     enabled: true,

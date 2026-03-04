@@ -139,6 +139,7 @@ export class FeatureStateMachine {
       projectPath,
       options,
       retryCount: 0,
+      infraRetryCount: 0,
       planRequired: false,
       remediationAttempts: 0,
       mergeRetryCount: 0,
