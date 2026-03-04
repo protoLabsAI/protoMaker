@@ -137,6 +137,40 @@ export interface McpHttpServerConfig {
 }
 
 /**
+ * Lifecycle hook callback function.
+ * Structurally compatible with @anthropic-ai/claude-agent-sdk HookCallback.
+ * Uses `any` for input/output to avoid a hard dependency on the SDK from this package.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type HookCallback = (
+  input: any,
+  toolUseID: string | undefined,
+  options: { signal: AbortSignal }
+) => Promise<any>;
+
+/**
+ * Matcher configuration for lifecycle hooks.
+ * Structurally compatible with @anthropic-ai/claude-agent-sdk HookCallbackMatcher.
+ */
+export interface HookCallbackMatcher {
+  matcher?: string;
+  hooks: HookCallback[];
+  timeout?: number;
+}
+
+/**
+ * Tool permission callback invoked before each tool execution.
+ * Structurally compatible with @anthropic-ai/claude-agent-sdk CanUseTool.
+ * Uses `any` return type to avoid a hard dependency on the SDK from this package.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type CanUseTool = (
+  toolName: string,
+  input: Record<string, unknown>,
+  options: { signal: AbortSignal }
+) => Promise<any>;
+
+/**
  * Subagent definition for specialized task delegation
  */
 export interface AgentDefinition {
@@ -189,6 +223,21 @@ export interface ExecuteOptions {
    * Key: agent name, Value: agent definition
    */
   agents?: Record<string, AgentDefinition>;
+  /**
+   * Lifecycle hooks for the Claude Agent SDK.
+   * Maps hook event names (e.g. 'PreToolUse', 'PostToolUse') to arrays of callback matchers.
+   */
+  hooks?: Partial<Record<string, HookCallbackMatcher[]>>;
+  /**
+   * Permission callback invoked before each tool execution.
+   * Return value controls whether the tool is allowed to run.
+   */
+  canUseTool?: CanUseTool;
+  /**
+   * Tools that are explicitly disallowed for this execution.
+   * The SDK will refuse to invoke any tool whose name appears in this list.
+   */
+  disallowedTools?: string[];
   /**
    * Reasoning effort for Codex/OpenAI models with reasoning capabilities.
    * Controls how many reasoning tokens the model generates before responding.

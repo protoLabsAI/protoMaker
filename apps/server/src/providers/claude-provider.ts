@@ -5,7 +5,14 @@
  * with the provider architecture.
  */
 
-import { query, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import {
+  query,
+  type Options,
+  type SDKUserMessage,
+  type HookCallback,
+  type HookCallbackMatcher,
+  type CanUseTool,
+} from '@anthropic-ai/claude-agent-sdk';
 import {
   getThinkingTokenBudget,
   validateBareModelId,
@@ -264,6 +271,12 @@ export class ClaudeProvider extends BaseProvider {
       ...(maxThinkingTokens && { maxThinkingTokens }),
       // Subagents configuration for specialized task delegation
       ...(options.agents && { agents: options.agents }),
+      // Lifecycle hooks for the Claude Agent SDK
+      ...(options.hooks && { hooks: options.hooks as Options['hooks'] }),
+      // Tool permission callback
+      ...(options.canUseTool && { canUseTool: options.canUseTool as CanUseTool }),
+      // Explicitly disallowed tools
+      ...(options.disallowedTools && { disallowedTools: options.disallowedTools }),
       // Pass through outputFormat for structured JSON outputs
       ...(options.outputFormat && { outputFormat: options.outputFormat }),
     };

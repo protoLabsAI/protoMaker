@@ -22,6 +22,8 @@ import type {
   ClaudeApiProfile,
   ClaudeCompatibleProvider,
   Credentials,
+  HookCallbackMatcher,
+  CanUseTool,
 } from '@protolabs-ai/types';
 import { stripProviderPrefix } from '@protolabs-ai/types';
 
@@ -68,6 +70,20 @@ export interface SimpleQueryOptions {
   claudeCompatibleProvider?: ClaudeCompatibleProvider;
   /** Credentials for resolving 'credentials' apiKeySource in Claude API profiles/providers */
   credentials?: Credentials;
+  /**
+   * Lifecycle hooks for the Claude Agent SDK.
+   * Maps hook event names (e.g. 'PreToolUse', 'PostToolUse') to arrays of callback matchers.
+   */
+  hooks?: Partial<Record<string, HookCallbackMatcher[]>>;
+  /**
+   * Permission callback invoked before each tool execution.
+   * Return value controls whether the tool is allowed to run.
+   */
+  canUseTool?: CanUseTool;
+  /**
+   * Tools that are explicitly disallowed for this execution.
+   */
+  disallowedTools?: string[];
   /** Trace context for Langfuse enrichment (feature ID, role, tags) */
   traceContext?: {
     featureId?: string;
@@ -154,6 +170,9 @@ export async function simpleQuery(options: SimpleQueryOptions): Promise<SimpleQu
     claudeApiProfile: options.claudeApiProfile, // Legacy: Pass active Claude API profile for alternative endpoint configuration
     claudeCompatibleProvider: options.claudeCompatibleProvider, // New: Pass Claude-compatible provider (takes precedence)
     credentials: options.credentials, // Pass credentials for resolving 'credentials' apiKeySource
+    hooks: options.hooks,
+    canUseTool: options.canUseTool,
+    disallowedTools: options.disallowedTools,
   };
 
   for await (const msg of provider.executeQuery(providerOptions)) {
@@ -254,6 +273,9 @@ export async function streamingQuery(options: StreamingQueryOptions): Promise<Si
     claudeApiProfile: options.claudeApiProfile, // Legacy: Pass active Claude API profile for alternative endpoint configuration
     claudeCompatibleProvider: options.claudeCompatibleProvider, // New: Pass Claude-compatible provider (takes precedence)
     credentials: options.credentials, // Pass credentials for resolving 'credentials' apiKeySource
+    hooks: options.hooks,
+    canUseTool: options.canUseTool,
+    disallowedTools: options.disallowedTools,
   };
 
   for await (const msg of provider.executeQuery(providerOptions)) {
