@@ -317,6 +317,22 @@ export function createChatRoutes(services: ServiceContainer): Router {
       } catch {
         // Settings unavailable — safe default (flag disabled)
       }
+      // Convert ava-specific mcpServers to the agent SDK format and merge with
+      // project-level MCP servers configured in global settings.  The converted
+      // list is passed down to execute_dynamic_agent so inner agents delegated
+      // from Ava chat can access the same additional MCP servers.
+      const avaMcpServers = (avaConfig.mcpServers ?? [])
+        .filter((s) => s.enabled !== false)
+        .map((s) => ({
+          name: s.name,
+          ...(s.type !== undefined && { type: s.type }),
+          ...(s.command !== undefined && { command: s.command }),
+          ...(s.args !== undefined && { args: s.args }),
+          ...(s.env !== undefined && { env: s.env }),
+          ...(s.url !== undefined && { url: s.url }),
+          ...(s.headers !== undefined && { headers: s.headers }),
+        }));
+
       const tools = projectPath
         ? buildAvaTools(
             projectPath,
@@ -339,7 +355,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
               ...avaConfig.toolGroups,
               userPresenceDetection,
               autoApproveTools: avaConfig.autoApproveTools,
-            }
+            },
+            avaMcpServers.length > 0 ? avaMcpServers : undefined
           )
         : {};
 

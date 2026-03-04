@@ -28,7 +28,7 @@ import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { AgentService } from '../../services/agent-service.js';
 import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
 import type { RoleRegistryService } from '../../services/role-registry-service.js';
-import type { AgentFactoryService } from '../../services/agent-factory-service.js';
+import type { AgentFactoryService, AgentConfig } from '../../services/agent-factory-service.js';
 import type { DynamicAgentExecutor } from '../../services/dynamic-agent-executor.js';
 import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
@@ -191,7 +191,8 @@ function formatToolLabel(toolName: string): string {
 export function buildAvaTools(
   projectPath: string,
   services: AvaToolsServices,
-  config: AvaToolsConfig
+  config: AvaToolsConfig,
+  avaMcpServers?: AgentConfig['mcpServers']
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {};
 
@@ -670,6 +671,7 @@ export function buildAvaTools(
         const result = await services.dynamicAgentExecutor.execute(agentConfig, {
           prompt,
           hooks: progressHooks,
+          ...(avaMcpServers && avaMcpServers.length > 0 && { mcpServers: avaMcpServers }),
           ...(emitter &&
             toolCallId && {
               onText: () => {
