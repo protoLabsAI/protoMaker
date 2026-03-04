@@ -4,6 +4,9 @@
  * Provides: ava (getConfig, updateConfig)
  */
 import { BaseHttpClient, type Constructor } from './base-http-client';
+import type { MCPServerConfig } from '@protolabs-ai/types';
+
+export type { MCPServerConfig };
 
 export interface AvaToolGroups {
   boardRead: boolean;
@@ -29,6 +32,8 @@ export interface AvaConfig {
   contextInjection: boolean;
   systemPromptExtension: string;
   autoApproveTools: boolean;
+  /** MCP servers available to Ava and delegated inner agents */
+  mcpServers?: MCPServerConfig[];
 }
 
 export const withAvaClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
