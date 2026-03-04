@@ -30,6 +30,9 @@ export type {
   McpHttpServerConfig,
   AgentDefinition,
   ReasoningEffort,
+  HookCallback,
+  HookCallbackMatcher,
+  CanUseTool,
 } from './provider.js';
 
 // Provider constants and utilities
