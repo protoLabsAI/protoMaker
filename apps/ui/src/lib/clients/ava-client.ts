@@ -12,6 +12,14 @@ export interface AvaToolGroups {
   autoMode: boolean;
   projectMgmt: boolean;
   orchestration: boolean;
+  agentDelegation: boolean;
+  notes: boolean;
+  metrics: boolean;
+  prWorkflow: boolean;
+  promotion: boolean;
+  contextFiles: boolean;
+  projects: boolean;
+  briefing: boolean;
 }
 
 export interface AvaConfig {
@@ -20,6 +28,7 @@ export interface AvaConfig {
   sitrepInjection: boolean;
   contextInjection: boolean;
   systemPromptExtension: string;
+  autoApproveTools: boolean;
 }
 
 export const withAvaClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
