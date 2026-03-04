@@ -68,6 +68,16 @@ export interface AgentConfig {
     description?: string;
     priority?: number;
   }>;
+  /** MCP server configurations for this agent (enables per-template MCP server assignment) */
+  mcpServers: Array<{
+    name: string;
+    type?: 'stdio' | 'sse' | 'http';
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    url?: string;
+    headers?: Record<string, string>;
+  }>;
   /** Deployment environment (dev/staging/prod) */
   environment: DeploymentEnvironment;
   /** Project path this agent is configured for */
@@ -306,6 +316,8 @@ export class AgentFactoryService {
       assignments: template.assignments,
       desiredState: (template as Record<string, unknown>)
         .desiredState as AgentConfig['desiredState'],
+      mcpServers: ((template as Record<string, unknown>).mcpServers ??
+        []) as AgentConfig['mcpServers'],
       environment: this.environment,
       projectPath,
     };

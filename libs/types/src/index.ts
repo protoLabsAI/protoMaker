@@ -685,6 +685,7 @@ export {
   HeadsdownConfigSchema,
   DesiredStateConditionSchema,
   StateOperatorSchema,
+  MCPServerConfigSchema,
   KNOWN_AGENT_ROLES,
   WORLD_STATE_KEYS,
 } from './agent-templates.js';
@@ -696,6 +697,7 @@ export type {
   AgentHeadsdownConfig,
   DesiredStateCondition,
   StateOperator,
+  AgentMCPServerConfig,
 } from './agent-templates.js';
 
 // ConversationSurface types (platform-agnostic agent interaction)

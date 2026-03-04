@@ -9,6 +9,7 @@
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 import { createLogger, classifyError, listSkills, type SkillsFsModule } from '@protolabs-ai/utils';
+import type { HookCallbackMatcher, CanUseTool } from '@protolabs-ai/types';
 import {
   simpleQuery,
   streamingQuery,
@@ -67,6 +68,21 @@ export interface ExecuteOptions {
     featureName?: string;
     agentRole?: string;
   };
+  /**
+   * Lifecycle hooks for the Claude Agent SDK.
+   * Maps hook event names (e.g. 'PreToolUse', 'PostToolUse') to arrays of callback matchers.
+   */
+  hooks?: Partial<Record<string, HookCallbackMatcher[]>>;
+  /**
+   * Permission callback invoked before each tool execution.
+   * Return value controls whether the tool is allowed to run.
+   */
+  canUseTool?: CanUseTool;
+  /**
+   * MCP server configurations to make available for this execution.
+   * Enables per-execution MCP server assignment for future use.
+   */
+  mcpServers?: AgentConfig['mcpServers'];
 }
 
 export class DynamicAgentExecutor {
@@ -118,6 +134,8 @@ export class DynamicAgentExecutor {
           abortController: options.abortController,
           onText: options.onText,
           onToolUse: options.onToolUse,
+          hooks: options.hooks,
+          canUseTool: options.canUseTool,
           traceContext,
         });
         output = result.text;
@@ -131,6 +149,8 @@ export class DynamicAgentExecutor {
           maxTurns: config.maxTurns,
           allowedTools,
           abortController: options.abortController,
+          hooks: options.hooks,
+          canUseTool: options.canUseTool,
           traceContext,
         });
         output = result.text;
