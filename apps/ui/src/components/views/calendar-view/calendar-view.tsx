@@ -64,7 +64,7 @@ function groupEventsByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]
 
     const current = new Date(startDate);
     while (current <= endDate) {
-      const key = current.toISOString().split('T')[0];
+      const key = toDateKey(current);
       const existing = map.get(key);
       if (existing) {
         existing.push(event);
@@ -94,9 +94,12 @@ function getEventDotStyle(event: CalendarEvent): React.CSSProperties | undefined
   return undefined;
 }
 
-/** Format a YYYY-MM-DD string to a date key */
+/** Format a Date to a local YYYY-MM-DD key (avoids UTC shift) */
 function toDateKey(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /** Get today's date key */
@@ -365,7 +368,7 @@ export function CalendarView() {
 
   const handleNewEvent = useCallback(() => {
     const today = new Date();
-    setCreateDefaultDate(today.toISOString().split('T')[0]);
+    setCreateDefaultDate(toDateKey(today));
     setShowCreateDialog(true);
   }, []);
 
