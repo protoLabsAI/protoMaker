@@ -46,6 +46,13 @@ export interface AvaConfig {
   autoApproveTools: boolean;
   /** MCP servers available to Ava and delegated inner agents */
   mcpServers?: MCPServerConfig[];
+  /**
+   * Trust level for subagent tool execution.
+   * - 'full': Subagents run with bypassPermissions (fully autonomous).
+   * - 'gated': Each tool call requires approval via the event-based approval flow.
+   * Defaults to 'full'.
+   */
+  subagentTrust: 'full' | 'gated';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,6 +86,7 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
   systemPromptExtension: '',
   autoApproveTools: false,
   mcpServers: [],
+  subagentTrust: 'full',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
