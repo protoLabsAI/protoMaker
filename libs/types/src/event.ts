@@ -357,6 +357,9 @@ export type EventType =
   | 'job:failed'
   // Chat tool progress events (real-time sideband for Ava tool execution)
   | 'chat:tool-progress'
+  // Subagent tool approval events (gated trust model)
+  | 'subagent:tool-approval-request'
+  | 'subagent:tool-approval-response'
   // Server lifecycle events
   | 'server:shutdown';
 
@@ -761,6 +764,19 @@ export interface EventPayloadMap {
     sensorId: string;
     data: Record<string, unknown>;
     receivedAt: string;
+  };
+
+  // Subagent tool approval events (gated trust model)
+  'subagent:tool-approval-request': {
+    approvalId: string;
+    toolCallId: string;
+    toolName: string;
+    toolInput: Record<string, unknown>;
+  };
+  'subagent:tool-approval-response': {
+    approvalId: string;
+    approved: boolean;
+    message?: string;
   };
 }
 

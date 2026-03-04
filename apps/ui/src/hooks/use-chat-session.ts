@@ -5,10 +5,21 @@
  * and syncing between useChat's live state and the Zustand store.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useChatStore } from '@/store/chat-store';
+import { getHttpApiClient, getServerUrlSync } from '@/lib/http-api-client';
+
+/** A pending subagent tool approval surfaced from the subagent:tool-approval-request event */
+export interface PendingSubagentApproval {
+  approvalId: string;
+  toolCallId: string;
+  toolName: string;
+  toolInput: Record<string, unknown>;
+  /** ISO timestamp when the approval was received (for 5-minute timeout UI) */
+  receivedAt: string;
+}
 
 interface UseChatSessionOptions {
   /** Default model for new sessions */
@@ -85,6 +96,83 @@ export function useChatSession({
     });
 
   const isStreaming = status === 'streaming' || status === 'submitted';
+
+  // ── Subagent approval state (gated trust model) ────────────────────────────
+
+  const [pendingSubagentApprovals, setPendingSubagentApprovals] = useState<
+    PendingSubagentApproval[]
+  >([]);
+
+  // Subscribe to subagent:tool-approval-request events from the server
+  useEffect(() => {
+    const api = getHttpApiClient();
+    const unsubscribe = api.subscribeToEvents((type: string, payload: unknown) => {
+      if (type === 'subagent:tool-approval-request') {
+        const req = payload as {
+          approvalId: string;
+          toolCallId: string;
+          toolName: string;
+          toolInput: Record<string, unknown>;
+        };
+        setPendingSubagentApprovals((prev) => [
+          ...prev,
+          {
+            approvalId: req.approvalId,
+            toolCallId: req.toolCallId,
+            toolName: req.toolName,
+            toolInput: req.toolInput,
+            receivedAt: new Date().toISOString(),
+          },
+        ]);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  /** Remove a pending approval from the list (after approve or deny). */
+  const removePendingApproval = useCallback((approvalId: string) => {
+    setPendingSubagentApprovals((prev) => prev.filter((a) => a.approvalId !== approvalId));
+  }, []);
+
+  /** Approve a subagent tool call — posts to /api/chat/tool-approval. */
+  const approveSubagentTool = useCallback(
+    async (approvalId: string) => {
+      removePendingApproval(approvalId);
+      try {
+        await fetch(`${getServerUrlSync()}/api/chat/tool-approval`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ approvalId, approved: true }),
+        });
+      } catch (err) {
+        console.error('Failed to approve subagent tool:', err);
+      }
+    },
+    [removePendingApproval]
+  );
+
+  /** Deny a subagent tool call — posts to /api/chat/tool-approval. */
+  const denySubagentTool = useCallback(
+    async (approvalId: string, message?: string) => {
+      removePendingApproval(approvalId);
+      try {
+        await fetch(`${getServerUrlSync()}/api/chat/tool-approval`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            approvalId,
+            approved: false,
+            message: message ?? 'Denied by user',
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to deny subagent tool:', err);
+      }
+    },
+    [removePendingApproval]
+  );
 
   // When messages change, persist to store
   useEffect(() => {
@@ -173,9 +261,14 @@ export function useChatSession({
     error,
     setMessages,
 
-    // HITL
+    // HITL (native AI SDK approval for Ava tools)
     approveToolAction,
     rejectToolAction,
+
+    // Subagent approval (gated trust model)
+    pendingSubagentApprovals,
+    approveSubagentTool,
+    denySubagentTool,
 
     // Session management
     sessions: visibleSessions,

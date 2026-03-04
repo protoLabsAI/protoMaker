@@ -16,7 +16,7 @@ import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
 import type { EventEmitter } from 'events';
-import type { NotesWorkspace } from '@protolabs-ai/types';
+import type { NotesWorkspace, CanUseTool } from '@protolabs-ai/types';
 import {
   getNotesWorkspacePath,
   ensureNotesDir,
@@ -83,6 +83,12 @@ export interface AvaToolsServices {
   projectService?: ProjectService;
   /** Tool progress emitter — optional, enables real-time progress labels in chat */
   toolProgressEmitter?: ToolProgressEmitter;
+  /**
+   * Permission callback for subagent tool execution (gated trust model).
+   * When set, each tool call made by inner agents must be explicitly approved.
+   * Undefined means full trust (bypassPermissions).
+   */
+  canUseTool?: CanUseTool;
 }
 
 export interface AvaToolsConfig {
@@ -678,6 +684,8 @@ export function buildAvaTools(
                 emitter.emitProgress(toolCallId, `${agentLabel} -- Composing response`);
               },
             }),
+          // Gated trust: pass canUseTool callback so inner agent tool calls require approval
+          ...(services.canUseTool && { canUseTool: services.canUseTool }),
         });
 
         // Cleanup rate-limit tracking

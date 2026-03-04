@@ -42,8 +42,11 @@ import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
 import type { PlanData } from './ava-tools.js';
 import { ToolProgressEmitter } from './tool-progress.js';
+import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
+import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { EventType } from '@protolabs-ai/types';
 
 export type { AvaConfig };
 
@@ -263,6 +266,13 @@ export function createChatRoutes(services: ServiceContainer): Router {
         ? await loadAvaConfig(projectPath)
         : { ...DEFAULT_AVA_CONFIG, toolGroups: { ...DEFAULT_AVA_CONFIG.toolGroups } };
 
+      // Build canUseTool callback for gated subagent trust.
+      // Full trust (default) returns undefined — subagents run with bypassPermissions.
+      const canUseTool =
+        avaConfig.subagentTrust === 'gated'
+          ? buildCanUseToolCallback('gated', services.events)
+          : undefined;
+
       // Model selection: session picker (header/body) > AvaConfig.model > default (sonnet)
       // The inline ChatModelSelect sends x-model-alias; config model is the fallback for new chats.
       const modelAlias =
@@ -350,6 +360,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
               sensorRegistryService: userPresenceDetection
                 ? services.sensorRegistryService
                 : undefined,
+              canUseTool,
             },
             {
               ...avaConfig.toolGroups,
@@ -471,6 +482,43 @@ export function createChatRoutes(services: ServiceContainer): Router {
 
       res.status(500).json({ error: message });
     }
+  });
+
+  /**
+   * POST /api/chat/tool-approval
+   *
+   * Resolves a pending subagent tool-approval request for the gated trust model.
+   * Accepts { approvalId, approved, message? } and emits
+   * `subagent:tool-approval-response` on the shared event bus so the waiting
+   * `canUseTool` promise in agent-trust.ts resolves immediately.
+   *
+   * Body: { approvalId: string, approved: boolean, message?: string }
+   */
+  router.post('/tool-approval', (req: Request, res: Response) => {
+    const { approvalId, approved, message } = req.body as {
+      approvalId: string;
+      approved: boolean;
+      message?: string;
+    };
+
+    if (!approvalId || typeof approved !== 'boolean') {
+      res.status(400).json({ error: 'approvalId and approved (boolean) are required' });
+      return;
+    }
+
+    const response: ToolApprovalResponse = {
+      approvalId,
+      approved,
+      ...(message !== undefined && { message }),
+    };
+
+    // Use EventType cast — subagent approval event types are defined in
+    // libs/types/src/event.ts but the shared dist may be ahead of the published package.
+    services.events.emit('subagent:tool-approval-response' as EventType, response);
+
+    logger.info(`Tool approval response emitted: approvalId=${approvalId}, approved=${approved}`);
+
+    res.json({ ok: true });
   });
 
   return router;
