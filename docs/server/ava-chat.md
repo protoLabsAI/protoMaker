@@ -89,3 +89,67 @@ Sessions are stored in Zustand (`chat-store.ts`) keyed by `projectId`. Switching
 ## Settings UI
 
 The gear icon in the chat header opens `AvaSettingsPanel`, which loads config via `GET /api/ava/config/get` and saves via `POST /api/ava/config/update`. Changes take effect on the next chat request — no server restart required.
+
+## SDK Hooks
+
+When Ava delegates to an inner agent via `execute_dynamic_agent`, the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) is invoked through `DynamicAgentExecutor`. Three hook types are wired in:
+
+| Hook           | Trigger                                          | Effect                                                      |
+| -------------- | ------------------------------------------------ | ----------------------------------------------------------- |
+| `PostToolUse`  | After every tool execution in inner agent        | Accumulates cost, emits `agent:tool-result` WebSocket event |
+| `Notification` | SDK informational events (context compact, etc.) | Surfaces warnings in the agent output log                   |
+| `SubagentStop` | Inner agent session ends                         | Marks sub-run complete, aggregates cost to parent           |
+
+Hooks are configured in `DynamicAgentExecutor` before calling `query()`. They are not exposed to the outer Ava loop — Ava only sees the final tool result from `execute_dynamic_agent`.
+
+## Custom MCP Servers
+
+`AvaConfig.mcpServers` lets projects supply additional MCP server definitions that are forwarded to delegated agents:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_TOKEN": "${GITHUB_TOKEN}" }
+    }
+  }
+}
+```
+
+These servers are passed to `createChatOptions({ mcpServers })` before the inner agent runs. The outer Ava session does **not** receive MCP tools — they are scoped to delegated agents only. This prevents Ava from directly calling high-privilege tools while still allowing inner agents to use them under the trust gate.
+
+## Trust Model
+
+`AvaConfig.subagentTrust` controls the maximum trust level granted to agents Ava delegates to:
+
+| Level        | Effect                                                                      |
+| ------------ | --------------------------------------------------------------------------- |
+| `high`       | Inner agents may call all tools including destructive ones without approval |
+| `standard`   | Inner agents call most tools; destructive tools still require approval      |
+| `restricted` | Inner agents are limited to read-only and low-risk tools                    |
+
+Trust is enforced via the SDK's `canUseTool` callback in `DynamicAgentExecutor`. If the requested tool's required trust level exceeds `subagentTrust`, `canUseTool` returns `false` and the SDK does not execute the tool. Ava receives `"tool_blocked"` as the tool result.
+
+Omitting `subagentTrust` from `ava-config.json` defaults to `standard`.
+
+## Tool Progress WebSocket Events
+
+During agent delegation, `DynamicAgentExecutor` emits progress events over the WebSocket connection (keyed by `agentRunId`). The chat UI subscribes to these via `AgentOutputCard`:
+
+| Event type          | Payload                                     | Rendered by                   |
+| ------------------- | ------------------------------------------- | ----------------------------- |
+| `agent:text`        | `{ text }` — streamed text from inner agent | `AgentOutputCard` text stream |
+| `agent:tool-use`    | `{ toolName, input }` — inner tool call     | Tool invocation row           |
+| `agent:tool-result` | `{ toolName, result }` — inner tool result  | Collapsible result            |
+| `agent:complete`    | `{ cost, stepCount }` — final summary       | Completion chip               |
+| `agent:error`       | `{ message }` — agent error                 | Error callout                 |
+
+These events are only emitted for delegated agents — Ava's own tool calls stream through the SSE channel, not WebSocket.
+
+## See Also
+
+- [Ava Chat System — Architecture Pipeline](../dev/ava-chat-system.md#architecture-pipeline) — full end-to-end request flow diagram
+- [Ava Delegation Flow](../agents/ava-delegation.md) — how `execute_dynamic_agent` routes to `DynamicAgentExecutor`
+- [SDK Integration](../agents/sdk-integration.md) — Claude Agent SDK query options and session management
