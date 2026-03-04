@@ -17,6 +17,8 @@
   <a href="https://protolabs.studio"><img src="https://img.shields.io/badge/docs-protolabs.studio-blue" alt="Docs" /></a>
 </p>
 
+> **Alpha Software** --- protoLabs Studio is under active development. Things break, APIs change, and rough edges are everywhere. If you're a hacker, thinker, or do-er who wants to shape the future of autonomous development, you're in the right place. If you want something more stable, check out [Automaker](https://github.com/AutoMaker-Org/automaker) --- the project we forked from.
+
 ---
 
 **protoLabs** is the maintained successor of [Automaker](https://github.com/AutoMaker-Org/automaker). We picked it up, rebuilt it into a multi-agent orchestration studio, and ship real products with it every day.
@@ -129,6 +131,21 @@ You create a feature --> Agent claims it --> Works in isolated branch --> Create
 5. Merge and ship. Feature moves to done.
 
 For complex work, protoLabs runs a full pipeline: idea -> research -> SPARC PRD -> human review -> milestones -> parallel agent execution.
+
+## Why This Works
+
+Autonomous agents sound dangerous. Unsupervised AI writing code, creating PRs, touching your codebase --- what could go wrong?
+
+Everything, if you skip the discipline. protoLabs works because the guardrails are non-negotiable:
+
+- **Context files define the rules.** Every project has `.automaker/context/` files that agents load before writing a single line. Your coding standards, architectural decisions, and conventions are injected into every agent session. Agents follow YOUR rules because you wrote them.
+- **CodeRabbit reviews every PR.** Automated code review catches style violations, security issues, and logic errors before any human sees the diff. Agents that produce sloppy code get caught immediately.
+- **CI runs on every push.** TypeScript checks, linting, formatting, tests --- nothing merges without passing the full pipeline. Broken code never reaches your main branch.
+- **You review and merge.** Agents create PRs. They do not push to production. Every change goes through your normal review process. You have final say on what ships.
+
+Trust is not the starting point --- it is earned. You set the standards. Agents follow them. Automated review catches drift. CI enforces correctness. And you hold the merge button.
+
+The system stays aligned with your vision because you control every layer: the context files agents read, the review gates they pass through, and the branches they can touch.
 
 ## Claude Code Plugin
 
