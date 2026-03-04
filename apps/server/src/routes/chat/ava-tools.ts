@@ -628,14 +628,15 @@ export function buildAvaTools(
       description:
         'Execute a dynamic agent with a specific role and prompt. The agent runs in the project worktree and returns its output. Use for delegating specialized tasks to domain-expert agents.',
       inputSchema: z.object({
-        role: z.string().describe('Agent role/template name (e.g. "researcher", "kai", "matt")'),
+        role: z
+          .string()
+          .describe('Agent role/template name. Use list_agent_templates to see available roles.'),
         prompt: z.string().describe('Task prompt for the agent'),
         model: z
           .string()
           .optional()
           .describe('Model override (haiku, sonnet, opus). Defaults to template setting.'),
       }),
-      needsApproval: destructiveNeedsApproval,
       execute: async ({ role, prompt, model }, { toolCallId }) => {
         if (
           !services.roleRegistryService ||
