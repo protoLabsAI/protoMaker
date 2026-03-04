@@ -25,6 +25,8 @@ export interface TrackedPR {
   reviewState: 'pending' | 'changes_requested' | 'approved' | 'commented';
   iterationCount: number;
   lastProcessedReviewAt?: number;
+  /** When this PR was first added to tracking (epoch ms) */
+  trackedSince?: number;
   ciMonitoring?: {
     headSha: string;
     startedAt: number;
@@ -224,6 +226,66 @@ export class PRStatusChecker {
         }
       )
       .filter(Boolean) as ThreadFeedbackItem[];
+  }
+
+  /**
+   * Fetch the PR's base branch and HEAD commit SHA.
+   * Used to detect required status checks that never registered.
+   */
+  async fetchPRDetails(pr: TrackedPR): Promise<{ baseBranch: string; headSha: string } | null> {
+    try {
+      const { stdout } = await execFileAsync(
+        'gh',
+        ['pr', 'view', String(pr.prNumber), '--json', 'baseRefName,headRefOid'],
+        {
+          cwd: pr.projectPath,
+          timeout: 15_000,
+          encoding: 'utf-8',
+        }
+      );
+
+      const data = JSON.parse(stdout) as { baseRefName: string; headRefOid: string };
+      return { baseBranch: data.baseRefName, headSha: data.headRefOid };
+    } catch (error) {
+      logger.debug(`Failed to fetch PR details for PR #${pr.prNumber}: ${error}`);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch the names of required status checks configured on a branch's protection rules.
+   * Returns an empty array if the branch has no protection or no required checks.
+   */
+  async fetchRequiredStatusChecks(pr: TrackedPR, baseBranch: string): Promise<string[]> {
+    try {
+      const { stdout } = await execFileAsync(
+        'gh',
+        [
+          'api',
+          `repos/{owner}/{repo}/branches/${baseBranch}/protection/required_status_checks`,
+        ],
+        {
+          cwd: pr.projectPath,
+          timeout: 15_000,
+          encoding: 'utf-8',
+        }
+      );
+
+      const data = JSON.parse(stdout) as {
+        contexts?: string[];
+        checks?: Array<{ context: string; app_id: number | null }>;
+      };
+
+      // Prefer `checks` (newer GitHub API) over `contexts` (deprecated)
+      if (data.checks && data.checks.length > 0) {
+        return data.checks.map((c) => c.context);
+      }
+      return data.contexts ?? [];
+    } catch (error) {
+      // Branch may have no protection configured — this is normal
+      logger.debug(`No required status checks found for branch '${baseBranch}': ${error}`);
+      return [];
+    }
   }
 
   /**
