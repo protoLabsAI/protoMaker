@@ -165,8 +165,7 @@ export function useChatSession({
     if (!isStreaming && approvedActions.length > 0) {
       setApprovedActions([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isStreaming]);
+  }, [isStreaming]); // intentionally omits approvedActions — only clear on stream end
 
   // Ensure there's always a session (scoped to project when projectId provided)
   useEffect(() => {
