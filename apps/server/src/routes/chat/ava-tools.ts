@@ -91,7 +91,7 @@ export interface AvaToolsServices {
     getOrCreateSession(
       projectPath: string,
       projectSlug: string
-    ): Promise<{ sessionId: string; pmAgentStarted: boolean }>;
+    ): { projectSlug: string; createdAt: string };
   };
   /** Tool progress emitter — optional, enables real-time progress labels in chat */
   toolProgressEmitter?: ToolProgressEmitter;
@@ -1209,13 +1209,11 @@ export function buildAvaTools(
           maxConcurrency
         );
 
-        let pmSession: { sessionId: string; pmAgentStarted: boolean } | undefined;
+        let pmSession: { projectSlug: string; createdAt: string } | null = null;
         if (services.projectPMService) {
           try {
-            pmSession = await services.projectPMService.getOrCreateSession(
-              projectPath,
-              projectSlug
-            );
+            const session = services.projectPMService.getOrCreateSession(projectPath, projectSlug);
+            pmSession = { projectSlug: session.projectSlug, createdAt: session.createdAt };
           } catch {
             // PM session creation is best-effort
           }
@@ -1223,7 +1221,7 @@ export function buildAvaTools(
 
         return {
           ...launchResult,
-          pmSession: pmSession ?? null,
+          pmSession,
         };
       },
     });

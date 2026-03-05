@@ -129,10 +129,14 @@ export function createProjectPmRoutes(
 
       // Load project data for system prompt
       const project = await projectService.getProject(projectPath, projectSlug).catch(() => null);
-      const ceremonyStatus = (() => {
+      const ceremonyStatus = await (async () => {
         try {
-          const s = ceremonyService.getStatus();
-          return s as { phase?: string; lastStandup?: string; lastRetro?: string } | null;
+          const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
+          return {
+            phase: state.phase,
+            lastStandup: state.lastStandup || undefined,
+            lastRetro: state.lastRetro || undefined,
+          };
         } catch {
           return null;
         }
@@ -171,11 +175,21 @@ export function createProjectPmRoutes(
         }),
 
         get_ceremony_state: makeTool({
-          description: 'Get the current ceremony phase and recent ceremony history.',
+          description:
+            'Get the current ceremony phase, transition history, and cadence for this project.',
           inputSchema: z.object({}),
           execute: async () => {
             try {
-              return ceremonyService.getStatus();
+              const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
+              return {
+                phase: state.phase,
+                currentMilestone: state.currentMilestone ?? null,
+                lastStandup: state.lastStandup || null,
+                lastRetro: state.lastRetro || null,
+                standupCadence: state.standupCadence,
+                transitionCount: state.history.length,
+                recentTransitions: state.history.slice(-5),
+              };
             } catch {
               return { error: 'Ceremony state unavailable' };
             }
@@ -285,15 +299,14 @@ export function createProjectPmRoutes(
             content: z.string().describe('Document content (plain text or markdown)'),
           }),
           execute: async ({ title, content }) => {
-            const docId = `doc-${Date.now()}`;
-            events.emit('project:document:created' as EventType, {
+            const doc = await projectService.createDoc(
               projectPath,
               projectSlug,
-              docId,
               title,
               content,
-            });
-            return { ok: true, docId, title };
+              'PM Agent'
+            );
+            return { ok: true, docId: doc.id, title: doc.title };
           },
         }),
 
@@ -321,14 +334,20 @@ export function createProjectPmRoutes(
       const resolvedModelId = resolveModelString('haiku', 'haiku');
       const messages: ModelMessage[] = await convertToModelMessages(rawMessages, { tools });
 
+      // Prepend session history (system event messages from feature completions, etc.)
+      // so the PM agent has persistent context across page refreshes.
+      const session = projectPmService.getOrCreateSession(projectPath, projectSlug);
+      const sessionHistory = session.messages.filter((m) => m.role === 'system');
+      const allMessages: ModelMessage[] = [...sessionHistory, ...messages];
+
       logger.info(
-        `PM chat request: ${messages.length} messages, project=${projectSlug}, model=haiku`
+        `PM chat request: ${messages.length} user messages + ${sessionHistory.length} session events, project=${projectSlug}, model=haiku`
       );
 
       const result = streamText({
         model: anthropic(resolvedModelId),
         system: systemPrompt,
-        messages,
+        messages: allMessages,
         tools,
         stopWhen: stepCountIs(5),
         experimental_telemetry: {
@@ -393,7 +412,7 @@ export function createProjectPmRoutes(
    * Returns full session history + ceremony state for a project slug.
    * Query param: projectPath (required)
    */
-  router.get('/session/:slug', (req: Request, res: Response) => {
+  router.get('/session/:slug', async (req: Request, res: Response) => {
     const { slug } = req.params as { slug: string };
     const { projectPath } = req.query as { projectPath?: string };
 
@@ -410,7 +429,7 @@ export function createProjectPmRoutes(
 
     let ceremonyState: unknown = null;
     try {
-      ceremonyState = ceremonyService.getStatus();
+      ceremonyState = await ceremonyService.getCeremonyState(projectPath, slug);
     } catch {
       // Non-fatal
     }

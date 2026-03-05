@@ -118,7 +118,6 @@ export interface CeremonyAuditEntry {
 export type CeremonyPhase =
   | 'awaiting_kickoff'
   | 'milestone_active'
-  | 'standup_due'
   | 'milestone_retro'
   | 'project_retro'
   | 'project_complete';

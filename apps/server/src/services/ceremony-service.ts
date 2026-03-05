@@ -173,6 +173,15 @@ export class CeremonyService {
         this.handleProjectLifecycleLaunched(payload as ProjectLifecycleLaunchedPayload).catch(
           (err) => logger.warn('Project lifecycle launched error:', err)
         );
+      } else if (type === ('ceremony:trigger-requested' as string)) {
+        this.handleCeremonyTriggerRequested(
+          payload as {
+            projectPath: string;
+            projectSlug: string;
+            ceremonyType: string;
+            milestoneSlug?: string;
+          }
+        ).catch((err) => logger.warn('Ceremony trigger-requested error:', err));
       }
     });
 
@@ -624,6 +633,53 @@ export class CeremonyService {
       });
     } finally {
       this.activeReflection = null;
+    }
+  }
+
+  /**
+   * Handle ceremony:trigger-requested events from PM agent tools.
+   * Emits the appropriate event that existing handlers already handle.
+   */
+  private async handleCeremonyTriggerRequested(payload: {
+    projectPath: string;
+    projectSlug: string;
+    ceremonyType: string;
+    milestoneSlug?: string;
+  }): Promise<void> {
+    if (!this.emitter) return;
+
+    const { projectPath, projectSlug, ceremonyType, milestoneSlug } = payload;
+    logger.info(
+      `Ceremony trigger requested: ${ceremonyType} for ${projectSlug}${milestoneSlug ? ` milestone=${milestoneSlug}` : ''}`
+    );
+
+    if (ceremonyType === 'standup') {
+      this.emitter.emit('milestone:started', {
+        projectPath,
+        projectSlug,
+        projectTitle: projectSlug,
+        milestoneTitle: milestoneSlug ?? 'Standup',
+        milestoneNumber: 0,
+      });
+    } else if (ceremonyType === 'retro') {
+      this.emitter.emit('milestone:completed', {
+        projectPath,
+        projectSlug,
+        projectTitle: projectSlug,
+        milestoneTitle: milestoneSlug ?? 'Retro',
+        milestoneNumber: 0,
+      });
+    } else if (ceremonyType === 'project-retro') {
+      this.emitter.emit('project:completed', {
+        projectPath,
+        projectSlug,
+        projectTitle: projectSlug,
+        totalMilestones: 0,
+        totalFeatures: 0,
+        totalCostUsd: 0,
+        failureCount: 0,
+        milestoneSummaries: [],
+      });
     }
   }
 }

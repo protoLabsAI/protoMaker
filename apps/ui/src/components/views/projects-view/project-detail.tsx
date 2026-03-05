@@ -59,8 +59,6 @@ export function ProjectDetail({
     );
   }
 
-  const hasResources = (project.links?.length ?? 0) > 0;
-
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       <ProjectHeader
@@ -87,12 +85,10 @@ export function ProjectDetail({
                 <Layers />
                 <span className="hidden sm:inline">Features</span>
               </TabsTrigger>
-              {hasResources && (
-                <TabsTrigger value="resources">
-                  <BookOpen />
-                  <span className="hidden sm:inline">Resources</span>
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="resources">
+                <BookOpen />
+                <span className="hidden sm:inline">Resources</span>
+              </TabsTrigger>
               <TabsTrigger value="updates">
                 <MessageSquare />
                 <span className="hidden sm:inline">Updates</span>
@@ -107,11 +103,9 @@ export function ProjectDetail({
               <FeaturesTab projectSlug={projectSlug} />
             </TabsContent>
 
-            {hasResources && (
-              <TabsContent value="resources">
-                <ResourcesTab projectSlug={projectSlug} project={project as Project} />
-              </TabsContent>
-            )}
+            <TabsContent value="resources">
+              <ResourcesTab projectSlug={projectSlug} project={project as Project} />
+            </TabsContent>
 
             <TabsContent value="updates">
               <UpdatesTab project={project as Project} />
