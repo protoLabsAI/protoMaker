@@ -384,9 +384,24 @@ export function createChatRoutes(services: ServiceContainer): Router {
       // pairs required for HITL approval continuation and multi-turn tool use.
       const messages = await convertToModelMessages(rawMessages, { tools });
 
+      // Estimate payload size for perf tracking
+      const systemPromptChars = systemPrompt.length;
+      const messagesJson = JSON.stringify(messages);
+      const messagesChars = messagesJson.length;
+      const estimatedInputTokens = Math.ceil((systemPromptChars + messagesChars) / 4);
+      const requestStartTime = Date.now();
+
       logger.info(
-        `Chat request: ${messages.length} messages, model=${modelAlias}, projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}, extendedThinking=${extendedThinking}`
+        `Chat request: ${messages.length} messages, model=${modelAlias}, ~${estimatedInputTokens} est. input tokens, ` +
+          `systemPrompt=${(systemPromptChars / 1024).toFixed(1)}KB, messages=${(messagesChars / 1024).toFixed(1)}KB, ` +
+          `projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}, extendedThinking=${extendedThinking}`
       );
+
+      if (estimatedInputTokens > 150_000) {
+        logger.warn(
+          `Chat payload approaching context limit: ~${estimatedInputTokens} tokens, ${messages.length} messages, ${(messagesChars / 1024).toFixed(0)}KB payload`
+        );
+      }
 
       const result = streamText({
         model: aiModel,
@@ -430,6 +445,20 @@ export function createChatRoutes(services: ServiceContainer): Router {
 
           // Await the full text (separate internal stream tee in streamText)
           const fullText = await result.text;
+
+          // Log completion metrics
+          try {
+            const usage = await result.usage;
+            const durationMs = Date.now() - requestStartTime;
+            logger.info(
+              `Chat complete: ${durationMs}ms, ` +
+                `inputTokens=${usage.inputTokens}, outputTokens=${usage.outputTokens}, ` +
+                `totalTokens=${(usage.inputTokens ?? 0) + (usage.outputTokens ?? 0)}, ` +
+                `responseChars=${fullText.length}, messages=${messages.length}`
+            );
+          } catch {
+            logger.warn(`Chat complete: ${Date.now() - requestStartTime}ms (usage unavailable)`);
+          }
 
           // Resolve citations when a projectPath is available
           if (projectPath && fullText) {

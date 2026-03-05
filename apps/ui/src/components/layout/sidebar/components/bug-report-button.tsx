@@ -10,7 +10,7 @@ interface BugReportButtonProps {
 export function BugReportButton({ sidebarExpanded }: BugReportButtonProps) {
   const handleBugReportClick = useCallback(() => {
     const api = getElectronAPI();
-    api.openExternalLink('https://github.com/AutoMaker-Org/automaker/issues');
+    api.openExternalLink('https://github.com/protolabsai/protomaker/issues');
   }, []);
 
   return (

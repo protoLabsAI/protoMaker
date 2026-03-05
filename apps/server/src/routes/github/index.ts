@@ -25,6 +25,7 @@ import { createMergePRHandler } from './routes/merge-pr.js';
 import { createCheckPRStatusHandler } from './routes/check-pr-status.js';
 import { createPRReviewCommentsHandler } from './routes/pr-review-comments.js';
 import { createResolvePRCommentHandler } from './routes/resolve-pr-comment.js';
+import { createWatchPRHandler } from './routes/watch-pr.js';
 import type { SettingsService } from '../../services/settings-service.js';
 
 export function createGitHubRoutes(

@@ -1,0 +1,9 @@
+# Streaming Text Rendering
+
+Overhaul the Ava chat surface streaming render pipeline: fix plugin array remount bug, add streaming-safe markdown sanitization, gate syntax highlighting behind isComplete, implement scroll lock with useLayoutEffect, add CSS streaming cursor, and add segment memoization for long messages.
+
+**Status:** drafting
+**Created:** 2026-03-05T18:01:19.152Z
+**Updated:** 2026-03-05T18:01:19.152Z
+
+## Milestones

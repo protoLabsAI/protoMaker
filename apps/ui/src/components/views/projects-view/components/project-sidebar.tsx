@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Calendar, User, Users, Target } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Calendar, User, Users, Target, X, Palette } from 'lucide-react';
 import { Badge, Input } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import {
@@ -32,10 +32,25 @@ function PropertyRow({ label, children }: { label: string; children: React.React
   );
 }
 
+const PRESET_COLORS = [
+  '#6366f1',
+  '#8b5cf6',
+  '#ec4899',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#64748b',
+];
+
 export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?: boolean }) {
   const updateMutation = useProjectUpdate(project.slug);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [newMember, setNewMember] = useState('');
+  const colorInputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (field: string, value: string) => {
     setEditingField(field);
@@ -60,6 +75,45 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
 
   const handlePriorityChange = (priority: ProjectPriority) => {
     updateMutation.mutate({ priority });
+  };
+
+  const handleAddMember = () => {
+    const trimmed = newMember.trim();
+    if (!trimmed) return;
+    const current = project.members ?? [];
+    if (current.includes(trimmed)) {
+      setNewMember('');
+      return;
+    }
+    const updated = [...current, trimmed];
+    updateMutation.mutate(
+      { members: updated },
+      {
+        onSuccess: () => {
+          setNewMember('');
+          toast.success('Member added');
+        },
+      }
+    );
+  };
+
+  const handleRemoveMember = (member: string) => {
+    const updated = (project.members ?? []).filter((m) => m !== member);
+    updateMutation.mutate(
+      { members: updated },
+      {
+        onSuccess: () => toast.success('Member removed'),
+      }
+    );
+  };
+
+  const handleColorChange = (color: string) => {
+    updateMutation.mutate(
+      { color },
+      {
+        onSuccess: () => toast.success('Color updated'),
+      }
+    );
   };
 
   return (
@@ -161,10 +215,103 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
         </PropertyRow>
 
         <PropertyRow label="Members">
-          <span className="flex items-center gap-1.5 text-sm text-foreground/80">
-            <Users className="w-3.5 h-3.5" />
-            {project.members?.length ? project.members.join(', ') : 'No members'}
-          </span>
+          <div className="flex flex-col gap-1.5">
+            {/* Existing member tags */}
+            {(project.members ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {(project.members ?? []).map((member) => (
+                  <span
+                    key={member}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-foreground/80"
+                  >
+                    <Users className="w-3 h-3" />
+                    {member}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMember(member)}
+                      className="ml-0.5 text-muted-foreground hover:text-foreground"
+                      aria-label={`Remove ${member}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* Add member input */}
+            <div className="flex items-center gap-1.5">
+              <Input
+                value={newMember}
+                onChange={(e) => setNewMember(e.target.value)}
+                placeholder="Add member..."
+                className="h-7 text-xs flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddMember();
+                  }
+                  if (e.key === 'Escape') setNewMember('');
+                }}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={handleAddMember}
+                disabled={!newMember.trim() || updateMutation.isPending}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+        </PropertyRow>
+
+        <PropertyRow label="Color">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Preset palette */}
+            {PRESET_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => handleColorChange(c)}
+                className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                style={{
+                  backgroundColor: c,
+                  borderColor: project.color === c ? 'white' : 'transparent',
+                  boxShadow: project.color === c ? `0 0 0 2px ${c}` : undefined,
+                }}
+                aria-label={`Set color ${c}`}
+                aria-pressed={project.color === c}
+              />
+            ))}
+            {/* Custom color input */}
+            <button
+              type="button"
+              onClick={() => colorInputRef.current?.click()}
+              className="w-5 h-5 rounded-full border border-dashed border-border flex items-center justify-center hover:border-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Custom color"
+            >
+              <Palette className="w-3 h-3 text-muted-foreground" />
+            </button>
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={project.color ?? '#6366f1'}
+              onChange={(e) => handleColorChange(e.target.value)}
+              className="sr-only"
+              aria-label="Custom color picker"
+            />
+            {/* Clear color */}
+            {project.color && (
+              <button
+                type="button"
+                onClick={() => handleColorChange('')}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </PropertyRow>
 
         <PropertyRow label="Start Date">

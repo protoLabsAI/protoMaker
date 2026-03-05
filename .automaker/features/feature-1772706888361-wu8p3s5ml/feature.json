@@ -20,6 +20,41 @@
       "to": "backlog",
       "timestamp": "2026-03-05T10:34:48.368Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-05T18:02:30.641Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-05T18:04:00.070Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-05T18:04:08.803Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-05T18:04:02.990Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "e749c300-8f32-4b63-b5ed-54be5dffdd27",
+  "executionHistory": [
+    {
+      "id": "30ce8447-6992-453c-bb6a-b313e9bdeaf1",
+      "startedAt": "2026-03-05T18:02:31.104Z",
+      "completedAt": "2026-03-05T18:04:00.466Z",
+      "durationMs": 89362,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
     }
   ]
 }

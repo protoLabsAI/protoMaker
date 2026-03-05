@@ -1,0 +1,54 @@
+{
+  "category": "Uncategorized",
+  "description": "The \"Bug Report\" button in the quick actions panel links to the wrong GitHub repository.\n\n**Current behavior:** Links to `https://github.com/protolabsai/automaker`\n**Expected behavior:** Links to `https://github.com/protolabsai/protomaker`\n\n## Fix\nFind the quick actions component (likely in `apps/ui/src/`) and update the hardcoded GitHub URL from `protolabsai/automaker` to `protolabsai/protomaker`.",
+  "title": "Fix bug report button URL in quick actions",
+  "priority": 2,
+  "status": "done",
+  "id": "feature-1772730612438-oy02y59ih",
+  "branchName": "feature/fix-bug-report-button-url-in-quick",
+  "descriptionHistory": [
+    {
+      "description": "The \"Bug Report\" button in the quick actions panel links to the wrong GitHub repository.\n\n**Current behavior:** Links to `https://github.com/protolabsai/automaker`\n**Expected behavior:** Links to `https://github.com/protolabsai/protomaker`\n\n## Fix\nFind the quick actions component (likely in `apps/ui/src/`) and update the hardcoded GitHub URL from `protolabsai/automaker` to `protolabsai/protomaker`.",
+      "timestamp": "2026-03-05T17:10:12.442Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T17:10:12.443Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T17:10:12.443Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-05T17:11:53.533Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-05T17:14:29.850Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-05T17:52:26.143Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-05T17:11:56.058Z",
+  "costUsd": 0.50479725,
+  "lastSessionId": "c9d34091-2543-49fc-a2e1-816d1d134517",
+  "lastTraceId": "4687c720-41f1-4c48-84d6-45ab9b98c5c3",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1820",
+  "prNumber": 1820,
+  "prCreatedAt": "2026-03-05T17:14:29.849Z",
+  "reviewStartedAt": "2026-03-05T17:14:29.850Z",
+  "prTrackedSince": "2026-03-05T17:14:29.852Z",
+  "prLastPolledAt": "2026-03-05T17:15:18.067Z",
+  "completedAt": "2026-03-05T17:52:26.143Z"
+}

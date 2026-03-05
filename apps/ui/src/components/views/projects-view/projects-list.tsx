@@ -16,6 +16,7 @@ interface ProjectSummary {
   goal: string;
   status: string;
   health?: string;
+  color?: string;
   milestones?: Array<{
     title: string;
     phases: Array<{ title: string }>;
@@ -296,6 +297,12 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
                           )}
                         >
+                          {/* Color indicator */}
+                          <div
+                            className="w-1 self-stretch shrink-0 rounded-sm"
+                            style={{ backgroundColor: project.color || 'transparent' }}
+                            aria-hidden="true"
+                          />
                           {/* Title + goal */}
                           <div className="flex-1 min-w-0 pl-3 pr-3 py-3">
                             <span className="font-medium text-sm truncate block">

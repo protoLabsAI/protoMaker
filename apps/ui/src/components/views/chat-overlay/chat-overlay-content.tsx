@@ -89,6 +89,13 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const suggestions = useContextualSuggestions(features ?? []);
   const { getProgressLabel } = useToolProgress();
 
+  // Estimate token count from conversation messages (chars / 4 approximation)
+  const estimatedTokens = useMemo(() => {
+    if (messages.length === 0) return 0;
+    const chars = JSON.stringify(messages).length;
+    return Math.ceil(chars / 4);
+  }, [messages]);
+
   // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
   // ChatInput clears the input immediately after calling this.
   const handleSubmit = useCallback(
@@ -422,6 +429,25 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
               actions={
                 <>
                   <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
+                  {estimatedTokens > 0 && (
+                    <span
+                      className={cn(
+                        'text-xs tabular-nums',
+                        estimatedTokens > 100_000
+                          ? 'text-destructive font-medium'
+                          : estimatedTokens > 50_000
+                            ? 'text-yellow-500'
+                            : 'text-muted-foreground'
+                      )}
+                      title={`~${estimatedTokens.toLocaleString()} estimated tokens in conversation`}
+                    >
+                      ~
+                      {estimatedTokens >= 1000
+                        ? `${(estimatedTokens / 1000).toFixed(1)}k`
+                        : estimatedTokens}{' '}
+                      tokens
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
                   </span>

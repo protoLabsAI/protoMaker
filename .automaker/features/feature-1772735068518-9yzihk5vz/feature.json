@@ -1,0 +1,34 @@
+{
+  "category": "Claude API Context Editing",
+  "description": "**Milestone:** Claude API Context Editing\n\nAdd compact_20260112 beta support as a final safety net. When estimated input tokens exceed 130K, enable the compact beta header. Add monitoring to log when compaction activates and how much it reduces. This is the last line of defense before a crash.\n\n**Files to Modify:**\n- apps/server/src/routes/chat/index.ts\n\n**Acceptance Criteria:**\n- [ ] Compact beta header added when estimated tokens exceed threshold\n- [ ] Compaction activation is logged with before/after token estimates\n- [ ] Chat survives 100+ message sessions without crashing\n- [ ] No regression in short chat sessions\n- [ ] TypeScript compiles cleanly\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Server-side compaction safety net",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772735068515-merurtsy1",
+  "branchName": "feature/claude-api-context-server-side",
+  "isFoundation": false,
+  "projectSlug": "ava-chat-context-window-management",
+  "id": "feature-1772735068518-9yzihk5vz",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Claude API Context Editing\n\nAdd compact_20260112 beta support as a final safety net. When estimated input tokens exceed 130K, enable the compact beta header. Add monitoring to log when compaction activates and how much it reduces. This is the last line of defense before a crash.\n\n**Files to Modify:**\n- apps/server/src/routes/chat/index.ts\n\n**Acceptance Criteria:**\n- [ ] Compact beta header added when estimated tokens exceed threshold\n- [ ] Compaction activation is logged with before/after token estimates\n- [ ] Chat survives 100+ message sessions without crashing\n- [ ] No regression in short chat sessions\n- [ ] TypeScript compiles cleanly\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-05T18:24:28.518Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T18:24:28.518Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T18:24:28.518Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772735068511-vfv2vv3af",
+    "feature-1772735068513-6w511kkim",
+    "feature-1772735068516-e9ufgm36p"
+  ]
+}

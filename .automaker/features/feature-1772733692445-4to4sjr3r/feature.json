@@ -1,0 +1,25 @@
+{
+  "category": "Uncategorized",
+  "description": "## Context\nTwo quick wins that should ship together. Both live in the message render component.\n\n## Part 1: sanitizeStreamingMarkdown()\nCreate a utility function that makes partial markdown safe to render mid-stream by closing unclosed syntax constructs.\n\n**Location:** `apps/ui/src/lib/streaming-markdown.ts`\n\n```ts\nexport function sanitizeStreamingMarkdown(text: string): string {\n  // Close unclosed fenced code blocks\n  const fences = (text.match(/```/g) || []).length;\n  if (fences % 2 !== 0) return text + '\\n```';\n\n  // Close unclosed inline code\n  const backticks = (text.match(/(?<!`)`(?!`)/g) || []).length;\n  if (backticks % 2 !== 0) return text + '`';\n\n  // Close unclosed bold\n  const boldMarkers = (text.match(/\\*\\*/g) || []).length;\n  if (boldMarkers % 2 !== 0) return text + '**';\n\n  return text;\n}\n```\n\nExport and unit test with Vitest: unclosed fence, unclosed inline code, unclosed bold, clean input (no-op).\n\n## Part 2: Plugin array memoization fix\nFind all usages of react-markdown in `apps/ui/src/` and ensure remarkPlugins and rehypePlugins arrays are hoisted to module scope (not inline).\n\n**Wrong:**\n```tsx\n<ReactMarkdown remarkPlugins={[remarkGfm]}>\n```\n\n**Correct:**\n```tsx\nconst REMARK_PLUGINS = [remarkGfm]; // module scope\n\n<ReactMarkdown remarkPlugins={REMARK_PLUGINS}>\n```\n\nInline array refs cause react-markdown to remount the full component tree on every token update.\n\nFix all occurrences. No new files needed beyond the utility.\n\n## Acceptance Criteria\n- `sanitizeStreamingMarkdown` exported from `apps/ui/src/lib/streaming-markdown.ts`\n- Unit tests pass for all 4 cases\n- Zero inline `remarkPlugins={[...]}` or `rehypePlugins={[...]}` in the codebase\n- TypeScript compiles clean",
+  "title": "sanitizeStreamingMarkdown() helper + react-markdown plugin memoization fix",
+  "priority": 3,
+  "status": "backlog",
+  "id": "feature-1772733692445-4to4sjr3r",
+  "branchName": "feature/sanitizestreamingmarkdown-helper-react",
+  "descriptionHistory": [
+    {
+      "description": "## Context\nTwo quick wins that should ship together. Both live in the message render component.\n\n## Part 1: sanitizeStreamingMarkdown()\nCreate a utility function that makes partial markdown safe to render mid-stream by closing unclosed syntax constructs.\n\n**Location:** `apps/ui/src/lib/streaming-markdown.ts`\n\n```ts\nexport function sanitizeStreamingMarkdown(text: string): string {\n  // Close unclosed fenced code blocks\n  const fences = (text.match(/```/g) || []).length;\n  if (fences % 2 !== 0) return text + '\\n```';\n\n  // Close unclosed inline code\n  const backticks = (text.match(/(?<!`)`(?!`)/g) || []).length;\n  if (backticks % 2 !== 0) return text + '`';\n\n  // Close unclosed bold\n  const boldMarkers = (text.match(/\\*\\*/g) || []).length;\n  if (boldMarkers % 2 !== 0) return text + '**';\n\n  return text;\n}\n```\n\nExport and unit test with Vitest: unclosed fence, unclosed inline code, unclosed bold, clean input (no-op).\n\n## Part 2: Plugin array memoization fix\nFind all usages of react-markdown in `apps/ui/src/` and ensure remarkPlugins and rehypePlugins arrays are hoisted to module scope (not inline).\n\n**Wrong:**\n```tsx\n<ReactMarkdown remarkPlugins={[remarkGfm]}>\n```\n\n**Correct:**\n```tsx\nconst REMARK_PLUGINS = [remarkGfm]; // module scope\n\n<ReactMarkdown remarkPlugins={REMARK_PLUGINS}>\n```\n\nInline array refs cause react-markdown to remount the full component tree on every token update.\n\nFix all occurrences. No new files needed beyond the utility.\n\n## Acceptance Criteria\n- `sanitizeStreamingMarkdown` exported from `apps/ui/src/lib/streaming-markdown.ts`\n- Unit tests pass for all 4 cases\n- Zero inline `remarkPlugins={[...]}` or `rehypePlugins={[...]}` in the codebase\n- TypeScript compiles clean",
+      "timestamp": "2026-03-05T18:01:32.449Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T18:01:32.449Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T18:01:32.449Z",
+      "reason": "Feature created"
+    }
+  ]
+}

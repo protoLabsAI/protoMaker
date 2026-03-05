@@ -1,0 +1,120 @@
+{
+  "slug": "ava-chat-context-window-management",
+  "title": "Ava Chat Context Window Management",
+  "goal": "Implement a 3-layer context management strategy for the Ava chat to prevent context window exhaustion. Layer 1: Tool result compaction (truncate/summarize large tool results before they enter conversation). Layer 2: Claude API native context_management with tool result clearing. Layer 3: Server-side compaction as safety net.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-tool-result-compaction",
+      "title": "Tool Result Compaction",
+      "description": "Build the compaction layer that processes tool results before they enter conversation history. This is the highest-impact change — most token bloat comes from verbose tool results.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "compacttoolresult-utility-and-per-tool-policies",
+          "title": "compactToolResult utility and per-tool policies",
+          "description": "Create a compactToolResult() function in apps/server/src/routes/chat/ that accepts a tool name and result object, applies size-based and tool-specific compaction rules, and returns a compact version. Add per-tool policies: list_features keeps only id/title/status, get_board_summary keeps counts only, get_agent_output truncates to last 2000 chars, etc. Wire it into the chat route so all tool results pass through compaction before being added to conversation history.",
+          "filesToModify": [
+            "apps/server/src/routes/chat/tool-compaction.ts",
+            "apps/server/src/routes/chat/index.ts",
+            "apps/server/src/routes/chat/ava-tools.ts"
+          ],
+          "acceptanceCriteria": [
+            "compactToolResult() reduces list_features output by 80%+",
+            "compactToolResult() reduces get_board_summary by 50%+",
+            "All 44 tools have a compaction policy (even if pass-through)",
+            "Chat route wires compaction into tool result flow",
+            "Existing tool functionality is not broken",
+            "TypeScript compiles cleanly"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772735068511-vfv2vv3af"
+        },
+        {
+          "number": 2,
+          "name": "message-level-compaction-and-token-budget",
+          "title": "Message-level compaction and token budget",
+          "description": "Add a message-level compaction pass that runs before sending messages to Claude. Estimate token count per message, and when total exceeds a budget (e.g. 100K), compact older messages by summarizing tool results to one-line summaries and truncating long assistant responses. Add the estimateTokens() helper and compactMessageHistory() function.",
+          "filesToModify": [
+            "apps/server/src/routes/chat/message-compaction.ts",
+            "apps/server/src/routes/chat/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "estimateTokens() provides reasonable estimates for message arrays",
+            "compactMessageHistory() reduces token count below budget threshold",
+            "Recent messages (last 10) are preserved verbatim",
+            "Older tool results are replaced with one-line summaries",
+            "Chat remains coherent after compaction",
+            "TypeScript compiles cleanly"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772735068513-6w511kkim"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772735068509-ae0dnhqcb"
+    },
+    {
+      "number": 2,
+      "slug": "02-claude-api-context-editing",
+      "title": "Claude API Context Editing",
+      "description": "Wire Claude's native context management features as a second defense layer. This lets Claude itself manage context when our compaction isn't enough.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "wire-provideroptions-for-context-management",
+          "title": "Wire providerOptions for context management",
+          "description": "Add providerOptions.anthropic to the streamText() call in the chat route. Enable context_management with clear_tool_uses_20250919 policy. Add the required beta header context-management-2025-06-27. Test that Claude automatically clears old tool use/result pairs when context is tight.",
+          "filesToModify": [
+            "apps/server/src/routes/chat/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "providerOptions.anthropic.context_management is set in streamText call",
+            "Beta header is included in API requests",
+            "Claude clears old tool results automatically when context is tight",
+            "No regression in normal chat flow",
+            "TypeScript compiles cleanly"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772735068516-e9ufgm36p"
+        },
+        {
+          "number": 2,
+          "name": "server-side-compaction-safety-net",
+          "title": "Server-side compaction safety net",
+          "description": "Add compact_20260112 beta support as a final safety net. When estimated input tokens exceed 130K, enable the compact beta header. Add monitoring to log when compaction activates and how much it reduces. This is the last line of defense before a crash.",
+          "filesToModify": [
+            "apps/server/src/routes/chat/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Compact beta header added when estimated tokens exceed threshold",
+            "Compaction activation is logged with before/after token estimates",
+            "Chat survives 100+ message sessions without crashing",
+            "No regression in short chat sessions",
+            "TypeScript compiles cleanly"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772735068518-9yzihk5vz"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772735068515-merurtsy1"
+    }
+  ],
+  "prd": {
+    "situation": "The Ava chat in protoLabs Studio uses Vercel AI SDK v6 streamText() with Claude models. Every chat request sends the full conversation history. Tool results (board summaries, feature lists, agent outputs, metrics) are included verbatim, bloating the payload. At 82 messages the payload hits ~150K+ tokens and crashes with EPIPE errors.",
+    "problem": "Tool results dominate context consumption — a single list_features call returns 68 features at ~500 tokens each (34K tokens). Board summaries, agent outputs, and metrics compound this. The chat becomes unusable after 15-20 tool-heavy exchanges. There is no compaction, summarization, or context editing in place.",
+    "approach": "Three defensive layers: (1) Tool Result Compaction — a compactToolResult() utility that truncates/summarizes tool results before they enter the conversation history, with per-tool policies for what to keep vs discard. (2) Claude API Context Editing — wire providerOptions.anthropic.context_management with clear_tool_uses_20250919 to let Claude automatically clear old tool results. (3) Server-Side Compaction — use compact_20260112 beta as a safety net when estimated tokens exceed a threshold.",
+    "results": "Chat sessions survive 100+ messages without crashing. Tool-heavy workflows (board triage, agent monitoring, PR management) remain responsive throughout long sessions. Token usage stays under 120K even in extended sessions.",
+    "constraints": [
+      "Must work with Vercel AI SDK v6 streamText()",
+      "Must not break existing tool functionality",
+      "Must preserve recent tool results for conversation coherence",
+      "Must be backwards compatible with existing chat sessions",
+      "Keep implementation simple — no external services or databases"
+    ]
+  },
+  "createdAt": "2026-03-05T18:24:20.043Z",
+  "updatedAt": "2026-03-05T18:24:28.534Z"
+}

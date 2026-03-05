@@ -1,0 +1,60 @@
+{
+  "category": "Uncategorized",
+  "description": "## Problem\n\n`check_pr_status` is a synchronous polling tool. Ava has to repeatedly call it in a loop, burning turns and blocking conversation while waiting for CI to complete. This doesn't scale with multiple PRs in flight and makes Ava appear stuck.\n\n## Solution\n\nBuild a background PR watcher that fires a push notification into the active Ava chat session when a PR's check state changes. Ava can then respond in context — immediately if she's waiting, or when she next processes messages if she's doing other work.\n\n## Components\n\n### 1. `PRWatcherService` (apps/server/src/services/)\n- Registry of watched PRs: `Map<prNumber, { sessionId, watchedSince, lastStatus }>`\n- Polling loop (configurable interval, default 30s) as primary mechanism\n- GitHub `check_suite` / `check_run` webhook events as secondary trigger (faster when available)\n- Emits internal `pr_watch_resolved` event when all checks pass OR any check fails\n- Auto-removes watch after resolution or timeout (configurable, default 30min)\n\n### 2. GitHub webhook handler\n- Register handler for `check_run` completed events in existing GitHub webhook route\n- On receipt: check if PR is in the watcher registry, trigger resolution if all checks pass\n\n### 3. `watch_pr` MCP/chat tool\n- Accepts: `prNumber`, `sessionId` (injected server-side from auth context)\n- Returns immediately with `{ watching: true, prNumber }`\n- On resolution: server pushes WebSocket event to the session: `{ type: 'pr_watch_resolved', prNumber, status: 'passed' | 'failed', checks: [...] }`\n\n### 4. Ava chat surface wiring\n- WebSocket client in UI receives `pr_watch_resolved` events\n- Injects as a new message into the active chat session\n- Ava processes it and responds: merge, escalate, or report as appropriate\n\n## Acceptance Criteria\n- `watch_pr(1820)` returns immediately\n- When all checks on PR #1820 pass, Ava receives a push notification in the active session without any polling\n- If a check fails, Ava is notified with which check failed\n- Watch auto-expires after 30 minutes if not resolved\n- Polling fallback works in environments without GitHub webhook inbound access\n- Existing `check_pr_status` tool remains available for one-off manual checks",
+  "title": "Background PR watcher with Ava chat push notification",
+  "priority": 2,
+  "status": "backlog",
+  "id": "feature-1772732993802-bu72scwfn",
+  "branchName": "feature/background-pr-watcher-with-ava-chat",
+  "descriptionHistory": [
+    {
+      "description": "## Problem\n\n`check_pr_status` is a synchronous polling tool. Ava has to repeatedly call it in a loop, burning turns and blocking conversation while waiting for CI to complete. This doesn't scale with multiple PRs in flight and makes Ava appear stuck.\n\n## Solution\n\nBuild a background PR watcher that fires a push notification into the active Ava chat session when a PR's check state changes. Ava can then respond in context — immediately if she's waiting, or when she next processes messages if she's doing other work.\n\n## Components\n\n### 1. `PRWatcherService` (apps/server/src/services/)\n- Registry of watched PRs: `Map<prNumber, { sessionId, watchedSince, lastStatus }>`\n- Polling loop (configurable interval, default 30s) as primary mechanism\n- GitHub `check_suite` / `check_run` webhook events as secondary trigger (faster when available)\n- Emits internal `pr_watch_resolved` event when all checks pass OR any check fails\n- Auto-removes watch after resolution or timeout (configurable, default 30min)\n\n### 2. GitHub webhook handler\n- Register handler for `check_run` completed events in existing GitHub webhook route\n- On receipt: check if PR is in the watcher registry, trigger resolution if all checks pass\n\n### 3. `watch_pr` MCP/chat tool\n- Accepts: `prNumber`, `sessionId` (injected server-side from auth context)\n- Returns immediately with `{ watching: true, prNumber }`\n- On resolution: server pushes WebSocket event to the session: `{ type: 'pr_watch_resolved', prNumber, status: 'passed' | 'failed', checks: [...] }`\n\n### 4. Ava chat surface wiring\n- WebSocket client in UI receives `pr_watch_resolved` events\n- Injects as a new message into the active chat session\n- Ava processes it and responds: merge, escalate, or report as appropriate\n\n## Acceptance Criteria\n- `watch_pr(1820)` returns immediately\n- When all checks on PR #1820 pass, Ava receives a push notification in the active session without any polling\n- If a check fails, Ava is notified with which check failed\n- Watch auto-expires after 30 minutes if not resolved\n- Polling fallback works in environments without GitHub webhook inbound access\n- Existing `check_pr_status` tool remains available for one-off manual checks",
+      "timestamp": "2026-03-05T17:49:53.803Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T17:49:53.804Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T17:49:53.804Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-05T17:56:46.188Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-05T18:00:36.366Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-05T18:00:44.497Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-05T18:00:40.072Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "6e59f85e-0896-4b88-844b-301fbc691cfa",
+  "executionHistory": [
+    {
+      "id": "fc62ab0e-8bc8-47f8-9d9c-2855723c7216",
+      "startedAt": "2026-03-05T17:56:46.667Z",
+      "completedAt": "2026-03-05T18:00:37.137Z",
+      "durationMs": 230470,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ]
+}

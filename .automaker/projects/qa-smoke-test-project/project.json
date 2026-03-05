@@ -1,0 +1,9 @@
+{
+  "slug": "qa-smoke-test-project",
+  "title": "QA Smoke Test Project",
+  "goal": "Temporary project created during Ava chat tools smoke test. Safe to delete after confirming create_project_plan tool is functional.",
+  "status": "drafting",
+  "milestones": [],
+  "createdAt": "2026-03-05T17:33:00.232Z",
+  "updatedAt": "2026-03-05T17:33:00.232Z"
+}

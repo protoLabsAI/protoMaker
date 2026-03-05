@@ -214,6 +214,9 @@ export type EventType =
   | 'project:prd:changes-requested'
   // CoS intake events
   | 'cos:prd-submitted'
+  // PR watcher events (background CI monitor for Ava)
+  | 'pr:watch-added'
+  | 'pr:watch-resolved'
   // PR feedback loop events (EM dev lifecycle)
   | 'pr:feedback-received'
   | 'pr:changes-requested'
@@ -734,6 +737,21 @@ export interface EventPayloadMap {
     traceId: string;
     phase?: PipelinePhase;
     spanId?: string;
+    timestamp: string;
+  };
+
+  // PR watcher events (background CI monitor for Ava)
+  'pr:watch-added': {
+    prNumber: number;
+    projectPath: string;
+    sessionId?: string;
+  };
+  'pr:watch-resolved': {
+    prNumber: number;
+    projectPath: string;
+    sessionId?: string;
+    status: 'passed' | 'failed';
+    checks: Array<{ name: string; conclusion: string }>;
     timestamp: string;
   };
 

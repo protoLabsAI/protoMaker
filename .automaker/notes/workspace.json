@@ -3,7 +3,8 @@
   "activeTabId": "49ce8e0b-b2d9-43a9-8073-535698843379",
   "tabOrder": [
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
-    "49ce8e0b-b2d9-43a9-8073-535698843379"
+    "49ce8e0b-b2d9-43a9-8073-535698843379",
+    "6c253133-2cec-4659-aee4-d7d26a29fe61"
   ],
   "tabs": {
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08": {
@@ -35,7 +36,22 @@
         "wordCount": 102,
         "characterCount": 671
       }
+    },
+    "6c253133-2cec-4659-aee4-d7d26a29fe61": {
+      "id": "6c253133-2cec-4659-aee4-d7d26a29fe61",
+      "name": "Ava Chat QA",
+      "content": "<h2>Ava Chat QA</h2><p>Smoke test in progress. All read tools passing. Mutating tools passing. Last updated during QA run on 2026-03-05.</p>",
+      "permissions": {
+        "agentRead": true,
+        "agentWrite": true
+      },
+      "metadata": {
+        "createdAt": 1772731864401,
+        "updatedAt": 1772731974528,
+        "wordCount": 20,
+        "characterCount": 990
+      }
     }
   },
-  "workspaceVersion": 15
+  "workspaceVersion": 17
 }
