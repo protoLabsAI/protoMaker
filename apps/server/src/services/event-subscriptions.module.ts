@@ -11,6 +11,7 @@ const logger = createLogger('Server:Wiring');
 export function register(container: ServiceContainer): void {
   const { events, featureLoader, autoModeService, escalationRouter } = container;
 
+  // TODO: migrate to bus.on() — feature:stopped, feature:deleted, escalation:acknowledged
   // feature:stopped → reset stale in_progress features to backlog immediately
   events.subscribe((type, payload) => {
     if (type !== 'feature:stopped') return;

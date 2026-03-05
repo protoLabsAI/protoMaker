@@ -74,6 +74,7 @@ export class WorktreeLifecycleService {
     if (this.initialized) return;
     this.initialized = true;
 
+    // TODO: migrate to bus.on()
     this.events.subscribe((type, payload) => {
       // Clean up worktree after PR is merged
       if (type === 'feature:pr-merged') {

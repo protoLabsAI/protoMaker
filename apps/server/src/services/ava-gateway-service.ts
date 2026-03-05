@@ -182,6 +182,7 @@ export class AvaGatewayService {
       throw new Error('EventEmitter not initialized. Call initialize() first.');
     }
 
+    // TODO: migrate to bus.on()
     this.unsubscribe = this.events.subscribe((type, payload) => {
       this.handleCriticalEvent(type, payload);
     });

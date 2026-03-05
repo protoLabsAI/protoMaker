@@ -15,7 +15,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import type { EscalationSignal, EscalationChannel } from '@protolabsai/types';
-import { EscalationSeverity } from '@protolabsai/types';
+import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
@@ -141,13 +141,27 @@ export class EscalationRouter {
   setEventEmitter(events: EventEmitter): void {
     this.events = events;
 
-    events.subscribe((type, payload) => {
-      if (type === 'escalation:signal-received') {
-        void this.routeSignal(payload as EscalationSignal);
-      }
+    events.on('escalation:signal-received', (payload) => {
+      void this.routeSignal(payload as unknown as EscalationSignal);
     });
 
-    logger.info('EscalationRouter listening for escalation:signal-received events');
+    events.on('feature:blocked', (payload) => {
+      const featureId = payload['featureId'] as string | undefined;
+      const featureTitle = payload['featureTitle'] as string | undefined;
+      const reason = payload['reason'] as string | undefined;
+      void this.routeSignal({
+        type: 'feature-blocked',
+        source: EscalationSource.lead_engineer_escalation,
+        severity: EscalationSeverity.medium,
+        deduplicationKey: `feature-blocked:${featureId ?? 'unknown'}`,
+        timestamp: new Date().toISOString(),
+        context: { featureId, featureTitle, reason },
+      });
+    });
+
+    logger.info(
+      'EscalationRouter listening for escalation:signal-received and feature:blocked events'
+    );
   }
 
   /**

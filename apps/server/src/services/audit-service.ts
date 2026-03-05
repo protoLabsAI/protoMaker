@@ -90,6 +90,7 @@ export class AuditService {
     this.initialized = true;
     this.authorityService = authorityService;
 
+    // TODO: migrate to bus.on()
     this.events.subscribe((type, payload) => {
       const data = payload as Record<string, unknown>;
       const projectPath = data.projectPath as string | undefined;
