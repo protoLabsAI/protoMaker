@@ -242,6 +242,13 @@ const SLEEP_INTERVAL_IDLE_MS = 30000; // Sustained idle polling after idle event
 const SLEEP_INTERVAL_NORMAL_MS = 2000; // Normal loop iteration delay
 const SLEEP_INTERVAL_ERROR_MS = 5000; // Backoff after a loop iteration error
 
+/** Structured outcome from an auto-loop feature execution attempt. */
+interface PipelineResult {
+  outcome: 'completed' | 'escalated' | 'needs_retry';
+  retryAfterMs?: number;
+  errorInfo?: ReturnType<typeof classifyError>;
+}
+
 export class AutoModeService {
   private events: EventEmitter;
   private typedEventBus: TypedEventBus;
@@ -1226,30 +1233,57 @@ export class AutoModeService {
                 true
               );
 
-          executionPromise
-            .then(() => {
-              // Remove from starting set once execution completes (successfully or not)
-              clearTimeout(startingTimeout);
-              projectState.startingFeatures.delete(nextFeature.id);
-            })
-            .catch((error: unknown) => {
-              logger.error(`Feature ${nextFeature.id} error:`, error);
-              // Remove from starting set on error
-              clearTimeout(startingTimeout);
-              projectState.startingFeatures.delete(nextFeature.id);
-              // Notify circuit breaker — without this, LE failures loop forever
+          // Convert the raw execution promise into a structured PipelineResult so all
+          // outcomes — success, escalation, and retryable failures — are handled
+          // uniformly in the single .then() handler below.
+          const pipelineResultPromise: Promise<PipelineResult> = executionPromise
+            .then((): PipelineResult => ({ outcome: 'completed' }))
+            .catch((error: unknown): PipelineResult => {
               const errorInfo = classifyError(error);
-              if (!errorInfo.isCancellation) {
-                const shouldPause = this.trackFailureAndCheckPauseForProject(
-                  projectPath,
-                  branchName,
-                  errorInfo
-                );
-                if (shouldPause) {
-                  this.signalShouldPauseForProject(projectPath, branchName, errorInfo);
-                }
+              if (errorInfo.isRateLimit) {
+                const retryAfterMs = errorInfo.retryAfter
+                  ? errorInfo.retryAfter * 1000
+                  : SLEEP_INTERVAL_ERROR_MS;
+                return { outcome: 'needs_retry', retryAfterMs, errorInfo };
               }
+              return { outcome: 'escalated', errorInfo };
             });
+
+          pipelineResultPromise.then((result: PipelineResult) => {
+            clearTimeout(startingTimeout);
+            switch (result.outcome) {
+              case 'completed':
+                projectState.startingFeatures.delete(nextFeature.id);
+                this.recordSuccessForProject(projectPath, branchName);
+                break;
+              case 'escalated': {
+                projectState.startingFeatures.delete(nextFeature.id);
+                const errorInfo = result.errorInfo!;
+                logger.error(`[AutoLoop] Feature ${nextFeature.id} escalated:`, errorInfo);
+                if (!errorInfo.isCancellation) {
+                  const shouldPause = this.trackFailureAndCheckPauseForProject(
+                    projectPath,
+                    branchName,
+                    errorInfo
+                  );
+                  if (shouldPause) {
+                    this.signalShouldPauseForProject(projectPath, branchName, errorInfo);
+                  }
+                }
+                break;
+              }
+              case 'needs_retry': {
+                const delay = result.retryAfterMs ?? SLEEP_INTERVAL_ERROR_MS;
+                logger.info(
+                  `[AutoLoop] Feature ${nextFeature.id} scheduled for retry in ${delay}ms`
+                );
+                setTimeout(() => {
+                  projectState.startingFeatures.delete(nextFeature.id);
+                }, delay);
+                break;
+              }
+            }
+          });
 
           // Brief sleep to ensure proper sequencing
           await this.sleep(100);
