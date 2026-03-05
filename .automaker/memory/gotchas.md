@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 756
-  referenced: 242
-  successfulFeatures: 242
+  loaded: 771
+  referenced: 243
+  successfulFeatures: 243
 ---
 # gotchas
 
@@ -488,3 +488,13 @@ usageStats:
 - **Situation:** Modern repos use checks[], older repos only have contexts[]. Single API call returns both fields. Calling code must handle both to avoid empty required-checks list.
 - **Root cause:** GitHub API evolved. Branch protection rules predate the checks API redesign. No single format covers all repos.
 - **How to avoid:** Explicit fallback logic is verbose but safe. Costs one extra union type check. Without it, old repos silently fail CI check detection.
+
+#### [Pattern] Lock-Free Concurrency Pattern: Uses Set<featureId> (startingFeatures) + timeout instead of explicit Mutex/Lock for preventing concurrent execution of same feature (2026-03-05)
+- **Problem solved:** Needs to prevent race condition where FeatureScheduler tries to run the same feature twice if previous execution hangs or runs slowly
+- **Why this works:** Set-based tracking is simpler than explicit locks (no deadlock risk, no lock ordering issues). Timeout provides automatic cleanup if feature gets stuck (self-healing). Leverages async event loop semantics naturally.
+- **Trade-offs:** Gained: Simplicity, automatic cleanup, no deadlock risk. Lost: Implicit locking semantics (must understand Set-based tracking pattern), no explicit lock visibility.
+
+#### [Gotcha] startingTimeout cleanup timer must reference the correct feature state: timeout must clean up ONLY if feature is still in startingFeatures, else legitimate completion already removed it (2026-03-05)
+- **Situation:** Safety mechanism for hung features: setTimeout cleanup. Risk: Race between legitimate completion and timeout firing, causing double cleanup or incorrect state.
+- **Root cause:** Without checking Set membership before cleanup, timeout firing after legitimate completion could corrupt state machine (double removal, or re-lock an already-running feature). The check prevents this.
+- **How to avoid:** Gained: Safety from race conditions, self-healing on hangs. Lost: Slight complexity in cleanup logic (must check Set membership).
