@@ -12,7 +12,7 @@ import type { HITLFormRequestInput } from './hitl-form.js';
 /**
  * Handles HITL interactions for a specific communication channel.
  * Implementations route approvals, forms, and notifications to the
- * appropriate external system (UI, Linear, Discord, GitHub, MCP).
+ * appropriate external system (UI, Discord, GitHub, MCP).
  */
 export interface ChannelHandler {
   /** The channel this handler is registered for */

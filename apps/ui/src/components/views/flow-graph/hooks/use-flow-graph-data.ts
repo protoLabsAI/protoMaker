@@ -117,7 +117,7 @@ function getServiceStatus(
       return {
         status: isActive ? 'active' : 'idle',
         throughput: 0, // TODO: Show real signal count when available
-        statusLine: isActive ? 'Monitoring sources' : 'Linear, GitHub, Discord, MCP',
+        statusLine: isActive ? 'Monitoring sources' : 'GitHub, Discord, MCP',
       };
     }
     case 'triage': {
@@ -475,12 +475,10 @@ export function useFlowGraphData(
     // 2. Integration nodes
     // Server returns different field names per integration:
     //   discord: { connected, botOnline }
-    //   linear:  { connected, oauthValid }
     //   github:  { authenticated }
     const integrations = integrationStatus as
       | {
           discord?: { connected?: boolean; botOnline?: boolean };
-          linear?: { connected?: boolean; oauthValid?: boolean };
           github?: { authenticated?: boolean };
         }
       | undefined;
@@ -488,7 +486,7 @@ export function useFlowGraphData(
     const integrationDefs: Array<{
       id: string;
       label: string;
-      type: 'github' | 'linear' | 'discord';
+      type: 'github' | 'discord';
       isConnected: () => boolean;
       getStatus: () => string;
     }> = [
@@ -498,18 +496,6 @@ export function useFlowGraphData(
         type: 'github',
         isConnected: () => integrations?.github?.authenticated ?? false,
         getStatus: () => (integrations?.github?.authenticated ? 'authenticated' : 'offline'),
-      },
-      {
-        id: NODE_IDS.linear,
-        label: 'Linear',
-        type: 'linear',
-        isConnected: () => integrations?.linear?.connected ?? false,
-        getStatus: () =>
-          integrations?.linear?.connected
-            ? integrations?.linear?.oauthValid
-              ? 'oauth'
-              : 'connected'
-            : 'offline',
       },
       {
         id: NODE_IDS.discord,

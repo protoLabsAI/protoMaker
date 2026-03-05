@@ -20,8 +20,6 @@ export * from './domains/hitl/index.js';
 // DynamicStructuredTool factory families
 export { createBoardTools } from './board-tools.js';
 export type { BoardDeps } from './board-tools.js';
-export { createLinearTools } from './linear-tools.js';
-export type { LinearDeps, LinearIssue } from './linear-tools.js';
 export { createDiscordTools } from './discord-tools.js';
 export type { DiscordDeps, DiscordMessage } from './discord-tools.js';
 export { createGitHubTools } from './github-tools.js';

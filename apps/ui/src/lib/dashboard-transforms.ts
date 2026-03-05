@@ -35,7 +35,7 @@ export interface Gauge {
 export interface ActivityItem {
   id: string;
   icon: string;
-  source: 'discord' | 'linear' | 'github' | 'agent';
+  source: 'discord' | 'github' | 'agent';
   message: string;
   timestamp: string;
 }
@@ -386,7 +386,6 @@ function getEventIcon(type: string): string {
     agent: '🤖',
     github: '📦',
     discord: '💬',
-    linear: '📋',
     error: '❌',
     success: '✅',
     warning: '⚠️',
@@ -399,11 +398,10 @@ function getEventIcon(type: string): string {
 /**
  * Maps event sources to ActivityItem source types
  */
-function mapEventSource(source: string): 'discord' | 'linear' | 'github' | 'agent' {
+function mapEventSource(source: string): 'discord' | 'github' | 'agent' {
   const normalized = source.toLowerCase();
 
   if (normalized.includes('discord')) return 'discord';
-  if (normalized.includes('linear')) return 'linear';
   if (normalized.includes('github') || normalized.includes('git')) return 'github';
 
   return 'agent';

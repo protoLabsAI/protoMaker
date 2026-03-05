@@ -3,8 +3,7 @@
  * POST /api/flows/project-planning/resume  - Resume flow after HITL checkpoint
  * GET  /api/flows/project-planning/status/:sessionId - Get planning session status
  *
- * These routes provide HTTP access to the project planning flow,
- * complementing the event-driven Linear integration.
+ * These routes provide HTTP access to the project planning flow.
  */
 
 import type { Request, Response } from 'express';
@@ -27,7 +26,6 @@ export interface PlanningResumeRequest {
 
 /**
  * Handler for starting a project planning flow via HTTP.
- * This triggers the same flow that Linear webhook events trigger.
  */
 export function createPlanningExecuteHandler(_planningService: ProjectPlanningService) {
   return async (req: Request, res: Response): Promise<void> => {
@@ -53,8 +51,8 @@ export function createPlanningExecuteHandler(_planningService: ProjectPlanningSe
       // This is better than duplicating the flow creation logic.
       res.json({
         success: true,
-        message: `Project planning flow initiated for "${name}". Use the Linear agent session to interact with HITL checkpoints.`,
-        note: 'The planning flow is managed via Linear agent sessions. Use the /status endpoint to check progress.',
+        message: `Project planning flow initiated for "${name}". Use HITL checkpoints to interact with the flow.`,
+        note: 'Use the /status endpoint to check progress.',
       });
     } catch (error) {
       logError(error, 'Execute project planning flow failed');

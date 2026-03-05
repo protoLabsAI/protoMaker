@@ -46,8 +46,8 @@ describe('FeatureClassifier', () => {
       });
 
       const result = await classifyFeature(
-        'Add webhook handler for Linear events',
-        'Create Express route to receive and process Linear webhook payloads',
+        'Add webhook handler for GitHub events',
+        'Create Express route to receive and process GitHub webhook payloads',
         '/test'
       );
 

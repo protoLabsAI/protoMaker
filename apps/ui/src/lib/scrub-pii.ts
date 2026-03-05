@@ -11,9 +11,6 @@ const PII_PATTERNS: Array<[RegExp, string]> = [
   // Anthropic API keys
   [/sk-ant-[a-zA-Z0-9-]+/g, 'sk-ant-***'],
 
-  // Linear API tokens
-  [/lin_api_[a-zA-Z0-9]+/g, 'lin_api_***'],
-
   // GitHub personal access tokens
   [/ghp_[a-zA-Z0-9]+/g, 'ghp_***'],
 

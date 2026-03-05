@@ -279,19 +279,6 @@ assignments: {
 }
 ```
 
-### Linear Routing
-
-```typescript
-assignments: {
-  linear: {
-    teamKey: 'PROTO',
-    projectIds: ['proj-123'],
-    labelFilter: ['security'],     // Only security-labeled issues
-    assigneeFilter: ['your-username'] // Only issues assigned to you
-  }
-}
-```
-
 ### GitHub Routing
 
 ```typescript

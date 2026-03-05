@@ -23,7 +23,6 @@ import { getMattPrompt } from './agents/matt.js';
 import { getSamPrompt } from './agents/sam.js';
 import { getCindiPrompt } from './agents/cindi.js';
 import { getJonPrompt } from './agents/jon.js';
-import { getLinearSpecialistPrompt } from './agents/linear-specialist.js';
 import { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 import { getBoardJanitorPrompt } from './agents/board-janitor.js';
 import { getFrankPrompt } from './agents/frank.js';
@@ -109,7 +108,6 @@ registerPrompt('product-manager', (config) =>
 registerPrompt('engineering-manager', (config) =>
   getEngineeringManagerPrompt({
     projectPath: config.projectPath,
-    linearProjects: (config.linearProjects as string[]) ?? [],
     contextFiles: config.contextFiles,
   })
 );
@@ -117,7 +115,6 @@ registerPrompt('engineering-manager', (config) =>
 registerPrompt('frontend-engineer', (config) =>
   getFrontendEngineerPrompt({
     projectPath: config.projectPath,
-    linearProjects: (config.linearProjects as string[]) ?? [],
     contextFiles: config.contextFiles,
   })
 );
@@ -125,7 +122,6 @@ registerPrompt('frontend-engineer', (config) =>
 registerPrompt('backend-engineer', (config) =>
   getBackendEngineerPrompt({
     projectPath: config.projectPath,
-    linearProjects: (config.linearProjects as string[]) ?? [],
     contextFiles: config.contextFiles,
   })
 );
@@ -133,7 +129,6 @@ registerPrompt('backend-engineer', (config) =>
 registerPrompt('devops-engineer', (config) =>
   getDevOpsEngineerPrompt({
     projectPath: config.projectPath,
-    linearProjects: (config.linearProjects as string[]) ?? [],
     contextFiles: config.contextFiles,
   })
 );
@@ -148,7 +143,6 @@ registerPrompt('qa-engineer', (config) =>
 registerPrompt('docs-engineer', (config) =>
   getDocsEngineerPrompt({
     projectPath: config.projectPath,
-    linearProjects: (config.linearProjects as string[]) ?? [],
     contextFiles: config.contextFiles,
   })
 );
@@ -168,9 +162,6 @@ registerPrompt('matt', (config) => getMattPrompt({ userProfile: config.userProfi
 registerPrompt('sam', (config) => getSamPrompt({ userProfile: config.userProfile }));
 registerPrompt('cindi', (config) => getCindiPrompt({ userProfile: config.userProfile }));
 registerPrompt('jon', (config) => getJonPrompt({ userProfile: config.userProfile }));
-registerPrompt('linear-specialist', (config) =>
-  getLinearSpecialistPrompt({ userProfile: config.userProfile })
-);
 registerPrompt('pr-maintainer', (config) =>
   getPrMaintainerPrompt({ userProfile: config.userProfile })
 );

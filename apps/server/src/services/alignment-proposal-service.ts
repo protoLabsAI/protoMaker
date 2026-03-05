@@ -26,7 +26,6 @@ const MILESTONE_DEFS: { title: string; gapIds: string[] }[] = [
       'typescript-setup',
       'typescript-strict',
       'typescript-composite',
-      'linear-mcp',
     ],
   },
   {

@@ -20,7 +20,6 @@ Server env vars used by the Express backend:
 - `PORT`, `HOST`, `HOSTNAME`
 - `ANTHROPIC_API_KEY`
 - `DISCORD_TOKEN` (server bot service)
-- `LINEAR_API_TOKEN`
 - `AUTOMAKER_API_KEY`
 - `AUTOMAKER_AUTO_LOGIN=true` (dev only)
 
@@ -29,7 +28,6 @@ MCP plugin env vars used by Claude Code tools:
 - `AUTOMAKER_ROOT` (path to project)
 - `AUTOMAKER_API_KEY` (must match server)
 - `DISCORD_BOT_TOKEN` (MCP Discord tools)
-- `LINEAR_API_KEY`
 
 ## Hard Rules
 
@@ -55,8 +53,6 @@ Both `.env` files are gitignored. If `git status` shows them as modified/untrack
 `DISCORD_TOKEN` (server) and `DISCORD_BOT_TOKEN` (plugin) may be the same token but are consumed differently:
 - Server: `DiscordBotService.initialize()` calls `client.login(token)`
 - Plugin: MCP Discord tools use REST API with token header
-
-Similarly `LINEAR_API_TOKEN` (server) and `LINEAR_API_KEY` (plugin) — same key, different consumers.
 
 ## Auto-Login
 `AUTOMAKER_AUTO_LOGIN=true` skips the login prompt in development. Disabled when `NODE_ENV=production`. Required for headless/automated operation.

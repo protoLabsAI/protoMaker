@@ -5,7 +5,7 @@
  * Each integration is described by an IntegrationDescriptor — a serializable manifest
  * that declares its config fields, category, scope, icon, and health check capability.
  *
- * Phase 1: Discord, Linear, GitHub, Twitch
+ * Phase 1: Discord, GitHub, Twitch
  * Phase 2: AI providers, MCP servers, Langfuse
  */
 
@@ -76,7 +76,7 @@ export type ConfigField = z.infer<typeof ConfigFieldSchema>;
 // ---------------------------------------------------------------------------
 
 export const IntegrationDescriptorSchema = z.object({
-  /** Unique identifier (e.g. 'discord', 'linear', 'github') */
+  /** Unique identifier (e.g. 'discord', 'github') */
   id: z.string().min(1),
   /** Display name */
   name: z.string().min(1),

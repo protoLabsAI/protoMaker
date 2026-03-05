@@ -196,8 +196,8 @@ export function createUpdateHandler(
         });
       }
 
-      // Emit feature:updated when title or description changed so LinearSyncService
-      // can propagate the changes to the linked Linear issue.
+      // Emit feature:updated when title or description changed so downstream
+      // services can react to metadata changes.
       if (events) {
         const titleChanged = updates.title !== undefined && currentFeature?.title !== updated.title;
         const descriptionChanged =

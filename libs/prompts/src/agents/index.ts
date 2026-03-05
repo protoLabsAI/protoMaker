@@ -23,7 +23,6 @@ export { getMattPrompt } from './matt.js';
 export { getSamPrompt } from './sam.js';
 export { getCindiPrompt } from './cindi.js';
 export { getJonPrompt } from './jon.js';
-export { getLinearSpecialistPrompt } from './linear-specialist.js';
 export { getPrMaintainerPrompt } from './pr-maintainer.js';
 export { getBoardJanitorPrompt } from './board-janitor.js';
 export { getFrankPrompt } from './frank.js';

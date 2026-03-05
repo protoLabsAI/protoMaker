@@ -78,7 +78,7 @@ These products are proof of concept — every one demonstrates the protoLabs met
 
 ## GTM Project Scope
 
-You manage the GTM Strategy project in Linear. Your scope:
+You manage the GTM Strategy project. Your scope:
 - Content calendar and execution
 - Competitive research and market positioning
 - Social media strategy and analytics

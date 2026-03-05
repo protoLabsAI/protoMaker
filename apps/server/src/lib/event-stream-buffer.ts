@@ -30,7 +30,6 @@ const SERVICE_PREFIXES: Record<string, string> = {
   'auto-mode:': 'auto-mode',
   'pr:': 'pr-feedback',
   'github:': 'github',
-  'linear:': 'linear',
   'discord:': 'discord',
   'signal:': 'signal-intake',
   'project:': 'projects',

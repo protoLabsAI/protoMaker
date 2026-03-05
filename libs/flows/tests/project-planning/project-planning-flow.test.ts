@@ -107,7 +107,7 @@ function createInitialState(): Partial<ProjectPlanningState> {
       description: 'A test project for the planning flow',
       teamId: 'team-1',
       teamName: 'Engineering',
-      url: 'https://linear.app/test/project/proj-123',
+      url: 'https://protolabs.studio/projects/proj-123',
     },
     sessionId: 'session-abc',
     projectPath: '/home/test/project',
@@ -239,7 +239,6 @@ describe('Project Planning Flow', () => {
 
     expect(result.stage).toBe('completed');
     expect(result.createdIssueIds.length).toBeGreaterThan(0);
-    expect(result.linearProjectId).toBe('proj-123');
   });
 
   it('should handle cancel at HITL checkpoint', async () => {

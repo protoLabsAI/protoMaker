@@ -1,39 +1,10 @@
 /**
- * External Integration Tools (Linear, Discord, Twitch, HITL)
+ * External Integration Tools (Discord, Twitch, HITL)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 export const integrationTools: Tool[] = [
-  {
-    name: 'sync_project_to_linear',
-    description:
-      'Sync Automaker project milestones to Linear project milestones. Creates/updates milestones, matches issues to milestones by epic title, assigns issues, and optionally deletes placeholder milestones. Idempotent — safe to re-run.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        projectSlug: {
-          type: 'string',
-          description: 'Project slug (e.g., "copilotkit-langgraph-side-panel")',
-        },
-        linearProjectId: {
-          type: 'string',
-          description: 'Linear project ID (optional, uses project.linearProjectId if not provided)',
-        },
-        cleanupPlaceholders: {
-          type: 'boolean',
-          description:
-            'Delete Linear milestones that do not match any Automaker milestone (default: false)',
-        },
-      },
-      required: ['projectPath', 'projectSlug'],
-    },
-  },
-
   {
     name: 'send_discord_dm',
     description:

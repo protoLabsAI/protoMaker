@@ -1,11 +1,11 @@
 /**
  * Project Planning Flow Types
  *
- * State annotations and types for the Linear-native project planning workflow.
+ * State annotations and types for the project planning workflow.
  *
  * Flow stages:
- *   receive → research → planning_doc → [HITL] → deep_research → research_doc → [HITL]
- *   → generate_prd → [HITL] → plan_milestones → [HITL] → create_issues → done
+ *   receive -> research -> planning_doc -> [HITL] -> deep_research -> research_doc -> [HITL]
+ *   -> generate_prd -> [HITL] -> plan_milestones -> [HITL] -> create_issues -> done
  *
  * Each HITL checkpoint pauses the flow and presents a document to the user
  * via the ConversationSurface. The user's response resumes the flow.
@@ -35,17 +35,17 @@ export type PlanningStage =
 // ─── Project Input ──────────────────────────────────────────────────────────
 
 export interface ProjectInput {
-  /** Linear project ID */
+  /** Project ID */
   projectId: string;
-  /** Project name from Linear */
+  /** Project name */
   name: string;
-  /** Project description from Linear */
+  /** Project description */
   description: string;
-  /** Linear team ID */
+  /** Team ID */
   teamId?: string;
-  /** Linear team name */
+  /** Team name */
   teamName?: string;
-  /** Linear project URL */
+  /** Project URL */
   url?: string;
 }
 
@@ -124,7 +124,7 @@ export interface ProjectPlanningState {
   /** Current stage in the planning pipeline */
   stage: PlanningStage;
 
-  /** The project input from Linear */
+  /** The project input */
   projectInput: ProjectInput;
 
   /** Agent session ID (for ConversationSurface interactions) */
@@ -173,11 +173,8 @@ export interface ProjectPlanningState {
 
   // ─── Issue Creation ───────────────────────────────────────
 
-  /** Linear issue IDs created from milestones */
+  /** Issue IDs created from milestones */
   createdIssueIds: string[];
-
-  /** Linear project ID for linking issues */
-  linearProjectId?: string;
 
   // ─── Trust Boundary ──────────────────────────────────────
 
@@ -235,7 +232,6 @@ export const ProjectPlanningStateAnnotation = Annotation.Root({
     reducer: appendReducer,
     default: () => [],
   }),
-  linearProjectId: Annotation<string | undefined>,
 
   // Trust boundary
   trustBoundaryResult: Annotation<'autoApprove' | 'requireReview' | undefined>,

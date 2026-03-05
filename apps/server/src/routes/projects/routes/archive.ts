@@ -1,5 +1,5 @@
 /**
- * POST /archive endpoint - Archive a project after Linear handoff
+ * POST /archive endpoint - Archive a project
  *
  * Slims down project.json to mapping data only and removes
  * .md files and milestones/ directory.

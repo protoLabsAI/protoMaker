@@ -127,9 +127,6 @@ Tweet 10: [CTA — try it, follow for more, link]
 - \`#dev\` (${devChannel}) — Share content updates
 - DMs to ${userName} — Time-sensitive coordination
 
-**Linear Projects (GTM source of truth):**
-- Check Linear for current GTM project URLs
-
 ## Operating Principles
 
 1. **Proof through products** — No claim without a working demo

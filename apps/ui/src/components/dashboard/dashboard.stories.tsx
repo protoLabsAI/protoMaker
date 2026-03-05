@@ -70,8 +70,8 @@ const mockActivity = [
   {
     id: '4',
     icon: '',
-    source: 'linear' as const,
-    message: 'Issue AVM-142 moved to In Progress',
+    source: 'github' as const,
+    message: 'Issue #142 moved to In Progress',
     timestamp: '12m',
   },
   {
@@ -205,7 +205,7 @@ function IntegrationsTab() {
   return (
     <div className="space-y-6">
       {/* Integration Cards */}
-      <StaggerContainer className="grid grid-cols-3 gap-4">
+      <StaggerContainer className="grid grid-cols-2 gap-4">
         <IntegrationCard
           name="Discord"
           icon="💬"
@@ -216,18 +216,6 @@ function IntegrationsTab() {
             { label: 'Active Channels', value: 3 },
             { label: 'Alerts Sent', value: 12 },
             { label: 'Uptime', value: '99.9%' },
-          ]}
-        />
-        <IntegrationCard
-          name="Linear"
-          icon="📐"
-          connected={true}
-          color="#5E6AD2"
-          stats={[
-            { label: 'Open Issues', value: 8 },
-            { label: 'In Progress', value: 3 },
-            { label: 'Closed Today', value: 5 },
-            { label: 'Cycles Active', value: 1 },
           ]}
         />
         <IntegrationCard
@@ -342,7 +330,7 @@ function SystemTab() {
             { name: 'Board Janitor', status: 'active', avgLatencyMs: 45 },
             { name: 'Frank (Health)', status: 'active', avgLatencyMs: 32 },
             { name: 'GTM Content', status: 'idle' },
-            { name: 'Linear Sync', status: 'active', avgLatencyMs: 210 },
+            { name: 'PR Feedback', status: 'active', avgLatencyMs: 210 },
           ]}
         />
         <GlowCard orb="bottom-left" orbColor="#10b981" className="p-5">

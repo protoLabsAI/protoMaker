@@ -105,7 +105,6 @@ role: 'custom';
 | `chief-of-staff`      | Executive coordination        |
 | `pr-maintainer`       | GitHub PR reviews             |
 | `board-janitor`       | Board cleanup, organization   |
-| `linear-specialist`   | Linear integration            |
 | `calendar-assistant`  | Scheduling, reminders         |
 | `custom`              | Custom agent type             |
 
@@ -215,21 +214,6 @@ Configure where the agent receives work from:
 }
 ```
 
-#### Linear Assignment
-
-```typescript
-{
-  assignments: {
-    linear: {
-      teamKey: 'PROTO',                    // Linear team
-      projectIds: ['abc123'],              // Specific projects
-      labelFilter: ['security'],           // Only these labels
-      assigneeFilter: ['security-bot'],    // Only these assignees
-    },
-  },
-}
-```
-
 #### GitHub Assignment
 
 ```typescript
@@ -316,8 +300,6 @@ Define invariants the agent maintains:
 | `unread_dms`                | Unread Discord DMs            | number |
 | `unanswered_mentions`       | Unanswered @mentions          | number |
 | `pending_messages`          | Messages awaiting response    | number |
-| `unread_notifications`      | Unread Linear notifications   | number |
-| `assigned_issues`           | Linear issues assigned        | number |
 | `overdue_issues`            | Issues past due date          | number |
 | `consecutive_errors`        | Consecutive errors            | number |
 | `total_turns`               | Total turns consumed          | number |

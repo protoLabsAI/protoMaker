@@ -38,7 +38,7 @@ Based on observed behavior and Claude Agent SDK usage patterns:
 
 - Context file size (`.automaker/context/`)
 - Project complexity and file count
-- MCP tool usage (Linear, Discord, etc.)
+- MCP tool usage (Discord, etc.)
 - Conversation history length
 
 ### Known Limits
@@ -145,7 +145,6 @@ Create `.env.staging`:
 ```bash
 # API Keys
 ANTHROPIC_API_KEY=your_anthropic_key
-LINEAR_API_KEY=your_linear_key
 AUTOMAKER_API_KEY=automaker-staging-key-2026
 
 # Container User
@@ -411,7 +410,7 @@ docker exec automaker-server-staging iostat -x 5
    docker exec automaker-server-staging curl -w "@curl-format.txt" -o /dev/null -s https://api.anthropic.com
    ```
 
-2. Review MCP tool usage - heavy Linear/Discord queries can slow agents
+2. Review MCP tool usage - heavy Discord queries can slow agents
 
 3. Check for context file bloat:
    ```bash
@@ -492,26 +491,6 @@ An old container from a different compose context still exists. Fix:
 
 ```bash
 docker stop automaker-server && docker rm automaker-server
-```
-
-### Linear API Key (`LINEAR_API_KEY`)
-
-Linear's API requires different `Authorization` header formats depending on the token type:
-
-- **API keys** (start with `lin_api_`): Pass directly — `Authorization: lin_api_...`
-- **OAuth tokens**: Use Bearer prefix — `Authorization: Bearer <token>`
-
-The `LinearMCPClient.executeGraphQL()` method detects the token type automatically. If you see `400 Bad Request` errors from Linear, verify:
-
-1. The env var is set: `docker exec automaker-server env | grep LINEAR`
-2. The token format is correct (should start with `lin_api_`)
-3. The token is valid (test directly):
-
-```bash
-curl -s https://api.linear.app/graphql \
-  -H "Content-Type: application/json" \
-  -H "Authorization: $LINEAR_API_KEY" \
-  -d '{"query":"{ viewer { id name } }"}' | python3 -m json.tool
 ```
 
 ### protoLabs API Key (`AUTOMAKER_API_KEY`)
@@ -621,7 +600,7 @@ Staging uses vertical scaling - increase resources on single host:
 5. **Keep context files lean** - Large context slows agents and increases memory
 6. **Clean up worktrees regularly** - Remove merged/stale worktrees to free disk space
 7. **Test with mixed complexity** - Don't run all architectural features at once
-8. **Use Discord/Linear integrations** - Async notifications reduce need for polling
+8. **Use Discord integrations** - Async notifications reduce need for polling
 
 ## Support & Debugging
 

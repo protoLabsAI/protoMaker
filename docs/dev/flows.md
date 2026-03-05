@@ -24,7 +24,7 @@ libs/flows/src/
 │   ├── state.ts                    # AntagonisticReviewStateAnnotation
 │   ├── graph.ts                    # Graph with type bridge adapters
 │   └── nodes/                      # Classify, pair-review, consensus, HITL
-├── project-planning/               # Linear-native project planning
+├── project-planning/               # Project planning flow
 │   ├── types.ts                    # ProjectPlanningStateAnnotation
 │   ├── graph.ts                    # Graph with 4 HITL checkpoints
 │   ├── nodes/                      # Research, PRD, milestones, HITL, issues
@@ -438,7 +438,7 @@ const result = await graph.invoke({
 
 ## Project Planning Flow
 
-Linear-native project planning workflow that takes a project from idea through research, PRD generation, milestone planning, and issue creation.
+Project planning workflow that takes a project from idea through research, PRD generation, milestone planning, and feature creation.
 
 ### Architecture
 

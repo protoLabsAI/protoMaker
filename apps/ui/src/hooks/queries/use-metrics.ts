@@ -213,7 +213,7 @@ const SYSTEM_HEALTH_STALE_TIME = 15 * 1000; // 15 seconds
 const ACTIVITY_FEED_STALE_TIME = 10 * 1000; // 10 seconds
 
 /**
- * Fetch integration status for Discord, Linear, and GitHub
+ * Fetch integration status for Discord and GitHub
  */
 export function useIntegrationStatus(projectPath: string | undefined) {
   return useQuery({

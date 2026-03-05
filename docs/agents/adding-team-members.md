@@ -245,14 +245,6 @@ If the role needs to run autonomously (event-driven, not just on-demand), create
 2. Register in `apps/server/src/services/authority-service.ts`
 3. See `docs/agents/adding-teammates.md` for the full authority agent guide
 
-## Linear Integration (Optional)
-
-For roles that interact with Linear (like GTM):
-
-1. Linear MCP is available via the plugin (`linear-mcp-server`)
-2. Scope access per role using Linear project IDs
-3. For full Linear Agent API integration (mentions, delegations), see the Linear Agent Integration milestone
-
 ## Existing Roles
 
 | Role                  | Model  | Tools                                              | Description                      |

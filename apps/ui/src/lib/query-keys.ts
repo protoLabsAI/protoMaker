@@ -330,7 +330,7 @@ export const queryKeys = {
   // Integrations
   // ============================================
   integrations: {
-    /** Integration status for Discord, Linear, GitHub */
+    /** Integration status for Discord, GitHub */
     status: (projectPath: string) => ['integrations', 'status', projectPath] as const,
     /** Discord channel signal configs for a project */
     signalChannels: (projectPath: string) =>

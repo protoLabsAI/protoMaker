@@ -2,11 +2,7 @@
  * ConversationSurface — Platform-Agnostic Agent Interaction Interface
  *
  * Defines a standard interface for multi-turn agent conversations that works
- * across Linear (primary), Discord, Slack, email, and any future platform.
- *
- * The interface maps directly to Linear's Agent Activity Protocol but is
- * expressed generically so implementations can adapt to each platform's
- * native capabilities.
+ * across Discord, Slack, email, and any future platform.
  *
  * Lifecycle:
  *   acknowledge → showProgress → (askQuestion ↔ handleResponse)* → sendResponse | reportError
@@ -15,13 +11,7 @@
 /**
  * Supported conversation platforms
  */
-export type ConversationPlatform =
-  | 'linear'
-  | 'discord'
-  | 'slack'
-  | 'email'
-  | 'telegram'
-  | 'whatsapp';
+export type ConversationPlatform = 'discord' | 'slack' | 'email' | 'telegram' | 'whatsapp';
 
 /**
  * Declares what a platform supports.

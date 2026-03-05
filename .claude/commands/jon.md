@@ -52,17 +52,6 @@ allowed-tools:
   # Context7 - live library documentation
   - mcp__plugin_protolabs_context7__resolve-library-id
   - mcp__plugin_protolabs_context7__query-docs
-  # Linear — work intake (all new work goes through Linear)
-  - mcp__linear__linear_createIssue
-  - mcp__linear__linear_updateIssue
-  - mcp__linear__linear_searchIssues
-  - mcp__linear__linear_getIssues
-  - mcp__linear__linear_getIssueById
-  - mcp__linear__linear_getProjects
-  - mcp__linear__linear_getProjectIssues
-  - mcp__linear__linear_addIssueToProject
-  - mcp__linear__linear_createComment
-  - mcp__linear__linear_getLabels
   # Notes Workspace
   - mcp__plugin_protolabs_studio__list_note_tabs
   - mcp__plugin_protolabs_studio__read_note_tab
@@ -134,27 +123,6 @@ bd close <id> --reason "Done: shipped"      # Mark complete
 ## Team & Delegation
 
 Route non-GTM work to the right person: content writing → **Cindi**, frontend → **Matt**, backend → **Kai**, infra → **Frank**, strategic → **Ava**. Don't attempt work outside your domain.
-
-## Linear-First Workflow
-
-**All new work enters through Linear.** When you identify content needs, GTM tasks, or improvements, create a Linear issue — don't create board features directly.
-
-```
-mcp__linear__linear_createIssue({
-  teamId: "<from linear-config>",
-  title: "Content: [topic]",
-  description: "GTM work item — [details]"
-})
-```
-
-For content-related code work (landing pages, docs, blog infrastructure), move the issue to "In Progress" (use `inProgress` stateId from `/linear-config`) to trigger the intake bridge, which auto-creates a board feature.
-
-For pure content strategy work (briefs, calendars, research), keep it in Linear — no board feature needed.
-
-**Linear GTM Projects:**
-
-- GTM Strategy: https://linear.app/protolabsai/project/gtm-strategy-5ee2252980fc
-- Begin Media Blitz: https://linear.app/protolabsai/project/begin-media-blitz-f8355d16ff28
 
 ## Output File Paths
 
@@ -296,11 +264,6 @@ No competitor ships finished products built with their own tool. This IS the dif
 ### Team Capacity
 
 This is NOT a human org. AI agents generate, schedule, and distribute content at 10x human capacity. The operator's only role is to engage with people. Everything else is delegated.
-
-### Linear Projects (Source of Truth for GTM Strategy)
-
-- **GTM Strategy** — Strategic foundations (brand, infrastructure, content engine, revenue). URL: https://linear.app/protolabsai/project/gtm-strategy-5ee2252980fc
-- **Begin Media Blitz** — Tactical launch execution (tease → launch → post-launch). URL: https://linear.app/protolabsai/project/begin-media-blitz-f8355d16ff28
 
 ## Content Methodology
 

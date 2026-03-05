@@ -207,7 +207,6 @@ export {
   type RetroFlowDeps,
   type RetroFeatureLoader,
   type RetroDiscordBot,
-  type RetroLinearClient,
 } from './ceremonies/retro-flow.js';
 
 export {
@@ -215,10 +214,9 @@ export {
   type ProjectRetroFlowDeps,
   type ProjectRetroFeatureLoader,
   type ProjectRetroDiscordBot,
-  type ProjectRetroLinearClient,
 } from './ceremonies/project-retro-flow.js';
 
-// Project planning flow (Linear-native HITL workflow)
+// Project planning flow (HITL workflow)
 export {
   createProjectPlanningFlow,
   type ProjectPlanningFlowConfig,
@@ -248,8 +246,6 @@ export {
   type IssueCreator,
   createHitlRouter,
   createHitlProcessorNode,
-  createLinearIssueCreator,
-  type LinearIssueCreatorDeps,
   // LLM-powered executor implementations
   createLLMResearchExecutor,
   createLLMPlanningDocGenerator,

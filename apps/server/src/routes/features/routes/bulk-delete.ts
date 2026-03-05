@@ -39,7 +39,7 @@ export function createBulkDeleteHandler(featureLoader: FeatureLoader, events?: E
         const batch = featureIds.slice(i, i + BATCH_SIZE);
         const batchResults = await Promise.all(
           batch.map(async (featureId) => {
-            // Fetch feature before deletion so the payload has linearIssueId
+            // Fetch feature before deletion so the event payload has full feature data
             const feature = await featureLoader.get(projectPath, featureId);
             const success = await featureLoader.delete(projectPath, featureId);
             if (success) {

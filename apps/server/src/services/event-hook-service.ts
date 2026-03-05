@@ -82,8 +82,6 @@ const GENERIC_EVENT_TYPE_TO_TRIGGER: Partial<Record<string, EventHookTrigger>> =
   'headsdown:agent:work-failed': 'headsdown_agent_work_failed',
   // Integrations
   'coderabbit:review-received': 'coderabbit_review_received',
-  'linear:approval:detected': 'linear_approval_detected',
-  'linear:changes-requested:detected': 'linear_changes_requested_detected',
   'discord:message:detected': 'discord_message_detected',
   // Project / planning
   'issue:created': 'issue_created',
@@ -147,9 +145,7 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
     trigger === 'ceremony_triggered' ||
     trigger === 'ceremony_milestone_update' ||
     trigger === 'ceremony_project_retro' ||
-    trigger === 'auto_mode_stopped' ||
-    trigger === 'linear_approval_detected' ||
-    trigger === 'linear_changes_requested_detected'
+    trigger === 'auto_mode_stopped'
   ) {
     return 'medium';
   }

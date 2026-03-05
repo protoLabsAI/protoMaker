@@ -1,13 +1,12 @@
 /**
  * Tool Family Tests
  *
- * Unit tests for the 4 DynamicStructuredTool factory families:
- * board, linear, discord, and github.
+ * Unit tests for the 3 DynamicStructuredTool factory families:
+ * board, discord, and github.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { createBoardTools } from '../src/board-tools.js';
-import { createLinearTools } from '../src/linear-tools.js';
 import { createDiscordTools } from '../src/discord-tools.js';
 import { createGitHubTools } from '../src/github-tools.js';
 import { ToolRegistry } from '../src/registry.js';
@@ -100,64 +99,6 @@ describe('createBoardTools()', () => {
     expect(mockFeatureLoader.create).toHaveBeenCalledWith(
       '/test',
       expect.objectContaining({ title: 'New Feature' })
-    );
-  });
-});
-
-// ─── Linear Tools ─────────────────────────────────────────────────────────────
-
-describe('createLinearTools()', () => {
-  const mockIssue = {
-    id: 'issue-1',
-    identifier: 'PRO-123',
-    title: 'Test Issue',
-    url: 'https://linear.app/test/issue/PRO-123',
-  };
-
-  const mockLinearClient = {
-    createIssue: vi.fn().mockResolvedValue(mockIssue),
-    updateIssue: vi.fn().mockResolvedValue(mockIssue),
-    searchIssues: vi.fn().mockResolvedValue([mockIssue]),
-  };
-
-  const tools = createLinearTools({
-    linearClient: mockLinearClient,
-    defaultTeamId: 'team-123',
-  });
-  const registry = new ToolRegistry();
-  registry.registerMany(tools as never[]);
-
-  it('returns 3 tools', () => {
-    expect(tools).toHaveLength(3);
-    expect(registry.has('create_linear_issue')).toBe(true);
-    expect(registry.has('update_linear_issue')).toBe(true);
-    expect(registry.has('search_linear_issues')).toBe(true);
-  });
-
-  it('create_linear_issue uses defaultTeamId when teamId omitted', async () => {
-    const result = await registry.execute('create_linear_issue', { title: 'Fix bug' });
-    expect(result.success).toBe(true);
-    expect(mockLinearClient.createIssue).toHaveBeenCalledWith(
-      expect.objectContaining({ teamId: 'team-123', title: 'Fix bug' })
-    );
-  });
-
-  it('create_linear_issue fails without teamId and no default', async () => {
-    const localTools = createLinearTools({ linearClient: mockLinearClient });
-    const localRegistry = new ToolRegistry();
-    localRegistry.registerMany(localTools as never[]);
-    const result = await localRegistry.execute('create_linear_issue', { title: 'Fix bug' });
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/teamId is required/);
-  });
-
-  it('search_linear_issues returns matching issues', async () => {
-    const result = await registry.execute('search_linear_issues', { query: 'bug' });
-    expect(result.success).toBe(true);
-    expect((result.data as { count: number }).count).toBe(1);
-    expect(mockLinearClient.searchIssues).toHaveBeenCalledWith(
-      'bug',
-      expect.objectContaining({ limit: 10 })
     );
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Create Issues Node
  *
- * Takes the approved milestones and creates Linear issues.
+ * Takes the approved milestones and creates issues.
  * This is the final step — after this, the project is ready for execution.
  */
 
@@ -55,7 +55,6 @@ export function createIssueCreationNode(creator?: IssueCreator) {
     return {
       stage: 'completed',
       createdIssueIds,
-      linearProjectId: projectInput.projectId,
     };
   };
 }

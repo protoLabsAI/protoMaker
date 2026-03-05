@@ -2,7 +2,7 @@
  * IntegrationsTab - Shows integration status, activity feed, and running agents
  *
  * Displays:
- * - Integration cards for Discord, Linear, and GitHub with connection status and stats
+ * - Integration cards for Discord and GitHub with connection status and stats
  * - Activity ticker showing cross-platform activity feed
  * - Agent session status card showing running agents with model and current task
  */
@@ -15,7 +15,6 @@ import {
   MessageSquare,
   CheckCircle2,
   XCircle,
-  Hash,
   GitPullRequest,
   Bot,
   Clock,
@@ -274,14 +273,6 @@ export function IntegrationsTab({ projectPath }: IntegrationsTabProps) {
     { label: 'Channels', value: discordConnected ? '8' : '0' },
   ];
 
-  // Extract Linear stats (mock data - will be replaced by real stats from backend)
-  const linearConnected =
-    integrationStatus?.linear?.connected && integrationStatus?.linear?.oauthValid;
-  const linearStats = [
-    { label: 'Open Issues', value: linearConnected ? '12' : '0' },
-    { label: 'In Progress', value: linearConnected ? '4' : '0' },
-  ];
-
   // Extract GitHub stats (mock data - will be replaced by real stats from backend)
   const githubConnected = integrationStatus?.github?.authenticated;
   const githubStats = [
@@ -292,8 +283,8 @@ export function IntegrationsTab({ projectPath }: IntegrationsTabProps) {
   if (isLoadingIntegrations) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
             <Card key={i} className="bg-card/50 backdrop-blur-sm border-border/50">
               <CardContent className="pt-6">
                 <div className="space-y-3 animate-pulse">
@@ -312,20 +303,13 @@ export function IntegrationsTab({ projectPath }: IntegrationsTabProps) {
   return (
     <div className="space-y-4">
       {/* Integration Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <IntegrationCard
           title="Discord"
           icon={MessageSquare}
           status={discordConnected ? 'connected' : 'offline'}
           stats={discordStats}
           iconColor="bg-chart-1/10 text-chart-1"
-        />
-        <IntegrationCard
-          title="Linear"
-          icon={Hash}
-          status={linearConnected ? 'connected' : 'offline'}
-          stats={linearStats}
-          iconColor="bg-chart-4/10 text-chart-4"
         />
         <IntegrationCard
           title="GitHub"

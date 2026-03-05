@@ -9,7 +9,7 @@
  * Identifies the originating channel of a signal.
  * Used to track where a feature request came from and where replies should go.
  */
-export type SignalChannel = 'linear' | 'discord' | 'github' | 'mcp' | 'ui';
+export type SignalChannel = 'discord' | 'github' | 'mcp' | 'ui';
 
 /**
  * Metadata describing the origin of a signal and routing context for replies.
@@ -18,17 +18,13 @@ export type SignalChannel = 'linear' | 'discord' | 'github' | 'mcp' | 'ui';
 export interface SignalMetadata {
   /** The originating channel */
   channel: SignalChannel;
-  /** Channel-specific identifier (e.g. Discord channel ID, Linear team ID) */
+  /** Channel-specific identifier (e.g. Discord channel ID) */
   channelId?: string;
   /** Human-readable channel name */
   channelName?: string;
-  /** Linear issue ID (for linear channel) */
-  issueId?: string;
-  /** Linear issue URL (for linear channel) */
-  issueUrl?: string;
   /** Discord/platform message ID */
   messageId?: string;
-  /** Discord thread ID or Linear comment thread ID */
+  /** Thread ID (e.g. Discord thread ID) */
   threadId?: string;
   /** ID of the user who originated the signal */
   userId?: string;

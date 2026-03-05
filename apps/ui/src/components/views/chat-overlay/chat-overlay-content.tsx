@@ -32,6 +32,7 @@ import { useChatSession } from '@/hooks/use-chat-session';
 import { useAppStore } from '@/store/app-store';
 import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
 import { useToolProgress } from '@/hooks/use-tool-progress';
+import { ChatStatusBar } from './chat-status-bar';
 import { getOverlayAPI } from '@/lib/electron';
 
 const OVERLAY_HEIGHT_DEFAULT = 600;
@@ -87,7 +88,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const pendingBranchFor = useRef<string | null>(null);
 
   const suggestions = useContextualSuggestions(features ?? []);
-  const { getProgressLabel } = useToolProgress();
+  const { getProgressLabel, activeLabel: activeToolLabel } = useToolProgress();
 
   // Estimate token count from conversation messages (chars / 4 approximation)
   const estimatedTokens = useMemo(() => {
@@ -95,6 +96,14 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     const chars = JSON.stringify(messages).length;
     return Math.ceil(chars / 4);
   }, [messages]);
+
+  // Count agentic steps in the current streaming message for the status bar
+  const stepCount = useMemo(() => {
+    if (!isStreaming || messages.length === 0) return 0;
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'assistant') return 0;
+    return (lastMsg.parts ?? []).filter((p) => p.type === 'step-start').length;
+  }, [messages, isStreaming]);
 
   // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
   // ChatInput clears the input immediately after calling this.
@@ -356,6 +365,13 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           {error.message || 'An error occurred'}
         </div>
       )}
+
+      {/* Status bar — tool progress + project event tickers */}
+      <ChatStatusBar
+        toolProgressLabel={activeToolLabel}
+        isStreaming={isStreaming}
+        stepCount={stepCount}
+      />
 
       {/* Main content area */}
       <div className="flex min-h-0 flex-1">

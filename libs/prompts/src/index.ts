@@ -159,7 +159,6 @@ export { getMattPrompt } from './agents/matt.js';
 export { getSamPrompt } from './agents/sam.js';
 export { getCindiPrompt } from './agents/cindi.js';
 export { getJonPrompt } from './agents/jon.js';
-export { getLinearSpecialistPrompt } from './agents/linear-specialist.js';
 export { getPrMaintainerPrompt } from './agents/pr-maintainer.js';
 export { getBoardJanitorPrompt } from './agents/board-janitor.js';
 export { getFrankPrompt } from './agents/frank.js';

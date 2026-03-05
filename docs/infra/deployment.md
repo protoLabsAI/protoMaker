@@ -290,10 +290,6 @@ sudo systemctl disable automaker
 
 | Variable                           | Required | Description                                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `LINEAR_CLIENT_ID`                 | No       | Linear OAuth app client ID ([setup guide](/integrations/linear))                                 |
-| `LINEAR_CLIENT_SECRET`             | No       | Linear OAuth app client secret                                                                   |
-| `LINEAR_REDIRECT_URI`              | No       | OAuth callback URL (default: `http://localhost:3008/api/linear/oauth/callback`)                  |
-| `LINEAR_WEBHOOK_SECRET`            | No       | Secret for verifying Linear webhook payloads                                                     |
 | `DISCORD_TOKEN`                    | No       | Discord bot token for event routing and notifications                                            |
 | `DISCORD_GUILD_ID`                 | No       | Discord server (guild) ID                                                                        |
 | `DISCORD_CHANNEL_SUGGESTIONS`      | No       | Channel ID for `#suggestions` — community feature ideas                                          |

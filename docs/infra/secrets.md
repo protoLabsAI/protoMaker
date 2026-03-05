@@ -124,7 +124,6 @@ ANTHROPIC_API_KEY=sk-ant-xxx
 AUTOMAKER_API_KEY=<generated-secure-key>
 GH_TOKEN=gho_xxx
 DISCORD_BOT_TOKEN=xxx
-LINEAR_API_TOKEN=lin_api_xxx
 CLAUDE_OAUTH_CREDENTIALS={"accessToken":"..."}
 ```
 
@@ -168,20 +167,6 @@ Wrap MCP server commands with `infisical run` to inject secrets at startup.
         "npx",
         "-y",
         "mcp-discord"
-      ]
-    },
-    "linear": {
-      "command": "infisical",
-      "args": [
-        "run",
-        "--projectId",
-        "<project-id>",
-        "--env",
-        "dev",
-        "--",
-        "npx",
-        "-y",
-        "@tacticlaunch/mcp-linear"
       ]
     }
   }
@@ -235,7 +220,7 @@ Use Infisical's GitHub Actions integration or export secrets to GitHub Actions s
 ### Phase 2: Update MCP Configs
 
 1. Update MCP server configs to use `infisical run` wrapper
-2. Test all MCP tools still work (automaker, discord, linear)
+2. Test all MCP tools still work (automaker, discord)
 3. Remove hardcoded keys from `plugin.json`
 
 ### Phase 3: Update Docker

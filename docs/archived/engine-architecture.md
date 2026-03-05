@@ -36,7 +36,7 @@ This document defines the Automaker engine architecture. It is the source of tru
 
 ### AVA (Automated Virtual Agency)
 
-AVA is the **nerve center**. She sees the full world state — server alerts, social media, Linear issues, Discord messages, GitHub events, everything. Her job:
+AVA is the **nerve center**. She sees the full world state — server alerts, social media, Discord messages, GitHub events, everything. Her job:
 
 - **Classify** every signal: is this Ops or GTM?
 - **Route** to the right branch
@@ -154,7 +154,7 @@ Auto-merge completes:
 
 1. PR merges to main (or epic branch)
 2. Board status updates to `done`
-3. GH -> Linear sync closes corresponding tickets
+3. Feature marked complete via board update
 4. Feature marked complete
 5. Transition to DONE
 
@@ -209,19 +209,17 @@ AVA classifies every incoming signal and routes to the right branch.
 
 ### Classification Table
 
-| Signal Source                            | Classification  | Route                                 |
-| ---------------------------------------- | --------------- | ------------------------------------- |
-| Linear issue (engineering label/project) | Ops             | Lead Engineer -> board feature        |
-| Linear issue (marketing label/project)   | GTM             | Log + park (manual)                   |
-| GitHub issue (any)                       | Ops             | Lead Engineer -> board feature        |
-| GitHub PR event                          | Ops             | Lead Engineer REVIEW state            |
-| Discord #dev / #infra                    | Ops             | Lead Engineer -> board feature        |
-| Discord #marketing / #social             | GTM             | Log + park (manual)                   |
-| Server health alert                      | Ops             | Lead Engineer -> Frank feature        |
-| Social media mention                     | GTM             | Log + park (manual)                   |
-| MCP `create_feature`                     | Ops (fast path) | Direct to board, no PM pipeline       |
-| MCP `process_idea`                       | Ops (full path) | PM Agent -> PRD -> decompose -> board |
-| User CLI command                         | Direct          | Persona agent in interactive mode     |
+| Signal Source                | Classification  | Route                                 |
+| ---------------------------- | --------------- | ------------------------------------- |
+| GitHub issue (any)           | Ops             | Lead Engineer -> board feature        |
+| GitHub PR event              | Ops             | Lead Engineer REVIEW state            |
+| Discord #dev / #infra        | Ops             | Lead Engineer -> board feature        |
+| Discord #marketing / #social | GTM             | Log + park (manual)                   |
+| Server health alert          | Ops             | Lead Engineer -> Frank feature        |
+| Social media mention         | GTM             | Log + park (manual)                   |
+| MCP `create_feature`         | Ops (fast path) | Direct to board, no PM pipeline       |
+| MCP `process_idea`           | Ops (full path) | PM Agent -> PRD -> decompose -> board |
+| User CLI command             | Direct          | Persona agent in interactive mode     |
 
 ### Fast Path vs Full Path
 
@@ -290,7 +288,7 @@ Systems removed by this architecture:
 | ------------------------- | ---------------------------------------------------------- | ----- | ----------------------------------------- |
 | PR Maintainer crew        | `crew-members/pr-maintainer-check.ts`                      | ~250  | Absorbed by REVIEW state                  |
 | Board Janitor crew        | `crew-members/board-janitor-check.ts`                      | ~200  | Absorbed by state transitions             |
-| PR State Sync crew        | `crew-members/pr-state-sync-check.ts`                      | ~150  | GH -> Linear sync handles it              |
+| PR State Sync crew        | `crew-members/pr-state-sync-check.ts`                      | ~150  | Board state sync handles it               |
 | GTM crew                  | `crew-members/gtm-check.ts`                                | ~100  | GTM branch is parked                      |
 | Ava crew check            | `crew-members/ava-check.ts`                                | ~300  | AVA is the router, not a crew member      |
 | Frank crew check          | `crew-members/frank-check.ts`                              | ~200  | Host health routes through AVA to Frank   |

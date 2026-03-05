@@ -168,7 +168,7 @@ export interface IdleTaskConfig {
  */
 export interface WorkItem {
   /** Work type */
-  type: 'discord_message' | 'linear_issue' | 'github_pr' | 'idle_task' | 'state_divergence';
+  type: 'discord_message' | 'github_pr' | 'idle_task' | 'state_divergence';
 
   /** Unique work item ID */
   id: string;
@@ -231,7 +231,7 @@ export const ROLE_CAPABILITIES: Record<AgentRole, RoleCapabilities> = {
     canModifyFiles: false,
     canCommit: false,
     canCreatePRs: false,
-    description: 'Research codebase, engage with users, create SPARC PRDs, create Linear projects',
+    description: 'Research codebase, engage with users, create SPARC PRDs, create projects',
   },
   'engineering-manager': {
     role: 'engineering-manager',

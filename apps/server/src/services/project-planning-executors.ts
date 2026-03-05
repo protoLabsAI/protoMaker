@@ -30,7 +30,7 @@ const logger = createLogger('ProjectPlanningExecutors');
  *
  * All 5 planning executors use the smart model by default.
  * The IssueCreator is NOT included here — it's injected separately
- * by ProjectPlanningService using the LinearMCPClient.
+ * by ProjectPlanningService.
  *
  * @param services - Services container with settingsService for model resolution
  * @param projectPath - Optional project path for per-project model overrides
@@ -55,7 +55,5 @@ export async function createLLMProjectPlanningConfig(
     prdGenerator: createLLMPRDGenerator(smartModel),
     milestonePlanner: createLLMMilestonePlanner(smartModel),
     enableCheckpointing: true,
-    // issueCreator intentionally omitted — ProjectPlanningService injects
-    // the real Linear issue creator using LinearMCPClient
   };
 }

@@ -436,28 +436,6 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Find a feature by its Linear issue ID
-   * @param projectPath - Path to the project
-   * @param linearIssueId - Linear issue ID to search for
-   * @returns The matching feature or null if not found
-   */
-  async findByLinearIssueId(projectPath: string, linearIssueId: string): Promise<Feature | null> {
-    if (!linearIssueId || !linearIssueId.trim()) {
-      return null;
-    }
-
-    const features = await this.getAll(projectPath);
-
-    for (const feature of features) {
-      if (feature.linearIssueId === linearIssueId) {
-        return feature;
-      }
-    }
-
-    return null;
-  }
-
-  /**
    * Check if a title already exists on another feature (for duplicate detection)
    * @param projectPath - Path to the project
    * @param title - Title to check

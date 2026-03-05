@@ -35,7 +35,6 @@ const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
   milestone: 'bg-chart-2',
   custom: 'bg-chart-3',
   google: 'bg-chart-4',
-  linear: 'bg-chart-5',
   job: 'bg-amber-500',
 };
 

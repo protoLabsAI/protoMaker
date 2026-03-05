@@ -1,6 +1,6 @@
 ---
 name: smoke-check
-description: Fast MCP tool connectivity check. Tests 12 tools across protoLabs Studio and external integrations, outputs a PASS/FAIL matrix.
+description: Fast MCP tool connectivity check. Tests 11 tools across protoLabs Studio and external integrations, outputs a PASS/FAIL matrix.
 model: haiku
 allowed-tools:
   - mcp__plugin_protolabs_studio__health_check
@@ -25,20 +25,19 @@ Run a fast connectivity check across all MCP tool categories. No retries, no ana
 
 1. Run ALL of the following tool calls **in parallel** (use a single message with multiple tool calls):
 
-| #   | Category  | Tool Call                                                 | Args                         |
-| --- | --------- | --------------------------------------------------------- | ---------------------------- |
-| 1   | Health    | `health_check`                                            | `{}`                         |
-| 2   | Features  | `list_features`                                           | `{projectPath: "$CWD"}`      |
-| 3   | Agents    | `list_running_agents`                                     | `{projectPath: "$CWD"}`      |
-| 4   | Worktrees | `list_worktrees`                                          | `{projectPath: "$CWD"}`      |
-| 5   | Context   | `list_context_files`                                      | `{projectPath: "$CWD"}`      |
-| 6   | Auto-Mode | `get_auto_mode_status`                                    | `{projectPath: "$CWD"}`      |
-| 7   | Notes     | `list_note_tabs`                                          | `{}`                         |
-| 8   | Registry  | `get_role_registry_status`                                | `{}`                         |
-| 9   | Settings  | `get_settings`                                            | `{}`                         |
-| 10  | Events    | `list_events`                                             | `{limit: 1}`                 |
-| 11  | Discord   | `read_discord_dms`                                        | `{userId: "test", limit: 1}` |
-| 12  | Linear    | Use `WebFetch` to check `https://linear.app` reachability |
+| #   | Category  | Tool Call                  | Args                         |
+| --- | --------- | -------------------------- | ---------------------------- |
+| 1   | Health    | `health_check`             | `{}`                         |
+| 2   | Features  | `list_features`            | `{projectPath: "$CWD"}`      |
+| 3   | Agents    | `list_running_agents`      | `{projectPath: "$CWD"}`      |
+| 4   | Worktrees | `list_worktrees`           | `{projectPath: "$CWD"}`      |
+| 5   | Context   | `list_context_files`       | `{projectPath: "$CWD"}`      |
+| 6   | Auto-Mode | `get_auto_mode_status`     | `{projectPath: "$CWD"}`      |
+| 7   | Notes     | `list_note_tabs`           | `{}`                         |
+| 8   | Registry  | `get_role_registry_status` | `{}`                         |
+| 9   | Settings  | `get_settings`             | `{}`                         |
+| 10  | Events    | `list_events`              | `{limit: 1}`                 |
+| 11  | Discord   | `read_discord_dms`         | `{userId: "test", limit: 1}` |
 
 Replace `$CWD` with the actual current working directory path.
 
@@ -57,7 +56,7 @@ Replace `$CWD` with the actual current working directory path.
 | 2 | Features | PASS | 12 features |
 | ... | ... | ... | ... |
 
-**Result: 11/12 PASS** | 1 failure: Discord (bot token not configured)
+**Result: 10/11 PASS** | 1 failure: Discord (bot token not configured)
 ```
 
 4. Keep the Notes column to 5 words or fewer per row. Use counts where available (e.g., "3 agents running", "0 worktrees").

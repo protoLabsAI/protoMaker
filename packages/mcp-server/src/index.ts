@@ -1144,15 +1144,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       });
     }
 
-    // Linear Sync
-    case 'sync_project_to_linear':
-      return apiCall('/linear/sync-project', {
-        projectPath: args.projectPath,
-        projectSlug: args.projectSlug,
-        linearProjectId: args.linearProjectId,
-        cleanupPlaceholders: args.cleanupPlaceholders,
-      });
-
     // Project Lifecycle
     case 'initiate_project':
       return apiCall('/projects/lifecycle/initiate', {
@@ -1187,14 +1178,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/projects/lifecycle/status', {
         projectPath: args.projectPath,
         projectSlug: args.projectSlug,
-      });
-
-    case 'collect_related_issues':
-      return apiCall('/projects/lifecycle/collect-related', {
-        projectPath: args.projectPath,
-        projectSlug: args.projectSlug,
-        linearProjectId: args.linearProjectId,
-        issueIds: args.issueIds,
       });
 
     // Lead Engineer (Production Phase)

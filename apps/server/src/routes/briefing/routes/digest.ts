@@ -78,8 +78,6 @@ const TRIGGER_SEVERITY_MAP: Record<EventHookTrigger, BriefingSeverity> = {
   ceremony_triggered: 'medium',
   ceremony_milestone_update: 'medium',
   ceremony_project_retro: 'medium',
-  linear_approval_detected: 'medium',
-  linear_changes_requested_detected: 'medium',
 
   // Low: Informational events, creation events, low-impact changes
   feature_created: 'low',

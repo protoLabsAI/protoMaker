@@ -45,7 +45,6 @@ import { createResearchHandler } from './routes/research.js';
 import { createGapAnalysisHandler } from './routes/gap-analysis.js';
 import { createProposeHandler } from './routes/propose.js';
 import { createDiscordProvisionHandler } from './routes/discord-provision.js';
-import { createLinearProvisionHandler } from './routes/linear-provision.js';
 import { createCloneHandler } from './routes/clone.js';
 import { createReportHandler } from './routes/report.js';
 import { createOpenReportHandler } from './routes/open-report.js';
@@ -109,7 +108,6 @@ export function createSetupRoutes(settingsService: SettingsService): Router {
   router.post('/report', createReportHandler());
   router.post('/open-report', createOpenReportHandler());
   router.post('/discord-provision', createDiscordProvisionHandler());
-  router.post('/linear-provision', createLinearProvisionHandler());
   // Labs management routes
   router.post('/clone', createCloneHandler());
   router.post('/deliver', createDeliverHandler());

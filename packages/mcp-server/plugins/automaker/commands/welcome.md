@@ -100,7 +100,7 @@ mcp__plugin_protolabs_studio__update_settings({
 })
 ```
 
-Do NOT collect Discord, Linear, GitHub org, bio, or any other fields. Those are power-user settings.
+Do NOT collect Discord, GitHub org, bio, or any other fields. Those are power-user settings.
 
 ## Phase 3: Orientation
 

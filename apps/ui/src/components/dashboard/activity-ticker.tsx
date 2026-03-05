@@ -5,14 +5,13 @@ import { cn } from '@/lib/utils';
 interface ActivityItem {
   id: string;
   icon: string;
-  source: 'discord' | 'linear' | 'github' | 'agent';
+  source: 'discord' | 'github' | 'agent';
   message: string;
   timestamp: string;
 }
 
 const sourceStyles: Record<string, { color: string; label: string }> = {
   discord: { color: '#5865F2', label: 'Discord' },
-  linear: { color: '#5E6AD2', label: 'Linear' },
   github: { color: '#238636', label: 'GitHub' },
   agent: { color: 'var(--chart-1)', label: 'Agent' },
 };

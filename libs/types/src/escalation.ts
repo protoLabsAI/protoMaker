@@ -74,7 +74,7 @@ export interface EscalationSignal {
 
 /**
  * Escalation channel interface
- * Implemented by all output channels (Discord DM, channel, Linear, etc.)
+ * Implemented by all output channels (Discord DM, channel, etc.)
  */
 export interface EscalationChannel {
   /** Unique name for this channel */

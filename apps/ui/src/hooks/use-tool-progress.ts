@@ -46,5 +46,8 @@ export function useToolProgress() {
     [labels]
   );
 
-  return { getProgressLabel };
+  // Return the most recent active label (for the status bar)
+  const activeLabel = labels.size > 0 ? [...labels.values()].pop() : undefined;
+
+  return { getProgressLabel, activeLabel };
 }

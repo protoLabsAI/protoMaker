@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CalendarService } from '@/services/calendar-service.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
-import type { SettingsService } from '@/services/settings-service.js';
-import { LinearMCPClient } from '@/services/linear-mcp-client.js';
 import * as secureFs from '@/lib/secure-fs.js';
 import { atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import type { Feature, CalendarEvent } from '@protolabsai/types';
@@ -24,16 +22,9 @@ vi.mock('@protolabsai/utils', async () => {
   };
 });
 
-vi.mock('@/services/linear-mcp-client.js', () => ({
-  LinearMCPClient: vi.fn().mockImplementation(() => ({
-    listProjectMilestones: vi.fn().mockResolvedValue([]),
-  })),
-}));
-
 describe('calendar-service.ts', () => {
   let service: CalendarService;
   let mockFeatureLoader: FeatureLoader;
-  let mockSettingsService: SettingsService;
   const projectPath = '/test/project';
 
   beforeEach(() => {
@@ -47,13 +38,7 @@ describe('calendar-service.ts', () => {
       getAll: vi.fn().mockResolvedValue([]),
     } as unknown as FeatureLoader;
 
-    // Mock SettingsService
-    mockSettingsService = {
-      getProjectSettings: vi.fn().mockResolvedValue({}),
-    } as unknown as SettingsService;
-
     service.setFeatureLoader(mockFeatureLoader);
-    service.setSettingsService(mockSettingsService);
 
     // Mock file system - by default, calendar.json doesn't exist
     vi.mocked(secureFs.access).mockRejectedValue(new Error('ENOENT'));
@@ -66,7 +51,7 @@ describe('calendar-service.ts', () => {
   });
 
   describe('listEvents', () => {
-    it('should merge features, Linear milestones, and custom events correctly', async () => {
+    it('should merge features and custom events correctly', async () => {
       // Setup custom events
       const customEvents: CalendarEvent[] = [
         {
@@ -104,33 +89,10 @@ describe('calendar-service.ts', () => {
       ];
       vi.mocked(mockFeatureLoader.getAll).mockResolvedValue(features);
 
-      // Setup Linear milestones
-      const milestones = [
-        {
-          id: 'milestone-1',
-          name: 'Milestone 1',
-          targetDate: '2026-03-10',
-          description: 'Test milestone',
-        },
-      ];
-      const mockListMilestones = vi.fn().mockResolvedValue(milestones);
-      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
-        integrations: {
-          linear: {
-            projectId: 'linear-project-1',
-          },
-        },
-      });
-      vi.mocked(LinearMCPClient).mockImplementation(function () {
-        return {
-          listProjectMilestones: mockListMilestones,
-        } as any;
-      } as any);
-
       const events = await service.listEvents(projectPath);
 
-      // Should have 3 events total: 1 custom + 1 feature + 1 milestone
-      expect(events).toHaveLength(3);
+      // Should have 2 events total: 1 custom + 1 feature
+      expect(events).toHaveLength(2);
 
       // Check custom event
       expect(events.find((e) => e.id === 'custom-1')).toBeDefined();
@@ -141,16 +103,9 @@ describe('calendar-service.ts', () => {
       expect(featureEvent?.type).toBe('feature');
       expect(featureEvent?.date).toBe('2026-03-05');
 
-      // Check milestone event
-      const milestoneEvent = events.find((e) => e.id === 'milestone-milestone-1');
-      expect(milestoneEvent).toBeDefined();
-      expect(milestoneEvent?.type).toBe('milestone');
-      expect(milestoneEvent?.date).toBe('2026-03-10');
-
       // Events should be sorted by date (earliest first)
       expect(events[0].date).toBe('2026-03-01');
       expect(events[1].date).toBe('2026-03-05');
-      expect(events[2].date).toBe('2026-03-10');
     });
 
     it('should filter events by date range', async () => {
@@ -243,26 +198,6 @@ describe('calendar-service.ts', () => {
 
     it('should handle FeatureLoader errors gracefully', async () => {
       vi.mocked(mockFeatureLoader.getAll).mockRejectedValue(new Error('Feature loader error'));
-
-      // Should not throw, just log warning
-      const events = await service.listEvents(projectPath);
-
-      expect(events).toEqual([]);
-    });
-
-    it('should handle Linear client errors gracefully', async () => {
-      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue({
-        integrations: {
-          linear: {
-            projectId: 'linear-project-1',
-          },
-        },
-      });
-      vi.mocked(LinearMCPClient).mockImplementation(function () {
-        return {
-          listProjectMilestones: vi.fn().mockRejectedValue(new Error('Linear error')),
-        } as any;
-      } as any);
 
       // Should not throw, just log warning
       const events = await service.listEvents(projectPath);

@@ -13,7 +13,7 @@ import type { EventEmitter } from '../lib/events.js';
 const logger = createLogger('TriageService');
 
 /**
- * Issue priority levels (GitHub/Linear compatible)
+ * Issue priority levels (GitHub compatible)
  * P1 = Urgent, P2 = High, P3 = Normal, P4 = Low
  */
 export type IssuePriority = 1 | 2 | 3 | 4;

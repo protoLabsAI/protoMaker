@@ -1143,8 +1143,8 @@ export function buildAvaTools(
 
     tools['create_project_plan'] = makeTool({
       description:
-        'Initiate a new project by creating a local project entry and registering it with Linear (if configured). ' +
-        'Performs a duplicate check before creating. Returns the project slug and Linear URL if available.',
+        'Initiate a new project by creating a local project entry. ' +
+        'Performs a duplicate check before creating. Returns the project slug.',
       inputSchema: z.object({
         title: z.string().describe('Project title'),
         description: z.string().describe('Project idea description or goals'),
@@ -1164,8 +1164,8 @@ export function buildAvaTools(
 
     tools['approve_project'] = makeTool({
       description:
-        'Approve the PRD for a project: creates board features and epics from the project milestones, ' +
-        'and syncs milestones to Linear if the project has a Linear ID. Returns the number of features created.',
+        'Approve the PRD for a project: creates board features and epics from the project milestones. ' +
+        'Returns the number of features created.',
       inputSchema: z.object({
         projectSlug: z.string().describe('Project slug to approve'),
         createEpics: z

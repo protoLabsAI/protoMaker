@@ -1,9 +1,8 @@
 /**
- * Integration Settings - Per-project Linear, Discord, Google, and external service configuration
+ * Integration Settings - Per-project Discord, Google, and external service configuration
  *
- * Covers Discord bot settings, Linear project management integration,
- * Discord communication integration, Google Calendar OAuth, and the
- * container for all per-project integration configurations.
+ * Covers Discord bot settings, Discord communication integration,
+ * Google Calendar OAuth, and the container for all per-project integration configurations.
  */
 
 import type { EventHookTrigger } from './event-settings.js';
@@ -80,93 +79,6 @@ export const DEFAULT_DISCORD_SETTINGS: DiscordSettings = {
   notifyOnMilestoneComplete: true,
   notifyOnProjectComplete: true,
   notifyOnError: true,
-};
-
-// ============================================================================
-// Linear Integration - Per-project Linear project management integration
-// ============================================================================
-
-/**
- * LinearIntegrationConfig - Configuration for Linear project management integration
- *
- * When enabled, ProtoMaker events (feature created, status changed, etc.) trigger
- * Linear MCP tools to sync planning state between ProtoMaker and Linear.
- */
-export interface LinearIntegrationConfig {
-  /** Enable Linear integration for this project */
-  enabled: boolean;
-  /** Linear workspace ID (optional - uses authenticated user's workspace if not specified) */
-  workspaceId?: string;
-  /** Linear team ID for creating issues */
-  teamId?: string;
-  /** Linear project ID to associate issues with */
-  projectId?: string;
-  /** Create Linear issue when ProtoMaker feature is created (default: true) */
-  syncOnFeatureCreate?: boolean;
-  /** Update Linear issue status when ProtoMaker feature status changes (default: true) */
-  syncOnStatusChange?: boolean;
-  /** Add Linear comment when agent completes feature (default: true) */
-  commentOnCompletion?: boolean;
-  /** Enable Linear project updates for ceremony events (default: false) */
-  enableProjectUpdates?: boolean;
-  /** Priority mapping: ProtoMaker complexity -> Linear priority (0=none, 1=urgent, 2=high, 3=normal, 4=low) */
-  priorityMapping?: {
-    small?: number;
-    medium?: number;
-    large?: number;
-    architectural?: number;
-  };
-  /** Custom label to apply to all synced issues */
-  labelName?: string;
-  /** Enable bidirectional sync (default: false) */
-  syncEnabled?: boolean;
-  /** Conflict resolution strategy: 'linear' (Linear wins), 'automaker' (AutoMaker wins), 'manual' (require user input) */
-  conflictResolution?: 'linear' | 'automaker' | 'manual';
-  /** Workflow state names that indicate approval (default: ['Approved', 'Ready for Planning']) */
-  approvalStates?: string[];
-  /** Workflow state names that indicate changes requested (default: ['Changes Requested']) */
-  changesRequestedStates?: string[];
-  /** Workflow state names that trigger intake transfer to Automaker board (default: ['Todo']) */
-  intakeTriggerStates?: string[];
-
-  // API key fallback (personal API token, no OAuth required)
-  /** Personal Linear API key (fallback when OAuth is not configured) */
-  apiKey?: string;
-
-  // Agent OAuth (actor=app) fields
-  /** OAuth access token for agent (actor=app) */
-  agentToken?: string;
-  /** OAuth refresh token */
-  refreshToken?: string;
-  /** Token expiration timestamp (ISO 8601) */
-  tokenExpiresAt?: string;
-  /** Granted OAuth scopes */
-  scopes?: string[];
-
-  // Custom workflow state IDs (for HITL deepening)
-  /** Custom workflow state IDs for human-in-the-loop escalation */
-  customStateIds?: {
-    /** "Needs Human Review" state ID */
-    needsHumanReview?: string;
-    /** "Escalated" state ID */
-    escalated?: string;
-    /** "Agent Denied" state ID */
-    agentDenied?: string;
-  };
-}
-
-/** Default Linear integration settings - disabled by default */
-export const DEFAULT_LINEAR_INTEGRATION: LinearIntegrationConfig = {
-  enabled: false,
-  syncOnFeatureCreate: true,
-  syncOnStatusChange: true,
-  commentOnCompletion: true,
-  priorityMapping: {
-    small: 4, // Low priority
-    medium: 3, // Normal priority
-    large: 2, // High priority
-    architectural: 1, // Urgent priority
-  },
 };
 
 // ============================================================================
@@ -381,8 +293,6 @@ export interface GoogleIntegrationConfig {
  * Each integration can be independently enabled/disabled per project.
  */
 export interface ProjectIntegrations {
-  /** Linear project management integration */
-  linear?: LinearIntegrationConfig;
   /** Discord team communication integration */
   discord?: DiscordIntegrationConfig;
   /** Google Calendar integration (OAuth2 tokens) */
@@ -421,16 +331,10 @@ export interface ErrorTrackingSettings {
 export interface IntegrationEventMapping {
   /** Event that triggers this integration action */
   event: EventHookTrigger;
-  /** Which integration to use (linear, discord, etc.) */
-  integration: 'linear' | 'discord';
+  /** Which integration to use */
+  integration: 'discord';
   /** Action to perform (maps to MCP tool) */
-  action:
-    | 'create_issue'
-    | 'update_issue'
-    | 'add_comment'
-    | 'send_message'
-    | 'create_thread'
-    | 'add_reaction';
+  action: 'send_message' | 'create_thread' | 'add_reaction';
   /** Optional condition function to determine if action should execute */
   condition?: string;
 }

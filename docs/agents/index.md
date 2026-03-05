@@ -40,7 +40,7 @@ Covers:
 - RoleRegistryService (in-memory template storage with tier enforcement)
 - AgentFactoryService (create configs from templates with overrides/inheritance)
 - DynamicAgentExecutor (execute with system prompt assembly and tool filtering)
-- Assignment routing (Discord, Linear, GitHub)
+- Assignment routing (Discord, GitHub)
 - End-to-end flow
 
 **Read this if:** You want to create custom agent types, understand how agents are configured at runtime, or build on the template system.

@@ -253,7 +253,6 @@ const ROLE_OPTIONS = [
   'chief-of-staff',
   'pr-maintainer',
   'board-janitor',
-  'linear-specialist',
   'calendar-assistant',
   'custom',
 ];

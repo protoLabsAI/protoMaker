@@ -6,7 +6,7 @@
  * where the feature originated.
  *
  * Usage:
- *   channelRouter.register(new LinearChannelHandler(linearClient));
+ *   channelRouter.register(new DiscordChannelHandler(discordBot));
  *   channelRouter.getHandler(feature).requestApproval(feature, context);
  */
 

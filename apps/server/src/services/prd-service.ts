@@ -28,7 +28,6 @@ export interface PRDMetadata {
   approvedBy?: string; // User ID/name
   approvedAt?: string;
   discordThreadId?: string; // Where PRD discussion happened
-  linearProjectId?: string; // Created project (if approved)
 }
 
 /**
@@ -46,7 +45,7 @@ export interface PRDDocument {
  * - Create and format SPARC PRDs
  * - Save PRDs to disk
  * - Track PRD approval workflow
- * - Generate markdown for Discord/Linear
+ * - Generate markdown for Discord
  */
 export class PRDService {
   private static instance: PRDService;
@@ -143,28 +142,6 @@ export class PRDService {
     logger.info(`Updated PRD ${prdId} status to: ${status}`);
 
     return document;
-  }
-
-  /**
-   * Link PRD to Linear project
-   */
-  async linkLinearProject(
-    prdId: string,
-    projectPath: string,
-    linearProjectId: string
-  ): Promise<void> {
-    const document = await this.loadPRD(prdId, projectPath);
-
-    if (!document) {
-      throw new Error(`PRD ${prdId} not found in ${projectPath}`);
-    }
-
-    document.metadata.linearProjectId = linearProjectId;
-    document.metadata.updatedAt = new Date().toISOString();
-
-    await this.savePRD(document);
-
-    logger.info(`Linked PRD ${prdId} to Linear project ${linearProjectId}`);
   }
 
   /**
