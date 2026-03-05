@@ -3,7 +3,7 @@
  */
 
 import { randomBytes } from 'crypto';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { Request, Response, NextFunction } from 'express';
 
 const logger = createLogger('Terminal');

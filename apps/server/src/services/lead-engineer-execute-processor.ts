@@ -8,9 +8,9 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import { createLogger } from '@protolabs-ai/utils';
-import { getAutomakerDir, getFeatureDir } from '@protolabs-ai/platform';
-import type { EventType } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
+import type { EventType } from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -18,7 +18,7 @@ import type {
   StateTransitionResult,
 } from './lead-engineer-types.js';
 import { EXECUTE_TIMEOUT_MS, MAX_AGENT_RETRIES, MAX_INFRA_RETRIES } from './lead-engineer-types.js';
-import type { VerifiedTrajectory } from '@protolabs-ai/types';
+import type { VerifiedTrajectory } from '@protolabsai/types';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');

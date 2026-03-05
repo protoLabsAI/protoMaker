@@ -4,7 +4,7 @@ import {
   isValidSpecXml,
   type ParseResult,
   type SpecOutput,
-} from '@protolabs-ai/spec-parser';
+} from '@protolabsai/spec-parser';
 
 /**
  * Result of the spec parsing hook.

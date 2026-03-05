@@ -8,5 +8,5 @@ export default defineConfig({
   clean: true,
   splitting: false,
   treeshake: true,
-  external: ['@protolabs-ai/types', '@protolabs-ai/utils', '@sentry/node', '@sentry/electron'],
+  external: ['@protolabsai/types', '@protolabsai/utils', '@sentry/node', '@sentry/electron'],
 });

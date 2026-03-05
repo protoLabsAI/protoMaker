@@ -200,7 +200,7 @@ auto-release.yml
     ├── verify GH_PAT is set (warning if absent — Electron build chain won't fire)
     ├── clean stale changesets (find .changeset -name '*.md' ! -name 'README.md' -delete)
     ├── npm run release:prepare  (analyze commits since last tag → bump type)
-    ├── npm run changeset:version  (bump @protolabs-ai/* in lockstep, write CHANGELOG)
+    ├── npm run changeset:version  (bump @protolabsai/* in lockstep, write CHANGELOG)
     ├── git commit "chore: release vX.Y.Z" → pushed to main
     ├── git tag vX.Y.Z → pushed via GH_PAT
     │               ↓

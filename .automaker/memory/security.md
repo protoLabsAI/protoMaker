@@ -416,7 +416,7 @@ usageStats:
 - **Trade-offs:** More verbose, requires occasional pinning updates. But updates are explicit and auditable (commit message shows 'upgraded actions/checkout to v4.2.0'). Vulnerability surface reduced significantly.
 
 #### [Pattern] Layered repository validation: combining fork check + explicit repository name check + event type check + merge status check creates multiple layers of defense. Each layer catches different attack vectors independently. (2026-02-25)
-- **Problem solved:** The implementation checks: (1) github.event.pull_request.head.repo.full_name == github.repository (fork check), (2) github.repository == 'proto-labs-ai/protoMaker' (explicit repo name), (3) github.event.pull_request.merged == true (merge status), (4) different checks for different event types.
+- **Problem solved:** The implementation checks: (1) github.event.pull_request.head.repo.full_name == github.repository (fork check), (2) github.repository == 'protoLabsAI/protoMaker' (explicit repo name), (3) github.event.pull_request.merged == true (merge status), (4) different checks for different event types.
 - **Why this works:** No single check is bulletproof. Fork check prevents fork attacks but doesn't verify this is the correct repo. Repo name check prevents workflows running in mirrors/forks of the codebase. Merge status check prevents accidental processing of open PRs. Layering makes exploitation harder—attacker would need to bypass multiple independent validations.
 - **Trade-offs:** More verbose guard logic (2-3 if conditions). But defense-in-depth is worth the verbosity for self-hosted runner workflows where compromise is costly.
 

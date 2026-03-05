@@ -7,11 +7,11 @@
 import { useState, useCallback } from 'react';
 import { GitPullRequest, RefreshCw, ExternalLink, GitMerge, X } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { getElectronAPI, type GitHubPR } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Markdown } from '@protolabs-ai/ui/molecules';
+import { Button } from '@protolabsai/ui/atoms';
+import { Markdown } from '@protolabsai/ui/molecules';
 import { cn } from '@/lib/utils';
 import { useGitHubPRs } from '@/hooks/queries';
 

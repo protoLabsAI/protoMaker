@@ -1,10 +1,10 @@
 import { memo, useMemo, useCallback, useState } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
+import { Button } from '@protolabsai/ui/atoms';
+import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 import type { Feature } from '@/store/types';
-import type { PipelineConfig, FeatureStatusWithPipeline } from '@protolabs-ai/types';
+import type { PipelineConfig, FeatureStatusWithPipeline } from '@protolabsai/types';
 import { ListHeader } from './list-header';
 import { ListRow, sortFeatures } from './list-row';
 import { createRowActionHandlers, type RowActionHandlers } from './row-actions';

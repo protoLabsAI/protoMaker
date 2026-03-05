@@ -7,7 +7,7 @@
  * - Fetch CI check run results
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 

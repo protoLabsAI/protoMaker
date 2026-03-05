@@ -1,9 +1,9 @@
 import type { JSX } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { Globe, CircleDot, GitPullRequest } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { useDroppable } from '@dnd-kit/core';
 import type { WorktreeInfo, BranchInfo, DevServerInfo, PRInfo, GitRepoStatus } from '../types';
 import { BranchSwitchDropdown } from './branch-switch-dropdown';

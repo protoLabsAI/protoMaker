@@ -7,8 +7,8 @@
  */
 
 import { exec } from 'node:child_process';
-import { createLogger } from '@protolabs-ai/utils';
-import type { CalendarEvent } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { CalendarEvent } from '@protolabsai/types';
 import type { CalendarService } from './calendar-service.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { AutomationService } from './automation-service.js';

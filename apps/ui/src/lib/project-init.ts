@@ -5,7 +5,7 @@
  * new or existing projects.
  */
 
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { getElectronAPI } from './electron';
 
 const logger = createLogger('ProjectInit');

@@ -8,7 +8,7 @@
 
 import { QueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { isConnectionError, handleServerOffline } from './http-api-client';
 
 const logger = createLogger('QueryClient');

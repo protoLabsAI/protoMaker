@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plug, Calendar, CheckCircle2, XCircle, ExternalLink, Loader2 } from 'lucide-react';
-import { Button, Input, Label, Spinner } from '@protolabs-ai/ui/atoms';
+import { Button, Input, Label, Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { apiPost } from '@/lib/api-fetch';
 import { getServerUrlSync } from '@/lib/http-api-client';

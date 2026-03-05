@@ -16,7 +16,7 @@ import { ProviderFactory } from '../../providers/provider-factory.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
 import { StreamObserver } from '../stream-observer-service.js';
 import { getWorkflowSettings } from '../../lib/settings-helpers.js';
-import { setFeatureContext } from '@protolabs-ai/error-tracking';
+import { setFeatureContext } from '@protolabsai/error-tracking';
 import { LoopDetectedError } from '../auto-mode-service.js';
 
 import type {
@@ -29,8 +29,8 @@ import type {
   PlanningMode,
   ExecutionContext,
   ActionProposal,
-} from '@protolabs-ai/types';
-import { DEFAULT_PHASE_MODELS, isClaudeModel, stripProviderPrefix } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_PHASE_MODELS, isClaudeModel, stripProviderPrefix } from '@protolabsai/types';
 import {
   buildPromptWithImages,
   classifyError,
@@ -40,14 +40,10 @@ import {
   createLogger,
   type DedupChecker,
   type IndexRebuilder,
-} from '@protolabs-ai/utils';
-import {
-  resolveModelString,
-  resolvePhaseModel,
-  DEFAULT_MODELS,
-} from '@protolabs-ai/model-resolver';
-import { getFeatureDir } from '@protolabs-ai/platform';
-import { rebaseWorktreeOnMain } from '@protolabs-ai/git-utils';
+} from '@protolabsai/utils';
+import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@protolabsai/model-resolver';
+import { getFeatureDir } from '@protolabsai/platform';
+import { rebaseWorktreeOnMain } from '@protolabsai/git-utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -1799,9 +1795,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
 
     // Try to find a provider for the model (if it's a provider model like "GLM-4.7")
     // This allows users to select provider models in the Auto Mode / Feature execution
-    let claudeCompatibleProvider:
-      | import('@protolabs-ai/types').ClaudeCompatibleProvider
-      | undefined;
+    let claudeCompatibleProvider: import('@protolabsai/types').ClaudeCompatibleProvider | undefined;
     let providerResolvedModel: string | undefined;
     if (finalModel && this.settingsService) {
       // If providerId is explicitly set (from agentExecutionModel phase setting),
@@ -2529,7 +2523,7 @@ After generating the revised spec, output:
 
                   // Emit loop detection event
                   this.events.emit(
-                    'pipeline:loop-detected' as import('@protolabs-ai/types').EventType,
+                    'pipeline:loop-detected' as import('@protolabsai/types').EventType,
                     {
                       featureId,
                       loopSignature: streamObserver.getLoopSignature() || 'unknown',
@@ -2993,7 +2987,7 @@ You can use the Read tool to view these images at any time during implementation
       const dedupChecker: DedupChecker | undefined = this.knowledgeStoreService
         ? async (
             projPath: string,
-            learning: import('@protolabs-ai/utils').LearningEntry,
+            learning: import('@protolabsai/utils').LearningEntry,
             targetFile: string
           ) => {
             if (!this.knowledgeStoreService) return false;

@@ -38,11 +38,11 @@ Layer 1 is active today. Layers 2-3 are planned future work.
 
 ## Shared component library
 
-All interactive UI elements must come from `@protolabs-ai/ui`. The package lives at `libs/ui/` and exports through two entry points:
+All interactive UI elements must come from `@protolabsai/ui`. The package lives at `libs/ui/` and exports through two entry points:
 
 ```typescript
-import { Button, Card, Input, Badge } from '@protolabs-ai/ui/atoms';
-import { ConfirmDialog, Autocomplete, Markdown } from '@protolabs-ai/ui/molecules';
+import { Button, Card, Input, Badge } from '@protolabsai/ui/atoms';
+import { ConfirmDialog, Autocomplete, Markdown } from '@protolabsai/ui/molecules';
 ```
 
 ### Atoms (26+ components)
@@ -98,12 +98,12 @@ Application chrome (toolbars, panels, sidebars, inspectors, settings, modals) mu
 
 | Never use                 | Always use instead                                                  |
 | ------------------------- | ------------------------------------------------------------------- |
-| `<button>`                | `<Button>` from `@protolabs-ai/ui/atoms`                            |
-| `<input>`                 | `<Input>` from `@protolabs-ai/ui/atoms`                             |
+| `<button>`                | `<Button>` from `@protolabsai/ui/atoms`                             |
+| `<input>`                 | `<Input>` from `@protolabsai/ui/atoms`                              |
 | `<select>`                | `<Select>` + `<SelectTrigger>` + `<SelectContent>` + `<SelectItem>` |
-| `<textarea>`              | `<Textarea>` from `@protolabs-ai/ui/atoms`                          |
-| `<input type="checkbox">` | `<Checkbox>` from `@protolabs-ai/ui/atoms`                          |
-| `<label>`                 | `<Label>` from `@protolabs-ai/ui/atoms`                             |
+| `<textarea>`              | `<Textarea>` from `@protolabsai/ui/atoms`                           |
+| `<input type="checkbox">` | `<Checkbox>` from `@protolabsai/ui/atoms`                           |
+| `<label>`                 | `<Label>` from `@protolabsai/ui/atoms`                              |
 
 **Exemption:** Canvas/renderer internals (code editor buffers, terminal emulators, design canvas) are exempt because they render user content, not application chrome.
 
@@ -160,7 +160,7 @@ Three tiers only. No exceptions:
 
 ## Context file system
 
-The enforcement mechanism works through the `.automaker/context/` directory. Files placed here are automatically injected into every agent's system prompt via `loadContextFiles()` from `@protolabs-ai/utils`.
+The enforcement mechanism works through the `.automaker/context/` directory. Files placed here are automatically injected into every agent's system prompt via `loadContextFiles()` from `@protolabsai/utils`.
 
 **Active context files for UI standards:**
 
@@ -178,7 +178,7 @@ Agent starts
   → loadContextFiles({ projectPath })
   → Reads ALL files from .automaker/context/
   → Injects as system prompt section
-  → Agent sees: "ALWAYS use <Button> from @protolabs-ai/ui/atoms, NEVER use <button>"
+  → Agent sees: "ALWAYS use <Button> from @protolabsai/ui/atoms, NEVER use <button>"
   → Agent follows the rules in generated code
 ```
 

@@ -9,11 +9,11 @@
 
 import * as secureFs from '../../lib/secure-fs.js';
 import type { EventEmitter } from '../../lib/events.js';
-import { createLogger } from '@protolabs-ai/utils';
-import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
-import { resolvePhaseModel } from '@protolabs-ai/model-resolver';
+import { createLogger } from '@protolabsai/utils';
+import { DEFAULT_PHASE_MODELS } from '@protolabsai/types';
+import { resolvePhaseModel } from '@protolabsai/model-resolver';
 import { streamingQuery } from '../../providers/simple-query-service.js';
-import { getAppSpecPath } from '@protolabs-ai/platform';
+import { getAppSpecPath } from '@protolabsai/platform';
 import type { SettingsService } from '../../services/settings-service.js';
 import {
   getAutoLoadClaudeMdSetting,

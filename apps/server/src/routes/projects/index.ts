@@ -24,7 +24,7 @@ import { createCreateFeaturesHandler } from './routes/create-features.js';
 import { createArchiveHandler } from './routes/archive.js';
 import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
-import { createProjectTools, toExpressRouter } from '@protolabs-ai/tools';
+import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,

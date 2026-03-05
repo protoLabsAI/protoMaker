@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { deliveryService } from '../../../services/delivery-service.js';
 
 const logger = createLogger('setup:deliver');

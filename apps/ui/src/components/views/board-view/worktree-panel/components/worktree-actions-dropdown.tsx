@@ -1,4 +1,4 @@
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   Trash2,
   MoreHorizontal,

@@ -17,8 +17,8 @@
  *   - hitl:form-requested → routes a human-input-required notification
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { EventType, NotificationType } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { EventType, NotificationType } from '@protolabsai/types';
 import type { SensorRegistryService } from './sensor-registry-service.js';
 import type { NotificationService } from './notification-service.js';
 import type { DiscordBotService } from './discord-bot-service.js';

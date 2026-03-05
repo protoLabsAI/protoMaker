@@ -1,7 +1,7 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { Download, AlertCircle } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { CopyableCommandField } from './copyable-command-field';
 import { TerminalOutput } from './terminal-output';
 

@@ -1,6 +1,6 @@
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Slider } from '@protolabsai/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,

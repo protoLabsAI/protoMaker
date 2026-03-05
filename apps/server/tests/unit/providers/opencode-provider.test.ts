@@ -3,11 +3,11 @@ import {
   OpencodeProvider,
   resetToolUseIdCounter,
 } from '../../../src/providers/opencode-provider.js';
-import type { ProviderMessage, ModelDefinition } from '@protolabs-ai/types';
+import type { ProviderMessage, ModelDefinition } from '@protolabsai/types';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
-import { spawnJSONLProcess, getOpenCodeAuthIndicators } from '@protolabs-ai/platform';
+import { spawnJSONLProcess, getOpenCodeAuthIndicators } from '@protolabsai/platform';
 
-vi.mock('@protolabs-ai/platform', () => ({
+vi.mock('@protolabsai/platform', () => ({
   spawnJSONLProcess: vi.fn(),
   isWslAvailable: vi.fn().mockReturnValue(false),
   findCliInWsl: vi.fn().mockReturnValue(null),

@@ -2,7 +2,7 @@
  * Shape renderer for rectangles and ellipses
  */
 
-import type { PenRectangle, PenEllipse } from '@protolabs-ai/types';
+import type { PenRectangle, PenEllipse } from '@protolabsai/types';
 import { fillToCSS, colorToCSS } from './style-utils';
 import type { CSSProperties } from 'react';
 

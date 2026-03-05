@@ -4,7 +4,7 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('GitHub');
 

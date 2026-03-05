@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { ArrowDown, ArrowUp, Link2, X } from 'lucide-react';
 import type { Feature } from '@/store/types';
 import { cn } from '@/lib/utils';

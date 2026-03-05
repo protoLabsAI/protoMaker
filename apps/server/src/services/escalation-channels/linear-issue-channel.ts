@@ -19,8 +19,8 @@ import type {
   EscalationSignal,
   EscalationSeverity,
   EscalationSource,
-} from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import { LinearMCPClient, type CreateIssueOptions } from '../linear-mcp-client.js';
 import type { SettingsService } from '../settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';

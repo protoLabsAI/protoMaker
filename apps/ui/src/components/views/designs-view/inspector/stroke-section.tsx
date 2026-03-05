@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import type { PenNode } from '@protolabs-ai/types';
+import type { PenNode } from '@protolabsai/types';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface StrokeSectionProps {
@@ -22,11 +22,11 @@ export function StrokeSection({ node }: StrokeSectionProps) {
   }
 
   // Access strokes via type assertion since we checked above
-  const strokes = (node as unknown as { strokes: import('@protolabs-ai/types').PenStroke[] })
+  const strokes = (node as unknown as { strokes: import('@protolabsai/types').PenStroke[] })
     .strokes;
 
   // Convert PenColor to CSS string for display
-  const colorToDisplayString = (color: string | import('@protolabs-ai/types').PenColor): string => {
+  const colorToDisplayString = (color: string | import('@protolabsai/types').PenColor): string => {
     if (typeof color === 'string') return color;
     return `rgb(${color.r}, ${color.g}, ${color.b})`;
   };

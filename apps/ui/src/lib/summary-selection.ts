@@ -7,7 +7,7 @@
  */
 
 import { extractSummary } from './log-parser';
-import type { PipelineSummary } from '@protolabs-ai/types';
+import type { PipelineSummary } from '@protolabsai/types';
 
 /**
  * Returns the effective summary for a feature.

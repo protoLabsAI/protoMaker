@@ -1,4 +1,4 @@
-# @protolabs-ai/flows
+# @protolabsai/flows
 
 LangGraph state graph examples and patterns for building AI workflows in AutoMaker.
 
@@ -320,8 +320,8 @@ These patterns are designed for use in AutoMaker's agent workflows:
 - `@langchain/langgraph` - Core LangGraph framework
 - `@langchain/core` - LangChain base classes
 - `@langchain/anthropic` - Claude model integration
-- `@protolabs-ai/utils` - Logging and utilities
-- `@protolabs-ai/types` - TypeScript type definitions
+- `@protolabsai/utils` - Logging and utilities
+- `@protolabsai/types` - TypeScript type definitions
 
 ## Development
 

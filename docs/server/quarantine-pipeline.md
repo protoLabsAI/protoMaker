@@ -680,4 +680,4 @@ The quarantine system is implemented across these files:
 
 - [Contribution model](/dev/contribution-model) — How external contributors submit ideas
 - [Feature lifecycle](/dev/idea-to-production) — What happens after a feature passes quarantine
-- [SECURITY.md](https://github.com/proto-labs-ai/protoMaker/blob/main/SECURITY.md) — Security vulnerability reporting process
+- [SECURITY.md](https://github.com/protoLabsAI/protoMaker/blob/main/SECURITY.md) — Security vulnerability reporting process

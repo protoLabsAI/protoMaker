@@ -3,7 +3,7 @@
  */
 
 import { useMemo } from 'react';
-import type { PenNode, PenDocument as PenDocumentParsed } from '@protolabs-ai/types';
+import type { PenNode, PenDocument as PenDocumentParsed } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { TransformSection } from './transform-section';
 import { FillSection } from './fill-section';

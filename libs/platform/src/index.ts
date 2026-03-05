@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/platform
+ * @protolabsai/platform
  * Platform-specific utilities for AutoMaker
  */
 

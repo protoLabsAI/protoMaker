@@ -1,7 +1,7 @@
 import { Shield, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 
 interface SecuritySectionProps {
   skipSandboxWarning: boolean;

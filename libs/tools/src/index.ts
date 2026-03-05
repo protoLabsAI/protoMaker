@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/tools
+ * @protolabsai/tools
  *
  * Unified tool definition and registry system for AutoMaker.
  * Provides type-safe tool creation with Zod schemas and centralized tool management.

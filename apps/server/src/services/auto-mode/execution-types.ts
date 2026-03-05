@@ -3,7 +3,7 @@
  * Used by both AutoModeService and ExecutionService.
  */
 
-import type { Feature, ModelProvider } from '@protolabs-ai/types';
+import type { Feature, ModelProvider } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Shared state types (previously defined inline in auto-mode-service.ts)

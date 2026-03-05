@@ -5,8 +5,8 @@
  * emits escalation signal, and saves trajectory data.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { EventType, VerifiedTrajectory } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { EventType, VerifiedTrajectory } from '@protolabsai/types';
 import { FailureClassifierService } from './failure-classifier-service.js';
 import type {
   ProcessorServiceContext,

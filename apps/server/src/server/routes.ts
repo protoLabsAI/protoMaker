@@ -2,7 +2,7 @@
 
 import type { Express } from 'express';
 import rateLimit from 'express-rate-limit';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from './services.js';
 

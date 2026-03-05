@@ -179,7 +179,7 @@ Access via `escalationRouter.getLog(limit?)` (most recent first).
 
 Channel registration happens in `apps/server/src/services/escalation-channels/escalation-channels.module.ts`. To add a new channel:
 
-1. Create a class implementing `EscalationChannel` from `@protolabs-ai/types`
+1. Create a class implementing `EscalationChannel` from `@protolabsai/types`
 2. Implement `name`, `canHandle(signal)`, `send(signal)`, and optionally `rateLimit`
 3. Register it in the module: `escalationRouter.registerChannel(new MyChannel(...))`
 

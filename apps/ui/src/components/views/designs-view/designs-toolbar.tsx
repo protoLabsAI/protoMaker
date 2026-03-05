@@ -3,10 +3,10 @@
  */
 
 import { useEffect } from 'react';
-import type { PenTheme } from '@protolabs-ai/types';
+import type { PenTheme } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { Save } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 
 interface DesignsToolbarProps {
   themes: PenTheme[];

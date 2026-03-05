@@ -17,9 +17,9 @@ import type {
   FeatureStatusWithPipeline,
   PipelineConfig,
   ServerLogLevel,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
-// Re-export types from @protolabs-ai/types for convenience
+// Re-export types from @protolabsai/types for convenience
 export type {
   ModelAlias,
   PlanningMode,

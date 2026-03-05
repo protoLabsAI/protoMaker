@@ -5,8 +5,8 @@
  * These cannot be overwritten or unregistered via the API.
  */
 
-import type { AgentTemplate, UserProfile, CustomPrompt } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import type { AgentTemplate, UserProfile, CustomPrompt } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import {
   getAvaPrompt,
   getMattPrompt,
@@ -19,7 +19,7 @@ import {
   getBoardJanitorPrompt,
   getFrankPrompt,
   getPmPrompt,
-} from '@protolabs-ai/prompts';
+} from '@protolabsai/prompts';
 import type { RoleRegistryService } from './role-registry-service.js';
 
 const logger = createLogger('BuiltInTemplates');

@@ -1,5 +1,5 @@
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
 import { Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

@@ -13,7 +13,7 @@
  */
 
 import { Annotation, StateGraph, MemorySaver } from '@langchain/langgraph';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import * as readline from 'node:readline/promises';
 
 const logger = createLogger('hitl-graph');

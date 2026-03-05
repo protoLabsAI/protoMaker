@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
-import { PathNotAllowedError } from '@protolabs-ai/platform';
+import { PathNotAllowedError } from '@protolabsai/platform';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createReaddirHandler() {

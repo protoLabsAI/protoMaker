@@ -1,4 +1,4 @@
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,9 +6,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { GitBranch, ChevronDown, CircleDot, Check } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { WorktreeInfo } from '../types';
 

@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
   Spinner,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { apiFetch } from '@/lib/api-fetch';
 import { useAppStore } from '@/store/app-store';
 import { useSignalChannels } from '@/hooks/use-signal-channels';
@@ -28,8 +28,8 @@ import type {
   ConfigField,
   DiscordChannelSignalConfig,
   UserProfile,
-} from '@protolabs-ai/types';
-import type { SignalIntent } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import type { SignalIntent } from '@protolabsai/types';
 
 interface IntegrationConfigDialogProps {
   integrationId: string | null;

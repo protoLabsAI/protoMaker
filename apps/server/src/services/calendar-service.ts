@@ -8,8 +8,8 @@
  */
 
 import path from 'path';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
-import { getAutomakerDir } from '@protolabs-ai/platform';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
+import { getAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
@@ -19,7 +19,7 @@ import type {
   CalendarEvent,
   CalendarEventType,
   CalendarQueryOptions,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 const logger = createLogger('CalendarService');
 

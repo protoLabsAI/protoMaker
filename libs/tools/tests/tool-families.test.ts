@@ -11,7 +11,7 @@ import { createLinearTools } from '../src/linear-tools.js';
 import { createDiscordTools } from '../src/discord-tools.js';
 import { createGitHubTools } from '../src/github-tools.js';
 import { ToolRegistry } from '../src/registry.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 // ─── Board Tools ─────────────────────────────────────────────────────────────
 

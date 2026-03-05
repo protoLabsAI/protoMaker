@@ -21,10 +21,10 @@
  * are subject to policy checks and approval workflows.
  */
 
-import type { Feature, PipelinePhase } from '@protolabs-ai/types';
-import type { AuthorityAgent } from '@protolabs-ai/types';
-import { createLogger, loadContextFiles } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import type { Feature, PipelinePhase } from '@protolabsai/types';
+import type { AuthorityAgent } from '@protolabsai/types';
+import { createLogger, loadContextFiles } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';

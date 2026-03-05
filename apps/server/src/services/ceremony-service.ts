@@ -9,9 +9,9 @@
  * (routes, services.ts, engine routes, integration-service) require no changes.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabs-ai/flows';
+import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';

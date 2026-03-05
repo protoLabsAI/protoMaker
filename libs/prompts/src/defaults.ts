@@ -23,8 +23,8 @@ import type {
   ResolvedContextDescriptionPrompts,
   ResolvedSuggestionsPrompts,
   ResolvedTaskExecutionPrompts,
-} from '@protolabs-ai/types';
-import { STATIC_PORT, SERVER_PORT } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { STATIC_PORT, SERVER_PORT } from '@protolabsai/types';
 
 /**
  * ========================================================================

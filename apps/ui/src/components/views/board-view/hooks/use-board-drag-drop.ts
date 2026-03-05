@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { Feature } from '@/store/app-store';
 import { useAppStore } from '@/store/app-store';

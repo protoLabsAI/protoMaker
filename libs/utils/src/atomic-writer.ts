@@ -5,7 +5,7 @@
  * ensuring data integrity even during crashes or power failures.
  */
 
-import { secureFs } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabsai/platform';
 import path from 'path';
 import crypto from 'crypto';
 import { createLogger } from './logger.js';

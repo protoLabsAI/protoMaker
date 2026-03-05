@@ -4,7 +4,7 @@ import path from 'node:path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@protolabs-ai/types': path.resolve(__dirname, './src/index.ts'),
+      '@protolabsai/types': path.resolve(__dirname, './src/index.ts'),
     },
   },
   test: {

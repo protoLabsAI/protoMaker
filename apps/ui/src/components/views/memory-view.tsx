@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Card } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Card } from '@protolabsai/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -21,7 +21,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -29,11 +29,11 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { Markdown } from '@protolabs-ai/ui/molecules';
+import { Markdown } from '@protolabsai/ui/molecules';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { isMarkdownFilename } from '@/lib/image-utils';
 import {
@@ -41,7 +41,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 
 const logger = createLogger('MemoryView');
 

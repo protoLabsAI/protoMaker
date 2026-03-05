@@ -13,14 +13,14 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'fs/promises';
 import { join } from 'path';
-import { createLogger } from '@protolabs-ai/utils';
-import { ensureAutomakerDir } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { ensureAutomakerDir } from '@protolabsai/platform';
 import type {
   Feature,
   HITLFormRequest,
   HITLFormRequestInput,
   HITLFormRequestSummary,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { ChannelRouter } from './channel-router.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';

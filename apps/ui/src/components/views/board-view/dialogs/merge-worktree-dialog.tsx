@@ -6,12 +6,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import { GitMerge, AlertTriangle, Trash2, Wrench } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 import { BranchAutocomplete } from '@/components/views/board-view/components/branch-autocomplete';

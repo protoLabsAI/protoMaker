@@ -11,7 +11,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import type { UserIdentityService } from '../services/user-identity-service.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('UserRoutes');
 

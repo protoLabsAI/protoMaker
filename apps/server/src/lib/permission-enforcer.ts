@@ -2,11 +2,11 @@
  * Permission enforcement utilities for Cursor provider
  */
 
-import type { CursorCliConfigFile, CursorToolCallEvent } from '@protolabs-ai/types';
+import type { CursorCliConfigFile, CursorToolCallEvent } from '@protolabsai/types';
 
 /** The tool_call shape from CursorToolCallEvent */
 type ToolCall = CursorToolCallEvent['tool_call'];
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('PermissionEnforcer');
 

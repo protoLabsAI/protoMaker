@@ -15,12 +15,12 @@
  * 4. External processes (EventHooks, MCP subscriptions) handle the events
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
-import type { LinearIntegrationConfig, ProjectIntegrations } from '@protolabs-ai/types';
-import type { Feature } from '@protolabs-ai/types';
+import type { LinearIntegrationConfig, ProjectIntegrations } from '@protolabsai/types';
+import type { Feature } from '@protolabsai/types';
 
 import { LinearMCPClient } from './linear-mcp-client.js';
 

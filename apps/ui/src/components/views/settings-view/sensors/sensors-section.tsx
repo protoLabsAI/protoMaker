@@ -11,13 +11,13 @@ import {
   AlertTriangle,
   Activity,
 } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { apiFetch } from '@/lib/api-fetch';
 import { getApiKey, getServerUrlSync } from '@/lib/http-api-client';
-import type { SensorConfig, SensorState } from '@protolabs-ai/types';
+import type { SensorConfig, SensorState } from '@protolabsai/types';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 

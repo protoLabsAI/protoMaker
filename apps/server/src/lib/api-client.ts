@@ -12,7 +12,7 @@
  * Use this for wrapping calls to GitHub, Discord, and other external APIs.
  */
 
-import { createLogger, classifyError } from '@protolabs-ai/utils';
+import { createLogger, classifyError } from '@protolabsai/utils';
 
 const logger = createLogger('ApiClient');
 

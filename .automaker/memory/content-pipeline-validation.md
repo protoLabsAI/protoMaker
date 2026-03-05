@@ -208,8 +208,8 @@ All 5 test runs scored exactly 10% on research quality, indicating a systematic 
 ```bash
 npm run build:server
 # Result: ✅ Success
-# - @protolabs-ai/flows: rebuilt with regex fix
-# - @protolabs-ai/server: rebuilt with fallback code
+# - @protolabsai/flows: rebuilt with regex fix
+# - @protolabsai/server: rebuilt with fallback code
 # - Build time: ~2.6s
 # - All TypeScript compilation successful
 ```

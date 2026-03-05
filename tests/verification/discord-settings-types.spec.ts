@@ -11,8 +11,8 @@ import type {
   GlobalSettings,
   ProjectSettings,
   Credentials,
-} from '@protolabs-ai/types';
-import { DEFAULT_DISCORD_SETTINGS } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_DISCORD_SETTINGS } from '@protolabsai/types';
 
 test.describe('Discord Settings Types', () => {
   test('DEFAULT_DISCORD_SETTINGS has correct structure', () => {

@@ -1,4 +1,4 @@
-# @protolabs-ai/prompts
+# @protolabsai/prompts
 
 ## 0.33.1
 
@@ -6,8 +6,8 @@
 
 - Maintenance release.
 - Updated dependencies
-  - @protolabs-ai/types@0.33.1
-  - @protolabs-ai/utils@0.33.1
+  - @protolabsai/types@0.33.1
+  - @protolabsai/utils@0.33.1
 
 ## 0.33.0
 
@@ -26,8 +26,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.33.0
-  - @protolabs-ai/utils@0.33.0
+  - @protolabsai/types@0.33.0
+  - @protolabsai/utils@0.33.0
 
 ## 0.32.1
 
@@ -41,8 +41,8 @@
   - we have many references to `npm run dev:web` throughout our docs and int
 
 - Updated dependencies
-  - @protolabs-ai/types@0.32.1
-  - @protolabs-ai/utils@0.32.1
+  - @protolabsai/types@0.32.1
+  - @protolabsai/utils@0.32.1
 
 ## 0.32.0
 
@@ -65,8 +65,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.32.0
-  - @protolabs-ai/utils@0.32.0
+  - @protolabsai/types@0.32.0
+  - @protolabsai/utils@0.32.0
 
 ## 0.31.0
 
@@ -79,8 +79,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.31.0
-  - @protolabs-ai/utils@0.31.0
+  - @protolabsai/types@0.31.0
+  - @protolabsai/utils@0.31.0
 
 ## 0.30.1
 
@@ -89,8 +89,8 @@
 - ### Bug Fixes
   - capture thinking blocks in simpleQuery for Opus plan generation
 - Updated dependencies
-  - @protolabs-ai/types@0.30.1
-  - @protolabs-ai/utils@0.30.1
+  - @protolabsai/types@0.30.1
+  - @protolabsai/utils@0.30.1
 
 ## 0.30.0
 
@@ -112,8 +112,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.30.0
-  - @protolabs-ai/utils@0.30.0
+  - @protolabsai/types@0.30.0
+  - @protolabsai/utils@0.30.0
 
 ## 0.29.0
 
@@ -125,8 +125,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.29.0
-  - @protolabs-ai/utils@0.29.0
+  - @protolabsai/types@0.29.0
+  - @protolabsai/utils@0.29.0
 
 ## 0.28.0
 
@@ -138,8 +138,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.28.0
-  - @protolabs-ai/utils@0.28.0
+  - @protolabsai/types@0.28.0
+  - @protolabsai/utils@0.28.0
 
 ## 0.27.0
 
@@ -158,8 +158,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.27.0
-  - @protolabs-ai/utils@0.27.0
+  - @protolabsai/types@0.27.0
+  - @protolabsai/utils@0.27.0
 
 ## 0.26.0
 
@@ -171,7 +171,7 @@
   ### Bug Fixes
   - oauth auth detection + pr-feedback stale entry cleanup
   - address CodeRabbit review feedback on project management PR
-  - add @protolabs-ai/tools as server dependency
+  - add @protolabsai/tools as server dependency
 
   ### Refactors
   - unify project view with design system atoms and semantic tokens
@@ -179,8 +179,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.26.0
-  - @protolabs-ai/utils@0.26.0
+  - @protolabsai/types@0.26.0
+  - @protolabsai/utils@0.26.0
 
 ## 0.25.0
 
@@ -219,8 +219,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.25.0
-  - @protolabs-ai/utils@0.25.0
+  - @protolabsai/types@0.25.0
+  - @protolabsai/utils@0.25.0
 
 ## 0.24.0
 
@@ -242,8 +242,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.24.0
-  - @protolabs-ai/utils@0.24.0
+  - @protolabsai/types@0.24.0
+  - @protolabsai/utils@0.24.0
 
 ## 0.23.0
 
@@ -258,8 +258,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.23.0
-  - @protolabs-ai/utils@0.23.0
+  - @protolabsai/types@0.23.0
+  - @protolabsai/utils@0.23.0
 
 ## 0.22.0
 
@@ -279,8 +279,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.22.0
-  - @protolabs-ai/utils@0.22.0
+  - @protolabsai/types@0.22.0
+  - @protolabsai/utils@0.22.0
 
 ## 0.21.0
 
@@ -311,8 +311,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.21.0
-  - @protolabs-ai/utils@0.21.0
+  - @protolabsai/types@0.21.0
+  - @protolabsai/utils@0.21.0
 
 ## 0.20.1
 
@@ -322,8 +322,8 @@
   - filter chore PRs from GitHub release notes
   - add file edit path discipline rule to agent CLAUDE.md
 - Updated dependencies
-  - @protolabs-ai/types@0.20.1
-  - @protolabs-ai/utils@0.20.1
+  - @protolabsai/types@0.20.1
+  - @protolabsai/utils@0.20.1
 
 ## 0.20.0
 
@@ -341,8 +341,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.20.0
-  - @protolabs-ai/utils@0.20.0
+  - @protolabsai/types@0.20.0
+  - @protolabsai/utils@0.20.0
 
 ## 0.19.0
 
@@ -357,8 +357,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.19.0
-  - @protolabs-ai/utils@0.19.0
+  - @protolabsai/types@0.19.0
+  - @protolabsai/utils@0.19.0
 
 ## 0.18.1
 
@@ -367,8 +367,8 @@
 - ### Bug Fixes
   - use default API key instead of random generation
 - Updated dependencies
-  - @protolabs-ai/types@0.18.1
-  - @protolabs-ai/utils@0.18.1
+  - @protolabsai/types@0.18.1
+  - @protolabsai/utils@0.18.1
 
 ## 0.18.0
 
@@ -380,8 +380,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.18.0
-  - @protolabs-ai/utils@0.18.0
+  - @protolabsai/types@0.18.0
+  - @protolabsai/utils@0.18.0
 
 ## 0.17.0
 
@@ -400,8 +400,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.17.0
-  - @protolabs-ai/utils@0.17.0
+  - @protolabsai/types@0.17.0
+  - @protolabsai/utils@0.17.0
 
 ## 0.16.1
 
@@ -409,8 +409,8 @@
 
 - Maintenance release.
 - Updated dependencies
-  - @protolabs-ai/types@0.16.1
-  - @protolabs-ai/utils@0.16.1
+  - @protolabsai/types@0.16.1
+  - @protolabsai/utils@0.16.1
 
 ## 0.16.0
 
@@ -432,8 +432,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.16.0
-  - @protolabs-ai/utils@0.16.0
+  - @protolabsai/types@0.16.0
+  - @protolabsai/utils@0.16.0
 
 ## 0.15.3
 
@@ -453,8 +453,8 @@
   - [linear] feat(observability): implement TrajectoryStoreService — persist (#1481)
 
 - Updated dependencies
-  - @protolabs-ai/types@0.15.3
-  - @protolabs-ai/utils@0.15.3
+  - @protolabsai/types@0.15.3
+  - @protolabsai/utils@0.15.3
 
 ## 0.15.2
 
@@ -469,8 +469,8 @@
   - [linear] ux(ava-anywhere): polish the overlay as the primary Ava chat su (#1472)
 
 - Updated dependencies
-  - @protolabs-ai/types@0.15.2
-  - @protolabs-ai/utils@0.15.2
+  - @protolabsai/types@0.15.2
+  - @protolabsai/utils@0.15.2
 
 ## 0.15.1
 
@@ -484,8 +484,8 @@
   - discord config dialog — signal sources section (#1465)
 
 - Updated dependencies
-  - @protolabs-ai/types@0.15.1
-  - @protolabs-ai/utils@0.15.1
+  - @protolabsai/types@0.15.1
+  - @protolabsai/utils@0.15.1
 
 ## 0.15.0
 
@@ -512,8 +512,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.15.0
-  - @protolabs-ai/utils@0.15.0
+  - @protolabsai/types@0.15.0
+  - @protolabsai/utils@0.15.0
 
 ## 0.14.0
 
@@ -539,8 +539,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.14.0
-  - @protolabs-ai/utils@0.14.0
+  - @protolabsai/types@0.14.0
+  - @protolabsai/utils@0.14.0
 
 ## 0.13.0
 
@@ -564,8 +564,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.13.0
-  - @protolabs-ai/utils@0.13.0
+  - @protolabsai/types@0.13.0
+  - @protolabsai/utils@0.13.0
 
 ## 0.12.0
 
@@ -591,8 +591,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.12.0
-  - @protolabs-ai/utils@0.12.0
+  - @protolabsai/types@0.12.0
+  - @protolabsai/utils@0.12.0
 
 ## 0.11.0
 
@@ -604,8 +604,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.11.0
-  - @protolabs-ai/utils@0.11.0
+  - @protolabsai/types@0.11.0
+  - @protolabsai/utils@0.11.0
 
 ## 0.10.2
 
@@ -614,8 +614,8 @@
 - ### Bug Fixes
   - surface AUTOMAKER_ROOT missing error on new installs (PRO-335) (#1411)
 - Updated dependencies
-  - @protolabs-ai/types@0.10.2
-  - @protolabs-ai/utils@0.10.2
+  - @protolabsai/types@0.10.2
+  - @protolabsai/utils@0.10.2
 
 ## 0.10.1
 
@@ -626,8 +626,8 @@
   - rebase onto target branch before PR creation in non-Graphite path (#1407)
   - delete changeset-release.yml — auto-release owns the release pipeline (#1406)
 - Updated dependencies
-  - @protolabs-ai/types@0.10.1
-  - @protolabs-ai/utils@0.10.1
+  - @protolabsai/types@0.10.1
+  - @protolabsai/utils@0.10.1
 
 ## 0.10.0
 
@@ -639,8 +639,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.10.0
-  - @protolabs-ai/utils@0.10.0
+  - @protolabsai/types@0.10.0
+  - @protolabsai/utils@0.10.0
 
 ## 0.9.0
 
@@ -661,8 +661,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.9.0
-  - @protolabs-ai/utils@0.9.0
+  - @protolabsai/types@0.9.0
+  - @protolabsai/utils@0.9.0
 
 ## 0.8.0
 
@@ -684,8 +684,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.8.0
-  - @protolabs-ai/utils@0.8.0
+  - @protolabsai/types@0.8.0
+  - @protolabsai/utils@0.8.0
 
 ## 0.7.0
 
@@ -728,8 +728,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.7.0
-  - @protolabs-ai/utils@0.7.0
+  - @protolabsai/types@0.7.0
+  - @protolabsai/utils@0.7.0
 
 ## 0.5.0
 
@@ -757,8 +757,8 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.5.0
-  - @protolabs-ai/utils@0.5.0
+  - @protolabsai/types@0.5.0
+  - @protolabsai/utils@0.5.0
 
 ## 0.4.0
 
@@ -774,13 +774,13 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @protolabs-ai/types@0.4.0
-  - @protolabs-ai/utils@0.4.0
+  - @protolabsai/types@0.4.0
+  - @protolabsai/utils@0.4.0
 
 ## 0.3.0
 
 ### Patch Changes
 
 - Updated dependencies [3e55d9f]
-  - @protolabs-ai/types@0.3.0
-  - @protolabs-ai/utils@0.3.0
+  - @protolabsai/types@0.3.0
+  - @protolabsai/utils@0.3.0

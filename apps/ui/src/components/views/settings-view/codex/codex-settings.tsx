@@ -1,5 +1,5 @@
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
 import { FileCode, Globe, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OpenAIIcon } from '@/components/shared/provider-icon';

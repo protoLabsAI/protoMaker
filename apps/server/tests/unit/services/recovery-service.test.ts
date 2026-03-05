@@ -10,8 +10,8 @@ import type {
   ErrorInfo,
   ExecutionContext,
   RecoveryConfig,
-} from '@protolabs-ai/types';
-import { DEFAULT_RECOVERY_CONFIG } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_RECOVERY_CONFIG } from '@protolabsai/types';
 
 // Create a shared mock logger instance
 const mockLogger = vi.hoisted(() => ({
@@ -21,8 +21,8 @@ const mockLogger = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
-vi.mock('@protolabs-ai/utils', async () => {
-  const actual = await vi.importActual<typeof import('@protolabs-ai/utils')>('@protolabs-ai/utils');
+vi.mock('@protolabsai/utils', async () => {
+  const actual = await vi.importActual<typeof import('@protolabsai/utils')>('@protolabsai/utils');
   return {
     ...actual,
     createLogger: vi.fn(() => mockLogger),
@@ -40,7 +40,7 @@ const mockSecureFs = vi.hoisted(() => ({
 
 vi.mock('../../../src/lib/secure-fs.js', () => mockSecureFs);
 
-vi.mock('@protolabs-ai/platform', () => ({
+vi.mock('@protolabsai/platform', () => ({
   getAutomakerDir: vi.fn((p: string) => `${p}/.automaker`),
 }));
 

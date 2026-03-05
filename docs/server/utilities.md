@@ -1,17 +1,17 @@
 # Server Utilities Reference
 
-> **Note:** Most utilities documented here have been extracted to shared packages. Import from `@protolabs-ai/utils`, `@protolabs-ai/model-resolver`, and `@protolabs-ai/platform` instead of `apps/server/src/lib/`. See [Shared Packages](../dev/shared-packages) for the canonical import guide.
+> **Note:** Most utilities documented here have been extracted to shared packages. Import from `@protolabsai/utils`, `@protolabsai/model-resolver`, and `@protolabsai/platform` instead of `apps/server/src/lib/`. See [Shared Packages](../dev/shared-packages) for the canonical import guide.
 >
-> | Old Path                    | New Package                    |
-> | --------------------------- | ------------------------------ |
-> | `lib/image-handler.ts`      | `@protolabs-ai/utils`          |
-> | `lib/prompt-builder.ts`     | `@protolabs-ai/utils`          |
-> | `lib/model-resolver.ts`     | `@protolabs-ai/model-resolver` |
-> | `lib/conversation-utils.ts` | `@protolabs-ai/utils`          |
-> | `lib/error-handler.ts`      | `@protolabs-ai/utils`          |
-> | `lib/subprocess-manager.ts` | `@protolabs-ai/platform`       |
+> | Old Path                    | New Package                   |
+> | --------------------------- | ----------------------------- |
+> | `lib/image-handler.ts`      | `@protolabsai/utils`          |
+> | `lib/prompt-builder.ts`     | `@protolabsai/utils`          |
+> | `lib/model-resolver.ts`     | `@protolabsai/model-resolver` |
+> | `lib/conversation-utils.ts` | `@protolabsai/utils`          |
+> | `lib/error-handler.ts`      | `@protolabsai/utils`          |
+> | `lib/subprocess-manager.ts` | `@protolabsai/platform`       |
 
-This document describes utility functions available for server-side code. The canonical imports use shared packages (`@protolabs-ai/utils`, `@protolabs-ai/model-resolver`, `@protolabs-ai/platform`), not direct `lib/` paths.
+This document describes utility functions available for server-side code. The canonical imports use shared packages (`@protolabsai/utils`, `@protolabsai/model-resolver`, `@protolabsai/platform`), not direct `lib/` paths.
 
 ---
 

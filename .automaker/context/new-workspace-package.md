@@ -6,20 +6,20 @@ When a feature requires creating a new package under `libs/`, follow these rules
 
 ### 1. Version ranges for internal workspace deps
 
-ALL `@protolabs-ai/*` deps in your new `package.json` MUST use the current monorepo version range: `"^0.19.0"`. Do NOT use older ranges like `^0.15.x` or `^0.6.x` — even if that was the version at the time of writing.
+ALL `@protolabsai/*` deps in your new `package.json` MUST use the current monorepo version range: `"^0.19.0"`. Do NOT use older ranges like `^0.15.x` or `^0.6.x` — even if that was the version at the time of writing.
 
 ```json
 {
   "dependencies": {
-    "@protolabs-ai/types": "^0.19.0",
-    "@protolabs-ai/utils": "^0.19.0"
+    "@protolabsai/types": "^0.19.0",
+    "@protolabsai/utils": "^0.19.0"
   }
 }
 ```
 
 Check the current range by looking at any other lib: `cat libs/flows/package.json | grep protolabs-ai`
 
-Using the wrong version causes `npm install` to try fetching `@protolabs-ai/types@^0.6.0` from the public npm registry → 404 → CI failure.
+Using the wrong version causes `npm install` to try fetching `@protolabsai/types@^0.6.0` from the public npm registry → 404 → CI failure.
 
 ### 2. Add to Dockerfile
 
@@ -40,7 +40,7 @@ After creating the new package, the lock file will be stale. Run `npm install --
 **Entry 1** — the package metadata (under `packages.libs/<name>`):
 ```json
 "libs/<name>": {
-  "name": "@protolabs-ai/<name>",
+  "name": "@protolabsai/<name>",
   "version": "0.19.0",
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": { ... },
@@ -48,9 +48,9 @@ After creating the new package, the lock file will be stale. Run `npm install --
 }
 ```
 
-**Entry 2** — the workspace symlink (under `packages.node_modules/@protolabs-ai/<name>`):
+**Entry 2** — the workspace symlink (under `packages.node_modules/@protolabsai/<name>`):
 ```json
-"node_modules/@protolabs-ai/<name>": {
+"node_modules/@protolabsai/<name>": {
   "resolved": "libs/<name>",
   "link": true
 }

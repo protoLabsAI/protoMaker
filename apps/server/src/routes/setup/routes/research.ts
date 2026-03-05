@@ -1,9 +1,9 @@
 import type { RequestHandler } from 'express';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { researchRepo } from '../../../services/repo-research-service.js';
-import type { RepoResearchResult } from '@protolabs-ai/types';
+import type { RepoResearchResult } from '@protolabsai/types';
 
 const logger = createLogger('setup:research');
 

@@ -4,9 +4,9 @@ All frontend code MUST follow these rules. Violations break theming across 6+ th
 
 ## 1. Shared Component Library
 
-ALWAYS import from `@protolabs-ai/ui`. NEVER use bare HTML elements for interactive UI.
+ALWAYS import from `@protolabsai/ui`. NEVER use bare HTML elements for interactive UI.
 
-### Atoms (`@protolabs-ai/ui/atoms`)
+### Atoms (`@protolabsai/ui/atoms`)
 
 | Component | Notes |
 |-----------|-------|
@@ -36,7 +36,7 @@ ALWAYS import from `@protolabs-ai/ui`. NEVER use bare HTML elements for interact
 | `Tooltip, TooltipContent, TooltipProvider, TooltipTrigger` | |
 | `Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandSeparator, CommandShortcut` | |
 
-### Molecules (`@protolabs-ai/ui/molecules`)
+### Molecules (`@protolabsai/ui/molecules`)
 
 | Component | Purpose |
 |-----------|---------|
@@ -51,12 +51,12 @@ ALWAYS import from `@protolabs-ai/ui`. NEVER use bare HTML elements for interact
 
 | NEVER use | ALWAYS use instead |
 |-----------|--------------------|
-| `<button>` | `<Button>` from `@protolabs-ai/ui/atoms` |
-| `<input>` | `<Input>` from `@protolabs-ai/ui/atoms` |
+| `<button>` | `<Button>` from `@protolabsai/ui/atoms` |
+| `<input>` | `<Input>` from `@protolabsai/ui/atoms` |
 | `<select>` | `<Select>` + `<SelectTrigger>` + `<SelectContent>` + `<SelectItem>` |
-| `<textarea>` | `<Textarea>` from `@protolabs-ai/ui/atoms` |
-| `<input type="checkbox">` | `<Checkbox>` from `@protolabs-ai/ui/atoms` |
-| `<label>` | `<Label>` from `@protolabs-ai/ui/atoms` |
+| `<textarea>` | `<Textarea>` from `@protolabsai/ui/atoms` |
+| `<input type="checkbox">` | `<Checkbox>` from `@protolabsai/ui/atoms` |
+| `<label>` | `<Label>` from `@protolabsai/ui/atoms` |
 
 ## 3. Button Variants & Sizes
 
@@ -128,7 +128,7 @@ Three tiers only:
 ### Card Section
 
 ```tsx
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@protolabs-ai/ui/atoms';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@protolabsai/ui/atoms';
 
 <Card>
   <CardHeader>
@@ -144,7 +144,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@prot
 ### Form Field
 
 ```tsx
-import { Label, Input } from '@protolabs-ai/ui/atoms';
+import { Label, Input } from '@protolabsai/ui/atoms';
 
 <div className="space-y-2">
   <Label htmlFor="project-name">Project Name</Label>
@@ -156,7 +156,7 @@ import { Label, Input } from '@protolabs-ai/ui/atoms';
 ### Button Group
 
 ```tsx
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { Save, Trash2 } from 'lucide-react';
 
 <div className="flex items-center gap-2">

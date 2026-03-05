@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import {
   getSpecRegenerationStatus,
   setRunningState,

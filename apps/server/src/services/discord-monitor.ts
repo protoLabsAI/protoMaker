@@ -10,8 +10,8 @@ import type {
   DiscordMonitorConfig,
   DiscordChannelSignalConfig,
   WorkItem,
-} from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('DiscordMonitor');
 

@@ -505,30 +505,30 @@ usageStats:
 ### Extracted pure function with zero external dependencies into standalone package rather than keeping it in monorepo service layer (2026-02-13)
 - **Context:** researchRepo() function in repo-research-service.ts needed to be reusable outside the main server, but was tightly coupled to the service structure
 - **Why:** Pure functions with no external deps (only Node.js builtins) are ideal candidates for package extraction. No version management issues, no circular deps, no auth/context passing needed. Enables reuse in create-protolab CLI without dragging server infrastructure
-- **Rejected:** Could have kept it in server and imported from there, but that would require create-protolab to depend on @protolabs-ai/server (huge bloat). Could have rewritten logic in create-protolab, but that duplicates 652 lines and creates maintenance burden
+- **Rejected:** Could have kept it in server and imported from there, but that would require create-protolab to depend on @protolabsai/server (huge bloat). Could have rewritten logic in create-protolab, but that duplicates 652 lines and creates maintenance burden
 - **Trade-offs:** Extraction adds new package surface but gains true reusability. Upside: create-protolab stays lightweight. Downside: two places to maintain types/utils if not carefully unified
-- **Breaking if changed:** If this function gains dependencies on @protolabs-ai/* packages later (auth, caching, logging from shared libs), the package extraction fails - becomes unmaintainable. Must keep this function pure or extraction was wrong
+- **Breaking if changed:** If this function gains dependencies on @protolabsai/* packages later (auth, caching, logging from shared libs), the package extraction fails - becomes unmaintainable. Must keep this function pure or extraction was wrong
 
 #### [Gotcha] Git command failures (like branch protection checks) initially failed silently; had to enhance runCmd() to log warnings instead of swallowing errors (2026-02-13)
 - **Situation:** Extracted function inherited git error handling from original service - errors were caught but not surfaced, making debugging hard when moving to new package context
 - **Root cause:** Function works fine in service context where git failures are infrequent, but in CLI extraction context where function is called in isolation, silent failures hide real problems. Users need visibility into what git checks failed
 - **How to avoid:** Added logging overhead but gained observability. CLI users can now see why research returned empty git branch, DNS check, etc. Cost: slightly noisier logs if git is misconfigured
 
-#### [Pattern] Created local type definitions and utility stubs (types.ts, utils.ts) instead of importing from @protolabs-ai/* packages (2026-02-13)
-- **Problem solved:** Original function imported RepoResearchResult from @protolabs-ai/types and createLogger from @protolabs-ai/utils. Extraction required breaking these external deps
+#### [Pattern] Created local type definitions and utility stubs (types.ts, utils.ts) instead of importing from @protolabsai/* packages (2026-02-13)
+- **Problem solved:** Original function imported RepoResearchResult from @protolabsai/types and createLogger from @protolabsai/utils. Extraction required breaking these external deps
 - **Why this works:** Package must be self-contained to avoid coupling create-protolab to the main monorepo. Copying types.ts (interface only, no logic) is cost-free. createLogger() stub is minimal (~5 lines) - only used for console output. This isolation pattern allows the package to evolve independently and be vendored/published separately
 - **Trade-offs:** Duplication of types is minimal (interface definitions only). Gain: zero runtime deps. Lose: if core types change, must manually sync. Mitigation: types are stable, changes unlikely
 
-### Copy entire type definitions file inline rather than import from @protolabs-ai/types package (2026-02-13)
-- **Context:** create-protolab package needs setup pipeline types but cannot import @protolabs-ai/types due to runtime context where @protolabs-ai/types fails (likely browser environment or circular dependency)
+### Copy entire type definitions file inline rather than import from @protolabsai/types package (2026-02-13)
+- **Context:** create-protolab package needs setup pipeline types but cannot import @protolabsai/types due to runtime context where @protolabsai/types fails (likely browser environment or circular dependency)
 - **Why:** Type duplication avoids runtime import failures. Package manager workspace resolution fails in certain execution contexts (create-protolab runs standalone during repo research), so local types prevent module resolution errors entirely
-- **Rejected:** Re-exporting types from @protolabs-ai/types would be cleaner but creates hard dependency on package manager correctly resolving @protolabs-ai/types in all contexts where create-protolab executes
+- **Rejected:** Re-exporting types from @protolabsai/types would be cleaner but creates hard dependency on package manager correctly resolving @protolabsai/types in all contexts where create-protolab executes
 - **Trade-offs:** Maintenance burden (keep two copies in sync) vs reliability (no import-time failures). Added sync comment + potential CI check to mitigate drift
 - **Breaking if changed:** If types are updated in libs/types/src/setup.ts without updating the copy, create-protolab will use stale interfaces, leading to type mismatches at composition time when features are created
 
-#### [Gotcha] Types file must have ZERO external imports including @protolabs-ai/* packages to remain standalone (2026-02-13)
-- **Situation:** Initial concern: would importing from @protolabs-ai/types break the standalone nature? Yes - any import at module load time fails in certain contexts
-- **Root cause:** create-protolab is invoked in repo research phase before full monorepo build completes, and in contexts where npm workspace resolution is not available or breaks. Even @protolabs-ai/types (a workspace package) cannot be reliably imported
+#### [Gotcha] Types file must have ZERO external imports including @protolabsai/* packages to remain standalone (2026-02-13)
+- **Situation:** Initial concern: would importing from @protolabsai/types break the standalone nature? Yes - any import at module load time fails in certain contexts
+- **Root cause:** create-protolab is invoked in repo research phase before full monorepo build completes, and in contexts where npm workspace resolution is not available or breaks. Even @protolabsai/types (a workspace package) cannot be reliably imported
 - **How to avoid:** Pure interfaces (no code, no imports) are trivially safe. Any runtime code or imports resurrects the original problem
 
 ### Logger writes all levels (info/warn/error/debug) to stderr, not stdout (2026-02-13)
@@ -551,9 +551,9 @@ usageStats:
 - **Breaking if changed:** Adding validation would change error types; wrapping errors would require refactoring all call sites; Result type would break existing interfaces
 
 ### Extracted pure synchronous function with zero external dependencies by creating inline type definitions and minimal logger wrapper instead of importing from monorepo packages (2026-02-13)
-- **Context:** Gap analysis service needed to be extracted from server (which imports @protolabs-ai/types, @protolabs-ai/utils) into create-protolab package for use as standalone library
+- **Context:** Gap analysis service needed to be extracted from server (which imports @protolabsai/types, @protolabsai/utils) into create-protolab package for use as standalone library
 - **Why:** Monorepo package imports would create circular dependencies and tight coupling. Pure function with embedded types ensures create-protolab can be used independently without server build artifacts or external package resolution
-- **Rejected:** Re-exporting from @protolabs-ai/types via package.json exports field - would still require server packages to be built and available at runtime
+- **Rejected:** Re-exporting from @protolabsai/types via package.json exports field - would still require server packages to be built and available at runtime
 - **Trade-offs:** Type duplication (GapAnalysisReport, RepoResearchResult copied into new package) eliminates tight coupling. Slightly larger package but complete standalone functionality
 - **Breaking if changed:** If gap check logic in analyzeGaps changes, must update in BOTH locations (server + create-protolab) or create-protolab will drift from server behavior
 
@@ -626,7 +626,7 @@ usageStats:
 
 ### Created CLI entry point in separate workspace package (create-protolab) rather than embedding in main server (2026-02-13)
 - **Context:** CLI needs independent versioning, distribution, and lifecycle from the core server
-- **Why:** Workspace isolation allows npm publish of CLI without server dependencies. Consumers can install just the CLI tool globally without pulling in 500MB of server deps. Monorepo structure provides shared type safety via @protolabs-ai/types without tight coupling
+- **Why:** Workspace isolation allows npm publish of CLI without server dependencies. Consumers can install just the CLI tool globally without pulling in 500MB of server deps. Monorepo structure provides shared type safety via @protolabsai/types without tight coupling
 - **Rejected:** Embedding CLI in main server package would require publishing entire server + dependencies for CLI-only updates
 - **Trade-offs:** Easier: independent updates, distribution, CI/CD. Harder: coordinating type changes across packages, ensuring types are published
 - **Breaking if changed:** If merged back into server package, CLI consumers would need to install full server, bloating footprint 10-20x
@@ -761,7 +761,7 @@ usageStats:
 - **Why:** libs/ is reserved for shared internal libraries with workspace member setup. packages/ is for published/external-facing modules. Validation is internal infrastructure.
 - **Rejected:** Creating in packages/ would require npm publishing setup and external dependency management, overkill for internal validators.
 - **Trade-offs:** libs/ means automatic workspace hoisting and simpler dependency resolution, but requires build:packages step and tsconfig.json composite references.
-- **Breaking if changed:** If moved to packages/, must update all imports from @protolabs-ai/validation and adjust build pipeline. Workspace resolution would break in dependent packages.
+- **Breaking if changed:** If moved to packages/, must update all imports from @protolabsai/validation and adjust build pipeline. Workspace resolution would break in dependent packages.
 
 #### [Pattern] Structured validator result pattern: {success: boolean, data?: T, errors?: ValidationError[]} used across all validators (2026-02-13)
 - **Problem solved:** Multiple validator modules (schemas, api, template, filesystem) needed consistent error handling for downstream code.
@@ -809,7 +809,7 @@ usageStats:
 
 ### Package build chain ordering: observability placed after policy-engine and before git-utils in build:libs script (2026-02-13)
 - **Context:** Adding new package to monorepo workspace with existing build chain dependencies
-- **Why:** Packages must be built in dependency order - observability only depends on @protolabs-ai/types, so it can be placed relatively early. Positioning matters because npm workspace builds can fail if dependencies aren't built first
+- **Why:** Packages must be built in dependency order - observability only depends on @protolabsai/types, so it can be placed relatively early. Positioning matters because npm workspace builds can fail if dependencies aren't built first
 - **Rejected:** Arbitrary placement or appending to the end without considering dependency tree
 - **Trade-offs:** Correct ordering prevents build failures and improves build parallelization efficiency, but requires understanding the full dependency graph
 - **Breaking if changed:** Incorrect build order will cause 'module not found' errors at runtime if dependents try to import from packages built after them
@@ -893,7 +893,7 @@ usageStats:
 - **Root cause:** Lazy expiration is more efficient than background timers. Prevents memory leaks by allowing cleanup to be called periodically (e.g., via cron or event). Accessing expired item triggers removal.
 - **How to avoid:** Slightly more operational logic needed but avoids background threads and keeps hot path fast. Memory eventually frees.
 
-### Delegate tracing implementation to existing middleware (wrapProviderWithTracing) in @protolabs-ai/observability rather than implementing tracing logic directly in TracedProvider (2026-02-13)
+### Delegate tracing implementation to existing middleware (wrapProviderWithTracing) in @protolabsai/observability rather than implementing tracing logic directly in TracedProvider (2026-02-13)
 - **Context:** TracedProvider needed to wrap LLM providers with tracing, but observability package already contained comprehensive middleware handling token extraction, cost calculation, and Langfuse trace creation
 - **Why:** Avoids duplication, maintains single source of truth for tracing logic, leverages existing tested middleware. TracedProvider becomes a thin adapter layer.
 - **Rejected:** Implementing tracing logic directly in TracedProvider would duplicate middleware logic and create maintenance burden
@@ -938,10 +938,10 @@ usageStats:
 - **Why this works:** Thread isolation (unique thread_id per execution) prevents state collision across concurrent executions and enables checkpoint isolation. MemorySaver trades persistence durability for simplicity in proof-of-concept.
 - **Trade-offs:** MemorySaver is in-process only (survives function lifetime but not process restart). Production would need PostgresSaver or similar. Current approach suitable for stateless function deployments with retry capability.
 
-### Created dedicated @protolabs-ai/flows package rather than adding graph to existing packages (2026-02-13)
+### Created dedicated @protolabsai/flows package rather than adding graph to existing packages (2026-02-13)
 - **Context:** Need to manage LangGraph dependency without forcing it on all consumers of core packages
-- **Why:** Monorepo architecture benefits: LangGraph is optional infrastructure (PoC), not core domain. Separate package allows selective adoption. LangGraph version bumps don't affect @protolabs-ai/platform stability.
-- **Rejected:** Adding to @protolabs-ai/platform - would make LangGraph a transitive dependency for all consumers, increases coupling, makes replacement harder if better framework emerges.
+- **Why:** Monorepo architecture benefits: LangGraph is optional infrastructure (PoC), not core domain. Separate package allows selective adoption. LangGraph version bumps don't affect @protolabsai/platform stability.
+- **Rejected:** Adding to @protolabsai/platform - would make LangGraph a transitive dependency for all consumers, increases coupling, makes replacement harder if better framework emerges.
 - **Trade-offs:** Added package management complexity (new tsconfig, vitest config, build script) but isolated dependency risk and allowed independent iteration on flows without coordinating with platform release cycle.
 - **Breaking if changed:** Merging flows back into platform would expose LangGraph dependency to all consumers and make it harder to swap flow engines later. Separation provides architectural optionality.
 
@@ -1008,7 +1008,7 @@ usageStats:
 ### Defined ContentCreationConfig type locally in service file instead of importing from flows package (2026-02-14)
 - **Context:** ContentConfig interface existed in flows package but wasn't exported; attempted to re-export as ContentCreationFlowConfig but service couldn't access it across workspace boundaries
 - **Why:** Type re-exports across workspace package boundaries require proper package.json exports configuration. Defining locally avoids circular dependency risks and packaging configuration complexity
-- **Rejected:** Importing from @protolabs-ai/flows - would require modifying package exports and handling potential circular dependencies when service imports from flows which may import types
+- **Rejected:** Importing from @protolabsai/flows - would require modifying package exports and handling potential circular dependencies when service imports from flows which may import types
 - **Trade-offs:** Easier: Avoids packaging configuration. Harder: Type duplication between service and flow definition - future changes require updating both locations
 - **Breaking if changed:** If ContentConfig interface changes in the flow, the service won't automatically update and will silently accept outdated config shapes
 
@@ -1024,7 +1024,7 @@ usageStats:
 - **Trade-offs:** Easier: State consistency, clean resumption, full audit trail in checkpointer. Harder: Client must explicitly resume with decision, adds round-trip latency
 - **Breaking if changed:** If checkpointer is removed, no resumption capability and flow state is lost on interrupt. If interruptBefore removed, gates become no-ops and flow proceeds without human input
 
-#### [Gotcha] Workspace imports must use published package names (@protolabs-ai/*) not relative paths to source files (2026-02-14)
+#### [Gotcha] Workspace imports must use published package names (@protolabsai/*) not relative paths to source files (2026-02-14)
 - **Situation:** Attempted to import flow creation function and types from source files in flows library using relative paths, resulting in type resolution failures
 - **Root cause:** Monorepo tooling (likely turborepo/nx) compiles workspace packages and expects consumers to import from published exports defined in package.json#exports, not from source directories directly
 - **How to avoid:** Easier: Guarantees consumers always use built package. Harder: Can't directly debug source, requires build step between code changes and testing
@@ -1627,11 +1627,11 @@ usageStats:
 - **Why this works:** Each entry point in package.json exports map requires a corresponding tsup entry in the entry array. Without both, the build produces no output for that path and consumers get import failures despite the export being declared.
 - **Trade-offs:** Multiple entries increase build time slightly and create more dist files, but enables granular package consumption and proper tree-shaking per entry point. Consumers can import only what they need.
 
-### Vite alias required for workspace CSS imports in monorepo. Added `@protolabs-ai/ui` alias pointing to `libs/ui/src` in vite.config.mts (2026-02-18)
+### Vite alias required for workspace CSS imports in monorepo. Added `@protolabsai/ui` alias pointing to `libs/ui/src` in vite.config.mts (2026-02-18)
 - **Context:** Theme CSS files moved from apps/ui to libs/ui, but Vite couldn't resolve relative path imports during build. Build failed with module resolution errors.
 - **Why:** Vite's CSS import resolution and Tailwind's content scanning require explicit alias mappings for workspace packages. Without the alias, Vite treats the relative path as external and fails to bundle CSS.
 - **Rejected:** Using package.json 'exports' field alone. Package exports work for JS imports but not for CSS file resolution during Vite build. Also rejected: symlink resolution—unreliable across platforms.
-- **Trade-offs:** Alias adds build config complexity but guarantees consistent resolution. Alternative of using fully-qualified package imports (@protolabs-ai/ui/themes.css) would require additional loader configuration and wouldn't work with Tailwind's content scanning.
+- **Trade-offs:** Alias adds build config complexity but guarantees consistent resolution. Alternative of using fully-qualified package imports (@protolabsai/ui/themes.css) would require additional loader configuration and wouldn't work with Tailwind's content scanning.
 - **Breaking if changed:** Removing the alias breaks the build immediately—Vite can't find libs/ui imports. Any future workspace CSS packages would need similar alias configuration.
 
 #### [Gotcha] Tailwind CSS content scanning in monorepos requires explicit `@source` directive in global.css. Without it, CSS classes unique to shared packages don't generate. (2026-02-18)
@@ -1649,17 +1649,17 @@ usageStats:
 - **Why this works:** The pattern allows @custom-variant definitions and @theme inline to remain static (theme-agnostic structure), while :root and @media (prefers-color-scheme) can swap actual values. Single source of truth for token structure, multiple sources for values.
 - **Trade-offs:** Extra indirection adds one layer of lookup (Tailwind → CSS var → oklch value), negligible performance cost. But it prevents accidental direct color references and forces consistent token usage.
 
-#### [Gotcha] Pre-existing build issue (@protolabs-ai/ui/atoms import resolution failure) blocks verification of CSS changes, creating false uncertainty about correctness. The CSS extraction itself is valid; the test failure masks other problems. (2026-02-18)
+#### [Gotcha] Pre-existing build issue (@protolabsai/ui/atoms import resolution failure) blocks verification of CSS changes, creating false uncertainty about correctness. The CSS extraction itself is valid; the test failure masks other problems. (2026-02-18)
 - **Situation:** After extracting theme CSS, E2E tests fail because the app won't load due to unrelated import resolution errors.
-- **Root cause:** The @protolabs-ai/ui package name mismatch (package declares @protolabs-ai/ui, tsconfig doesn't map it, but build still references it) is a separate, pre-existing issue that prevents the app from running at all.
+- **Root cause:** The @protolabsai/ui package name mismatch (package declares @protolabsai/ui, tsconfig doesn't map it, but build still references it) is a separate, pre-existing issue that prevents the app from running at all.
 - **How to avoid:** CSS changes are correct and verified by static inspection (syntax, structure, line reduction), but cannot be validated via end-to-end tests until the import issue is resolved. Increasing build/test complexity to work around unrelated issues is worse than documenting the blockers.
 
 ### Multi-entry-point tsup configuration with explicit package.json exports field for theme utilities sub-export (2026-02-18)
-- **Context:** Need to expose theme utilities from @protolabs-ai/ui without polluting main export; library already uses tsup with single entry point
-- **Why:** tsup's entry point array allows building isolated chunks; package.json exports creates conditional resolution paths. Consumers import @protolabs-ai/ui/themes (clean API) which resolves to dist/themes/index.js without modifying main entry
+- **Context:** Need to expose theme utilities from @protolabsai/ui without polluting main export; library already uses tsup with single entry point
+- **Why:** tsup's entry point array allows building isolated chunks; package.json exports creates conditional resolution paths. Consumers import @protolabsai/ui/themes (clean API) which resolves to dist/themes/index.js without modifying main entry
 - **Rejected:** Re-export from main index.ts (pollutes bundle, mixes concerns); separate package (adds monorepo complexity); direct dist imports (no type safety, fragile paths)
 - **Trade-offs:** Requires maintaining parallel tsup config array and package.json exports in sync; slightly higher build artifact count; enables precise tree-shaking per sub-export
-- **Breaking if changed:** Removing entry from tsup array or package.json exports breaks @protolabs-ai/ui/themes imports; changing dist folder structure breaks consumer imports
+- **Breaking if changed:** Removing entry from tsup array or package.json exports breaks @protolabsai/ui/themes imports; changing dist folder structure breaks consumer imports
 
 ### Centralized THEMES constant array over per-file theme definitions, enabling single source of truth for theme metadata (2026-02-18)
 - **Context:** Apps previously had hardcoded theme lists scattered across components; adding new utilities requires consistent metadata (name, class, type, label)
@@ -1671,7 +1671,7 @@ usageStats:
 #### [Gotcha] Node.js-specific dependencies bundled into browser build when moving components between packages without declaring them in the target package (2026-02-18)
 - **Situation:** Moved `markdown` component from apps/ui to libs/ui. Build failed with Node.js module errors (fs, path) because react-markdown, rehype-raw, rehype-sanitize were in apps/ui/package.json but not libs/ui/package.json. Vite bundled them as external dependencies into the browser build.
 - **Root cause:** Package.json dependencies control what Vite can resolve. When a package imports a dependency it doesn't declare, the bundler treats it as external and includes it in the output, causing runtime failures in the browser.
-- **How to avoid:** Adding dependencies to libs/ui increases package size and dependency surface, but ensures the package is truly portable and doesn't depend on consumer package.json entries. Required for publishing @protolabs-ai/ui as a standalone package.
+- **How to avoid:** Adding dependencies to libs/ui increases package size and dependency surface, but ensures the package is truly portable and doesn't depend on consumer package.json entries. Required for publishing @protolabsai/ui as a standalone package.
 
 ### Move dependent components (hotkey-button before confirm-dialog) in dependency order to avoid circular references when consolidating into single package (2026-02-18)
 - **Context:** confirm-dialog depends on hotkey-button. Both were in apps/ui but needed to move to libs/ui/molecules. Moving only confirm-dialog first would create cross-package dependency (confirm-dialog in libs/ui → hotkey-button in apps/ui).
@@ -1680,8 +1680,8 @@ usageStats:
 - **Trade-offs:** Requires upfront dependency mapping before refactoring. Easier verification and isolation of build issues per component. Slightly more manual effort vs. bulk-moving everything.
 - **Breaking if changed:** If confirm-dialog remains in apps/ui while hotkey-button moves to libs/ui, the import path becomes apps/ui → libs/ui → apps/ui (circular reference through import chain), causing module resolution loops or duplicate instantiation.
 
-#### [Pattern] libs/ui package uses relative imports with .js extensions (e.g., `from '../atoms/button.js'`) instead of aliased paths (@protolabs-ai/ui/atoms) within the library (2026-02-18)
-- **Problem solved:** When moving components to libs/ui, internal imports must use relative paths with .js extensions, not the @protolabs-ai/ui alias. The alias is only for external consumers (apps/ui, etc).
+#### [Pattern] libs/ui package uses relative imports with .js extensions (e.g., `from '../atoms/button.js'`) instead of aliased paths (@protolabsai/ui/atoms) within the library (2026-02-18)
+- **Problem solved:** When moving components to libs/ui, internal imports must use relative paths with .js extensions, not the @protolabsai/ui alias. The alias is only for external consumers (apps/ui, etc).
 - **Why this works:** ESM module resolution in Node.js requires explicit extensions in relative imports. Internal package imports using relative paths resolve directly without going through the export map. Using aliases internally would create circular reference issues during bundling and adds resolution overhead.
 - **Trade-offs:** Internal imports are less consistent with external API, but avoids circular resolution. Requires developers to know the internal convention. However, this is standard practice in monorepo libraries (shadcn/ui follows same pattern).
 
@@ -1701,23 +1701,23 @@ usageStats:
 - **Trade-offs:** Importing all theme files upfront (at preview load time) means all CSS is parsed even if only 1 theme is active. Alternative: lazy-load theme CSS only when selected (requires async decorator, more complex). The current approach is simpler and theme CSS files are small (~1KB each).
 
 ### Configure Storybook story glob to scan monorepo paths (../src/**/*.stories.*) instead of app-specific paths. This decouples story discovery from app location, allowing libs/ui stories to be found by name pattern alone. (2026-02-18)
-- **Context:** apps/ui previously had Storybook scanning apps/ui/src/. When moving Storybook config to libs/ui, the glob needed to point to libs/ui/src/ instead. Question: should it reference relative paths (../src/) or absolute paths (@protolabs-ai/ui)?
-- **Why:** Relative paths are the Storybook convention (main.ts in .storybook/ is the reference point). They're agnostic to monorepo structure and work with any workspace layout. Absolute paths (@protolabs-ai/ui/src/) would require resolving package imports, adding a dependency on webpack/tsup import configuration.
-- **Rejected:** Absolute imports using @protolabs-ai/ui (adds coupling to package name and import resolution configuration; harder to refactor if package is renamed). Glob that includes both apps/ui and libs/ui (creates confusion about which stories are canonical; duplicates stories if both locations exist).
+- **Context:** apps/ui previously had Storybook scanning apps/ui/src/. When moving Storybook config to libs/ui, the glob needed to point to libs/ui/src/ instead. Question: should it reference relative paths (../src/) or absolute paths (@protolabsai/ui)?
+- **Why:** Relative paths are the Storybook convention (main.ts in .storybook/ is the reference point). They're agnostic to monorepo structure and work with any workspace layout. Absolute paths (@protolabsai/ui/src/) would require resolving package imports, adding a dependency on webpack/tsup import configuration.
+- **Rejected:** Absolute imports using @protolabsai/ui (adds coupling to package name and import resolution configuration; harder to refactor if package is renamed). Glob that includes both apps/ui and libs/ui (creates confusion about which stories are canonical; duplicates stories if both locations exist).
 - **Trade-offs:** Relative paths are simple and discoverable but break if someone moves .storybook/ to a different depth (would need to update ../../../src/ refs). Absolute imports are more resilient to directory reshuffles but require import resolution setup.
 - **Breaking if changed:** If you change the glob pattern, stories won't be discovered—Storybook UI shows empty story list. If you move .storybook/ without updating ../src/ paths, stories disappear again.
 
 ### Storybook story files located in libs/ui/src/atoms/ (shared package) rather than apps/ui/src/ (app project), with configuration update to scan both locations (2026-02-18)
-- **Context:** Component library (@protolabs-ai/ui) is a shared package in monorepo. Stories need discovery by Storybook running in apps/ui app.
+- **Context:** Component library (@protolabsai/ui) is a shared package in monorepo. Stories need discovery by Storybook running in apps/ui app.
 - **Why:** Stories are part of the component library contract, not the consuming app. Co-locating stories with components in libs/ makes them versioned with the library and re-usable across any app that imports components.
 - **Rejected:** Keeping stories only in apps/ui/src/ would decouple component documentation from the library itself, making it impossible to document components when the library is consumed by external projects.
 - **Trade-offs:** Requires Storybook config to explicitly include out-of-project paths (../../../libs/ui/src/). Without this config, story discovery fails silently (no error, just missing stories). Discovered stories now come from TWO locations, increasing cognitive load for maintainers.
 - **Breaking if changed:** Removing the '../../../libs/ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)' entry from .storybook/main.ts stories array causes 25 stories to vanish from Storybook with no error message—only detection is 'fewer stories than expected'.
 
 #### [Gotcha] CSF3 stories in monorepo shared packages (libs/) with relative imports to component src files can fail silently during Storybook build if typescript path resolution hasn't resolved workspace symlinks (2026-02-18)
-- **Situation:** Stories import from @protolabs-ai/ui components using workspace symlink, which must be fully resolved before Storybook transpiles stories.
+- **Situation:** Stories import from @protolabsai/ui components using workspace symlink, which must be fully resolved before Storybook transpiles stories.
 - **Root cause:** Monorepo workspace symlinks are 'lazy'—they exist but don't guarantee module resolution order. Storybook can transpile and bundle the story file before the symlink is followed, resulting in 'module not found' at runtime.
-- **How to avoid:** Using workspace symlinks (@protolabs-ai/ui) is correct long-term (works in both monorepo and published package) but requires careful Storybook config and occasionally needs full clean rebuild to fix symlink resolution issues.
+- **How to avoid:** Using workspace symlinks (@protolabsai/ui) is correct long-term (works in both monorepo and published package) but requires careful Storybook config and occasionally needs full clean rebuild to fix symlink resolution issues.
 
 ### Storybook configuration must explicitly include shared library paths via @source directive or story discovery config, not rely on automatic scanning from project root (2026-02-18)
 - **Context:** Stories in libs/ui/src/ were not being discovered by Storybook even though they existed. Tailwind CSS 4 had similar issue (PR #749) where content scanning stopped at package.json boundary
@@ -1731,7 +1731,7 @@ usageStats:
 - **Why this works:** Pattern scales to new components automatically. Any new atom can copy the template and fill in props. autodocs tag generates docs from Default + argTypes without additional documentation work. Consistent naming (Default, AllVariants) makes Storybook sidebar predictable
 - **Trade-offs:** 194-story structure is higher maintenance than 25-story version but provides much better coverage. Developers can test all prop combinations interactively. Time investment in consistent template pays off across all 25 atoms
 
-### Monorepo workspace commands (--workspace=@protolabs-ai/ui) are used from repo root in CI, not with working-directory context switching (2026-02-18)
+### Monorepo workspace commands (--workspace=@protolabsai/ui) are used from repo root in CI, not with working-directory context switching (2026-02-18)
 - **Context:** CI workflow needed to run build-storybook for a specific package in a monorepo. Initial implementation used working-directory: libs/ui with workspace flag, then corrected to use workspace flag from root.
 - **Why:** Workspace-aware package managers (npm with workspace support) understand relative paths from the repo root. Using --workspace flag eliminates the need to change directories in CI runners, reducing state management complexity. Running from root means the PATH, environment variables, and relative imports all work consistently regardless of which package is being built.
 - **Rejected:** Could have used cd libs/ui && npm run build-storybook (no workspace flag). This couples the CI step to the physical directory structure and breaks if the package moves. Working-directory context switching also makes it harder to reason about which files are where in CI logs.
@@ -1746,7 +1746,7 @@ usageStats:
 - **Breaking if changed:** If prepublishOnly is removed, package must be manually built before every publish, or old dist/ artifacts get shipped
 
 #### [Pattern] Package documentation (README) should live in package root and reference upper-level philosophy docs, not duplicate content (2026-02-18)
-- **Problem solved:** Creating @protolabs-ai/ui package documentation required deciding where to place README and how to avoid duplication with docs/dev/frontend-philosophy.md
+- **Problem solved:** Creating @protolabsai/ui package documentation required deciding where to place README and how to avoid duplication with docs/dev/frontend-philosophy.md
 - **Why this works:** Keeps package-level docs (installation, usage, API) close to source code for discoverability, while higher-level philosophy and design decisions live in docs/ for team-wide reference. Single source of truth per layer prevents drift.
 - **Trade-offs:** Requires maintaining two documents with overlapping content. Benefit: Each document serves its intended audience (package users vs. frontend team philosophy readers) without context-switching.
 
@@ -1768,7 +1768,7 @@ usageStats:
 - **Trade-offs:** Renaming is more work than deleting (requires 3 reference updates). But it improves code clarity and prevents future confusion about what escalation types are used for.
 
 #### [Gotcha] npm workspace type resolution requires `npm install` at root after modifying shared packages. TypeScript doesn't auto-detect updated types in workspace dependencies even though source files were changed. (2026-02-19)
-- **Situation:** Modified `libs/types/src/escalation.ts` enum. Dependent package `@protolabs-ai/server` failed to resolve new enum value despite correct source changes. Build error: enum value not found.
+- **Situation:** Modified `libs/types/src/escalation.ts` enum. Dependent package `@protolabsai/server` failed to resolve new enum value despite correct source changes. Build error: enum value not found.
 - **Root cause:** npm workspaces use symlinks to link packages. The symlink target's `dist/` contains the compiled JavaScript/TypeScript declarations. Modifying source doesn't update `dist/` until the package is rebuilt. Running `npm install` at root triggers workspace rebuild and re-links the packages.
 - **How to avoid:** Running full `npm install` is slower than targeted rebuild, but ensures all workspace symlinks are fresh and all dependent packages see consistent types. Prevents subtle version skew bugs.
 
@@ -2031,12 +2031,12 @@ usageStats:
 - **Root cause:** Grep with single-line patterns can't match objects that break across lines. Node objects use multi-line formatting for readability.
 - **How to avoid:** Easier: Multi-line formatting is more readable. Harder: Can't use simple text counting; requires reading actual content or AST parsing
 
-### Using own design system (@protolabs-ai/ui branded as 'Glyphkit') as portfolio/proof-of-concept rather than third-party UI kit (2026-02-22)
+### Using own design system (@protolabsai/ui branded as 'Glyphkit') as portfolio/proof-of-concept rather than third-party UI kit (2026-02-22)
 - **Context:** Storybook deployment showcases design system to external users and potential clients
 - **Why:** Demonstrates protoLabs methodology with real implementation; provides credible proof of design system capabilities and their design tooling approach
 - **Rejected:** Use third-party design system, build separate demo system, or use generic component library
 - **Trade-offs:** Requires maintaining public-facing Storybook quality; ties design system releases to marketing cadence; but increases credibility and dog-food testing
-- **Breaking if changed:** If @protolabs-ai/ui is removed or replaced, portfolio proof-of-concept disappears; existing links to Storybook become invalid
+- **Breaking if changed:** If @protolabsai/ui is removed or replaced, portfolio proof-of-concept disappears; existing links to Storybook become invalid
 
 ### Cloudflare Pages + Wrangler deployment path vs GitHub Pages or simpler alternatives (2026-02-22)
 - **Context:** Static site deployment for design system documentation/reference
@@ -2154,12 +2154,12 @@ usageStats:
 - **Trade-offs:** Cleaner separation of concerns vs gap where integrations exist but don't run. Simpler current feature vs more work in future feature.
 - **Breaking if changed:** If initialization code assumes all registered integrations are initialized, it will have missing services. If startup wiring is never implemented, integrations register but never start.
 
-### Externalized SignalCounts type from signal-intake-service.ts to centralized @protolabs-ai/types/signal.ts package (2026-02-22)
+### Externalized SignalCounts type from signal-intake-service.ts to centralized @protolabsai/types/signal.ts package (2026-02-22)
 - **Context:** Type needed to be imported by both server services and tools domain packages, creating cross-package dependency
 - **Why:** Creating explicit contract in shared types package enforces compatibility and single source of truth. Alternative was duplicating type or using any
 - **Rejected:** Keep type local to SignalIntakeService; import in tools would require circular dependency or re-exporting from server package
 - **Trade-offs:** Easy cross-package reuse now, but changes to SignalCounts structure break both packages simultaneously - tightly couples them
-- **Breaking if changed:** Removing from @protolabs-ai/types breaks both server and tools package imports; changing field structure breaks both packages at same time
+- **Breaking if changed:** Removing from @protolabsai/types breaks both server and tools package imports; changing field structure breaks both packages at same time
 
 #### [Pattern] Signal classification uses string prefix matching (twitter:, youtube:, substack:) to route to GTM category rather than enum-based dispatch (2026-02-22)
 - **Problem solved:** Multiple unrelated platforms need to be classified as marketing signals and routed to same queue
@@ -2178,7 +2178,7 @@ usageStats:
 - **Why this works:** Prefix-based routing decouples signal source additions from routing logic; new platforms require only new tool definitions and count tracking, not signal service modification
 - **Trade-offs:** More flexible and scalable but requires discipline to maintain naming conventions; harder to find all signal handlers via IDE search
 
-### Centralized SignalCounts type in @protolabs-ai/types package instead of keeping in signal-intake-service (2026-02-22)
+### Centralized SignalCounts type in @protolabsai/types package instead of keeping in signal-intake-service (2026-02-22)
 - **Context:** Multiple packages (tools, server) need to reference signal count structure; placed in shared types package
 - **Why:** Breaks circular dependency; prevents server package from exposing implementation details to tools package; establishes single source of truth
 - **Rejected:** Defining SignalCounts in server package - would require tools package to depend on server or duplicate the type
@@ -2353,7 +2353,7 @@ usageStats:
 - **Trade-offs:** Gains: loose coupling, zero migration cost when backend adds properties. Loses: type safety for extended properties—no IDE autocomplete or compile-time checking for `pipelineState` access. Must document the runtime schema or risk TypeScript `as any` casts.
 
 #### [Pattern] In monorepos with pre-existing build failures, use selective app builds (`npm run build` in apps/ui/) to verify feature changes without being blocked by unrelated package failures. (2026-02-23)
-- **Problem solved:** Root-level `npm run build` failed due to p-limit import error in `@protolabs-ai/platform` secure-fs.ts. Feature author worked around by building only the UI app where changes were made.
+- **Problem solved:** Root-level `npm run build` failed due to p-limit import error in `@protolabsai/platform` secure-fs.ts. Feature author worked around by building only the UI app where changes were made.
 - **Why this works:** Enables fast feedback loop on localized changes. Full monorepo builds are slow and often accumulate technical debt (broken imports, outdated deps). Selective builds isolate the feature's package boundary and confirm no regressions within that scope.
 - **Trade-offs:** Gains: unblocked verification, fast feedback. Loses: no guarantee that the full build works after PR merges. Another PR in platform may have unblocked the build by the time feature lands.
 
@@ -3027,7 +3027,7 @@ usageStats:
 - **Breaking if changed:** If failure diversity exceeds pattern coverage, classification accuracy degrades and unknown category grows. No learning loop to auto-improve patterns. Manual pattern updates required for new tools/frameworks.
 
 #### [Pattern] Recovery strategies are tightly mapped to FailureCategory patterns, embedding tactical recovery in the classifier itself. (2026-02-24)
-- **Problem solved:** FailureAnalysis includes both category and recoveryStrategy. Each pattern matcher returns a strategy (e.g., rate_limit → exponential_backoff). Strategies are union type from shared @protolabs-ai/types.
+- **Problem solved:** FailureAnalysis includes both category and recoveryStrategy. Each pattern matcher returns a strategy (e.g., rate_limit → exponential_backoff). Strategies are union type from shared @protolabsai/types.
 - **Why this works:** Keeps failure diagnosis and recovery strategy coupled—if a failure is rate-limited, retry with backoff is the correct recovery. Single source of truth per failure type prevents strategy mismatches.
 - **Trade-offs:** Simpler code (diagnosis + strategy together). Harder to evolve strategies independently. RecoveryStrategy changes require classifier updates. Strategy becomes an implementation detail of the classifier.
 
@@ -3331,9 +3331,9 @@ usageStats:
 - **Why this works:** Clear scope boundaries prevent scope creep and technical debt. NPM_TOKEN management is (1) repository-wide infrastructure, not feature-specific, (2) requires human security review (who can publish?), (3) one-time setup that enables many releases.
 - **Trade-offs:** Cleaner architecture: security setup is separated from release mechanics. Slight friction: handoff requires human action (Josh configures secret).
 
-#### [Pattern] Defined SanitizationViolation, SanitizationResult, and SanitizationSeverity interfaces locally in sanitize.ts rather than in @protolabs-ai/types package, despite types being the centralized interface repository. (2026-02-25)
+#### [Pattern] Defined SanitizationViolation, SanitizationResult, and SanitizationSeverity interfaces locally in sanitize.ts rather than in @protolabsai/types package, despite types being the centralized interface repository. (2026-02-25)
 - **Problem solved:** Creating reusable sanitization library that exports both functions and types
-- **Why this works:** If types were imported from @protolabs-ai/types and types re-exported, it would create a circular dependency: types imports from utils for normalization, utils imports from types for interfaces. Local definitions break the cycle while keeping the library self-contained.
+- **Why this works:** If types were imported from @protolabsai/types and types re-exported, it would create a circular dependency: types imports from utils for normalization, utils imports from types for interfaces. Local definitions break the cycle while keeping the library self-contained.
 - **Trade-offs:** Slight duplication if other packages need these interfaces (they'd have to import from utils instead of types), but eliminates circular dependency overhead and keeps sanitization library dependency-free
 
 ### Feature count logic explicitly aligns with generate-changelog.mjs: same cutoff date (CUTOFF_DATE 2026-02-04), same categorization (feature-category commits), same git log parsing logic. (2026-02-25)
@@ -3451,7 +3451,7 @@ usageStats:
 - **Why this works:** Committed CSS ensures: (1) deployment doesn't require build step on server, (2) git history shows what was deployed, (3) works in environments without Node/build tools. GitHub Actions regeneration ensures: (1) source of truth is config, (2) accidental manual edits get overwritten, (3) deploy always uses current config.
 - **Trade-offs:** Slightly larger repo (33KB CSS file) but fast deployments without build. Hybrid approach combines benefits of both worlds.
 
-### Created `@protolabs-ai/error-tracking` wrapper package instead of direct Sentry integration throughout codebase (2026-02-25)
+### Created `@protolabsai/error-tracking` wrapper package instead of direct Sentry integration throughout codebase (2026-02-25)
 - **Context:** Abstraction layer over `@sentry/node` and `@sentry/electron` to provide unified API across server and Electron contexts
 - **Why:** Decouples application code from Sentry vendor; allows swapping error tracking provider (e.g., from Sentry to PostHog, DataDog) without changing app code everywhere. Single point of configuration and privacy enforcement
 - **Rejected:** Importing Sentry directly in every module that needs error tracking (tight coupling, vendor lock-in, inconsistent privacy controls)
@@ -3553,7 +3553,7 @@ usageStats:
 - **Why this works:** StateContext is the shared mutable state across transitions; passing feedback via context avoids creating new return type for ReviewProcessor and keeps each processor focused on its output
 - **Trade-offs:** Implicit data flow via context (easier short-term) vs explicit contracts; less coupling vs harder to trace data flow
 
-#### [Gotcha] TypeScript Package ID deduplication causes false 'member not found' errors in git worktrees with shared node_modules. When a transitive dependency (e.g., @protolabs-ai/utils) imports an older version of a local workspace package (@protolabs-ai/types@0.4.0), TypeScript deduplicates by Package ID and reuses the first loaded instance, hiding new exports added in the worktree. (2026-02-26)
+#### [Gotcha] TypeScript Package ID deduplication causes false 'member not found' errors in git worktrees with shared node_modules. When a transitive dependency (e.g., @protolabsai/utils) imports an older version of a local workspace package (@protolabsai/types@0.4.0), TypeScript deduplicates by Package ID and reuses the first loaded instance, hiding new exports added in the worktree. (2026-02-26)
 - **Situation:** Worktree shares node_modules with main branch. Main branch has types@0.4.0 without TrajectoryFact; worktree added TrajectoryFact but TypeScript still reported 'member not found'.
 - **Root cause:** TypeScript's deduplication strategy assumes the same Package ID always refers to the same exports, which breaks when a workspace package is modified in a worktree but the main branch's cached node_modules version is stale.
 - **How to avoid:** Shared node_modules saves ~30% disk space and faster installs, but requires careful coordination: rebuilding main branch's dist/ (gitignored) to sync TypeScript's package cache across worktrees.

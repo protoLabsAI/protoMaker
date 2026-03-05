@@ -1,15 +1,15 @@
 // @ts-nocheck -- Electron API types pending strict validation refactor
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import {
@@ -26,7 +26,7 @@ import {
   XCircle,
   Trash2,
 } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import { StatusBadge, TerminalOutput } from '../components';
 import { useCliStatus, useCliInstallation, useTokenSave } from '../hooks';

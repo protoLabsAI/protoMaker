@@ -8,14 +8,14 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   KnowledgeStoreStats,
   KnowledgeSearchOptions,
   KnowledgeSearchResult,
   KnowledgeStoreSettings,
   RetrievalMode,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { KnowledgeEmbeddingOrchestrator } from './knowledge-embedding-orchestrator.js';
 import { KnowledgeIngestionService } from './knowledge-ingestion-service.js';
 import { KnowledgeSearchService } from './knowledge-search-service.js';

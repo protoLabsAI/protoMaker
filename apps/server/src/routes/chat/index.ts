@@ -34,8 +34,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { anthropic } from '@ai-sdk/anthropic';
-import { createLogger } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import { buildAvaSystemPrompt, type NotesContext } from './personas.js';
 import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.js';
 import { getSitrep } from './sitrep.js';
@@ -46,7 +46,7 @@ import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
 import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
-import type { EventType } from '@protolabs-ai/types';
+import type { EventType } from '@protolabsai/types';
 
 export type { AvaConfig };
 

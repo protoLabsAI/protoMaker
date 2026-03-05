@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DEFAULT_MAX_CONCURRENCY } from '@protolabs-ai/types';
+import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
 import type { AutoModeActivity } from './types';
 
 interface WorktreeState {

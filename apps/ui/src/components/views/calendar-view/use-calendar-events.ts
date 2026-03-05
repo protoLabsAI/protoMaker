@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiPost } from '@/lib/api-fetch';
-import type { CalendarEvent, CalendarEventType, JobAction } from '@protolabs-ai/types';
+import type { CalendarEvent, CalendarEventType, JobAction } from '@protolabsai/types';
 
 interface CalendarListResponse {
   success: boolean;

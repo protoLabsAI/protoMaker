@@ -6,10 +6,10 @@
  */
 
 import path from 'path';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
-import { ensureAutomakerDir } from '@protolabs-ai/platform';
-import type { PipelineConfig, PipelineStep, FeatureStatusWithPipeline } from '@protolabs-ai/types';
+import { ensureAutomakerDir } from '@protolabsai/platform';
+import type { PipelineConfig, PipelineStep, FeatureStatusWithPipeline } from '@protolabsai/types';
 
 const logger = createLogger('PipelineService');
 

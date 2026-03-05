@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import Markdown from 'react-markdown';
-import type { Project } from '@protolabs-ai/types';
+import type { Project } from '@protolabsai/types';
 
 const SPARC_SECTIONS = [
   { key: 'situation', label: 'Situation', color: 'text-[var(--status-info)]' },

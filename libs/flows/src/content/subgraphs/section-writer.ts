@@ -12,9 +12,9 @@
 import { StateGraph, Annotation } from '@langchain/langgraph';
 import { z } from 'zod';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { isLangfuseReady } from '../langfuse-guard.js';
-import { LangfuseClient } from '@protolabs-ai/observability';
+import { LangfuseClient } from '@protolabsai/observability';
 import { extractTag, extractAllTags, extractRequiredTag } from '../xml-parser.js';
 
 const logger = createLogger('SectionWriter');

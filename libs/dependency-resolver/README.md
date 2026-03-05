@@ -1,4 +1,4 @@
-# @protolabs-ai/dependency-resolver
+# @protolabsai/dependency-resolver
 
 Feature dependency resolution using topological sorting.
 
@@ -9,7 +9,7 @@ This package provides dependency resolution for AutoMaker features using Kahn's 
 ## Installation
 
 ```bash
-npm install @protolabs-ai/dependency-resolver
+npm install @protolabsai/dependency-resolver
 ```
 
 ## Exports
@@ -19,8 +19,8 @@ npm install @protolabs-ai/dependency-resolver
 Order features based on dependencies and priorities.
 
 ```typescript
-import { resolveDependencies } from '@protolabs-ai/dependency-resolver';
-import type { Feature } from '@protolabs-ai/types';
+import { resolveDependencies } from '@protolabsai/dependency-resolver';
+import type { Feature } from '@protolabsai/types';
 
 const features: Feature[] = [
   {
@@ -61,7 +61,7 @@ if (result.hasCycle) {
 Check if a feature's dependencies are satisfied.
 
 ```typescript
-import { areDependenciesSatisfied } from '@protolabs-ai/dependency-resolver';
+import { areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
 
 const allFeatures: Feature[] = [
   { id: 'database', status: 'completed', ... },
@@ -82,7 +82,7 @@ if (areDependenciesSatisfied(authFeature, allFeatures)) {
 Get list of incomplete dependencies blocking a feature.
 
 ```typescript
-import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
+import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 
 const blocking = getBlockingDependencies(feature, allFeatures);
 
@@ -100,8 +100,8 @@ import {
   resolveDependencies,
   areDependenciesSatisfied,
   getBlockingDependencies,
-} from '@protolabs-ai/dependency-resolver';
-import type { Feature } from '@protolabs-ai/types';
+} from '@protolabsai/dependency-resolver';
+import type { Feature } from '@protolabsai/types';
 
 async function executeFeatures(features: Feature[]) {
   // Resolve dependency order
@@ -180,9 +180,9 @@ Treated same as no dependencies - feature is ready immediately.
 
 ## Dependencies
 
-- `@protolabs-ai/types` - Feature type definition
+- `@protolabsai/types` - Feature type definition
 
 ## Used By
 
-- `@protolabs-ai/server` - Auto-mode feature execution
-- `@protolabs-ai/ui` - Board view feature ordering
+- `@protolabsai/server` - Auto-mode feature execution
+- `@protolabsai/ui` - Board view feature ordering

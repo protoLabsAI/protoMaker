@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 
 interface SettingsNavContainerProps {
   isOpen: boolean;

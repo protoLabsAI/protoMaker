@@ -10,7 +10,7 @@ Use one of these keywords followed by the issue reference:
 - `Resolves #123`
 
 For cross-repo or full URL references:
-- `Closes https://github.com/proto-labs-ai/protoMaker/issues/123`
+- `Closes https://github.com/protoLabsAI/protoMaker/issues/123`
 
 ## What Does NOT Work
 

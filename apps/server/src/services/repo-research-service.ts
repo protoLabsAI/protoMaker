@@ -9,8 +9,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@protolabs-ai/utils';
-import type { RepoResearchResult } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { RepoResearchResult } from '@protolabsai/types';
 
 const logger = createLogger('repo-research');
 const execFileAsync = promisify(execFile);

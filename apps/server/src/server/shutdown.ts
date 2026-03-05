@@ -3,7 +3,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type * as http from 'node:http';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from './services.js';
 import { getTerminalService } from '../services/terminal-service.js';

@@ -2,14 +2,14 @@
 
 A WXT + React + TypeScript + Tailwind CSS starter for Chrome and Firefox MV3 extensions. Ships with messaging, storage, and permissions modules pre-wired, plus a Vitest test setup.
 
-Repository: [proto-labs-ai/browser-extension-template](https://github.com/proto-labs-ai/browser-extension-template)
+Repository: [protoLabsAI/browser-extension-template](https://github.com/protoLabsAI/browser-extension-template)
 
-Example project built from this template: [proto-labs-ai/protoExtension](https://github.com/proto-labs-ai/protoExtension)
+Example project built from this template: [protoLabsAI/protoExtension](https://github.com/protoLabsAI/protoExtension)
 
 ## Quick start
 
 ```bash
-git clone https://github.com/proto-labs-ai/browser-extension-template.git my-extension
+git clone https://github.com/protoLabsAI/browser-extension-template.git my-extension
 cd my-extension
 npm install
 npm run dev        # hot-reloading dev build

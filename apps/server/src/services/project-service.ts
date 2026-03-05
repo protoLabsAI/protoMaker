@@ -18,7 +18,7 @@ import type {
   ProjectDocument,
   ProjectDocumentsFile,
   ProjectStats,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   createLogger,
   createProject,
@@ -28,8 +28,8 @@ import {
   phaseToFeatureDescription,
   phaseToBranchName,
   slugify,
-} from '@protolabs-ai/utils';
-import { secureFs } from '@protolabs-ai/platform';
+} from '@protolabsai/utils';
+import { secureFs } from '@protolabsai/platform';
 import {
   getProjectsDir,
   getProjectStatsPath,
@@ -42,7 +42,7 @@ import {
   getMilestoneFilePath,
   ensureProjectDir,
   ensureMilestoneDir,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 import type { FeatureLoader } from './feature-loader.js';
 import type { CalendarService } from './calendar-service.js';
 

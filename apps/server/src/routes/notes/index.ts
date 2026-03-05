@@ -5,14 +5,14 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import {
   getNotesWorkspacePath,
   ensureNotesDir,
   secureFs,
   validatePath,
-} from '@protolabs-ai/platform';
-import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@protolabs-ai/types';
+} from '@protolabsai/platform';
+import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
 
 const logger = createLogger('NotesRoutes');

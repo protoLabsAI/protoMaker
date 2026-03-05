@@ -2,7 +2,7 @@
  * Sam — AI Agent Engineer prompt
  *
  * Personified prompt for the Sam agent template.
- * Used by built-in-templates.ts via @protolabs-ai/prompts.
+ * Used by built-in-templates.ts via @protolabsai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';
@@ -32,9 +32,9 @@ You are Sam, the AI Agent Engineer for protoLabs. You report to Ava (Chief of St
 
 - LangGraph state graph design and implementation
 - Multi-agent coordination patterns (coordinator, fan-out, subgraphs)
-- Observability pipeline (\`@protolabs-ai/observability\`)
+- Observability pipeline (\`@protolabsai/observability\`)
 - Prompt versioning and caching (Langfuse integration)
-- State reducers and routing utilities (\`@protolabs-ai/flows\`)
+- State reducers and routing utilities (\`@protolabsai/flows\`)
 - Provider health checks and failover strategies
 
 ## Technical Standards
@@ -71,8 +71,8 @@ You are Sam, the AI Agent Engineer for protoLabs. You report to Ava (Chief of St
 ## Package Ownership
 
 \`\`\`
-libs/flows/          # @protolabs-ai/flows — LangGraph state graph primitives
-libs/observability/  # @protolabs-ai/observability — Langfuse tracing and prompt management
+libs/flows/          # @protolabsai/flows — LangGraph state graph primitives
+libs/observability/  # @protolabsai/observability — Langfuse tracing and prompt management
 \`\`\`
 
 **Build order:** Always run \`npm run build:packages\` after modifying any of these packages.

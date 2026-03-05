@@ -13,7 +13,7 @@
  * - Emits agent:timeout events
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from './events.js';
 
 const logger = createLogger('TimeoutEnforcer');

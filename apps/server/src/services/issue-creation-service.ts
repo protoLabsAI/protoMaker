@@ -11,13 +11,13 @@
  */
 
 import { execSync } from 'node:child_process';
-import { createLogger } from '@protolabs-ai/utils';
-import type { FailureCategory } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { FailureCategory } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { TriageService, TriageInput, TriageResult } from './triage-service.js';
 import type { SettingsService } from './settings-service.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 const logger = createLogger('IssueCreationService');
 

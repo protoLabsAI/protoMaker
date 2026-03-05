@@ -13,9 +13,9 @@
  * - Configurable channel mapping
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { EscalationChannel, EscalationSignal } from '@protolabs-ai/types';
-import { EscalationSeverity, EscalationSource } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { EscalationChannel, EscalationSignal } from '@protolabsai/types';
+import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
 import type { DiscordService } from '../discord-service.js';
 
 const logger = createLogger('DiscordChannelEscalation');

@@ -10,7 +10,7 @@ automaker/
 │   ├── ui/           # React + Vite + Electron frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
 ├── site/             # Landing page (protolabs.studio) — static HTML on Cloudflare Pages
-└── libs/             # Shared packages (@protolabs-ai/*)
+└── libs/             # Shared packages (@protolabsai/*)
     ├── types/        # Core TypeScript definitions (no dependencies)
     ├── utils/        # Logging, errors, image processing, context loading
     ├── prompts/      # AI prompt templates
@@ -23,7 +23,7 @@ automaker/
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
     ├── observability/# Langfuse tracing, prompt versioning & cost tracking
-    └── ui/           # Shared UI components (@protolabs-ai/ui) — atoms, molecules, theme
+    └── ui/           # Shared UI components (@protolabsai/ui) — atoms, molecules, theme
 ```
 
 ## Package Dependency Chain
@@ -31,14 +31,14 @@ automaker/
 Packages follow a strict layered dependency hierarchy. Lower-level packages cannot depend on higher-level ones:
 
 ```
-@protolabs-ai/types (no dependencies)
+@protolabsai/types (no dependencies)
     ↓
-@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform,
-@protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver,
-@protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools,
-@protolabs-ai/flows, @protolabs-ai/observability
+@protolabsai/utils, @protolabsai/prompts, @protolabsai/platform,
+@protolabsai/model-resolver, @protolabsai/dependency-resolver,
+@protolabsai/spec-parser, @protolabsai/pen-parser, @protolabsai/tools,
+@protolabsai/flows, @protolabsai/observability
     ↓
-@protolabs-ai/git-utils, @protolabs-ai/ui
+@protolabsai/git-utils, @protolabsai/ui
     ↓
 apps/server, apps/ui (applications)
 ```
@@ -52,7 +52,7 @@ apps/server, apps/ui (applications)
 
 ## Core Package Responsibilities
 
-### @protolabs-ai/types
+### @protolabsai/types
 
 Foundation layer with zero dependencies. Contains all TypeScript interfaces and types used across the project.
 
@@ -66,12 +66,12 @@ import type {
   Project,
   Milestone,
   Phase,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 ```
 
-**Rule:** Never import from other `@protolabs-ai/*` packages. External deps (zod, etc.) are allowed.
+**Rule:** Never import from other `@protolabsai/*` packages. External deps (zod, etc.) are allowed.
 
-### @protolabs-ai/utils
+### @protolabsai/utils
 
 Common utilities for logging, error handling, image processing, and context file loading.
 
@@ -82,10 +82,10 @@ import {
   createLogger, // Winston-based logger
   classifyError, // Error categorization
   loadContextFiles, // Load .automaker/context/*.md
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 ```
 
-### @protolabs-ai/prompts
+### @protolabsai/prompts
 
 AI prompt templates for agents, organized by role (PM, engineer, specialist).
 
@@ -95,10 +95,10 @@ AI prompt templates for agents, organized by role (PM, engineer, specialist).
 import {
   getEnhancementPrompt, // Feature enhancement prompts
   getAgentSystemPrompt, // Agent role system prompts
-} from '@protolabs-ai/prompts';
+} from '@protolabsai/prompts';
 ```
 
-### @protolabs-ai/platform
+### @protolabsai/platform
 
 Path management, security checks, and process spawning utilities.
 
@@ -109,17 +109,17 @@ import {
   getFeatureDir, // Get .automaker/features/{id}
   ensureAutomakerDir, // Create .automaker/ structure
   spawnChildProcess, // Secure process spawning
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 ```
 
-### @protolabs-ai/model-resolver
+### @protolabsai/model-resolver
 
 Converts model aliases to full model strings.
 
 **Key exports:**
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 // Usage
 resolveModelString('sonnet'); // → 'claude-sonnet-4-6'
@@ -129,17 +129,17 @@ resolveModelString('haiku'); // → 'claude-haiku-4-5-20251001'
 
 See [Model Resolver Guide](../server/model-resolver.md) for details.
 
-### @protolabs-ai/dependency-resolver
+### @protolabsai/dependency-resolver
 
 Resolves feature dependencies and determines execution order.
 
 **Key exports:**
 
 ```typescript
-import { resolveDependencies } from '@protolabs-ai/dependency-resolver';
+import { resolveDependencies } from '@protolabsai/dependency-resolver';
 ```
 
-### @protolabs-ai/git-utils
+### @protolabsai/git-utils
 
 Git operations and worktree management.
 
@@ -150,10 +150,10 @@ import {
   getGitRepositoryDiffs, // Get diffs between branches
   createWorktree, // Create isolated worktree
   cleanupWorktree, // Remove worktree
-} from '@protolabs-ai/git-utils';
+} from '@protolabsai/git-utils';
 ```
 
-### @protolabs-ai/tools
+### @protolabsai/tools
 
 Unified tool definition and registry system for AI agents.
 
@@ -164,10 +164,10 @@ import {
   ToolRegistry, // Tool registration and lookup
   createTool, // Tool factory
   ToolDefinition, // Tool schema
-} from '@protolabs-ai/tools';
+} from '@protolabsai/tools';
 ```
 
-### @protolabs-ai/flows
+### @protolabsai/flows
 
 LangGraph state graph primitives and flow orchestration for multi-agent workflows.
 
@@ -178,10 +178,10 @@ import {
   StateGraph, // Graph construction
   StateNode, // Node definition
   executeFlow, // Flow executor
-} from '@protolabs-ai/flows';
+} from '@protolabsai/flows';
 ```
 
-### @protolabs-ai/observability
+### @protolabsai/observability
 
 Langfuse tracing, prompt versioning, and cost tracking.
 
@@ -192,10 +192,10 @@ import {
   initializeLangfuse, // Setup Langfuse client
   traceAgentExecution, // Trace agent runs
   trackPromptVersion, // Version prompts
-} from '@protolabs-ai/observability';
+} from '@protolabsai/observability';
 ```
 
-### @protolabs-ai/ui
+### @protolabsai/ui
 
 Shared React components using atomic design pattern (atoms, molecules, organisms).
 
@@ -206,7 +206,7 @@ import {
   Button, // Atom components
   Card, // Molecule components
   theme, // Tailwind CSS theme
-} from '@protolabs-ai/ui';
+} from '@protolabsai/ui';
 ```
 
 ## Import Conventions
@@ -215,13 +215,13 @@ import {
 
 ```typescript
 // ✅ Correct
-import type { Feature, ExecuteOptions } from '@protolabs-ai/types';
-import { createLogger, classifyError } from '@protolabs-ai/utils';
-import { getEnhancementPrompt } from '@protolabs-ai/prompts';
-import { getFeatureDir, ensureAutomakerDir } from '@protolabs-ai/platform';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import { resolveDependencies } from '@protolabs-ai/dependency-resolver';
-import { getGitRepositoryDiffs } from '@protolabs-ai/git-utils';
+import type { Feature, ExecuteOptions } from '@protolabsai/types';
+import { createLogger, classifyError } from '@protolabsai/utils';
+import { getEnhancementPrompt } from '@protolabsai/prompts';
+import { getFeatureDir, ensureAutomakerDir } from '@protolabsai/platform';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import { resolveDependencies } from '@protolabsai/dependency-resolver';
+import { getGitRepositoryDiffs } from '@protolabsai/git-utils';
 
 // ❌ Never import from relative paths in apps/
 import { Feature } from '../services/feature-loader'; // Wrong
@@ -307,7 +307,7 @@ cd libs/my-package
 
 ```json
 {
-  "name": "@protolabs-ai/my-package",
+  "name": "@protolabsai/my-package",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -324,7 +324,7 @@ cd libs/my-package
     "test": "vitest"
   },
   "dependencies": {
-    "@protolabs-ai/types": "workspace:*"
+    "@protolabsai/types": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.3.5",
@@ -375,7 +375,7 @@ npm install
 
 ## Troubleshooting
 
-### "Cannot find module '@protolabs-ai/xyz'"
+### "Cannot find module '@protolabsai/xyz'"
 
 **Solution:** Build packages first:
 

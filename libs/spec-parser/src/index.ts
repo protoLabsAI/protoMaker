@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/spec-parser
+ * @protolabsai/spec-parser
  *
  * XML spec parser for AutoMaker - parses and generates app_spec.txt XML.
  * This package provides utilities for:
@@ -8,8 +8,8 @@
  * - Validating spec data
  */
 
-// Re-export types from @protolabs-ai/types for convenience
-export type { SpecOutput } from '@protolabs-ai/types';
+// Re-export types from @protolabsai/types for convenience
+export type { SpecOutput } from '@protolabsai/types';
 
 // XML utilities
 export { escapeXml, unescapeXml, extractXmlSection, extractXmlElements } from './xml-utils.js';

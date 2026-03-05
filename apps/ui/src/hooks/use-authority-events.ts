@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { EventType } from '@protolabs-ai/types';
+import type { EventType } from '@protolabsai/types';
 
 export interface AuthorityEvent {
   id: string;

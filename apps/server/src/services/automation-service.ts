@@ -13,9 +13,9 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import { trace, context, SpanStatusCode } from '@opentelemetry/api';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
-import { createLogger } from '@protolabs-ai/utils';
-import { secureFs } from '@protolabs-ai/platform';
-import type { Automation, AutomationRunRecord, AutomationRunStatus } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { secureFs } from '@protolabsai/platform';
+import type { Automation, AutomationRunRecord, AutomationRunStatus } from '@protolabsai/types';
 import type { SchedulerService } from './scheduler-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -85,7 +85,7 @@ export interface UpdateAutomationInput {
 export type FlowFactory = (modelConfig?: Record<string, unknown>) => Promise<void>;
 
 /**
- * Stored trigger types — mirrors @protolabs-ai/types AutomationTrigger but with
+ * Stored trigger types — mirrors @protolabsai/types AutomationTrigger but with
  * a relaxed eventType (string instead of strict EventType union) so that users
  * can persist event-based automations without needing a compile-time EventType match.
  */
@@ -95,7 +95,7 @@ type StoredWebhookTrigger = { type: 'webhook'; path: string };
 type StoredTrigger = StoredCronTrigger | StoredEventTrigger | StoredWebhookTrigger;
 
 /**
- * Stored automation record — all fields from @protolabs-ai/types Automation except
+ * Stored automation record — all fields from @protolabsai/types Automation except
  * modelConfig (flexible Record) and trigger (relaxed eventType).
  * executionCount and failureCount are populated from SchedulerService at read time.
  */

@@ -7,7 +7,7 @@
  * - Preventing duplicate validations for the same issue
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../../common.js';
 
 const logger = createLogger('IssueValidation');

@@ -14,7 +14,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { StreamObserver } from './stream-observer-service.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
-import { setFeatureContext } from '@protolabs-ai/error-tracking';
+import { setFeatureContext } from '@protolabsai/error-tracking';
 
 /**
  * Error thrown when stream observer detects an agent loop.
@@ -42,7 +42,7 @@ import type {
   ActionProposal,
   EventType,
   ExecutionState,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   DEFAULT_PHASE_MODELS,
   DEFAULT_MAX_CONCURRENCY,
@@ -52,7 +52,7 @@ import {
   normalizeFeatureStatus,
   EscalationSource,
   EscalationSeverity,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   buildPromptWithImages,
   classifyError,
@@ -66,27 +66,23 @@ import {
   DEFAULT_BACKUP_COUNT,
   type DedupChecker,
   type IndexRebuilder,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 
 const logger = createLogger('AutoMode');
-import {
-  resolveModelString,
-  resolvePhaseModel,
-  DEFAULT_MODELS,
-} from '@protolabs-ai/model-resolver';
+import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 import {
   resolveDependencies,
   areDependenciesSatisfied,
   getBlockingInfo,
-} from '@protolabs-ai/dependency-resolver';
+} from '@protolabsai/dependency-resolver';
 import {
   getFeatureDir,
   getAutomakerDir,
   getFeaturesDir,
   getExecutionStatePath,
   ensureAutomakerDir,
-} from '@protolabs-ai/platform';
-import { rebaseWorktreeOnMain } from '@protolabs-ai/git-utils';
+} from '@protolabsai/platform';
+import { rebaseWorktreeOnMain } from '@protolabsai/git-utils';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -162,7 +158,7 @@ async function getCurrentBranch(projectPath: string): Promise<string | null> {
   }
 }
 
-// PlanningMode type is imported from @protolabs-ai/types
+// PlanningMode type is imported from @protolabsai/types
 
 // Model selection for features is handled by AutoModeService.getModelForFeature() class method
 // which reads the user-configured agentExecutionModel from settings.
@@ -220,7 +216,7 @@ interface ProjectAutoLoopState {
   humanBlockedCount: number; // Count of features blocked by human-assigned dependencies
 }
 
-// ExecutionState is defined in libs/types/src/auto-mode.ts and imported from @protolabs-ai/types.
+// ExecutionState is defined in libs/types/src/auto-mode.ts and imported from @protolabsai/types.
 
 // Default empty execution state
 const DEFAULT_EXECUTION_STATE: ExecutionState = {
@@ -968,7 +964,7 @@ export class AutoModeService {
             );
             for (const issue of report.issues) {
               this.events.emit(
-                'escalation:signal-received' as import('@protolabs-ai/types').EventType,
+                'escalation:signal-received' as import('@protolabsai/types').EventType,
                 {
                   source: 'auto_mode_health_sweep',
                   severity: issue.type === 'stale_gate' ? 'medium' : 'low',

@@ -83,7 +83,7 @@ const features = featureLoader.listFeatures();
 **Pattern:**
 
 \```typescript
-import { classifyError } from '@protolabs-ai/utils';
+import { classifyError } from '@protolabsai/utils';
 
 try {
 // ... operation
@@ -543,7 +543,7 @@ SELECT * FROM chunks_fts WHERE chunks_fts MATCH 'your term';
 ### Pattern: Append Learning After Task
 
 ```typescript
-import { KnowledgeStoreService } from '@protolabs-ai/server';
+import { KnowledgeStoreService } from '@protolabsai/server';
 
 async function completeTask(feature: Feature) {
   // ... execute task

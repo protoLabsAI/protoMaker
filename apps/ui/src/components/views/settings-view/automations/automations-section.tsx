@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import {
   Zap,
@@ -18,7 +18,7 @@ import {
   Play,
   History,
 } from 'lucide-react';
-import type { Automation, AutomationRunStatus } from '@protolabs-ai/types';
+import type { Automation, AutomationRunStatus } from '@protolabsai/types';
 import {
   listAutomations,
   createAutomation,

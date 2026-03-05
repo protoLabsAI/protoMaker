@@ -32,8 +32,8 @@ import {
   type ThreadChannel,
   Events,
 } from 'discord.js';
-import { createLogger } from '@protolabs-ai/utils';
-import type { ReactionAbility, ChannelWorkflow } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { ReactionAbility, ChannelWorkflow } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
 import type { FeatureLoader } from './feature-loader.js';

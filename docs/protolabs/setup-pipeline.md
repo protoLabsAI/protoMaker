@@ -47,7 +47,7 @@ The `/setuplab` command is the entry point for onboarding any repository to prot
 
 ## Types
 
-All types are in `libs/types/src/setup.ts` and exported from `@protolabs-ai/types`.
+All types are in `libs/types/src/setup.ts` and exported from `@protolabsai/types`.
 
 ### Key Types
 

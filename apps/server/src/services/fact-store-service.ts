@@ -11,9 +11,9 @@
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import Anthropic from '@anthropic-ai/sdk';
-import { createLogger, atomicWriteJson } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import type { TrajectoryFact } from '@protolabs-ai/types';
+import { createLogger, atomicWriteJson } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import type { TrajectoryFact } from '@protolabsai/types';
 
 const logger = createLogger('FactStoreService');
 

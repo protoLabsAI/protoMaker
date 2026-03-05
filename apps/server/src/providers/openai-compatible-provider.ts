@@ -14,9 +14,9 @@ import type {
   InstallationStatus,
   ModelDefinition,
 } from './types.js';
-import type { OpenAICompatibleConfig } from '@protolabs-ai/types';
+import type { OpenAICompatibleConfig } from '@protolabsai/types';
 import { SettingsService } from '../services/settings-service.js';
-import { getDataDirectory } from '@protolabs-ai/platform';
+import { getDataDirectory } from '@protolabsai/platform';
 
 /** Prefix used to identify OpenAI-compatible models in the routing system */
 const OPENAI_COMPAT_PREFIX = 'openai-compat/';

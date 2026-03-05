@@ -7,7 +7,7 @@
  *   - contentPipeline    (route text to content agents)
  *   - authorityPipeline  (route ideas to PM agent)
  */
-import type { NotesWorkspace, NoteTabPermissions } from '@protolabs-ai/types';
+import type { NotesWorkspace, NoteTabPermissions } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>

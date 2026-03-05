@@ -2,7 +2,7 @@
  * Group renderer - layout only, no fill
  */
 
-import type { PenGroup } from '@protolabs-ai/types';
+import type { PenGroup } from '@protolabsai/types';
 import { PenNodeRenderer } from './pen-node-renderer';
 import { layoutToFlexDirection } from './style-utils';
 import type { CSSProperties } from 'react';

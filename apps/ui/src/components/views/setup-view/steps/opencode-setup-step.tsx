@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { createLogger } from '@protolabsai/utils/logger';
+import { Button } from '@protolabsai/ui/atoms';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
 import { useSetupStore } from '@/store/setup-store';
 import { getElectronAPI } from '@/lib/electron';
 import {
@@ -16,7 +16,7 @@ import {
   XCircle,
   Terminal,
 } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import { StatusBadge } from '../components';
 

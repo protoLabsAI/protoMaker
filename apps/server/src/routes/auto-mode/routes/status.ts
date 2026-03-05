@@ -8,7 +8,7 @@
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
-import { MAX_SYSTEM_CONCURRENCY } from '@protolabs-ai/types';
+import { MAX_SYSTEM_CONCURRENCY } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 export function createStatusHandler(

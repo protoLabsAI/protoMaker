@@ -2,7 +2,7 @@
  * Recursive node renderer that dispatches to specific node type renderers
  */
 
-import type { PenNode } from '@protolabs-ai/types';
+import type { PenNode } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
 import { PenFrameRenderer } from './pen-frame-renderer';
 import { PenGroupRenderer } from './pen-group-renderer';

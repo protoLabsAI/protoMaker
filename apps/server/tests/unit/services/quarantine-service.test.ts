@@ -4,7 +4,7 @@ import path from 'path';
 import os from 'os';
 import { QuarantineService } from '@/services/quarantine-service.js';
 import { TrustTierService } from '@/services/trust-tier-service.js';
-import type { TrustTier } from '@protolabs-ai/types';
+import type { TrustTier } from '@protolabsai/types';
 
 describe('QuarantineService', () => {
   let testProjectDir: string;

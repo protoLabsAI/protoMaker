@@ -9,7 +9,7 @@ import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError } from '../common.js';
-import { isValidRemoteName, isValidBranchName } from '@protolabs-ai/platform';
+import { isValidRemoteName, isValidBranchName } from '@protolabsai/platform';
 
 const execAsync = promisify(exec);
 

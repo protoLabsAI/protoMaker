@@ -5,8 +5,8 @@
 
 import type { Request, Response } from 'express';
 import { readdir, stat } from 'node:fs/promises';
-import { createLogger } from '@protolabs-ai/utils';
-import { validatePath } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { validatePath } from '@protolabsai/platform';
 
 const logger = createLogger('DesignsDirectoryRoute');
 

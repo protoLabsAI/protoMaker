@@ -7,10 +7,10 @@
  * - agent.quality: based on CodeRabbit review thread count
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { Feature } from '@protolabsai/types';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
-import type { LangfuseClient } from '@protolabs-ai/observability';
+import type { LangfuseClient } from '@protolabsai/observability';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 

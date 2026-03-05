@@ -18,7 +18,7 @@ metadata:
 | Type | Framework | Command | Scope |
 |------|-----------|---------|-------|
 | Unit | Vitest | `npm run test:server` | Server services, utilities |
-| Package | Vitest | `npm run test:packages` | Shared @protolabs-ai/* packages |
+| Package | Vitest | `npm run test:packages` | Shared @protolabsai/* packages |
 | E2E | Playwright | `npm run test` | Full browser UI tests |
 
 ## Core Patterns

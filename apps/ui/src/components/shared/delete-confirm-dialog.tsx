@@ -6,9 +6,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { HotkeyButton } from '@protolabs-ai/ui/molecules';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { HotkeyButton } from '@protolabsai/ui/molecules';
 import type { ReactNode } from 'react';
 
 interface DeleteConfirmDialogProps {

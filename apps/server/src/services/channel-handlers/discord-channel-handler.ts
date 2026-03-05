@@ -10,7 +10,7 @@
  * since the pipeline:gate-waiting event already notifies the UI directly.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
 
 const logger = createLogger('ChannelHandler');

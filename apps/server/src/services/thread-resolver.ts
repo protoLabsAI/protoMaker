@@ -8,9 +8,9 @@
  * - Processing thread feedback after agent remediation completes
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { FeedbackThreadDecision, ReviewThreadFeedback } from '@protolabs-ai/types';
-import { EscalationSeverity, EscalationSource } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { FeedbackThreadDecision, ReviewThreadFeedback } from '@protolabsai/types';
+import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { TrackedPR, ThreadFeedbackItem } from './pr-status-checker.js';
@@ -165,7 +165,7 @@ export class ThreadResolver {
 
       if (deniedDecisions.length > 0) {
         const remediationHistory = (feature?.remediationHistory ||
-          []) as import('@protolabs-ai/types').RemediationHistoryEntry[];
+          []) as import('@protolabsai/types').RemediationHistoryEntry[];
         const currentEntry = remediationHistory.find(
           (entry) => entry.iteration === pr.iterationCount && !entry.completedAt
         );

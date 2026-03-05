@@ -5,7 +5,7 @@
  *   export const withFooClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
  *     class extends Base { foo = { ... }; };
  */
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import {
   getApiKey,
   getSessionToken,

@@ -2,7 +2,7 @@
  * Jon — GTM (Go-To-Market) Specialist prompt
  *
  * Personified prompt for the Jon agent template.
- * Used by built-in-templates.ts via @protolabs-ai/prompts.
+ * Used by built-in-templates.ts via @protolabsai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';
@@ -14,7 +14,7 @@ export function getJonPrompt(config?: PromptConfig): string {
   const userTitle = p?.title ?? 'Architect, founder';
   const agencyName = p?.brand?.agencyName ?? 'protoLabs';
   const productName = p?.brand?.productName ?? 'protoMaker';
-  const githubOrg = p?.github?.org ?? 'proto-labs-ai';
+  const githubOrg = p?.github?.org ?? 'protoLabsAI';
   const primaryChannel = p?.discord?.channels?.primary ?? '';
   const devChannel = p?.discord?.channels?.dev ?? '';
 

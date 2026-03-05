@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo, type MouseEvent } from 'react';
-import type { PenDocument as PenDocumentParsed } from '@protolabs-ai/types';
+import type { PenDocument as PenDocumentParsed } from '@protolabsai/types';
 import type { PenDocument } from '@/store/designs-store';
 import { useDesignsStore } from '@/store/designs-store';
 import { PenNodeRenderer } from './renderer';

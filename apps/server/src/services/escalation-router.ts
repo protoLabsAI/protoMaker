@@ -14,9 +14,9 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import type { EscalationSignal, EscalationChannel } from '@protolabs-ai/types';
-import { EscalationSeverity } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import type { EscalationSignal, EscalationChannel } from '@protolabsai/types';
+import { EscalationSeverity } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('EscalationRouter');

@@ -126,8 +126,8 @@ fill?: PenFill[];
 ## Implementation Rules
 
 1. **No heavy deps** — render with React components + CSS flexbox, not fabric.js/konva
-2. **Types in `@protolabs-ai/types`** (libs/types/src/pen.ts) — single source of truth
-3. **Parser in `@protolabs-ai/pen-parser`** (libs/pen-parser/) — follows libs/ conventions
+2. **Types in `@protolabsai/types`** (libs/types/src/pen.ts) — single source of truth
+3. **Parser in `@protolabsai/pen-parser`** (libs/pen-parser/) — follows libs/ conventions
 4. **Server routes** in apps/server/src/routes/designs/ — Express 5 pattern
 5. **UI components** in apps/ui/src/components/views/designs-view/
 6. **Lucide icons** — map `iconFontFamily: "lucide"` + `iconFontName` to lucide-react components

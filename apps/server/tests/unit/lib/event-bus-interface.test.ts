@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createEventEmitter } from '../../../src/lib/events.js';
-import type { EventBus } from '@protolabs-ai/types';
+import type { EventBus } from '@protolabsai/types';
 
 describe('EventBus Interface Contract', () => {
   it('createEventEmitter() satisfies EventBus interface at type level', () => {

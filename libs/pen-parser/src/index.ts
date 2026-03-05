@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/pen-parser
+ * @protolabsai/pen-parser
  *
  * Parser and utilities for Penpot .pen design files
  */

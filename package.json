@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/proto-labs-ai/protoMaker.git"
+    "url": "https://github.com/protoLabsAI/protoMaker.git"
   },
   "homepage": "https://protolabs.studio",
   "bugs": {
-    "url": "https://github.com/proto-labs-ai/protoMaker/issues"
+    "url": "https://github.com/protoLabsAI/protoMaker/issues"
   },
   "packageManager": "npm@10.9.3",
   "engines": {

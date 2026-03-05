@@ -8,7 +8,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { projectPlanExists } from '@protolabs-ai/platform';
+import { projectPlanExists } from '@protolabsai/platform';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import {
   orchestrateProjectFeatures,

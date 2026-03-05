@@ -10,7 +10,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@protolabs-ai/ui/organisms": ["../../libs/ui/src/organisms/index.ts"]
+      "@protolabsai/ui/organisms": ["../../libs/ui/src/organisms/index.ts"]
     },
     "moduleResolution": "bundler",
     "resolveJsonModule": true,

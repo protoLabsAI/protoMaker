@@ -2,7 +2,7 @@
  * CostChart - Area chart showing cost over time
  */
 
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import {
   AreaChart,

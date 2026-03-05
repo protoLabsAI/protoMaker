@@ -13,7 +13,7 @@ import type {
   SkillRequirements,
   CreateSkillOptions,
   UpdateSkillOptions,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 /**
  * File system module interface for dependency injection

@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('setup:linear-provision');
 

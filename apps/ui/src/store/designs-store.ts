@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { PenNode } from '@protolabs-ai/types';
+import type { PenNode } from '@protolabsai/types';
 
 // Temporary type definitions - will be replaced when server types are available
 export interface PenDocument {

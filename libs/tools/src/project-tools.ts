@@ -19,7 +19,7 @@ import type {
   ProjectDocumentsFile,
   ProjectHealth,
   UpdateProjectInput,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Minimal structural interface — avoids importing the concrete ProjectService

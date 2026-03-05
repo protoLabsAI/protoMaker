@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useDesignsStore } from '@/store/designs-store';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { DesignsTree } from './designs-tree';
 import { DesignsCanvas } from './designs-canvas';
 import { PropertyInspector } from './inspector/property-inspector';
@@ -10,7 +10,7 @@ import { FileText, Package } from 'lucide-react';
 import { DndProvider, DragOverlayContent } from './dnd';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import type { DragData } from './dnd';
-import type { PenNode } from '@protolabs-ai/types';
+import type { PenNode } from '@protolabsai/types';
 
 export function DesignsView() {
   const { currentProject } = useAppStore();

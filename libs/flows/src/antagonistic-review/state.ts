@@ -15,7 +15,7 @@ import {
   type ReviewerPerspective,
   type PairReviewResult,
   DistillationDepth,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 /**
  * Token usage captured from a single LLM node invocation

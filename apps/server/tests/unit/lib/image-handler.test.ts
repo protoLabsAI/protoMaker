@@ -4,7 +4,7 @@ import {
   readImageAsBase64,
   convertImagesToContentBlocks,
   formatImagePathsForPrompt,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 import { pngBase64Fixture } from '../../fixtures/images.js';
 import * as fs from 'fs/promises';
 

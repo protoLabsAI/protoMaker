@@ -14,7 +14,7 @@ import { SystemTab } from './system-tab';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
-import type { EventType } from '@protolabs-ai/types';
+import type { EventType } from '@protolabsai/types';
 
 interface MetricsSectionProps {
   projectPath: string;

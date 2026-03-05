@@ -6,8 +6,8 @@
  */
 
 import * as secureFs from './secure-fs.js';
-import { getValidationsDir, getValidationDir, getValidationPath } from '@protolabs-ai/platform';
-import type { StoredValidation } from '@protolabs-ai/types';
+import { getValidationsDir, getValidationDir, getValidationPath } from '@protolabsai/platform';
+import type { StoredValidation } from '@protolabsai/types';
 
 // Re-export StoredValidation for convenience
 export type { StoredValidation };

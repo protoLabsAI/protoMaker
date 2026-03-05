@@ -1,8 +1,8 @@
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { Code, Eye, Columns2 } from 'lucide-react';
-import { Markdown } from '@protolabs-ai/ui/molecules';
+import { Markdown } from '@protolabsai/ui/molecules';
 import type { MarkdownViewMode } from '../use-file-editor-store';
 
 export function isMarkdownFile(path: string): boolean {

@@ -5,11 +5,11 @@
 import type { Request, Response } from 'express';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 import { TrustTierService } from '../../../services/trust-tier-service.js';
 import { QuarantineService } from '../../../services/quarantine-service.js';
-import type { QuarantineStage, SanitizationViolation } from '@protolabs-ai/types';
+import type { QuarantineStage, SanitizationViolation } from '@protolabsai/types';
 
 /**
  * Determine the feature source from request headers and authentication method

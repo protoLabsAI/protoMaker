@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AgentService } from '@/services/agent-service.js';
 import { ProviderFactory } from '@/providers/provider-factory.js';
 import * as fs from 'fs/promises';
-import * as imageHandler from '@protolabs-ai/utils';
-import * as promptBuilder from '@protolabs-ai/utils';
-import * as contextLoader from '@protolabs-ai/utils';
+import * as imageHandler from '@protolabsai/utils';
+import * as promptBuilder from '@protolabsai/utils';
+import * as contextLoader from '@protolabsai/utils';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
 
 // Create a shared mock logger instance for assertions using vi.hoisted
@@ -17,8 +17,8 @@ const mockLogger = vi.hoisted(() => ({
 
 vi.mock('fs/promises');
 vi.mock('@/providers/provider-factory.js');
-vi.mock('@protolabs-ai/utils', async () => {
-  const actual = await vi.importActual<typeof import('@protolabs-ai/utils')>('@protolabs-ai/utils');
+vi.mock('@protolabsai/utils', async () => {
+  const actual = await vi.importActual<typeof import('@protolabsai/utils')>('@protolabsai/utils');
   return {
     ...actual,
     loadContextFiles: vi.fn(),
@@ -513,7 +513,7 @@ describe('agent-service.ts', () => {
 
       // Re-import platform to initialize with new env var
       vi.resetModules();
-      const { initAllowedPaths } = await import('@protolabs-ai/platform');
+      const { initAllowedPaths } = await import('@protolabsai/platform');
       initAllowedPaths();
 
       const { AgentService } = await import('@/services/agent-service.js');
@@ -532,7 +532,7 @@ describe('agent-service.ts', () => {
         delete process.env.ALLOWED_ROOT_DIRECTORY;
       }
       vi.resetModules();
-      const { initAllowedPaths: reinit } = await import('@protolabs-ai/platform');
+      const { initAllowedPaths: reinit } = await import('@protolabsai/platform');
       reinit();
     });
   });

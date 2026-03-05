@@ -14,7 +14,7 @@ import type {
   InstallationStatus,
   ModelDefinition,
 } from './types.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('FakeProvider');
 

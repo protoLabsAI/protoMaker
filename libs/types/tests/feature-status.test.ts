@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { normalizeFeatureStatus, type FeatureStatus } from '@protolabs-ai/types';
+import { normalizeFeatureStatus, type FeatureStatus } from '@protolabsai/types';
 
 describe('normalizeFeatureStatus', () => {
   describe('canonical statuses (passthrough)', () => {

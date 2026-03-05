@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/utils
+ * @protolabsai/utils
  * Sanitization and security utilities
  */
 

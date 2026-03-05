@@ -1,5 +1,5 @@
 import { Eye, Edit3, Code } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsList, TabsTrigger } from '@protolabsai/ui/atoms';
 import type { SpecViewMode } from '../types';
 
 interface SpecModeTabsProps {

@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildCanUseToolCallback } from '../../../src/lib/agent-trust.js';
 import type { EventEmitter } from '../../../src/lib/events.js';
-import type { EventType } from '@protolabs-ai/types';
+import type { EventType } from '@protolabsai/types';
 
 // ─── Minimal EventEmitter mock ────────────────────────────────────────────────
 

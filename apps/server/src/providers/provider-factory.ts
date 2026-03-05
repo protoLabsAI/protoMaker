@@ -13,7 +13,7 @@ import {
   isCodexModel,
   isOpencodeModel,
   type ModelProvider,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import * as fs from 'fs';
 import * as path from 'path';

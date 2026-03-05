@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { secureFs } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabsai/platform';
 import {
   atomicWriteJson,
   readJsonFile,
@@ -11,7 +11,7 @@ import {
 } from '../src/atomic-writer';
 
 // Mock secureFs
-vi.mock('@protolabs-ai/platform', () => ({
+vi.mock('@protolabsai/platform', () => ({
   secureFs: {
     writeFile: vi.fn(),
     readFile: vi.fn(),

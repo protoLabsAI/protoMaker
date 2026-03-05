@@ -22,7 +22,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RUNNER_DIR="/home/$(whoami)/actions-runner"
-REPO="proto-labs-ai/automaker"
+REPO="protoLabsAI/automaker"
 SERVICE_NAME="automaker-runner"
 
 # Colors

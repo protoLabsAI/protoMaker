@@ -12,7 +12,7 @@ import * as path from 'path';
 // secureFs is used for user-controllable paths (working directory validation)
 // to enforce ALLOWED_ROOT_DIRECTORY security boundary
 import * as secureFs from '../lib/secure-fs.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('Terminal');
 // System paths module handles shell binary checks and WSL detection
@@ -22,7 +22,7 @@ import {
   systemPathReadFileSync,
   getWslVersionPath,
   getShellPaths,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 
 // Maximum scrollback buffer size (characters)
 const MAX_SCROLLBACK_SIZE = 50000; // ~50KB per terminal

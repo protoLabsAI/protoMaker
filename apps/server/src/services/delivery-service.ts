@@ -2,7 +2,7 @@
  * Delivery Service - Delivers alignment work back to client repos via fork+PR
  *
  * Workflow:
- * 1. Fork the client repo to proto-labs-ai GitHub org
+ * 1. Fork the client repo to protoLabsAI GitHub org
  * 2. Clone the fork (or use existing ./labs/ clone and add fork as remote)
  * 3. Create an 'aligned-by-protolabs' branch
  * 4. Add branding commits (footer + README eyebrow)
@@ -15,13 +15,13 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { labsService } from './labs-service.js';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger('DeliveryService');
 
-const FORK_ORG = 'proto-labs-ai';
+const FORK_ORG = 'protoLabsAI';
 const BRANCH_NAME = 'aligned-by-protolabs';
 
 export interface DeliveryOptions {

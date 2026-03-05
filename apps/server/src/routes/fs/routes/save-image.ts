@@ -6,7 +6,7 @@ import type { Request, Response } from 'express';
 import * as secureFs from '../../../lib/secure-fs.js';
 import path from 'path';
 import { getErrorMessage, logError } from '../common.js';
-import { getImagesDir } from '@protolabs-ai/platform';
+import { getImagesDir } from '@protolabsai/platform';
 
 export function createSaveImageHandler() {
   return async (req: Request, res: Response): Promise<void> => {

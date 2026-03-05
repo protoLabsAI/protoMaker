@@ -11,7 +11,7 @@
  *   AggregatedPresenceState { status, lastActivity, confidence, sensors }
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { SensorRegistryService } from './sensor-registry-service.js';
 
 const logger = createLogger('ContextAggregator');

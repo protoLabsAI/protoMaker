@@ -13,7 +13,7 @@ import { promisify } from 'util';
 import path from 'path';
 import * as secureFs from '../../../lib/secure-fs.js';
 import type { EventEmitter } from '../../../lib/events.js';
-import { isGitRepo } from '@protolabs-ai/git-utils';
+import { isGitRepo } from '@protolabsai/git-utils';
 import {
   getErrorMessage,
   logError,
@@ -23,7 +23,7 @@ import {
   execGitCommand,
 } from '../common.js';
 import { trackBranch } from './branch-tracking.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { runInitScript } from '../../../services/init-script-service.js';
 const logger = createLogger('Worktree');
 

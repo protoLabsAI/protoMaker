@@ -10,11 +10,11 @@ Install directly from the GitHub repository:
 
 ```bash
 # 1. Clone the repo (needed for the MCP server binary)
-git clone https://github.com/proto-labs-ai/protomaker.git
+git clone https://github.com/protoLabsAI/protomaker.git
 cd protomaker
 
 # 2. Add the protoLabs plugin marketplace
-claude plugin marketplace add https://github.com/proto-labs-ai/protomaker/tree/main/packages/mcp-server/plugins
+claude plugin marketplace add https://github.com/protoLabsAI/protomaker/tree/main/packages/mcp-server/plugins
 
 # 3. Install the plugin
 claude plugin install protolabs
@@ -42,7 +42,7 @@ For developers working on protoLabs:
 
 ```bash
 # 1. Clone and install protoLabs
-git clone https://github.com/proto-labs-ai/protomaker.git
+git clone https://github.com/protoLabsAI/protomaker.git
 cd protomaker
 npm install
 
@@ -105,7 +105,7 @@ The protoLabs Claude Code plugin enables you to:
 
 The plugin consists of:
 
-1. **MCP Server** (`@protolabs-ai/mcp-server`) - Exposes protoLabs's API via Model Context Protocol
+1. **MCP Server** (`@protolabsai/mcp-server`) - Exposes protoLabs's API via Model Context Protocol
 2. **Claude Plugin** (`packages/mcp-server/plugins/automaker`) - Provides slash commands and subagents
 
 ## Installation

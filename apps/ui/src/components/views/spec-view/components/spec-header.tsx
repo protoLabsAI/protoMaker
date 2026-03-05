@@ -1,4 +1,4 @@
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -6,7 +6,7 @@ import {
 import { PanelHeader } from '@/components/shared/panel-header';
 import type { PanelHeaderAction } from '@/components/shared/panel-header';
 import { Save, Sparkles, FileText, AlertCircle, ListPlus, RefreshCcw } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { PHASE_LABELS } from '../constants';
 
 interface SpecHeaderProps {

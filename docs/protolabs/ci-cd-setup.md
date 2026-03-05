@@ -580,4 +580,4 @@ npm run setup-ci -- /path/to/project
 
 ---
 
-**Questions or issues?** Open an issue at https://github.com/proto-labs-ai/protomaker
+**Questions or issues?** Open an issue at https://github.com/protoLabsAI/protomaker

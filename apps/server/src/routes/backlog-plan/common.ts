@@ -2,11 +2,11 @@
  * Common utilities for backlog plan routes
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import { ensureAutomakerDir, getAutomakerDir } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { ensureAutomakerDir, getAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../../lib/secure-fs.js';
 import path from 'path';
-import type { BacklogPlanResult } from '@protolabs-ai/types';
+import type { BacklogPlanResult } from '@protolabsai/types';
 
 const logger = createLogger('BacklogPlan');
 

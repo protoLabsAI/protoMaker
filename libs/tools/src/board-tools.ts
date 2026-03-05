@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { defineSharedTool } from './define-tool.js';
 import type { SharedTool } from './types.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Minimal structural interface — avoids importing the concrete FeatureLoader

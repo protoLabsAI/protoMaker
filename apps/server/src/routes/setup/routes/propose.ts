@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { generateProposal } from '../../../services/alignment-proposal-service.js';
-import type { GapAnalysisReport, AlignmentProposal } from '@protolabs-ai/types';
+import type { GapAnalysisReport, AlignmentProposal } from '@protolabsai/types';
 
 const logger = createLogger('setup:propose');
 

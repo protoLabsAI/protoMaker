@@ -28,10 +28,10 @@ describe('parsePROwnershipWatermark', () => {
   });
 
   it('parses a valid watermark from a PR body', () => {
-    const body = `Some PR description\n\n<!-- automaker:owner instance=ava-staging team=proto-labs-ai created=2026-02-25T19:00:00.000Z -->`;
+    const body = `Some PR description\n\n<!-- automaker:owner instance=ava-staging team=protoLabsAI created=2026-02-25T19:00:00.000Z -->`;
     const result = parsePROwnershipWatermark(body);
     expect(result.instanceId).toBe('ava-staging');
-    expect(result.teamId).toBe('proto-labs-ai');
+    expect(result.teamId).toBe('protoLabsAI');
     expect(result.createdAt).toBe('2026-02-25T19:00:00.000Z');
   });
 
@@ -60,10 +60,10 @@ describe('parsePROwnershipWatermark', () => {
 
 describe('buildPROwnershipWatermark', () => {
   it('builds a valid HTML comment watermark', () => {
-    const watermark = buildPROwnershipWatermark('ava-staging', 'proto-labs-ai');
+    const watermark = buildPROwnershipWatermark('ava-staging', 'protoLabsAI');
     expect(watermark).toMatch(/^<!--\s*automaker:owner\s+/);
     expect(watermark).toContain('instance=ava-staging');
-    expect(watermark).toContain('team=proto-labs-ai');
+    expect(watermark).toContain('team=protoLabsAI');
     expect(watermark).toMatch(/created=\d{4}-\d{2}-\d{2}T/);
     expect(watermark).toMatch(/-->$/);
   });

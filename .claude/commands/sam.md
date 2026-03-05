@@ -102,7 +102,7 @@ Build flows from small, typed, testable nodes. A coordinator is just a planning 
 
 ## Package Ownership
 
-### @protolabs-ai/flows (`libs/flows/`)
+### @protolabsai/flows (`libs/flows/`)
 
 LangGraph state graph primitives for multi-agent coordination.
 
@@ -118,7 +118,7 @@ LangGraph state graph primitives for multi-agent coordination.
 
 **Docs:** `docs/dev/flows.md`
 
-### @protolabs-ai/observability (`libs/observability/`)
+### @protolabsai/observability (`libs/observability/`)
 
 Langfuse-based tracing, prompt management, and cost tracking.
 
@@ -167,10 +167,10 @@ Langfuse-based tracing, prompt management, and cost tracking.
 
 ```
 libs/
-  flows/              # @protolabs-ai/flows — LangGraph primitives
-  observability/      # @protolabs-ai/observability — Langfuse tracing
-  types/              # @protolabs-ai/types — Shared type definitions
-  utils/              # @protolabs-ai/utils — Logging, errors
+  flows/              # @protolabsai/flows — LangGraph primitives
+  observability/      # @protolabsai/observability — Langfuse tracing
+  types/              # @protolabsai/types — Shared type definitions
+  utils/              # @protolabsai/utils — Logging, errors
 ```
 
 **Build order:** Always run `npm run build:packages` before building server if shared packages changed.

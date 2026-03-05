@@ -1,10 +1,10 @@
-import { Badge, Card } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Badge, Card } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProjectFeatures } from '../hooks/use-project-features';
 import { getFeatureStatusVariant } from '../lib/status-variants';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 export function FeaturesTab({ projectSlug }: { projectSlug: string }) {
   const { data, isLoading } = useProjectFeatures(projectSlug);

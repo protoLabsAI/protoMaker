@@ -6,18 +6,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import { AlertCircle } from 'lucide-react';
 import { Feature, ModelAlias, ThinkingLevel, PlanningMode } from '@/store/types';
 import { TestingTabContent, PrioritySelect, PlanningModeSelect, WorkModeSelector } from '../shared';
 import type { WorkMode } from '../shared';
 import { PhaseModelSelector } from '@/components/views/settings-view/model-defaults/phase-model-selector';
-import { isClaudeModel, type PhaseModelEntry } from '@protolabs-ai/types';
+import { isClaudeModel, type PhaseModelEntry } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 
 interface MassEditDialogProps {
   open: boolean;

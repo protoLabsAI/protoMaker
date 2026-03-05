@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { FilePlus, FolderPlus, Pencil, Trash2, Copy, ClipboardCopy } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ConfirmDialog } from '@protolabs-ai/ui/molecules';
+import { ConfirmDialog } from '@protolabsai/ui/molecules';
 
 export interface ContextMenuTarget {
   x: number;

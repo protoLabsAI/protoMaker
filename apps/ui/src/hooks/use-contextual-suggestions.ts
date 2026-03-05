@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { SuggestionItem } from '@protolabs-ai/ui/ai';
+import type { SuggestionItem } from '@protolabsai/ui/ai';
 import type { Feature } from '@/store/types';
 
 const DEFAULT_SUGGESTIONS: SuggestionItem[] = [

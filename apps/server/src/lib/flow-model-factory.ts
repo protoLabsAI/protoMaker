@@ -11,9 +11,9 @@
 
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { createLogger } from '@protolabs-ai/utils';
-import { resolvePhaseModel } from '@protolabs-ai/model-resolver';
-import type { PhaseModelKey, ClaudeCompatibleProvider, Credentials } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { resolvePhaseModel } from '@protolabsai/model-resolver';
+import type { PhaseModelKey, ClaudeCompatibleProvider, Credentials } from '@protolabsai/types';
 import { getPhaseModelWithOverrides } from './settings-helpers.js';
 import type { SettingsService } from '../services/settings-service.js';
 

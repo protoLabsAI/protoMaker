@@ -4,8 +4,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { createLogger } from '@protolabs-ai/utils/logger';
-import type { EventType } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils/logger';
+import type { EventType } from '@protolabsai/types';
 
 const logger = createLogger('EventFeed');
 

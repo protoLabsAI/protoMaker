@@ -22,24 +22,24 @@ Complete reference for working in the Automaker monorepo. Covers build order, de
 Packages MUST only depend on packages above them in the chain. Violating this creates circular imports that break the build.
 
 ```
-@protolabs-ai/types            ← no dependencies, foundation for everything
+@protolabsai/types            ← no dependencies, foundation for everything
          ↓
-@protolabs-ai/utils
-@protolabs-ai/prompts
-@protolabs-ai/platform
-@protolabs-ai/model-resolver
-@protolabs-ai/dependency-resolver
-@protolabs-ai/spec-parser
+@protolabsai/utils
+@protolabsai/prompts
+@protolabsai/platform
+@protolabsai/model-resolver
+@protolabsai/dependency-resolver
+@protolabsai/spec-parser
          ↓
-@protolabs-ai/git-utils        ← depends on types + utils
+@protolabsai/git-utils        ← depends on types + utils
          ↓
-@protolabs-ai/mcp-server       ← depends on all above (lives in packages/)
+@protolabsai/mcp-server       ← depends on all above (lives in packages/)
          ↓
 apps/server                    ← depends on all above
-apps/ui                        ← depends on @protolabs-ai/types only (browser-safe)
+apps/ui                        ← depends on @protolabsai/types only (browser-safe)
 ```
 
-> **Note:** `@protolabs-ai/mcp-server` lives in `packages/` not `libs/`. It IS included in `build:packages`.
+> **Note:** `@protolabsai/mcp-server` lives in `packages/` not `libs/`. It IS included in `build:packages`.
 
 ---
 
@@ -73,25 +73,25 @@ npm run build
 
 ## Import Conventions
 
-**Always import from `@protolabs-ai/*` workspace packages. Never use relative paths that cross package boundaries.**
+**Always import from `@protolabsai/*` workspace packages. Never use relative paths that cross package boundaries.**
 
 ### ✅ Correct Imports
 
 ```typescript
 // Types from the shared types package
-import type { Feature, AgentStatus, BoardColumn } from '@protolabs-ai/types';
+import type { Feature, AgentStatus, BoardColumn } from '@protolabsai/types';
 
 // Utilities from shared utils
-import { createLogger, sleep, formatDate } from '@protolabs-ai/utils';
+import { createLogger, sleep, formatDate } from '@protolabsai/utils';
 
 // Git operations
-import { getChangedFiles, createWorktree } from '@protolabs-ai/git-utils';
+import { getChangedFiles, createWorktree } from '@protolabsai/git-utils';
 
 // Model resolution
-import { resolveModel } from '@protolabs-ai/model-resolver';
+import { resolveModel } from '@protolabsai/model-resolver';
 
 // Prompts
-import { buildSystemPrompt } from '@protolabs-ai/prompts';
+import { buildSystemPrompt } from '@protolabsai/prompts';
 ```
 
 ### ❌ Incorrect Imports (Anti-Patterns)
@@ -131,7 +131,7 @@ libs/types/tsconfig.json
   └── compilerOptions.declarationMap: true   ← enables go-to-source (not dist)
 ```
 
-Each shared package sets `"main": "./dist/index.js"` and `"exports"` in its `package.json`. When you `import from '@protolabs-ai/types'`, Node resolves to `dist/index.js`. **If dist is stale, you get old types.**
+Each shared package sets `"main": "./dist/index.js"` and `"exports"` in its `package.json`. When you `import from '@protolabsai/types'`, Node resolves to `dist/index.js`. **If dist is stale, you get old types.**
 
 ---
 
@@ -145,7 +145,7 @@ Follow these steps exactly. Missing any step causes workspace link failures or b
 
 ```json
 {
-  "name": "@protolabs-ai/my-package",
+  "name": "@protolabsai/my-package",
   "version": "0.1.0",
   "private": true,
   "main": "./dist/index.js",
@@ -161,7 +161,7 @@ Follow these steps exactly. Missing any step causes workspace link failures or b
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@protolabs-ai/types": "*"
+    "@protolabsai/types": "*"
   }
 }
 ```
@@ -174,7 +174,7 @@ Extend `../../tsconfig.base.json` with `composite: true`, `declarationMap: true`
 
 In root `package.json`:
 1. Add `"libs/my-package"` to the `workspaces` array
-2. Add `npm run build -w @protolabs-ai/my-package` to `build:packages` **after** its dependencies
+2. Add `npm run build -w @protolabsai/my-package` to `build:packages` **after** its dependencies
 
 ### Step 5 — Install and Verify
 
@@ -190,8 +190,8 @@ npm run build:packages   # verify it builds
 | Anti-Pattern | Why It Fails | Fix |
 |---|---|---|
 | `build:server` without `build:packages` first | Stale types from old dist | Always run `build:packages` first |
-| Relative imports across package boundaries | Breaks when packages move; no workspace resolution | Use `@protolabs-ai/*` imports |
-| Adding `@protolabs-ai/server` dep to a lib | Circular dependency | Only depend on packages higher in the chain |
+| Relative imports across package boundaries | Breaks when packages move; no workspace resolution | Use `@protolabsai/*` imports |
+| Adding `@protolabsai/server` dep to a lib | Circular dependency | Only depend on packages higher in the chain |
 | Forgetting `composite: true` in tsconfig | Project references break | Always add it to lib tsconfigs |
 | Not running `npm install` after adding package | Workspace symlink missing | Run `npm install` from root after adding a package |
 | `process.env` at module level in shared packages | Crashes browser (no `process` in browser) | Guard with `typeof process !== 'undefined'` |

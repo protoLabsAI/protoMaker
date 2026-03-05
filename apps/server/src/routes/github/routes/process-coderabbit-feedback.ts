@@ -4,9 +4,9 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { GitHubComment } from '@protolabs-ai/types';
+import type { GitHubComment } from '@protolabsai/types';
 import { codeRabbitParserService } from '../../../services/coderabbit-parser-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';

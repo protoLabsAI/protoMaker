@@ -26,7 +26,7 @@ import {
   migrateModelId,
   type PhaseModelEntry,
   type ThinkingLevel,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 // Pattern definitions for Codex/OpenAI models
 const CODEX_MODEL_PREFIXES = ['codex-', 'gpt-'];

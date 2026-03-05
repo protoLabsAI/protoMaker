@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
-import { Card, CardContent } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent } from '@protolabsai/ui/atoms';
 import { File, Folder, FolderOpen, ChevronRight, ChevronDown, Code, RefreshCw } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('CodeView');

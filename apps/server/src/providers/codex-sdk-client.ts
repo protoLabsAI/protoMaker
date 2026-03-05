@@ -11,8 +11,8 @@ import {
   classifyError,
   getUserFriendlyErrorMessage,
   createLogger,
-} from '@protolabs-ai/utils';
-import { supportsReasoningEffort } from '@protolabs-ai/types';
+} from '@protolabsai/utils';
+import { supportsReasoningEffort } from '@protolabsai/types';
 import type { ExecuteOptions, ProviderMessage } from './types.js';
 
 const logger = createLogger('CodexSDK');

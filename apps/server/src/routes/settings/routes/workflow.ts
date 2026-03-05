@@ -10,8 +10,8 @@
  */
 
 import type { Request, Response } from 'express';
-import type { WorkflowSettings } from '@protolabs-ai/types';
-import { DEFAULT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
+import type { WorkflowSettings } from '@protolabsai/types';
+import { DEFAULT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';

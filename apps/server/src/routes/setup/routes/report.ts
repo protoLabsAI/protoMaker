@@ -1,7 +1,7 @@
 import type { RequestHandler } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { generateAndSaveReport } from '../../../services/report-generator-service.js';
-import type { RepoResearchResult, GapAnalysisReport } from '@protolabs-ai/types';
+import type { RepoResearchResult, GapAnalysisReport } from '@protolabsai/types';
 
 const logger = createLogger('setup:report');
 

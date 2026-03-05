@@ -1,12 +1,12 @@
 import { ChevronDown, Tag, X } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -14,8 +14,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { IssuesStateFilter } from '../types';
 import { ISSUES_STATE_FILTER_OPTIONS } from '../types';

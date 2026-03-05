@@ -10,8 +10,8 @@
 
 import fs from 'fs/promises';
 import { join } from 'path';
-import { createLogger } from '@protolabs-ai/utils';
-import type { PhaseHandoff, FeatureState } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { PhaseHandoff, FeatureState } from '@protolabsai/types';
 
 const logger = createLogger('LeadHandoffService');
 

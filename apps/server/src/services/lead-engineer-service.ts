@@ -9,8 +9,8 @@
  *   LeadEngineerSessionStore  — session persistence + checkpoint reconciliation
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { EventType, LeadEngineerSession, ExecuteOptions } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { EventType, LeadEngineerSession, ExecuteOptions } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';

@@ -8,7 +8,7 @@
  * Claude responses when structured output is not available.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('JsonExtractor');
 

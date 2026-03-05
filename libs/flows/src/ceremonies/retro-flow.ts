@@ -9,8 +9,8 @@
  *
  * Usage (server-side):
  * ```typescript
- * import { createRetroFlow } from '@protolabs-ai/flows';
- * import { createBoardTools, createDiscordTools, createLinearTools } from '@protolabs-ai/tools';
+ * import { createRetroFlow } from '@protolabsai/flows';
+ * import { createBoardTools, createDiscordTools, createLinearTools } from '@protolabsai/tools';
  *
  * const flow = createRetroFlow({
  *   featureLoader,
@@ -32,7 +32,7 @@
 
 import { StateGraph, Annotation, END, START } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Minimal structural interfaces (dependency injection without concrete imports)

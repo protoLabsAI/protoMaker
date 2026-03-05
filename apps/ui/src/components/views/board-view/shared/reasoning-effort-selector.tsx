@@ -1,7 +1,7 @@
-import { Label } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import { Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ReasoningEffort } from '@protolabs-ai/types';
+import type { ReasoningEffort } from '@protolabsai/types';
 import { REASONING_EFFORT_LEVELS, REASONING_EFFORT_LABELS } from './model-constants';
 
 interface ReasoningEffortSelectorProps {

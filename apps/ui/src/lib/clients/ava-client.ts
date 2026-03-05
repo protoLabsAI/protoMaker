@@ -4,7 +4,7 @@
  * Provides: ava (getConfig, updateConfig)
  */
 import { BaseHttpClient, type Constructor } from './base-http-client';
-import type { MCPServerConfig } from '@protolabs-ai/types';
+import type { MCPServerConfig } from '@protolabsai/types';
 
 export type { MCPServerConfig };
 

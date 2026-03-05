@@ -1,5 +1,5 @@
 import { Tag } from 'lucide-react';
-import { Autocomplete } from '@protolabs-ai/ui/molecules';
+import { Autocomplete } from '@protolabsai/ui/molecules';
 
 interface CategoryAutocompleteProps {
   value: string;

@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api-fetch';
-import type { DiscordChannelSignalConfig } from '@protolabs-ai/types';
+import type { DiscordChannelSignalConfig } from '@protolabsai/types';
 
 export interface UseSignalChannelsReturn {
   channels: DiscordChannelSignalConfig[];

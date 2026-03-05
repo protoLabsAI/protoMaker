@@ -194,7 +194,7 @@ docker compose start
 
 ```bash
 # Clone repository
-git clone https://github.com/proto-labs-ai/protomaker.git
+git clone https://github.com/protoLabsAI/protomaker.git
 cd protomaker
 
 # Create volumes

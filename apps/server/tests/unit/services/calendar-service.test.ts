@@ -4,13 +4,13 @@ import type { FeatureLoader } from '@/services/feature-loader.js';
 import type { SettingsService } from '@/services/settings-service.js';
 import { LinearMCPClient } from '@/services/linear-mcp-client.js';
 import * as secureFs from '@/lib/secure-fs.js';
-import { atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
-import type { Feature, CalendarEvent } from '@protolabs-ai/types';
+import { atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
+import type { Feature, CalendarEvent } from '@protolabsai/types';
 
 // Mock modules
 vi.mock('@/lib/secure-fs.js');
-vi.mock('@protolabs-ai/utils', async () => {
-  const actual = await vi.importActual<typeof import('@protolabs-ai/utils')>('@protolabs-ai/utils');
+vi.mock('@protolabsai/utils', async () => {
+  const actual = await vi.importActual<typeof import('@protolabsai/utils')>('@protolabsai/utils');
   return {
     ...actual,
     atomicWriteJson: vi.fn(),

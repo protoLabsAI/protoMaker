@@ -5,8 +5,8 @@
  * Enhanced with goal gates, checkpointing, and pipeline event emission.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { Feature, ExecuteOptions, GoalGateResult, EventType } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { Feature, ExecuteOptions, GoalGateResult, EventType } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import { IntakeProcessor, PlanProcessor } from './lead-engineer-processors.js';

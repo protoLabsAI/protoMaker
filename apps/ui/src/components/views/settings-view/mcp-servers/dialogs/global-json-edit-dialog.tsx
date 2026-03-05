@@ -1,6 +1,6 @@
 import { Code } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 
 interface GlobalJsonEditDialogProps {
   open: boolean;

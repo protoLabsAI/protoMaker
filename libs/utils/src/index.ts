@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/utils
+ * @protolabsai/utils
  * Shared utility functions for AutoMaker
  */
 

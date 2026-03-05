@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { toast } from 'sonner';
 
 const logger = createLogger('TrashOperations');

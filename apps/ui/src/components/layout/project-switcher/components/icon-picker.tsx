@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { X, Search } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { ScrollArea } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { ScrollArea } from '@protolabsai/ui/atoms';
 
 interface IconPickerProps {
   selectedIcon: string | null;

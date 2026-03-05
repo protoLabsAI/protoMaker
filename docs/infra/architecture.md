@@ -523,7 +523,7 @@ The Proxmox MCP server provides Claude Code with direct management of VMs and co
 
 ### Setup
 
-**Repository:** [proto-labs-ai/mcp-proxmox](https://github.com/proto-labs-ai/mcp-proxmox) (hardened fork of gilby125/mcp-proxmox)
+**Repository:** [protoLabsAI/mcp-proxmox](https://github.com/protoLabsAI/mcp-proxmox) (hardened fork of gilby125/mcp-proxmox)
 
 **Required env vars:**
 
@@ -542,7 +542,7 @@ The Proxmox MCP server provides Claude Code with direct management of VMs and co
   "proxmox": {
     "type": "stdio",
     "command": "npx",
-    "args": ["-y", "github:proto-labs-ai/mcp-proxmox"],
+    "args": ["-y", "github:protoLabsAI/mcp-proxmox"],
     "env": {
       "PROXMOX_HOST": "${PROXMOX_HOST}",
       "PROXMOX_TOKEN_NAME": "${PROXMOX_TOKEN_NAME}",

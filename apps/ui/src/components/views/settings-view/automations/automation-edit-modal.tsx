@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -11,17 +11,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Automation, PhaseModelEntry } from '@protolabs-ai/types';
+import type { Automation, PhaseModelEntry } from '@protolabsai/types';
 import { PhaseModelSelector } from '../model-defaults/phase-model-selector';
 
 interface AutomationEditModalProps {

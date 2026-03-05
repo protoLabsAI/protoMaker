@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { Plus, Trash2, MessageSquare } from 'lucide-react';
-import { Button, Card, Textarea } from '@protolabs-ai/ui/atoms';
+import { Button, Card, Textarea } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { HealthIndicator } from '../components/health-indicator';
 import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { toast } from 'sonner';
-import type { Project, ProjectHealth, ProjectStatusUpdate } from '@protolabs-ai/types';
+import type { Project, ProjectHealth, ProjectStatusUpdate } from '@protolabsai/types';
 
 export function UpdatesTab({ project }: { project: Project }) {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';

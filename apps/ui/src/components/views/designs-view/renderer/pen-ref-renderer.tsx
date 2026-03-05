@@ -2,7 +2,7 @@
  * Ref renderer - resolves references to other nodes and renders with overrides
  */
 
-import type { PenRef } from '@protolabs-ai/types';
+import type { PenRef } from '@protolabsai/types';
 import { usePenDocument } from './pen-document-context';
 import { PenNodeRenderer } from './pen-node-renderer';
 import { useMemo } from 'react';

@@ -23,7 +23,7 @@ import { executeDiscordPhase } from './phases/discord.js';
  * 7. Outro
  */
 
-// Types (simplified for CLI - would normally import from @protolabs-ai/types)
+// Types (simplified for CLI - would normally import from @protolabsai/types)
 interface GapItem {
   id: string;
   category: string;

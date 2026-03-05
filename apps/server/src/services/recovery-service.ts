@@ -14,10 +14,10 @@ import type {
   ExecutionContext,
   RecoveryConfig,
   ErrorInfo,
-} from '@protolabs-ai/types';
-import { DEFAULT_RECOVERY_CONFIG } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
-import { getAutomakerDir } from '@protolabs-ai/platform';
+} from '@protolabsai/types';
+import { DEFAULT_RECOVERY_CONFIG } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
+import { getAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
 import path from 'node:path';
 import type { EventEmitter } from '../lib/events.js';

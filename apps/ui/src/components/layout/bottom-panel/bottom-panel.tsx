@@ -4,7 +4,7 @@ import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { useRunningAgentsCount } from '@/hooks/queries/use-running-agents';
 import { isElectron, getOverlayAPI } from '@/lib/electron';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
 import {
   Bot,
   ListTodo,

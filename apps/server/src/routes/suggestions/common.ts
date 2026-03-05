@@ -2,7 +2,7 @@
  * Common utilities and state for suggestions routes
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 const logger = createLogger('Suggestions');
