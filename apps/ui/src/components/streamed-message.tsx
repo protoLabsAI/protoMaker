@@ -1,10 +1,13 @@
 import { memo, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import { sanitizeStreamingMarkdown } from '@/lib/sanitize-streaming-markdown';
 
 const SEGMENT_SIZE = 500;
 const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS_STREAMING: [] = [];
+const REHYPE_PLUGINS_COMPLETE = [rehypeHighlight];
 
 function splitIntoSegments(content: string): { settled: string[]; tail: string } {
   const settled: string[] = [];
@@ -25,7 +28,9 @@ function splitIntoSegments(content: string): { settled: string[]; tail: string }
 }
 
 const SettledSegment = memo(({ content }: { content: string }) => (
-  <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{content}</ReactMarkdown>
+  <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS_COMPLETE}>
+    {content}
+  </ReactMarkdown>
 ));
 SettledSegment.displayName = 'SettledSegment';
 
@@ -38,7 +43,10 @@ export function StreamedMessage({ content, isComplete }: StreamedMessageProps) {
   // For short messages skip segmentation entirely — no overhead
   if (content.length <= 5000) {
     return (
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+      <ReactMarkdown
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={isComplete ? REHYPE_PLUGINS_COMPLETE : REHYPE_PLUGINS_STREAMING}
+      >
         {isComplete ? content : sanitizeStreamingMarkdown(content)}
       </ReactMarkdown>
     );
@@ -55,7 +63,10 @@ function SegmentedMessage({ content, isComplete }: StreamedMessageProps) {
       {settled.map((seg, i) => (
         <SettledSegment key={i} content={seg} />
       ))}
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
+      <ReactMarkdown
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={isComplete ? REHYPE_PLUGINS_COMPLETE : REHYPE_PLUGINS_STREAMING}
+      >
         {isComplete ? tail : sanitizeStreamingMarkdown(tail)}
       </ReactMarkdown>
     </>
