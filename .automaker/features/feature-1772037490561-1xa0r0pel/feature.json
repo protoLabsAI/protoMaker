@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Refactor: decompose http-api-client.ts (3,480 lines)\n\napps/ui/src/lib/http-api-client.ts is a 3,480-line god object. Should be split into domain-specific clients (features, agents, auto-mode, projects, git, calendar, etc.) with a shared base client handling auth and error handling. Target: no single file over 400 lines.",
   "title": "[linear] Refactor: decompose http-api-client.ts (3,480 lines)",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "linearIssueId": "29046b42-bcaf-4b85-812b-caf191722e73",

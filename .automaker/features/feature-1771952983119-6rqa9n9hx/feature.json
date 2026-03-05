@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Landing page: add email capture / waitlist form\n\nAdd a waitlist/email capture form to the landing page for early access signups. Options:\\\\n- Simple email collection with form submission to a backend/service\\\\n- Integration with Mailchimp, Resend, or similar\\\\n- Thank you state after submission\\\\n\\\\nShould be prominent in the hero section and/or a dedicated CTA section.",
   "title": "[linear] Landing page: add email capture / waitlist form",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "id": "feature-1771952983119-6rqa9n9hx",

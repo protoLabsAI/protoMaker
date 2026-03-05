@@ -2,7 +2,7 @@
   "category": "Dashboards + Loki Log Aggregation",
   "description": "**Milestone:** Dashboards + Loki Log Aggregation\n\nAdd Loki and Promtail services to docker-compose.monitoring.yml. Configure Promtail to tail Docker container logs via the Docker socket. Create monitoring/promtail/config.yml with job configs that label logs by container name and compose service. Add Loki as a Grafana data source in provisioning. Verify logs from server, UI, and docs containers appear in Grafana Explore.\n\n**Files to Modify:**\n- docker-compose.monitoring.yml\n- monitoring/promtail/config.yml\n- monitoring/loki/local-config.yml\n- monitoring/grafana/provisioning/datasources/loki.yml\n\n**Acceptance Criteria:**\n- [ ] Loki service running and accepting log pushes\n- [ ] Promtail tailing all Docker container logs\n- [ ] Logs searchable in Grafana Explore by container name\n- [ ] Log labels include service name, container name, compose project\n- [ ] Loki retention set to 7 days to manage disk usage\n\n**Complexity:** medium",
   "title": "Loki + Promtail Log Aggregation",
-  "status": "verified",
+  "status": "done",
   "isEpic": false,
   "branchName": "feature/dashboards-loki-log-loki-promtail-log",
   "isFoundation": true,

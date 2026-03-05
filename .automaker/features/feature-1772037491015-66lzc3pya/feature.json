@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Refactor: decompose lead-engineer-service.ts (2,989 lines)\n\napps/server/src/services/lead-engineer-service.ts is 2,989 lines. Should be decomposed into its state machine, fast-path rule engine, escalation handler, and retro/ceremony triggers as separate files. Target: no single file over 400 lines.",
   "title": "[linear] Refactor: decompose lead-engineer-service.ts (2,989 lines)",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "linearIssueId": "2810989b-e5db-46ca-bd5f-11b72518e6e7",

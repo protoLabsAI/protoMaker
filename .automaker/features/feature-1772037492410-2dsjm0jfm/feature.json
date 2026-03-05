@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Refactor: decompose ceremony-service.ts (2,067 lines)\n\napps/server/src/services/ceremony-service.ts is 2,067 lines. Should be split into StandupCeremony, RetroCeremony, ProjectRetroCeremony, and a shared CeremonyBase. Target: no single file over 400 lines.",
   "title": "[linear] Refactor: decompose ceremony-service.ts (2,067 lines)",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "linearIssueId": "7635464b-6537-44f0-87f3-d9c5e7af8c8b",

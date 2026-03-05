@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Desktop app: code signing for Windows (EV certificate or Azure Trusted Signing)\n\nSet up Windows code signing to avoid SmartScreen warnings:\\\\n- Option A: EV code signing certificate (DigiCert, Sectigo)\\\\n- Option B: Azure Trusted Signing (cheaper, cloud-based)\\\\n\\\\nConfigure electron-builder and CI workflow with signing credentials. Test NSIS installer installs without SmartScreen popup.",
   "title": "[linear] Desktop app: code signing for Windows (EV certificate or Azure Trusted Signing)",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "id": "feature-1771952992501-qx1gvp5fi",

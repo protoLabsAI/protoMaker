@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Bug: dev server crashes repeatedly when agent runs on large files\n\nDev server crashes 3+ times per session when an agent works on large files (e.g. 7,462-line auto-mode-service.ts). Memory is ruled out: 74% free, server at 300MB RSS, 16GB heap. No macOS crash reports. No OOM signals in logs. Looks like a clean process exit from an uncaught exception.\n\nReproduce: start auto-mode with TypedEventBus extraction feature and wait \\~5 min.\n\nNeeded: uncaught exception handler that logs stack trace before exit, and process exit code logging.",
   "title": "[linear] Bug: dev server crashes repeatedly when agent runs on large files",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "linearIssueId": "562eee31-e628-4ffb-ba1a-2a6985e23c94",
