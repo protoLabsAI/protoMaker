@@ -574,8 +574,21 @@ export class AutoModeService {
       cooldownMs: COOLDOWN_PERIOD_MS,
     });
 
-    // Stop the auto loop for this project
-    this.stopAutoLoopForProject(projectPath, branchName);
+    // Pause (not stop) the loop — keeps state in the coordinator map so the
+    // cooldown timer reference remains valid and autoResumeAfterCooldown can
+    // find the state via getState().  stopAutoLoopForProject deletes state,
+    // which caused the cooldown timer to write to a dangling reference and
+    // auto-resume to silently fail.
+    this.coordinator.pauseLoop(worktreeKey);
+
+    // Clear retry timers for features in this project to prevent zombie restarts
+    for (const [featureId, timer] of this.retryTimers) {
+      const running = this.runningFeatures.get(featureId);
+      if (running && running.projectPath === projectPath) {
+        clearTimeout(timer);
+        this.retryTimers.delete(featureId);
+      }
+    }
 
     // Schedule auto-resume after cooldown period
     projectState.cooldownTimer = setTimeout(() => {
@@ -1180,6 +1193,18 @@ export class AutoModeService {
               // Remove from starting set on error
               clearTimeout(startingTimeout);
               projectState.startingFeatures.delete(nextFeature.id);
+              // Notify circuit breaker — without this, LE failures loop forever
+              const errorInfo = classifyError(error);
+              if (!errorInfo.isCancellation) {
+                const shouldPause = this.trackFailureAndCheckPauseForProject(
+                  projectPath,
+                  branchName,
+                  errorInfo
+                );
+                if (shouldPause) {
+                  this.signalShouldPauseForProject(projectPath, branchName, errorInfo);
+                }
+              }
             });
 
           // Brief sleep to ensure proper sequencing
@@ -1677,6 +1702,7 @@ export class AutoModeService {
     // The abort signal will still propagate to stop any ongoing execution
     this.concurrencyManager.release(featureId);
     this.runningFeatures.delete(featureId);
+    this.typedEventBus.clearFeature(featureId);
     activeAgentsCount.set(this.runningFeatures.size);
 
     // Cancel retry timer to prevent zombie restart loop
@@ -2426,6 +2452,7 @@ export class AutoModeService {
       if (current === pipelineRunningFeature) {
         this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
+        this.typedEventBus.clearFeature(featureId);
         activeAgentsCount.set(this.runningFeatures.size);
       }
     }
@@ -2852,6 +2879,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       if (current === followUpRunningFeature) {
         this.concurrencyManager.release(featureId);
         this.runningFeatures.delete(featureId);
+        this.typedEventBus.clearFeature(featureId);
         activeAgentsCount.set(this.runningFeatures.size);
       }
     }

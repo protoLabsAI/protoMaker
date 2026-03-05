@@ -26,6 +26,14 @@ export class TypedEventBus {
   }
 
   /**
+   * Remove rate-limit tracking for a feature (call when a feature completes).
+   * Prevents unbounded growth of the lastProgressEventTime map.
+   */
+  clearFeature(featureId: string): void {
+    this.lastProgressEventTime.delete(featureId);
+  }
+
+  /**
    * Emit an auto-mode event wrapped in the `auto-mode:event` envelope.
    *
    * All auto-mode events must go through this method so the client receives
