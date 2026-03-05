@@ -452,8 +452,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
             const durationMs = Date.now() - requestStartTime;
             logger.info(
               `Chat complete: ${durationMs}ms, ` +
-                `promptTokens=${usage.promptTokens}, completionTokens=${usage.completionTokens}, ` +
-                `totalTokens=${usage.totalTokens ?? usage.promptTokens + usage.completionTokens}, ` +
+                `inputTokens=${usage.inputTokens}, outputTokens=${usage.outputTokens}, ` +
+                `totalTokens=${(usage.inputTokens ?? 0) + (usage.outputTokens ?? 0)}, ` +
                 `responseChars=${fullText.length}, messages=${messages.length}`
             );
           } catch {
