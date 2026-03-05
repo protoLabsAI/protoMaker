@@ -25,6 +25,7 @@ import {
 } from '@protolabsai/platform';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
+import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { AgentService } from '../../services/agent-service.js';
 import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
 import type { RoleRegistryService } from '../../services/role-registry-service.js';
@@ -64,6 +65,7 @@ export interface PlanData {
 export interface AvaToolsServices {
   featureLoader: FeatureLoader;
   autoModeService: AutoModeService;
+  leadEngineerService: LeadEngineerService;
   agentService: AgentService;
   /** Optional event emitter used for board-write change notifications */
   events?: EventEmitter;
@@ -450,7 +452,7 @@ export function buildAvaTools(
       }),
       needsApproval: destructiveNeedsApproval,
       execute: async ({ featureId }) => {
-        await services.autoModeService.executeFeature(projectPath, featureId, true);
+        await services.leadEngineerService.process(projectPath, featureId);
         return { success: true, featureId };
       },
     });
