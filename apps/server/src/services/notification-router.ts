@@ -256,52 +256,38 @@ export class NotificationRouter {
    *   hitl:form-requested   → HITL / human-input-required notification
    */
   private subscribeToEvents(): void {
-    this.events.subscribe((type, payload) => {
-      if (type === 'feature:completed') {
-        const data = payload as {
-          featureId?: string;
-          featureTitle?: string;
-          projectPath?: string;
-        };
-        void this.route({
-          type: 'completion',
-          title: 'Feature Completed',
-          message: data.featureTitle
-            ? `"${data.featureTitle}" completed successfully.`
-            : 'A feature completed successfully.',
-          featureId: data.featureId,
-          projectPath: data.projectPath,
-        });
-      } else if (type === 'feature:error') {
-        const data = payload as {
-          featureId?: string;
-          featureTitle?: string;
-          projectPath?: string;
-          error?: string;
-        };
-        void this.route({
-          type: 'failure',
-          title: 'Feature Failed',
-          message: data.featureTitle
-            ? `"${data.featureTitle}" encountered an error.`
-            : `Feature failed: ${data.error ?? 'unknown error'}`,
-          featureId: data.featureId,
-          projectPath: data.projectPath,
-        });
-      } else if (type === 'hitl:form-requested') {
-        const data = payload as {
-          featureId?: string;
-          projectPath?: string;
-          title?: string;
-        };
-        void this.route({
-          type: 'hitl',
-          title: 'Human Input Required',
-          message: data.title ?? 'An agent is waiting for your input.',
-          featureId: data.featureId,
-          projectPath: data.projectPath,
-        });
-      }
+    this.events.on('feature:completed', (data) => {
+      void this.route({
+        type: 'completion',
+        title: 'Feature Completed',
+        message: data.featureTitle
+          ? `"${data.featureTitle}" completed successfully.`
+          : 'A feature completed successfully.',
+        featureId: data.featureId,
+        projectPath: data.projectPath,
+      });
+    });
+
+    this.events.on('feature:error', (data) => {
+      void this.route({
+        type: 'failure',
+        title: 'Feature Failed',
+        message: data.featureTitle
+          ? `"${data.featureTitle}" encountered an error.`
+          : `Feature failed: ${data.error ?? 'unknown error'}`,
+        featureId: data.featureId,
+        projectPath: data.projectPath,
+      });
+    });
+
+    this.events.on('hitl:form-requested', (data) => {
+      void this.route({
+        type: 'hitl',
+        title: 'Human Input Required',
+        message: data.title ?? 'An agent is waiting for your input.',
+        featureId: data.featureId,
+        projectPath: data.projectPath,
+      });
     });
   }
 
