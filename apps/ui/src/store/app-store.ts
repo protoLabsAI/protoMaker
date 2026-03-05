@@ -180,7 +180,6 @@ export interface AppActions {
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleBottomPanel: () => void;
-  setBottomPanelActiveTab: (tab: string) => void;
   toggleMobileSidebarHidden: () => void;
   setMobileSidebarHidden: (hidden: boolean) => void;
 
@@ -324,7 +323,7 @@ const initialState: AppState = {
   currentView: 'welcome',
   sidebarOpen: true,
   bottomPanelOpen: false,
-  bottomPanelActiveTab: 'activity',
+  bottomPanelActiveTab: 'activity', // Deprecated — kept for persisted state compat
   mobileSidebarHidden: false, // Sidebar visible by default on mobile
   lastSelectedSessionByProject: {},
   features: [],
@@ -721,7 +720,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
   toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleBottomPanel: () => set({ bottomPanelOpen: !get().bottomPanelOpen }),
-  setBottomPanelActiveTab: (tab) => set({ bottomPanelActiveTab: tab }),
   toggleMobileSidebarHidden: () => set({ mobileSidebarHidden: !get().mobileSidebarHidden }),
   setMobileSidebarHidden: (hidden) => set({ mobileSidebarHidden: hidden }),
 
