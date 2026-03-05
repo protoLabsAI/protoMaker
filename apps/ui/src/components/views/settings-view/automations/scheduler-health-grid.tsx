@@ -91,7 +91,10 @@ function TaskCard({ task }: { task: SchedulerTask }) {
             <XCircle className="w-3 h-3 shrink-0" />
             Failed
             {task.lastError && (
-              <span className="text-muted-foreground/60 truncate max-w-[120px]" title={task.lastError}>
+              <span
+                className="text-muted-foreground/60 truncate max-w-[120px]"
+                title={task.lastError}
+              >
                 — {task.lastError}
               </span>
             )}
