@@ -77,6 +77,7 @@ import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
 import { writeLock, removeLock } from '../../lib/worktree-lock.js';
 
+import { TypedEventBus } from './typed-event-bus.js';
 import type {
   RunningFeature,
   ParsedTask,
@@ -253,6 +254,8 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export class ExecutionService {
+  private readonly typedEventBus: TypedEventBus;
+
   constructor(
     private readonly events: EventEmitter,
     private readonly settingsService: SettingsService | null,
@@ -265,7 +268,9 @@ export class ExecutionService {
     private readonly heapStopThreshold: number,
     private readonly heapAbortThreshold: number,
     private readonly callbacks: IAutoModeCallbacks
-  ) {}
+  ) {
+    this.typedEventBus = new TypedEventBus(events);
+  }
 
   // ---------------------------------------------------------------------------
   // Public API
@@ -494,7 +499,7 @@ export class ExecutionService {
             if (decision.verdict !== 'allow') {
               logger.info(`Authority denied feature start: ${decision.reason}`);
               this.runningFeatures.delete(featureId);
-              this.callbacks.emitAutoModeEvent('auto_mode_feature_skipped', {
+              this.typedEventBus.emitAutoModeEvent('auto_mode_feature_skipped', {
                 featureId,
                 projectPath,
                 reason: decision.reason,
@@ -515,7 +520,7 @@ export class ExecutionService {
       await this.callbacks.updateFeatureStatus(projectPath, featureId, 'in_progress');
 
       // Emit feature start event AFTER status update so frontend sees correct status
-      this.callbacks.emitAutoModeEvent('auto_mode_feature_start', {
+      this.typedEventBus.emitAutoModeEvent('auto_mode_feature_start', {
         featureId,
         projectPath,
         branchName: feature.branchName ?? null,
@@ -576,7 +581,7 @@ export class ExecutionService {
 
         // Emit planning mode info
         if (feature.planningMode && feature.planningMode !== 'skip') {
-          this.callbacks.emitAutoModeEvent('planning_started', {
+          this.typedEventBus.emitAutoModeEvent('planning_started', {
             featureId: feature.id,
             mode: feature.planningMode,
             message: `Starting ${feature.planningMode} planning phase`,
@@ -608,7 +613,7 @@ export class ExecutionService {
       // This keeps the branch fresh and reduces merge conflicts
       if (branchName && useWorktrees) {
         logger.info(`Syncing branch ${branchName} before agent execution...`);
-        this.callbacks.emitAutoModeEvent('sync_started', {
+        this.typedEventBus.emitAutoModeEvent('sync_started', {
           featureId,
           branchName,
           message: `Syncing branch ${branchName} with parent...`,
@@ -618,7 +623,7 @@ export class ExecutionService {
           await execAsync('git fetch origin', { cwd: workDir, timeout: 30000 });
           await execAsync('git rebase origin/dev', { cwd: workDir, timeout: 60000 });
           logger.info(`Branch ${branchName} rebased onto origin/dev`);
-          this.callbacks.emitAutoModeEvent('sync_completed', {
+          this.typedEventBus.emitAutoModeEvent('sync_completed', {
             featureId,
             branchName,
             message: 'Branch rebased onto origin/dev',
@@ -634,7 +639,7 @@ export class ExecutionService {
             } catch {
               // Abort failed — not much we can do
             }
-            this.callbacks.emitAutoModeEvent('sync_warning', {
+            this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
               branchName,
               message: `Rebase conflicts detected. Agent will work on current branch state.`,
@@ -642,7 +647,7 @@ export class ExecutionService {
             });
           } else {
             logger.warn(`Git rebase failed for ${branchName}: ${rebaseMsg}`);
-            this.callbacks.emitAutoModeEvent('sync_warning', {
+            this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
               branchName,
               message: `Git rebase failed: ${rebaseMsg}. Continuing with agent execution.`,
@@ -721,7 +726,7 @@ export class ExecutionService {
               }),
               ...(recoveryResult.prCreatedAt && { prCreatedAt: recoveryResult.prCreatedAt }),
             });
-            this.callbacks.emitAutoModeEvent('auto_mode_git_workflow', {
+            this.typedEventBus.emitAutoModeEvent('auto_mode_git_workflow', {
               featureId,
               pushed: true,
               prUrl: recoveryResult.prUrl,
@@ -910,7 +915,7 @@ export class ExecutionService {
           if (gitWorkflowResult) {
             // Check if git workflow encountered conflicts
             if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
-              this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+              this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
                 featureId,
                 featureName: feature.title,
                 message: `Git workflow warning: ${gitWorkflowResult.error}`,
@@ -918,7 +923,7 @@ export class ExecutionService {
               });
             }
 
-            this.callbacks.emitAutoModeEvent('auto_mode_git_workflow', {
+            this.typedEventBus.emitAutoModeEvent('auto_mode_git_workflow', {
               featureId,
               committed: gitWorkflowResult.commitHash,
               pushed: gitWorkflowResult.pushed,
@@ -981,7 +986,7 @@ export class ExecutionService {
       const runtimeSec = tempRunningFeature
         ? Math.round((Date.now() - tempRunningFeature.startTime) / 1000)
         : 0;
-      this.callbacks.emitAutoModeEvent('auto_mode_feature_complete', {
+      this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
         branchName: feature.branchName ?? null,
@@ -1067,7 +1072,7 @@ export class ExecutionService {
         } else {
           logger.error(`Feature ${featureId} looped ${MAX_LOOP_RETRIES} times, giving up.`);
           await this.callbacks.updateFeatureStatus(projectPath, featureId, 'failed');
-          this.callbacks.emitAutoModeEvent('auto_mode_feature_complete', {
+          this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
             featureId,
             featureName: feature.title,
             branchName: feature.branchName ?? null,
@@ -1077,7 +1082,7 @@ export class ExecutionService {
           });
         }
       } else if (errorInfo.isAbort) {
-        this.callbacks.emitAutoModeEvent('auto_mode_feature_complete', {
+        this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
           featureId,
           featureName: feature?.title,
           branchName: feature?.branchName ?? null,
@@ -1131,7 +1136,7 @@ export class ExecutionService {
             `Recovery for feature ${featureId}: scheduling retry (attempt ${tempRunningFeature.retryCount + 1}/${failureAnalysis.maxRetries})`
           );
 
-          this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+          this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
             featureId,
             featureName: feature?.title,
             message: `Recovery: ${recoveryResult.actionTaken}`,
@@ -1209,7 +1214,7 @@ export class ExecutionService {
               status: 'blocked',
               statusChangeReason: `Git commit hook failure (${newFailureCount} attempts) — blocked for human review`,
             });
-            this.callbacks.emitAutoModeEvent('auto_mode_error', {
+            this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
               featureId,
               featureName: feature?.title,
               branchName: feature?.branchName ?? null,
@@ -1237,7 +1242,7 @@ export class ExecutionService {
                 );
             }, backoffMs);
             this.retryTimers.set(featureId, retryTimer);
-            this.callbacks.emitAutoModeEvent('auto_mode_error', {
+            this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
               featureId,
               featureName: feature?.title,
               branchName: feature?.branchName ?? null,
@@ -1248,7 +1253,7 @@ export class ExecutionService {
           }
         } else {
           await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
-          this.callbacks.emitAutoModeEvent('auto_mode_error', {
+          this.typedEventBus.emitAutoModeEvent('auto_mode_error', {
             featureId,
             featureName: feature?.title,
             branchName: feature?.branchName ?? null,
@@ -1352,7 +1357,7 @@ export class ExecutionService {
         error: `Exceeded max-turns retry limit (${MAX_MAX_TURNS_RETRIES} retries)`,
         lastFailureTime: new Date().toISOString(),
       });
-      this.callbacks.emitAutoModeEvent('auto_mode_feature_complete', {
+      this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
         featureId,
         featureName: feature.title,
         branchName: feature.branchName ?? null,
@@ -1377,7 +1382,7 @@ export class ExecutionService {
       failureCount: newFailureCount,
     });
 
-    this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+    this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
       featureId,
       featureName: feature.title,
       message: `Hit turn limit. Retrying with ${escalatedTurns} turns (attempt ${newFailureCount + 1}).`,
@@ -1498,14 +1503,14 @@ export class ExecutionService {
     // Update feature status to current pipeline step
     await this.callbacks.updateFeatureStatus(projectPath, featureId, pipelineStatus);
 
-    this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+    this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
       featureId,
       branchName: feature.branchName ?? null,
       content: `Starting pipeline step ${stepIndex + 1}/${totalSteps}: ${step.name}`,
       projectPath,
     });
 
-    this.callbacks.emitAutoModeEvent('pipeline_step_started', {
+    this.typedEventBus.emitAutoModeEvent('pipeline_step_started', {
       featureId,
       stepId: step.id,
       stepName: step.name,
@@ -1582,7 +1587,7 @@ export class ExecutionService {
       }
     }
 
-    this.callbacks.emitAutoModeEvent('pipeline_step_complete', {
+    this.typedEventBus.emitAutoModeEvent('pipeline_step_complete', {
       featureId,
       stepId: step.id,
       stepName: step.name,
@@ -1698,14 +1703,14 @@ Complete the pipeline step instructions above. Review the previous work and appl
       await sleep(500);
 
       // Emit mock progress events to simulate agent activity
-      this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+      this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
         featureId,
         content: 'Mock agent: Analyzing the codebase...',
       });
 
       await sleep(300);
 
-      this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+      this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
         featureId,
         content: 'Mock agent: Implementing the feature...',
       });
@@ -1716,7 +1721,7 @@ Complete the pipeline step instructions above. Review the previous work and appl
       const mockFilePath = path.join(workDir, 'yellow.txt');
       await secureFs.writeFile(mockFilePath, 'yellow');
 
-      this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+      this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
         featureId,
         content: "Mock agent: Created yellow.txt file with content 'yellow'",
       });
@@ -2127,7 +2132,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
                     );
 
                     // Emit plan_approval_required event
-                    this.callbacks.emitAutoModeEvent('plan_approval_required', {
+                    this.typedEventBus.emitAutoModeEvent('plan_approval_required', {
                       featureId,
                       projectPath,
                       branchName,
@@ -2159,7 +2164,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
                         userFeedback = approvalResult.feedback;
 
                         // Emit approval event
-                        this.callbacks.emitAutoModeEvent('plan_approved', {
+                        this.typedEventBus.emitAutoModeEvent('plan_approved', {
                           featureId,
                           projectPath,
                           branchName,
@@ -2188,7 +2193,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
                         planVersion++;
 
                         // Emit revision event
-                        this.callbacks.emitAutoModeEvent('plan_revision_requested', {
+                        this.typedEventBus.emitAutoModeEvent('plan_revision_requested', {
                           featureId,
                           projectPath,
                           branchName,
@@ -2238,7 +2243,7 @@ After generating the revised spec, output:
                             for (const block of msg.message.content) {
                               if (block.type === 'text') {
                                 revisionText += block.text || '';
-                                this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+                                this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
                                   featureId,
                                   content: block.text,
                                 });
@@ -2292,7 +2297,7 @@ After generating the revised spec, output:
                   );
 
                   // Emit info event for frontend
-                  this.callbacks.emitAutoModeEvent('plan_auto_approved', {
+                  this.typedEventBus.emitAutoModeEvent('plan_auto_approved', {
                     featureId,
                     projectPath,
                     branchName,
@@ -2343,7 +2348,7 @@ After generating the revised spec, output:
 
                     // Emit task started
                     logger.info(`Starting task ${task.id}: ${task.description}`);
-                    this.callbacks.emitAutoModeEvent('auto_mode_task_started', {
+                    this.typedEventBus.emitAutoModeEvent('auto_mode_task_started', {
                       featureId,
                       projectPath,
                       branchName,
@@ -2387,13 +2392,13 @@ After generating the revised spec, output:
                         for (const block of msg.message.content) {
                           if (block.type === 'text') {
                             responseText += block.text || '';
-                            this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+                            this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
                               featureId,
                               branchName,
                               content: block.text,
                             });
                           } else if (block.type === 'tool_use') {
-                            this.callbacks.emitAutoModeEvent('auto_mode_tool', {
+                            this.typedEventBus.emitAutoModeEvent('auto_mode_tool', {
                               featureId,
                               branchName,
                               tool: block.name,
@@ -2410,7 +2415,7 @@ After generating the revised spec, output:
 
                     // Emit task completed
                     logger.info(`Task ${task.id} completed for feature ${featureId}`);
-                    this.callbacks.emitAutoModeEvent('auto_mode_task_complete', {
+                    this.typedEventBus.emitAutoModeEvent('auto_mode_task_complete', {
                       featureId,
                       projectPath,
                       branchName,
@@ -2431,7 +2436,7 @@ After generating the revised spec, output:
                         // Phase changed, emit phase complete
                         const phaseMatch = task.phase.match(/Phase\s*(\d+)/i);
                         if (phaseMatch) {
-                          this.callbacks.emitAutoModeEvent('auto_mode_phase_complete', {
+                          this.typedEventBus.emitAutoModeEvent('auto_mode_phase_complete', {
                             featureId,
                             projectPath,
                             branchName,
@@ -2482,13 +2487,13 @@ After generating the revised spec, output:
                       for (const block of msg.message.content) {
                         if (block.type === 'text') {
                           responseText += block.text || '';
-                          this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+                          this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
                             featureId,
                             branchName,
                             content: block.text,
                           });
                         } else if (block.type === 'tool_use') {
-                          this.callbacks.emitAutoModeEvent('auto_mode_tool', {
+                          this.typedEventBus.emitAutoModeEvent('auto_mode_tool', {
                             featureId,
                             branchName,
                             tool: block.name,
@@ -2514,7 +2519,7 @@ After generating the revised spec, output:
                 logger.info(
                   `Emitting progress event for ${featureId}, content length: ${block.text?.length || 0}`
                 );
-                this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+                this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
                   featureId,
                   branchName,
                   content: block.text,
@@ -2549,7 +2554,7 @@ After generating the revised spec, output:
               }
 
               // Emit event for real-time UI
-              this.callbacks.emitAutoModeEvent('auto_mode_tool', {
+              this.typedEventBus.emitAutoModeEvent('auto_mode_tool', {
                 featureId,
                 branchName,
                 tool: block.name,
@@ -3136,7 +3141,7 @@ You can use the Read tool to view these images at any time during implementation
     branchName: string | null,
     content: string | undefined
   ): void {
-    this.callbacks.emitAutoModeEvent('auto_mode_progress', {
+    this.typedEventBus.emitAutoModeEvent('auto_mode_progress', {
       featureId,
       branchName,
       content,
