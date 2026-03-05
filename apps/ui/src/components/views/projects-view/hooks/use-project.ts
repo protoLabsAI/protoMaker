@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { Project } from '@protolabsai/types';
 
 export function useProject(projectSlug: string | null) {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
@@ -11,7 +10,7 @@ export function useProject(projectSlug: string | null) {
     queryFn: async () => {
       const api = getHttpApiClient();
       const res = await api.lifecycle.getProject(projectPath, projectSlug!);
-      if (res.success && res.project) return res.project as unknown as Project;
+      if (res.success && res.project) return res.project;
       return null;
     },
     enabled: !!projectPath && !!projectSlug,
