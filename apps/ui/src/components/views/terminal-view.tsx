@@ -1492,7 +1492,13 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
         </div>
         <div className="flex-1 flex items-center justify-center min-h-0">
           <p className="text-sm text-muted-foreground/50">
-            Press <span className="font-medium text-muted-foreground">+</span> to open a terminal
+            Press + or{' '}
+            <button
+              onClick={() => createTerminal()}
+              className="text-muted-foreground hover:text-foreground underline underline-offset-2 cursor-pointer"
+            >
+              open a terminal
+            </button>
           </p>
         </div>
       </div>
