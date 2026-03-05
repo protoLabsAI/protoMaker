@@ -43,7 +43,6 @@ export type ViewMode =
   | 'agent'
   | 'settings'
   | 'interview'
-  | 'context'
   | 'terminal'
   | 'ideation';
 
@@ -220,8 +219,6 @@ export interface KeyboardShortcuts {
   graph: string;
   agent: string;
   spec: string;
-  context: string;
-  memory: string;
   settings: string;
   projectSettings: string;
   terminal: string;
@@ -269,8 +266,6 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   graph: 'H',
   agent: 'A',
   spec: 'D',
-  context: 'C',
-  memory: 'Y',
   settings: 'S',
   projectSettings: 'Shift+S',
   terminal: 'Cmd+`',

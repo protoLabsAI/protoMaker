@@ -3,11 +3,9 @@ import type { NavigateOptions } from '@tanstack/react-router';
 import {
   FileText,
   LayoutGrid,
-  BookOpen,
   Library,
   CircleDot,
   GitPullRequest,
-  Brain,
   Network,
   Inbox,
   Settings,
@@ -30,8 +28,6 @@ interface UseNavigationProps {
     cyclePrevProject: string;
     cycleNextProject: string;
     spec: string;
-    context: string;
-    memory: string;
     notes: string;
     docs: string;
     board: string;
@@ -51,7 +47,6 @@ interface UseNavigationProps {
     projects: string;
   };
   hideSpecEditor: boolean;
-  hideContext: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
   hideFileEditor: boolean;
@@ -79,7 +74,6 @@ interface UseNavigationProps {
 export function useNavigation({
   shortcuts,
   hideSpecEditor,
-  hideContext,
   hideDesigns,
   hideDocs,
   hideFileEditor,
@@ -134,18 +128,6 @@ export function useNavigation({
         isLoading: isSpecGenerating,
       },
       {
-        id: 'context',
-        label: 'Context',
-        icon: BookOpen,
-        shortcut: shortcuts.context,
-      },
-      {
-        id: 'memory',
-        label: 'Memory',
-        icon: Brain,
-        shortcut: shortcuts.memory,
-      },
-      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
@@ -156,9 +138,6 @@ export function useNavigation({
     // Filter out hidden items
     const visibleToolsItems = allToolsItems.filter((item) => {
       if (item.id === 'spec' && hideSpecEditor) {
-        return false;
-      }
-      if (item.id === 'context' && hideContext) {
         return false;
       }
       if (item.id === 'docs' && hideDocs) {
@@ -287,7 +266,6 @@ export function useNavigation({
   }, [
     shortcuts,
     hideSpecEditor,
-    hideContext,
     hideDesigns,
     hideDocs,
     hideFileEditor,

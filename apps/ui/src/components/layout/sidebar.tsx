@@ -93,7 +93,7 @@ export function Sidebar() {
   }, [sidebarOpen, toggleSidebar]);
 
   // Environment variable flags for hiding sidebar items
-  const { hideContext, hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
+  const { hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
 
   // Get customizable keyboard shortcuts
   const shortcuts = useKeyboardShortcutsConfig();
@@ -262,7 +262,6 @@ export function Sidebar() {
   const { navSections, navigationShortcuts } = useNavigation({
     shortcuts,
     hideSpecEditor: hideSpecEditor || !featureFlags.specEditor,
-    hideContext,
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,
     hideFileEditor: false,

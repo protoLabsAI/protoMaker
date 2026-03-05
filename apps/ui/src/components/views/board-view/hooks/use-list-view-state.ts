@@ -42,7 +42,7 @@ const DEFAULT_STATE: ListViewPersistedState = {
  * Validates and returns a valid ViewMode, defaulting to 'kanban' if invalid
  */
 function validateViewMode(value: unknown): ViewMode {
-  if (value === 'kanban' || value === 'list') {
+  if (value === 'kanban' || value === 'list' || value === 'context' || value === 'memory') {
     return value;
   }
   return 'kanban';
@@ -164,9 +164,13 @@ export function useListViewState(): UseListViewStateReturn {
     setViewModeState(mode);
   }, []);
 
-  // Toggle between kanban and list views
+  // Cycle through view modes: kanban → list → context → memory → kanban
   const toggleViewMode = useCallback(() => {
-    setViewModeState((prev) => (prev === 'kanban' ? 'list' : 'kanban'));
+    setViewModeState((prev) => {
+      const cycle: ViewMode[] = ['kanban', 'list', 'context', 'memory'];
+      const idx = cycle.indexOf(prev);
+      return cycle[(idx + 1) % cycle.length];
+    });
   }, []);
 
   // Set sort column - toggles direction if same column is clicked
