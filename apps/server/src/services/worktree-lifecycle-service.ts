@@ -19,6 +19,7 @@ import { createLogger } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
+import { isWorktreeLocked } from '../lib/worktree-lock.js';
 
 const logger = createLogger('WorktreeLifecycle');
 
@@ -219,6 +220,15 @@ export class WorktreeLifecycleService {
           );
           return; // Skip cleanup - worktree is in use
         }
+      }
+
+      // Check worktree lock file: refuse removal if a live agent process holds the lock
+      const locked = await isWorktreeLocked(worktreePath);
+      if (locked) {
+        logger.warn(
+          `[SAFETY] Cannot clean up worktree ${worktreeName} - lock file indicates a live agent process is active`
+        );
+        return; // Skip cleanup - worktree lock is held by a running process
       }
 
       // Check if worktree exists
