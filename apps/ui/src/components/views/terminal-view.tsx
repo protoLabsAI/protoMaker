@@ -14,7 +14,6 @@ import {
   SquarePlus,
   Settings,
 } from 'lucide-react';
-import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { getServerUrlSync } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
@@ -1480,11 +1479,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
   if (terminalState.tabs.length === 0) {
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
-        <PanelHeader
-          icon={TerminalIcon}
-          title="Terminal"
-          actions={[{ icon: Plus, label: 'New terminal', onClick: () => createTerminal() }]}
-        />
         <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
           <div className="p-4 rounded-full bg-brand-500/10 mb-4">
             <TerminalIcon className="h-12 w-12 text-brand-500" />
@@ -1527,11 +1521,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
       onDragCancel={handleDragCancel}
     >
       <div className="flex-1 flex flex-col overflow-hidden">
-        <PanelHeader
-          icon={TerminalIcon}
-          title="Terminal"
-          actions={[{ icon: Plus, label: 'New terminal', onClick: () => createTerminal() }]}
-        />
         {/* Tab bar */}
         <div className="flex items-center bg-card border-b border-border px-2">
           {/* Tabs */}
