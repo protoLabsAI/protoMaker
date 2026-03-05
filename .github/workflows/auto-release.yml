@@ -15,6 +15,7 @@ on:
     types: [closed]
     branches:
       - main
+  workflow_dispatch:
 
 permissions: read-all
 
@@ -22,9 +23,10 @@ jobs:
   release:
     runs-on: self-hosted
     if: >-
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref == 'staging' &&
-      github.repository == 'protoLabsAI/protoMaker'
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'staging' &&
+       github.repository == 'protoLabsAI/protoMaker')
     timeout-minutes: 15
     permissions:
       contents: write
