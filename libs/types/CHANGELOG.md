@@ -1,5 +1,19 @@
 # @protolabsai/types
 
+## 0.39.0
+
+### Minor Changes
+
+- ### Features
+  - replace token estimate with real usage data from AI SDK
+
+  ### Bug Fixes
+  - auto-cleanup Docker when staging disk is low
+  - add @protolabsai/types dep to libs/ui and stop inlining external DTS
+
+  ### Refactors
+  - move Issues into Projects tabs, PRs into Features tabs
+
 ## 0.38.0
 
 ### Minor Changes
