@@ -1,5 +1,15 @@
 # @protolabsai/model-resolver
 
+## 0.35.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - disable auto-trigger bug triage, gate to chukz reaction only
+  - unify dependency check in IntakeProcessor with shared resolver
+- Updated dependencies
+  - @protolabsai/types@0.35.1
+
 ## 0.35.0
 
 ### Minor Changes
