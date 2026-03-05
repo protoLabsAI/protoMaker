@@ -3,71 +3,143 @@
   "title": "Automation Control Plane Consolidation",
   "goal": "Consolidate the duplicate Maintenance and Automations UIs into a single Automations control plane by achieving feature parity in AutomationsSection, deleting the MaintenanceSection, and removing the orphaned scheduler routes.",
   "status": "active",
-  "createdAt": "2026-03-02T15:35:04.244Z",
-  "updatedAt": "2026-03-02T15:35:27.297Z",
-  "archivedAt": "2026-03-05T08:31:18.743Z",
   "milestones": [
     {
       "number": 1,
       "slug": "01-backend-enrich-automation-list-with-scheduler-metadata",
       "title": "Backend: Enrich Automation List with Scheduler Metadata",
-      "epicId": "feature-1772465727282-qohfttg03",
-      "status": "pending",
+      "description": "Make /api/automations/list return lastRunAt, nextRunAt, executionCount, and failureCount by merging SchedulerService task data into the Automation list response.",
       "phases": [
         {
           "number": 1,
           "name": "enrich-automation-list-response-with-scheduler-stats",
           "title": "Enrich automation list response with scheduler stats",
-          "featureId": "feature-1772465727283-u8ow8u8dg",
-          "complexity": "small"
+          "description": "In AutomationService.list(), look up each automation's corresponding SchedulerService task and merge in lastRun, nextRun, executionCount, failureCount. Also update executeAutomation() to write lastRunAt to the automation record after each run.",
+          "filesToModify": [
+            "apps/server/src/services/automation-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET /api/automations/list returns lastRunAt, nextRunAt, executionCount, failureCount for cron automations",
+            "npm run build:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772465727283-u8ow8u8dg"
         }
-      ]
+      ],
+      "status": "pending",
+      "epicId": "feature-1772465727282-qohfttg03"
     },
     {
       "number": 2,
       "slug": "02-ui-automations-section-feature-parity",
       "title": "UI: Automations Section Feature Parity",
-      "epicId": "feature-1772465727284-q37gmpp2z",
-      "status": "pending",
+      "description": "Add the 5 capabilities the Automations UI is missing vs the Maintenance UI, plus a run history panel.",
       "phases": [
         {
           "number": 1,
           "name": "add-run-now-timestamps-stats-and-human-readable-cron",
           "title": "Add Run Now, timestamps, stats, and human-readable cron",
-          "featureId": "feature-1772465727284-xj2xq5203",
-          "complexity": "medium"
+          "description": "In automations-section.tsx: add cronToHuman() helper, enabled/disabled count summary, lastRunAt/nextRunAt timestamps, executionCount/failureCount per row, and Run Now button calling POST /api/automations/:id/run. Add runAutomation() to api.ts.",
+          "filesToModify": [
+            "apps/ui/src/components/views/settings-view/automations/automations-section.tsx",
+            "apps/ui/src/lib/api.ts"
+          ],
+          "acceptanceCriteria": [
+            "Each row shows last run and next run times in human-readable relative format",
+            "Run Now button triggers the automation and refreshes the row",
+            "Header shows N/M automations enabled summary",
+            "Cron expressions display as human-readable strings",
+            "npm run build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772465727284-xj2xq5203"
         },
         {
           "number": 2,
           "name": "add-run-history-panel",
           "title": "Add run history panel",
-          "featureId": "feature-1772465727285-cpt7t1jj7",
-          "complexity": "medium"
+          "description": "Add an expandable section showing run history per automation. Calls GET /api/automations/:id/history. Displays startedAt, duration, status badge, error message, Langfuse trace link if traceId present. Add getAutomationHistory() to api.ts.",
+          "filesToModify": [
+            "apps/ui/src/components/views/settings-view/automations/automation-history-panel.tsx",
+            "apps/ui/src/components/views/settings-view/automations/automations-section.tsx",
+            "apps/ui/src/lib/api.ts"
+          ],
+          "acceptanceCriteria": [
+            "History shows up to 10 recent runs with timestamp, duration, status, error",
+            "Trace link shows if traceId present",
+            "npm run build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772465727285-cpt7t1jj7"
         }
-      ]
+      ],
+      "status": "pending",
+      "epicId": "feature-1772465727284-q37gmpp2z"
     },
     {
       "number": 3,
       "slug": "03-cleanup-delete-maintenance-section-and-scheduler-routes",
       "title": "Cleanup: Delete Maintenance Section and Scheduler Routes",
-      "epicId": "feature-1772465727286-js7npeso3",
-      "status": "pending",
+      "description": "Remove all legacy Maintenance UI code, scheduler backend routes, navigation entry, and MaintenanceSettings type.",
       "phases": [
         {
           "number": 1,
           "name": "delete-maintenancesection-ui-and-scheduler-backend-routes",
           "title": "Delete MaintenanceSection UI and scheduler backend routes",
-          "featureId": "feature-1772465727286-tox62s6nm",
-          "complexity": "small"
+          "description": "Delete maintenance/ UI directory. Delete apps/server/src/routes/scheduler/ directory. Remove maintenance from navigation.ts, settings-view.tsx, use-settings-view.ts, and routes.ts.",
+          "filesToModify": [
+            "apps/ui/src/components/views/settings-view/maintenance/maintenance-section.tsx",
+            "apps/ui/src/components/views/settings-view/config/navigation.ts",
+            "apps/ui/src/components/views/settings-view.tsx",
+            "apps/ui/src/components/views/settings-view/hooks/use-settings-view.ts",
+            "apps/server/src/server/routes.ts",
+            "apps/server/src/routes/scheduler/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Settings nav has no Maintenance item",
+            "/api/scheduler/* routes return 404",
+            "npm run build passes",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772465727286-tox62s6nm"
         },
         {
           "number": 2,
           "name": "remove-maintenancesettings-type-and-globalsettings-maintenance-field",
           "title": "Remove MaintenanceSettings type and GlobalSettings.maintenance field",
-          "featureId": "feature-1772465727287-4056r3dpu",
-          "complexity": "small"
+          "description": "Delete MaintenanceSettings and MaintenanceTaskOverride from project-settings.ts. Remove maintenance field from GlobalSettings. Remove applyMaintenanceSettingsOverrides() from AutomationService. Run npm run build:packages.",
+          "filesToModify": [
+            "libs/types/src/project-settings.ts",
+            "libs/types/src/global-settings.ts",
+            "apps/server/src/services/automation-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "MaintenanceSettings types deleted",
+            "GlobalSettings.maintenance field removed",
+            "npm run build:packages passes",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772465727287-4056r3dpu"
         }
-      ]
+      ],
+      "status": "pending",
+      "epicId": "feature-1772465727286-js7npeso3"
     }
-  ]
+  ],
+  "researchSummary": "Automation type already has lastRunAt, nextRunAt, lastRunStatus fields but not populated. SchedulerService stores lastRun, nextRun, executionCount, failureCount on ScheduledTask objects. /api/automations/:id/run and /api/automations/:id/history endpoints exist and work but not wired to UI. MaintenanceSection is the only caller of /api/scheduler/* in the UI.",
+  "prd": {
+    "situation": "protoLabs Studio has two separate UI surfaces for controlling scheduled background tasks. The Maintenance section talks directly to /api/scheduler/* showing raw SchedulerService tasks. The Automations section talks to /api/automations/* showing the same 8 built-in tasks with richer metadata. Both were built at different times as the architecture evolved.",
+    "problem": "Users see the same 8 maintenance tasks in two Settings sections. The Automations UI is missing 5 capabilities the Maintenance UI has: Run Now button, lastRunAt/nextRunAt timestamps, execution count, failure count, and human-readable cron expression display.",
+    "approach": "Close the 5 capability gaps in AutomationsSection by enriching the /api/automations/list response with scheduler metadata and adding Run Now support, stats summary, human-readable cron, and a run history panel. Then delete MaintenanceSection, scheduler routes, and MaintenanceSettings type.",
+    "results": "Single Automations control plane in Settings. All automations managed in one place with full CRUD, trigger type support, OTel-traced execution history, model config, and manual run capability.",
+    "constraints": [
+      "SchedulerService stays as AutomationService internal infrastructure",
+      "Built-in automation records are protected (isBuiltIn: true)",
+      "No behavior change to the 8 maintenance tasks themselves"
+    ]
+  },
+  "createdAt": "2026-03-02T15:35:04.244Z",
+  "updatedAt": "2026-03-05T07:02:05.947Z"
 }

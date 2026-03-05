@@ -1,13 +1,11 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, createElement } from 'react';
 import type { NavigateOptions } from '@tanstack/react-router';
 import {
   FileText,
   LayoutGrid,
-  BookOpen,
   Library,
   CircleDot,
   GitPullRequest,
-  Brain,
   Network,
   Inbox,
   Settings,
@@ -17,6 +15,29 @@ import {
   FolderOpen,
   FolderKanban,
 } from 'lucide-react';
+
+/** protoLabs logo icon sized for sidebar nav (matches lucide icon API) */
+function ProtoLabsIcon({ className }: { className?: string }) {
+  return createElement(
+    'svg',
+    {
+      xmlns: 'http://www.w3.org/2000/svg',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className,
+    },
+    createElement('rect', { width: 16, height: 12, x: 4, y: 8, rx: 2 }),
+    createElement('path', { d: 'M12 8V4H8' }),
+    createElement('path', { d: 'M2 14h2' }),
+    createElement('path', { d: 'M20 14h2' }),
+    createElement('path', { d: 'M15 13v2' }),
+    createElement('path', { d: 'M9 13v2' })
+  );
+}
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
 import type { Project } from '@/lib/electron';
@@ -30,18 +51,13 @@ interface UseNavigationProps {
     cyclePrevProject: string;
     cycleNextProject: string;
     spec: string;
-    context: string;
-    memory: string;
     notes: string;
     docs: string;
     board: string;
-    graph: string;
-    agent: string;
     settings: string;
     projectSettings: string;
     githubIssues: string;
     githubPrs: string;
-    notifications: string;
     systemView: string;
     inbox: string;
     fileEditor: string;
@@ -49,15 +65,16 @@ interface UseNavigationProps {
     calendar: string;
     automations: string;
     projects: string;
+    chat: string;
   };
   hideSpecEditor: boolean;
-  hideContext: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
   hideFileEditor: boolean;
   hideSystemView: boolean;
   hideNotes: boolean;
   hideCalendar: boolean;
+  hideAvaChat: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -79,13 +96,13 @@ interface UseNavigationProps {
 export function useNavigation({
   shortcuts,
   hideSpecEditor,
-  hideContext,
   hideDesigns,
   hideDocs,
   hideFileEditor,
   hideSystemView,
   hideNotes,
   hideCalendar,
+  hideAvaChat,
   currentProject,
   projects,
   projectHistory,
@@ -134,67 +151,52 @@ export function useNavigation({
         isLoading: isSpecGenerating,
       },
       {
-        id: 'context',
-        label: 'Context',
-        icon: BookOpen,
-        shortcut: shortcuts.context,
-      },
-      {
-        id: 'memory',
-        label: 'Memory',
-        icon: Brain,
-        shortcut: shortcuts.memory,
-      },
-      {
         id: 'docs',
         label: 'Docs',
         icon: Library,
         shortcut: shortcuts.docs,
       },
+      {
+        id: 'notes',
+        label: 'Content',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
+      },
+      {
+        id: 'calendar',
+        label: 'Calendar',
+        icon: CalendarDays,
+        shortcut: shortcuts.calendar,
+      },
     ];
 
     // Filter out hidden items
     const visibleToolsItems = allToolsItems.filter((item) => {
-      if (item.id === 'spec' && hideSpecEditor) {
-        return false;
-      }
-      if (item.id === 'context' && hideContext) {
-        return false;
-      }
-      if (item.id === 'docs' && hideDocs) {
-        return false;
-      }
+      if (item.id === 'spec' && hideSpecEditor) return false;
+      if (item.id === 'docs' && hideDocs) return false;
+      if (item.id === 'notes' && hideNotes) return false;
+      if (item.id === 'calendar' && hideCalendar) return false;
       return true;
     });
 
-    // Build project items - Terminal, Calendar, Designs are conditionally included
+    // Build project items
     const projectItems: NavItem[] = [
       {
+        id: 'projects',
+        label: 'Projects',
+        icon: FolderKanban,
+        shortcut: shortcuts.projects,
+      },
+      {
         id: 'board',
-        label: 'Board',
+        label: 'Features',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
       },
     ];
 
-    if (!hideNotes) {
-      projectItems.push({
-        id: 'notes',
-        label: 'Notes',
-        icon: NotebookPen,
-        shortcut: shortcuts.notes,
-      });
-    }
-
-    projectItems.push({
-      id: 'projects',
-      label: 'Projects',
-      icon: FolderKanban,
-      shortcut: shortcuts.projects,
-    });
-
     if (!hideSystemView) {
-      projectItems.splice(1, 0, {
+      projectItems.push({
         id: 'system-view',
         label: 'System View',
         icon: Network,
@@ -205,9 +207,18 @@ export function useNavigation({
     if (!hideFileEditor) {
       projectItems.push({
         id: 'file-editor',
-        label: 'File Editor',
+        label: 'Editor',
         icon: FolderOpen,
         shortcut: shortcuts.fileEditor,
+      });
+    }
+
+    if (!hideAvaChat) {
+      projectItems.push({
+        id: 'chat',
+        label: 'Ava',
+        icon: ProtoLabsIcon,
+        shortcut: shortcuts.chat,
       });
     }
 
@@ -217,15 +228,6 @@ export function useNavigation({
         label: 'Designs',
         icon: Palette,
         shortcut: shortcuts.designs,
-      });
-    }
-
-    if (!hideCalendar) {
-      projectItems.push({
-        id: 'calendar',
-        label: 'Calendar',
-        icon: CalendarDays,
-        shortcut: shortcuts.calendar,
       });
     }
 
@@ -276,7 +278,7 @@ export function useNavigation({
         },
         {
           id: 'project-settings',
-          label: 'Project Settings',
+          label: 'Settings',
           icon: Settings,
           shortcut: shortcuts.projectSettings,
         },
@@ -287,13 +289,13 @@ export function useNavigation({
   }, [
     shortcuts,
     hideSpecEditor,
-    hideContext,
     hideDesigns,
     hideDocs,
     hideFileEditor,
     hideSystemView,
     hideNotes,
     hideCalendar,
+    hideAvaChat,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,

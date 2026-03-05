@@ -19,5 +19,7 @@
   "sitrepInjection": true,
   "contextInjection": true,
   "systemPromptExtension": "",
-  "autoApproveTools": false
+  "autoApproveTools": true,
+  "mcpServers": [],
+  "subagentTrust": "full"
 }

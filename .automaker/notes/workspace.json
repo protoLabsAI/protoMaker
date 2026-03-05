@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "activeTabId": "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
+  "activeTabId": "49ce8e0b-b2d9-43a9-8073-535698843379",
   "tabOrder": [
     "f35b89fb-3cc2-4e1f-8e58-98165c82df08",
     "49ce8e0b-b2d9-43a9-8073-535698843379"
@@ -24,16 +24,16 @@
     "49ce8e0b-b2d9-43a9-8073-535698843379": {
       "id": "49ce8e0b-b2d9-43a9-8073-535698843379",
       "name": "Infra Update - Staging HTTPS",
-      "content": "<h2>Staging Infra Update (2026-03-05)</h2><h3>PWA Install via Tailscale HTTPS</h3><p>PWA install wasn't showing on staging because browsers require HTTPS. Staging was HTTP-only over Tailscale.</p><h3>Changes</h3><ul><li><strong>Tailscale HTTPS proxy</strong> added to <code>setup-staging.sh</code> — UI on <code>:443</code>, API on <code>:8443</code>. Runs automatically after health check on <code>--start</code>.</li><li><strong>nginx fix</strong> — <code>sw.js</code> and <code>manifest.webmanifest</code> now served with <code>no-cache</code> + <code>Service-Worker-Allowed: /</code> instead of 7-day immutable cache.</li><li><strong>PWA virtual module stub</strong> — Electron dev mode no longer errors on <code>virtual:pwa-register/react</code>.</li></ul><h3>Access</h3><p>Use <code>https://ava.&lt;tailnet&gt;.ts.net</code> for PWA-eligible HTTPS on staging.</p><h3>PRs</h3><ul><li>#1764 — PWA virtual module stub</li><li>#1765 — Tailscale HTTPS + nginx fix</li></ul><h3>Post to Discord</h3><p>Discord bot was down during session — manually post in <code>#ava</code> or <code>#infra</code> when available.</p>",
+      "content": "<h2>Staging Infra Update (2026-03-05)</h2><h3>PWA Install via Tailscale HTTPS</h3><p>PWA install wasn't showing on staging because browsers require HTTPS. Staging was HTTP-only over Tailscale.</p><h3>Changes</h3><ul><li><p><strong>Tailscale HTTPS proxy</strong> added to <code>setup-staging.sh</code> — UI on <code>:443</code>, API on <code>:8443</code>. Runs automatically after health check on <code>--start</code>.</p></li><li><p><strong>nginx fix</strong> — <code>sw.js</code> and <code>manifest.webmanifest</code> now served with <code>no-cache</code> + <code>Service-Worker-Allowed: /</code> instead of 7-day immutable cache.</p></li><li><p><strong>PWA virtual module stub</strong> — Electron dev mode no longer errors on <code>virtual:pwa-register/react</code>.</p></li></ul><h3>Access</h3><p>Use <code>https://ava.&lt;tailnet&gt;.ts.net</code> for PWA-eligible HTTPS on staging.</p><h3>PRs</h3><ul><li><p>#1764 — PWA virtual module stub</p></li><li><p>#1765 — Tailscale HTTPS + nginx fix</p></li></ul>",
       "permissions": {
         "agentRead": true,
         "agentWrite": true
       },
       "metadata": {
         "createdAt": 1772697727473,
-        "updatedAt": 1772697727473,
-        "wordCount": 103,
-        "characterCount": 771
+        "updatedAt": 1772707557479,
+        "wordCount": 102,
+        "characterCount": 671
       }
     }
   },

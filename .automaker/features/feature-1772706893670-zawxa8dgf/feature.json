@@ -1,0 +1,25 @@
+{
+  "category": "Uncategorized",
+  "description": "Two Project fields are missing edit capability in ProjectSidebar:\n1. `members` — rendered as `project.members?.join(', ')` with no add/remove UI\n2. `color` — field exists on the Project type but is never displayed or editable anywhere\n\n**What to do:**\n- Members: replace the read-only display with a tag-input component — add member (text input + enter), remove member (×). Call `useProjectUpdate` on change.\n- Color: add a color swatch/picker control to the sidebar. Use a simple color input or a small preset palette. Reflect the chosen color in the project list (colored left border or badge). Call `useProjectUpdate` on change.\n\n**Files to touch:**\n- `apps/ui/src/components/views/projects-view/components/project-sidebar.tsx`\n- `apps/ui/src/components/views/projects-view/projects-list.tsx` (for color display in list)",
+  "title": "Project page: add members edit UI and project color picker to sidebar",
+  "priority": 2,
+  "status": "backlog",
+  "id": "feature-1772706893670-zawxa8dgf",
+  "branchName": "feature/project-page-add-members-edit-ui-and",
+  "descriptionHistory": [
+    {
+      "description": "Two Project fields are missing edit capability in ProjectSidebar:\n1. `members` — rendered as `project.members?.join(', ')` with no add/remove UI\n2. `color` — field exists on the Project type but is never displayed or editable anywhere\n\n**What to do:**\n- Members: replace the read-only display with a tag-input component — add member (text input + enter), remove member (×). Call `useProjectUpdate` on change.\n- Color: add a color swatch/picker control to the sidebar. Use a simple color input or a small preset palette. Reflect the chosen color in the project list (colored left border or badge). Call `useProjectUpdate` on change.\n\n**Files to touch:**\n- `apps/ui/src/components/views/projects-view/components/project-sidebar.tsx`\n- `apps/ui/src/components/views/projects-view/projects-list.tsx` (for color display in list)",
+      "timestamp": "2026-03-05T10:34:53.671Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T10:34:53.671Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T10:34:53.671Z",
+      "reason": "Feature created"
+    }
+  ]
+}

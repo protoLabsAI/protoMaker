@@ -2,7 +2,7 @@
   "category": "Uncategorized",
   "description": "Create the protoLabs Discord server and update all \"TBA\" placeholders across the codebase with the real invite link.\n\n## Files to update\n\nOnce the Discord is live, replace \"TBA\" / placeholder links in these files:\n\n- `SECURITY.md` — 3 locations (Discord preferred contact, announcements link, contact section)\n- `README.md` — 3 locations (badge href + shield URL with guild ID, community section, contributing section)\n- `CONTRIBUTING.md` — 2 locations (real-time chat link, getting help section)\n- `.github/ISSUE_TEMPLATE/config.yml` — 1 location (contact link URL)\n- `.github/workflows/close-external-prs.yml` — 1 location (auto-close PR comment)\n\n## What to do\n\n1. Create protoLabs Discord server (or use existing guild 1070606339363049492 if public-facing)\n2. Generate a permanent invite link\n3. Replace all \"Discord invite link TBA\", \"Discord (TBA)\", and placeholder `#` hrefs with the real link\n4. Update the README Discord badge to use the real guild ID: `https://img.shields.io/discord/GUILD_ID?color=5865F2&label=Discord&logo=discord&logoColor=white`\n5. Verify all links work",
   "title": "Set up protoLabs Discord and update all references",
-  "status": "backlog",
+  "status": "done",
   "complexity": "small",
   "assignee": "josh",
   "priority": 3,
@@ -26,6 +26,13 @@
       "to": "backlog",
       "timestamp": "2026-03-03T20:10:11.024Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-05T11:34:46.122Z"
     }
-  ]
+  ],
+  "featureType": "code",
+  "completedAt": "2026-03-05T11:34:46.122Z"
 }

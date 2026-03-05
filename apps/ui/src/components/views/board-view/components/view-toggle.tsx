@@ -1,7 +1,7 @@
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, BookOpen, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ViewMode = 'kanban' | 'list';
+export type ViewMode = 'kanban' | 'list' | 'context' | 'memory';
 
 interface ViewToggleProps {
   viewMode: ViewMode;
@@ -22,7 +22,7 @@ function toggleBtnClass(active: boolean) {
 }
 
 /**
- * A segmented control component for switching between kanban and list views.
+ * A segmented control component for switching between board view modes.
  */
 export function ViewToggle({ viewMode, onViewModeChange, className }: ViewToggleProps) {
   return (
@@ -55,6 +55,28 @@ export function ViewToggle({ viewMode, onViewModeChange, className }: ViewToggle
       >
         <List className="w-4 h-4" />
         <span className="sr-only">List</span>
+      </button>
+      <button
+        role="tab"
+        aria-selected={viewMode === 'context'}
+        aria-label="Context view"
+        onClick={() => onViewModeChange('context')}
+        className={toggleBtnClass(viewMode === 'context')}
+        data-testid="view-toggle-context"
+      >
+        <BookOpen className="w-4 h-4" />
+        <span className="sr-only">Context</span>
+      </button>
+      <button
+        role="tab"
+        aria-selected={viewMode === 'memory'}
+        aria-label="Memory view"
+        onClick={() => onViewModeChange('memory')}
+        className={toggleBtnClass(viewMode === 'memory')}
+        data-testid="view-toggle-memory"
+      >
+        <Brain className="w-4 h-4" />
+        <span className="sr-only">Memory</span>
       </button>
     </div>
   );
