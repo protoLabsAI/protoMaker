@@ -1,4 +1,4 @@
-import { FileText, Milestone, Layers, FileEdit, ExternalLink, MessageSquare } from 'lucide-react';
+import { FileText, Milestone, Layers, FolderOpen, MessageSquare } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
@@ -8,8 +8,7 @@ import { useProject, useProjectDelete } from './hooks/use-project';
 import { PrdTab } from './tabs/prd-tab';
 import { MilestonesTab } from './tabs/milestones-tab';
 import { FeaturesTab } from './tabs/features-tab';
-import { DocumentsTab } from './tabs/documents-tab';
-import { LinksTab } from './tabs/links-tab';
+import { ResourcesTab } from './tabs/resources-tab';
 import { UpdatesTab } from './tabs/updates-tab';
 import type { Project } from '@protolabsai/types';
 
@@ -77,13 +76,9 @@ export function ProjectDetail({
                 <Layers />
                 Features
               </TabsTrigger>
-              <TabsTrigger value="documents">
-                <FileEdit />
-                Documents
-              </TabsTrigger>
-              <TabsTrigger value="links">
-                <ExternalLink />
-                Links
+              <TabsTrigger value="resources">
+                <FolderOpen />
+                Resources
               </TabsTrigger>
               <TabsTrigger value="updates">
                 <MessageSquare />
