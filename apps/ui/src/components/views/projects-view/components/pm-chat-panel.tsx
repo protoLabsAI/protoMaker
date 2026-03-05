@@ -134,10 +134,10 @@ export function PmChatPanel({
               <div key={message.id} className="flex justify-end">
                 <div className="max-w-[80%] rounded-lg px-3 py-2 bg-primary text-primary-foreground text-sm">
                   {message.parts
-                    ?.filter(
-                      (p): p is { type: 'text'; text: string } => p.type === 'text'
-                    )
-                    .map((p, i) => <span key={i}>{p.text}</span>)}
+                    ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+                    .map((p, i) => (
+                      <span key={i}>{p.text}</span>
+                    ))}
                 </div>
               </div>
             );
@@ -148,10 +148,10 @@ export function PmChatPanel({
               <div key={message.id} className="flex justify-center">
                 <span className="text-xs text-muted-foreground">
                   {message.parts
-                    ?.filter(
-                      (p): p is { type: 'text'; text: string } => p.type === 'text'
-                    )
-                    .map((p, i) => <span key={i}>{p.text}</span>)}
+                    ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+                    .map((p, i) => (
+                      <span key={i}>{p.text}</span>
+                    ))}
                 </span>
               </div>
             );
@@ -162,10 +162,10 @@ export function PmChatPanel({
             <div key={message.id} className="flex justify-start">
               <div className="max-w-[80%] rounded-lg px-3 py-2 bg-muted text-foreground text-sm">
                 {message.parts
-                  ?.filter(
-                    (p): p is { type: 'text'; text: string } => p.type === 'text'
-                  )
-                  .map((p, i) => <span key={i}>{p.text}</span>)}
+                  ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+                  .map((p, i) => (
+                    <span key={i}>{p.text}</span>
+                  ))}
               </div>
             </div>
           );
