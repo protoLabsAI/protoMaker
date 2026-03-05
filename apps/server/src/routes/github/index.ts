@@ -102,5 +102,8 @@ export function createGitHubRoutes(
     createResolvePRCommentHandler()
   );
 
+  // Background PR CI watcher (Ava push notifications)
+  router.post('/watch-pr', validatePathParams('projectPath'), createWatchPRHandler(events));
+
   return router;
 }
