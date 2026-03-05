@@ -103,6 +103,7 @@ export class PRFeedbackService {
     if (this.initialized) return;
     this.initialized = true;
 
+    // TODO: migrate to bus.on()
     this.events.subscribe((type, payload) => {
       if (type === 'auto-mode:event') {
         const data = payload as Record<string, unknown>;

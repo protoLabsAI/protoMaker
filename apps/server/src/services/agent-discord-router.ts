@@ -68,6 +68,7 @@ export class AgentDiscordRouter {
   start(): void {
     logger.info('Starting AgentDiscordRouter');
 
+    // TODO: migrate to bus.on()
     this.unsubscribe = this.events.subscribe((type, payload) => {
       if (type === 'discord:user-message:routed') {
         this.handleRoutedMessage(payload as DiscordUserMessageRoutedPayload).catch((error) => {
