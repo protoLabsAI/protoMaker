@@ -21,6 +21,7 @@ import {
 } from '@/store/app-store';
 import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { useSetupStore } from '@/store/setup-store';
+import { useTerminalStore } from '@/store/terminal-store';
 import { useAuthStore } from '@/store/auth-store';
 import { getElectronAPI, isElectron } from '@/lib/electron';
 import { isMac } from '@/lib/utils';
@@ -218,26 +219,49 @@ function RootLayoutContent() {
   // focus is inside a terminal or input — you always want to be able to dismiss the panel.
   const shortcuts = useKeyboardShortcutsConfig();
   useEffect(() => {
-    const handleTerminalToggle = (event: KeyboardEvent) => {
-      const parsed = parseShortcut(shortcuts.terminal);
-      if (!parsed.key) return;
+    const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform || '');
 
-      const cmdCtrlPressed = event.metaKey || event.ctrlKey;
-      if (parsed.cmdCtrl && !cmdCtrlPressed) return;
-      if (!parsed.cmdCtrl && cmdCtrlPressed) return;
-      if (parsed.shift && !event.shiftKey) return;
-      if (!parsed.shift && event.shiftKey) return;
-      if (parsed.alt && !event.altKey) return;
-      if (!parsed.alt && event.altKey) return;
-      if (event.key.toLowerCase() !== parsed.key.toLowerCase()) return;
+    const handleTerminalToggle = (event: KeyboardEvent) => {
+      if (event.key !== '`') return;
+      // Cmd+` on Mac, Alt+` on Windows/Linux
+      const modifierPressed = isMac ? event.metaKey : event.altKey;
+      if (!modifierPressed) return;
+      if (event.shiftKey) return;
 
       event.preventDefault();
       useAppStore.getState().toggleBottomPanel();
     };
 
+    // Shift+= ('+' key) — open terminal panel and create a new tab
+    const handleNewTerminal = (event: KeyboardEvent) => {
+      if (event.key !== '+' || !event.shiftKey) return;
+      // Don't trigger inside inputs/textareas
+      const tag = (event.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (event.target as HTMLElement)?.isContentEditable)
+        return;
+
+      event.preventDefault();
+      const store = useAppStore.getState();
+      // Open the panel if closed
+      if (!store.bottomPanelOpen) {
+        store.toggleBottomPanel();
+      }
+      // Request a new terminal tab via the terminal store
+      const projectPath = store.currentProject?.path;
+      useTerminalStore.getState().setPendingTerminalRequest({
+        cwd: projectPath || '~',
+        mode: 'tab',
+        nonce: Date.now(),
+      });
+    };
+
     window.addEventListener('keydown', handleTerminalToggle);
-    return () => window.removeEventListener('keydown', handleTerminalToggle);
-  }, [shortcuts.terminal]);
+    window.addEventListener('keydown', handleNewTerminal);
+    return () => {
+      window.removeEventListener('keydown', handleTerminalToggle);
+      window.removeEventListener('keydown', handleNewTerminal);
+    };
+  }, []);
 
   // Mobile device detection for PWA optimizations
   const isMobile = useIsMobile();
@@ -716,8 +740,8 @@ function RootLayoutContent() {
         return;
       }
       if (currentProject) {
-        // Project is selected, go to the board
-        navigate({ to: '/board' });
+        // Project is selected, go to projects view
+        navigate({ to: '/projects' });
       } else {
         // No project selected, go to dashboard
         navigate({ to: '/dashboard' });
@@ -754,7 +778,7 @@ function RootLayoutContent() {
         }
 
         if (isRootRoute) {
-          navigate({ to: '/board' });
+          navigate({ to: '/projects' });
         }
       } catch (error) {
         logger.error('Auto-open project crashed:', error);
@@ -958,7 +982,7 @@ function RootLayoutContent() {
             />
             <Panel
               ref={terminalPanelRef}
-              defaultSize={35}
+              defaultSize={50}
               minSize={15}
               maxSize={70}
               collapsible

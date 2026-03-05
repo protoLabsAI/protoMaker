@@ -15,9 +15,9 @@ The system has three layers:
 ```text
 Project Owner (CEO, Human)
 ├── AVA, Opus, Trust=3 — Engineering
-│   ├── Matt, Sonnet, Trust=2
-│   ├── Sam, Sonnet, Trust=2
-│   ├── Frank, Sonnet, Trust=2
+│   ├── Frontend, Sonnet, Trust=2
+│   ├── Infrastructure, Sonnet, Trust=2
+│   ├── DevOps, Sonnet, Trust=2
 │   ├── Cindi, Sonnet, Trust=2
 │   ├── Backend Engineer, Sonnet, Trust=2
 │   ├── Product Manager, Sonnet, Trust=1

@@ -221,6 +221,7 @@ export function TerminalView() {
   const initialMode = pendingRequest?.mode;
   const nonce = pendingRequest?.nonce;
   const { currentProject } = useAppStore();
+  const toggleBottomPanel = useAppStore((s) => s.toggleBottomPanel);
   const {
     terminalState,
     setTerminalUnlocked,
@@ -1315,8 +1316,8 @@ export function TerminalView() {
             isActive={terminalState.activeSessionId === content.sessionId}
             onFocus={() => setActiveTerminalSession(content.sessionId)}
             onClose={() => killTerminal(content.sessionId)}
-            onSplitHorizontal={() => createTerminal('horizontal', content.sessionId)}
-            onSplitVertical={() => createTerminal('vertical', content.sessionId)}
+            onSplitHorizontal={() => createTerminal('vertical', content.sessionId)}
+            onSplitVertical={() => createTerminal('horizontal', content.sessionId)}
             onNewTab={createTerminalInNewTab}
             onNavigateUp={() => navigateToTerminal('up')}
             onNavigateDown={() => navigateToTerminal('down')}
@@ -1480,6 +1481,13 @@ export function TerminalView() {
               <Plus className="h-4 w-4" />
             </button>
           </div>
+          <button
+            className="flex items-center justify-center p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+            onClick={toggleBottomPanel}
+            title="Close Terminal"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
         <div className="flex-1 flex items-center justify-center min-h-0">
           <p className="text-sm text-muted-foreground/50">
@@ -1542,7 +1550,7 @@ export function TerminalView() {
               variant="ghost"
               size="sm"
               className="h-7 px-2 text-muted-foreground hover:text-foreground"
-              onClick={() => createTerminal('horizontal')}
+              onClick={() => createTerminal('vertical')}
               title="Split Right"
             >
               <SplitSquareHorizontal className="h-4 w-4" />
@@ -1551,7 +1559,7 @@ export function TerminalView() {
               variant="ghost"
               size="sm"
               className="h-7 px-2 text-muted-foreground hover:text-foreground"
-              onClick={() => createTerminal('vertical')}
+              onClick={() => createTerminal('horizontal')}
               title="Split Down"
             >
               <SplitSquareVertical className="h-4 w-4" />
@@ -1709,6 +1717,17 @@ export function TerminalView() {
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* Close terminal panel */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-muted-foreground hover:text-foreground"
+              onClick={toggleBottomPanel}
+              title="Close Terminal"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -1734,10 +1753,10 @@ export function TerminalView() {
                 onFocus={() => setActiveTerminalSession(terminalState.maximizedSessionId!)}
                 onClose={() => killTerminal(terminalState.maximizedSessionId!)}
                 onSplitHorizontal={() =>
-                  createTerminal('horizontal', terminalState.maximizedSessionId!)
+                  createTerminal('vertical', terminalState.maximizedSessionId!)
                 }
                 onSplitVertical={() =>
-                  createTerminal('vertical', terminalState.maximizedSessionId!)
+                  createTerminal('horizontal', terminalState.maximizedSessionId!)
                 }
                 onNewTab={createTerminalInNewTab}
                 onSessionInvalid={() => {

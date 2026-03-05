@@ -2,7 +2,7 @@
 
 `@protolabsai/flows` provides LangGraph state graph primitives for building multi-agent coordination flows. It includes state management utilities, typed reducers, routing helpers, a graph builder, and reference implementations of common patterns.
 
-**Owner:** Sam (AI Agent Engineer)
+**Owner:** Infrastructure agent (agent infra domain)
 
 ## Package Structure
 

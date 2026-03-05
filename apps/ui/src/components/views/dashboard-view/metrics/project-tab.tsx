@@ -24,11 +24,16 @@ import { SuccessChart } from './success-chart';
 
 interface ProjectMetricsTabProps {
   projectPath: string;
+  timeRange?: TimeRange;
 }
 
-export function ProjectMetricsTab({ projectPath }: ProjectMetricsTabProps) {
+export function ProjectMetricsTab({
+  projectPath,
+  timeRange: controlledTimeRange,
+}: ProjectMetricsTabProps) {
   const colors = useChartColors();
-  const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const [internalTimeRange, setInternalTimeRange] = useState<TimeRange>('30d');
+  const timeRange = controlledTimeRange ?? internalTimeRange;
   const { startDate, endDate } = useTimeRangeDates(timeRange);
 
   const aggregate = useLedgerAggregate(projectPath, startDate, endDate);
@@ -42,9 +47,11 @@ export function ProjectMetricsTab({ projectPath }: ProjectMetricsTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-      </div>
+      {!controlledTimeRange && (
+        <div className="flex items-center justify-end">
+          <TimeRangeSelector value={internalTimeRange} onChange={setInternalTimeRange} />
+        </div>
+      )}
 
       {/* KPI Cards */}
       <KpiCards

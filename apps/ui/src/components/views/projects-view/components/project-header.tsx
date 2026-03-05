@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Trash2, PanelLeft, MessageSquareDot } from 'lucide-react';
 import { Badge } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
@@ -11,9 +11,21 @@ interface ProjectHeaderProps {
   project: Project;
   onBack: () => void;
   onDelete?: () => void;
+  onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
+  onTogglePmChat?: () => void;
+  pmChatOpen?: boolean;
 }
 
-export function ProjectHeader({ project, onBack, onDelete }: ProjectHeaderProps) {
+export function ProjectHeader({
+  project,
+  onBack,
+  onDelete,
+  onToggleSidebar,
+  sidebarOpen,
+  onTogglePmChat,
+  pmChatOpen,
+}: ProjectHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   return (
@@ -22,6 +34,17 @@ export function ProjectHeader({ project, onBack, onDelete }: ProjectHeaderProps)
         <Button size="sm" variant="ghost" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
+        {onToggleSidebar && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onToggleSidebar}
+            className={`md:hidden ${sidebarOpen ? 'text-foreground' : 'text-muted-foreground'}`}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-foreground tracking-tight truncate">
@@ -38,6 +61,19 @@ export function ProjectHeader({ project, onBack, onDelete }: ProjectHeaderProps)
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{project.slug}</p>
         </div>
+        {onTogglePmChat && (
+          <Button
+            size="sm"
+            variant={pmChatOpen ? 'secondary' : 'ghost'}
+            onClick={onTogglePmChat}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Toggle PM chat"
+            data-testid="pm-chat-toggle"
+          >
+            <MessageSquareDot className="w-4 h-4" />
+            <span className="ml-1 text-xs">PM</span>
+          </Button>
+        )}
         {project.linearProjectUrl && (
           <a
             href={project.linearProjectUrl}

@@ -96,33 +96,23 @@ export function ProjectHealthCard() {
 
   return (
     <Card>
-      <CardContent className="pt-4 pb-3">
-        <div className="flex items-center justify-between gap-6">
+      <CardContent className="py-3 px-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Board Counts */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Metric label="Backlog" value={boardCounts.backlog} icon={ListTodo} />
-            <div className="h-6 w-px bg-border" />
+            <div className="h-5 w-px bg-border" />
             <Metric label="In Progress" value={boardCounts.inProgress} icon={Activity} />
-            <div className="h-6 w-px bg-border" />
+            <div className="h-5 w-px bg-border" />
             <Metric label="Review" value={boardCounts.review} icon={Clock} />
-            <div className="h-6 w-px bg-border" />
+            <div className="h-5 w-px bg-border" />
             <Metric label="Done" value={boardCounts.done} icon={CheckCircle2} />
           </div>
 
           {/* Right side: Running Agents & Auto-mode Status */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="rounded-md bg-primary/10 p-1.5">
-                <Activity className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Agents</span>
-                <span className="text-sm font-semibold">{runningAgentsCount}</span>
-              </div>
-            </div>
-
-            <div className="h-6 w-px bg-border" />
-
+          <div className="flex items-center gap-3">
+            <Metric label="Agents" value={runningAgentsCount} icon={Activity} />
+            <div className="h-5 w-px bg-border" />
             <StatusBadge status={autoModeStatus} />
           </div>
         </div>

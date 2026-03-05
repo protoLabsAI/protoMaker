@@ -645,6 +645,9 @@ export type {
   CeremonyAuditType,
   CeremonyDeliveryStatus,
   CeremonyAuditEntry,
+  CeremonyPhase,
+  CeremonyState,
+  CeremonyTransition,
 } from './ceremony.js';
 
 // Linear sync types (bidirectional sync metadata and payloads)

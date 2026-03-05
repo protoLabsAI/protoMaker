@@ -87,7 +87,7 @@ Helpers designed for single-use setup (`createFeatures(path, count)`) may overwr
 
 ### When to use
 
-Matt (Frontend Engineer) has exclusive access to `agent-browser`, a headless browser CLI built for AI agents. Use it for visual verification during frontend work — not as a replacement for Playwright E2E tests.
+The frontend agent has exclusive access to `agent-browser`, a headless browser CLI built for AI agents. Use it for visual verification during frontend work — not as a replacement for Playwright E2E tests.
 
 | Use case                                      | Tool          |
 | --------------------------------------------- | ------------- |

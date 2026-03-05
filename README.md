@@ -23,13 +23,13 @@
 
 Most AI coding tools give you a single agent in a single file. protoLabs gives you a **team**.
 
-Named AI agents --- Matt (frontend), Kai (backend), Sam (agent infra), Frank (DevOps) --- each with domain expertise, memory, and their own isolated workspace. They read your codebase, follow your coding standards, and produce real PRs against real branches.
+Specialized agents — frontend, backend, infrastructure, DevOps — each with domain expertise, memory, and their own isolated workspace. They read your codebase, follow your coding standards, and produce real PRs against real branches.
 
 You describe features on a Kanban board. Agents pick them up, implement them in isolated git worktrees, run verification, and create pull requests. CodeRabbit reviews the code. CI runs the tests. You merge when ready.
 
 No copy-pasting prompts. No babysitting context windows. You set the rules once in context files, and every agent follows them every time.
 
-![protoLabs UI](https://i.imgur.com/B6vZ2nW.png)
+![protoLabs UI](https://i.imgur.com/eG3ZMZx.png)
 
 ## Get Started
 

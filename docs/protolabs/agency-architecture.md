@@ -115,8 +115,8 @@ Production orchestration, auto-mode execution, and code quality.
               ╱         │         ╲
       Operations    Cross-cut    Engineering
        ╱    ╲          │          ╱      ╲
-    Jon    Cindi    Antag.    Lead Eng    Frank
-   (GTM)  (Content) Review   (Orchestr.) (DevOps)
+    GTM   Content   Antag.    Lead Eng    DevOps
+  (agent) (agent)  Review   (Orchestr.) (agent)
                                │
                            Auto-mode
                           ╱    │    ╲

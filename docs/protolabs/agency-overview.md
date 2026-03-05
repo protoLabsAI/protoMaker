@@ -41,14 +41,14 @@ Signal triage, quality gates, team health, and external communication. Orchestra
 
 Production orchestration, auto-mode execution, and code quality. The Lead Engineer uses fast-path rules (pure functions, no LLM) for routine decisions and escalates to full agent execution only when needed.
 
-| Agent                  | Type        | Responsibilities                                                        |
-| ---------------------- | ----------- | ----------------------------------------------------------------------- |
-| **Lead Engineer**      | Service     | Production orchestrator — fast-path rules, auto-mode management, events |
-| **Matt** (Frontend)    | AI Agent    | React 19, design systems, Storybook, component architecture             |
-| **Sam** (AI Agent Eng) | AI Agent    | LangGraph flows, LLM providers, observability, multi-agent coordination |
-| **Frank** (DevOps)     | AI Agent    | Infrastructure health, deploys, monitoring, system reliability          |
-| **Kai** (Backend)      | AI Agent    | Server-side features, API design, database, services                    |
-| **Auto-mode Agents**   | Sonnet/Opus | Feature implementation in isolated git worktrees                        |
+| Agent                | Type        | Responsibilities                                                        |
+| -------------------- | ----------- | ----------------------------------------------------------------------- |
+| **Lead Engineer**    | Service     | Production orchestrator — fast-path rules, auto-mode management, events |
+| **Frontend**         | AI Agent    | React 19, design systems, Storybook, component architecture             |
+| **Infrastructure**   | AI Agent    | LangGraph flows, LLM providers, observability, multi-agent coordination |
+| **DevOps**           | AI Agent    | Infrastructure health, deploys, monitoring, system reliability          |
+| **Backend**          | AI Agent    | Server-side features, API design, database, services                    |
+| **Auto-mode Agents** | Sonnet/Opus | Feature implementation in isolated git worktrees                        |
 
 ## Two Surfaces, Clear Separation
 

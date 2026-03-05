@@ -317,7 +317,13 @@ function buildTrayMenu(agentCount: number): Electron.Menu {
       },
     },
     { type: 'separator' },
-    { label: 'Quit', click: () => app.quit() },
+    {
+      label: 'Quit',
+      click: () => {
+        isQuittingIntentionally = true;
+        app.quit();
+      },
+    },
   ]);
 }
 
