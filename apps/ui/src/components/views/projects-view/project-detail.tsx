@@ -96,7 +96,7 @@ export function ProjectDetail({
             </TabsList>
 
             <TabsContent value="prd">
-              <PrdTab project={project as Project} />
+              <PrdTab project={project as Project} projectSlug={projectSlug} />
             </TabsContent>
 
             <TabsContent value="features">

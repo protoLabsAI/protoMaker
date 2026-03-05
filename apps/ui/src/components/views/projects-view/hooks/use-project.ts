@@ -46,3 +46,51 @@ export function useProjectDelete() {
     },
   });
 }
+
+export function useApprovePrd(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const api = getHttpApiClient();
+      return api.lifecycle.approvePrd(projectPath, projectSlug, {
+        createEpics: true,
+        setupDependencies: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
+
+export function useRequestChanges(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedback: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.requestChanges(projectPath, projectSlug, feedback);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
+
+export function useLaunchProject(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (maxConcurrency?: number) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.launch(projectPath, projectSlug, maxConcurrency);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
