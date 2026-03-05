@@ -18,6 +18,7 @@ import {
   Play,
   History,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Automation, AutomationRunStatus } from '@protolabsai/types';
 import {
   listAutomations,
@@ -26,6 +27,7 @@ import {
   deleteAutomation,
   runAutomation,
 } from '@/lib/api';
+import { getHttpApiClient } from '@/lib/http-api-client';
 import { AutomationEditModal, type AutomationFormData } from './automation-edit-modal';
 import { AutomationHistoryPanel } from './automation-history-panel';
 
@@ -208,6 +210,18 @@ export function AutomationsSection() {
   const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null);
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const api = getHttpApiClient();
+    return api.subscribeToEvents((type, payload) => {
+      if (type !== 'scheduler:task-failed') return;
+      const p = payload as { taskName: string; error: string };
+      toast.error(`Maintenance task failed: ${p.taskName}`, {
+        description: p.error,
+        duration: 8000,
+      });
+    });
+  }, []);
 
   const fetchAutomations = useCallback(async () => {
     try {

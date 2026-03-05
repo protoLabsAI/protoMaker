@@ -39,7 +39,8 @@ export type EventType =
   | 'hitl:form-responded'
   | 'actionable-item:created'
   | 'actionable-item:status-changed'
-  | 'chat:tool-progress';
+  | 'chat:tool-progress'
+  | 'scheduler:task-failed';
 
 export type EventCallback = (payload: unknown) => void;
 
