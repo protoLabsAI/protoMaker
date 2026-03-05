@@ -1,0 +1,31 @@
+{
+  "category": "Epic",
+  "description": "# Health Dashboard and Failure Alerting\n\nBuild the SchedulerHealthGrid UI component and add scheduler:task-failed event emission with WebSocket push. The health grid shows all tasks with next-run countdowns, last-run results, and execution counts. Failure alerting surfaces errors in the UI within 60 seconds.\n\n## Phases\n1. Scheduler Health Grid Component\n2. Failure Events and Alerting",
+  "title": "[Epic] Health Dashboard and Failure Alerting",
+  "status": "backlog",
+  "isEpic": true,
+  "epicColor": "#EF4444",
+  "branchName": "epic/health-dashboard-and-failure-alerting",
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291789-44zqatyfr",
+  "descriptionHistory": [
+    {
+      "description": "# Health Dashboard and Failure Alerting\n\nBuild the SchedulerHealthGrid UI component and add scheduler:task-failed event emission with WebSocket push. The health grid shows all tasks with next-run countdowns, last-run results, and execution counts. Failure alerting surfaces errors in the UI within 60 seconds.\n\n## Phases\n1. Scheduler Health Grid Component\n2. Failure Events and Alerting",
+      "timestamp": "2026-03-05T08:44:51.790Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.790Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.790Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772700291787-gcqfn3g0o"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "category": "Health Dashboard and Failure Alerting",
+  "description": "**Milestone:** Health Dashboard and Failure Alerting\n\nAdd useSchedulerStatus hook at apps/ui/src/hooks/use-scheduler-status.ts that polls GET /api/automations/scheduler/status every 30 seconds using the existing API client pattern. Add SchedulerHealthGrid component at apps/ui/src/components/views/settings-view/automations/scheduler-health-grid.tsx rendering a grid of task cards: task name, enabled badge, next-run countdown (e.g. 'in 4m 23s'), last-run result badge (green check or red X with error tooltip), execution count. Integrate SchedulerHealthGrid into automations-section.tsx above the automations list in a collapsible 'System Tasks' section. Follow Tailwind CSS 4 and existing component patterns — no new npm dependencies.\n\n**Files to Modify:**\n- apps/ui/src/hooks/use-scheduler-status.ts\n- apps/ui/src/components/views/settings-view/automations/scheduler-health-grid.tsx\n- apps/ui/src/components/views/settings-view/automations/automations-section.tsx\n\n**Acceptance Criteria:**\n- [ ] useSchedulerStatus hook fetches and auto-refreshes every 30s\n- [ ] SchedulerHealthGrid renders with live data from the API\n- [ ] Next-run countdown updates reactively and shows relative time\n- [ ] Last-run badge shows green check on success, red X on failure with error tooltip\n- [ ] Never-run tasks show N/A for last-run\n- [ ] No new npm dependencies introduced\n- [ ] TypeScript compiles clean\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Scheduler Health Grid Component",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772700291789-44zqatyfr",
+  "branchName": "feature/health-dashboard-scheduler-health",
+  "isFoundation": true,
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291791-oxg2agujb",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Health Dashboard and Failure Alerting\n\nAdd useSchedulerStatus hook at apps/ui/src/hooks/use-scheduler-status.ts that polls GET /api/automations/scheduler/status every 30 seconds using the existing API client pattern. Add SchedulerHealthGrid component at apps/ui/src/components/views/settings-view/automations/scheduler-health-grid.tsx rendering a grid of task cards: task name, enabled badge, next-run countdown (e.g. 'in 4m 23s'), last-run result badge (green check or red X with error tooltip), execution count. Integrate SchedulerHealthGrid into automations-section.tsx above the automations list in a collapsible 'System Tasks' section. Follow Tailwind CSS 4 and existing component patterns — no new npm dependencies.\n\n**Files to Modify:**\n- apps/ui/src/hooks/use-scheduler-status.ts\n- apps/ui/src/components/views/settings-view/automations/scheduler-health-grid.tsx\n- apps/ui/src/components/views/settings-view/automations/automations-section.tsx\n\n**Acceptance Criteria:**\n- [ ] useSchedulerStatus hook fetches and auto-refreshes every 30s\n- [ ] SchedulerHealthGrid renders with live data from the API\n- [ ] Next-run countdown updates reactively and shows relative time\n- [ ] Last-run badge shows green check on success, red X on failure with error tooltip\n- [ ] Never-run tasks show N/A for last-run\n- [ ] No new npm dependencies introduced\n- [ ] TypeScript compiles clean\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-05T08:44:51.791Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.791Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.791Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772700291787-gcqfn3g0o"
+  ]
+}

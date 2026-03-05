@@ -1,0 +1,28 @@
+{
+  "category": "Scheduler REST API",
+  "description": "**Milestone:** Scheduler REST API\n\nAdd GET /api/automations/scheduler/status route that calls SchedulerService.getStatus() and returns all task states (id, name, enabled, cronExpression, nextRun, lastRun, executionCount, lastError, averageDurationMs). Also extend the existing GET /api/automations/list response to include a schedulerStats object per automation entry (nextRun, lastRun, executionCount, lastError) by joining with scheduler task state on taskId. Wire the new route into apps/server/src/server/routes.ts. Protect with existing X-API-Key auth middleware. This endpoint is the data source for the health dashboard in Milestone 4.\n\n**Files to Modify:**\n- apps/server/src/routes/automations/index.ts\n- apps/server/src/services/automation-service.ts\n- apps/server/src/server/routes.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/automations/scheduler/status returns 200 with array of task status objects\n- [ ] Each entry includes: id, name, enabled, cronExpression, nextRun (ISO string or null), lastRun (ISO string or null), executionCount (number), lastError (string or null)\n- [ ] GET /api/automations/list response includes schedulerStats per automation entry\n- [ ] Endpoint is protected by API key auth and returns 401 without valid key\n- [ ] TypeScript compiles clean with no errors\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Scheduler Status Endpoint",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772700291779-pnprimiop",
+  "branchName": "feature/scheduler-rest-api-scheduler-status",
+  "isFoundation": true,
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291782-d7qohhuux",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Scheduler REST API\n\nAdd GET /api/automations/scheduler/status route that calls SchedulerService.getStatus() and returns all task states (id, name, enabled, cronExpression, nextRun, lastRun, executionCount, lastError, averageDurationMs). Also extend the existing GET /api/automations/list response to include a schedulerStats object per automation entry (nextRun, lastRun, executionCount, lastError) by joining with scheduler task state on taskId. Wire the new route into apps/server/src/server/routes.ts. Protect with existing X-API-Key auth middleware. This endpoint is the data source for the health dashboard in Milestone 4.\n\n**Files to Modify:**\n- apps/server/src/routes/automations/index.ts\n- apps/server/src/services/automation-service.ts\n- apps/server/src/server/routes.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/automations/scheduler/status returns 200 with array of task status objects\n- [ ] Each entry includes: id, name, enabled, cronExpression, nextRun (ISO string or null), lastRun (ISO string or null), executionCount (number), lastError (string or null)\n- [ ] GET /api/automations/list response includes schedulerStats per automation entry\n- [ ] Endpoint is protected by API key auth and returns 401 without valid key\n- [ ] TypeScript compiles clean with no errors\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-05T08:44:51.782Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.782Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.782Z",
+      "reason": "Feature created"
+    }
+  ]
+}

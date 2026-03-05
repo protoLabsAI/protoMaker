@@ -1,1 +1,0 @@
-Automation type already has lastRunAt, nextRunAt, lastRunStatus fields but not populated. SchedulerService stores lastRun, nextRun, executionCount, failureCount on ScheduledTask objects. /api/automations/:id/run and /api/automations/:id/history endpoints exist and work but not wired to UI. MaintenanceSection is the only caller of /api/scheduler/* in the UI.

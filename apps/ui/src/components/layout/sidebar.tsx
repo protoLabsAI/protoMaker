@@ -7,6 +7,8 @@ import { cn, isMac } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { useCeremonyStore } from '@/store/ceremony-store';
+import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
+import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
 import { useKeyboardShortcuts, useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { getElectronAPI, isElectron } from '@/lib/electron';
 import { initializeProject, hasAppSpec, hasAutomakerDir } from '@/lib/project-init';
@@ -95,6 +97,13 @@ export function Sidebar() {
 
   // Get customizable keyboard shortcuts
   const shortcuts = useKeyboardShortcutsConfig();
+
+  // Load inbox data eagerly so the badge count is available without navigating to /inbox
+  const projectPath = currentProject?.path ?? null;
+  useLoadActionableItems(projectPath);
+  useActionableItemEvents(projectPath);
+  useLoadCeremonyEntries(projectPath);
+  useCeremonyEventStream(projectPath);
 
   // Get pending actionable items count (drives the inbox badge)
   const unreadNotificationsCount = useActionableItemsStore((s) => s.pendingCount);
