@@ -546,6 +546,7 @@ export type {
   GitHubPushWebhookPayload,
   GitHubPingWebhookPayload,
   GitHubCheckSuiteWebhookPayload,
+  GitHubCheckRunWebhookPayload,
   GitHubWebhookPayload,
   WebhookVerificationResult,
   WebhookSettings,

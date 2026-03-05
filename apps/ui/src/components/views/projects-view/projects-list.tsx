@@ -10,6 +10,7 @@ import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useProjectFeatures } from './hooks/use-project-features';
 
 interface ProjectSummary {
   slug: string;
@@ -56,6 +57,31 @@ const PROJECT_STATUS_LABELS: Record<string, string> = {
   active: 'Active',
   completed: 'Completed',
 };
+
+function ProjectProgress({ projectSlug }: { projectSlug: string }) {
+  const { data: featuresData } = useProjectFeatures(projectSlug);
+  const features = (featuresData?.data?.features ?? []) as Array<{ status?: string }>;
+  const total = features.length;
+  const done = features.filter((f) => f.status === 'done').length;
+
+  if (total === 0) return null;
+
+  const pct = Math.round((done / total) * 100);
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-[var(--status-success)]"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted-foreground whitespace-nowrap">
+        {done}/{total}
+      </span>
+    </div>
+  );
+}
 
 export function ProjectsList() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
@@ -322,10 +348,11 @@ export function ProjectsList() {
                             )}
                           </div>
 
-                          {/* Milestone / phase counts */}
-                          <div className="w-32 shrink-0 flex items-center gap-3 text-xs text-muted-foreground pr-3">
+                          {/* Milestone / phase counts + progress */}
+                          <div className="w-36 shrink-0 flex items-center gap-3 text-xs text-muted-foreground pr-3">
                             {milestoneCount > 0 && <span>{milestoneCount} ms</span>}
                             {phaseCount > 0 && <span>{phaseCount} ph</span>}
+                            <ProjectProgress projectSlug={project.slug} />
                           </div>
 
                           {/* Navigate chevron */}

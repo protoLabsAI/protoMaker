@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Layers, BookOpen, MessageSquare } from 'lucide-react';
+import { FileText, Layers, BookOpen, MessageSquare, FlaskConical } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
@@ -12,6 +12,7 @@ import { PrdTab } from './tabs/prd-tab';
 import { FeaturesTab } from './tabs/features-tab';
 import { ResourcesTab } from './tabs/resources-tab';
 import { UpdatesTab } from './tabs/updates-tab';
+import { ResearchTab } from './tabs/research-tab';
 import type { Project } from '@protolabsai/types';
 
 export function ProjectDetail({
@@ -93,6 +94,12 @@ export function ProjectDetail({
                 <MessageSquare />
                 <span className="hidden sm:inline">Updates</span>
               </TabsTrigger>
+              {project.researchSummary && (
+                <TabsTrigger value="research">
+                  <FlaskConical />
+                  <span className="hidden sm:inline">Research</span>
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="prd">
@@ -110,6 +117,12 @@ export function ProjectDetail({
             <TabsContent value="updates">
               <UpdatesTab project={project as Project} />
             </TabsContent>
+
+            {project.researchSummary && (
+              <TabsContent value="research">
+                <ResearchTab project={project as Project} />
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

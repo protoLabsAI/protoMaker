@@ -77,7 +77,7 @@ Three files in `.github/ISSUE_TEMPLATE/`:
 blank_issues_enabled: false
 contact_links:
   - name: Discord
-    url: https://discord.gg/protolabs-studio
+    url: https://discord.gg/3KtfEthCpk
     about: Chat with the team and community
   - name: Discussions
     url: https://github.com/protoLabsAI/protoMaker/discussions
@@ -112,7 +112,7 @@ jobs:
             **Here's how you can contribute:**
             - Feature ideas: [Discussions](https://github.com/${context.repo.owner}/${context.repo.repo}/discussions/new?category=ideas)
             - Bug reports: [Issues](https://github.com/${context.repo.owner}/${context.repo.repo}/issues/new?template=bug_report.yml)
-            - Chat with us: [Discord](https://discord.gg/protolabs-studio)
+            - Chat with us: [Discord](https://discord.gg/3KtfEthCpk)
 
             Your ideas shape our roadmap. We just implement them differently.`;
             await github.rest.issues.createComment({

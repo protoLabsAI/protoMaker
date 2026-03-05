@@ -8,9 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/protoLabsAI/protolabs-studio/actions/workflows/test.yml"><img src="https://github.com/protoLabsAI/protolabs-studio/actions/workflows/test.yml/badge.svg" alt="Build Status" /></a>
+  <a href="https://github.com/protoLabsAI/protoMaker/actions/workflows/test.yml"><img src="https://github.com/protoLabsAI/protoMaker/actions/workflows/test.yml/badge.svg" alt="Build Status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="https://discord.gg/protolabs"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
+  <a href="https://discord.gg/3KtfEthCpk"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen" alt="Node Version" /></a>
   <a href="https://protolabs.studio"><img src="https://img.shields.io/badge/docs-protolabs.studio-blue" alt="Docs" /></a>
 </p>
@@ -38,8 +38,8 @@ _Desktop releases coming soon. Run from source to try now._
 ### Run from Source
 
 ```bash
-git clone https://github.com/protoLabsAI/protolabs-studio.git
-cd protolabs-studio
+git clone https://github.com/protoLabsAI/protoMaker.git
+cd protoMaker
 npm install
 npm run dev                 # Interactive launcher (choose web or electron)
 npm run dev:full            # Web mode — starts UI (localhost:3007) AND server (localhost:3008)
@@ -153,7 +153,7 @@ Full docs at **[protolabs.studio](https://protolabs.studio)**:
 
 Join builders exploring agentic coding and autonomous development:
 
-**[Discord](https://discord.gg/protolabs)** · **[protolabs.studio](https://protolabs.studio)** · **[GitHub](https://github.com/protoLabsAI)** · **[Code of Conduct](CODE_OF_CONDUCT.md)**
+**[Discord](https://discord.gg/3KtfEthCpk)** · **[protolabs.studio](https://protolabs.studio)** · **[GitHub](https://github.com/protoLabsAI)** · **[Code of Conduct](CODE_OF_CONDUCT.md)**
 
 ## Contributing
 
@@ -161,7 +161,7 @@ protoLabs uses an **ideas-only contribution model** --- AI agents implement all 
 
 - **Submit an idea**: [Idea Submission](https://github.com/protoLabsAI/protoMaker/issues/new?template=idea_submission.yml)
 - **Report a bug**: [Bug Report](https://github.com/protoLabsAI/protoMaker/issues/new?template=bug_report.yml)
-- **Join the discussion**: [Discord](https://discord.gg/protolabs)
+- **Join the discussion**: [Discord](https://discord.gg/3KtfEthCpk)
 
 [Contributing Guidelines](CONTRIBUTING.md)
 

@@ -12,8 +12,8 @@ protoLabs uses your authenticated Claude Code CLI credentials automatically. No 
 ## Install
 
 ```bash
-git clone https://github.com/protoLabsAI/protolabs-studio.git
-cd protolabs-studio
+git clone https://github.com/protoLabsAI/protoMaker.git
+cd protoMaker
 npm install
 ```
 

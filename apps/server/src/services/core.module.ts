@@ -1,4 +1,5 @@
 import type { ServiceContainer } from '../server/services.js';
+import { getPRWatcherService } from './pr-watcher-service.js';
 
 /**
  * Wires core service dependencies: calendar, headsdown, dev server, notifications,
@@ -61,4 +62,8 @@ export function register(container: ServiceContainer): void {
 
   // Audit service initialization
   auditService.initialize(authorityService);
+
+  // PRWatcherService — initialize singleton with the app event bus so the watch_pr
+  // Ava tool can call getPRWatcherService() without arguments and always get an instance.
+  getPRWatcherService(events);
 }
