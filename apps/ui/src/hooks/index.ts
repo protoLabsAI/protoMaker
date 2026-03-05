@@ -1,4 +1,5 @@
 export { useAutoMode } from './use-auto-mode';
+export { useScrollLock } from './use-scroll-lock';
 export { useBoardBackgroundSettings } from './use-board-background-settings';
 export { useKeyboardShortcuts } from './use-keyboard-shortcuts';
 export { useOSDetection, type OperatingSystem, type OSDetectionResult } from './use-os-detection';
