@@ -51,12 +51,12 @@ function StatItem({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="flex items-center gap-1 cursor-default">
+        <button className="flex items-center gap-1 cursor-default bg-transparent border-none p-0 focus:outline-none">
           <Icon className="h-3.5 w-3.5" />
           <span className={highlight && value > 0 ? `${highlightColor} font-medium` : ''}>
             {value}
           </span>
-        </span>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="text-xs max-w-xs">
         {tooltip}
@@ -96,9 +96,11 @@ export function BottomPanel() {
   const heapPercent = systemHealth?.heap?.percentage ?? 0;
   const uptime = systemHealth?.uptime ?? 0;
 
+  const peakPercent = Math.max(memPercent, cpuPercent, heapPercent);
+
   let systemStatus: 'ok' | 'warn' | 'error' = 'ok';
-  if (memPercent > 90 || cpuPercent > 90 || heapPercent > 90) systemStatus = 'error';
-  else if (memPercent > 75 || cpuPercent > 75 || heapPercent > 75) systemStatus = 'warn';
+  if (peakPercent > 90) systemStatus = 'error';
+  else if (peakPercent > 75) systemStatus = 'warn';
 
   const systemStatusColor = {
     ok: 'text-emerald-500',
@@ -180,9 +182,15 @@ export function BottomPanel() {
           <div className="h-4 w-px bg-border" />
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={cn('flex items-center gap-1 cursor-default', systemStatusColor)}>
+              <button
+                className={cn(
+                  'flex items-center gap-1 cursor-default bg-transparent border-none p-0 focus:outline-none',
+                  systemStatusColor
+                )}
+              >
                 <HeartPulse className="h-3.5 w-3.5" />
-              </span>
+                <span className="font-medium">{peakPercent.toFixed(0)}%</span>
+              </button>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
               {systemHealth ? (
@@ -190,7 +198,11 @@ export function BottomPanel() {
                   <p className="font-medium border-b border-border pb-1">System Health</p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Memory</span>
-                    <span className={memPercent > 75 ? 'text-yellow-400' : ''}>
+                    <span
+                      className={
+                        memPercent > 90 ? 'text-red-400' : memPercent > 75 ? 'text-yellow-400' : ''
+                      }
+                    >
                       {memPercent.toFixed(0)}%{' '}
                       <span className="text-muted-foreground/70">
                         ({formatBytes(systemHealth.memory.systemUsed)})
@@ -199,7 +211,11 @@ export function BottomPanel() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">CPU</span>
-                    <span className={cpuPercent > 75 ? 'text-yellow-400' : ''}>
+                    <span
+                      className={
+                        cpuPercent > 90 ? 'text-red-400' : cpuPercent > 75 ? 'text-yellow-400' : ''
+                      }
+                    >
                       {cpuPercent.toFixed(0)}%{' '}
                       <span className="text-muted-foreground/70">
                         ({systemHealth.cpu.cores} cores)
@@ -208,7 +224,15 @@ export function BottomPanel() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Heap</span>
-                    <span className={heapPercent > 75 ? 'text-yellow-400' : ''}>
+                    <span
+                      className={
+                        heapPercent > 90
+                          ? 'text-red-400'
+                          : heapPercent > 75
+                            ? 'text-yellow-400'
+                            : ''
+                      }
+                    >
                       {formatBytes(systemHealth.heap.used)} / {formatBytes(systemHealth.heap.total)}
                     </span>
                   </div>
