@@ -5,7 +5,7 @@
 import { Router, type Request, type Response } from 'express';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import type { CalendarService, CalendarQueryOptions } from '../../services/calendar-service.js';
-import type { JobAction } from '@protolabs-ai/types';
+import type { JobAction } from '@protolabsai/types';
 import type { JobExecutorService } from '../../services/job-executor-service.js';
 
 /**

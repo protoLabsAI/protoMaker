@@ -2,7 +2,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import {
   AlertCircle,
   AlertTriangle,
@@ -23,11 +23,11 @@ import {
   FileText,
   XCircle,
 } from 'lucide-react';
-import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
+import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
 import { EpicBadge } from './epic-badge';
 import { formatCostUsd } from '@/lib/format';
-import type { WorkItemState } from '@protolabs-ai/types';
+import type { WorkItemState } from '@protolabsai/types';
 
 /** Uniform badge style for all card badges */
 const uniformBadgeClass =

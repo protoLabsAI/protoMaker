@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('FeatureImageUpload');
 import { ImageIcon, X } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import {
   fileToBase64,
   generateImageId,

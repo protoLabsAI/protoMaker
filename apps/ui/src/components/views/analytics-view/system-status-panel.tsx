@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { Activity, Bot, GitPullRequest, ListTodo, Bell } from 'lucide-react';
 
 interface SystemStatusPanelProps {

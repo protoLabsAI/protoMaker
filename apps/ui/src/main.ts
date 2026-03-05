@@ -49,7 +49,7 @@ if (process.env.SENTRY_DSN_ELECTRON && process.env.SENTRY_ENABLED !== 'false') {
  * This version spawns the backend server and uses HTTP API for most operations.
  * Only native features (dialogs, shell) use IPC.
  *
- * SECURITY: All file system access uses centralized methods from @protolabs-ai/platform.
+ * SECURITY: All file system access uses centralized methods from @protolabsai/platform.
  */
 
 import path from 'path';
@@ -59,7 +59,7 @@ import crypto from 'crypto';
 import http, { Server } from 'http';
 import net from 'net';
 import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { initAutoUpdater } from './auto-updater';
 import {
   findNodeExecutable,
@@ -79,7 +79,7 @@ import {
   electronAppReadFile,
   // System path operations
   systemPathExists,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 
 const logger = createLogger('Electron');
 const serverLogger = createLogger('Server');
@@ -200,7 +200,7 @@ const MIN_HEIGHT = 500; // Reduced to allow more flexibility
 const DEFAULT_WIDTH = 1600;
 const DEFAULT_HEIGHT = 950;
 
-// Window bounds interface (matches @protolabs-ai/types WindowBounds)
+// Window bounds interface (matches @protolabsai/types WindowBounds)
 interface WindowBounds {
   x: number;
   y: number;

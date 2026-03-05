@@ -1,6 +1,6 @@
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { CliStatus } from '../shared/types';
 

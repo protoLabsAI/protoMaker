@@ -24,7 +24,7 @@ jobs:
     if: >-
       github.event.pull_request.merged == true &&
       github.event.pull_request.head.ref == 'staging' &&
-      github.repository == 'proto-labs-ai/protoMaker'
+      github.repository == 'protoLabsAI/protoMaker'
     timeout-minutes: 15
     permissions:
       contents: write
@@ -75,7 +75,7 @@ jobs:
         run: npm run release:prepare
 
       - name: Apply version bump
-        # Bumps all @protolabs-ai/* packages in lockstep and writes CHANGELOG.md.
+        # Bumps all @protolabsai/* packages in lockstep and writes CHANGELOG.md.
         # Then syncs workspace root, server, and ui to the same version so the
         # git tag always reflects the product version (not a stale 0.x.0 root).
         run: |

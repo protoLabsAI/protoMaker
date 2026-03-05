@@ -13,7 +13,7 @@
  * 2. Configure in settings with DISCORD_TOKEN and DISCORD_GUILD_ID
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   DiscordChannel,
   DiscordCategory,
@@ -28,7 +28,7 @@ import type {
   CreateWebhookOptions,
   SendWebhookMessageOptions,
   DiscordOperationResult,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { ClaudeProvider } from '../providers/claude-provider.js';
 
 const logger = createLogger('DiscordService');

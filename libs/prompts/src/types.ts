@@ -1,8 +1,8 @@
 /**
- * Shared types for @protolabs-ai/prompts
+ * Shared types for @protolabsai/prompts
  */
 
-import type { UserProfile } from '@protolabs-ai/types';
+import type { UserProfile } from '@protolabsai/types';
 
 /** Configuration for personified agent prompt generators */
 export interface PromptConfig {

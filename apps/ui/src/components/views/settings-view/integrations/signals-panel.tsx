@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Inbox } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { apiFetch } from '@/lib/api-fetch';
-import type { RecentSignal, SignalChannel, SignalIntent } from '@protolabs-ai/types';
+import type { RecentSignal, SignalChannel, SignalIntent } from '@protolabsai/types';
 
 const CHANNEL_STYLES: Record<SignalChannel, { label: string; className: string }> = {
   discord: {

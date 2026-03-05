@@ -1,5 +1,5 @@
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';

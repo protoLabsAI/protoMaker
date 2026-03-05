@@ -11,9 +11,9 @@
  * Storage: JSON file at {DATA_DIR}/trust-tiers.json
  */
 
-import { createLogger, atomicWriteJson, readJsonFile } from '@protolabs-ai/utils';
-import type { TrustTier, TrustTierRecord } from '@protolabs-ai/types';
-import type { Feature } from '@protolabs-ai/types';
+import { createLogger, atomicWriteJson, readJsonFile } from '@protolabsai/utils';
+import type { TrustTier, TrustTierRecord } from '@protolabsai/types';
+import type { Feature } from '@protolabsai/types';
 import path from 'path';
 
 const logger = createLogger('TrustTierService');

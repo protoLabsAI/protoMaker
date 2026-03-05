@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/flows
+ * @protolabsai/flows
  *
  * LangGraph state graph utilities and flow orchestration for AutoMaker.
  * Provides state management, reducers, routing, and example flows.

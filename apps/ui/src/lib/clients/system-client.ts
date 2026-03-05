@@ -21,7 +21,7 @@ import type {
   IntegrationStatusResponse,
   SystemHealthResponse,
 } from './api-types';
-import type { DiscordChannelSignalConfig, ProjectHealth } from '@protolabs-ai/types';
+import type { DiscordChannelSignalConfig, ProjectHealth } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>

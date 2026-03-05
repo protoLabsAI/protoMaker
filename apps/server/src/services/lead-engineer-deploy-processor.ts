@@ -6,9 +6,9 @@
  */
 
 import path from 'node:path';
-import { createLogger } from '@protolabs-ai/utils';
-import { getFeatureDir } from '@protolabs-ai/platform';
-import type { EventType } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { getFeatureDir } from '@protolabsai/platform';
+import type { EventType } from '@protolabsai/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import type {
   ProcessorServiceContext,

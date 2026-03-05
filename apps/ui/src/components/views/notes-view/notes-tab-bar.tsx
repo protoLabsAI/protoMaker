@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button, Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
 
 interface NotesTabBarProps {
   tabs: Array<{ id: string; name: string }>;

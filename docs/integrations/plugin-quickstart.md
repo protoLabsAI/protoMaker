@@ -13,7 +13,7 @@ Get the protoLabs Claude Code plugin running in 5 minutes.
 ### 1. Clone and build
 
 ```bash
-git clone https://github.com/proto-labs-ai/protomaker.git
+git clone https://github.com/protoLabsAI/protomaker.git
 cd protomaker
 npm install
 npm run build:packages

@@ -13,8 +13,8 @@ import type {
   LifecycleCollectResult,
   ProjectLifecyclePhase,
   Milestone,
-} from '@protolabs-ai/types';
-import { createLogger, slugify } from '@protolabs-ai/utils';
+} from '@protolabsai/types';
+import { createLogger, slugify } from '@protolabsai/utils';
 import type { SettingsService } from './settings-service.js';
 import type { ProjectService } from './project-service.js';
 import type { FeatureLoader } from './feature-loader.js';

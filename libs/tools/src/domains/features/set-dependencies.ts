@@ -6,7 +6,7 @@
  */
 
 import type { ToolContext, ToolResult } from '../../types.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 export interface SetDependenciesInput {
   projectPath: string;

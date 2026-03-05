@@ -17,19 +17,19 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
 const FIXED_PACKAGES = [
-  '@protolabs-ai/types',
-  '@protolabs-ai/utils',
-  '@protolabs-ai/platform',
-  '@protolabs-ai/prompts',
-  '@protolabs-ai/tools',
-  '@protolabs-ai/model-resolver',
-  '@protolabs-ai/dependency-resolver',
-  '@protolabs-ai/spec-parser',
-  '@protolabs-ai/flows',
-  '@protolabs-ai/observability',
-  '@protolabs-ai/git-utils',
-  '@protolabs-ai/mcp-server',
-  '@protolabs-ai/ui',
+  '@protolabsai/types',
+  '@protolabsai/utils',
+  '@protolabsai/platform',
+  '@protolabsai/prompts',
+  '@protolabsai/tools',
+  '@protolabsai/model-resolver',
+  '@protolabsai/dependency-resolver',
+  '@protolabsai/spec-parser',
+  '@protolabsai/flows',
+  '@protolabsai/observability',
+  '@protolabsai/git-utils',
+  '@protolabsai/mcp-server',
+  '@protolabsai/ui',
 ];
 
 function run(cmd) {

@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Workflow, RotateCcw, Replace } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { PhaseModelSelector } from './phase-model-selector';
 import { BulkReplaceDialog } from './bulk-replace-dialog';
-import type { PhaseModelKey } from '@protolabs-ai/types';
-import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
+import type { PhaseModelKey } from '@protolabsai/types';
+import { DEFAULT_PHASE_MODELS } from '@protolabsai/types';
 
 interface PhaseConfig {
   key: PhaseModelKey;

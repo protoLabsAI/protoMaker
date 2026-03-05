@@ -3,11 +3,11 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
-import { CODEX_MODEL_MAP } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { CODEX_MODEL_MAP } from '@protolabsai/types';
 import { ProviderFactory } from '../../../providers/provider-factory.js';
 import { getApiKey } from '../common.js';
-import { getCodexAuthIndicators } from '@protolabs-ai/platform';
+import { getCodexAuthIndicators } from '@protolabsai/platform';
 import {
   createSecureAuthEnv,
   AuthSessionManager,

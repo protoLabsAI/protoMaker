@@ -13,13 +13,13 @@
  */
 
 import { execSync } from 'node:child_process';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import {
   EscalationSource,
   EscalationSeverity,
   type EscalationChannel,
   type EscalationSignal,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { FeatureLoader } from '../feature-loader.js';
 
 const logger = createLogger('GitHubIssueChannel');

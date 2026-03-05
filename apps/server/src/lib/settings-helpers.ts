@@ -3,8 +3,8 @@
  */
 
 import type { SettingsService } from '../services/settings-service.js';
-import type { ContextFilesResult, ContextFileInfo } from '@protolabs-ai/utils';
-import { createLogger } from '@protolabs-ai/utils';
+import type { ContextFilesResult, ContextFileInfo } from '@protolabsai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   MCPServerConfig,
   McpServerConfig,
@@ -15,8 +15,8 @@ import type {
   PhaseModelEntry,
   Credentials,
   WorkflowSettings,
-} from '@protolabs-ai/types';
-import { DEFAULT_PHASE_MODELS, DEFAULT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_PHASE_MODELS, DEFAULT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import {
   mergeAutoModePrompts,
   mergeAgentPrompts,
@@ -30,7 +30,7 @@ import {
   mergeContextDescriptionPrompts,
   mergeSuggestionsPrompts,
   mergeTaskExecutionPrompts,
-} from '@protolabs-ai/prompts';
+} from '@protolabsai/prompts';
 
 const logger = createLogger('SettingsHelper');
 
@@ -129,7 +129,7 @@ ${formattedFiles.join('\n\n---\n\n')}
 
 /**
  * Format a single context file entry for the prompt
- * (Matches the format used in @protolabs-ai/utils/context-loader.ts)
+ * (Matches the format used in @protolabsai/utils/context-loader.ts)
  */
 function formatContextFileEntry(file: ContextFileInfo): string {
   const header = `## ${file.name}`;
@@ -484,7 +484,7 @@ export async function getSubagentsConfiguration(settingsService: SettingsService
 export async function getCustomSubagents(
   settingsService: SettingsService,
   projectPath?: string
-): Promise<Record<string, import('@protolabs-ai/types').AgentDefinition> | undefined> {
+): Promise<Record<string, import('@protolabsai/types').AgentDefinition> | undefined> {
   // Get global subagents
   const globalSettings = await settingsService.getGlobalSettings();
   const globalSubagents = globalSettings.customSubagents || {};
@@ -512,7 +512,7 @@ export interface ActiveClaudeApiProfileResult {
   /** The active profile, or undefined if using direct Anthropic API */
   profile: ClaudeApiProfile | undefined;
   /** Credentials for resolving 'credentials' apiKeySource */
-  credentials: import('@protolabs-ai/types').Credentials | undefined;
+  credentials: import('@protolabsai/types').Credentials | undefined;
 }
 
 /**
@@ -748,7 +748,7 @@ export interface ProviderByModelIdResult {
   /** The provider that contains this model, or undefined if not found */
   provider: ClaudeCompatibleProvider | undefined;
   /** The model configuration if found */
-  modelConfig: import('@protolabs-ai/types').ProviderModel | undefined;
+  modelConfig: import('@protolabsai/types').ProviderModel | undefined;
   /** Credentials for API key resolution */
   credentials: Credentials | undefined;
   /** The resolved Claude model ID to use for API calls (from mapsToClaudeModel) */
@@ -797,7 +797,7 @@ export async function getProviderByModelId(
         let resolvedModel: string | undefined;
         if (modelConfig.mapsToClaudeModel) {
           // Import resolveModelString to convert alias to full model ID
-          const { resolveModelString } = await import('@protolabs-ai/model-resolver');
+          const { resolveModelString } = await import('@protolabsai/model-resolver');
           resolvedModel = resolveModelString(modelConfig.mapsToClaudeModel);
           logger.info(
             `${logPrefix} Model "${modelId}" maps to Claude model "${modelConfig.mapsToClaudeModel}" -> "${resolvedModel}"`
@@ -842,7 +842,7 @@ export async function getAllProviderModels(
   Array<{
     providerId: string;
     providerName: string;
-    model: import('@protolabs-ai/types').ProviderModel;
+    model: import('@protolabsai/types').ProviderModel;
   }>
 > {
   try {
@@ -852,7 +852,7 @@ export async function getAllProviderModels(
     const allModels: Array<{
       providerId: string;
       providerName: string;
-      model: import('@protolabs-ai/types').ProviderModel;
+      model: import('@protolabsai/types').ProviderModel;
     }> = [];
 
     for (const provider of providers) {

@@ -6,8 +6,8 @@
  * no LLM calls, no async operations.
  */
 
-import type { FailureAnalysis, FailureCategory, RecoveryStrategy } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import type { FailureAnalysis, FailureCategory, RecoveryStrategy } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('FailureClassifier');
 

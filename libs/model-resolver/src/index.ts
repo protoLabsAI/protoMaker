@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/model-resolver
+ * @protolabsai/model-resolver
  * Model resolution utilities for AutoMaker
  */
 
@@ -10,7 +10,7 @@ export {
   DEFAULT_MODELS,
   type ModelAlias,
   type CursorModelId,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 // Export resolver functions
 export {

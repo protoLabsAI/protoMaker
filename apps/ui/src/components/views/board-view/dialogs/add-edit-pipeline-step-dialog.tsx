@@ -6,14 +6,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
 import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import type { PipelineStep } from '@protolabs-ai/types';
+import type { PipelineStep } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 import { STEP_TEMPLATES } from './pipeline-step-templates';
 

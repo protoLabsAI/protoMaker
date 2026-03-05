@@ -7,10 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { PathInput } from '@/components/shared/path-input';
-import { Kbd, KbdGroup } from '@protolabs-ai/ui/atoms';
+import { Kbd, KbdGroup } from '@protolabsai/ui/atoms';
 import { getDefaultWorkspaceDirectory, saveLastProjectDirectory } from '@/lib/workspace-config';
 import { useOSDetection } from '@/hooks';
 import { apiPost } from '@/lib/api-fetch';

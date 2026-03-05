@@ -5,10 +5,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { HotkeyButton } from '@protolabs-ai/ui/molecules';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { HotkeyButton } from '@protolabsai/ui/molecules';
 import {
   DescriptionImageDropZone,
   FeatureImagePath as DescriptionImagePath,

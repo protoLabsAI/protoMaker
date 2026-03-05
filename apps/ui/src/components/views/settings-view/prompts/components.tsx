@@ -1,9 +1,9 @@
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
 import { Info, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { PromptCustomization, CustomPrompt } from '@protolabs-ai/types';
+import type { PromptCustomization, CustomPrompt } from '@protolabsai/types';
 import type { BannerConfig, PromptFieldConfig, PromptFieldProps } from './types';
 
 /**

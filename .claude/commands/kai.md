@@ -95,7 +95,7 @@ Services communicate via `createEventEmitter()` events, not direct imports. This
 
 ### Errors are typed
 
-Use `classifyError()` from `@protolabs-ai/utils` for error categorization. Never swallow errors — log with `createLogger()` and return meaningful HTTP status codes. Consistent error responses make client-side handling predictable.
+Use `classifyError()` from `@protolabsai/utils` for error categorization. Never swallow errors — log with `createLogger()` and return meaningful HTTP status codes. Consistent error responses make client-side handling predictable.
 
 ### Express 5 conventions
 
@@ -108,7 +108,7 @@ Use `classifyError()` from `@protolabs-ai/utils` for error categorization. Never
 ```typescript
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('my-routes');
 const router = Router();
@@ -130,7 +130,7 @@ export { router as myRoutes };
 ### Service Pattern
 
 ```typescript
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('MyService');
 
@@ -153,7 +153,7 @@ export class MyService {
 ### Error Handling
 
 - Use `createLogger()` for all logging — never raw `console.log`
-- Use `classifyError()` from `@protolabs-ai/utils` for error categorization
+- Use `classifyError()` from `@protolabsai/utils` for error categorization
 - Return appropriate HTTP status codes: 400 (bad input), 404 (not found), 409 (conflict), 500 (internal)
 - Include `error` field in JSON responses for client consumption
 
@@ -219,15 +219,15 @@ Run server tests: `npm run test:server`
 - Express 5, WebSocket (ws), node-pty
 - Claude Agent SDK (agent execution)
 - Zod (request/response validation)
-- @protolabs-ai/types, @protolabs-ai/utils, @protolabs-ai/platform
+- @protolabsai/types, @protolabsai/utils, @protolabsai/platform
 
 ## Monorepo Context
 
 ```
 apps/server/      # Express 5 + WebSocket backend (port 3008)
-libs/types/       # @protolabs-ai/types (shared TypeScript definitions)
-libs/utils/       # @protolabs-ai/utils (logging, errors)
-libs/platform/    # @protolabs-ai/platform (paths, security)
+libs/types/       # @protolabsai/types (shared TypeScript definitions)
+libs/utils/       # @protolabsai/utils (logging, errors)
+libs/platform/    # @protolabsai/platform (paths, security)
 ```
 
 **Build order:** Always run `npm run build:packages` before building server if shared packages changed.

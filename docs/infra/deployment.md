@@ -28,15 +28,15 @@ No build step. Cloudflare serves the static HTML directly from the `site/` direc
 
 ### Cloudflare Pages Configuration
 
-| Setting           | Value                     |
-| ----------------- | ------------------------- |
-| Project name      | `protolabs-studio`        |
-| Repository        | `proto-labs-ai/automaker` |
-| Production branch | `main`                    |
-| Root directory    | `site`                    |
-| Build command     | _(none)_                  |
-| Build output      | `/`                       |
-| Watch paths       | `site/**`                 |
+| Setting           | Value                   |
+| ----------------- | ----------------------- |
+| Project name      | `protolabs-studio`      |
+| Repository        | `protoLabsAI/automaker` |
+| Production branch | `main`                  |
+| Root directory    | `site`                  |
+| Build command     | _(none)_                |
+| Build output      | `/`                     |
+| Watch paths       | `site/**`               |
 
 ### Custom Domains
 

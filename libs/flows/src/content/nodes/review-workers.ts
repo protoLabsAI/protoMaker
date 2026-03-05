@@ -9,8 +9,8 @@
 
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { RunnableConfig } from '@langchain/core/runnables';
-import { createLogger } from '@protolabs-ai/utils';
-import { LangfuseClient } from '@protolabs-ai/observability';
+import { createLogger } from '@protolabsai/utils';
+import { LangfuseClient } from '@protolabsai/observability';
 import { isLangfuseReady } from '../langfuse-guard.js';
 import { compilePrompt } from '../prompt-loader.js';
 import { extractAllTags, extractTag, extractRequiredEnum } from '../xml-parser.js';

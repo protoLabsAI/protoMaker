@@ -5,7 +5,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { randomBytes } from 'node:crypto';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { GoogleCalendarSyncService } from '../../services/google-calendar-sync-service.js';
 

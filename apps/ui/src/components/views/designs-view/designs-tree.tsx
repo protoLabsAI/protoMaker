@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDesignsStore, type FileTreeNode } from '@/store/designs-store';
 import { getElectronAPI } from '@/lib/electron';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { Folder, FolderOpen, FileText, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';

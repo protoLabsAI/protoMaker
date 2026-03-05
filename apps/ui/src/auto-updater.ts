@@ -10,7 +10,7 @@
 
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { autoUpdater, UpdateInfo, ProgressInfo } from 'electron-updater';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 
 const logger = createLogger('AutoUpdater');
 

@@ -11,9 +11,9 @@
  * invalidateSitrep() clears the cache entry for a given projectPath immediately.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import { getExecutionStatePath } from '@protolabs-ai/platform';
-import type { ExecutionState, Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { getExecutionStatePath } from '@protolabsai/platform';
+import type { ExecutionState, Feature } from '@protolabsai/types';
 import { FeatureLoader } from '../../services/feature-loader.js';
 import * as secureFs from '../../lib/secure-fs.js';
 

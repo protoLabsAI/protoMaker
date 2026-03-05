@@ -10,7 +10,7 @@
  * @see https://martinfowler.com/bliki/CircuitBreaker.html
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('CircuitBreaker');
 

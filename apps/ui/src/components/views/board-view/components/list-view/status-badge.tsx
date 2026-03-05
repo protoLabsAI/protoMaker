@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { COLUMNS, isPipelineStatus } from '../../constants';
-import type { FeatureStatusWithPipeline, PipelineConfig } from '@protolabs-ai/types';
+import type { FeatureStatusWithPipeline, PipelineConfig } from '@protolabsai/types';
 
 /**
  * Status display configuration

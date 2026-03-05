@@ -22,9 +22,9 @@ import {
   ListTodo,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
-import type { NoteTabPermissions } from '@protolabs-ai/types';
+import { Button } from '@protolabsai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
+import type { NoteTabPermissions } from '@protolabsai/types';
 
 interface NotesToolbarProps {
   editor: Editor | null;

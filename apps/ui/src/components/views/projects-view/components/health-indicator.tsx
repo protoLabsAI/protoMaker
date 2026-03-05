@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import type { ProjectHealth } from '@protolabs-ai/types';
+import type { ProjectHealth } from '@protolabsai/types';
 
 const HEALTH_CONFIG: Record<ProjectHealth, { color: string; label: string }> = {
   'on-track': { color: 'bg-[var(--status-success)]', label: 'On Track' },

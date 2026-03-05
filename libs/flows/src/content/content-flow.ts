@@ -5,8 +5,8 @@
  */
 
 import { Annotation } from '@langchain/langgraph';
-import type { Outline, ContentConfig, ResearchSummary } from '@protolabs-ai/types';
-import type { TracingConfig } from '@protolabs-ai/observability';
+import type { Outline, ContentConfig, ResearchSummary } from '@protolabsai/types';
+import type { TracingConfig } from '@protolabsai/observability';
 import type { RunnableConfig } from '@langchain/core/runnables';
 import { CopilotKitStateAnnotation } from './state.js';
 

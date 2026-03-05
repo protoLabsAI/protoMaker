@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { getHttpApiClient, waitForApiKeyInit } from '@/lib/http-api-client';
 import { getItem, setItem } from '@/lib/storage';
 import { useAppStore, THEME_STORAGE_KEY } from '@/store/app-store';
@@ -44,7 +44,7 @@ import {
   type CursorModelId,
   type OpencodeModelId,
   DEFAULT_FEATURE_FLAGS,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 const logger = createLogger('SettingsMigration');
 

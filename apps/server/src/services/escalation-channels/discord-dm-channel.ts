@@ -12,9 +12,9 @@
  * - Configurable recipient list
  */
 
-import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@protolabs-ai/types';
-import { EscalationSeverity as Severity, EscalationSource } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@protolabsai/types';
+import { EscalationSeverity as Severity, EscalationSource } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 
@@ -291,11 +291,11 @@ export class DiscordDMChannel implements EscalationChannel {
     // Build URL from GitHub context
     if (ctx.prNumber && typeof ctx.prNumber === 'number') {
       const repo = ctx.repo || 'automaker'; // Fallback to default repo
-      return `https://github.com/${process.env.GITHUB_REPO_OWNER || 'proto-labs-ai'}/${repo}/pull/${ctx.prNumber}`;
+      return `https://github.com/${process.env.GITHUB_REPO_OWNER || 'protoLabsAI'}/${repo}/pull/${ctx.prNumber}`;
     }
     if (ctx.issueNumber && typeof ctx.issueNumber === 'number') {
       const repo = ctx.repo || 'automaker';
-      return `https://github.com/${process.env.GITHUB_REPO_OWNER || 'proto-labs-ai'}/${repo}/issues/${ctx.issueNumber}`;
+      return `https://github.com/${process.env.GITHUB_REPO_OWNER || 'protoLabsAI'}/${repo}/issues/${ctx.issueNumber}`;
     }
 
     return null;

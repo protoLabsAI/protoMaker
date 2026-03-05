@@ -10,19 +10,19 @@
  * Storage: QuarantineEntry records in {projectPath}/.automaker/quarantine/{id}.json
  */
 
-import { createLogger, atomicWriteJson, readJsonFile } from '@protolabs-ai/utils';
+import { createLogger, atomicWriteJson, readJsonFile } from '@protolabsai/utils';
 import {
   normalizeUnicode,
   sanitizeMarkdownForLLM,
   detectPromptInjection,
   validateFilePaths,
-} from '@protolabs-ai/utils';
-import type { TrustTier, QuarantineEntry, SanitizationViolation } from '@protolabs-ai/types';
-import type { Feature } from '@protolabs-ai/types';
+} from '@protolabsai/utils';
+import type { TrustTier, QuarantineEntry, SanitizationViolation } from '@protolabsai/types';
+import type { Feature } from '@protolabsai/types';
 import type { TrustTierService } from './trust-tier-service.js';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { secureFs } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabsai/platform';
 
 const logger = createLogger('QuarantineService');
 

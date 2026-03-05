@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/observability
+ * @protolabsai/observability
  *
  * Langfuse-based observability, tracing, and prompt management for AutoMaker.
  */

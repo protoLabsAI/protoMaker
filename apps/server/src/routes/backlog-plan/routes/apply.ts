@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { BacklogPlanResult } from '@protolabs-ai/types';
+import type { BacklogPlanResult } from '@protolabsai/types';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { clearBacklogPlan, getErrorMessage, logError, logger } from '../common.js';
 

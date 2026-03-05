@@ -5,8 +5,8 @@
 import type { Request, Response } from 'express';
 import { join, relative, dirname } from 'node:path';
 import { writeFile, mkdir, access } from 'node:fs/promises';
-import { createLogger } from '@protolabs-ai/utils';
-import { validatePath } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { validatePath } from '@protolabsai/platform';
 import type { PenDocument } from './read.js';
 
 const logger = createLogger('DesignsRoutes');

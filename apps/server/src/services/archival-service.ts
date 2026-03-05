@@ -8,7 +8,7 @@
  * Epic features are skipped if any child features are still active.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
 import type { LedgerService } from './ledger-service.js';
 import type { SettingsService } from './settings-service.js';

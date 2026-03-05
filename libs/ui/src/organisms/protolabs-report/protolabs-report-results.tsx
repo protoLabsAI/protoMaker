@@ -2,7 +2,7 @@ import { ExternalLink, Plus, AlertTriangle, Info, CheckCircle2 } from 'lucide-re
 import { Button } from '../../atoms/button.js';
 import { Badge } from '../../atoms/badge.js';
 import { cn } from '../../lib/utils.js';
-import type { GapAnalysisReport, AlignmentProposal } from '@protolabs-ai/types';
+import type { GapAnalysisReport, AlignmentProposal } from '@protolabsai/types';
 
 interface ProtoLabsReportResultsProps {
   report: GapAnalysisReport;

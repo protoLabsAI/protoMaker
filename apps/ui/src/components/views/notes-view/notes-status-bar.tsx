@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Pencil } from 'lucide-react';
-import type { NoteTabPermissions } from '@protolabs-ai/types';
+import type { NoteTabPermissions } from '@protolabsai/types';
 
 interface NotesStatusBarProps {
   wordCount: number;

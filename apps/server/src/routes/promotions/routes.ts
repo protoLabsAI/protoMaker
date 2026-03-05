@@ -10,8 +10,8 @@
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
-import type { PromotionBatch, PromotionCandidate, PromotionStatus } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { PromotionBatch, PromotionCandidate, PromotionStatus } from '@protolabsai/types';
 import { stagingPromotionService } from '../../services/staging-promotion-service.js';
 
 const logger = createLogger('PromotionRoutes');

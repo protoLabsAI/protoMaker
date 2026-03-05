@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 // Mock exec/execFile before importing the service
 vi.mock('child_process', () => ({

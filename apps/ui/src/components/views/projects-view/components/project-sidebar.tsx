@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { Calendar, User, Users, Target } from 'lucide-react';
-import { Badge, Input } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge, Input } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
 import { getProjectStatusVariant } from '../lib/status-variants';
 import { useProjectUpdate } from '../hooks/use-project';
-import type { Project, ProjectHealth, ProjectPriority } from '@protolabs-ai/types';
+import type { Project, ProjectHealth, ProjectPriority } from '@protolabsai/types';
 import { toast } from 'sonner';
 
 const PRIORITY_CONFIG: Record<ProjectPriority, string> = {

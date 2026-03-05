@@ -2,7 +2,7 @@
  * Text renderer with font properties and styling
  */
 
-import type { PenText } from '@protolabs-ai/types';
+import type { PenText } from '@protolabsai/types';
 import { fillToCSS, colorToCSS } from './style-utils';
 import type { CSSProperties } from 'react';
 

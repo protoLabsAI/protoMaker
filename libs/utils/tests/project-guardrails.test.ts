@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { phaseToFeatureDescription } from '../src/project-parser.js';
-import type { Phase, Milestone } from '@protolabs-ai/types';
+import type { Phase, Milestone } from '@protolabsai/types';
 
 describe('phaseToFeatureDescription guardrails', () => {
   const baseMilestone: Milestone = {

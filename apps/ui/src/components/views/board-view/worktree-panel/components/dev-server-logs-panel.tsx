@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   Terminal,
   ArrowDown,
@@ -11,7 +11,7 @@ import {
   Clock,
   GitBranch,
 } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import {
   XtermLogViewer,
   type XtermLogViewerRef,

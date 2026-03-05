@@ -4,7 +4,7 @@
  * Utilities for creating and managing project structures.
  */
 
-import type { Project, Milestone, Phase, CreateProjectInput, SPARCPrd } from '@protolabs-ai/types';
+import type { Project, Milestone, Phase, CreateProjectInput, SPARCPrd } from '@protolabsai/types';
 import { slugify } from './string-utils.js';
 
 /**

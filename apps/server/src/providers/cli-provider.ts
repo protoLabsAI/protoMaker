@@ -34,9 +34,9 @@ import {
   windowsToWslPath,
   type SubprocessOptions,
   type WslCliResult,
-} from '@protolabs-ai/platform';
-import { calculateReasoningTimeout } from '@protolabs-ai/types';
-import { createLogger, isAbortError } from '@protolabs-ai/utils';
+} from '@protolabsai/platform';
+import { calculateReasoningTimeout } from '@protolabsai/types';
+import { createLogger, isAbortError } from '@protolabsai/utils';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -113,7 +113,7 @@ const cliLogger = createLogger('CliProvider');
  * CLI tools have longer startup and processing times compared to direct API calls,
  * so we use a higher base timeout (120s) than the default provider timeout (30s).
  * This is multiplied by reasoning effort multipliers when applicable.
- * @see calculateReasoningTimeout from @protolabs-ai/types
+ * @see calculateReasoningTimeout from @protolabsai/types
  */
 const CLI_BASE_TIMEOUT_MS = 120000;
 

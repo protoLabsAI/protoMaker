@@ -3,16 +3,16 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Project, ProjectStatus, SPARCPrd, PRDReviewComment } from '@protolabs-ai/types';
+import type { Project, ProjectStatus, SPARCPrd, PRDReviewComment } from '@protolabsai/types';
 import {
   getProjectJsonPath,
   getProjectFilePath,
   getPrdFilePath,
   getResearchFilePath,
   projectPlanExists,
-} from '@protolabs-ai/platform';
-import { secureFs } from '@protolabs-ai/platform';
-import { generateProjectFile, generatePrdFile } from '@protolabs-ai/utils';
+} from '@protolabsai/platform';
+import { secureFs } from '@protolabsai/platform';
+import { generateProjectFile, generatePrdFile } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 interface UpdateProjectRequest {

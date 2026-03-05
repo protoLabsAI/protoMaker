@@ -1,16 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, Pencil, ChevronLeft, Server, Globe, Key, X, Info } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { type OpenAICompatibleConfig, type ProviderModel } from '@protolabs-ai/types';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { type OpenAICompatibleConfig, type ProviderModel } from '@protolabsai/types';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
-// Local template definitions (mirrors @protolabs-ai/types OPENAI_COMPATIBLE_TEMPLATES)
+// Local template definitions (mirrors @protolabsai/types OPENAI_COMPATIBLE_TEMPLATES)
 // Defined locally to avoid dependency on the built dist during development.
 // ============================================================================
 

@@ -7,9 +7,9 @@
  * Uses a lightweight Haiku model for fast, cost-effective classification.
  */
 
-import type { RiskLevel } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import type { RiskLevel } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import Anthropic from '@anthropic-ai/sdk';
 
 const logger = createLogger('RiskClassifier');

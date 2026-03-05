@@ -10,13 +10,13 @@ import { useAppStore } from '@/store/app-store';
 import { useCalendarEvents } from './use-calendar-events';
 import { CreateEventDialog } from './create-event-dialog';
 import { EventDetailPanel } from './event-detail-panel';
-import { SkeletonPulse, Spinner } from '@protolabs-ai/ui/atoms';
+import { SkeletonPulse, Spinner } from '@protolabsai/ui/atoms';
 import { Calendar, CalendarDays, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { apiPost } from '@/lib/api-fetch';
-import type { CalendarEvent, CalendarEventType } from '@protolabs-ai/types';
+import type { CalendarEvent, CalendarEventType } from '@protolabsai/types';
 import type { CreateEventInput, UpdateEventInput } from './use-calendar-events';
 
 // ============================================================================

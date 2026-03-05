@@ -6,7 +6,7 @@ import {
   setLogLevel,
   setColorsEnabled,
   setTimestampsEnabled,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 
 describe('logger.ts', () => {
   let consoleSpy: {

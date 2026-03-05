@@ -3,9 +3,9 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import path from 'path';
-import { secureFs } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabsai/platform';
 
 const logger = createLogger('Setup');
 

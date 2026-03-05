@@ -6,7 +6,7 @@
  * Allows Claude Code and other MCP clients to interact with Automaker programmatically.
  *
  * Usage:
- *   npx @protolabs-ai/mcp-server
+ *   npx @protolabsai/mcp-server
  *
  * Environment variables:
  *   AUTOMAKER_API_URL - API base URL (default: http://localhost:3008)
@@ -20,7 +20,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import { toMCPTool } from '@protolabs-ai/tools';
+import { toMCPTool } from '@protolabsai/tools';
 
 // Configuration
 const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';

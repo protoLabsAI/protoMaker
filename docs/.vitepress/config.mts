@@ -139,10 +139,10 @@ export default defineConfig({
       ],
     },
 
-    socialLinks: [{ icon: 'github', link: 'https://github.com/proto-labs-ai/protomaker' }],
+    socialLinks: [{ icon: 'github', link: 'https://github.com/protoLabsAI/protomaker' }],
 
     editLink: {
-      pattern: 'https://github.com/proto-labs-ai/protomaker/edit/main/docs/:path',
+      pattern: 'https://github.com/protoLabsAI/protomaker/edit/main/docs/:path',
       text: 'Edit this page on GitHub',
     },
 

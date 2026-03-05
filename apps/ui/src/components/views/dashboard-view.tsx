@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { useOSDetection } from '@/hooks/use-os-detection';
@@ -8,7 +8,7 @@ import { initializeProject } from '@/lib/project-init';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { isMac } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { WorkspacePickerModal } from '@/components/dialogs/workspace-picker-modal';
 import type { StarterTemplate } from '@/lib/templates';
@@ -28,15 +28,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -44,7 +44,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { EventFeed } from './dashboard-view/event-feed';
 import { ProjectHealthCard } from './dashboard-view/project-health-card';
 import { MetricsSection } from './dashboard-view/metrics/metrics-section';

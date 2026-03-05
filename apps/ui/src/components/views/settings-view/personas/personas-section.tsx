@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Button, Badge, Switch, Textarea, Input } from '@protolabs-ai/ui/atoms';
+import { Button, Badge, Switch, Textarea, Input } from '@protolabsai/ui/atoms';
 import {
   Users,
   RotateCcw,
@@ -30,7 +30,7 @@ import {
   useUnregisterTemplate,
 } from '@/hooks/mutations/use-agent-template-mutations';
 import type { AgentTemplateMetadata } from '@/hooks/queries/use-agent-templates';
-import type { CustomPrompt } from '@protolabs-ai/types';
+import type { CustomPrompt } from '@protolabsai/types';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { useQuery } from '@tanstack/react-query';

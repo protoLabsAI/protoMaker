@@ -1,5 +1,5 @@
 {
-  "name": "@protolabs-ai/types",
+  "name": "@protolabsai/types",
   "version": "0.33.1",
   "type": "module",
   "description": "Shared type definitions for AutoMaker",

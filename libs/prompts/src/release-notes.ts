@@ -6,7 +6,7 @@
  * Discord announcements.
  *
  * Usage:
- *   import { buildReleaseNotesPrompt } from '@protolabs-ai/prompts';
+ *   import { buildReleaseNotesPrompt } from '@protolabsai/prompts';
  *   const prompt = buildReleaseNotesPrompt({ version, previousVersion, commits });
  *   // Feed `systemPrompt` and `prompt` to Claude
  */

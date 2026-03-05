@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Slider } from '@protolabsai/ui/atoms';
 import { FastForward, Bot, Settings2, Lock, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
-import { getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
+import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 
 interface AutoModeSettingsPopoverProps {
   skipVerificationInAutoMode: boolean;

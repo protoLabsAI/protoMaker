@@ -5,7 +5,7 @@
  * Re-exports error handling helpers from the parent routes module.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 /** Logger instance for settings-related operations */

@@ -426,7 +426,7 @@ When multiple protoLabs Studio instances (local dev, staging, CI bot) monitor th
 Every PR created by protoLabs Studio includes a hidden HTML comment:
 
 ```html
-<!-- automaker:owner instance=ava-staging team=proto-labs-ai created=2026-02-25T19:00:00.000Z -->
+<!-- automaker:owner instance=ava-staging team=protoLabsAI created=2026-02-25T19:00:00.000Z -->
 ```
 
 This is invisible in rendered GitHub markdown but parseable by `check-pr-status`.
@@ -449,7 +449,7 @@ Stale = BOTH last commit AND last activity older than `prOwnershipStaleTtlHours`
 ```json
 {
   "instanceId": "ava-staging",
-  "teamId": "proto-labs-ai",
+  "teamId": "protoLabsAI",
   "prOwnershipStaleTtlHours": 24
 }
 ```
@@ -471,5 +471,5 @@ If recovery fails, the feature is marked `blocked` with a `statusChangeReason` p
 ## Learn More
 
 - [Monorepo Architecture](./monorepo-architecture.md) - Package structure and dependencies
-- [CONTRIBUTING.md](https://github.com/proto-labs-ai/protoMaker/blob/main/CONTRIBUTING.md) - Complete contribution guide
+- [CONTRIBUTING.md](https://github.com/protoLabsAI/protoMaker/blob/main/CONTRIBUTING.md) - Complete contribution guide
 - [Conventional Commits](https://www.conventionalcommits.org/) - Commit message format

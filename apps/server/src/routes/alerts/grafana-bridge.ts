@@ -7,7 +7,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { LinearMCPClient } from '../../services/linear-mcp-client.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { DiscordBotService } from '../../services/discord-bot-service.js';

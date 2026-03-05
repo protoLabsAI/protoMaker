@@ -22,9 +22,9 @@ import {
   MemorySaver,
 } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { createLogger } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import { LangfuseClient } from '@protolabs-ai/observability';
+import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import { LangfuseClient } from '@protolabsai/observability';
 import { isLangfuseReady } from './langfuse-guard.js';
 import { wrapSubgraph } from '../graphs/utils/subgraph-wrapper.js';
 import {

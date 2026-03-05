@@ -11,7 +11,7 @@ hero:
       link: /getting-started/
     - theme: alt
       text: View on GitHub
-      link: https://github.com/proto-labs-ai
+      link: https://github.com/protoLabsAI
 
 features:
   - title: Ship Features with AI
@@ -31,5 +31,5 @@ features:
     link: /protolabs/
   - title: Open Source
     details: Fully open source. Learn the methodology. Build with it. No vendor lock-in.
-    link: https://github.com/proto-labs-ai
+    link: https://github.com/protoLabsAI
 ---

@@ -8,8 +8,8 @@
 
 import * as fsp from 'fs/promises';
 import * as path from 'path';
-import { createLogger, classifyError, listSkills, type SkillsFsModule } from '@protolabs-ai/utils';
-import type { HookCallbackMatcher, CanUseTool } from '@protolabs-ai/types';
+import { createLogger, classifyError, listSkills, type SkillsFsModule } from '@protolabsai/utils';
+import type { HookCallbackMatcher, CanUseTool } from '@protolabsai/types';
 import {
   simpleQuery,
   streamingQuery,

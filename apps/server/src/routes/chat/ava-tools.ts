@@ -16,13 +16,13 @@ import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
 import type { EventEmitter } from 'events';
-import type { NotesWorkspace, CanUseTool } from '@protolabs-ai/types';
+import type { NotesWorkspace, CanUseTool } from '@protolabsai/types';
 import {
   getNotesWorkspacePath,
   ensureNotesDir,
   getAutomakerDir,
   secureFs,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { AgentService } from '../../services/agent-service.js';

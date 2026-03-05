@@ -2,8 +2,8 @@
  * Common utilities for worktree routes
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import { spawnProcess } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { spawnProcess } from '@protolabsai/platform';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
@@ -18,7 +18,7 @@ export {
   isValidRemoteName,
   sanitizeCommitMessage,
   MAX_BRANCH_NAME_LENGTH,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 
 // ============================================================================
 // Secure Command Execution
@@ -26,7 +26,7 @@ export {
 
 /**
  * Execute git command with array arguments to prevent command injection.
- * Uses spawnProcess from @protolabs-ai/platform for secure, cross-platform execution.
+ * Uses spawnProcess from @protolabsai/platform for secure, cross-platform execution.
  *
  * @param args - Array of git command arguments (e.g., ['worktree', 'add', path])
  * @param cwd - Working directory to execute the command in

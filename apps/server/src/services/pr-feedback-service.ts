@@ -14,7 +14,7 @@
  * 5. EM agent picks up and handles reassignment or merge
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -23,7 +23,7 @@ import type {
   ReviewThreadFeedback,
   FeedbackThreadDecision,
   PendingFeedback,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { codeRabbitParserService } from './coderabbit-parser-service.js';
 import {
   prStatusChecker,

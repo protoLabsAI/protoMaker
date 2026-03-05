@@ -11,8 +11,8 @@ import type {
   ThinkingLevel,
   ReasoningEffort,
   PipelinePhase,
-} from '@protolabs-ai/types';
-import { stripProviderPrefix } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { stripProviderPrefix } from '@protolabsai/types';
 import {
   readImageAsBase64,
   buildPromptWithImages,
@@ -20,7 +20,7 @@ import {
   loadContextFiles,
   createLogger,
   classifyError,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import type { SettingsService } from './settings-service.js';
@@ -353,7 +353,7 @@ export class AgentService {
       // Try to find a provider for the model (if it's a provider model like "GLM-4.7")
       // This allows users to select provider models in the Agent Runner UI
       let claudeCompatibleProvider:
-        | import('@protolabs-ai/types').ClaudeCompatibleProvider
+        | import('@protolabsai/types').ClaudeCompatibleProvider
         | undefined;
       let providerResolvedModel: string | undefined;
       const requestedModel = model || session.model;

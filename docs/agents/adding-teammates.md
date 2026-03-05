@@ -73,9 +73,9 @@ Create `apps/server/src/services/authority-agents/{name}-agent.ts`:
  * All state transitions go through AuthorityService.submitProposal()
  */
 
-import type { Feature, AuthorityAgent } from '@protolabs-ai/types';
-import { createLogger, loadContextFiles } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import type { Feature, AuthorityAgent } from '@protolabsai/types';
+import { createLogger, loadContextFiles } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import type { FeatureLoader } from '../feature-loader.js';
@@ -322,8 +322,8 @@ Let's walk through adding a **Designer Agent** that reviews UI changes before me
  *   4. Notify Discord #design channel
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';

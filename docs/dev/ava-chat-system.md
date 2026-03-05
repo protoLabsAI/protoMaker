@@ -265,7 +265,7 @@ The `inputHash` is a stable JSON hash of the tool arguments, ensuring approvals 
 
 ## UI Components
 
-All chat components live in `libs/ui/src/ai/` and are exported from `@protolabs-ai/ui/ai`.
+All chat components live in `libs/ui/src/ai/` and are exported from `@protolabsai/ui/ai`.
 
 ### Rendering Pipeline
 
@@ -355,7 +355,7 @@ import { MyCard } from './tool-results/my-card.js';
 toolResultRegistry.register('my_tool_name', MyCard);
 ```
 
-4. Rebuild: `npx turbo run build --filter="@protolabs-ai/ui"`
+4. Rebuild: `npx turbo run build --filter="@protolabsai/ui"`
 
 ### Tool State Machine
 

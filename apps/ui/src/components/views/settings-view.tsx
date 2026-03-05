@@ -6,7 +6,7 @@ import { useThemeStore } from '@/store/theme-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { Cog, FileJson } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { useSettingsNavigation } from '@/components/shared/settings';
 
 import { useSettingsView, type SettingsViewId } from './settings-view/hooks';

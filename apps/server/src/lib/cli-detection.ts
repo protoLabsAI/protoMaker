@@ -8,7 +8,7 @@ import { spawn, execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const _logger = createLogger('CliDetection');
 

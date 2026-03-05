@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Webhook, Plus, Trash2, Pencil, Terminal, Globe, History } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
-import type { EventHook, EventHookTrigger } from '@protolabs-ai/types';
-import { EVENT_HOOK_TRIGGER_LABELS } from '@protolabs-ai/types';
+import type { EventHook, EventHookTrigger } from '@protolabsai/types';
+import { EVENT_HOOK_TRIGGER_LABELS } from '@protolabsai/types';
 import { EventHookDialog } from './event-hook-dialog';
 import { EventHistoryView } from './event-history-view';
 

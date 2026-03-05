@@ -85,11 +85,11 @@ Do not just recover and move on. The flywheel only improves if failures are capt
 
 ## Project Overview
 
-protoLabs Studio is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees. The repo name `protoMaker` on GitHub preserves lineage to the original Automaker project. Internal package names (`@protolabs-ai/*`), directory paths (`.automaker/`), and the codename "Automaker" are preserved in code and config.
+protoLabs Studio is an autonomous AI development studio built as an npm workspace monorepo. It provides a Kanban-based workflow where AI agents (powered by Claude Agent SDK) implement features in isolated git worktrees. The repo name `protoMaker` on GitHub preserves lineage to the original Automaker project. Internal package names (`@protolabsai/*`), directory paths (`.automaker/`), and the codename "Automaker" are preserved in code and config.
 
 ## Brand Identity
 
-The product is publicly branded as **protoLabs.studio** (domain: **protoLabs.studio**). The codebase uses "Automaker" internally (`@protolabs-ai/*` packages, `.automaker/` directory) — this is intentional and should NOT be renamed in code.
+The product is publicly branded as **protoLabs.studio** (domain: **protoLabs.studio**). The codebase uses "Automaker" internally (`@protolabsai/*` packages, `.automaker/` directory) — this is intentional and should NOT be renamed in code.
 
 - **protoLabs** / **protoLabs Studio** = the AI-native development agency and product (always camelCase)
 - **protoMaker** = GitHub repo name only, preserves lineage — not a product name
@@ -149,7 +149,7 @@ automaker/
 │   ├── ui/           # React + Vite + Electron frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
 ├── site/             # Landing page (protolabs.studio) — static HTML on Cloudflare Pages
-└── libs/             # Shared packages (@protolabs-ai/*)
+└── libs/             # Shared packages (@protolabsai/*)
     ├── types/        # Core TypeScript definitions (no dependencies)
     ├── utils/        # Logging, errors, image processing, context loading
     ├── prompts/      # AI prompt templates
@@ -162,7 +162,7 @@ automaker/
     ├── tools/        # Unified tool definition and registry system
     ├── flows/        # LangGraph state graph primitives & flow orchestration
     ├── observability/# Langfuse tracing, prompt versioning & cost tracking
-    └── ui/           # Shared UI components (@protolabs-ai/ui) — atoms, molecules, theme
+    └── ui/           # Shared UI components (@protolabsai/ui) — atoms, molecules, theme
 ```
 
 ### Package Dependency Chain
@@ -170,13 +170,13 @@ automaker/
 Packages can only depend on packages above them:
 
 ```
-@protolabs-ai/types (no dependencies)
+@protolabsai/types (no dependencies)
     ↓
-@protolabs-ai/utils, @protolabs-ai/prompts, @protolabs-ai/platform, @protolabs-ai/model-resolver, @protolabs-ai/dependency-resolver, @protolabs-ai/spec-parser, @protolabs-ai/pen-parser, @protolabs-ai/tools, @protolabs-ai/flows, @protolabs-ai/observability
+@protolabsai/utils, @protolabsai/prompts, @protolabsai/platform, @protolabsai/model-resolver, @protolabsai/dependency-resolver, @protolabsai/spec-parser, @protolabsai/pen-parser, @protolabsai/tools, @protolabsai/flows, @protolabsai/observability
     ↓
-@protolabs-ai/git-utils, @protolabs-ai/ui
+@protolabsai/git-utils, @protolabsai/ui
     ↓
-@protolabs-ai/server, @protolabs-ai/ui (apps)
+@protolabsai/server, @protolabsai/ui (apps)
 ```
 
 ### Key Technologies
@@ -253,13 +253,13 @@ Always import from shared packages, never from old paths:
 
 ```typescript
 // ✅ Correct
-import type { Feature, ExecuteOptions } from '@protolabs-ai/types';
-import { createLogger, classifyError } from '@protolabs-ai/utils';
-import { getEnhancementPrompt } from '@protolabs-ai/prompts';
-import { getFeatureDir, ensureAutomakerDir } from '@protolabs-ai/platform';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import { resolveDependencies } from '@protolabs-ai/dependency-resolver';
-import { getGitRepositoryDiffs } from '@protolabs-ai/git-utils';
+import type { Feature, ExecuteOptions } from '@protolabsai/types';
+import { createLogger, classifyError } from '@protolabsai/utils';
+import { getEnhancementPrompt } from '@protolabsai/prompts';
+import { getFeatureDir, ensureAutomakerDir } from '@protolabsai/platform';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import { resolveDependencies } from '@protolabsai/dependency-resolver';
+import { getGitRepositoryDiffs } from '@protolabsai/git-utils';
 
 // ❌ Never import from old paths
 import { Feature } from '../services/feature-loader'; // Wrong
@@ -292,11 +292,11 @@ Each feature executes in an isolated git worktree, protecting the main branch du
 
 ### Context Files
 
-Project-specific rules are stored in `.automaker/context/` and automatically loaded into agent prompts via `loadContextFiles()` from `@protolabs-ai/utils`.
+Project-specific rules are stored in `.automaker/context/` and automatically loaded into agent prompts via `loadContextFiles()` from `@protolabsai/utils`.
 
 ### Model Resolution
 
-Use `resolveModelString()` from `@protolabs-ai/model-resolver` to convert model aliases:
+Use `resolveModelString()` from `@protolabsai/model-resolver` to convert model aliases:
 
 - `haiku` → `claude-haiku-4-5-20251001`
 - `sonnet` → `claude-sonnet-4-6`
@@ -493,7 +493,7 @@ Automaker supports hierarchical project planning with the flow:
 ### Project Types (libs/types/src/project.ts)
 
 ```typescript
-import type { Project, Milestone, Phase, SPARCPrd } from '@protolabs-ai/types';
+import type { Project, Milestone, Phase, SPARCPrd } from '@protolabsai/types';
 
 // Project status lifecycle
 type ProjectStatus =

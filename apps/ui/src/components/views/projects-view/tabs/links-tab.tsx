@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Plus, Trash2, ExternalLink, Link as LinkIcon } from 'lucide-react';
-import { Button, Card, Input } from '@protolabs-ai/ui/atoms';
+import { Button, Card, Input } from '@protolabsai/ui/atoms';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
-import type { Project, ProjectLink } from '@protolabs-ai/types';
+import type { Project, ProjectLink } from '@protolabsai/types';
 
 export function LinksTab({ project }: { project: Project }) {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';

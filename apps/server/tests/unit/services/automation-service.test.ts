@@ -7,8 +7,8 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 
-// Mock @protolabs-ai/platform secureFs — use real fs in a temp dir
-vi.mock('@protolabs-ai/platform', () => {
+// Mock @protolabsai/platform secureFs — use real fs in a temp dir
+vi.mock('@protolabsai/platform', () => {
   return {
     secureFs: {
       access: async (p: string) => {
@@ -27,8 +27,8 @@ vi.mock('@protolabs-ai/platform', () => {
   };
 });
 
-// Mock @protolabs-ai/utils
-vi.mock('@protolabs-ai/utils', () => ({
+// Mock @protolabsai/utils
+vi.mock('@protolabsai/utils', () => ({
   createLogger: () => ({
     info: vi.fn(),
     error: vi.fn(),

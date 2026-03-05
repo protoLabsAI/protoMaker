@@ -68,7 +68,7 @@ usageStats:
 
 #### [Gotcha] Nested packages directory structure caused import path confusion - created packages/create-protolab/packages/ instead of correctly placing files in packages/create-protolab/src/ (2026-02-13)
 - **Situation:** During initial implementation, file structure was created with incorrect nesting (packages/create-protolab/packages/create-protolab/...) instead of the expected monorepo pattern
-- **Root cause:** Unclear mental model of the monorepo structure. The package name @protolabs-ai/create-protolab led to confusion about where files should live vs. where imports come from
+- **Root cause:** Unclear mental model of the monorepo structure. The package name @protolabsai/create-protolab led to confusion about where files should live vs. where imports come from
 - **How to avoid:** Caught early through verification testing which tried to import and immediately failed, forcing correction. Manual test-first approach prevented committing broken code
 
 #### [Gotcha] BaseProvider.constructor calls this.getName() before subclass constructor sets required instance variables, causing method to access undefined properties (2026-02-13)
@@ -87,7 +87,7 @@ usageStats:
 - **How to avoid:** Type assertions disable type safety at these call sites, but methods are stable LangGraph API. Alternative would be wrapping StateGraph in typed facade class.
 
 #### [Gotcha] Workspace dependency references must use explicit version numbers, not workspace:* protocol in certain contexts (2026-02-13)
-- **Situation:** Initial npm resolution failed when @protolabs-ai/flows tried to reference @protolabs-ai/types using workspace protocol
+- **Situation:** Initial npm resolution failed when @protolabsai/flows tried to reference @protolabsai/types using workspace protocol
 - **Root cause:** LangGraph build/compilation process may not resolve workspace protocol correctly in some monorepo configurations. Explicit version numbers force npm resolution to use published versions or local copies consistently.
 - **How to avoid:** Explicit versions slightly decouple from monorepo's version management - requires manual sync. But gained immediate stability and avoided monorepo-wide configuration changes.
 
@@ -162,7 +162,7 @@ usageStats:
 - **How to avoid:** Required manual diagnosis via glob search and path repair; lesson reinforces requirement to always use absolute paths in worktrees
 
 #### [Gotcha] Bulk import updates via task agents missed relative imports (../ui/markdown) that weren't part of standard aliased import patterns (2026-02-18)
-- **Situation:** After moving components and running bulk import updates with aliases (@protolabs-ai/ui/molecules), two files (memory-view.tsx, context-view.tsx) still had old relative imports (from '../ui/markdown'). These weren't caught by the import replacement because they used a different pattern than the task expected.
+- **Situation:** After moving components and running bulk import updates with aliases (@protolabsai/ui/molecules), two files (memory-view.tsx, context-view.tsx) still had old relative imports (from '../ui/markdown'). These weren't caught by the import replacement because they used a different pattern than the task expected.
 - **Root cause:** Automated bulk updates use regex patterns that match common import styles. Relative imports vary widely and may not match the exact pattern. Manual post-verification of grep results catches patterns the automation missed.
 - **How to avoid:** Added manual verification step (grep for old import paths) increases refactoring time but ensures complete migration. Prevents runtime errors from missed imports.
 
@@ -206,7 +206,7 @@ usageStats:
 - **Root cause:** Empirical 5-second threshold accounts for OBS buffer flush behavior. Avoids platform-specific file locking checks. Simple and reliable for this specific use case.
 - **How to avoid:** Automatic and reliable stabilization vs. 5-second artificial delay (non-critical since remux is fast relative to streaming duration).
 
-### Accepted pre-existing TypeScript build error in @protolabs-ai/platform package (p-limit import issue) as acceptable since feature only creates static HTML files (2026-02-22)
+### Accepted pre-existing TypeScript build error in @protolabsai/platform package (p-limit import issue) as acceptable since feature only creates static HTML files (2026-02-22)
 - **Context:** Build verification encountered compilation error in unrelated package, but feature doesn't depend on it
 - **Why:** Feature has zero dependency on broken package, proceeding unblocks delivery, fixing unrelated errors is scope creep, static HTML files can be deployed regardless
 - **Rejected:** Fixing the build error (scope creep); blocking feature on unrelated issues
@@ -288,7 +288,7 @@ usageStats:
 - **Root cause:** Electron npm package's postinstall script automatically downloads prebuilt binaries. Worktrees and restricted environments may lack permissions to create/write cache directories.
 - **How to avoid:** Skipping binary download defers Electron binary acquisition to later step, but allows npm install to complete
 
-#### [Gotcha] Build verification fails on pre-existing TypeScript error in @protolabs-ai/platform/src/secure-fs.ts (p-limit import type signature issue), but deployment configurations remain valid and unaffected (2026-02-24)
+#### [Gotcha] Build verification fails on pre-existing TypeScript error in @protolabsai/platform/src/secure-fs.ts (p-limit import type signature issue), but deployment configurations remain valid and unaffected (2026-02-24)
 - **Situation:** Build gate requires `npm run build:server` success, but unrelated TypeScript compilation error blocks full verification
 - **Root cause:** The p-limit library has incorrect type signatures that prevent compilation. Deployment configs are pure YAML/TOML/Markdown with no TypeScript compilation, making them validation-independent from the build system
 - **How to avoid:** Configuration files validated individually (YAML syntax, TOML format) rather than through full build process. Provides confidence in configs but breaks continuous integration gate
@@ -458,7 +458,7 @@ usageStats:
 - **Root cause:** Prioritizes recovery over perfection. Assumes human code review will catch linting/formatting issues. Hooks would block recovery on code style issues that aren't blocking the feature logic.
 - **How to avoid:** Recovery succeeds more often but code quality gates are bypassed. Human review becomes critical gating point for code quality instead of CI.
 
-#### [Gotcha] Git worktree + shared node_modules causes dual package resolution: TypeScript loads @protolabs-ai/types from both worktree's libs/types/dist AND main repo's libs/types/dist simultaneously (same PackageID, different real paths). This creates conflicting type definitions. (2026-02-25)
+#### [Gotcha] Git worktree + shared node_modules causes dual package resolution: TypeScript loads @protolabsai/types from both worktree's libs/types/dist AND main repo's libs/types/dist simultaneously (same PackageID, different real paths). This creates conflicting type definitions. (2026-02-25)
 - **Situation:** Developing type changes to workspace packages (GlobalSettings) within git worktrees while main repo's node_modules is shared between worktree and main branch
 - **Root cause:** TypeScript deduplicates modules by PackageID but stores real paths separately. When worktree has different source code than main repo's dist, both versions get loaded, causing type conflicts
 - **How to avoid:** Solution (node_modules override + copy dist to main) is local dev-only and not committed, so CI/clean builds don't need it. Trade-off: dev environment diverges slightly from CI environment. Clean monorepo build is your safety net.

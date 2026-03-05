@@ -6,12 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { JsonSyntaxEditor } from '@/components/shared/json-syntax-editor';
 import { apiGet, apiPut } from '@/lib/api-fetch';
 import { toast } from 'sonner';
-import type { GlobalSettings } from '@protolabs-ai/types';
+import type { GlobalSettings } from '@protolabsai/types';
 
 interface ImportExportDialogProps {
   open: boolean;

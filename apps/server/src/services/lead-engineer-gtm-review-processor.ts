@@ -8,7 +8,7 @@
  * Score < 75  → EXECUTE (revision required)
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
 import type {

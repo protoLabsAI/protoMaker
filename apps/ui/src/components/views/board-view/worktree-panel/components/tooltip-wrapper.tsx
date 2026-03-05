@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 
 interface TooltipWrapperProps {
   /** The element to wrap with a tooltip */

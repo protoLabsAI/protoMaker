@@ -9,7 +9,7 @@ The service file is located at `automaker.service` in the repository root.
 ```ini
 [Unit]
 Description=protoLabs AI Development Studio
-Documentation=https://github.com/proto-labs-ai/protomaker
+Documentation=https://github.com/protoLabsAI/protomaker
 After=docker.service
 Requires=docker.service
 
@@ -76,7 +76,7 @@ sudo systemctl start automaker
 ```ini
 [Unit]
 Description=protoLabs AI Development Studio
-Documentation=https://github.com/proto-labs-ai/protomaker
+Documentation=https://github.com/protoLabsAI/protomaker
 After=docker.service
 Requires=docker.service
 ```
@@ -150,7 +150,7 @@ Output:
 ● automaker.service - protoLabs AI Development Studio
      Loaded: loaded (/etc/systemd/system/automaker.service; enabled)
      Active: active (exited) since Wed 2026-02-05 10:00:00 UTC
-       Docs: https://github.com/proto-labs-ai/protomaker
+       Docs: https://github.com/protoLabsAI/protomaker
     Process: 1234 ExecStart=/usr/bin/docker compose up -d (code=exited, status=0/SUCCESS)
    Main PID: 1234 (code=exited, status=0/SUCCESS)
 ```

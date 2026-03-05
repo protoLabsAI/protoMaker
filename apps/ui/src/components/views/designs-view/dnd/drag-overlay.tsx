@@ -3,7 +3,7 @@
  * Shows a preview of the component being dragged
  */
 
-import type { PenNode, PenDocument } from '@protolabs-ai/types';
+import type { PenNode, PenDocument } from '@protolabsai/types';
 import { PenNodeRenderer } from '../renderer/pen-node-renderer';
 import { PenThemeProvider } from '../renderer/pen-theme-context';
 

@@ -1,18 +1,18 @@
 import { useAppStore } from '@/store/app-store';
 import { useAIModelsStore } from '@/store/ai-models-store';
 import { useSetupStore } from '@/store/setup-store';
-import { Label } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { Bot, Cloud, Server, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project } from '@/lib/electron';
-import type { ClaudeApiProfile } from '@protolabs-ai/types';
+import type { ClaudeApiProfile } from '@protolabsai/types';
 
 interface ProjectClaudeSectionProps {
   project: Project;

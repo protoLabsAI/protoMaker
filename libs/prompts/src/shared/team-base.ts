@@ -7,7 +7,7 @@
  * via getContentBase().
  */
 
-import type { UserProfile } from '@protolabs-ai/types';
+import type { UserProfile } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Team roster — who does what, delegation routing
@@ -45,7 +45,7 @@ export function getBrandIdentity(profile?: UserProfile): string {
 - **${productName}** = the AI development studio product
 - **${internalCodename}** = internal codename only — never in external-facing content, docs, or user-visible UI
 
-In code: \`@protolabs-ai/*\` packages, \`.automaker/\` directories are fine (internal).
+In code: \`@protolabsai/*\` packages, \`.automaker/\` directories are fine (internal).
 In prose, docs, or anything a user/customer sees: use **${agencyName}** / **${productName}**.`;
 }
 
@@ -80,7 +80,7 @@ You have access to Context7 MCP tools for looking up **current** library documen
 **When NOT to use it:**
 
 - For libraries you already know well and the project version matches your training
-- For internal \`@protolabs-ai/*\` packages (just read the source)`;
+- For internal \`@protolabsai/*\` packages (just read the source)`;
 
 // ---------------------------------------------------------------------------
 // Worktree safety
@@ -135,18 +135,18 @@ export const MONOREPO_STANDARDS = `## Monorepo Standards
 
 ### Package dependency chain (top → bottom):
 \`\`\`
-@protolabs-ai/types          (no deps)
-@protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver,
+@protolabsai/types          (no deps)
+@protolabsai/utils, prompts, platform, model-resolver, dependency-resolver,
   policy-engine, spec-parser, flows, observability
-@protolabs-ai/git-utils
+@protolabsai/git-utils
 apps/server, apps/ui
 \`\`\`
 
 ### Import conventions:
 \`\`\`typescript
 // Always import from packages, never relative cross-package paths
-import type { Feature } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import type { Feature } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 \`\`\`
 
 ### Build order:

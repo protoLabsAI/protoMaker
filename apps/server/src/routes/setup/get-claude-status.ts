@@ -8,7 +8,7 @@ import {
   getClaudeCliPaths,
   getClaudeAuthIndicators,
   systemPathAccess,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 import { getApiKey } from './common.js';
 import * as fs from 'fs';
 import * as path from 'path';

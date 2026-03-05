@@ -2,7 +2,7 @@
  * Common utilities for HITL form routes
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 export const logger = createLogger('HITLForms');

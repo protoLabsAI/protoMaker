@@ -6,7 +6,7 @@ protoLabs Studio uses [Changesets](https://github.com/changesets/changesets) for
 
 ## Version Scheme
 
-All `@protolabs-ai/*` and `@protolabs/*` packages in `libs/` share a single version (currently `0.x.y`). The `0.x` range signals pre-stable — breaking changes bump the minor version, features/fixes bump the patch.
+All `@protolabsai/*` and `@protolabs/*` packages in `libs/` share a single version (currently `0.x.y`). The `0.x` range signals pre-stable — breaking changes bump the minor version, features/fixes bump the patch.
 
 | Package Group              | Versioning                     | Published                    |
 | -------------------------- | ------------------------------ | ---------------------------- |
@@ -98,7 +98,7 @@ auto-release.yml
     ├── verify GH_PAT is set (warning if absent — Electron build chain won't fire)
     ├── clean stale changesets
     ├── npm run release:prepare  (analyze commits since last tag → minor/patch/major)
-    ├── npm run changeset:version  (bump all @protolabs-ai/* in lockstep, write CHANGELOG)
+    ├── npm run changeset:version  (bump all @protolabsai/* in lockstep, write CHANGELOG)
     ├── git commit "chore: release vX.Y.Z" → pushed to main
     ├── git tag vX.Y.Z → pushed via GH_PAT (triggers build-electron.yml)
     │               ↓
@@ -121,10 +121,10 @@ node scripts/rewrite-release-notes.mjs
 node scripts/rewrite-release-notes.mjs v0.30.1 v0.29.0 --post-discord
 ```
 
-The rewriter filters out merge/chore/promote commits, sends the rest to Claude (Haiku 4.5), and returns themed sections grouped by user impact. The prompt template is also available programmatically via `@protolabs-ai/prompts`:
+The rewriter filters out merge/chore/promote commits, sends the rest to Claude (Haiku 4.5), and returns themed sections grouped by user impact. The prompt template is also available programmatically via `@protolabsai/prompts`:
 
 ```typescript
-import { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from '@protolabs-ai/prompts';
+import { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from '@protolabsai/prompts';
 ```
 
 See [release.md](./release.md) for full documentation including voice guidelines, CI integration, and enable/disable instructions.

@@ -12,16 +12,16 @@ import type {
   ClaudeCompatibleProvider,
   ClaudeApiProfile,
   OpenAICompatibleConfig,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   getAllCursorModelIds,
   getAllCodexModelIds,
   getAllOpencodeModelIds,
   DEFAULT_PHASE_MODELS,
   DEFAULT_OPENCODE_MODEL,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { getElectronAPI } from '@/lib/electron';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import type { ClaudeUsage, CodexUsage } from './types';
 
 const logger = createLogger('AIModelsStore');

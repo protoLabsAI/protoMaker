@@ -11,13 +11,13 @@
  * - Delete old events to manage disk space
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import {
   getEventHistoryIndexPath,
   getEventPath,
   ensureEventHistoryDir,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 import type {
   StoredEvent,
   StoredEventIndex,
@@ -25,8 +25,8 @@ import type {
   EventHistoryFilter,
   EventHookTrigger,
   EventSeverity,
-} from '@protolabs-ai/types';
-import { DEFAULT_EVENT_HISTORY_INDEX } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_EVENT_HISTORY_INDEX } from '@protolabsai/types';
 import { randomUUID } from 'crypto';
 
 const logger = createLogger('EventHistoryService');

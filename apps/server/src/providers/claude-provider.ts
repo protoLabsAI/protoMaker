@@ -19,9 +19,9 @@ import {
   type ClaudeApiProfile,
   type ClaudeCompatibleProvider,
   type Credentials,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { BaseProvider } from './base-provider.js';
-import { classifyError, getUserFriendlyErrorMessage, createLogger } from '@protolabs-ai/utils';
+import { classifyError, getUserFriendlyErrorMessage, createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('ClaudeProvider');
 
@@ -365,7 +365,7 @@ export class ClaudeProvider extends BaseProvider {
     // If no API key, check for OAuth/CLI auth
     if (!authenticated) {
       try {
-        const { getClaudeAuthIndicators } = await import('@protolabs-ai/platform');
+        const { getClaudeAuthIndicators } = await import('@protolabsai/platform');
         const indicators = await getClaudeAuthIndicators();
         authenticated =
           indicators.hasStatsCacheWithActivity ||

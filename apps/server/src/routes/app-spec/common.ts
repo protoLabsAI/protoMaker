@@ -2,7 +2,7 @@
  * Common utilities and state management for spec regeneration
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('SpecRegeneration');
 

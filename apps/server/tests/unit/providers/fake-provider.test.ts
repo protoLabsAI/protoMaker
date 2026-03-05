@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FakeProvider } from '@/providers/fake-provider.js';
-import type { ExecuteOptions } from '@protolabs-ai/types';
+import type { ExecuteOptions } from '@protolabsai/types';
 
 describe('fake-provider.ts', () => {
   let provider: FakeProvider;

@@ -6,7 +6,7 @@
  */
 
 import { createHmac, timingSafeEqual } from 'crypto';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('LangfuseWebhook');
 

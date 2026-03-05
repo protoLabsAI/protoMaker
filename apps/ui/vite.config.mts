@@ -152,7 +152,7 @@ export default defineConfig(({ command }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        '@protolabs-ai/ui': path.resolve(__dirname, '../../libs/ui/src'),
+        '@protolabsai/ui': path.resolve(__dirname, '../../libs/ui/src'),
       },
     },
     server: {
@@ -199,7 +199,7 @@ export default defineConfig(({ command }) => {
       },
     },
     optimizeDeps: {
-      exclude: ['@protolabs-ai/platform'],
+      exclude: ['@protolabsai/platform'],
     },
     define: {
       __APP_VERSION__: JSON.stringify(appVersion),

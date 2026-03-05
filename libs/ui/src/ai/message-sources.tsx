@@ -18,9 +18,9 @@ export interface MessageSourcesProps {
 }
 
 export function MessageSources({ citations }: MessageSourcesProps) {
-  if (citations.length === 0) return null;
-
   const [isOpen, setIsOpen] = useState(citations.length <= 3);
+
+  if (citations.length === 0) return null;
 
   return (
     <div data-slot="message-sources" className="mt-2 border-t border-border/30 pt-2">

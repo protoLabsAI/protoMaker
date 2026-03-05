@@ -10,7 +10,7 @@
  *   // Pass to provider: { hooks }
  */
 
-import type { HookCallback, HookCallbackMatcher } from '@protolabs-ai/types';
+import type { HookCallback, HookCallbackMatcher } from '@protolabsai/types';
 import type { EventEmitter } from './events.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────

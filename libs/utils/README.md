@@ -1,4 +1,4 @@
-# @protolabs-ai/utils
+# @protolabsai/utils
 
 Shared utility functions for AutoMaker.
 
@@ -9,7 +9,7 @@ This package provides common utility functions used across AutoMaker's server an
 ## Installation
 
 ```bash
-npm install @protolabs-ai/utils
+npm install @protolabsai/utils
 ```
 
 ## Exports
@@ -19,7 +19,7 @@ npm install @protolabs-ai/utils
 Structured logging with context.
 
 ```typescript
-import { createLogger, LogLevel } from '@protolabs-ai/utils';
+import { createLogger, LogLevel } from '@protolabsai/utils';
 
 const logger = createLogger('MyComponent');
 logger.info('Processing request');
@@ -38,7 +38,7 @@ import {
   isAuthenticationError,
   classifyError,
   getUserFriendlyErrorMessage,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 
 try {
   await operation();
@@ -62,7 +62,7 @@ import {
   normalizeContentBlocks,
   formatHistoryAsText,
   convertHistoryToMessages,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 
 const text = extractTextFromContent(contentBlocks);
 const normalized = normalizeContentBlocks(content);
@@ -80,7 +80,7 @@ import {
   readImageAsBase64,
   convertImagesToContentBlocks,
   formatImagePathsForPrompt,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 
 const mimeType = getMimeTypeForImage('screenshot.png');
 const base64 = await readImageAsBase64('/path/to/image.jpg');
@@ -93,7 +93,7 @@ const formatted = formatImagePathsForPrompt(imagePaths);
 Build prompts with images for Claude.
 
 ```typescript
-import { buildPromptWithImages } from '@protolabs-ai/utils';
+import { buildPromptWithImages } from '@protolabsai/utils';
 
 const result = await buildPromptWithImages({
   basePrompt: 'Analyze this screenshot',
@@ -110,7 +110,7 @@ console.log(result.images); // Image data for Claude
 Common file system operations.
 
 ```typescript
-import { ensureDir, fileExists, readJsonFile, writeJsonFile } from '@protolabs-ai/utils';
+import { ensureDir, fileExists, readJsonFile, writeJsonFile } from '@protolabsai/utils';
 
 await ensureDir('/path/to/dir');
 const exists = await fileExists('/path/to/file');
@@ -121,7 +121,7 @@ await writeJsonFile('/config.json', data);
 ## Usage Example
 
 ```typescript
-import { createLogger, classifyError, buildPromptWithImages } from '@protolabs-ai/utils';
+import { createLogger, classifyError, buildPromptWithImages } from '@protolabsai/utils';
 
 const logger = createLogger('FeatureExecutor');
 
@@ -147,9 +147,9 @@ async function executeWithImages(prompt: string, images: string[]) {
 
 ## Dependencies
 
-- `@protolabs-ai/types` - Type definitions
+- `@protolabsai/types` - Type definitions
 
 ## Used By
 
-- `@protolabs-ai/server`
-- `@protolabs-ai/ui`
+- `@protolabsai/server`
+- `@protolabsai/ui`

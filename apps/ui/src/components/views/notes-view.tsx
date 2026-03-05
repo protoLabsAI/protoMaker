@@ -8,7 +8,7 @@ import { NotesTabBar } from './notes-view/notes-tab-bar';
 import { NotesToolbar } from './notes-view/notes-toolbar';
 import { TiptapEditor } from './notes-view/tiptap-editor';
 import { NotesStatusBar } from './notes-view/notes-status-bar';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 
 export function NotesView() {
   const currentProject = useAppStore((s) => s.currentProject);

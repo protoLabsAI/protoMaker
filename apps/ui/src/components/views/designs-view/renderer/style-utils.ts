@@ -2,7 +2,7 @@
  * Style utility functions for converting Pen node properties to CSS
  */
 
-import type { PenFill, PenStroke, PenColor } from '@protolabs-ai/types';
+import type { PenFill, PenStroke, PenColor } from '@protolabsai/types';
 
 /**
  * Variable resolver function type

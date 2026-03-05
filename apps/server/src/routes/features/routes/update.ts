@@ -10,13 +10,13 @@
 
 import type { Request, Response } from 'express';
 import { FeatureLoader } from '../../../services/feature-loader.js';
-import type { Feature, FeatureStatus, ActionProposal, RiskLevel } from '@protolabs-ai/types';
+import type { Feature, FeatureStatus, ActionProposal, RiskLevel } from '@protolabsai/types';
 import type { AuthorityService } from '../../../services/authority-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { FeatureHealthService } from '../../../services/feature-health-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('features/update');
 

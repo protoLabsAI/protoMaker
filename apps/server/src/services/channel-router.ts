@@ -10,13 +10,13 @@
  *   channelRouter.getHandler(feature).requestApproval(feature, context);
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   ChannelHandler,
   Feature,
   HITLFormRequestInput,
   SignalChannel,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 const logger = createLogger('ChannelRouter');
 

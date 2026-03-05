@@ -28,7 +28,7 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import type { AvaConfig, AvaToolGroups } from '@/lib/clients/ava-client';
 
 export interface AvaSettingsPanelProps {

@@ -20,8 +20,8 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Badge } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
 import { formatCostUsd } from '@/lib/format';
 import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
@@ -40,7 +40,7 @@ import type {
 } from '../types';
 import { PipelineMonitor } from './pipeline-monitor';
 import { TimelineVisualization } from './timeline-visualization';
-import type { PipelineState, PipelinePhase } from '@protolabs-ai/types';
+import type { PipelineState, PipelinePhase } from '@protolabsai/types';
 
 // ============================================
 // Shared helpers

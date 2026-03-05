@@ -1,5 +1,5 @@
 import type { Feature } from '@/store/types';
-import type { PipelineConfig, FeatureStatusWithPipeline } from '@protolabs-ai/types';
+import type { PipelineConfig, FeatureStatusWithPipeline } from '@protolabsai/types';
 
 export type ColumnId = Feature['status'];
 

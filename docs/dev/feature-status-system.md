@@ -44,7 +44,7 @@ The system automatically normalizes legacy status values:
 ### Backend (libs/types)
 
 ```typescript
-import { normalizeFeatureStatus } from '@protolabs-ai/types';
+import { normalizeFeatureStatus } from '@protolabsai/types';
 
 // Defensive normalization
 const status = normalizeFeatureStatus(feature.status, (from, to) => {

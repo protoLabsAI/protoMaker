@@ -1,6 +1,6 @@
 [Unit]
 Description=Automaker AI Development Studio
-Documentation=https://github.com/proto-labs-ai/automaker
+Documentation=https://github.com/protoLabsAI/automaker
 After=docker.service
 Requires=docker.service
 

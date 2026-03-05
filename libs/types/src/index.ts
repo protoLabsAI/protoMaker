@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/types
+ * @protolabsai/types
  * Shared type definitions for AutoMaker
  */
 
@@ -600,7 +600,7 @@ export { ROLE_CAPABILITIES } from './agent-roles.js';
 export type { HeadsdownLoopConfig, HeadsdownConfig, HeadsdownState } from './headsdown.js';
 export { DEFAULT_HEADSDOWN_CONFIGS } from './headsdown.js';
 
-// Policy engine types (used by @protolabs-ai/policy-engine)
+// Policy engine types (used by @protolabsai/policy-engine)
 export type {
   AgentRoleName,
   PolicyAction,

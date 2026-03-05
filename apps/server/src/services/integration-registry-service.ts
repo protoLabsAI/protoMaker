@@ -17,8 +17,8 @@ import {
   type IntegrationHealth,
   type IntegrationSummary,
   type DiscordChannelSignalConfig,
-} from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('IntegrationRegistry');

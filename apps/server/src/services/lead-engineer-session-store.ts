@@ -6,9 +6,9 @@
  */
 
 import path from 'node:path';
-import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabs-ai/utils';
-import { getAutomakerDir } from '@protolabs-ai/platform';
-import type { LeadEngineerSession } from '@protolabs-ai/types';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
+import { getAutomakerDir } from '@protolabsai/platform';
+import type { LeadEngineerSession } from '@protolabsai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';

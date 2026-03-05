@@ -6,8 +6,8 @@ import {
   createFeatureMap,
   getBlockingDependenciesFromMap,
   resolveDependencies,
-} from '@protolabs-ai/dependency-resolver';
-import { normalizeFeatureStatus } from '@protolabs-ai/types';
+} from '@protolabsai/dependency-resolver';
+import { normalizeFeatureStatus } from '@protolabsai/types';
 
 type ColumnId = Feature['status'];
 

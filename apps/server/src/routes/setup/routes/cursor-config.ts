@@ -22,7 +22,7 @@ import {
   type CursorModelId,
   type CursorPermissionProfile,
   type CursorCliPermissions,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   readGlobalConfig,
   readProjectConfig,

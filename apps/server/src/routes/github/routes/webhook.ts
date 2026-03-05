@@ -7,7 +7,7 @@
 
 import { createHmac, timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   GitHubWebhookPayload,
   GitHubIssueWebhookPayload,
@@ -17,7 +17,7 @@ import type {
   GitHubPingWebhookPayload,
   WebhookVerificationResult,
   GitHubCheckSuiteWebhookPayload,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 

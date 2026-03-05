@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { createEventEmitter, type EventEmitter } from '../lib/events.js';
 
 import { AgentService } from '../services/agent-service.js';

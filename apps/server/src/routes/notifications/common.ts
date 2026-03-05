@@ -4,7 +4,7 @@
  * Provides logger and error handling utilities shared across all notification endpoints.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 /** Logger instance for notification-related operations */

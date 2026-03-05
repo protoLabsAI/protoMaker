@@ -5,7 +5,7 @@
   "author": {
     "name": "Proto Labs AI"
   },
-  "repository": "https://github.com/proto-labs-ai/automaker",
+  "repository": "https://github.com/protoLabsAI/automaker",
   "mcpServers": {
     "studio": {
       "command": "bash",

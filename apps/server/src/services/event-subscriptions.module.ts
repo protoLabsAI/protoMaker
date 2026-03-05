@@ -1,5 +1,5 @@
-import { createLogger } from '@protolabs-ai/utils';
-import type { Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { Feature } from '@protolabsai/types';
 
 import type { ServiceContainer } from '../server/services.js';
 

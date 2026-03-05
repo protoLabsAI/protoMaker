@@ -12,7 +12,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const execFileAsync = promisify(execFile);
 const logger = createLogger('LabsService');

@@ -22,8 +22,8 @@ import {
   QueueView,
   type QueueItem,
   type BranchInfo,
-} from '@protolabs-ai/ui/ai';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/ai';
+import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { ChatModelSelect } from '@/components/views/chat/components/chat-model-select';
 import { ConversationList } from './conversation-list';

@@ -9,8 +9,8 @@
  *
  * Usage (server-side):
  * ```typescript
- * import { createStandupFlow } from '@protolabs-ai/flows';
- * import { createDiscordTools } from '@protolabs-ai/tools';
+ * import { createStandupFlow } from '@protolabsai/flows';
+ * import { createDiscordTools } from '@protolabsai/tools';
  *
  * const flow = createStandupFlow({
  *   projectService,

@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Project, Milestone, Phase, SPARCPrd } from '@protolabs-ai/types';
+import type { Project, Milestone, Phase, SPARCPrd } from '@protolabsai/types';
 import {
   ensureProjectStructure,
   ensureMilestoneDir,
@@ -17,14 +17,14 @@ import {
   generatePhaseSlug,
   generateProjectSlug,
   projectPlanExists,
-} from '@protolabs-ai/platform';
-import { secureFs } from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
+import { secureFs } from '@protolabsai/platform';
 import {
   generateProjectFile,
   generateMilestoneFile,
   generatePhaseFile,
   generatePrdFile,
-} from '@protolabs-ai/utils';
+} from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 interface CreateProjectRequest {

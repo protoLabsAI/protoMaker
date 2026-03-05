@@ -283,10 +283,10 @@ libs/flows/src/content/
 ## Monorepo Context
 
 ```
-libs/flows/        # @protolabs-ai/flows — LangGraph content flows
-libs/types/        # @protolabs-ai/types (shared TypeScript definitions)
-libs/prompts/      # @protolabs-ai/prompts (content prompts)
-libs/utils/        # @protolabs-ai/utils (logging, errors)
+libs/flows/        # @protolabsai/flows — LangGraph content flows
+libs/types/        # @protolabsai/types (shared TypeScript definitions)
+libs/prompts/      # @protolabsai/prompts (content prompts)
+libs/utils/        # @protolabsai/utils (logging, errors)
 ```
 
 **Build order:** Always run `npm run build:packages` before testing content flows if shared packages changed.

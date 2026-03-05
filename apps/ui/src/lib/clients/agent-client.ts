@@ -5,7 +5,7 @@
  */
 import type { GitHubAPI, IssueValidationInput, IssueValidationEvent } from '../electron';
 import type { Message } from '@/types/electron';
-import type { ModelId, ThinkingLevel, ReasoningEffort } from '@protolabs-ai/types';
+import type { ModelId, ThinkingLevel, ReasoningEffort } from '@protolabsai/types';
 import type { EventCallback } from './base-http-client';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 

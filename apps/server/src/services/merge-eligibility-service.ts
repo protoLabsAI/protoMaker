@@ -5,9 +5,9 @@
  * if a PR is ready for automatic merging.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { AutoMergeSettings, AutoMergeCheckType } from '@protolabs-ai/types';
-import { DEFAULT_AUTO_MERGE_SETTINGS } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { AutoMergeSettings, AutoMergeCheckType } from '@protolabsai/types';
+import { DEFAULT_AUTO_MERGE_SETTINGS } from '@protolabsai/types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 

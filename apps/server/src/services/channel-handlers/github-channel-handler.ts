@@ -14,8 +14,8 @@
  */
 
 import { execSync } from 'node:child_process';
-import { createLogger } from '@protolabs-ai/utils';
-import type { HITLFormRequest } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { HITLFormRequest } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
 import type { PipelineOrchestrator } from '../pipeline-orchestrator.js';
 import type { FeatureLoader } from '../feature-loader.js';

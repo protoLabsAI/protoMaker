@@ -12,7 +12,7 @@
 import type { Request, Response } from 'express';
 import type { EventHistoryService } from '../../../services/event-history-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
-import type { EventReplayResult, EventReplayHookResult, EventHook } from '@protolabs-ai/types';
+import type { EventReplayResult, EventReplayHookResult, EventHook } from '@protolabsai/types';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getErrorMessage, logError, logger } from '../common.js';

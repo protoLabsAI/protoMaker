@@ -1,18 +1,18 @@
 import { Plus, X, Map as MapIcon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
-import type { SpecOutput } from '@protolabs-ai/spec-parser';
+} from '@protolabsai/ui/atoms';
+import type { SpecOutput } from '@protolabsai/spec-parser';
 
 type RoadmapPhase = NonNullable<SpecOutput['implementation_roadmap']>[number];
 type PhaseStatus = 'completed' | 'in_progress' | 'pending';

@@ -1,7 +1,7 @@
 /**
- * Settings Types - Re-exported from @protolabs-ai/types
+ * Settings Types - Re-exported from @protolabsai/types
  *
- * This file now re-exports settings types from the shared @protolabs-ai/types package
+ * This file now re-exports settings types from the shared @protolabsai/types package
  * to maintain backward compatibility with existing imports in the server codebase.
  */
 
@@ -42,7 +42,7 @@ export type {
   PRDComplexity,
   AutoApproveRule,
   RequireReviewRule,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -55,4 +55,4 @@ export {
   CREDENTIALS_VERSION,
   PROJECT_SETTINGS_VERSION,
   OPENAI_COMPATIBLE_TEMPLATES,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';

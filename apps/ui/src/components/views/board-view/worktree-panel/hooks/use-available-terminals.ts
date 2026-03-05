@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 import { useTerminalStore } from '@/store/terminal-store';
-import type { TerminalInfo } from '@protolabs-ai/types';
+import type { TerminalInfo } from '@protolabsai/types';
 
 const logger = createLogger('AvailableTerminals');
 

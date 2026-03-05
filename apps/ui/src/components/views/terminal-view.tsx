@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import {
   Terminal as TerminalIcon,
   Plus,
@@ -15,24 +15,24 @@ import {
   Settings,
 } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { getServerUrlSync } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import type { TerminalPanelContent, TerminalTab, PersistedTerminalPanel } from '@/store/types';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Slider } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { TERMINAL_FONT_OPTIONS } from '@/config/terminal-themes';
 import { DEFAULT_FONT_VALUE } from '@/config/ui-font-options';
 import { toast } from 'sonner';

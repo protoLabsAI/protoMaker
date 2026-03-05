@@ -9,10 +9,10 @@
 import { useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useShallow } from 'zustand/react/shallow';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { createLogger } from '@protolabs-ai/utils/logger';
-import { DEFAULT_MAX_CONCURRENCY } from '@protolabs-ai/types';
+import { Label } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { createLogger } from '@protolabsai/utils/logger';
+import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useAutoMode } from '@/hooks/use-auto-mode';

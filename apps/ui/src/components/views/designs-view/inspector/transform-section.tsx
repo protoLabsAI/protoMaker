@@ -2,10 +2,10 @@
  * Transform section for editing position and size
  */
 
-import type { PenNode } from '@protolabs-ai/types';
+import type { PenNode } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Slider } from '@protolabsai/ui/atoms';
 
 interface TransformSectionProps {
   node: PenNode;

@@ -8,9 +8,9 @@
  * - Path resolution (relative/absolute)
  */
 
-import { secureFs } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabsai/platform';
 import path from 'path';
-import type { ImageData, ImageContentBlock } from '@protolabs-ai/types';
+import type { ImageData, ImageContentBlock } from '@protolabsai/types';
 
 /**
  * MIME type mapping for image file extensions

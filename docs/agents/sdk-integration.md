@@ -43,7 +43,7 @@ protoLabs Studio uses a provider abstraction to support multiple LLM backends:
 The system automatically selects the provider based on model ID:
 
 ```typescript
-import { getProviderByModelId } from '@protolabs-ai/utils';
+import { getProviderByModelId } from '@protolabsai/utils';
 
 // Resolves to Claude provider
 const provider = getProviderByModelId('claude-sonnet-4-6');
@@ -146,7 +146,7 @@ Context files are loaded from:
 **Loading behavior:**
 
 ```typescript
-import { loadContextFiles } from '@protolabs-ai/utils';
+import { loadContextFiles } from '@protolabsai/utils';
 
 const contextFiles = await loadContextFiles({
   workingDirectory: '/path/to/project',
@@ -309,7 +309,7 @@ const chatOptions = createChatOptions({
 ### Error Classification
 
 ```typescript
-import { classifyError, isAbortError } from '@protolabs-ai/utils';
+import { classifyError, isAbortError } from '@protolabsai/utils';
 
 try {
   await executeAgent(options);
@@ -476,7 +476,7 @@ Agents execute in isolated git worktrees to protect the main codebase:
 ### Worktree Creation
 
 ```typescript
-import { createWorktree } from '@protolabs-ai/git-utils';
+import { createWorktree } from '@protolabsai/git-utils';
 
 const worktreePath = await createWorktree({
   projectPath: '/path/to/project',
@@ -498,7 +498,7 @@ const chatOptions = createChatOptions({
 ### Worktree Cleanup
 
 ```typescript
-import { cleanupWorktree } from '@protolabs-ai/git-utils';
+import { cleanupWorktree } from '@protolabsai/git-utils';
 
 await cleanupWorktree({
   projectPath: '/path/to/project',
@@ -513,7 +513,7 @@ protoLabs Studio can register custom tools for agent use:
 ### Defining a Tool
 
 ```typescript
-import { ToolDefinition } from '@protolabs-ai/tools';
+import { ToolDefinition } from '@protolabsai/tools';
 
 const myTool: ToolDefinition = {
   name: 'analyze-dependencies',
@@ -539,7 +539,7 @@ const myTool: ToolDefinition = {
 ### Registering Tools
 
 ```typescript
-import { ToolRegistry } from '@protolabs-ai/tools';
+import { ToolRegistry } from '@protolabsai/tools';
 
 const registry = new ToolRegistry();
 registry.register('dependencies', myTool);

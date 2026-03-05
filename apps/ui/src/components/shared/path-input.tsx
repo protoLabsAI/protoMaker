@@ -1,9 +1,9 @@
 import { useEffect, Fragment, FocusEvent, KeyboardEvent, MouseEvent } from 'react';
 import { useState, useRef, useCallback, useMemo } from 'react';
 import { Home, ArrowLeft, Pencil, ArrowRight, Search, Folder, File, X } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Kbd } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Kbd } from '@protolabsai/ui/atoms';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -11,7 +11,7 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   Command,
   CommandInput,
@@ -19,7 +19,7 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 
 interface BreadcrumbSegment {

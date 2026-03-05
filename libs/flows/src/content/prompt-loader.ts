@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LangfuseClient } from '@protolabs-ai/observability';
-import { createLogger } from '@protolabs-ai/utils';
+import { LangfuseClient } from '@protolabsai/observability';
+import { createLogger } from '@protolabsai/utils';
 import { isLangfuseReady } from './langfuse-guard.js';
 
 const logger = createLogger('PromptLoader');

@@ -601,7 +601,7 @@ export interface GlobalSettings {
   /**
    * Team or organization identifier for grouping instances.
    * Used in PR ownership watermarks to identify which org created a PR.
-   * Example: "proto-labs-ai"
+   * Example: "protoLabsAI"
    */
   teamId?: string;
 

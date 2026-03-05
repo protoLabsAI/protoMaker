@@ -17,7 +17,7 @@ import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CeremonyAuditLogService } from '../../services/ceremony-audit-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('ceremonies');
 

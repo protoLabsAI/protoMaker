@@ -1,4 +1,4 @@
-# @protolabs-ai/ui
+# @protolabsai/ui
 
 ## 0.33.1
 
@@ -119,7 +119,7 @@
   ### Bug Fixes
   - oauth auth detection + pr-feedback stale entry cleanup
   - address CodeRabbit review feedback on project management PR
-  - add @protolabs-ai/tools as server dependency
+  - add @protolabsai/tools as server dependency
 
   ### Refactors
   - unify project view with design system atoms and semantic tokens

@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
 import Anthropic from '@anthropic-ai/sdk';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { KnowledgeEmbeddingOrchestrator } from './knowledge-embedding-orchestrator.js';
 
 const logger = createLogger('KnowledgeIngestionService');

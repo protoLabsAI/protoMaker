@@ -9,8 +9,8 @@
  * transitions out of blocked state (feature unblocked).
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { EventType } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { EventType } from '@protolabsai/types';
 import type { ActionableItemService } from './actionable-item-service.js';
 import type { EventEmitter, UnsubscribeFn } from '../lib/events.js';
 

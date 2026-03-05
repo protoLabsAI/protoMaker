@@ -11,7 +11,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { EventBus, EventCallback, EventType } from '@protolabs-ai/types';
+import type { EventBus, EventCallback, EventType } from '@protolabsai/types';
 import {
   DEFAULT_PIPELINE_GATES,
   GTM_SKIP_PHASES,
@@ -20,8 +20,8 @@ import {
   type PipelineBranch,
   type PipelinePhase,
   type PipelineState,
-} from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import type { PhaseProcessor } from './authority-agents/agent-utils.js';
 import type { ChannelRouter } from './channel-router.js';
 import type { FeatureLoader } from './feature-loader.js';

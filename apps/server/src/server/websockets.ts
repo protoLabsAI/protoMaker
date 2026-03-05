@@ -3,7 +3,7 @@
 import type * as http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import cookie from 'cookie';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from './services.js';
 import { getTerminalService } from '../services/terminal-service.js';

@@ -9,9 +9,9 @@
 import { exec, execFile } from 'child_process';
 import path from 'path';
 import { promisify } from 'util';
-import { createLogger } from '@protolabs-ai/utils';
-import type { Feature } from '@protolabs-ai/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { Feature } from '@protolabsai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 
 const execAsync = promisify(exec);
@@ -83,7 +83,9 @@ export async function checkAndRecoverUncommittedWork(
   projectPath: string,
   prBaseBranch?: string
 ): Promise<WorktreeRecoveryResult> {
-  const baseBranch = prBaseBranch || DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
+  const rawBranch = prBaseBranch || DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch;
+  // Sanitize branch name to prevent shell injection — allow only valid git ref characters
+  const baseBranch = rawBranch.replace(/[^a-zA-Z0-9_./-]/g, '');
   const result: WorktreeRecoveryResult = { detected: false, recovered: false };
 
   try {

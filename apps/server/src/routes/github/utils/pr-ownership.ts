@@ -58,7 +58,7 @@ export function parsePROwnershipWatermark(body: string): PROwnership {
  * Generates a hidden HTML comment invisible in rendered GitHub markdown.
  *
  * @param instanceId - Automaker instance ID (e.g. "ava-staging" or a UUID)
- * @param teamId - Team/org identifier (e.g. "proto-labs-ai")
+ * @param teamId - Team/org identifier (e.g. "protoLabsAI")
  * @returns HTML comment string to append to PR body
  */
 export function buildPROwnershipWatermark(instanceId: string, teamId: string): string {

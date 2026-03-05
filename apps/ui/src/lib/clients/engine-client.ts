@@ -6,7 +6,7 @@
  *              pipeline state, signal submit, PRD approval,
  *              content drafts/review, pipeline checkpoints/status/gate/override)
  */
-import type { PipelineState } from '@protolabs-ai/types';
+import type { PipelineState } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withEngineClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>

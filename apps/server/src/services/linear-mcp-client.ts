@@ -15,7 +15,7 @@
  *   });
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('LinearMCPClient');

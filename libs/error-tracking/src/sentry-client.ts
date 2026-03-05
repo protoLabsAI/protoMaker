@@ -6,7 +6,7 @@
  */
 
 import * as Sentry from '@sentry/node';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 import { scrubSensitiveData, hashProjectPath } from './privacy.js';
 
 /**

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -7,12 +7,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
 import { Wand2, Check, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -22,7 +22,7 @@ import type {
   ModelAlias,
   CursorModelId,
   PhaseModelEntry,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { ModelOverrideTrigger } from '@/components/shared/model-override-trigger';
 import { useAIModelsStore } from '@/store/ai-models-store';
 

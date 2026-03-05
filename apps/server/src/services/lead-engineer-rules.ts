@@ -10,7 +10,7 @@ import type {
   LeadRuleAction,
   LeadFastPathRule,
   LeadFeatureSnapshot,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 // ────────────────────────── Thresholds ──────────────────────────
 

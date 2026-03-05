@@ -5,9 +5,9 @@
  * PlanProcessor:   Generates implementation plan, runs antagonistic review.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import type { AgentRole, Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import type { AgentRole, Feature } from '@protolabsai/types';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import type {

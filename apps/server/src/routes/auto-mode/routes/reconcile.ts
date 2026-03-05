@@ -7,7 +7,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 

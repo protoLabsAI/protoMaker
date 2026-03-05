@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Key, CheckCircle2, XCircle, Loader2, ExternalLink, Info } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { ProviderToggle } from '../provider-toggle';
 
 const logger = createLogger('GroqSettings');

@@ -18,7 +18,7 @@ import type { SettingsService } from '../../../src/services/settings-service.js'
 import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { ProjectService } from '../../../src/services/project-service.js';
 import type { MetricsService } from '../../../src/services/metrics-service.js';
-import type { ProjectSettings } from '@protolabs-ai/types';
+import type { ProjectSettings } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Module mocks — prevent real LLM calls
@@ -28,13 +28,13 @@ vi.mock('@langchain/anthropic', () => ({
   ChatAnthropic: vi.fn().mockImplementation(() => ({})),
 }));
 
-vi.mock('@protolabs-ai/flows', () => ({
+vi.mock('@protolabsai/flows', () => ({
   createStandupFlow: vi.fn(),
   createRetroFlow: vi.fn(),
   createProjectRetroFlow: vi.fn(),
 }));
 
-import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabs-ai/flows';
+import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 
 // ---------------------------------------------------------------------------
 // Mock factories

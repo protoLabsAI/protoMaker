@@ -3,7 +3,7 @@
  */
 
 import { spawn } from 'child_process';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('AuthUtils');
 

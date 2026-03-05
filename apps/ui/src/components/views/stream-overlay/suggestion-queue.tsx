@@ -4,7 +4,7 @@
  * Displays suggestions from !idea commands with vote counts.
  */
 
-import type { TwitchSuggestion } from '@protolabs-ai/types';
+import type { TwitchSuggestion } from '@protolabsai/types';
 
 interface SuggestionQueueProps {
   suggestions: TwitchSuggestion[];

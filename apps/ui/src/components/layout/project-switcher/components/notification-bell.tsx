@@ -8,9 +8,9 @@ import { useNavigate } from '@tanstack/react-router';
 import { useNotificationsStore } from '@/store/notifications-store';
 import { useLoadNotifications, useNotificationEvents } from '@/hooks/use-notification-events';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import type { Notification } from '@protolabs-ai/types';
+import { Button } from '@protolabsai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
+import type { Notification } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 
 /**

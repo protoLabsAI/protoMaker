@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import {
   Dialog,
   DialogContent,
@@ -7,15 +7,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { HotkeyButton } from '@protolabs-ai/ui/molecules';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { HotkeyButton } from '@protolabsai/ui/molecules';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
 import { FolderPlus, FolderOpen, Rocket, ExternalLink, Check, Link, Folder } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { starterTemplates, type StarterTemplate } from '@/lib/templates';
 import { getElectronAPI } from '@/lib/electron';
 import { cn } from '@/lib/utils';

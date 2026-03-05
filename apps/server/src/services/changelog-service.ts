@@ -10,14 +10,14 @@
  */
 
 import path from 'path';
-import { createLogger } from '@protolabs-ai/utils';
-import { secureFs } from '@protolabs-ai/platform';
-import { getProjectDir } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { secureFs } from '@protolabsai/platform';
+import { getProjectDir } from '@protolabsai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 const logger = createLogger('ChangelogService');
 

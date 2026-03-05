@@ -5,7 +5,7 @@ import {
   CLAUDE_MODEL_MAP,
   CURSOR_MODEL_MAP,
   DEFAULT_MODELS,
-} from '@protolabs-ai/model-resolver';
+} from '@protolabsai/model-resolver';
 
 describe('model-resolver.ts', () => {
   let consoleSpy: any;

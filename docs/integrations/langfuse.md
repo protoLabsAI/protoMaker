@@ -246,6 +246,6 @@ Langfuse also provides a native MCP server at `{LANGFUSE_BASE_URL}/api/public/mc
 
 ## Related Documentation
 
-- [Observability Package](../dev/observability-package.md) — `@protolabs-ai/observability` library internals (contributor reference)
+- [Observability Package](../dev/observability-package.md) — `@protolabsai/observability` library internals (contributor reference)
 - [Providers](../server/providers.md) — AI provider architecture
 - [Prompt Engineering](../agents/prompt-engineering.md) — How prompts are composed and customized

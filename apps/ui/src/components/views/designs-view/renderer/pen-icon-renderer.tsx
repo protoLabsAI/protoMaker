@@ -2,7 +2,7 @@
  * Icon renderer with Lucide React icon support
  */
 
-import type { PenIconFont } from '@protolabs-ai/types';
+import type { PenIconFont } from '@protolabsai/types';
 import { fillToCSS, colorToCSS } from './style-utils';
 import type { CSSProperties } from 'react';
 import * as LucideIcons from 'lucide-react';

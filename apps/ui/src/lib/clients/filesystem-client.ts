@@ -16,7 +16,7 @@ import type {
   SaveImageResult,
 } from '../electron';
 import { getGlobalFileBrowser } from '@/contexts/file-browser-context';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 const logger = createLogger('HttpClient');

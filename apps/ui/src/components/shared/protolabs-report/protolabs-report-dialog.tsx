@@ -7,13 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
   Spinner,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
-import { ProtoLabsReportResults } from '@protolabs-ai/ui/organisms';
-import type { RepoResearchResult, GapAnalysisReport, AlignmentProposal } from '@protolabs-ai/types';
+import { ProtoLabsReportResults } from '@protolabsai/ui/organisms';
+import type { RepoResearchResult, GapAnalysisReport, AlignmentProposal } from '@protolabsai/types';
 
 type PipelineStep = 'idle' | 'researching' | 'analyzing' | 'generating' | 'complete' | 'error';
 

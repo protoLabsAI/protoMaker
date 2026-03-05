@@ -5,7 +5,7 @@
  * across all AI providers (Claude, Codex, Cursor)
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('ErrorHandler');
 

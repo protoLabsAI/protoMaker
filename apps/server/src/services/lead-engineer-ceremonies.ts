@@ -6,8 +6,8 @@
  * CeremonyService handles retro + Discord automatically (already subscribed to project:completed).
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { LeadEngineerSession } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { LeadEngineerSession } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { WorldStateBuilder } from './lead-engineer-world-state.js';

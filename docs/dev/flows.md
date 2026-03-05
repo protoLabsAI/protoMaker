@@ -1,6 +1,6 @@
 # Flows Package
 
-`@protolabs-ai/flows` provides LangGraph state graph primitives for building multi-agent coordination flows. It includes state management utilities, typed reducers, routing helpers, a graph builder, and reference implementations of common patterns.
+`@protolabsai/flows` provides LangGraph state graph primitives for building multi-agent coordination flows. It includes state management utilities, typed reducers, routing helpers, a graph builder, and reference implementations of common patterns.
 
 **Owner:** Sam (AI Agent Engineer)
 
@@ -47,7 +47,7 @@ libs/flows/src/
 LangGraph uses `Annotation.Root()` to define typed state. This package bridges Zod schemas to LangGraph annotations:
 
 ```typescript
-import { createStateAnnotation, validateState } from '@protolabs-ai/flows';
+import { createStateAnnotation, validateState } from '@protolabsai/flows';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -93,7 +93,7 @@ Reducers define how parallel node outputs merge into shared state. Every field w
 | `mapMergeReducer`           | Map merge (right wins)                       | Key-value accumulation                   |
 
 ```typescript
-import { appendReducer, fileReducer, counterReducer } from '@protolabs-ai/flows';
+import { appendReducer, fileReducer, counterReducer } from '@protolabsai/flows';
 ```
 
 ### Routing
@@ -108,7 +108,7 @@ import {
   createSequentialRouter,
   createParallelRouter,
   createEndRouter,
-} from '@protolabs-ai/flows';
+} from '@protolabsai/flows';
 
 // Binary: true/false → node A or B
 const router = createBinaryRouter<MyState>(
@@ -143,7 +143,7 @@ const fanOut = createParallelRouter<MyState>((state) => state.queries.map((q) =>
 The `GraphBuilder` class provides a fluent API for constructing state graphs:
 
 ```typescript
-import { GraphBuilder, END, START } from '@protolabs-ai/flows';
+import { GraphBuilder, END, START } from '@protolabsai/flows';
 
 const builder = new GraphBuilder<MyState>({
   stateAnnotation: MyState,
@@ -166,7 +166,7 @@ const result = await compiled.invoke({ query: 'test' });
 **Convenience constructors** for common patterns:
 
 ```typescript
-import { createLinearGraph, createLoopGraph, createBranchingGraph } from '@protolabs-ai/flows';
+import { createLinearGraph, createLoopGraph, createBranchingGraph } from '@protolabsai/flows';
 
 // Linear: A → B → C
 const linear = createLinearGraph(config, [
@@ -234,7 +234,7 @@ Key points:
 Subgraphs maintain their own message state, preventing pollution of the parent coordinator's history. Use `wrapSubgraph()`:
 
 ```typescript
-import { wrapSubgraph } from '@protolabs-ai/flows';
+import { wrapSubgraph } from '@protolabsai/flows';
 
 const wrappedResearcher = wrapSubgraph<
   CoordinatorState, // parent state type
@@ -288,7 +288,7 @@ Full coordinator pattern with Send()-based fan-out to researcher and analyzer su
 
 ## Content Creation Flow
 
-The content creation pipeline is the primary production flow in `@protolabs-ai/flows`. It generates blog posts, technical documentation, training data, and HuggingFace dataset rows through a 6-phase pipeline with parallel processing and human-in-the-loop gates.
+The content creation pipeline is the primary production flow in `@protolabsai/flows`. It generates blog posts, technical documentation, training data, and HuggingFace dataset rows through a 6-phase pipeline with parallel processing and human-in-the-loop gates.
 
 ### Architecture
 
@@ -367,7 +367,7 @@ graph TD
 ### Usage
 
 ```typescript
-import { createContentCreationFlow } from '@protolabs-ai/flows';
+import { createContentCreationFlow } from '@protolabsai/flows';
 
 const flow = createContentCreationFlow();
 const compiled = flow.compile();
@@ -419,7 +419,7 @@ After `classify_topic`, the flow routes based on PRD complexity:
 The graph accepts `smartModel` and `fastModel` via state. When provided, real LLM nodes execute; when absent, deterministic mock fallbacks run (enabling tests without API keys).
 
 ```typescript
-import { createAntagonisticReviewGraph } from '@protolabs-ai/flows';
+import { createAntagonisticReviewGraph } from '@protolabsai/flows';
 
 const graph = createAntagonisticReviewGraph(true);
 const result = await graph.invoke({
@@ -479,7 +479,7 @@ const result = await graph.invoke({
 All processing nodes accept pluggable executors for dependency injection:
 
 ```typescript
-import { createProjectPlanningFlow } from '@protolabs-ai/flows';
+import { createProjectPlanningFlow } from '@protolabsai/flows';
 
 const flow = createProjectPlanningFlow({
   researchExecutor: myLLMResearcher,
@@ -510,5 +510,5 @@ const flow = createProjectPlanningFlow({
 ```
 @langchain/langgraph  # State graph runtime
 zod                   # Schema validation
-@protolabs-ai/utils      # Logging
+@protolabsai/utils      # Logging
 ```

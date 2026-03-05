@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { DiscordService } from '../../../services/discord-service.js';
 
 const logger = createLogger('discord/reorganize');

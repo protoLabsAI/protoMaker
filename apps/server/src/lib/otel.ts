@@ -13,7 +13,7 @@
  * Gracefully no-ops if LANGFUSE_PUBLIC_KEY is not set.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('OTel');
 

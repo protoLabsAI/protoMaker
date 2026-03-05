@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/prompts
+ * @protolabsai/prompts
  * AI prompt templates for AutoMaker
  */
 
@@ -21,8 +21,8 @@ export {
   getAvailableEnhancementModes,
 } from './enhancement.js';
 
-// Re-export types from @protolabs-ai/types
-export type { EnhancementMode, EnhancementExample } from '@protolabs-ai/types';
+// Re-export types from @protolabsai/types
+export type { EnhancementMode, EnhancementExample } from '@protolabsai/types';
 
 // Default prompts
 export {
@@ -98,7 +98,7 @@ export {
   mergeAllPrompts,
 } from './merge.js';
 
-// Re-export resolved prompt types from @protolabs-ai/types
+// Re-export resolved prompt types from @protolabsai/types
 export type {
   ResolvedAutoModePrompts,
   ResolvedAgentPrompts,
@@ -112,7 +112,7 @@ export type {
   ResolvedContextDescriptionPrompts,
   ResolvedSuggestionsPrompts,
   ResolvedTaskExecutionPrompts,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 // Prompt registry (unified role → prompt mapping)
 export {

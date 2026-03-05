@@ -5,9 +5,9 @@
  * corrective actions to bring actual state in line with desired state.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { ExecutionState } from '@protolabs-ai/types';
-import { getExecutionStatePath } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import type { ExecutionState } from '@protolabsai/types';
+import { getExecutionStatePath } from '@protolabsai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';

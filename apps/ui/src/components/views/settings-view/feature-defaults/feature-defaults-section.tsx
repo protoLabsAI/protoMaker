@@ -1,6 +1,6 @@
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
-import { Slider } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
+import { Slider } from '@protolabsai/ui/atoms';
 import {
   FlaskConical,
   TestTube,
@@ -22,8 +22,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
-import type { PhaseModelEntry } from '@protolabs-ai/types';
+} from '@protolabsai/ui/atoms';
+import type { PhaseModelEntry } from '@protolabsai/types';
 import { PhaseModelSelector } from '../model-defaults/phase-model-selector';
 
 type PlanningMode = 'skip' | 'lite' | 'spec' | 'full';

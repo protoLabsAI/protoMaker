@@ -3,7 +3,7 @@
  * Renders a scaled-down preview of a reusable component
  */
 
-import type { PenNode, PenDocument } from '@protolabs-ai/types';
+import type { PenNode, PenDocument } from '@protolabsai/types';
 import { useDraggable } from '@dnd-kit/core';
 import { PenNodeRenderer } from '../renderer/pen-node-renderer';
 import { PenThemeProvider } from '../renderer/pen-theme-context';

@@ -6,7 +6,7 @@
  */
 
 import { contextBridge, ipcRenderer, OpenDialogOptions, SaveDialogOptions } from 'electron';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 
 const logger = createLogger('Preload');
 

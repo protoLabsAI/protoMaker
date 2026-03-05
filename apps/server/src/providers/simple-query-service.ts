@@ -24,8 +24,8 @@ import type {
   Credentials,
   HookCallbackMatcher,
   CanUseTool,
-} from '@protolabs-ai/types';
-import { stripProviderPrefix } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { stripProviderPrefix } from '@protolabsai/types';
 
 /**
  * Options for simple query execution

@@ -10,7 +10,7 @@
 
 import * as BetterSqlite3 from 'better-sqlite3';
 import Anthropic from '@anthropic-ai/sdk';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { EmbeddingService } from './embedding-service.js';
 
 const logger = createLogger('KnowledgeEmbeddingOrchestrator');

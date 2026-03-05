@@ -45,19 +45,19 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       // Resolve shared packages to source files for proper mocking in tests
-      '@protolabs-ai/utils': path.resolve(__dirname, '../../libs/utils/src/index.ts'),
-      '@protolabs-ai/platform': path.resolve(__dirname, '../../libs/platform/src/index.ts'),
-      '@protolabs-ai/types': path.resolve(__dirname, '../../libs/types/src/index.ts'),
-      '@protolabs-ai/model-resolver': path.resolve(
+      '@protolabsai/utils': path.resolve(__dirname, '../../libs/utils/src/index.ts'),
+      '@protolabsai/platform': path.resolve(__dirname, '../../libs/platform/src/index.ts'),
+      '@protolabsai/types': path.resolve(__dirname, '../../libs/types/src/index.ts'),
+      '@protolabsai/model-resolver': path.resolve(
         __dirname,
         '../../libs/model-resolver/src/index.ts'
       ),
-      '@protolabs-ai/dependency-resolver': path.resolve(
+      '@protolabsai/dependency-resolver': path.resolve(
         __dirname,
         '../../libs/dependency-resolver/src/index.ts'
       ),
-      '@protolabs-ai/git-utils': path.resolve(__dirname, '../../libs/git-utils/src/index.ts'),
-      '@protolabs-ai/error-tracking': path.resolve(
+      '@protolabsai/git-utils': path.resolve(__dirname, '../../libs/git-utils/src/index.ts'),
+      '@protolabsai/error-tracking': path.resolve(
         __dirname,
         '../../libs/error-tracking/src/index.ts'
       ),

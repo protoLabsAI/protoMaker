@@ -45,7 +45,7 @@ Your contribution is the **idea**, not the implementation.
 
 Before submitting a new idea, search existing issues to avoid duplicates:
 
-1. Visit [github.com/proto-labs-ai/protomaker/issues](https://github.com/proto-labs-ai/protomaker/issues)
+1. Visit [github.com/protoLabsAI/protomaker/issues](https://github.com/protoLabsAI/protomaker/issues)
 2. Search for keywords related to your idea
 3. Check both open and closed issues (we may have already implemented it)
 
@@ -211,7 +211,7 @@ After merging:
 3. **Release**: Included in next version release (weekly or milestone-based)
 4. **Changelog**: Your issue is linked in the release notes
 
-You can track releases at [github.com/proto-labs-ai/protomaker/releases](https://github.com/proto-labs-ai/protomaker/releases).
+You can track releases at [github.com/protoLabsAI/protomaker/releases](https://github.com/protoLabsAI/protomaker/releases).
 
 ### Timeline expectations
 
@@ -357,7 +357,7 @@ If rejected, revise and resubmit without the flagged content.
 
 **A**: Use GitHub Discussions instead of issues:
 
-- [github.com/proto-labs-ai/protomaker/discussions](https://github.com/proto-labs-ai/protomaker/discussions)
+- [github.com/protoLabsAI/protomaker/discussions](https://github.com/protoLabsAI/protomaker/discussions)
 
 Issues are for actionable ideas; discussions are for questions, brainstorming, and general feedback.
 
@@ -423,6 +423,6 @@ Exception: If you spot a typo, you can submit an issue and the agent will fix it
 
 - [Quarantine pipeline](/server/quarantine-pipeline) — How external submissions are validated
 - [Feature lifecycle](/dev/idea-to-production) — What happens after your idea is approved
-- [SECURITY.md](https://github.com/proto-labs-ai/protoMaker/blob/main/SECURITY.md) — Security vulnerability reporting process
-- [GitHub Issues](https://github.com/proto-labs-ai/protomaker/issues) — Submit your ideas here
-- [GitHub Discussions](https://github.com/proto-labs-ai/protomaker/discussions) — Ask questions and discuss
+- [SECURITY.md](https://github.com/protoLabsAI/protoMaker/blob/main/SECURITY.md) — Security vulnerability reporting process
+- [GitHub Issues](https://github.com/protoLabsAI/protomaker/issues) — Submit your ideas here
+- [GitHub Discussions](https://github.com/protoLabsAI/protomaker/discussions) — Ask questions and discuss

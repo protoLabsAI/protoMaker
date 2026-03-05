@@ -1,16 +1,12 @@
 /**
- * Re-export secure file system utilities from @protolabs-ai/platform
+ * Re-export secure file system utilities from @protolabsai/platform
  * This file exists for backward compatibility with existing imports
  */
 
-import { secureFs } from '@protolabs-ai/platform';
+import { secureFs } from '@protolabsai/platform';
 
 // Re-export types explicitly
-export type {
-  WriteFileOptions,
-  WriteFileSyncOptions,
-  ThrottleConfig,
-} from '@protolabs-ai/platform';
+export type { WriteFileOptions, WriteFileSyncOptions, ThrottleConfig } from '@protolabsai/platform';
 
 export const {
   // Async methods

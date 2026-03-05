@@ -82,11 +82,11 @@ function bumpVersion(packageJsonPath, packageName) {
 try {
   // Bump UI package version
   const uiOldVersion = JSON.parse(readFileSync(uiPackageJsonPath, 'utf8')).version;
-  const uiNewVersion = bumpVersion(uiPackageJsonPath, '@protolabs-ai/ui');
+  const uiNewVersion = bumpVersion(uiPackageJsonPath, '@protolabsai/ui');
 
   // Bump server package version (sync with UI)
   const serverOldVersion = JSON.parse(readFileSync(serverPackageJsonPath, 'utf8')).version;
-  const serverNewVersion = bumpVersion(serverPackageJsonPath, '@protolabs-ai/server');
+  const serverNewVersion = bumpVersion(serverPackageJsonPath, '@protolabsai/server');
 
   // Sync plugin.json version
   const pluginJson = JSON.parse(readFileSync(pluginJsonPath, 'utf8'));
@@ -101,8 +101,8 @@ try {
   }
 
   console.log(`Bumped version from ${uiOldVersion} to ${uiNewVersion} (${bumpType})`);
-  console.log(`Updated @protolabs-ai/ui: ${uiOldVersion} -> ${uiNewVersion}`);
-  console.log(`Updated @protolabs-ai/server: ${serverOldVersion} -> ${serverNewVersion}`);
+  console.log(`Updated @protolabsai/ui: ${uiOldVersion} -> ${uiNewVersion}`);
+  console.log(`Updated @protolabsai/server: ${serverOldVersion} -> ${serverNewVersion}`);
   console.log(`Updated plugin.json: ${pluginOldVersion} -> ${uiNewVersion}`);
   console.log(`Version is now: ${uiNewVersion}`);
 } catch (error) {

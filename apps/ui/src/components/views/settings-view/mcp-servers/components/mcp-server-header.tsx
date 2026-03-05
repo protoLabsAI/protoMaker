@@ -1,6 +1,6 @@
 import { Plug, RefreshCw, Download, Code, FileJson, Plus } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 interface MCPServerHeaderProps {
   isRefreshing: boolean;
   hasServers: boolean;

@@ -6,7 +6,7 @@
  * when the access token is expired or about to expire.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { SettingsService } from './settings-service.js';
 import type { CalendarService, CalendarEvent } from './calendar-service.js';
 

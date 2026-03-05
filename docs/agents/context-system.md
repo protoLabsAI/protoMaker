@@ -195,8 +195,8 @@ Inject into agent system prompt
 ### Code Example
 
 ```typescript
-import { loadContextFiles } from '@protolabs-ai/utils';
-import { secureFs } from '@protolabs-ai/platform';
+import { loadContextFiles } from '@protolabsai/utils';
+import { secureFs } from '@protolabsai/platform';
 
 const contextResult = await loadContextFiles({
   projectPath: '/path/to/project',

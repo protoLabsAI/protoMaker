@@ -5,9 +5,9 @@
 import type { Request, Response } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { isGitRepo } from '@protolabs-ai/git-utils';
+import { isGitRepo } from '@protolabsai/git-utils';
 import { getErrorMessage, logError, isValidBranchName, execGitCommand } from '../common.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
 

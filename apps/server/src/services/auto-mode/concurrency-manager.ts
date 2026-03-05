@@ -17,7 +17,7 @@
  *   has finished.
  */
 
-import type { RunningFeatureLease } from '@protolabs-ai/types';
+import type { RunningFeatureLease } from '@protolabsai/types';
 
 export class ConcurrencyManager {
   private readonly leases = new Map<string, RunningFeatureLease>();

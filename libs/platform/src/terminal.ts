@@ -12,7 +12,7 @@ import { promisify } from 'util';
 import { homedir } from 'os';
 import { join } from 'path';
 import { access } from 'fs/promises';
-import type { TerminalInfo } from '@protolabs-ai/types';
+import type { TerminalInfo } from '@protolabsai/types';
 
 const execFileAsync = promisify(execFile);
 

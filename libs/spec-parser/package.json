@@ -1,5 +1,5 @@
 {
-  "name": "@protolabs-ai/spec-parser",
+  "name": "@protolabsai/spec-parser",
   "version": "0.33.1",
   "type": "module",
   "description": "XML spec parser for AutoMaker - parses and generates app_spec.txt XML",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabs-ai/types": "^0.33.1",
+    "@protolabsai/types": "^0.33.1",
     "fast-xml-parser": "^5.3.7"
   },
   "devDependencies": {

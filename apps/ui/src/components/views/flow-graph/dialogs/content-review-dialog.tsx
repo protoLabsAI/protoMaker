@@ -22,8 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { useMutation } from '@tanstack/react-query';
 import Markdown from 'react-markdown';
 import { getHttpApiClient } from '@/lib/http-api-client';

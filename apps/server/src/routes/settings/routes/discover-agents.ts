@@ -7,7 +7,7 @@
 
 import type { Request, Response } from 'express';
 import { discoverFilesystemAgents } from '../../../lib/agent-discovery.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('DiscoverAgentsRoute');
 

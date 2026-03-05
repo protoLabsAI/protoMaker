@@ -9,7 +9,7 @@ import { ProjectContextMenu } from './components/project-context-menu';
 import { EditProjectDialog } from './components/edit-project-dialog';
 import { NotificationBell } from './components/notification-bell';
 import { ActionableItemsInbox } from './components/actionable-items-inbox';
-import { HITLFormNotification } from '@protolabs-ai/ui/organisms';
+import { HITLFormNotification } from '@protolabsai/ui/organisms';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 import { NewProjectModal } from '@/components/dialogs/new-project-modal';
 import { OnboardingDialog } from '@/components/layout/sidebar/dialogs';

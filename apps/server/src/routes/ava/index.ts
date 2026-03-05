@@ -3,7 +3,7 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 import type { ServiceContainer } from '../../server/services.js';
 import { createStatusHandler } from './routes/status.js';

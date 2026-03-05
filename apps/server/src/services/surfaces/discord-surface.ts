@@ -19,7 +19,7 @@ import type {
   SurfaceCapabilities,
   SurfaceChoiceOption,
   SurfaceMessage,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { DiscordBotService } from '../discord-bot-service.js';
 
 /** Maps session IDs to Discord context */

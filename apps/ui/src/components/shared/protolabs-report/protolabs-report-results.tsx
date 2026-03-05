@@ -1,8 +1,8 @@
 import { ExternalLink, Plus, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { GapAnalysisReport, AlignmentProposal } from '@protolabs-ai/types';
+import type { GapAnalysisReport, AlignmentProposal } from '@protolabsai/types';
 
 interface ProtoLabsReportResultsProps {
   report: GapAnalysisReport;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 
 const logger = createLogger('Sidebar');
@@ -331,7 +331,7 @@ export function Sidebar() {
               <QuickActionsBar
                 onBugReport={() =>
                   getElectronAPI().openExternalLink(
-                    'https://github.com/proto-labs-ai/automaker/issues'
+                    'https://github.com/protoLabsAI/automaker/issues'
                   )
                 }
                 onDocs={() => getElectronAPI().openExternalLink('https://docs.protolabs.studio')}

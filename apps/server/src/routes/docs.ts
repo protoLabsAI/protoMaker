@@ -7,7 +7,7 @@
  */
 
 import { Router } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { readdir, readFile, realpath } from 'node:fs/promises';
 import { join, basename, extname, resolve } from 'node:path';
 
