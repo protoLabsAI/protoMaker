@@ -28,6 +28,7 @@ import {
 } from '@/lib/api';
 import { AutomationEditModal, type AutomationFormData } from './automation-edit-modal';
 import { AutomationHistoryPanel } from './automation-history-panel';
+import { SchedulerHealthGrid } from './scheduler-health-grid';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -359,6 +360,7 @@ export function AutomationsSection() {
 
       {/* Content */}
       <div className="p-4">
+        <SchedulerHealthGrid />
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner className="w-6 h-6 text-muted-foreground" />
