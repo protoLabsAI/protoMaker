@@ -26,6 +26,7 @@ export function register(container: ServiceContainer): void {
 
   // Scheduler Service initialization and task registration via AutomationService
   schedulerService.initialize(events, dataDir);
+  schedulerService.setSettingsService(settingsService);
   void schedulerService
     .start()
     .then(async () => {
@@ -39,13 +40,16 @@ export function register(container: ServiceContainer): void {
       });
 
       // Register calendar job executor — scans for due jobs every minute
-      schedulerService.registerTask(
+      await schedulerService.registerTask(
         'job-executor:tick',
         'Calendar Job Executor',
         '* * * * *',
         () => container.jobExecutorService.tick(),
         true
       );
+
+      // Apply taskOverrides from global settings after all tasks are registered
+      await schedulerService.applySettingsOverrides();
     })
     .catch((err) => {
       logger.error('Scheduler startup or automation sync failed:', err);

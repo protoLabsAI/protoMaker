@@ -230,6 +230,27 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   userPresenceDetection: false,
 };
 
+// ============================================================================
+// Scheduler Settings
+// ============================================================================
+
+/**
+ * Scheduler settings for persisting task state across server restarts.
+ */
+export interface SchedulerSettings {
+  /**
+   * Per-task overrides for built-in scheduled tasks.
+   * Key: task ID (e.g., "archival", "health-check")
+   * Value: overrides for enabled state and/or cron expression
+   */
+  taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }>;
+}
+
+/** Default scheduler settings — no overrides */
+export const DEFAULT_SCHEDULER_SETTINGS: SchedulerSettings = {
+  taskOverrides: {},
+};
+
 export interface GlobalSettings {
   /** Version number for schema migration */
   version: number;
@@ -648,6 +669,12 @@ export interface GlobalSettings {
    * Toggled per-installation via Settings > Developer > Feature Flags.
    */
   featureFlags?: FeatureFlags;
+
+  /**
+   * Scheduler settings for persisting task enable/disable state and cron overrides.
+   * @see SchedulerSettings
+   */
+  schedulerSettings?: SchedulerSettings;
 }
 
 /** Default global settings used when no settings file exists */
@@ -723,4 +750,6 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   },
   // Feature flags — all on in development by default
   featureFlags: DEFAULT_FEATURE_FLAGS,
+  // Scheduler settings — no task overrides by default
+  schedulerSettings: DEFAULT_SCHEDULER_SETTINGS,
 };
