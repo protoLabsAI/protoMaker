@@ -252,6 +252,9 @@ start_services() {
     echo "  docker compose -f $COMPOSE_FILE logs server"
   fi
 
+  # Set up Tailscale HTTPS for PWA install support
+  setup_tailscale_https
+
   show_status
 }
 
@@ -326,7 +329,54 @@ show_status() {
   echo -e "  API:    ${GREEN}http://localhost:${api_port}${NC}"
   echo -e "  Docs:   ${GREEN}http://localhost:${docs_port}${NC}"
   echo -e "  Health: ${GREEN}http://localhost:${api_port}/api/health${NC}"
+
+  # Show Tailscale HTTPS endpoints if active
+  if command -v tailscale &>/dev/null && tailscale status &>/dev/null 2>&1; then
+    local ts_hostname
+    ts_hostname=$(tailscale status --self --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['Self']['DNSName'].rstrip('.'))" 2>/dev/null || echo "")
+    if [ -n "$ts_hostname" ] && tailscale serve status &>/dev/null 2>&1; then
+      echo ""
+      echo -e "  ${BLUE}Tailscale HTTPS:${NC}"
+      echo -e "  UI:     ${GREEN}https://${ts_hostname}${NC}"
+      echo -e "  API:    ${GREEN}https://${ts_hostname}:8443${NC}"
+    fi
+  fi
   echo ""
+}
+
+# ─── Tailscale HTTPS ─────────────────────────────────────────────────────────
+
+setup_tailscale_https() {
+  if ! command -v tailscale &>/dev/null; then
+    warn "Tailscale not installed — skipping HTTPS setup"
+    return 0
+  fi
+
+  if ! tailscale status &>/dev/null 2>&1; then
+    warn "Tailscale not connected — skipping HTTPS setup"
+    return 0
+  fi
+
+  local ui_port="${UI_PORT:-3007}"
+  local api_port="${API_PORT:-3008}"
+
+  info "Configuring Tailscale HTTPS proxy..."
+
+  # Reset existing serve config to avoid conflicts
+  tailscale serve reset 2>/dev/null || true
+
+  # Serve UI on HTTPS :443 (enables PWA install prompt)
+  tailscale serve --https=443 "http://localhost:${ui_port}"
+
+  # Serve API on HTTPS :8443 so the UI can proxy to it
+  tailscale serve --https=8443 "http://localhost:${api_port}"
+
+  local ts_hostname
+  ts_hostname=$(tailscale status --self --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['Self']['DNSName'].rstrip('.'))" 2>/dev/null || echo "unknown")
+
+  ok "Tailscale HTTPS active"
+  echo -e "  UI:  ${GREEN}https://${ts_hostname}${NC}"
+  echo -e "  API: ${GREEN}https://${ts_hostname}:8443${NC}"
 }
 
 # ─── Drain ────────────────────────────────────────────────────────────────────
