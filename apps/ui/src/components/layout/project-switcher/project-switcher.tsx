@@ -133,7 +133,7 @@ export function ProjectSwitcher() {
 
   const handleBugReportClick = useCallback(() => {
     const api = getElectronAPI();
-    api.openExternalLink('https://github.com/AutoMaker-Org/automaker/issues');
+    api.openExternalLink('https://github.com/protolabsai/protomaker/issues');
   }, []);
 
   const handleWikiClick = useCallback(() => {
