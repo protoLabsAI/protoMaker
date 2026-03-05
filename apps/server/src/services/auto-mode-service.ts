@@ -340,24 +340,17 @@ export class AutoModeService {
     // Stop running agents when their feature reaches a terminal state.
     // This prevents zombie agents from continuing to run (and consume API budget)
     // after a feature is marked done/verified externally (MCP, manual update, epic merge).
-    this.events.subscribe((type, payload) => {
-      if (type === 'feature:status-changed') {
-        const data = payload as {
-          featureId?: string;
-          newStatus?: string;
-          projectPath?: string;
-        };
-        if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
-          if (this.runningFeatures.has(data.featureId)) {
-            logger.info(
-              `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
-            );
-            void this.stopFeature(data.featureId);
-          }
-
-          // Auto-unblock: Check if any features were waiting on this as a human-blocked dependency
-          void this.handleFeatureCompletion(data.featureId, data.projectPath);
+    this.events.on('feature:status-changed', (data) => {
+      if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
+        if (this.runningFeatures.has(data.featureId)) {
+          logger.info(
+            `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
+          );
+          void this.stopFeature(data.featureId);
         }
+
+        // Auto-unblock: Check if any features were waiting on this as a human-blocked dependency
+        void this.handleFeatureCompletion(data.featureId, data.projectPath);
       }
     });
   }

@@ -12,6 +12,7 @@ import type {
   EventBus,
   EventSubscription,
   EventPayload,
+  TypedEventCallback,
 } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 
@@ -27,7 +28,7 @@ export type UnsubscribeFn = (() => void) & EventSubscription;
 export interface EventEmitter extends EventBus {
   emit: (type: EventType, payload: unknown) => void;
   subscribe: (callback: EventCallback) => UnsubscribeFn;
-  on: <T extends EventType>(type: T, handler: (payload: EventPayload<T>) => void) => UnsubscribeFn;
+  on: <T extends EventType>(type: T, callback: TypedEventCallback<T>) => UnsubscribeFn;
 }
 
 export function createEventEmitter(): EventEmitter {
@@ -77,6 +78,20 @@ export function createEventEmitter(): EventEmitter {
       return makeUnsub(() => {
         typedHandlers.get(type)?.delete(typed);
       });
+    },
+
+    on<T extends EventType>(type: T, callback: TypedEventCallback<T>) {
+      const wrapper: EventCallback = (eventType, payload) => {
+        if (eventType === type) {
+          callback(payload as Parameters<TypedEventCallback<T>>[0]);
+        }
+      };
+      subscribers.add(wrapper);
+      return {
+        unsubscribe: () => {
+          subscribers.delete(wrapper);
+        },
+      };
     },
 
     broadcast(type: EventType, payload?: unknown) {

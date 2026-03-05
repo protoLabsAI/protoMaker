@@ -6,7 +6,7 @@
  * (NATS, Redis pub/sub) can be swapped in for hivemind distribution.
  */
 
-import type { EventType, EventCallback } from './event.js';
+import type { EventType, EventCallback, TypedEventCallback } from './event.js';
 
 /** Handle returned by subscribe() for cleanup */
 export interface EventSubscription {
@@ -22,6 +22,12 @@ export interface EventBus {
    * The callback receives (type, payload) for every emitted event.
    */
   subscribe(callback: EventCallback): EventSubscription;
+
+  /**
+   * Subscribe to a single event type with a typed payload callback.
+   * Returns an EventSubscription for cleanup.
+   */
+  on<T extends EventType>(type: T, callback: TypedEventCallback<T>): EventSubscription;
 
   /**
    * Broadcast an event to all subscribers, including remote peers.
