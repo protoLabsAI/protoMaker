@@ -58,7 +58,17 @@ import { spawn, execSync, ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import http, { Server } from 'http';
 import net from 'net';
-import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  screen,
+  globalShortcut,
+  Tray,
+  Menu,
+} from 'electron';
 import { createLogger } from '@protolabsai/utils/logger';
 import { initAutoUpdater } from './auto-updater';
 import {
@@ -134,6 +144,8 @@ let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let serverProcess: ChildProcess | null = null;
 let staticServer: Server | null = null;
+let tray: Tray | null = null;
+let isQuittingIntentionally = false;
 
 // Default ports (can be overridden via env) - will be dynamically assigned if these are in use
 // When launched via root init.mjs we pass:
@@ -282,6 +294,28 @@ function getIconPath(): string | null {
   }
 
   return iconPath;
+}
+
+/**
+ * Get tray icon path for macOS menubar (16x16).
+ * Works in both dev and packaged builds.
+ */
+function getTrayIconPath(): string | null {
+  const trayIconPath = isDev
+    ? path.join(__dirname, '../public/icons/icon-16.png')
+    : path.join(__dirname, '../dist/public/icons/icon-16.png');
+
+  try {
+    if (!electronAppExists(trayIconPath)) {
+      logger.warn('Tray icon not found at:', trayIconPath);
+      return null;
+    }
+  } catch (error) {
+    logger.warn('Tray icon check failed:', trayIconPath, error);
+    return null;
+  }
+
+  return trayIconPath;
 }
 
 /**
@@ -756,7 +790,13 @@ function createWindow(): void {
   });
 
   // Save window bounds on close, resize, and move
-  mainWindow.on('close', () => {
+  mainWindow.on('close', (e) => {
+    // On macOS, hide the window instead of closing (keeps app alive in tray)
+    if (process.platform === 'darwin' && !isQuittingIntentionally) {
+      e.preventDefault();
+      mainWindow?.hide();
+      return;
+    }
     // Save immediately before closing (not debounced)
     if (mainWindow && !mainWindow.isDestroyed()) {
       const isMaximized = mainWindow.isMaximized();
@@ -912,6 +952,58 @@ function registerOverlayShortcut(): void {
   }
 }
 
+/**
+ * Create the macOS system tray icon and context menu.
+ * Gated behind process.platform === 'darwin'.
+ */
+function createTray(): void {
+  if (process.platform !== 'darwin') return;
+
+  const iconPath = getTrayIconPath();
+  if (!iconPath) {
+    logger.warn('Tray icon not found, skipping tray creation');
+    return;
+  }
+
+  tray = new Tray(iconPath);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open Board',
+      click: () => {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          createWindow();
+        } else {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        isQuittingIntentionally = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+  tray.setToolTip('protoLabs Studio');
+
+  tray.on('click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow();
+    } else if (mainWindow.isVisible()) {
+      mainWindow.focus();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   // In production, use Automaker dir in appData for app isolation
@@ -1057,6 +1149,9 @@ app.whenReady().then(async () => {
     createOverlayWindow();
     registerOverlayShortcut();
 
+    // Create macOS tray icon
+    createTray();
+
     // Initialize auto-updater (no-op in development)
     if (mainWindow) {
       initAutoUpdater(mainWindow);
@@ -1079,8 +1174,23 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+    } else if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
+
+  // On macOS, intercept will-quit to prevent quitting unless intentional (e.g. tray Quit)
+  if (process.platform === 'darwin') {
+    app.on('will-quit', (e) => {
+      if (!isQuittingIntentionally) {
+        e.preventDefault();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.hide();
+        }
+      }
+    });
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -1114,6 +1224,12 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   // Unregister global shortcuts
   globalShortcut.unregisterAll();
+
+  // Destroy tray icon (macOS)
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
 
   // Destroy overlay window
   if (overlayWindow && !overlayWindow.isDestroyed()) {
