@@ -467,6 +467,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
                   clearAtLeast: { type: 'input_tokens', value: 10000 },
                   clearToolInputs: true,
                 },
+                {
+                  type: 'compact_20260112',
+                  trigger: { type: 'input_tokens', value: 150000 },
+                },
               ],
             },
           },
@@ -522,6 +526,22 @@ export function createChatRoutes(services: ServiceContainer): Router {
                 outputTokens: usage.outputTokens ?? 0,
               },
             } as UIMessageChunk);
+
+            // Detect server-side compaction activation (compact_20260112).
+            // When compaction fires, the Anthropic API includes a compaction block
+            // in the response. The AI SDK surfaces provider-specific data via
+            // providerMetadata — log when this occurs so we can monitor its frequency.
+            try {
+              const meta = await result.providerMetadata;
+              const anthropicMeta = meta?.['anthropic'] as Record<string, unknown> | undefined;
+              if (anthropicMeta && 'compaction' in anthropicMeta) {
+                logger.info(
+                  `Server-side compaction activated (compact_20260112): ${JSON.stringify(anthropicMeta['compaction'])}`
+                );
+              }
+            } catch {
+              // providerMetadata unavailable — not critical, skip
+            }
           } catch {
             logger.warn(`Chat complete: ${Date.now() - requestStartTime}ms (usage unavailable)`);
           }
