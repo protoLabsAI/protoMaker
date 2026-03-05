@@ -25,7 +25,7 @@ function toggleBtnClass(active: boolean) {
 export function ProjectsView() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ProjectsTab>('plans');
+  const [activeTab, setActiveTab] = useState<ProjectsTab>('metrics');
 
   if (!projectPath) {
     return (
@@ -54,7 +54,6 @@ export function ProjectsView() {
             className={toggleBtnClass(activeTab === 'plans')}
           >
             <FolderKanban className="w-4 h-4" />
-            <span className="hidden sm:inline">Plans</span>
           </button>
           <button
             role="tab"
@@ -63,7 +62,6 @@ export function ProjectsView() {
             className={toggleBtnClass(activeTab === 'metrics')}
           >
             <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Metrics</span>
           </button>
         </div>
       </div>
