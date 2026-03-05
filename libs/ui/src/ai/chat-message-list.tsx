@@ -217,12 +217,14 @@ export function ChatMessageList({
               <p className="text-sm text-muted-foreground">{emptyMessage}</p>
             </div>
           ) : (
-            messages.map((message) => {
+            messages.map((message, idx) => {
               const branchInfo = branchInfoMap?.get(message.id);
+              const isLastMessage = idx === messages.length - 1;
               return (
                 <ChatMessage
                   key={message.id}
                   message={message}
+                  isStreaming={isStreaming && isLastMessage}
                   onRegenerate={onRegenerate}
                   onThumbsUp={onThumbsUp}
                   onThumbsDown={onThumbsDown}
