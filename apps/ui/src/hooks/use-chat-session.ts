@@ -81,6 +81,7 @@ export function useChatSession({
         api: '/api/chat',
         headers: { 'x-model-alias': modelAlias },
         body: transportBody,
+        credentials: 'include',
       }),
     [modelAlias, transportBody]
   );
