@@ -75,6 +75,7 @@ import { RecoveryService } from '../recovery-service.js';
 import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js';
 import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
+import { writeLock, removeLock } from '../../lib/worktree-lock.js';
 
 import type {
   RunningFeature,
@@ -469,6 +470,11 @@ export class ExecutionService {
 
       // Update running feature with actual worktree info
       tempRunningFeature.worktreePath = worktreePath;
+
+      // Write worktree lock file so cleanup operations can detect a live agent
+      if (worktreePath) {
+        await writeLock(worktreePath, featureId);
+      }
 
       // Authority system policy check: verify permission before starting this feature
       if (this.authorityService && this.settingsService) {
@@ -1278,6 +1284,12 @@ export class ExecutionService {
     } finally {
       logger.info(`Feature ${featureId} execution ended, cleaning up runningFeatures`);
       abortController?.abort();
+
+      // Remove worktree lock file now that the agent has exited
+      const worktreeForCleanup = tempRunningFeature.worktreePath;
+      if (worktreeForCleanup) {
+        await removeLock(worktreeForCleanup);
+      }
 
       // Only delete if the current entry is still the one we created
       // (delegated executions may have created a new entry)
