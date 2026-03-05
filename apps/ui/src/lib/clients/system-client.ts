@@ -21,7 +21,7 @@ import type {
   IntegrationStatusResponse,
   SystemHealthResponse,
 } from './api-types';
-import type { DiscordChannelSignalConfig, ProjectHealth } from '@protolabsai/types';
+import type { DiscordChannelSignalConfig, Project, ProjectHealth } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
@@ -228,13 +228,7 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         projectSlug: string
       ): Promise<{
         success: boolean;
-        project?: {
-          slug: string;
-          title: string;
-          status: string;
-          prd?: { situation: string; problem: string; approach: string; results: string };
-          milestones?: Array<{ title: string; phases: Array<{ title: string; status?: string }> }>;
-        };
+        project?: Project;
         error?: string;
       }> => this.post('/api/projects/get', { projectPath, projectSlug }),
       approvePrd: (
