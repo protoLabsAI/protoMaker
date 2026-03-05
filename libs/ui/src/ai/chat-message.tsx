@@ -27,7 +27,6 @@ import { TaskBlock, type ToolInvocationItem, type TaskToolState } from './task-b
 import { ChatMessageMarkdown } from './chat-message-markdown.js';
 import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
-import { AILoader } from './loader.js';
 import { MessageActions } from './message-actions.js';
 import { MessageBranches } from './message-branches.js';
 import { PlanPart, extractPlanData, type PlanData } from './plan-part.js';
@@ -199,17 +198,6 @@ function buildSegments(rawParts: Array<Record<string, unknown>>): PartSegment[] 
   }
 
   return segments;
-}
-
-/** Terminal tool states — the tool has finished (success, error, or denied). */
-const TERMINAL_TOOL_STATES = new Set(['output-available', 'output-error', 'output-denied']);
-
-/**
- * Returns true when the message still has at least one tool in a running state,
- * meaning the agentic loop has not yet finished.
- */
-function isMessageStreaming(rawParts: Array<Record<string, unknown>>): boolean {
-  return rawParts.some((p) => isToolPart(p) && !TERMINAL_TOOL_STATES.has(p.state as string));
 }
 
 /**
@@ -408,10 +396,6 @@ export function ChatMessage({
   const segments = buildSegments(rawParts);
   const stepGroups = groupByStep(segments);
 
-  // Stats for the progress indicator
-  const stepCount = rawParts.filter((p) => p.type === 'step-start').length;
-  const streaming = isMessageStreaming(rawParts);
-
   // Build onFeedback handler from separate thumbs up/down callbacks
   const onFeedback =
     onThumbsUp || onThumbsDown
@@ -420,21 +404,6 @@ export function ChatMessage({
           else onThumbsDown?.();
         }
       : undefined;
-
-  /** Find the live progress label for the first running tool in a step group. */
-  const getActiveToolProgressLabel = (group: PartSegment[]): string | undefined => {
-    if (!getToolProgressLabel) return undefined;
-    for (const seg of group) {
-      if (seg.kind !== 'tool-group') continue;
-      for (const tool of seg.tools) {
-        if (!TERMINAL_TOOL_STATES.has(tool.state)) {
-          const label = getToolProgressLabel(tool.toolCallId);
-          if (label) return label;
-        }
-      }
-    }
-    return undefined;
-  };
 
   return (
     <div data-slot="chat-message" className={cn('flex flex-col gap-1', className)}>
@@ -450,15 +419,6 @@ export function ChatMessage({
             )}
             <div className="flex min-w-0 flex-1 flex-col">
               <ChatMessageBubble role={role}>
-                {/* AILoader only on the last (active) bubble while streaming */}
-                {groupIdx === stepGroups.length - 1 && streaming && stepCount >= 1 && (
-                  <AILoader
-                    stepCount={stepCount}
-                    label={getActiveToolProgressLabel(group)}
-                    className="mb-1.5"
-                  />
-                )}
-
                 {group.map((seg, i) => {
                   // step-start segments are filtered out by groupByStep
                   if (seg.kind === 'step-start') return null;
