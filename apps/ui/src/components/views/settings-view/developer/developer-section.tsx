@@ -18,10 +18,6 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     label: 'Ava Anywhere',
     description: 'Chat overlay, Cmd+K modal, /chat route, and mobile chat tab.',
   },
-  calendar: {
-    label: 'Calendar',
-    description: 'Show the Calendar nav item in the project sidebar.',
-  },
   designs: {
     label: 'Designs',
     description: 'Show the Designs (pen file) viewer in the project sidebar.',
@@ -29,10 +25,6 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
   docs: {
     label: 'Docs',
     description: 'Show the Docs viewer in the project sidebar.',
-  },
-  notes: {
-    label: 'Notes',
-    description: 'Show the Notes nav item in the project sidebar.',
   },
   pipeline: {
     label: 'Authority Pipeline + HITL',
