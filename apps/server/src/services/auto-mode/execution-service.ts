@@ -70,6 +70,7 @@ import {
   getMCPServersFromSettings,
   getPromptCustomization,
   getProviderByModelId,
+  getPhaseModelWithOverrides,
 } from '../../lib/settings-helpers.js';
 import { RecoveryService } from '../recovery-service.js';
 import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js';
@@ -584,7 +585,7 @@ export class ExecutionService {
       );
 
       // Get model based on feature complexity and failure count
-      const modelResult = await this.callbacks.getModelForFeature(feature, projectPath);
+      const modelResult = await this.getModelForFeature(feature, projectPath);
       const maxTurns = getTurnsForFeature(feature);
       const provider = ProviderFactory.getProviderNameForModel(modelResult.model);
       logger.info(
@@ -1511,7 +1512,7 @@ export class ExecutionService {
     );
 
     // Get model based on feature complexity and failure count
-    const modelResult = await this.callbacks.getModelForFeature(feature, projectPath);
+    const modelResult = await this.getModelForFeature(feature, projectPath);
 
     // Run the agent for this pipeline step
     await this.runAgent(
@@ -3101,6 +3102,47 @@ You can use the Read tool to view these images at any time during implementation
     } catch (error) {
       logger.warn(`Failed to extract learnings from feature ${feature.id}:`, error);
     }
+  }
+
+  /**
+   * Select model based on feature complexity, failure count, and settings.
+   * Priority: explicit feature.model > failure escalation > architectural > settings > complexity
+   */
+  private async getModelForFeature(
+    feature: { model?: string; complexity?: string; failureCount?: number },
+    projectPath?: string
+  ): Promise<{ model: string; providerId?: string }> {
+    if (feature.model) {
+      return { model: resolveModelString(feature.model, DEFAULT_MODELS.autoMode) };
+    }
+    if (feature.failureCount && feature.failureCount >= 2) {
+      logger.info(`Escalating to opus after ${feature.failureCount} failures`);
+      return { model: DEFAULT_MODELS.claude };
+    }
+    if (feature.complexity === 'architectural') {
+      logger.info('Using opus for architectural feature');
+      return { model: DEFAULT_MODELS.claude };
+    }
+    try {
+      const { phaseModel } = await getPhaseModelWithOverrides(
+        'agentExecutionModel',
+        this.settingsService,
+        projectPath
+      );
+      if (phaseModel?.model) {
+        return {
+          model: resolveModelString(phaseModel.model, DEFAULT_MODELS.autoMode),
+          providerId: phaseModel.providerId,
+        };
+      }
+    } catch (err) {
+      logger.warn(`Failed to read agentExecutionModel setting, using fallback: ${err}`);
+    }
+    if (feature.complexity === 'small') {
+      logger.info('Using haiku for small feature');
+      return { model: DEFAULT_MODELS.trivial };
+    }
+    return { model: DEFAULT_MODELS.autoMode };
   }
 
   /**

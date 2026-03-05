@@ -10,7 +10,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { EventType, LeadEngineerSession, ExecuteOptions } from '@protolabsai/types';
+import type { EventType, LeadEngineerSession } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -294,10 +294,9 @@ export class LeadEngineerService {
     return this.activeFeatures.has(featureId);
   }
 
-  async process(projectPath: string, featureId: string, options: ExecuteOptions): Promise<void> {
+  async process(projectPath: string, featureId: string): Promise<void> {
     logger.info(`[LeadEngineer] Processing feature ${featureId}`, {
       projectPath,
-      model: options.model,
     });
     this.activeFeatures.add(featureId);
     try {
@@ -382,12 +381,7 @@ export class LeadEngineerService {
 
       let result: Awaited<ReturnType<typeof stateMachine.processFeature>>;
       try {
-        result = await stateMachine.processFeature(
-          feature,
-          projectPath,
-          options,
-          resumeFromCheckpoint
-        );
+        result = await stateMachine.processFeature(feature, projectPath, resumeFromCheckpoint);
       } finally {
         unsubPipelineSync();
       }

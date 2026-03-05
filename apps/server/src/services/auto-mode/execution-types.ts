@@ -84,12 +84,6 @@ export interface IAutoModeCallbacks {
     feature: Feature
   ): Promise<string | null>;
 
-  // Model selection
-  getModelForFeature(
-    feature: Feature,
-    projectPath?: string
-  ): Promise<{ model: string; providerId?: string }>;
-
   // State persistence
   saveExecutionState(projectPath: string): Promise<void>;
 
