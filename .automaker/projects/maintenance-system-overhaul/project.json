@@ -3,259 +3,108 @@
   "title": "Maintenance System Overhaul",
   "goal": "Modernize and standardize the maintenance system by fixing integration branch awareness, removing temporary stop-gaps, establishing proper configuration patterns, and creating a unified maintenance framework that scales with the team's workflow.",
   "status": "active",
+  "createdAt": "2026-03-04T17:30:00.000Z",
+  "updatedAt": "2026-03-04T17:30:00.000Z",
+  "archivedAt": "2026-03-05T08:31:18.314Z",
   "milestones": [
     {
       "number": 1,
       "slug": "01-fix-integration-branch-awareness",
       "title": "Fix Integration Branch Awareness",
-      "description": "Update all maintenance tasks to use the configured integration branch (dev) instead of hardcoded main/master checks. This fixes the worktree cleanup bug and standardizes branch detection across the system.",
+      "status": "pending",
       "phases": [
         {
           "number": 1,
           "name": "update-maintenance-tasks-integration-branch-detection",
           "title": "Update maintenance tasks integration branch detection",
-          "description": "Modify maintenance-tasks.ts to use gitWorkflow.prBaseBranch from settings instead of hardcoded 'main'/'master'. Update worktreeAutoCleanup() and mergedBranchAutoCleanup() functions to detect merged branches against the configured integration branch (dev). This fixes the core bug where 25 worktrees accumulate because they're merged to dev but cleanup only checks main/master.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance-tasks.ts"
-          ],
-          "acceptanceCriteria": [
-            "Worktree cleanup detects branches merged to dev (not just main/master)",
-            "Branch cleanup detects branches merged to dev (not just main/master)",
-            "Settings service integration branch is read from gitWorkflow.prBaseBranch",
-            "Backward compatibility maintained for repos without gitWorkflow settings",
-            "npm run build:server passes",
-            "Existing tests continue to pass"
-          ],
-          "complexity": "medium",
-          "featureId": "feature-1772643815761-yx4ekolwo"
+          "featureId": "feature-1772643815761-yx4ekolwo",
+          "complexity": "medium"
         },
         {
           "number": 2,
           "name": "add-branch-configuration-validation",
           "title": "Add branch configuration validation",
-          "description": "Add validation and fallback logic for integration branch detection. If gitWorkflow.prBaseBranch is not set or the branch doesn't exist, fall back to main/master detection with logging. Add health checks to verify configured branches exist and warn if integration branch config is missing.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance-tasks.ts",
-            "apps/server/src/services/settings-service.ts"
-          ],
-          "acceptanceCriteria": [
-            "Graceful fallback to main/master if prBaseBranch not configured",
-            "Warning logged when fallback is used",
-            "Health check validates configured integration branch exists",
-            "Error handling for non-existent configured branches",
-            "npm run build:server passes"
-          ],
           "complexity": "small"
         }
-      ],
-      "status": "pending"
+      ]
     },
     {
       "number": 2,
       "slug": "02-standardize-maintenance-configuration",
       "title": "Standardize Maintenance Configuration",
-      "description": "Create a unified maintenance configuration system that allows per-project customization of task schedules, thresholds, and behaviors while maintaining sensible defaults.",
+      "status": "pending",
       "phases": [
         {
           "number": 1,
           "name": "create-maintenance-settings-schema",
           "title": "Create maintenance settings schema",
-          "description": "Define MaintenanceSettings interface in project-settings.ts with configurable schedules, thresholds, and feature flags for each maintenance task. Include options for worktree retention days, stale feature hours, auto-merge eligibility rules, and task enable/disable flags. Design schema for both global defaults and per-project overrides.",
-          "filesToModify": [
-            "libs/types/src/project-settings.ts",
-            "libs/types/src/global-settings.ts"
-          ],
-          "acceptanceCriteria": [
-            "MaintenanceSettings interface defines all configurable options",
-            "Global defaults in DEFAULT_GLOBAL_SETTINGS",
-            "Per-project override capability in ProjectSettings",
-            "TypeScript types for all schedule formats (cron expressions)",
-            "npm run build:packages passes"
-          ],
           "complexity": "medium"
         },
         {
           "number": 2,
           "name": "implement-settings-driven-maintenance-tasks",
           "title": "Implement settings-driven maintenance tasks",
-          "description": "Refactor maintenance-tasks.ts to read configuration from the new MaintenanceSettings instead of hardcoded values. Make task schedules, thresholds, and behaviors configurable through settings. Update AutomationService to apply maintenance settings when creating built-in automation records.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance-tasks.ts",
-            "apps/server/src/services/automation-service.ts"
-          ],
-          "acceptanceCriteria": [
-            "All hardcoded thresholds replaced with settings values",
-            "Task schedules read from maintenance settings",
-            "Per-project setting overrides work correctly",
-            "Settings changes apply without server restart",
-            "npm run build:server passes"
-          ],
           "complexity": "large"
         },
         {
           "number": 3,
           "name": "add-maintenance-settings-ui",
           "title": "Add maintenance settings UI",
-          "description": "Create maintenance settings panel in the Settings view to allow runtime configuration of maintenance tasks. Include controls for task schedules, thresholds, integration branch setting, and individual task enable/disable toggles. Add validation for cron expressions and threshold values.",
-          "filesToModify": [
-            "apps/ui/src/components/views/settings-view/maintenance/maintenance-settings-panel.tsx",
-            "apps/ui/src/components/views/settings-view.tsx",
-            "apps/ui/src/components/views/settings-view/config/navigation.ts"
-          ],
-          "acceptanceCriteria": [
-            "Maintenance settings panel accessible in Settings",
-            "All maintenance task parameters configurable",
-            "Cron expression validation with preview",
-            "Changes persist to settings.json",
-            "Real-time settings update without server restart",
-            "npm run build passes"
-          ],
           "complexity": "large"
         }
-      ],
-      "status": "pending"
+      ]
     },
     {
       "number": 3,
       "slug": "03-remove-temporary-stopgaps",
       "title": "Remove Temporary Stop-gaps",
-      "description": "Identify and remove all temporary maintenance solutions that were meant as quick fixes. Replace them with proper implementations using the new standardized configuration system.",
+      "status": "pending",
       "phases": [
         {
           "number": 1,
           "name": "audit-temporary-maintenance-solutions",
           "title": "Audit temporary maintenance solutions",
-          "description": "Search codebase for TODO comments, FIXME markers, and 'temporary' references in maintenance-related code. Document all temporary solutions, their original purpose, current impact, and recommended permanent fix. Create migration plan for each identified stop-gap.",
-          "filesToModify": [],
-          "acceptanceCriteria": [
-            "Complete inventory of temporary maintenance solutions",
-            "Impact assessment for each stop-gap",
-            "Migration plan with effort estimates",
-            "Priority ranking based on technical debt impact"
-          ],
           "complexity": "small"
         },
         {
           "number": 2,
           "name": "replace-hardcoded-maintenance-intervals",
           "title": "Replace hardcoded maintenance intervals",
-          "description": "Replace all hardcoded cron expressions and timing constants in maintenance tasks with settings-driven values. Remove magic numbers for thresholds (2 hours for stale features, 5 minutes for integrity checks, etc.) and make them configurable through the maintenance settings system.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance-tasks.ts",
-            "apps/server/src/services/automation-service.ts"
-          ],
-          "acceptanceCriteria": [
-            "No hardcoded cron expressions in maintenance code",
-            "All timing thresholds configurable via settings",
-            "Default values preserved for backward compatibility",
-            "Settings validation prevents invalid intervals",
-            "npm run build:server passes"
-          ],
           "complexity": "medium"
         },
         {
           "number": 3,
           "name": "consolidate-duplicate-branch-detection-logic",
           "title": "Consolidate duplicate branch detection logic",
-          "description": "Extract common branch detection logic (main vs master, integration branch discovery) into a shared utility function. Remove duplicated code between worktree cleanup and branch cleanup functions. Create a centralized git branch helper that all maintenance tasks can use.",
-          "filesToModify": [
-            "libs/git-utils/src/branch-detection.ts",
-            "apps/server/src/services/maintenance-tasks.ts"
-          ],
-          "acceptanceCriteria": [
-            "Single source of truth for branch detection logic",
-            "No duplicate main/master detection code",
-            "Shared utility handles integration branch configuration",
-            "All maintenance tasks use common branch detection",
-            "npm run build:packages passes"
-          ],
           "complexity": "medium"
         }
-      ],
-      "status": "pending"
+      ]
     },
     {
       "number": 4,
       "slug": "04-unified-maintenance-framework",
       "title": "Unified Maintenance Framework",
-      "description": "Create a scalable maintenance framework that supports plugin-style task registration, consistent error handling, observability, and easy addition of new maintenance tasks.",
+      "status": "pending",
       "phases": [
         {
           "number": 1,
           "name": "design-maintenance-task-registry",
           "title": "Design maintenance task registry",
-          "description": "Create a MaintenanceTaskRegistry that allows dynamic registration of maintenance tasks with metadata (schedule, dependencies, configuration schema). Define MaintenanceTask interface for consistent task implementation. Support task discovery, dependency resolution, and runtime enable/disable.",
-          "filesToModify": [
-            "libs/types/src/maintenance.ts",
-            "apps/server/src/services/maintenance-task-registry.ts"
-          ],
-          "acceptanceCriteria": [
-            "MaintenanceTask interface defines task contract",
-            "Registry supports dynamic task registration",
-            "Task metadata includes schedule and dependencies",
-            "Runtime task enable/disable functionality",
-            "npm run build:server passes"
-          ],
           "complexity": "large"
         },
         {
           "number": 2,
           "name": "implement-maintenance-task-observability",
           "title": "Implement maintenance task observability",
-          "description": "Add comprehensive observability to maintenance tasks with execution metrics, duration tracking, success/failure rates, and OpenTelemetry tracing. Create maintenance task dashboard data and health endpoints for monitoring task performance and detecting issues.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance-tasks.ts",
-            "apps/server/src/routes/maintenance/health.ts",
-            "apps/ui/src/components/views/settings-view/maintenance/maintenance-dashboard.tsx"
-          ],
-          "acceptanceCriteria": [
-            "All tasks emit OpenTelemetry traces",
-            "Execution metrics collected and exposed",
-            "Health endpoint shows task status",
-            "UI dashboard displays task performance",
-            "Error tracking for failed tasks",
-            "npm run build passes"
-          ],
           "complexity": "large"
         },
         {
           "number": 3,
           "name": "create-maintenance-task-plugin-system",
           "title": "Create maintenance task plugin system",
-          "description": "Enable external plugins to register custom maintenance tasks through the registry. Support task configuration schema validation, lifecycle hooks (pre/post execution), and plugin isolation. Add documentation and examples for creating maintenance task plugins.",
-          "filesToModify": [
-            "apps/server/src/services/maintenance-task-registry.ts",
-            "packages/mcp-server/src/tools/maintenance-tools.ts",
-            "docs/dev/maintenance-task-plugins.md"
-          ],
-          "acceptanceCriteria": [
-            "External plugins can register maintenance tasks",
-            "Configuration schema validation for plugin tasks",
-            "Plugin isolation and error boundaries",
-            "Documentation with plugin examples",
-            "MCP tools for managing plugin tasks",
-            "npm run build passes"
-          ],
           "complexity": "large"
         }
-      ],
-      "status": "pending"
+      ]
     }
-  ],
-  "researchSummary": "The current maintenance system has several issues: 1) Worktree cleanup bug where tasks only check main/master instead of the dev integration branch, causing 25 stale worktrees; 2) Hardcoded schedules and thresholds scattered throughout maintenance-tasks.ts; 3) Duplicate branch detection logic; 4) No unified configuration system; 5) Limited observability for maintenance task performance; 6) No plugin system for custom maintenance tasks. The system needs modernization to support the team's dev-first workflow and enable scalable maintenance task management.",
-  "prd": {
-    "situation": "protoLabs Studio's maintenance system was built incrementally with hardcoded assumptions about git workflow (main/master branches) and fixed schedules. The team now uses dev as the integration branch, but maintenance tasks still check main/master for merged branches, causing worktree accumulation. Additionally, there's no unified configuration system, making it difficult to customize maintenance behavior per project or adjust schedules without code changes.",
-    "problem": "The maintenance system has four key issues: 1) Integration branch awareness - worktree cleanup only checks main/master, not dev, causing 25 stale worktrees for merged features; 2) Configuration inflexibility - schedules and thresholds are hardcoded in maintenance-tasks.ts; 3) Code duplication - branch detection logic is repeated across multiple functions; 4) Limited extensibility - no framework for adding new maintenance tasks or monitoring their performance.",
-    "approach": "Create a comprehensive maintenance system overhaul in four phases: 1) Fix integration branch awareness by making maintenance tasks read gitWorkflow.prBaseBranch instead of assuming main/master; 2) Create a standardized MaintenanceSettings configuration system with UI controls; 3) Remove temporary stop-gaps and consolidate duplicate logic; 4) Build a unified maintenance framework with plugin support, observability, and dynamic task registration.",
-    "results": "A modern, configurable maintenance system that: correctly detects merged branches against the dev integration branch; provides UI controls for all maintenance schedules and thresholds; eliminates code duplication through shared utilities; supports plugin-style task registration; includes comprehensive observability and health monitoring; scales with team workflow changes without requiring code modifications.",
-    "constraints": [
-      "Maintain backward compatibility for existing maintenance task behavior",
-      "Settings changes must apply without server restart where possible",
-      "All maintenance tasks must continue running during the migration",
-      "Plugin system must provide proper isolation and error boundaries",
-      "Performance impact must be minimal - maintenance tasks are background processes"
-    ]
-  },
-  "createdAt": "2026-03-04T17:30:00.000Z",
-  "updatedAt": "2026-03-04T17:30:00.000Z"
+  ]
 }

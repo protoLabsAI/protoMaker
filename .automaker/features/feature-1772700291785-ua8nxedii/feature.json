@@ -1,0 +1,32 @@
+{
+  "category": "Settings Persistence",
+  "description": "**Milestone:** Settings Persistence\n\nAdd SchedulerSettings interface to libs/types/src/global-settings.ts with taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }> and add DEFAULT_SCHEDULER_SETTINGS constant included in DEFAULT_GLOBAL_SETTINGS. Update SchedulerService.start() to read taskOverrides from settingsService and apply them after registering tasks. Update enableTask(), disableTask(), and updateTaskSchedule() to write back to GlobalSettings via settingsService when changing a built-in task. Pass settingsService into SchedulerService via a new setSettingsService() method or by extending the existing initialize() signature. Update scheduler.module.ts to wire settingsService into SchedulerService after initialization.\n\n**Files to Modify:**\n- libs/types/src/global-settings.ts\n- apps/server/src/services/scheduler-service.ts\n- apps/server/src/services/scheduler.module.ts\n\n**Acceptance Criteria:**\n- [ ] SchedulerSettings interface exported from @protolabsai/types\n- [ ] DEFAULT_SCHEDULER_SETTINGS included in DEFAULT_GLOBAL_SETTINGS\n- [ ] Disabling a built-in task writes to data/settings.json under schedulerSettings.taskOverrides\n- [ ] Server restart restores disabled state — task remains disabled\n- [ ] Cron expression override also persists and restores across restart\n- [ ] npm run build:packages and full typecheck pass\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "SchedulerSettings Type and Persistence Wiring",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772700291783-zviw2oiia",
+  "branchName": "feature/settings-persistence-schedulersettings",
+  "isFoundation": true,
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291785-ua8nxedii",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Settings Persistence\n\nAdd SchedulerSettings interface to libs/types/src/global-settings.ts with taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }> and add DEFAULT_SCHEDULER_SETTINGS constant included in DEFAULT_GLOBAL_SETTINGS. Update SchedulerService.start() to read taskOverrides from settingsService and apply them after registering tasks. Update enableTask(), disableTask(), and updateTaskSchedule() to write back to GlobalSettings via settingsService when changing a built-in task. Pass settingsService into SchedulerService via a new setSettingsService() method or by extending the existing initialize() signature. Update scheduler.module.ts to wire settingsService into SchedulerService after initialization.\n\n**Files to Modify:**\n- libs/types/src/global-settings.ts\n- apps/server/src/services/scheduler-service.ts\n- apps/server/src/services/scheduler.module.ts\n\n**Acceptance Criteria:**\n- [ ] SchedulerSettings interface exported from @protolabsai/types\n- [ ] DEFAULT_SCHEDULER_SETTINGS included in DEFAULT_GLOBAL_SETTINGS\n- [ ] Disabling a built-in task writes to data/settings.json under schedulerSettings.taskOverrides\n- [ ] Server restart restores disabled state — task remains disabled\n- [ ] Cron expression override also persists and restores across restart\n- [ ] npm run build:packages and full typecheck pass\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-05T08:44:51.786Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.786Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.786Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772700291779-pnprimiop"
+  ]
+}

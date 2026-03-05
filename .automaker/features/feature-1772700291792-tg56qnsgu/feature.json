@@ -1,0 +1,33 @@
+{
+  "category": "Health Dashboard and Failure Alerting",
+  "description": "**Milestone:** Health Dashboard and Failure Alerting\n\nIn SchedulerService, emit a scheduler:task-failed event (with taskId, taskName, error message, timestamp ISO string) when a task handler throws during execution. Add a WebSocket broadcast handler in the server event pipeline to forward scheduler:task-failed events to all connected UI clients. In automations-section.tsx subscribe to this event via the existing WebSocket hook and show a toast notification using the existing toast system when a maintenance task fails. Route the event to Discord #infra channel (ID 1469109809939742814) when DISCORD_TOKEN is configured — use existing DiscordBot service pattern, non-fatal if Discord unavailable.\n\n**Files to Modify:**\n- apps/server/src/services/scheduler-service.ts\n- apps/server/src/server/websockets.ts\n- apps/ui/src/components/views/settings-view/automations/automations-section.tsx\n\n**Acceptance Criteria:**\n- [ ] scheduler:task-failed event emitted from SchedulerService on task throw with taskId, taskName, error, timestamp\n- [ ] WebSocket delivers the event to all connected clients\n- [ ] UI shows toast notification within 60s of task failure\n- [ ] Discord notification sent to #infra when DISCORD_TOKEN is set (non-fatal if unavailable)\n- [ ] Existing task execution is not disrupted — failures are caught and logged before event emission\n- [ ] TypeScript compiles clean\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Failure Events and Alerting",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772700291789-44zqatyfr",
+  "branchName": "feature/health-dashboard-failure-events-and",
+  "isFoundation": false,
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291792-tg56qnsgu",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Health Dashboard and Failure Alerting\n\nIn SchedulerService, emit a scheduler:task-failed event (with taskId, taskName, error message, timestamp ISO string) when a task handler throws during execution. Add a WebSocket broadcast handler in the server event pipeline to forward scheduler:task-failed events to all connected UI clients. In automations-section.tsx subscribe to this event via the existing WebSocket hook and show a toast notification using the existing toast system when a maintenance task fails. Route the event to Discord #infra channel (ID 1469109809939742814) when DISCORD_TOKEN is configured — use existing DiscordBot service pattern, non-fatal if Discord unavailable.\n\n**Files to Modify:**\n- apps/server/src/services/scheduler-service.ts\n- apps/server/src/server/websockets.ts\n- apps/ui/src/components/views/settings-view/automations/automations-section.tsx\n\n**Acceptance Criteria:**\n- [ ] scheduler:task-failed event emitted from SchedulerService on task throw with taskId, taskName, error, timestamp\n- [ ] WebSocket delivers the event to all connected clients\n- [ ] UI shows toast notification within 60s of task failure\n- [ ] Discord notification sent to #infra when DISCORD_TOKEN is set (non-fatal if unavailable)\n- [ ] Existing task execution is not disrupted — failures are caught and logged before event emission\n- [ ] TypeScript compiles clean\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-05T08:44:51.793Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.793Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.793Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772700291785-ua8nxedii",
+    "feature-1772700291791-oxg2agujb"
+  ]
+}

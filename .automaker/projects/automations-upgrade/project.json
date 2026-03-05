@@ -1,0 +1,168 @@
+{
+  "slug": "automations-upgrade",
+  "title": "Automations Upgrade",
+  "goal": "Promote the Automations section from a simple CRUD panel into the single control plane for all scheduled work — built-in maintenance tasks, user automations, and scheduler health. Every operator action (enable/disable, reschedule, view metrics, triage failures) happens in one place without needing MCP access.",
+  "status": "active",
+  "prd": {
+    "situation": "Three-layer scheduling system: SchedulerService (868 lines, cron engine), AutomationService (697 lines, user-defined automation CRUD), and maintenance-tasks.ts (1000+ lines, 8 built-in system flows registered via FlowRegistry at startup). The Automations UI in Settings shows both user and built-in tasks with full CRUD for user automations and read-only display for built-ins. MCP exposes get_scheduler_status and update_maintenance_task tools. stale-worktrees and branch-cleanup already use resolveIntegrationBranch() correctly.",
+    "problem": "Four gaps prevent the Automations section from being a complete control plane: (1) Scheduler status is MCP-only — no REST API exists so the UI cannot display health metrics; (2) Built-in task configuration (enabled state, cron overrides) resets on every server restart because it is not persisted in GlobalSettings; (3) auto-merge-prs and auto-rebase-stale-prs ignore the configured prBaseBranch and always operate against main; (4) Task failures run silently with no events or UI alerts.",
+    "approach": "Four milestones in dependency order: REST endpoint for scheduler status (foundation); SchedulerSettings in GlobalSettings with persistence wiring; fix the 2 PR tasks to call resolveIntegrationBranch; build SchedulerHealthGrid UI + scheduler:task-failed events with WebSocket push and Discord routing.",
+    "results": "Automations is the unified control plane. Maintenance configs survive restarts. PR tasks target the correct branch. Operators see scheduler health and failures without MCP or log access.",
+    "constraints": [
+      "Do not break SchedulerService public API — MCP tools depend on it",
+      "Built-in tasks remain deletion-protected",
+      "Each phase independently buildable and typechecks clean",
+      "No new npm dependencies unless strictly necessary",
+      "New endpoints protected by existing X-API-Key auth middleware"
+    ]
+  },
+  "researchSummary": "SchedulerService is a singleton via getSchedulerService() with public API: registerTask, enableTask, disableTask, updateTaskSchedule, getStatus, getAllTasks. AutomationService wraps it for user automations persisted to data/automations.json. maintenance-tasks.ts registers 8 built-in flows via registerMaintenanceFlows() called from AutomationService.syncWithScheduler(). Automations UI is automations-section.tsx ~400 lines. GlobalSettings in libs/types/src/global-settings.ts has no scheduler or maintenance field. resolveIntegrationBranch() exists in maintenance-tasks.ts and reads prBaseBranch from settingsService — only called by stale-worktrees and branch-cleanup. WebSocket events flow through EventEmitter. scheduler.module.ts handles startup wiring. Routes registered in apps/server/src/server/routes.ts. Discord #infra channel ID: 1469109809939742814.",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-scheduler-rest-api",
+      "title": "Scheduler REST API",
+      "description": "Add REST endpoint exposing SchedulerService status so the UI can fetch health data without MCP. Foundation for the health dashboard — all downstream milestones depend on this endpoint existing.",
+      "status": "pending",
+      "phases": [
+        {
+          "number": 1,
+          "name": "scheduler-status-endpoint",
+          "title": "Scheduler Status Endpoint",
+          "description": "Add GET /api/automations/scheduler/status route that calls SchedulerService.getStatus() and returns all task states (id, name, enabled, cronExpression, nextRun, lastRun, executionCount, lastError, averageDurationMs). Also extend the existing GET /api/automations/list response to include a schedulerStats object per automation entry (nextRun, lastRun, executionCount, lastError) by joining with scheduler task state on taskId. Wire the new route into apps/server/src/server/routes.ts. Protect with existing X-API-Key auth middleware. This endpoint is the data source for the health dashboard in Milestone 4.",
+          "filesToModify": [
+            "apps/server/src/routes/automations/index.ts",
+            "apps/server/src/services/automation-service.ts",
+            "apps/server/src/server/routes.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET /api/automations/scheduler/status returns 200 with array of task status objects",
+            "Each entry includes: id, name, enabled, cronExpression, nextRun (ISO string or null), lastRun (ISO string or null), executionCount (number), lastError (string or null)",
+            "GET /api/automations/list response includes schedulerStats per automation entry",
+            "Endpoint is protected by API key auth and returns 401 without valid key",
+            "TypeScript compiles clean with no errors"
+          ],
+          "complexity": "small",
+          "isFoundation": true,
+          "featureId": "feature-1772700291782-d7qohhuux"
+        }
+      ],
+      "epicId": "feature-1772700291779-pnprimiop"
+    },
+    {
+      "number": 2,
+      "slug": "02-settings-persistence",
+      "title": "Settings Persistence",
+      "description": "Persist built-in maintenance task configuration (enabled state, cron overrides) in GlobalSettings so it survives server restarts. Today this resets to defaults on every restart.",
+      "status": "pending",
+      "phases": [
+        {
+          "number": 1,
+          "name": "scheduler-settings-type-and-persistence-wiring",
+          "title": "SchedulerSettings Type and Persistence Wiring",
+          "description": "Add SchedulerSettings interface to libs/types/src/global-settings.ts with taskOverrides: Record<string, { enabled?: boolean; cronExpression?: string }> and add DEFAULT_SCHEDULER_SETTINGS constant included in DEFAULT_GLOBAL_SETTINGS. Update SchedulerService.start() to read taskOverrides from settingsService and apply them after registering tasks. Update enableTask(), disableTask(), and updateTaskSchedule() to write back to GlobalSettings via settingsService when changing a built-in task. Pass settingsService into SchedulerService via a new setSettingsService() method or by extending the existing initialize() signature. Update scheduler.module.ts to wire settingsService into SchedulerService after initialization.",
+          "filesToModify": [
+            "libs/types/src/global-settings.ts",
+            "apps/server/src/services/scheduler-service.ts",
+            "apps/server/src/services/scheduler.module.ts"
+          ],
+          "acceptanceCriteria": [
+            "SchedulerSettings interface exported from @protolabsai/types",
+            "DEFAULT_SCHEDULER_SETTINGS included in DEFAULT_GLOBAL_SETTINGS",
+            "Disabling a built-in task writes to data/settings.json under schedulerSettings.taskOverrides",
+            "Server restart restores disabled state — task remains disabled",
+            "Cron expression override also persists and restores across restart",
+            "npm run build:packages and full typecheck pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772700291785-ua8nxedii"
+        }
+      ],
+      "epicId": "feature-1772700291783-zviw2oiia"
+    },
+    {
+      "number": 3,
+      "slug": "03-branch-aware-pr-tasks",
+      "title": "Branch-Aware PR Tasks",
+      "description": "Fix auto-merge-prs and auto-rebase-stale-prs maintenance tasks to respect the configured prBaseBranch instead of hardcoding main. These two tasks operate on PRs and must target the correct integration branch.",
+      "status": "pending",
+      "phases": [
+        {
+          "number": 1,
+          "name": "wire-resolve-integration-branch-into-pr-tasks",
+          "title": "Wire resolveIntegrationBranch into PR Tasks",
+          "description": "In maintenance-tasks.ts, update the auto-merge-prs and auto-rebase-stale-prs task handler functions to call resolveIntegrationBranch(projectPath, settingsService) and filter PRs to only those targeting that integration branch before merging or rebasing. The settingsService is already available in the syncWithScheduler context — thread it through to these handlers. Confirm stale-features and board-health do not need branch context (they operate on feature status not git branches — no change needed for them).",
+          "filesToModify": [
+            "apps/server/src/services/maintenance-tasks.ts"
+          ],
+          "acceptanceCriteria": [
+            "auto-merge-prs only merges PRs whose base branch matches resolveIntegrationBranch() result",
+            "auto-rebase-stale-prs only rebases PRs whose base branch matches resolveIntegrationBranch() result",
+            "With prBaseBranch: dev configured, both tasks target dev PRs only",
+            "With prBaseBranch: main configured, both tasks target main PRs only",
+            "Existing resolveIntegrationBranch() function reused unchanged",
+            "TypeScript compiles clean"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772700291788-zct5dd2z5"
+        }
+      ],
+      "epicId": "feature-1772700291787-gcqfn3g0o"
+    },
+    {
+      "number": 4,
+      "slug": "04-health-dashboard-and-failure-alerting",
+      "title": "Health Dashboard and Failure Alerting",
+      "description": "Build the SchedulerHealthGrid UI component and add scheduler:task-failed event emission with WebSocket push. The health grid shows all tasks with next-run countdowns, last-run results, and execution counts. Failure alerting surfaces errors in the UI within 60 seconds.",
+      "status": "pending",
+      "phases": [
+        {
+          "number": 1,
+          "name": "scheduler-health-grid-component",
+          "title": "Scheduler Health Grid Component",
+          "description": "Add useSchedulerStatus hook at apps/ui/src/hooks/use-scheduler-status.ts that polls GET /api/automations/scheduler/status every 30 seconds using the existing API client pattern. Add SchedulerHealthGrid component at apps/ui/src/components/views/settings-view/automations/scheduler-health-grid.tsx rendering a grid of task cards: task name, enabled badge, next-run countdown (e.g. 'in 4m 23s'), last-run result badge (green check or red X with error tooltip), execution count. Integrate SchedulerHealthGrid into automations-section.tsx above the automations list in a collapsible 'System Tasks' section. Follow Tailwind CSS 4 and existing component patterns — no new npm dependencies.",
+          "filesToModify": [
+            "apps/ui/src/hooks/use-scheduler-status.ts",
+            "apps/ui/src/components/views/settings-view/automations/scheduler-health-grid.tsx",
+            "apps/ui/src/components/views/settings-view/automations/automations-section.tsx"
+          ],
+          "acceptanceCriteria": [
+            "useSchedulerStatus hook fetches and auto-refreshes every 30s",
+            "SchedulerHealthGrid renders with live data from the API",
+            "Next-run countdown updates reactively and shows relative time",
+            "Last-run badge shows green check on success, red X on failure with error tooltip",
+            "Never-run tasks show N/A for last-run",
+            "No new npm dependencies introduced",
+            "TypeScript compiles clean"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772700291791-oxg2agujb"
+        },
+        {
+          "number": 2,
+          "name": "failure-events-and-alerting",
+          "title": "Failure Events and Alerting",
+          "description": "In SchedulerService, emit a scheduler:task-failed event (with taskId, taskName, error message, timestamp ISO string) when a task handler throws during execution. Add a WebSocket broadcast handler in the server event pipeline to forward scheduler:task-failed events to all connected UI clients. In automations-section.tsx subscribe to this event via the existing WebSocket hook and show a toast notification using the existing toast system when a maintenance task fails. Route the event to Discord #infra channel (ID 1469109809939742814) when DISCORD_TOKEN is configured — use existing DiscordBot service pattern, non-fatal if Discord unavailable.",
+          "filesToModify": [
+            "apps/server/src/services/scheduler-service.ts",
+            "apps/server/src/server/websockets.ts",
+            "apps/ui/src/components/views/settings-view/automations/automations-section.tsx"
+          ],
+          "acceptanceCriteria": [
+            "scheduler:task-failed event emitted from SchedulerService on task throw with taskId, taskName, error, timestamp",
+            "WebSocket delivers the event to all connected clients",
+            "UI shows toast notification within 60s of task failure",
+            "Discord notification sent to #infra when DISCORD_TOKEN is set (non-fatal if unavailable)",
+            "Existing task execution is not disrupted — failures are caught and logged before event emission",
+            "TypeScript compiles clean"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772700291792-tg56qnsgu"
+        }
+      ],
+      "epicId": "feature-1772700291789-44zqatyfr"
+    }
+  ],
+  "createdAt": "2026-03-05T08:45:00.000Z",
+  "updatedAt": "2026-03-05T08:44:51.812Z"
+}

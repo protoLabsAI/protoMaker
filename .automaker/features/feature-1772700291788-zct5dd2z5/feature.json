@@ -1,0 +1,32 @@
+{
+  "category": "Branch-Aware PR Tasks",
+  "description": "**Milestone:** Branch-Aware PR Tasks\n\nIn maintenance-tasks.ts, update the auto-merge-prs and auto-rebase-stale-prs task handler functions to call resolveIntegrationBranch(projectPath, settingsService) and filter PRs to only those targeting that integration branch before merging or rebasing. The settingsService is already available in the syncWithScheduler context — thread it through to these handlers. Confirm stale-features and board-health do not need branch context (they operate on feature status not git branches — no change needed for them).\n\n**Files to Modify:**\n- apps/server/src/services/maintenance-tasks.ts\n\n**Acceptance Criteria:**\n- [ ] auto-merge-prs only merges PRs whose base branch matches resolveIntegrationBranch() result\n- [ ] auto-rebase-stale-prs only rebases PRs whose base branch matches resolveIntegrationBranch() result\n- [ ] With prBaseBranch: dev configured, both tasks target dev PRs only\n- [ ] With prBaseBranch: main configured, both tasks target main PRs only\n- [ ] Existing resolveIntegrationBranch() function reused unchanged\n- [ ] TypeScript compiles clean\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Wire resolveIntegrationBranch into PR Tasks",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772700291787-gcqfn3g0o",
+  "branchName": "feature/branch-aware-pr-wire-resolveintegrat",
+  "isFoundation": true,
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291788-zct5dd2z5",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Branch-Aware PR Tasks\n\nIn maintenance-tasks.ts, update the auto-merge-prs and auto-rebase-stale-prs task handler functions to call resolveIntegrationBranch(projectPath, settingsService) and filter PRs to only those targeting that integration branch before merging or rebasing. The settingsService is already available in the syncWithScheduler context — thread it through to these handlers. Confirm stale-features and board-health do not need branch context (they operate on feature status not git branches — no change needed for them).\n\n**Files to Modify:**\n- apps/server/src/services/maintenance-tasks.ts\n\n**Acceptance Criteria:**\n- [ ] auto-merge-prs only merges PRs whose base branch matches resolveIntegrationBranch() result\n- [ ] auto-rebase-stale-prs only rebases PRs whose base branch matches resolveIntegrationBranch() result\n- [ ] With prBaseBranch: dev configured, both tasks target dev PRs only\n- [ ] With prBaseBranch: main configured, both tasks target main PRs only\n- [ ] Existing resolveIntegrationBranch() function reused unchanged\n- [ ] TypeScript compiles clean\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-05T08:44:51.788Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.788Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.788Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772700291783-zviw2oiia"
+  ]
+}
