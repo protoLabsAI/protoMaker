@@ -42,6 +42,7 @@ import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
 import type { PlanData } from './ava-tools.js';
 import { ToolProgressEmitter } from './tool-progress.js';
+import { compactToolResult } from './tool-compaction.js';
 import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
 import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
@@ -225,6 +226,32 @@ function extractPlan(text: string): PlanData | null {
   return null;
 }
 
+// ── Tool result compaction ────────────────────────────────────────────────────
+
+/**
+ * Wrap every tool's execute function so its result is compacted before being
+ * added to the conversation history sent back to the model.
+ */
+function applyToolCompaction(tools: Record<string, unknown>): Record<string, unknown> {
+  const wrapped: Record<string, unknown> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    const t = tool as Record<string, unknown>;
+    if (typeof t['execute'] === 'function') {
+      const originalExecute = t['execute'] as (...args: unknown[]) => Promise<unknown>;
+      wrapped[name] = {
+        ...t,
+        execute: async (...args: unknown[]) => {
+          const result = await originalExecute(...args);
+          return compactToolResult(name, result);
+        },
+      };
+    } else {
+      wrapped[name] = tool;
+    }
+  }
+  return wrapped;
+}
+
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createChatRoutes(services: ServiceContainer): Router {
@@ -343,7 +370,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
           ...(s.headers !== undefined && { headers: s.headers }),
         }));
 
-      const tools = projectPath
+      const rawTools = projectPath
         ? buildAvaTools(
             projectPath,
             {
@@ -373,6 +400,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
             avaMcpServers.length > 0 ? avaMcpServers : undefined
           )
         : {};
+      const tools = applyToolCompaction(rawTools) as typeof rawTools;
 
       // Enable extended thinking for models that support it (opus / sonnet).
       // The thinking budget caps how many tokens the model may use for internal
