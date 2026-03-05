@@ -85,7 +85,7 @@ import {
   useSelectionMode,
   useListViewState,
 } from './board-view/hooks';
-import { SelectionActionBar, ListView, StatsPanel } from './board-view/components';
+import { SelectionActionBar, ListView } from './board-view/components';
 import { MassEditDialog } from './board-view/dialogs';
 import { InitScriptIndicator } from './board-view/init-script-indicator';
 import { useInitScriptEvents } from '@/hooks/use-init-script-events';
@@ -1457,10 +1457,8 @@ export function BoardView() {
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* View Content - Kanban Board, List View, or Stats */}
-          {viewMode === 'stats' ? (
-            <StatsPanel />
-          ) : isListView ? (
+          {/* View Content - Kanban Board or List View */}
+          {isListView ? (
             <ListView
               columnFeaturesMap={columnFeaturesMap}
               allFeatures={hookFeatures}

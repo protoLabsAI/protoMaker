@@ -1,7 +1,7 @@
-import { LayoutGrid, List, BarChart3 } from 'lucide-react';
+import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ViewMode = 'kanban' | 'list' | 'stats';
+export type ViewMode = 'kanban' | 'list';
 
 interface ViewToggleProps {
   viewMode: ViewMode;
@@ -22,7 +22,7 @@ function toggleBtnClass(active: boolean) {
 }
 
 /**
- * A segmented control component for switching between kanban, list, and stats views.
+ * A segmented control component for switching between kanban and list views.
  */
 export function ViewToggle({ viewMode, onViewModeChange, className }: ViewToggleProps) {
   return (
@@ -55,17 +55,6 @@ export function ViewToggle({ viewMode, onViewModeChange, className }: ViewToggle
       >
         <List className="w-4 h-4" />
         <span className="sr-only">List</span>
-      </button>
-      <button
-        role="tab"
-        aria-selected={viewMode === 'stats'}
-        aria-label="Stats view"
-        onClick={() => onViewModeChange('stats')}
-        className={toggleBtnClass(viewMode === 'stats')}
-        data-testid="view-toggle-stats"
-      >
-        <BarChart3 className="w-4 h-4" />
-        <span className="sr-only">Stats</span>
       </button>
     </div>
   );
