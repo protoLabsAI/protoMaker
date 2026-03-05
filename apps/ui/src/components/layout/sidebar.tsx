@@ -252,13 +252,15 @@ export function Sidebar() {
   // Navigation sections and keyboard shortcuts (defined after handlers)
   const { navSections, navigationShortcuts } = useNavigation({
     shortcuts,
-    hideSpecEditor,
+    hideSpecEditor: hideSpecEditor || !featureFlags.specEditor,
     hideContext,
     hideTerminal,
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,
     hideFileEditor: false,
     hideSystemView: !featureFlags.systemView,
+    hideNotes: !featureFlags.notes,
+    hideCalendar: !featureFlags.calendar,
     currentProject,
     projects,
     projectHistory,

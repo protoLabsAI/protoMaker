@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearch } from '@tanstack/react-router';
 import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
@@ -44,6 +44,7 @@ import { AutomationsSection } from './settings-view/automations/automations-sect
 import { SensorsSection } from './settings-view/sensors/sensors-section';
 import { ImportExportDialog } from './settings-view/components/import-export-dialog';
 import { SettingsScopeToggle } from './settings-view/components/settings-scope-toggle';
+import { GLOBAL_NAV_GROUPS } from './settings-view/config/navigation';
 import type { Theme } from './settings-view/shared/types';
 
 export function SettingsView() {
@@ -69,6 +70,7 @@ export function SettingsView() {
     setPromptCustomization,
     systemMaxConcurrency,
     setSystemMaxConcurrency,
+    featureFlags,
   } = useAppStore();
   const { skipSandboxWarning, setSkipSandboxWarning } = useAIModelsStore();
   const { theme, setTheme } = useThemeStore();
@@ -97,6 +99,17 @@ export function SettingsView() {
 
   // Shared mobile navigation state
   const { showNavigation, setShowNavigation, toggleNavigation } = useSettingsNavigation(activeView);
+
+  // Filter out settings nav items gated by feature flags
+  const filteredNavGroups = useMemo(() => {
+    return GLOBAL_NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        if (item.id === 'sensors' && !featureFlags.userPresenceDetection) return false;
+        return true;
+      }),
+    })).filter((group) => group.items.length > 0);
+  }, [featureFlags.userPresenceDetection]);
 
   // Render the active section based on current view
   const renderActiveSection = () => {
@@ -243,6 +256,7 @@ export function SettingsView() {
           onNavigate={handleNavigate}
           isOpen={showNavigation}
           onClose={() => setShowNavigation(false)}
+          groups={filteredNavGroups}
         />
 
         {/* Content Panel - Shows only the active section */}

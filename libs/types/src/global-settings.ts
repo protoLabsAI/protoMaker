@@ -191,17 +191,22 @@ const DEFAULT_CODEX_ADDITIONAL_DIRS: string[] = [];
 export interface FeatureFlags {
   /** Ava Anywhere — chat overlay, Cmd+K modal, /chat route, mobile chat tab */
   avaChat: boolean;
-  /** Calendar view in project sidebar */
+  /** Calendar nav item in sidebar */
+  calendar: boolean;
   /** Designs/pen file viewer in project sidebar */
   designs: boolean;
   /** Docs view in project sidebar */
   docs: boolean;
+  /** Notes nav item in sidebar */
+  notes: boolean;
   /**
    * Authority pipeline (TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → … → PUBLISH).
    * When false, PipelineOrchestrator ignores all events — no gate cycling, no HITL
    * interruptions. Off by default until the pipeline overhaul is complete.
    */
   pipeline: boolean;
+  /** Spec editor in sidebar Tools section */
+  specEditor: boolean;
   /** System View — network/dependency graph view in the project sidebar */
   systemView: boolean;
   /**
@@ -215,9 +220,12 @@ export interface FeatureFlags {
 /** Default feature flags — all off by default, opt-in per environment */
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   avaChat: false,
+  calendar: false,
   designs: false,
   docs: false,
+  notes: false,
   pipeline: false,
+  specEditor: false,
   systemView: false,
   userPresenceDetection: false,
 };

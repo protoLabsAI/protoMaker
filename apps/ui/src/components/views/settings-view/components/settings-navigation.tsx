@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SettingsNavButton, SettingsNavContainer } from '@/components/shared/settings';
-import type { NavigationItem } from '../config/navigation';
+import type { NavigationItem, NavigationGroup } from '../config/navigation';
 import { GLOBAL_NAV_GROUPS } from '../config/navigation';
 import type { SettingsViewId } from '../hooks/use-settings-view';
 import { useAIModelsStore } from '@/store/ai-models-store';
@@ -23,6 +23,7 @@ interface SettingsNavigationProps {
   onNavigate: (sectionId: SettingsViewId) => void;
   isOpen?: boolean;
   onClose?: () => void;
+  groups?: NavigationGroup[];
 }
 
 function NavItemWithSubItems({
@@ -141,10 +142,12 @@ export function SettingsNavigation({
   onNavigate,
   isOpen = true,
   onClose,
+  groups,
 }: SettingsNavigationProps) {
+  const navGroups = groups ?? GLOBAL_NAV_GROUPS;
   return (
     <SettingsNavContainer isOpen={isOpen} onClose={onClose ?? (() => {})}>
-      {GLOBAL_NAV_GROUPS.map((group, groupIndex) => (
+      {navGroups.map((group, groupIndex) => (
         <div key={group.label}>
           {groupIndex > 0 && <div className="my-3 border-t border-border/50" />}
           <div className="px-3 py-2 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">

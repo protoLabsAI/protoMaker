@@ -59,6 +59,8 @@ interface UseNavigationProps {
   hideDocs: boolean;
   hideFileEditor: boolean;
   hideSystemView: boolean;
+  hideNotes: boolean;
+  hideCalendar: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -86,6 +88,8 @@ export function useNavigation({
   hideDocs,
   hideFileEditor,
   hideSystemView,
+  hideNotes,
+  hideCalendar,
   currentProject,
   projects,
   projectHistory,
@@ -177,12 +181,14 @@ export function useNavigation({
       },
     ];
 
-    projectItems.push({
-      id: 'notes',
-      label: 'Notes',
-      icon: NotebookPen,
-      shortcut: shortcuts.notes,
-    });
+    if (!hideNotes) {
+      projectItems.push({
+        id: 'notes',
+        label: 'Notes',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
+      });
+    }
 
     projectItems.push({
       id: 'projects',
@@ -218,12 +224,14 @@ export function useNavigation({
       });
     }
 
-    projectItems.push({
-      id: 'calendar',
-      label: 'Calendar',
-      icon: CalendarDays,
-      shortcut: shortcuts.calendar,
-    });
+    if (!hideCalendar) {
+      projectItems.push({
+        id: 'calendar',
+        label: 'Calendar',
+        icon: CalendarDays,
+        shortcut: shortcuts.calendar,
+      });
+    }
 
     // Add Terminal to Project section if not hidden
     if (!hideTerminal) {
@@ -299,6 +307,8 @@ export function useNavigation({
     hideDocs,
     hideFileEditor,
     hideSystemView,
+    hideNotes,
+    hideCalendar,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,
