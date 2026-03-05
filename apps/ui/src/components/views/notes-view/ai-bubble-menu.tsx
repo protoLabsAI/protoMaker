@@ -231,8 +231,8 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
           </button>
         </div>
 
-        {/* Send to pipeline */}
-        <div className="flex items-center gap-0.5 border-t border-border pt-1">
+        {/* TODO: Re-enable Send to pipeline with content creation updates */}
+        {/* <div className="flex items-center gap-0.5 border-t border-border pt-1">
           <span className="px-2 text-[10px] text-muted-foreground/60">Send to</span>
           {PIPELINE_ACTIONS.map((action) => (
             <button
@@ -246,7 +246,7 @@ export function AIBubbleMenu({ editor }: AIBubbleMenuProps) {
               <span>{action.label}</span>
             </button>
           ))}
-        </div>
+        </div> */}
       </div>
     </BubbleMenu>
   );

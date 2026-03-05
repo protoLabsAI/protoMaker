@@ -112,6 +112,53 @@ export interface CeremonyAuditEntry {
   };
 }
 
+/**
+ * CeremonyPhase - Current phase of the ceremony state machine
+ */
+export type CeremonyPhase =
+  | 'awaiting_kickoff'
+  | 'milestone_active'
+  | 'standup_due'
+  | 'milestone_retro'
+  | 'project_retro'
+  | 'project_complete';
+
+/**
+ * CeremonyTransition - A single recorded state transition in ceremony history
+ */
+export interface CeremonyTransition {
+  /** Phase before the transition */
+  from: CeremonyPhase;
+  /** Phase after the transition */
+  to: CeremonyPhase;
+  /** Event string that triggered the transition */
+  trigger: string;
+  /** ISO timestamp when the transition occurred */
+  timestamp: string;
+}
+
+/**
+ * CeremonyState - Full state of the ceremony state machine for a project
+ */
+export interface CeremonyState {
+  /** Current phase */
+  phase: CeremonyPhase;
+  /** Absolute path to the project */
+  projectPath: string;
+  /** Project slug */
+  projectSlug: string;
+  /** Current milestone slug, if any */
+  currentMilestone?: string;
+  /** ISO timestamp of the last standup ceremony */
+  lastStandup: string;
+  /** ISO timestamp of the last retro ceremony */
+  lastRetro: string;
+  /** Cron string for standup cadence (default: '0 9 * * 1') */
+  standupCadence: string;
+  /** Ordered list of all transitions that have occurred */
+  history: CeremonyTransition[];
+}
+
 export interface ProjectRetroData {
   /** ID of the completed project */
   projectId: string;

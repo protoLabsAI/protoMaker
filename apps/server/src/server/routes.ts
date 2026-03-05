@@ -84,6 +84,7 @@ import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
+import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -152,6 +153,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     contentFlowService,
     repoRoot,
     sensorRegistryService,
+    projectPmService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -404,6 +406,13 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Sensor registry routes (core sensor framework)
   app.use('/api/sensors', createSensorRoutes(sensorRegistryService));
   logger.info('Sensor routes mounted at /api/sensors');
+
+  // Project PM Agent routes
+  app.use(
+    '/api/project-pm',
+    createProjectPmRoutes(projectPmService, projectService, ceremonyService, featureLoader, events)
+  );
+  logger.info('Project PM routes mounted at /api/project-pm');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

@@ -47,9 +47,9 @@ All agents share a set of prompt fragments defined in `libs/prompts/src/shared/t
 
 Two functions compose these fragments for different agent categories:
 
-**`getEngineeringBase(profile?)`** — Full shared base for engineering agents (Matt, Sam, Kai, Frank, generic roles). Includes all 8 fragments.
+**`getEngineeringBase(profile?)`** — Full shared base for engineering agents (frontend, infrastructure, backend, devops, and generic roles). Includes all 8 fragments.
 
-**`getContentBase(profile?)`** — Lighter base for content/GTM agents (Jon, Cindi). Includes only `TEAM_ROSTER`, `BRAND_IDENTITY`, `CONTEXT7_GUIDE`, and `CONTINUOUS_IMPROVEMENT`. Content agents don't need worktree safety or monorepo standards.
+**`getContentBase(profile?)`** — Lighter base for content/GTM agents (GTM agent, content agent). Includes only `TEAM_ROSTER`, `BRAND_IDENTITY`, `CONTEXT7_GUIDE`, and `CONTINUOUS_IMPROVEMENT`. Content agents don't need worktree safety or monorepo standards.
 
 ### Layer 2: Role-specific prompts
 
@@ -57,13 +57,13 @@ Each persona has a prompt file in `libs/prompts/src/agents/`:
 
 ```
 libs/prompts/src/agents/
-├── ava.ts              # Chief of Staff — orchestration, no code writing
-├── matt.ts             # Frontend — React, Tailwind, components, a11y
-├── sam.ts              # Agent infra — LangGraph, providers, observability
-├── kai.ts              # Backend — Express routes, services, API design
-├── frank.ts            # DevOps — Docker, CI/CD, deploy, monitoring
-├── cindi.ts            # Content — blog posts, docs, training data, SEO
-├── jon.ts              # GTM — content strategy, brand, social media
+├── ava.ts              # Orchestrator — coordination, routing, no code writing
+├── matt.ts             # Frontend agent — React, Tailwind, components, a11y
+├── sam.ts              # Infrastructure agent — LangGraph, providers, observability
+├── kai.ts              # Backend agent — Express routes, services, API design
+├── frank.ts            # DevOps agent — Docker, CI/CD, deploy, monitoring
+├── cindi.ts            # Content agent — blog posts, docs, training data, SEO
+├── jon.ts              # GTM agent — content strategy, brand, social media
 ├── pr-maintainer.ts    # Pipeline — auto-merge, CodeRabbit, format fixes
 ├── board-janitor.ts    # Board hygiene — stale features, dependency repair
 ├── product-manager-prompt.ts     # PM authority agent

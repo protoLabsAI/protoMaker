@@ -72,8 +72,6 @@ interface UseNavigationProps {
   hideDocs: boolean;
   hideFileEditor: boolean;
   hideSystemView: boolean;
-  hideNotes: boolean;
-  hideCalendar: boolean;
   hideAvaChat: boolean;
   currentProject: Project | null;
   projects: Project[];
@@ -100,8 +98,6 @@ export function useNavigation({
   hideDocs,
   hideFileEditor,
   hideSystemView,
-  hideNotes,
-  hideCalendar,
   hideAvaChat,
   currentProject,
   projects,
@@ -174,8 +170,6 @@ export function useNavigation({
     const visibleToolsItems = allToolsItems.filter((item) => {
       if (item.id === 'spec' && hideSpecEditor) return false;
       if (item.id === 'docs' && hideDocs) return false;
-      if (item.id === 'notes' && hideNotes) return false;
-      if (item.id === 'calendar' && hideCalendar) return false;
       return true;
     });
 
@@ -293,8 +287,6 @@ export function useNavigation({
     hideDocs,
     hideFileEditor,
     hideSystemView,
-    hideNotes,
-    hideCalendar,
     hideAvaChat,
     hasGitHubRemote,
     unviewedValidationsCount,

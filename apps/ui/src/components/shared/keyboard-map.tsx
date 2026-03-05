@@ -88,7 +88,7 @@ const SHORTCUT_LABELS: Record<keyof KeyboardShortcuts, string> = {
   notes: 'Content',
   docs: 'Docs',
   settings: 'Settings',
-  projectSettings: 'Settings',
+  projectSettings: 'Project Settings',
   terminal: 'Toggle Terminal',
   githubIssues: 'Issues',
   githubPrs: 'Pull Requests',

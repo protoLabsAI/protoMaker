@@ -411,13 +411,13 @@ Lucide React is the standard icon library. It provides tree-shakeable, consisten
 
 ## Testing strategy
 
-| Layer             | Tool                        | What to test                                                        |
-| ----------------- | --------------------------- | ------------------------------------------------------------------- |
-| Unit              | Vitest                      | Utility functions, hooks, store logic                               |
-| Component         | Storybook interaction tests | UI behavior, accessibility, visual states                           |
-| Visual regression | Chromatic (target)          | Unintended UI changes between releases                              |
-| Agent visual      | agent-browser               | Theme validation, chart colors, responsive layouts (Matt exclusive) |
-| E2E               | Playwright                  | Critical user flows (create feature, run agent, board interactions) |
+| Layer             | Tool                        | What to test                                                                  |
+| ----------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| Unit              | Vitest                      | Utility functions, hooks, store logic                                         |
+| Component         | Storybook interaction tests | UI behavior, accessibility, visual states                                     |
+| Visual regression | Chromatic (target)          | Unintended UI changes between releases                                        |
+| Agent visual      | agent-browser               | Theme validation, chart colors, responsive layouts (frontend agent exclusive) |
+| E2E               | Playwright                  | Critical user flows (create feature, run agent, board interactions)           |
 
 ## Build and tooling
 

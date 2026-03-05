@@ -72,13 +72,13 @@ The team is organized into **Operations** and **Engineering** branches. Orchestr
 
 ### Engineering
 
-| Name              | Role                 | Type     | Notes                                                                    |
-| ----------------- | -------------------- | -------- | ------------------------------------------------------------------------ |
-| **Lead Engineer** | Production Orchestr. | Service  | Fast-path rules, auto-mode management, event-driven orchestration.       |
-| **Matt**          | Frontend Engineer    | AI Agent | React 19, design systems, Storybook, component architecture.             |
-| **Sam**           | AI Agent Engineer    | AI Agent | LangGraph flows, LLM providers, observability, multi-agent coordination. |
-| **Frank**         | DevOps Engineer      | AI Agent | Staging infra, deployments, health monitoring, system reliability.       |
-| **Kai**           | Backend Engineer     | AI Agent | Server-side features, API design, database, services.                    |
+| Name               | Role                 | Type     | Notes                                                                    |
+| ------------------ | -------------------- | -------- | ------------------------------------------------------------------------ |
+| **Lead Engineer**  | Production Orchestr. | Service  | Fast-path rules, auto-mode management, event-driven orchestration.       |
+| **Frontend**       | Frontend Engineer    | AI Agent | React 19, design systems, Storybook, component architecture.             |
+| **Infrastructure** | AI Agent Engineer    | AI Agent | LangGraph flows, LLM providers, observability, multi-agent coordination. |
+| **DevOps**         | DevOps Engineer      | AI Agent | Staging infra, deployments, health monitoring, system reliability.       |
+| **Backend**        | Backend Engineer     | AI Agent | Server-side features, API design, database, services.                    |
 
 ## Content Strategy
 

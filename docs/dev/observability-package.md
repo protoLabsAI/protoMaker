@@ -2,7 +2,7 @@
 
 `@protolabsai/observability` provides Langfuse-based tracing and cost tracking for LLM operations. All tracing is transparent — application code works identically whether Langfuse is available or not.
 
-**Owner:** Sam (AI Agent Engineer)
+**Owner:** Infrastructure agent (agent infra domain)
 
 ## Package Structure
 

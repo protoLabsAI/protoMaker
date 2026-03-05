@@ -116,7 +116,7 @@ export function ProjectSwitcher() {
     (project: Project) => {
       setCurrentProject(project);
       // Navigate to board view when switching projects
-      navigate({ to: '/board' });
+      navigate({ to: '/projects' });
     },
     [setCurrentProject, navigate]
   );
@@ -128,7 +128,7 @@ export function ProjectSwitcher() {
 
   const handleOnboardingSkip = () => {
     setShowOnboardingDialog(false);
-    navigate({ to: '/board' });
+    navigate({ to: '/projects' });
   };
 
   const handleBugReportClick = useCallback(() => {
@@ -196,7 +196,7 @@ export function ProjectSwitcher() {
         }
 
         // Navigate to board view
-        navigate({ to: '/board' });
+        navigate({ to: '/projects' });
       } catch (error) {
         console.error('Failed to open project:', error);
         toast.error('Failed to open project', {

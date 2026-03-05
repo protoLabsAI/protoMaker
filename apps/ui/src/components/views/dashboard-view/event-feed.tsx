@@ -84,11 +84,10 @@ export function EventFeed({ projectPath, className }: EventFeedProps) {
 
   return (
     <Card className={cn('flex flex-col h-full', className)}>
-      <CardHeader className="pb-3">
+      <CardHeader className="py-2.5 px-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Recent Events</CardTitle>
-            <CardDescription>Live feed of project activity</CardDescription>
+            <CardTitle className="text-sm">Recent Events</CardTitle>
           </div>
           <div className="flex items-center gap-2">
             <div
@@ -112,12 +111,9 @@ export function EventFeed({ projectPath, className }: EventFeedProps) {
         )}
 
         {!error && events.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <LucideIcons.Radio className="w-12 h-12 text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">No events yet</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Events will appear here as they occur
-            </p>
+          <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <LucideIcons.Radio className="w-8 h-8 text-muted-foreground/30 mb-2" />
+            <p className="text-xs text-muted-foreground">No events yet</p>
           </div>
         )}
 

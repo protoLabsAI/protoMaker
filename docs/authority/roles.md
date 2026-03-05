@@ -9,9 +9,9 @@
 ```text
 Project Owner (CEO, Human)
 ├── AVA, Opus, Trust=3 — Engineering
-│   ├── Matt, Sonnet, Trust=2
-│   ├── Sam, Sonnet, Trust=2
-│   ├── Frank, Sonnet, Trust=2
+│   ├── Frontend, Sonnet, Trust=2
+│   ├── Infrastructure, Sonnet, Trust=2
+│   ├── DevOps, Sonnet, Trust=2
 │   ├── Cindi, Sonnet, Trust=2
 │   ├── Backend Engineer, Sonnet, Trust=2
 │   ├── Product Manager, Sonnet, Trust=1
@@ -23,20 +23,20 @@ Project Owner (CEO, Human)
 
 ## Active Roster
 
-| Agent                                       | Role                | Model  | Trust           | Reports To    | Capabilities                  | Exposure     |
-| ------------------------------------------- | ------------------- | ------ | --------------- | ------------- | ----------------------------- | ------------ |
-| **Project Owner**                           | CEO & Founder       | —      | 3 (Autonomous)  | —             | All                           | —            |
-| [AVA](#ava)                                 | chief-of-staff      | Opus   | 3 (Autonomous)  | Owner         | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
-| [Matt](#matt)                               | frontend-engineer   | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Sam](#sam)                                 | backend-engineer    | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Frank](#frank)                             | devops-engineer     | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
-| [Cindi](#cindi)                             | content-writer      | Sonnet | 2 (Conditional) | AVA           | Edit, Commit, PR              | CLI, Discord |
-| [Backend Engineer](#backend-engineer)       | backend-engineer    | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
-| [Product Manager](#product-manager)         | product-manager     | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
-| [Engineering Manager](#engineering-manager) | engineering-manager | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
-| [PR Maintainer](#pr-maintainer)             | pr-maintainer       | Haiku  | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
-| [Board Janitor](#board-janitor)             | board-janitor       | Haiku  | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
-| [Jon](#jon)                                 | gtm-specialist      | Sonnet | 1 (Assisted)    | Project Owner | Bash, Edit                    | CLI, Discord |
+| Agent                                       | Role                 | Model  | Trust           | Reports To    | Capabilities                  | Exposure     |
+| ------------------------------------------- | -------------------- | ------ | --------------- | ------------- | ----------------------------- | ------------ |
+| **Project Owner**                           | CEO & Founder        | —      | 3 (Autonomous)  | —             | All                           | —            |
+| [AVA](#ava)                                 | chief-of-staff       | Opus   | 3 (Autonomous)  | Owner         | Bash, Edit, Commit, PR, Spawn | CLI, Discord |
+| [Frontend agent](#matt)                     | frontend-engineer    | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Infrastructure agent](#sam)                | agent-infra-engineer | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
+| [DevOps agent](#frank)                      | devops-engineer      | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | CLI, Discord |
+| [Cindi](#cindi)                             | content-writer       | Sonnet | 2 (Conditional) | AVA           | Edit, Commit, PR              | CLI, Discord |
+| [Backend Engineer](#backend-engineer)       | backend-engineer     | Sonnet | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
+| [Product Manager](#product-manager)         | product-manager      | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
+| [Engineering Manager](#engineering-manager) | engineering-manager  | Sonnet | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
+| [PR Maintainer](#pr-maintainer)             | pr-maintainer        | Haiku  | 2 (Conditional) | AVA           | Bash, Edit, Commit, PR        | Internal     |
+| [Board Janitor](#board-janitor)             | board-janitor        | Haiku  | 1 (Assisted)    | AVA           | Read-only                     | Internal     |
+| [Jon](#jon)                                 | gtm-specialist       | Sonnet | 1 (Assisted)    | Project Owner | Bash, Edit                    | CLI, Discord |
 
 ## Project Owner {#josh}
 
@@ -72,9 +72,9 @@ Autonomous operator with full authority. Manages operations, coordinates agents,
 
 ### Direct Reports
 
-- [Matt](#matt) — Frontend engineering specialist
-- [Sam](#sam) — AI agent engineer
-- [Frank](#frank) — Manages infrastructure, CI/CD, deployments, monitoring, and system reliability
+- [Frontend agent](#matt) — Frontend engineering specialist
+- [Infrastructure agent](#sam) — AI agent infrastructure engineer
+- [DevOps agent](#frank) — Manages infrastructure, CI/CD, deployments, monitoring, and system reliability
 - [Cindi](#cindi) — Content writing specialist for protoLabs
 - [Backend Engineer](#backend-engineer) — Implements server-side features, APIs, services, and database logic
 - [Product Manager](#product-manager) — Manages requirements, priorities, roadmap, and stakeholder communication
@@ -88,7 +88,7 @@ Can spawn sub-agents with roles: backend-engineer, frontend-engineer, devops-eng
 
 ---
 
-## Matt {#matt}
+## Frontend Agent {#matt}
 
 **Type:** AI
 **Role:** frontend-engineer
@@ -105,10 +105,10 @@ Frontend engineering specialist. Implements UI components, design systems, themi
 
 ---
 
-## Sam {#sam}
+## Infrastructure Agent {#sam}
 
 **Type:** AI
-**Role:** backend-engineer
+**Role:** agent-infra-engineer
 **Model:** Sonnet
 **Trust Level:** 2 (Conditional)
 **Reports to:** AVA
@@ -122,7 +122,7 @@ AI agent engineer. Designs multi-agent flows, LangGraph state graphs, LLM provid
 
 ---
 
-## Frank {#frank}
+## DevOps Agent {#frank}
 
 **Type:** AI
 **Role:** devops-engineer
@@ -262,7 +262,7 @@ GTM Specialist — content strategy, brand positioning, social media, competitiv
 
 These templates exist in the registry but are not placed in the org hierarchy:
 
-- **Kai** (kai) — Backend engineer. Implements Express routes, services, API design, error handling, and server-side features. Reports to Ava.
+- **Backend agent** (kai) — Backend engineer. Implements Express routes, services, API design, error handling, and server-side features. Reports to Ava.
 
 ## Adding a New Team Member
 

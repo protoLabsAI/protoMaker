@@ -153,7 +153,7 @@ export function DashboardView() {
           description: `Opened ${name}`,
         });
 
-        navigate({ to: '/board' });
+        navigate({ to: '/projects' });
       } catch (error) {
         logger.error('[Dashboard] Failed to open project:', error);
         toast.error('Failed to open project', {
@@ -322,7 +322,7 @@ export function DashboardView() {
         description: `Created ${projectName}`,
       });
 
-      navigate({ to: '/board' });
+      navigate({ to: '/projects' });
     } catch (error) {
       logger.error('Failed to create project:', error);
       toast.error('Failed to create project', {
@@ -403,7 +403,7 @@ export function DashboardView() {
         description: `Created ${projectName} from ${template.name}`,
       });
 
-      navigate({ to: '/board' });
+      navigate({ to: '/projects' });
     } catch (error) {
       logger.error('Failed to create project from template:', error);
       toast.error('Failed to create project', {
@@ -480,7 +480,7 @@ export function DashboardView() {
         description: `Created ${projectName}`,
       });
 
-      navigate({ to: '/board' });
+      navigate({ to: '/projects' });
     } catch (error) {
       logger.error('Failed to create project from custom URL:', error);
       toast.error('Failed to create project', {

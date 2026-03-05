@@ -4,37 +4,37 @@ Why protoLabs uses named personas, domain-scoped delegation, model tiers, worktr
 
 ## Why named personas
 
-protoLabs agents are not generic "Agent 1, Agent 2" instances. Each has a name, a domain, and a personality — Matt (frontend), Sam (agent infra), Kai (backend), Frank (devops), Cindi (content), Jon (GTM), and Ava (orchestrator).
+protoLabs agents are not generic "Agent 1, Agent 2" instances. Each has a domain specialization and personality — frontend, agent infrastructure, backend, devops, content, GTM, and orchestration.
 
 ### Domain boundaries
 
-Named personas enforce strict domain boundaries. Matt only touches `apps/ui/` and component code. Kai owns `apps/server/src/routes/` and services. Frank handles Docker, CI, and deploy scripts. This isn't cosmetic — it prevents the single biggest failure mode of multi-agent systems: agents stepping on each other's work.
+Named personas enforce strict domain boundaries. The frontend agent only touches `apps/ui/` and component code. The backend agent owns `apps/server/src/routes/` and services. The DevOps agent handles Docker, CI, and deploy scripts. This isn't cosmetic — it prevents the single biggest failure mode of multi-agent systems: agents stepping on each other's work.
 
 When a feature spans domains (frontend + backend), it doesn't get assigned to one agent. Instead, the Lead Engineer creates two features with a dependency edge. The backend feature ships first; the frontend feature depends on it. Each agent works in its domain, in its own worktree, with no merge conflicts.
 
 ### Memory accumulation
 
-Named personas accumulate domain-specific memory. When Matt discovers that Tailwind v4 requires `@import "tailwindcss"` instead of `@tailwind base`, that learning persists in `.automaker/memory/` and feeds into future Matt executions. Generic agents would lose this context or pollute other domains with irrelevant learnings.
+Named personas accumulate domain-specific memory. When the frontend agent discovers that Tailwind v4 requires `@import "tailwindcss"` instead of `@tailwind base`, that learning persists in `.automaker/memory/` and feeds into future frontend executions. Generic agents would lose this context or pollute other domains with irrelevant learnings.
 
 ### Audit trail accountability
 
-When a PR introduces a regression, the audit trail shows exactly which persona made which decision. "Sam modified `libs/flows/src/coordinator.ts` at turn 14, after reading `libs/flows/src/content/section-writer.ts`" is actionable. "Agent 3 modified file X" is not.
+When a PR introduces a regression, the audit trail shows exactly which persona made which decision. "The infrastructure agent modified `libs/flows/src/coordinator.ts` at turn 14, after reading `libs/flows/src/content/section-writer.ts`" is actionable. "Agent 3 modified file X" is not.
 
 ### The roster
 
 The canonical roster lives in `libs/prompts/src/shared/team-base.ts` as the `TEAM_ROSTER` constant. Every agent receives this table in its system prompt, so each agent knows _who to delegate to_ when work falls outside its domain.
 
-| Agent             | Domain        | Delegate when...                                       |
-| ----------------- | ------------- | ------------------------------------------------------ |
-| **Ava**           | Orchestration | Product direction, cross-team coordination, escalation |
-| **Matt**          | Frontend      | React, UI components, design system, Tailwind, a11y    |
-| **Sam**           | Agent infra   | LangGraph flows, LLM providers, observability          |
-| **Kai**           | Backend       | Express routes, services, API design, error handling   |
-| **Frank**         | DevOps        | CI/CD, Docker, deploy, monitoring, infra               |
-| **Jon**           | GTM           | Content strategy, brand, social media, launches        |
-| **Cindi**         | Content       | Blog posts, docs, training data, SEO copy              |
-| **PR Maintainer** | Pipeline      | Auto-merge, CodeRabbit threads, format fixes           |
-| **Board Janitor** | Board hygiene | Stale features, dependency repair, status cleanup      |
+| Agent                    | Domain        | Delegate when...                                       |
+| ------------------------ | ------------- | ------------------------------------------------------ |
+| **Orchestrator**         | Orchestration | Product direction, cross-team coordination, escalation |
+| **Frontend agent**       | Frontend      | React, UI components, design system, Tailwind, a11y    |
+| **Infrastructure agent** | Agent infra   | LangGraph flows, LLM providers, observability          |
+| **Backend agent**        | Backend       | Express routes, services, API design, error handling   |
+| **DevOps agent**         | DevOps        | CI/CD, Docker, deploy, monitoring, infra               |
+| **GTM agent**            | GTM           | Content strategy, brand, social media, launches        |
+| **Content agent**        | Content       | Blog posts, docs, training data, SEO copy              |
+| **PR Maintainer**        | Pipeline      | Auto-merge, CodeRabbit threads, format fixes           |
+| **Board Janitor**        | Board hygiene | Stale features, dependency repair, status cleanup      |
 
 ## Two surfaces: interactive and autonomous
 
@@ -42,7 +42,7 @@ The same agent templates serve both interactive and autonomous use cases. This i
 
 ### Interactive (CLI / Discord)
 
-When you type `/matt` in Claude Code, you get Matt in conversational mode:
+When you invoke a domain agent in Claude Code, you get it in conversational mode:
 
 - Connected to your terminal via WebSocket
 - Context files and memory loaded from `.automaker/context/` and `.automaker/memory/`
@@ -51,7 +51,7 @@ When you type `/matt` in Claude Code, you get Matt in conversational mode:
 
 ### Autonomous (pipeline)
 
-When auto-mode picks up a frontend feature, it gets the same Matt template:
+When auto-mode picks up a frontend feature, it gets the same frontend agent template:
 
 - Runs in an isolated worktree
 - Board-driven lifecycle (INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE)
@@ -62,9 +62,9 @@ When auto-mode picks up a frontend feature, it gets the same Matt template:
 
 The `RoleRegistryService` and `AgentFactoryService` serve both surfaces. A template defines: persona identity, model tier, tool access, domain boundaries. The _execution path_ determines interactive vs autonomous — not the template. This means:
 
-1. **Consistent behavior** — Matt gives the same quality advice whether you're chatting or auto-mode is running
+1. **Consistent behavior** — A domain agent gives the same quality advice whether you're chatting or auto-mode is running
 2. **Single source of truth** — prompt improvements benefit both surfaces immediately
-3. **No divergence** — there's no "interactive Matt" and "pipeline Matt" drifting apart over time
+3. **No divergence** — there's no "interactive" and "pipeline" version of the same agent drifting apart over time
 
 See [Dynamic Role Registry](./dynamic-role-registry.md) for the template system implementation.
 
@@ -73,11 +73,11 @@ See [Dynamic Role Registry](./dynamic-role-registry.md) for the template system 
 When a feature enters the Lead Engineer's INTAKE state, it must be assigned to the right persona. The assignment uses file-path pattern matching:
 
 ```
-Files in apps/ui/, libs/ui/, component references      → Matt (frontend)
-Files in apps/server/src/routes/, services/             → Kai (backend)
-Files in libs/flows/, libs/observability/ → Sam (agent infra)
-Files in scripts/, docker-compose*, .github/, Dockerfile → Frank (devops)
-Mixed or unclear                                        → Kai (default)
+Files in apps/ui/, libs/ui/, component references      → Frontend agent
+Files in apps/server/src/routes/, services/             → Backend agent
+Files in libs/flows/, libs/observability/ → Infrastructure agent
+Files in scripts/, docker-compose*, .github/, Dockerfile → DevOps agent
+Mixed or unclear                                        → Backend agent (default)
 ```
 
 ### Cross-domain features
@@ -93,7 +93,7 @@ This mirrors how human engineering teams work: the backend engineer builds the A
 
 ### Fallback
 
-When domain detection is ambiguous, Kai (backend) is the default. Backend is the most common domain in this monorepo, and Kai's prompt includes enough general engineering knowledge to handle edge cases.
+When domain detection is ambiguous, the backend agent is the default. Backend is the most common domain in this monorepo, and the backend agent's prompt includes enough general engineering knowledge to handle edge cases.
 
 ## Model tier philosophy
 

@@ -133,16 +133,16 @@ Features are units of work on the Kanban board. Each has a status:
 
 ### Agents
 
-AI agents powered by Claude execute features. Named personas own specific domains:
+AI agents powered by Claude execute features. Domain-scoped agents own specific areas:
 
-| Agent | Domain                                | Model  |
-| ----- | ------------------------------------- | ------ |
-| Matt  | Frontend (React, UI, Tailwind)        | Sonnet |
-| Kai   | Backend (Express, services, APIs)     | Sonnet |
-| Sam   | Agent infra (LangGraph, providers)    | Sonnet |
-| Frank | DevOps (Docker, CI/CD, deploy)        | Sonnet |
-| Cindi | Content (blog posts, docs, SEO)       | Sonnet |
-| Ava   | Orchestration (routing, coordination) | Opus   |
+| Agent                | Domain                            | Model  |
+| -------------------- | --------------------------------- | ------ |
+| Frontend agent       | React, UI, Tailwind               | Sonnet |
+| Backend agent        | Express, services, APIs           | Sonnet |
+| Infrastructure agent | LangGraph, providers, agent infra | Sonnet |
+| DevOps agent         | Docker, CI/CD, deploy             | Sonnet |
+| Content agent        | Blog posts, docs, SEO             | Sonnet |
+| Orchestrator         | Routing, coordination, priorities | Opus   |
 
 Model selection is automatic: Haiku for small tasks, Sonnet for standard work (default), Opus for architectural changes. Features that fail 2+ times auto-escalate to the next model tier.
 
@@ -182,7 +182,7 @@ protoLabs is built as three surfaces that share the same agent infrastructure:
 └──────────────────────────────────────────────┘
 ```
 
-The same agent templates (Matt, Kai, Sam, etc.) serve all three surfaces. Whether you're chatting with `/matt` in the CLI or auto-mode is running Matt on a frontend feature, it's the same prompt, same tools, same domain knowledge.
+The same agent templates serve all three surfaces. Whether you invoke a domain agent interactively in the CLI or auto-mode assigns it to a feature, it uses the same prompt, same tools, same domain knowledge.
 
 ## Data Storage
 
