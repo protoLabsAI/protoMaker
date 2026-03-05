@@ -51,7 +51,12 @@ import { useMobileVisibility } from '@/hooks/use-mobile-visibility';
 import { useVirtualKeyboardResize } from '@/hooks/use-virtual-keyboard-resize';
 import { BottomPanel } from '@/components/layout/bottom-panel';
 import { UpdateNotification } from '@/components/layout/update-notification';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  type ImperativePanelHandle,
+} from 'react-resizable-panels';
 import type { Project } from '@/lib/electron';
 
 const LazyTerminalView = lazy(() =>
@@ -184,6 +189,8 @@ function RootLayoutContent() {
     toggleSidebar: _toggleSidebar,
     setMobileSidebarHidden,
   } = useAppStore();
+  const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen);
+  const terminalPanelRef = useRef<ImperativePanelHandle>(null);
   // Subscribe to theme and font state to trigger re-renders when they change
   const { theme, fontFamilySans, fontFamilyMono } = useThemeStore();
   const { skipSandboxWarning, setSkipSandboxWarning, fetchCodexModels } = useAIModelsStore();
@@ -792,6 +799,17 @@ function RootLayoutContent() {
     }
   }, [effectiveFontSans, effectiveFontMono]);
 
+  // Sync bottom panel open/close with the resizable panel
+  useEffect(() => {
+    const panel = terminalPanelRef.current;
+    if (!panel) return;
+    if (bottomPanelOpen && panel.isCollapsed()) {
+      panel.expand();
+    } else if (!bottomPanelOpen && panel.isExpanded()) {
+      panel.collapse();
+    }
+  }, [bottomPanelOpen]);
+
   // Show sandbox rejection screen if user denied the risk warning
   if (sandboxStatus === 'denied') {
     return <SandboxRejectionScreen />;
@@ -883,8 +901,6 @@ function RootLayoutContent() {
     );
   }
 
-  const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen);
-
   // Show project switcher on all app pages (not on dashboard, setup, or login)
   // Also hide on compact screens (< 1240px) - the sidebar will show a logo instead
   return (
@@ -899,28 +915,48 @@ function RootLayoutContent() {
         )}
         <Sidebar />
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
-          <PanelGroup direction="vertical">
-            <Panel defaultSize={bottomPanelOpen ? 65 : 100} minSize={20}>
+          <PanelGroup direction="vertical" autoSaveId="root-layout">
+            <Panel defaultSize={65} minSize={20} order={1}>
               <div className="flex flex-col h-full min-h-0 overflow-hidden">
                 <Outlet />
               </div>
             </Panel>
-            {bottomPanelOpen && (
-              <>
-                <PanelResizeHandle className="h-1 w-full bg-border/60 hover:bg-brand-500 transition-colors data-[resize-handle-state=hover]:bg-brand-500 data-[resize-handle-state=drag]:bg-brand-500 cursor-row-resize" />
-                <Panel defaultSize={35} minSize={15} maxSize={70}>
-                  <Suspense
-                    fallback={
-                      <div className="flex items-center justify-center h-full">
-                        <LoadingState message="Loading terminal..." />
-                      </div>
-                    }
-                  >
-                    <LazyTerminalView />
-                  </Suspense>
-                </Panel>
-              </>
-            )}
+            <PanelResizeHandle
+              className={`h-1 w-full transition-colors cursor-row-resize ${
+                bottomPanelOpen
+                  ? 'bg-border/60 hover:bg-brand-500 data-[resize-handle-state=hover]:bg-brand-500 data-[resize-handle-state=drag]:bg-brand-500'
+                  : 'hidden'
+              }`}
+            />
+            <Panel
+              ref={terminalPanelRef}
+              defaultSize={35}
+              minSize={15}
+              maxSize={70}
+              collapsible
+              collapsedSize={0}
+              order={2}
+              onCollapse={() => {
+                if (useAppStore.getState().bottomPanelOpen) {
+                  useAppStore.getState().toggleBottomPanel();
+                }
+              }}
+              onExpand={() => {
+                if (!useAppStore.getState().bottomPanelOpen) {
+                  useAppStore.getState().toggleBottomPanel();
+                }
+              }}
+            >
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <LoadingState message="Loading terminal..." />
+                  </div>
+                }
+              >
+                <LazyTerminalView />
+              </Suspense>
+            </Panel>
           </PanelGroup>
           <BottomPanel />
         </div>
