@@ -9,7 +9,7 @@
     </filter>
   </defs>
   <rect x="16" y="16" width="224" height="224" rx="56" fill="url(#brand-gradient)" />
-  <g transform="translate(32, 32) scale(8)" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
+  <g transform="translate(224, 32) scale(-8, 8)" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)">
     <path d="M12 8V4H8" />
     <rect width="16" height="12" x="4" y="8" rx="2" />
     <path d="M2 14h2" />

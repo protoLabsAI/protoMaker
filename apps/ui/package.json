@@ -248,7 +248,7 @@
           ]
         }
       ],
-      "icon": "public/logo_larger.png"
+      "icon": "public/icon.icns"
     },
     "win": {
       "target": [
@@ -259,7 +259,7 @@
           ]
         }
       ],
-      "icon": "public/favicon.ico"
+      "icon": "public/icon.ico"
     },
     "linux": {
       "target": [
