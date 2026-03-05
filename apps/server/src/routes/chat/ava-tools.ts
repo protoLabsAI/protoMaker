@@ -462,8 +462,14 @@ export function buildAvaTools(
       }),
       needsApproval: destructiveNeedsApproval,
       execute: async ({ featureId }) => {
-        await services.leadEngineerService.process(projectPath, featureId);
-        return { success: true, featureId };
+        // Fire-and-forget — don't block the chat on agent execution
+        services.leadEngineerService.process(projectPath, featureId).catch(() => {});
+        return {
+          success: true,
+          featureId,
+          message:
+            'Agent started. Use get_agent_output or list_running_agents to monitor progress.',
+        };
       },
     });
 
