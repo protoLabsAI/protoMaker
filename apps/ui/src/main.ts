@@ -146,6 +146,7 @@ let serverProcess: ChildProcess | null = null;
 let staticServer: Server | null = null;
 let tray: Tray | null = null;
 let isQuittingIntentionally = false;
+let agentPollInterval: ReturnType<typeof setInterval> | null = null;
 
 // Default ports (can be overridden via env) - will be dynamically assigned if these are in use
 // When launched via root init.mjs we pass:
@@ -294,6 +295,105 @@ function getIconPath(): string | null {
   }
 
   return iconPath;
+}
+
+// ============================================
+// System Tray
+// ============================================
+
+let lastKnownAgentCount = 0;
+
+function buildTrayMenu(agentCount: number): Electron.Menu {
+  const statusLabel =
+    agentCount > 0 ? `● ${agentCount} agent${agentCount === 1 ? '' : 's'} running` : '○ Idle';
+  return Menu.buildFromTemplate([
+    { label: statusLabel, enabled: false },
+    { type: 'separator' },
+    {
+      label: 'Show protoLabs Studio',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    { type: 'separator' },
+    { label: 'Quit', click: () => app.quit() },
+  ]);
+}
+
+function updateTray(agentCount: number): void {
+  if (!tray || tray.isDestroyed()) return;
+  lastKnownAgentCount = agentCount;
+  const tooltipSuffix =
+    agentCount > 0 ? `${agentCount} agent${agentCount === 1 ? '' : 's'} running` : 'Idle';
+  tray.setToolTip(`protoLabs Studio — ${tooltipSuffix}`);
+  tray.setContextMenu(buildTrayMenu(agentCount));
+}
+
+function fetchRunningAgentCount(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const key = apiKey;
+    const options: http.RequestOptions = {
+      hostname: 'localhost',
+      port: serverPort,
+      path: '/api/agents/running',
+      method: 'GET',
+      headers: key ? { 'X-API-Key': key } : {},
+      timeout: 5000,
+    };
+    const req = http.request(options, (res) => {
+      let body = '';
+      res.on('data', (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const count = Array.isArray(data)
+            ? data.length
+            : typeof data?.count === 'number'
+              ? data.count
+              : 0;
+          resolve(count);
+        } catch {
+          reject(new Error('Failed to parse response'));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Timeout'));
+    });
+    req.end();
+  });
+}
+
+function setupTray(): void {
+  const iconPath = getIconPath();
+  if (!iconPath) {
+    logger.warn('[Tray] No icon path available, skipping tray setup');
+    return;
+  }
+
+  try {
+    tray = new Tray(iconPath);
+    updateTray(0);
+
+    agentPollInterval = setInterval(async () => {
+      try {
+        const count = await fetchRunningAgentCount();
+        updateTray(count);
+      } catch (err) {
+        logger.warn('[Tray] Failed to fetch agent status:', (err as Error).message);
+        // Keep last known state — no crash
+      }
+    }, 10_000);
+  } catch (err) {
+    logger.error('[Tray] Failed to create system tray:', (err as Error).message);
+  }
 }
 
 /**
@@ -1145,6 +1245,9 @@ app.whenReady().then(async () => {
     // Create window
     createWindow();
 
+    // Set up system tray with live agent status
+    setupTray();
+
     // Pre-warm overlay window and register global shortcut
     createOverlayWindow();
     registerOverlayShortcut();
@@ -1222,6 +1325,18 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  // Stop agent polling
+  if (agentPollInterval !== null) {
+    clearInterval(agentPollInterval);
+    agentPollInterval = null;
+  }
+
+  // Destroy system tray
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
+
   // Unregister global shortcuts
   globalShortcut.unregisterAll();
 
