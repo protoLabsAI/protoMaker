@@ -82,9 +82,12 @@ case 'start_agent':
 
 // 3. API route handler
 // apps/server/src/routes/auto-mode/routes/run-feature.ts
-export function createRunFeatureHandler(autoModeService: AutoModeService) {
+export function createRunFeatureHandler(
+  autoModeService: AutoModeService,
+  leadEngineerService: LeadEngineerService
+) {
   return async (req: Request, res: Response): Promise<void> => {
-    const { projectPath, featureId, useWorktrees } = req.body;
+    const { projectPath, featureId } = req.body;
 
     // Check capacity
     const capacity = await autoModeService.checkWorktreeCapacity(projectPath, featureId);
@@ -93,35 +96,25 @@ export function createRunFeatureHandler(autoModeService: AutoModeService) {
       return;
     }
 
-    // Start execution in background
-    autoModeService
-      .executeFeature(projectPath, featureId, useWorktrees, false)
+    // Start execution via Lead Engineer state machine
+    leadEngineerService
+      .process(projectPath, featureId)
       .catch((error) => logger.error(`Feature ${featureId} error:`, error));
 
     res.json({ success: true });
   };
 }
 
-// 4. AutoModeService executes agent
-// apps/server/src/services/auto-mode-service.ts
-async executeFeature(projectPath: string, featureId: string, useWorktrees: boolean): Promise<void> {
-  // Load feature
-  const feature = await this.loadFeature(projectPath, featureId);
-
-  // Load context
-  const contextResult = await loadContextFiles({ projectPath, taskContext: { title: feature.title, description: feature.description } });
-
-  // Build SDK options
-  const sdkOptions = createChatOptions({ cwd: worktreePath, systemPrompt: contextResult.formattedPrompt });
-
-  // Execute via provider
-  const provider = ProviderFactory.getProviderForModel(model);
-  const stream = provider.executeQuery({ prompt: feature.description, ...sdkOptions });
-
-  // Stream results back via WebSocket
-  for await (const msg of stream) {
-    this.events.emit('agent:stream', { featureId, message: msg });
-  }
+// 4. LeadEngineerService processes feature through state machine
+// apps/server/src/services/lead-engineer-service.ts
+async process(projectPath: string, featureId: string): Promise<PipelineResult> {
+  // State machine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE
+  // EXECUTE phase:
+  //   - Creates worktree for isolation
+  //   - Loads context files (.automaker/context/, CLAUDE.md)
+  //   - Builds SDK options, executes via ClaudeProvider
+  //   - Streams progress events via WebSocket
+  //   - Creates PR when complete, transitions to REVIEW
 }
 
 // 5. Provider calls Claude SDK
@@ -418,7 +411,8 @@ claude
 └──────────────────┬───────────────────────────────────┘
                    │
 ┌──────────────────▼───────────────────────────────────┐
-│  AutoModeService.executeFeature()                    │
+│  LeadEngineerService.process()                       │
+│  → EXECUTE phase (ExecuteProcessor):                 │
 │  1. Loads feature from .automaker/features/          │
 │  2. Calls loadContextFiles({                         │
 │       projectPath,                                   │

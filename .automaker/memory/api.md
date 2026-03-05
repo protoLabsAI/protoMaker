@@ -5,7 +5,7 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 303
+  loaded: 315
   referenced: 76
   successfulFeatures: 76
 ---
@@ -713,3 +713,8 @@ usageStats:
 - **Situation:** Initial feature description implied 'pass them to streamText as additional mcpServers', but streamText is a streaming text generation API, not an agentic SDK. Only execute_dynamic_agent has the Agent SDK underneath.
 - **Root cause:** Vercel AI SDK is designed for chat/completion flows, not agentic control flow. MCP servers require bidirectional agent-server semantics that streamText doesn't expose. Claude Agent SDK has that built-in.
 - **How to avoid:** Simpler integration — no need to thread mcpServers through streamText's internal routing. Trade-off: Ava's direct tools (AI functions at Ava's level) can't invoke ava-level MCP servers; only nested execute_dynamic_agent calls can.
+
+#### [Pattern] Exception-Based Outcome Switching: PipelineResult success/failure distinguished by return value vs exception throw, not Result<T, E> type (2026-03-05)
+- **Problem solved:** FeatureScheduler.run() either returns {featureId, success: true} or throws; caller's .catch() distinguishes outcomes
+- **Why this works:** Enables clean circuit-breaker logic in AutoModeService: success path is happy path (return), failure path has explicit handler that can apply circuit-break policy. Avoids nested conditionals for outcome checking.
+- **Trade-offs:** Gained: Natural control flow for circuit-breaker (exception = halt loop, return = continue). Lost: Explicit error channel (exceptions can be implicit if not carefully documented).

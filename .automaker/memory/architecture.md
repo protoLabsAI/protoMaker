@@ -3727,3 +3727,15 @@ usageStats:
 - **Rejected:** Could filter in loadAvaConfig, but that's config layer business, not filtering. Could filter in ava-tools.ts, but that's buried inside tool code and less discoverable.
 - **Trade-offs:** Single conversion point makes audit trail clear. If routing logic changes (e.g., 'allow all servers including disabled'), it's obvious where to change. Downside: any other code needing avaMcpServers would have to reimplement filtering or call through index.ts.
 - **Breaking if changed:** If filtering moves to ava-tools.ts and index.ts starts passing unfiltered array, the intent becomes implicit rather than explicit. If filtering is removed entirely, disabled servers execute.
+
+#### [Pattern] Dependency Inversion: FeatureScheduler depends on PipelineRunner interface that its caller (AutoModeService) implements, rather than FeatureScheduler being self-contained (2026-03-05)
+- **Problem solved:** Extracting scheduling logic from AutoModeService while maintaining tight coupling would limit reusability and testability
+- **Why this works:** This inversion allows FeatureScheduler to be scheduler-only (what to run, when, order) while AutoModeService handles execution (how to run, circuit-breaker, cleanup). Enables different pipeline implementations and clean unit testing of scheduler in isolation.
+- **Trade-offs:** Gained: Reusability, testability, separation of concerns. Lost: Some indirection in understanding the control flow (must trace through interface calls).
+
+### Created new service file (feature-scheduler.ts) for 1145-line FeatureScheduler class instead of keeping in auto-mode-service.ts (2026-03-05)
+- **Context:** Refactored auto-mode-service.ts by extracting 1015 lines into new file, demonstrating existing separation was clear enough for file boundary
+- **Why:** Scheduling (what/when/order to run features) is logically separate from execution (actually running them, error handling, cleanup). Separate file makes this boundary explicit and allows FeatureScheduler reuse by future services.
+- **Rejected:** Alternative: Keep in same file with tight class organization. Rejected because 2000+ line file becomes hard to navigate, and reusability is lost.
+- **Trade-offs:** Gained: Reusability, reduced class size, explicit concern boundary. Lost: Must trace between two files to understand full flow, additional import complexity.
+- **Breaking if changed:** If scheduler moves back into auto-mode-service or its responsibility expands elsewhere without interface abstraction, reusability advantage is lost and duplication risk increases.

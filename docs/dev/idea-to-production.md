@@ -335,7 +335,9 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 | `apps/server/src/services/signal-intake-service.ts`                      | Signal classification             |
 | `apps/server/src/services/lead-engineer-service.ts`                      | State machine                     |
 | `apps/server/src/services/lead-engineer-rules.ts`                        | Fast-path rules                   |
-| `apps/server/src/services/auto-mode-service.ts`                          | Auto-loop and execution           |
+| `apps/server/src/services/auto-mode-service.ts`                          | Orchestration, worktree mgmt      |
+| `apps/server/src/services/feature-scheduler.ts`                          | Scheduling loop, dep resolution   |
+| `apps/server/src/services/notification-router.ts`                        | Notification signal routing       |
 | `apps/server/src/services/pr-feedback-service.ts`                        | PR polling and remediation        |
 | `apps/server/src/services/hitl-form-service.ts`                          | HITL form creation and responses  |
 | `apps/server/src/services/escalation-router.ts`                          | Escalation signal routing         |

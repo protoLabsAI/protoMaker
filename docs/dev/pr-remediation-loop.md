@@ -386,10 +386,10 @@ cat .automaker/features/{featureId}/feature.json | jq '{
 
 **Solutions:**
 
-1. Verify `AutoModeService` is injected into `PRFeedbackService`
+1. Verify `LeadEngineerService` is wired to `PRFeedbackService` (via `wiring.ts`)
 2. Check if agent capacity is full (max concurrent agents reached)
 3. Review feature status - must be `review` for remediation to trigger
-4. Check for errors in `executeFeature()` call
+4. Check Lead Engineer REVIEW phase logs for errors
 
 ## Antagonistic Review System
 

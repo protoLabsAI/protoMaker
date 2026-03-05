@@ -4,7 +4,7 @@
  * Unit tests for the auto-mode scheduling loop components:
  * - AutoLoopCoordinator: circuit breaker (pause after 3 failures, cooldown, resume)
  * - ConcurrencyManager: lease acquisition/release and count queries
- * - AutoModeService: loadPendingFeatures (dep resolution, foundation guard, git-workflow block)
+ * - FeatureScheduler: loadPendingFeatures (dep resolution, foundation guard, git-workflow block)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -68,6 +68,11 @@ import { getFeaturesDir } from '@protolabsai/platform';
 import { AutoLoopCoordinator } from '@/services/auto-mode/auto-loop-coordinator.js';
 import { ConcurrencyManager } from '@/services/auto-mode/concurrency-manager.js';
 import { AutoModeService } from '@/services/auto-mode-service.js';
+import {
+  FeatureScheduler,
+  type PipelineRunner,
+  type SchedulerCallbacks,
+} from '@/services/feature-scheduler.js';
 import type { Feature } from '@protolabsai/types';
 
 const mockExec = exec as unknown as ReturnType<typeof vi.fn>;
@@ -372,28 +377,54 @@ describe('ConcurrencyManager - lease management', () => {
 
 // ─── AutoModeService — loadPendingFeatures ───────────────────────────────────
 
-describe('AutoModeService - loadPendingFeatures', () => {
-  let service: AutoModeService;
+describe('FeatureScheduler - loadPendingFeatures', () => {
+  let scheduler: FeatureScheduler;
+  const mockFeatureLoader = {
+    update: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn(),
+    getAll: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  };
   const mockEvents = {
     subscribe: vi.fn(),
     emit: vi.fn(),
     on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    broadcast: vi.fn(),
+  };
+  const mockRunner: PipelineRunner = { run: vi.fn() };
+  const mockCallbacks: SchedulerCallbacks = {
+    getRunningCountForWorktree: vi.fn().mockResolvedValue(0),
+    hasInProgressFeatures: vi.fn().mockResolvedValue(false),
+    isFeatureRunning: vi.fn().mockReturnValue(false),
+    isFeatureFinished: vi.fn().mockReturnValue(false),
+    emitAutoModeEvent: vi.fn(),
+    getHeapUsagePercent: vi.fn().mockReturnValue(0),
+    getMostRecentRunningFeature: vi.fn().mockReturnValue(null),
+    recordSuccessForProject: vi.fn(),
+    trackFailureAndCheckPauseForProject: vi.fn().mockReturnValue(false),
+    signalShouldPauseForProject: vi.fn(),
+    sleep: vi.fn().mockResolvedValue(undefined),
+    HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: 85,
+    HEAP_USAGE_ABORT_AGENTS_THRESHOLD: 92,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Re-establish platform mocks cleared by vitest's mockReset: true
     mockGetFeaturesDir.mockReturnValue('/fake/project/.automaker/features');
     mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
-    service = new AutoModeService(mockEvents as any);
-  });
-
-  afterEach(async () => {
-    await service.stopAutoLoop().catch(() => {});
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+    scheduler = new FeatureScheduler({
+      featureLoader: mockFeatureLoader as never,
+      settingsService: null,
+      events: mockEvents as never,
+      runner: mockRunner,
+      callbacks: mockCallbacks,
+    });
   });
 
   const callLoadPendingFeatures = (projectPath: string, branchName: string | null = null) => {
-    return (service as any).loadPendingFeatures(projectPath, branchName) as Promise<Feature[]>;
+    return scheduler.loadPendingFeatures(projectPath, branchName);
   };
 
   it('dep-satisfied: feature with all deps in "done" state is returned', async () => {
@@ -510,14 +541,7 @@ describe('AutoModeService - loadPendingFeatures', () => {
 
     setupFeaturesOnDisk([feature]);
 
-    // Mock featureLoader.update so the sync doesn't throw
-    (service as any).featureLoader = {
-      update: vi.fn().mockResolvedValue(undefined),
-      get: vi.fn(),
-      getAll: vi.fn(),
-      create: vi.fn(),
-      delete: vi.fn(),
-    };
+    // featureLoader.update is already mocked at describe-level
 
     const result = await callLoadPendingFeatures('/fake/project');
 
