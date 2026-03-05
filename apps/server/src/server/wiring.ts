@@ -11,6 +11,7 @@ import { register as registerLeadEngineer } from '../services/lead-engineer.modu
 import { register as registerWorktreeLifecycle } from '../services/worktree-lifecycle.module.js';
 import { register as registerDiscord } from '../services/discord.module.js';
 import { register as registerScheduler } from '../services/scheduler.module.js';
+import { register as registerCeremony } from '../services/ceremony.module.js';
 import { register as registerInfrastructure } from '../services/infrastructure.module.js';
 
 /**
@@ -32,6 +33,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   await registerWorktreeLifecycle(services);
   await registerDiscord(services);
   await registerScheduler(services);
+  registerCeremony(services);
   await registerInfrastructure(services);
 
   // Start built-in sensors (websocket-clients + electron-idle) after all wiring is complete.

@@ -9,17 +9,25 @@
  * (routes, services.ts, engine routes, integration-service) require no changes.
  */
 
+import path from 'path';
 import { createLogger } from '@protolabsai/utils';
+import { secureFs, getProjectDir } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
+import type { CeremonyState } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
 import type { MetricsService } from './metrics-service.js';
 import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
+import type { SchedulerService } from './scheduler-service.js';
+import { transition } from './ceremony-state-machine.js';
 
 const logger = createLogger('CeremonyService');
+
+const CEREMONY_STATE_FILE = 'ceremony-state.json';
+const DEFAULT_STANDUP_CADENCE = '0 9 * * 1';
 
 // ---------------------------------------------------------------------------
 // Minimal event payload shapes (mirrors the original ceremony-base.ts types)
@@ -60,6 +68,21 @@ interface ProjectCompletedPayload {
   }>;
 }
 
+interface ProjectLifecycleLaunchedPayload {
+  projectPath: string;
+  projectSlug: string;
+  featuresInBacklog: number;
+  autoModeStarted: boolean;
+}
+
+interface CeremonyFiredPayload {
+  type: string;
+  projectSlug: string;
+  projectPath: string;
+  milestoneSlug?: string;
+  remainingMilestones?: number;
+}
+
 // ---------------------------------------------------------------------------
 // EventEmitter-based discordBot adapter
 // Satisfies StandupDiscordBot / RetroDiscordBot structural interfaces without
@@ -89,6 +112,7 @@ export class CeremonyService {
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
   private auditLog: CeremonyAuditLogService | null = null;
+  private schedulerService: SchedulerService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   // Observability counters (same shape as old CeremonyBase.ceremonyCounts)
@@ -141,6 +165,14 @@ export class CeremonyService {
         this.handleProjectCompleted(payload as ProjectCompletedPayload).catch((err) =>
           logger.warn('Project retro flow error:', err)
         );
+      } else if (type === 'ceremony:fired') {
+        this.handleCeremonyFired(payload as CeremonyFiredPayload).catch((err) =>
+          logger.warn('Ceremony fired state update error:', err)
+        );
+      } else if (type === 'project:lifecycle:launched') {
+        this.handleProjectLifecycleLaunched(payload as ProjectLifecycleLaunchedPayload).catch(
+          (err) => logger.warn('Project lifecycle launched error:', err)
+        );
       }
     });
 
@@ -149,6 +181,10 @@ export class CeremonyService {
 
   setAuditLog(auditLog: CeremonyAuditLogService): void {
     this.auditLog = auditLog;
+  }
+
+  setSchedulerService(schedulerService: SchedulerService): void {
+    this.schedulerService = schedulerService;
   }
 
   destroy(): void {
@@ -192,6 +228,69 @@ export class CeremonyService {
   }
 
   // ---------------------------------------------------------------------------
+  // CeremonyState persistence
+  // ---------------------------------------------------------------------------
+
+  private getCeremonyStatePath(projectPath: string, projectSlug: string): string {
+    return path.join(getProjectDir(projectPath, projectSlug), CEREMONY_STATE_FILE);
+  }
+
+  async getCeremonyState(projectPath: string, projectSlug: string): Promise<CeremonyState> {
+    const filePath = this.getCeremonyStatePath(projectPath, projectSlug);
+    try {
+      const content = (await secureFs.readFile(filePath, 'utf-8')) as string;
+      return JSON.parse(content) as CeremonyState;
+    } catch {
+      // File missing or unreadable — create default awaiting_kickoff state
+      const defaultState: CeremonyState = {
+        phase: 'awaiting_kickoff',
+        projectPath,
+        projectSlug,
+        lastStandup: '',
+        lastRetro: '',
+        standupCadence: DEFAULT_STANDUP_CADENCE,
+        history: [],
+      };
+      await this.saveCeremonyState(projectPath, projectSlug, defaultState);
+      return defaultState;
+    }
+  }
+
+  private async saveCeremonyState(
+    projectPath: string,
+    projectSlug: string,
+    state: CeremonyState
+  ): Promise<void> {
+    const projectDir = getProjectDir(projectPath, projectSlug);
+    // Ensure the directory exists (project dir under .automaker/projects/{slug})
+    await secureFs.mkdir(projectDir, { recursive: true });
+    const filePath = path.join(projectDir, CEREMONY_STATE_FILE);
+    await secureFs.writeFile(filePath, JSON.stringify(state, null, 2), 'utf-8');
+  }
+
+  private async applyTransition(
+    projectPath: string,
+    projectSlug: string,
+    event: string,
+    payload: unknown
+  ): Promise<CeremonyState | null> {
+    try {
+      const current = await this.getCeremonyState(projectPath, projectSlug);
+      const next = transition(current, event, payload);
+      if (next !== current) {
+        await this.saveCeremonyState(projectPath, projectSlug, next);
+        logger.debug(`CeremonyState [${projectSlug}]: ${current.phase} → ${next.phase} (${event})`);
+      }
+      return next;
+    } catch (err) {
+      logger.warn(
+        `CeremonyState persistence failed for ${projectSlug} on ${event}: ${err instanceof Error ? err.message : String(err)}`
+      );
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Private event handlers — delegate to LangGraph flows
   // ---------------------------------------------------------------------------
 
@@ -207,10 +306,65 @@ export class CeremonyService {
     return discordConfig?.channels?.ceremonies || ceremonySettings?.discordChannelId;
   }
 
+  private async handleProjectLifecycleLaunched(
+    payload: ProjectLifecycleLaunchedPayload
+  ): Promise<void> {
+    const { projectPath, projectSlug } = payload;
+
+    // Transition state machine: awaiting_kickoff → milestone_active
+    await this.applyTransition(projectPath, projectSlug, 'project:lifecycle:launched', payload);
+
+    // Register standup scheduler task
+    if (this.schedulerService) {
+      try {
+        const state = await this.getCeremonyState(projectPath, projectSlug);
+        const taskId = `pm-standup-${projectSlug}`;
+        const cadence = state.standupCadence || DEFAULT_STANDUP_CADENCE;
+
+        await this.schedulerService.registerTask(
+          taskId,
+          `PM Standup: ${projectSlug}`,
+          cadence,
+          () => {
+            this.emitter?.emit('milestone:started', {
+              projectPath,
+              projectSlug,
+              projectTitle: projectSlug,
+              milestoneTitle: 'Standup',
+              milestoneNumber: 0,
+            });
+          },
+          true
+        );
+        logger.info(`Registered standup task ${taskId} with cadence ${cadence}`);
+      } catch (err) {
+        logger.warn(
+          `Failed to register standup task for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+  }
+
   private async handleMilestoneStarted(payload: MilestoneEventPayload): Promise<void> {
     if (!this.projectService || !this.settingsService || !this.emitter) return;
 
     const { projectPath, projectSlug, projectTitle, milestoneTitle, milestoneNumber } = payload;
+
+    // Update milestone tracking in state (non-fatal if persistence fails)
+    this.getCeremonyState(projectPath, projectSlug)
+      .then(async (state) => {
+        if (state.phase === 'milestone_active' || state.phase === 'awaiting_kickoff') {
+          const milestoneSlugComputed = milestoneTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const updated: CeremonyState = { ...state, currentMilestone: milestoneSlugComputed };
+          await this.saveCeremonyState(projectPath, projectSlug, updated);
+        }
+      })
+      .catch((err) => {
+        logger.warn(
+          `CeremonyState milestone tracking failed for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      });
+
     const projectSettings = await this.settingsService.getProjectSettings(projectPath);
     const ceremonySettings = projectSettings.ceremonySettings;
     if (!ceremonySettings?.enabled) {
@@ -284,6 +438,10 @@ export class CeremonyService {
     if (!this.featureLoader || !this.settingsService || !this.emitter) return;
 
     const { projectPath, projectSlug, projectTitle, milestoneTitle, milestoneNumber } = payload;
+
+    // State transition: milestone_active → milestone_retro
+    await this.applyTransition(projectPath, projectSlug, 'milestone:completed', payload);
+
     const projectSettings = await this.settingsService.getProjectSettings(projectPath);
     const ceremonySettings = projectSettings.ceremonySettings;
     if (!ceremonySettings?.enabled || !ceremonySettings?.enableMilestoneUpdates) {
@@ -356,10 +514,39 @@ export class CeremonyService {
     }
   }
 
+  private async handleCeremonyFired(payload: CeremonyFiredPayload): Promise<void> {
+    const { type, projectPath, projectSlug } = payload;
+
+    let eventKey: string | null = null;
+    if (type === 'milestone_retro') {
+      eventKey = 'ceremony:fired(retro)';
+    } else if (type === 'project_retro') {
+      eventKey = 'ceremony:fired(project_retro)';
+    }
+
+    if (eventKey) {
+      await this.applyTransition(projectPath, projectSlug, eventKey, payload);
+    }
+  }
+
   private async handleProjectCompleted(payload: ProjectCompletedPayload): Promise<void> {
     if (!this.featureLoader || !this.settingsService || !this.emitter) return;
 
     const { projectPath, projectSlug, projectTitle } = payload;
+
+    // State transition: project_retro (if in that phase already from ceremony:fired)
+    // or direct transition based on current phase
+    await this.applyTransition(projectPath, projectSlug, 'project:completed', payload);
+
+    // Unregister standup scheduler task
+    if (this.schedulerService) {
+      const taskId = `pm-standup-${projectSlug}`;
+      const unregistered = await this.schedulerService.unregisterTask(taskId);
+      if (unregistered) {
+        logger.info(`Unregistered standup task ${taskId} on project completion`);
+      }
+    }
+
     const dedupeKey = `${projectPath}:${projectSlug}`;
     if (this.processedProjects.has(dedupeKey)) {
       logger.debug(`Project retro already processed for ${projectSlug}, skipping`);
