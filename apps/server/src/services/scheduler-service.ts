@@ -25,6 +25,7 @@ import { createLogger } from '@protolabsai/utils';
 import { secureFs } from '@protolabsai/platform';
 import path from 'path';
 import type { EventEmitter } from '../lib/events.js';
+import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('Scheduler');
 
@@ -336,6 +337,7 @@ export class SchedulerService {
   private running = false;
   private events: EventEmitter | null = null;
   private dataDir: string | null = null;
+  private settingsService: SettingsService | null = null;
 
   /** Check interval in milliseconds (default: 60 seconds) */
   private checkInterval = 60000;
@@ -350,6 +352,13 @@ export class SchedulerService {
     this.events = events;
     this.dataDir = dataDir;
     logger.info('Scheduler service initialized');
+  }
+
+  /**
+   * Set the settings service for persisting task overrides to global settings
+   */
+  setSettingsService(settingsService: SettingsService): void {
+    this.settingsService = settingsService;
   }
 
   /**
@@ -576,6 +585,9 @@ export class SchedulerService {
     // Save tasks after enabling
     await this.saveTasks();
 
+    // Persist enabled override to global settings
+    await this.persistTaskOverride(id, { enabled: true });
+
     return true;
   }
 
@@ -596,6 +608,9 @@ export class SchedulerService {
 
     // Save tasks after disabling
     await this.saveTasks();
+
+    // Persist disabled override to global settings
+    await this.persistTaskOverride(id, { enabled: false });
 
     return true;
   }
@@ -636,6 +651,9 @@ export class SchedulerService {
 
     await this.saveTasks();
 
+    // Persist cron expression override to global settings
+    await this.persistTaskOverride(id, { cronExpression });
+
     return true;
   }
 
@@ -673,6 +691,82 @@ export class SchedulerService {
         executionCount: t.executionCount,
       })),
     };
+  }
+
+  /**
+   * Persist a task override (enabled/cronExpression) to global settings
+   */
+  private async persistTaskOverride(
+    taskId: string,
+    override: { enabled?: boolean; cronExpression?: string }
+  ): Promise<void> {
+    if (!this.settingsService) return;
+
+    try {
+      const settings = await this.settingsService.getGlobalSettings();
+      const existing = settings.schedulerSettings?.taskOverrides ?? {};
+      await this.settingsService.updateGlobalSettings({
+        schedulerSettings: {
+          taskOverrides: {
+            ...existing,
+            [taskId]: {
+              ...existing[taskId],
+              ...override,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      logger.error(`Failed to persist task override for "${taskId}":`, error);
+    }
+  }
+
+  /**
+   * Apply taskOverrides from global settings to registered tasks.
+   * Must be called after all tasks are registered.
+   */
+  async applySettingsOverrides(): Promise<void> {
+    if (!this.settingsService) return;
+
+    try {
+      const settings = await this.settingsService.getGlobalSettings();
+      const overrides = settings.schedulerSettings?.taskOverrides ?? {};
+
+      for (const [taskId, override] of Object.entries(overrides)) {
+        const task = this.tasks.get(taskId);
+        if (!task) continue;
+
+        if (override.enabled !== undefined && task.enabled !== override.enabled) {
+          task.enabled = override.enabled;
+          task.nextRun = task.enabled
+            ? getNextRunTime(task.cronExpression).toISOString()
+            : undefined;
+          logger.info(
+            `Applied settings override for task "${task.name}" (${taskId}): enabled=${override.enabled}`
+          );
+        }
+
+        if (override.cronExpression && task.cronExpression !== override.cronExpression) {
+          const validation = validateCronExpression(override.cronExpression);
+          if (validation.valid) {
+            task.cronExpression = override.cronExpression;
+            this.parsedCrons.set(taskId, parseCronExpression(override.cronExpression));
+            if (task.enabled) {
+              task.nextRun = getNextRunTime(override.cronExpression).toISOString();
+            }
+            logger.info(
+              `Applied settings override for task "${task.name}" (${taskId}): cronExpression=${override.cronExpression}`
+            );
+          } else {
+            logger.warn(
+              `Ignoring invalid cronExpression override for task "${task.name}" (${taskId}): ${validation.error}`
+            );
+          }
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to apply settings overrides:', error);
+    }
   }
 
   /**
