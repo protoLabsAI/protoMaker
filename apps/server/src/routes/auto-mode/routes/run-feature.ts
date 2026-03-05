@@ -5,6 +5,7 @@
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { LeadEngineerService } from '../../../services/lead-engineer-service.js';
 import {
   areDependenciesSatisfied,
   getBlockingDependencies,
@@ -16,7 +17,8 @@ const logger = createLogger('AutoMode');
 
 export function createRunFeatureHandler(
   autoModeService: AutoModeService,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureLoader,
+  leadEngineerService: LeadEngineerService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
@@ -74,17 +76,10 @@ export function createRunFeatureHandler(
         return;
       }
 
-      // Start execution in background
-      // executeFeature derives workDir from feature.branchName
-      autoModeService
-        .executeFeature(projectPath, featureId, useWorktrees ?? false, false)
-        .catch((error) => {
-          logger.error(`Feature ${featureId} error:`, error);
-        })
-        .finally(() => {
-          // Release the starting slot when execution completes (success or error)
-          // Note: The feature should be in runningFeatures by this point
-        });
+      // Start execution in background via LeadEngineerService state machine
+      leadEngineerService.process(projectPath, featureId).catch((error) => {
+        logger.error(`Feature ${featureId} error:`, error);
+      });
 
       res.json({ success: true });
     } catch (error) {

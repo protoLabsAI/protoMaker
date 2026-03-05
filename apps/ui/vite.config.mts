@@ -61,7 +61,8 @@ export default defineConfig(({ command }) => {
       }),
       tailwindcss(),
       react(),
-      // Only include PWA plugin in web mode (not Electron)
+      // PWA: in web mode, use the real plugin; in Electron mode, stub the virtual
+      // modules so imports resolve without error in dev server.
       ...(skipElectron
         ? [
             VitePWA({
@@ -124,7 +125,24 @@ export default defineConfig(({ command }) => {
               },
             }),
           ]
-        : []),
+        : [
+            {
+              name: 'pwa-virtual-stub',
+              resolveId(id: string) {
+                if (id === 'virtual:pwa-register/react' || id === 'virtual:pwa-register') {
+                  return `\0${id}`;
+                }
+              },
+              load(id: string) {
+                if (id === '\0virtual:pwa-register/react') {
+                  return 'export function useRegisterSW() { return { needRefresh: [false, () => {}], offlineReady: [false, () => {}], updateServiceWorker: async () => {} }; }';
+                }
+                if (id === '\0virtual:pwa-register') {
+                  return 'export function registerSW() { return () => {}; }';
+                }
+              },
+            },
+          ]),
       // Sentry plugin must be LAST - uploads source maps after build
       // Only in production builds when SENTRY_AUTH_TOKEN is available
       ...(command === 'build' &&

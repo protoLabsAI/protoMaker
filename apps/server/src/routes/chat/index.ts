@@ -349,6 +349,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
             {
               featureLoader: services.featureLoader,
               autoModeService: services.autoModeService,
+              leadEngineerService: services.leadEngineerService,
               agentService: services.agentService,
               roleRegistryService: services.roleRegistryService,
               agentFactoryService: services.agentFactoryService,

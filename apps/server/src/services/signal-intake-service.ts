@@ -105,6 +105,7 @@ export class SignalIntakeService {
   }
 
   private registerListener(): void {
+    // TODO: migrate to bus.on()
     this.events.subscribe((type, payload) => {
       if (type === 'signal:received') {
         void this.handleSignal(payload as SignalPayload);

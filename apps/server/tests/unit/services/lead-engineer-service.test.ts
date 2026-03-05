@@ -1,11 +1,36 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { EventType, Feature } from '@protolabsai/types';
 import { LeadEngineerService } from '@/services/lead-engineer-service.js';
+import { FeatureStateMachine } from '@/services/lead-engineer-state-machine.js';
+import type {
+  ProcessorServiceContext,
+  StateContext,
+  StateProcessor,
+  StateTransitionResult,
+  FeatureProcessingState,
+} from '@/services/lead-engineer-types.js';
 
 // ────────────────────────── Mocks ──────────────────────────
 
+vi.mock('@protolabsai/utils', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/settings-helpers.js', () => ({
+  getWorkflowSettings: vi.fn(),
+}));
+
+import { getWorkflowSettings } from '@/lib/settings-helpers.js';
+const mockGetWorkflowSettings = getWorkflowSettings as unknown as ReturnType<typeof vi.fn>;
+
 function createMockEvents() {
   const subscribers: Array<(type: EventType, payload: unknown) => void> = [];
+  const typedSubscribers: Array<{ type: EventType; cb: (payload: unknown) => void }> = [];
   return {
     emit: vi.fn(),
     subscribe: vi.fn((cb: (type: EventType, payload: unknown) => void) => {
@@ -17,8 +42,20 @@ function createMockEvents() {
       (unsub as any).unsubscribe = unsub;
       return unsub;
     }),
+    on: vi.fn((type: EventType, cb: (payload: unknown) => void) => {
+      typedSubscribers.push({ type, cb });
+      return {
+        unsubscribe: () => {
+          const idx = typedSubscribers.findIndex((s) => s.type === type && s.cb === cb);
+          if (idx >= 0) typedSubscribers.splice(idx, 1);
+        },
+      };
+    }),
     _fire(type: EventType, payload: unknown) {
       for (const cb of subscribers) cb(type, payload);
+      for (const s of typedSubscribers) {
+        if (s.type === type) s.cb(payload);
+      }
     },
     _subscribers: subscribers,
   };
@@ -73,6 +110,7 @@ function createMockProjectLifecycleService() {
 function createMockSettingsService() {
   return {
     getGlobalSettings: vi.fn().mockResolvedValue({ maxConcurrency: 3 }),
+    getProjectSettings: vi.fn().mockResolvedValue({ workflow: {} }),
   };
 }
 
@@ -83,6 +121,23 @@ function createMockMetricsService() {
       totalCostUsd: 5.0,
       completedFeatures: 3,
     }),
+  };
+}
+
+// ────────────────────────── Mock State Processor ──────────────────────────
+
+function createMockProcessor(
+  nextState: FeatureProcessingState | null,
+  shouldContinue = true
+): StateProcessor {
+  return {
+    enter: vi.fn().mockResolvedValue(undefined),
+    process: vi.fn().mockResolvedValue({
+      nextState,
+      shouldContinue,
+      reason: `Mock transition to ${nextState}`,
+    } as StateTransitionResult),
+    exit: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -100,6 +155,15 @@ describe('LeadEngineerService', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Re-establish settings mock cleared by vitest's mockReset: true
+    mockGetWorkflowSettings.mockResolvedValue({
+      pipeline: {
+        supervisorEnabled: false,
+        checkpointEnabled: false,
+        goalGatesEnabled: false,
+        antagonisticPlanReview: false,
+      },
+    });
     events = createMockEvents();
     featureLoader = createMockFeatureLoader([]);
     autoModeService = createMockAutoModeService();
@@ -115,8 +179,7 @@ describe('LeadEngineerService', () => {
       projectService as any,
       projectLifecycleService as any,
       settingsService as any,
-      metricsService as any,
-      '/test/repo'
+      metricsService as any
     );
   });
 
@@ -129,7 +192,7 @@ describe('LeadEngineerService', () => {
 
   describe('session management', () => {
     it('starts a session and emits lead-engineer:started', async () => {
-      await await service.initialize();
+      await service.initialize();
       const session = await service.start('/test/project', 'my-project');
 
       expect(session.projectPath).toBe('/test/project');
@@ -239,8 +302,7 @@ describe('LeadEngineerService', () => {
         projectService as any,
         projectLifecycleService as any,
         settingsService as any,
-        metricsService as any,
-        '/test/repo'
+        metricsService as any
       );
       await service.initialize();
       await service.start('/test/project', 'my-project');
@@ -267,8 +329,7 @@ describe('LeadEngineerService', () => {
         projectService as any,
         projectLifecycleService as any,
         settingsService as any,
-        metricsService as any,
-        '/test/repo'
+        metricsService as any
       );
       await service.initialize();
       await service.start('/test/project', 'my-project');
@@ -331,8 +392,7 @@ describe('LeadEngineerService', () => {
         projectService as any,
         projectLifecycleService as any,
         settingsService as any,
-        metricsService as any,
-        '/test/repo'
+        metricsService as any
       );
       await service.initialize();
       await service.start('/test/project', 'my-project');
@@ -364,5 +424,210 @@ describe('LeadEngineerService', () => {
       service.destroy();
       expect(service.getAllSessions()).toHaveLength(0);
     });
+  });
+});
+
+// ────────────────────────── FeatureStateMachine Pipeline Tests ──────────────────────────
+
+describe('FeatureStateMachine — pipeline state transitions', () => {
+  let mockEvents: ReturnType<typeof createMockEvents>;
+  let mockFeatureLoader: ReturnType<typeof createMockFeatureLoader>;
+  let mockAutoModeService: ReturnType<typeof createMockAutoModeService>;
+  let serviceContext: ProcessorServiceContext;
+
+  beforeEach(() => {
+    mockEvents = createMockEvents();
+    mockFeatureLoader = createMockFeatureLoader([]);
+    mockAutoModeService = createMockAutoModeService();
+
+    serviceContext = {
+      events: mockEvents as any,
+      featureLoader: mockFeatureLoader as any,
+      autoModeService: mockAutoModeService as any,
+    };
+  });
+
+  function makeFeature(overrides: Partial<Feature> = {}): Feature {
+    return {
+      id: 'feat-1',
+      title: 'Test Feature',
+      description: 'A feature to test the pipeline',
+      status: 'backlog',
+      category: 'feature',
+      ...overrides,
+    };
+  }
+
+  function makeOptions() {
+    return { model: 'sonnet' };
+  }
+
+  it('happy path: INTAKE → EXECUTE → REVIEW → MERGE → DEPLOY (finalState=DEPLOY, status=done)', async () => {
+    const feature = makeFeature();
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    // Replace processors with mocks that drive happy-path transitions
+    stateMachine.registerProcessor('INTAKE', createMockProcessor('EXECUTE'));
+    stateMachine.registerProcessor('PLAN', createMockProcessor('EXECUTE'));
+    stateMachine.registerProcessor('EXECUTE', createMockProcessor('REVIEW'));
+    stateMachine.registerProcessor('REVIEW', createMockProcessor('MERGE'));
+    stateMachine.registerProcessor('MERGE', createMockProcessor('DEPLOY'));
+    stateMachine.registerProcessor('DEPLOY', createMockProcessor(null, false));
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+    expect(finalState).toBe('DEPLOY');
+  });
+
+  it('happy path with PLAN: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY', async () => {
+    const feature = makeFeature({ complexity: 'large' });
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    stateMachine.registerProcessor('INTAKE', createMockProcessor('PLAN'));
+    stateMachine.registerProcessor('PLAN', createMockProcessor('EXECUTE'));
+    stateMachine.registerProcessor('EXECUTE', createMockProcessor('REVIEW'));
+    stateMachine.registerProcessor('REVIEW', createMockProcessor('MERGE'));
+    stateMachine.registerProcessor('MERGE', createMockProcessor('DEPLOY'));
+    stateMachine.registerProcessor('DEPLOY', createMockProcessor(null, false));
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+    expect(finalState).toBe('DEPLOY');
+  });
+
+  it('INTAKE → ESCALATE when processor transitions to ESCALATE', async () => {
+    const feature = makeFeature();
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    // INTAKE processor signals ESCALATE (e.g. unmet deps)
+    const intakeProcessor: StateProcessor = {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockResolvedValue({
+        nextState: 'ESCALATE',
+        shouldContinue: true,
+        reason: 'Unmet dependencies: dep-1, dep-2',
+      } as StateTransitionResult),
+      exit: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const escalateProcessor: StateProcessor = {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockResolvedValue({
+        nextState: null,
+        shouldContinue: false,
+        reason: 'Escalated',
+      } as StateTransitionResult),
+      exit: vi.fn().mockResolvedValue(undefined),
+    };
+
+    stateMachine.registerProcessor('INTAKE', intakeProcessor);
+    stateMachine.registerProcessor('ESCALATE', escalateProcessor);
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+
+    expect(finalState).toBe('ESCALATE');
+    expect(escalateProcessor.process).toHaveBeenCalled();
+  });
+
+  it('EXECUTE → ESCALATE when processor transitions to ESCALATE after retries', async () => {
+    const feature = makeFeature();
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    stateMachine.registerProcessor('INTAKE', createMockProcessor('EXECUTE'));
+
+    // EXECUTE processor fails immediately and escalates
+    const executeProcessor: StateProcessor = {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockResolvedValue({
+        nextState: 'ESCALATE',
+        shouldContinue: true,
+        reason: 'Max agent retries exceeded (3)',
+      } as StateTransitionResult),
+      exit: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const escalateProcessor: StateProcessor = {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockResolvedValue({
+        nextState: null,
+        shouldContinue: false,
+        reason: 'Escalated',
+      } as StateTransitionResult),
+      exit: vi.fn().mockResolvedValue(undefined),
+    };
+
+    stateMachine.registerProcessor('EXECUTE', executeProcessor);
+    stateMachine.registerProcessor('ESCALATE', escalateProcessor);
+
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
+
+    expect(finalState).toBe('ESCALATE');
+    expect(escalateProcessor.process).toHaveBeenCalled();
+  });
+
+  it('state machine emits pipeline:state-entered events for each state', async () => {
+    const feature = makeFeature();
+    const stateMachine = new FeatureStateMachine(serviceContext, {
+      goalGatesEnabled: false,
+      events: mockEvents as any,
+    });
+
+    stateMachine.registerProcessor('INTAKE', createMockProcessor('EXECUTE'));
+    stateMachine.registerProcessor('EXECUTE', createMockProcessor('REVIEW'));
+    stateMachine.registerProcessor('REVIEW', createMockProcessor(null, false));
+
+    await stateMachine.processFeature(feature, '/test/project', makeOptions());
+
+    const stateEnteredCalls = (mockEvents.emit as ReturnType<typeof vi.fn>).mock.calls.filter(
+      ([type]) => type === 'pipeline:state-entered'
+    );
+
+    const enteredStates = stateEnteredCalls.map(([, payload]) => (payload as any).state);
+    expect(enteredStates).toContain('INTAKE');
+    expect(enteredStates).toContain('EXECUTE');
+    expect(enteredStates).toContain('REVIEW');
+  });
+
+  it('escalation signal is emitted when ESCALATE processor runs', async () => {
+    const feature = makeFeature();
+    // Wire up EscalateProcessor via real service context so it emits signal
+    const stateMachine = new FeatureStateMachine(serviceContext, { goalGatesEnabled: false });
+
+    stateMachine.registerProcessor('INTAKE', {
+      enter: vi.fn().mockResolvedValue(undefined),
+      process: vi.fn().mockImplementation(async (ctx: StateContext) => {
+        ctx.escalationReason = 'Unmet dependencies: dep-1';
+        return { nextState: 'ESCALATE', shouldContinue: true, reason: 'Unmet deps' };
+      }),
+      exit: vi.fn().mockResolvedValue(undefined),
+    });
+
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+
+    await stateMachine.processFeature(feature, '/test/project', makeOptions());
+
+    // EscalateProcessor emits escalation:signal-received
+    const escalationEmit = (mockEvents.emit as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([type]) => type === 'escalation:signal-received'
+    );
+    expect(escalationEmit).toBeDefined();
   });
 });

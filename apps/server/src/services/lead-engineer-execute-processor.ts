@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
-import type { EventType } from '@protolabsai/types';
+import type { EventType, PipelinePhase } from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -81,6 +81,13 @@ export class ExecuteProcessor implements StateProcessor {
     logger.info(`[EXECUTE] Starting execution for feature: ${ctx.feature.id}`, {
       retryCount: ctx.retryCount,
       persona: ctx.assignedPersona,
+    });
+    this.serviceContext.events.emit('pipeline:phase-entered' as EventType, {
+      featureId: ctx.feature.id,
+      projectPath: ctx.projectPath,
+      phase: 'EXECUTE' as PipelinePhase,
+      branch: 'ops' as const,
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -524,8 +531,15 @@ export class ExecuteProcessor implements StateProcessor {
     };
   }
 
-  async exit(_ctx: StateContext): Promise<void> {
+  async exit(ctx: StateContext): Promise<void> {
     logger.info('[EXECUTE] Execution phase completed');
+    this.serviceContext.events.emit('pipeline:phase-completed' as EventType, {
+      featureId: ctx.feature.id,
+      projectPath: ctx.projectPath,
+      phase: 'EXECUTE' as PipelinePhase,
+      branch: 'ops' as const,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   /**

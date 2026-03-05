@@ -180,7 +180,6 @@ function makeCallbacks(
     getAutoLoopRunning: vi.fn(() => false),
     updateFeatureStatus: vi.fn(async () => {}),
     updateFeaturePlanSpec: vi.fn(async () => {}),
-    emitAutoModeEvent: vi.fn(),
     recordSuccessForProject: vi.fn(),
     trackFailureAndCheckPauseForProject: vi.fn(() => false),
     signalShouldPauseForProject: vi.fn(),
@@ -220,13 +219,18 @@ function makeRecoveryService() {
   } as any;
 }
 
+function makeEvents() {
+  return { subscribe: vi.fn(), emit: vi.fn() } as any;
+}
+
 function makeService(
   callbacks: IAutoModeCallbacks,
   featureLoader: ReturnType<typeof makeFeatureLoader>,
-  recoveryService: ReturnType<typeof makeRecoveryService>
+  recoveryService: ReturnType<typeof makeRecoveryService>,
+  events = makeEvents()
 ): ExecutionService {
   return new ExecutionService(
-    { subscribe: vi.fn(), emit: vi.fn() } as any,
+    events,
     null,
     featureLoader,
     null,
@@ -252,6 +256,7 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
   let callbacks: IAutoModeCallbacks;
   let featureLoader: ReturnType<typeof makeFeatureLoader>;
   let recoveryService: ReturnType<typeof makeRecoveryService>;
+  let events: ReturnType<typeof makeEvents>;
   let service: ExecutionService;
 
   beforeEach(() => {
@@ -261,15 +266,20 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
     callbacks = makeCallbacks(feature);
     featureLoader = makeFeatureLoader(feature);
     recoveryService = makeRecoveryService();
-    service = makeService(callbacks, featureLoader, recoveryService);
+    events = makeEvents();
+    service = makeService(callbacks, featureLoader, recoveryService, events);
   });
 
-  it('agent start: emitAutoModeEvent called with auto_mode_feature_start', async () => {
+  it('agent start: auto-mode:event emitted with auto_mode_feature_start', async () => {
     await service.executeFeature(PROJECT_PATH, FEATURE_ID);
 
-    expect(callbacks.emitAutoModeEvent).toHaveBeenCalledWith(
-      'auto_mode_feature_start',
-      expect.objectContaining({ featureId: FEATURE_ID, projectPath: PROJECT_PATH })
+    expect(events.emit).toHaveBeenCalledWith(
+      'auto-mode:event',
+      expect.objectContaining({
+        type: 'auto_mode_feature_start',
+        featureId: FEATURE_ID,
+        projectPath: PROJECT_PATH,
+      })
     );
   });
 

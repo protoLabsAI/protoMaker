@@ -7,10 +7,12 @@ describe('auto-mode-service.ts', () => {
   const mockEvents = {
     subscribe: vi.fn(),
     emit: vi.fn(),
+    on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
     service = new AutoModeService(mockEvents as any);
   });
 

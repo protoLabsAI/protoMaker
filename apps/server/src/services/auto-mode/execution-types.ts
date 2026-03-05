@@ -84,12 +84,6 @@ export interface IAutoModeCallbacks {
     feature: Feature
   ): Promise<string | null>;
 
-  // Model selection
-  getModelForFeature(
-    feature: Feature,
-    projectPath?: string
-  ): Promise<{ model: string; providerId?: string }>;
-
   // State persistence
   saveExecutionState(projectPath: string): Promise<void>;
 
@@ -103,9 +97,6 @@ export interface IAutoModeCallbacks {
     featureId: string,
     updates: Partial<PlanSpec>
   ): Promise<void>;
-
-  // Event emission (rate-limited)
-  emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void;
 
   // Success / failure tracking
   recordSuccessForProject(projectPath: string, branchName: string | null): void;

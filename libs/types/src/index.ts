@@ -767,6 +767,7 @@ export type {
   PersonaAssignment,
   LeadEngineerService,
   PhaseHandoff,
+  PipelineResult,
 } from './lead-engineer.js';
 
 // Twitch integration types (chat suggestions)

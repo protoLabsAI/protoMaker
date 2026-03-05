@@ -6,7 +6,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { EventType, VerifiedTrajectory } from '@protolabsai/types';
+import type { EventType, PipelinePhase, VerifiedTrajectory } from '@protolabsai/types';
 import { FailureClassifierService } from './failure-classifier-service.js';
 import type {
   ProcessorServiceContext,
@@ -222,7 +222,15 @@ export class EscalateProcessor implements StateProcessor {
     };
   }
 
-  async exit(_ctx: StateContext): Promise<void> {
+  async exit(ctx: StateContext): Promise<void> {
     logger.info('[ESCALATE] Escalation completed');
+    this.serviceContext.events.emit('pipeline:phase-skipped' as EventType, {
+      featureId: ctx.feature.id,
+      projectPath: ctx.projectPath,
+      phase: 'EXECUTE' as PipelinePhase,
+      branch: 'ops' as const,
+      reason: ctx.escalationReason || 'Feature escalated — pipeline halted',
+      timestamp: new Date().toISOString(),
+    });
   }
 }

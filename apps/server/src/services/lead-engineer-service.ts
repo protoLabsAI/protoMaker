@@ -10,7 +10,13 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { EventType, LeadEngineerSession, ExecuteOptions } from '@protolabsai/types';
+import type {
+  EventType,
+  EventSubscription,
+  LeadEngineerSession,
+  PipelineResult,
+} from '@protolabsai/types';
+import { FeatureState } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -54,7 +60,7 @@ const SUPERVISOR_CHECK_MS = 30 * 1000;
 
 export class LeadEngineerService {
   private sessions = new Map<string, LeadEngineerSession>();
-  private unsubscribe: (() => void) | null = null;
+  private subscriptions: EventSubscription[] = [];
   private refreshIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private activeFeatures = new Set<string>();
@@ -143,26 +149,30 @@ export class LeadEngineerService {
   }
 
   async initialize(): Promise<void> {
-    this.unsubscribe = this.events.subscribe((type: EventType, payload: unknown) => {
-      if (type === 'project:lifecycle:launched') {
-        const p = payload as { projectPath?: string; projectSlug?: string } | null;
+    this.subscriptions.push(
+      this.events.on('project:lifecycle:launched', (data) => {
+        const p = data as { projectPath?: string; projectSlug?: string } | null;
         if (p?.projectPath && p?.projectSlug) {
           this.start(p.projectPath, p.projectSlug).catch((err) =>
             logger.error(`Auto-start failed for ${p.projectSlug}:`, err)
           );
         }
-        return;
-      }
-      if (type === ('lead-engineer:project-completing-requested' as EventType)) {
-        const p = payload as { projectPath?: string } | null;
-        if (p?.projectPath) {
-          const session = this.sessions.get(p.projectPath);
+      }),
+      this.events.on('lead-engineer:project-completing-requested', (data) => {
+        if (data?.projectPath) {
+          const session = this.sessions.get(data.projectPath);
           if (session) void this.handleProjectCompleting(session);
         }
-        return;
-      }
-      this.onEvent(type, payload);
-    });
+      }),
+      this.events.subscribe((type: EventType, payload: unknown) => {
+        if (
+          type !== 'project:lifecycle:launched' &&
+          type !== 'lead-engineer:project-completing-requested'
+        ) {
+          this.onEvent(type, payload);
+        }
+      })
+    );
     await this.sessionStore.restore(async (projectPath, projectSlug, maxConcurrency) => {
       await this.start(projectPath, projectSlug, { maxConcurrency });
     });
@@ -175,10 +185,8 @@ export class LeadEngineerService {
   }
 
   destroy(): void {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
-    }
+    for (const sub of this.subscriptions) sub.unsubscribe();
+    this.subscriptions = [];
     for (const [projectPath] of this.sessions) this.clearIntervals(projectPath);
     this.sessions.clear();
     logger.info('LeadEngineerService destroyed');
@@ -294,10 +302,9 @@ export class LeadEngineerService {
     return this.activeFeatures.has(featureId);
   }
 
-  async process(projectPath: string, featureId: string, options: ExecuteOptions): Promise<void> {
+  async process(projectPath: string, featureId: string): Promise<PipelineResult> {
     logger.info(`[LeadEngineer] Processing feature ${featureId}`, {
       projectPath,
-      model: options.model,
     });
     this.activeFeatures.add(featureId);
     try {
@@ -382,27 +389,38 @@ export class LeadEngineerService {
 
       let result: Awaited<ReturnType<typeof stateMachine.processFeature>>;
       try {
-        result = await stateMachine.processFeature(
-          feature,
-          projectPath,
-          options,
-          resumeFromCheckpoint
-        );
+        result = await stateMachine.processFeature(feature, projectPath, resumeFromCheckpoint);
       } finally {
         unsubPipelineSync();
       }
 
+      const outcome: PipelineResult['outcome'] =
+        result.finalState === 'DONE'
+          ? 'completed'
+          : result.finalState === 'ESCALATE'
+            ? 'escalated'
+            : 'blocked';
+
+      const pipelineResult: PipelineResult = {
+        outcome,
+        finalState: result.finalState as unknown as FeatureState,
+        failureCount: result.context.retryCount,
+      };
+
       logger.info(`[LeadEngineer] Feature processing completed`, {
         featureId,
         finalState: result.finalState,
+        outcome,
         escalated: result.finalState === 'ESCALATE',
       });
       this.events.emit('lead-engineer:feature-processed' as EventType, {
         projectPath,
         featureId,
         finalState: result.finalState,
+        outcome,
         success: result.finalState !== 'ESCALATE',
       });
+      return pipelineResult;
     } catch (error: unknown) {
       logger.error(`[LeadEngineer] Feature processing failed`, {
         featureId,

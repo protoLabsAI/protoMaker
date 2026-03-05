@@ -18,6 +18,12 @@ import { register as registerInfrastructure } from '../services/infrastructure.m
  * Ordering matters — some modules depend on others having run first (e.g. Discord before DiscordDM).
  */
 export async function wireServices(services: ServiceContainer): Promise<void> {
+  // Guard: leadEngineerService is required — auto-mode no longer has a fallback execution path.
+  // If this throws at startup, services.ts failed to initialize LeadEngineerService.
+  if (!services.leadEngineerService) {
+    throw new Error('LeadEngineerService failed to initialize — cannot start server');
+  }
+
   await registerCore(services);
   await registerEscalationChannels(services);
   await registerEventSubscriptions(services);

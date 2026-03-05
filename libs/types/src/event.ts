@@ -316,6 +316,7 @@ export type EventType =
   | 'lead-engineer:rule-evaluated'
   | 'lead-engineer:project-completing'
   | 'lead-engineer:project-completed'
+  | 'lead-engineer:project-completing-requested'
   | 'lead-engineer:hitl-response'
   // Notes workspace events (agent-initiated tab mutations)
   | 'notes:tab-created'
@@ -573,6 +574,7 @@ export interface EventPayloadMap {
   };
 
   // Auto-mode events
+  'auto-mode:event': { type: string; projectPath?: string; data?: Record<string, unknown> };
   'auto-mode:started': { projectPath?: string };
   'auto-mode:stopped': { projectPath?: string; reason?: string };
   'auto-mode:idle': { projectPath?: string };
@@ -612,6 +614,7 @@ export interface EventPayloadMap {
   };
   'lead-engineer:project-completing': { projectPath: string; projectSlug: string };
   'lead-engineer:project-completed': { projectPath: string; projectSlug: string };
+  'lead-engineer:project-completing-requested': { projectPath: string };
   'lead-engineer:hitl-response': {
     formId: string;
     featureId?: string;

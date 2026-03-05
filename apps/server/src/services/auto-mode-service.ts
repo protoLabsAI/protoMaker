@@ -92,6 +92,7 @@ import type { EventEmitter } from '../lib/events.js';
 import { TypedEventBus } from './auto-mode/typed-event-bus.js';
 import { ConcurrencyManager } from './auto-mode/concurrency-manager.js';
 import { ensureCleanWorktree } from '../lib/worktree-guard.js';
+import { isWorktreeLocked } from '../lib/worktree-lock.js';
 import {
   agentCostTotal,
   agentExecutionDuration,
@@ -241,6 +242,13 @@ const SLEEP_INTERVAL_IDLE_MS = 30000; // Sustained idle polling after idle event
 const SLEEP_INTERVAL_NORMAL_MS = 2000; // Normal loop iteration delay
 const SLEEP_INTERVAL_ERROR_MS = 5000; // Backoff after a loop iteration error
 
+/** Structured outcome from an auto-loop feature execution attempt. */
+interface PipelineResult {
+  outcome: 'completed' | 'escalated' | 'needs_retry';
+  retryAfterMs?: number;
+  errorInfo?: ReturnType<typeof classifyError>;
+}
+
 export class AutoModeService {
   private events: EventEmitter;
   private typedEventBus: TypedEventBus;
@@ -271,8 +279,8 @@ export class AutoModeService {
   private authorityService: AuthorityService | null = null;
   // Data integrity watchdog service for monitoring feature count (optional)
   private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
-  // Lead Engineer service for delegated feature execution (optional)
-  private leadEngineerService: LeadEngineerService | null = null;
+  // Lead Engineer service for feature execution (required)
+  private leadEngineerService!: LeadEngineerService;
   // Knowledge Store service for learning deduplication (optional)
   private knowledgeStoreService: KnowledgeStoreService | null = null;
   // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
@@ -305,12 +313,10 @@ export class AutoModeService {
       resumeFeature: this.resumeFeature.bind(this),
       findExistingWorktreeForBranch: this.findExistingWorktreeForBranch.bind(this),
       createWorktreeForBranch: this.createWorktreeForBranch.bind(this),
-      getModelForFeature: this.getModelForFeature.bind(this),
       saveExecutionState: this.saveExecutionState.bind(this),
       getAutoLoopRunning: () => this.autoLoopRunning,
       updateFeatureStatus: this.updateFeatureStatus.bind(this),
       updateFeaturePlanSpec: this.updateFeaturePlanSpec.bind(this),
-      emitAutoModeEvent: this.emitAutoModeEvent.bind(this),
       recordSuccessForProject: this.recordSuccessForProject.bind(this),
       trackFailureAndCheckPauseForProject: this.trackFailureAndCheckPauseForProject.bind(this),
       signalShouldPauseForProject: this.signalShouldPauseForProject.bind(this),
@@ -334,24 +340,17 @@ export class AutoModeService {
     // Stop running agents when their feature reaches a terminal state.
     // This prevents zombie agents from continuing to run (and consume API budget)
     // after a feature is marked done/verified externally (MCP, manual update, epic merge).
-    this.events.subscribe((type, payload) => {
-      if (type === 'feature:status-changed') {
-        const data = payload as {
-          featureId?: string;
-          newStatus?: string;
-          projectPath?: string;
-        };
-        if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
-          if (this.runningFeatures.has(data.featureId)) {
-            logger.info(
-              `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
-            );
-            void this.stopFeature(data.featureId);
-          }
-
-          // Auto-unblock: Check if any features were waiting on this as a human-blocked dependency
-          void this.handleFeatureCompletion(data.featureId, data.projectPath);
+    this.events.on('feature:status-changed', (data) => {
+      if (data.featureId && (data.newStatus === 'done' || data.newStatus === 'verified')) {
+        if (this.runningFeatures.has(data.featureId)) {
+          logger.info(
+            `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
+          );
+          void this.stopFeature(data.featureId);
         }
+
+        // Auto-unblock: Check if any features were waiting on this as a human-blocked dependency
+        void this.handleFeatureCompletion(data.featureId, data.projectPath);
       }
     });
   }
@@ -373,10 +372,11 @@ export class AutoModeService {
   }
 
   /**
-   * Wire up the Lead Engineer service for delegated feature execution.
-   * When set, auto-mode will delegate feature processing to the state machine.
+   * Wire up the Lead Engineer service for feature execution.
+   * Required — auto-mode routes all features through the state machine.
    */
   setLeadEngineerService(service: LeadEngineerService): void {
+    if (!service) throw new Error('LeadEngineerService is required');
     this.leadEngineerService = service;
   }
 
@@ -1137,75 +1137,124 @@ export class AutoModeService {
             continue;
           }
 
-          // Guard: content features (featureType === 'content') must route through
-          // leadEngineerService to the GTM execution path. They must NOT be launched
-          // with the standard code agent. If leadEngineerService is not available, skip them.
-          if (nextFeature.featureType === 'content' && !this.leadEngineerService) {
-            logger.warn(
-              `[AutoLoop] Skipping content feature ${nextFeature.id} ("${nextFeature.title}") — LeadEngineerService required for GTM execution path`
-            );
-            await this.sleep(2000);
-            continue;
-          }
-
-          // Mark feature as starting BEFORE calling executeFeature to prevent race conditions
+          // Mark feature as starting BEFORE calling process() to prevent race conditions
           projectState.startingFeatures.add(nextFeature.id);
 
           logger.info(`[AutoLoop] Starting feature ${nextFeature.id}: ${nextFeature.title}`);
           // Reset idle event flag since we're doing work again
           projectState.hasEmittedIdleEvent = false;
 
-          // Safety timeout: Remove from starting set after 30 seconds if still there
-          // This prevents features from getting permanently stuck in "starting" state
-          const startingTimeout = setTimeout(() => {
-            if (projectState.startingFeatures.has(nextFeature.id)) {
-              logger.warn(
-                `[AutoLoop] Feature ${nextFeature.id} stuck in starting state for 30s, cleaning up`
-              );
-              projectState.startingFeatures.delete(nextFeature.id);
-            }
-          }, 30000);
+          // Safety timeout: Remove from starting set after 30 seconds if still there.
+          // Before declaring a feature stuck, check whether a lock file exists in its
+          // worktree — if it does, the agent process is alive and startup succeeded;
+          // extend the timeout rather than cleaning up prematurely.
+          const featureForTimeout = nextFeature;
+          const scheduleStartingTimeout = (delayMs: number): NodeJS.Timeout => {
+            return setTimeout(() => {
+              if (!projectState.startingFeatures.has(featureForTimeout.id)) return;
+
+              // If the feature is already in runningFeatures, startup succeeded — clear silently
+              if (this.runningFeatures.has(featureForTimeout.id)) {
+                projectState.startingFeatures.delete(featureForTimeout.id);
+                return;
+              }
+
+              // Check worktree lock file: if a live process holds the lock, extend the timeout
+              const branchForLock = featureForTimeout.branchName;
+              if (branchForLock) {
+                const worktreePathForLock = path.join(
+                  projectPath,
+                  '.worktrees',
+                  branchForLock.replace(/\//g, '-')
+                );
+                isWorktreeLocked(worktreePathForLock)
+                  .then((locked) => {
+                    if (locked) {
+                      logger.info(
+                        `[AutoLoop] Feature ${featureForTimeout.id} still starting after ${delayMs}ms but lock file shows live process — extending timeout`
+                      );
+                      scheduleStartingTimeout(30000);
+                    } else {
+                      logger.warn(
+                        `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
+                      );
+                      projectState.startingFeatures.delete(featureForTimeout.id);
+                    }
+                  })
+                  .catch(() => {
+                    // Cannot read lock file — treat as not locked and clean up
+                    logger.warn(
+                      `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
+                    );
+                    projectState.startingFeatures.delete(featureForTimeout.id);
+                  });
+              } else {
+                logger.warn(
+                  `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
+                );
+                projectState.startingFeatures.delete(featureForTimeout.id);
+              }
+            }, delayMs);
+          };
+          const startingTimeout = scheduleStartingTimeout(30000);
 
           // Start feature execution in background.
-          // Content features (featureType === 'content') always route through leadEngineerService
-          // to the GTM execution path (guarded above — leadEngineerService is non-null here).
-          // Code features use leadEngineerService if available, otherwise fall back to executeFeature.
-          const featureModelResult = await this.getModelForFeature(nextFeature, projectPath);
-          const executionPromise = this.leadEngineerService
-            ? this.leadEngineerService.process(projectPath, nextFeature.id, {
-                model: featureModelResult.model,
-              } as unknown as ExecuteOptions) // State machine builds full ExecuteOptions internally
-            : this.executeFeature(
-                projectPath,
-                nextFeature.id,
-                projectState.config.useWorktrees,
-                true
-              );
+          // All features route through leadEngineerService.process() — the state machine
+          // handles both code and content (GTM) features.
+          // Model selection is handled inside IntakeProcessor.
+          const executionPromise = this.leadEngineerService.process(projectPath, nextFeature.id);
 
-          executionPromise
-            .then(() => {
-              // Remove from starting set once execution completes (successfully or not)
-              clearTimeout(startingTimeout);
-              projectState.startingFeatures.delete(nextFeature.id);
-            })
-            .catch((error: unknown) => {
-              logger.error(`Feature ${nextFeature.id} error:`, error);
-              // Remove from starting set on error
-              clearTimeout(startingTimeout);
-              projectState.startingFeatures.delete(nextFeature.id);
-              // Notify circuit breaker — without this, LE failures loop forever
+          // Convert the raw execution promise into a structured PipelineResult so all
+          // outcomes — success, escalation, and retryable failures — are handled
+          // uniformly in the single .then() handler below.
+          const pipelineResultPromise: Promise<PipelineResult> = executionPromise
+            .then((): PipelineResult => ({ outcome: 'completed' }))
+            .catch((error: unknown): PipelineResult => {
               const errorInfo = classifyError(error);
-              if (!errorInfo.isCancellation) {
-                const shouldPause = this.trackFailureAndCheckPauseForProject(
-                  projectPath,
-                  branchName,
-                  errorInfo
-                );
-                if (shouldPause) {
-                  this.signalShouldPauseForProject(projectPath, branchName, errorInfo);
-                }
+              if (errorInfo.isRateLimit) {
+                const retryAfterMs = errorInfo.retryAfter
+                  ? errorInfo.retryAfter * 1000
+                  : SLEEP_INTERVAL_ERROR_MS;
+                return { outcome: 'needs_retry', retryAfterMs, errorInfo };
               }
+              return { outcome: 'escalated', errorInfo };
             });
+
+          pipelineResultPromise.then((result: PipelineResult) => {
+            clearTimeout(startingTimeout);
+            switch (result.outcome) {
+              case 'completed':
+                projectState.startingFeatures.delete(nextFeature.id);
+                this.recordSuccessForProject(projectPath, branchName);
+                break;
+              case 'escalated': {
+                projectState.startingFeatures.delete(nextFeature.id);
+                const errorInfo = result.errorInfo!;
+                logger.error(`[AutoLoop] Feature ${nextFeature.id} escalated:`, errorInfo);
+                if (!errorInfo.isCancellation) {
+                  const shouldPause = this.trackFailureAndCheckPauseForProject(
+                    projectPath,
+                    branchName,
+                    errorInfo
+                  );
+                  if (shouldPause) {
+                    this.signalShouldPauseForProject(projectPath, branchName, errorInfo);
+                  }
+                }
+                break;
+              }
+              case 'needs_retry': {
+                const delay = result.retryAfterMs ?? SLEEP_INTERVAL_ERROR_MS;
+                logger.info(
+                  `[AutoLoop] Feature ${nextFeature.id} scheduled for retry in ${delay}ms`
+                );
+                setTimeout(() => {
+                  projectState.startingFeatures.delete(nextFeature.id);
+                }, delay);
+                break;
+              }
+            }
+          });
 
           // Brief sleep to ensure proper sequencing
           await this.sleep(100);
