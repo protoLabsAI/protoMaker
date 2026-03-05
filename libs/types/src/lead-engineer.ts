@@ -276,6 +276,25 @@ export interface PersonaAssignment {
   maxConcurrency?: number;
 }
 
+// ────────────────────────── Pipeline Result ──────────────────────────
+
+/**
+ * Structured result returned by LeadEngineerService.process()
+ * Captures the outcome, final state, and optional retry/failure metadata.
+ */
+export interface PipelineResult {
+  /** High-level outcome of the pipeline run */
+  outcome: 'completed' | 'escalated' | 'blocked' | 'needs_retry';
+  /** The final state the feature was in when processing ended */
+  finalState: FeatureState;
+  /** Human-readable reason for this outcome */
+  reason?: string;
+  /** Cumulative failure count at the time processing ended */
+  failureCount?: number;
+  /** Suggested delay before retrying, in milliseconds */
+  retryAfterMs?: number;
+}
+
 // ────────────────────────── Phase Handoffs ──────────────────────────
 
 /**

@@ -10,7 +10,13 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { EventType, LeadEngineerSession, ExecuteOptions } from '@protolabsai/types';
+import type {
+  EventType,
+  LeadEngineerSession,
+  ExecuteOptions,
+  PipelineResult,
+} from '@protolabsai/types';
+import { FeatureState } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -294,7 +300,11 @@ export class LeadEngineerService {
     return this.activeFeatures.has(featureId);
   }
 
-  async process(projectPath: string, featureId: string, options: ExecuteOptions): Promise<void> {
+  async process(
+    projectPath: string,
+    featureId: string,
+    options: ExecuteOptions
+  ): Promise<PipelineResult> {
     logger.info(`[LeadEngineer] Processing feature ${featureId}`, {
       projectPath,
       model: options.model,
@@ -392,17 +402,33 @@ export class LeadEngineerService {
         unsubPipelineSync();
       }
 
+      const outcome: PipelineResult['outcome'] =
+        result.finalState === 'DONE'
+          ? 'completed'
+          : result.finalState === 'ESCALATE'
+            ? 'escalated'
+            : 'blocked';
+
+      const pipelineResult: PipelineResult = {
+        outcome,
+        finalState: result.finalState as unknown as FeatureState,
+        failureCount: result.context.retryCount,
+      };
+
       logger.info(`[LeadEngineer] Feature processing completed`, {
         featureId,
         finalState: result.finalState,
+        outcome,
         escalated: result.finalState === 'ESCALATE',
       });
       this.events.emit('lead-engineer:feature-processed' as EventType, {
         projectPath,
         featureId,
         finalState: result.finalState,
+        outcome,
         success: result.finalState !== 'ESCALATE',
       });
+      return pipelineResult;
     } catch (error: unknown) {
       logger.error(`[LeadEngineer] Feature processing failed`, {
         featureId,
