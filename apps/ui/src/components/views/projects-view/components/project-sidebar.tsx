@@ -32,7 +32,7 @@ function PropertyRow({ label, children }: { label: string; children: React.React
   );
 }
 
-export function ProjectSidebar({ project }: { project: Project }) {
+export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?: boolean }) {
   const updateMutation = useProjectUpdate(project.slug);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -63,7 +63,9 @@ export function ProjectSidebar({ project }: { project: Project }) {
   };
 
   return (
-    <div className="w-72 shrink-0 border-r border-border/40 overflow-y-auto px-4 py-4 space-y-4">
+    <div
+      className={`w-72 shrink-0 border-r border-border/40 overflow-y-auto px-4 py-4 space-y-4 ${isOpen ? 'block' : 'hidden'} md:block`}
+    >
       {/* Goal */}
       {project.goal && (
         <div>
