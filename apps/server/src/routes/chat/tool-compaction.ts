@@ -44,9 +44,7 @@ function compactAgentOutput(result: unknown): unknown {
     const r = result as Record<string, unknown>;
     const output = typeof r['output'] === 'string' ? r['output'] : '';
     const truncated =
-      output.length > AGENT_OUTPUT_MAX_CHARS
-        ? output.slice(-AGENT_OUTPUT_MAX_CHARS)
-        : output;
+      output.length > AGENT_OUTPUT_MAX_CHARS ? output.slice(-AGENT_OUTPUT_MAX_CHARS) : output;
     return { featureId: r['featureId'], output: truncated };
   }
   return result;
