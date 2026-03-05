@@ -14,6 +14,7 @@ import {
   CalendarDays,
   FolderOpen,
   FolderKanban,
+  MessageCircle,
 } from 'lucide-react';
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
@@ -45,6 +46,7 @@ interface UseNavigationProps {
     calendar: string;
     automations: string;
     projects: string;
+    chat: string;
   };
   hideSpecEditor: boolean;
   hideDesigns: boolean;
@@ -53,6 +55,7 @@ interface UseNavigationProps {
   hideSystemView: boolean;
   hideNotes: boolean;
   hideCalendar: boolean;
+  hideAvaChat: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -80,6 +83,7 @@ export function useNavigation({
   hideSystemView,
   hideNotes,
   hideCalendar,
+  hideAvaChat,
   currentProject,
   projects,
   projectHistory,
@@ -133,20 +137,30 @@ export function useNavigation({
         icon: Library,
         shortcut: shortcuts.docs,
       },
+      {
+        id: 'notes',
+        label: 'Notes',
+        icon: NotebookPen,
+        shortcut: shortcuts.notes,
+      },
+      {
+        id: 'calendar',
+        label: 'Calendar',
+        icon: CalendarDays,
+        shortcut: shortcuts.calendar,
+      },
     ];
 
     // Filter out hidden items
     const visibleToolsItems = allToolsItems.filter((item) => {
-      if (item.id === 'spec' && hideSpecEditor) {
-        return false;
-      }
-      if (item.id === 'docs' && hideDocs) {
-        return false;
-      }
+      if (item.id === 'spec' && hideSpecEditor) return false;
+      if (item.id === 'docs' && hideDocs) return false;
+      if (item.id === 'notes' && hideNotes) return false;
+      if (item.id === 'calendar' && hideCalendar) return false;
       return true;
     });
 
-    // Build project items - Terminal, Calendar, Designs are conditionally included
+    // Build project items
     const projectItems: NavItem[] = [
       {
         id: 'board',
@@ -156,12 +170,12 @@ export function useNavigation({
       },
     ];
 
-    if (!hideNotes) {
+    if (!hideSystemView) {
       projectItems.push({
-        id: 'notes',
-        label: 'Notes',
-        icon: NotebookPen,
-        shortcut: shortcuts.notes,
+        id: 'system-view',
+        label: 'System View',
+        icon: Network,
+        shortcut: shortcuts.systemView,
       });
     }
 
@@ -172,15 +186,6 @@ export function useNavigation({
       shortcut: shortcuts.projects,
     });
 
-    if (!hideSystemView) {
-      projectItems.splice(1, 0, {
-        id: 'system-view',
-        label: 'System View',
-        icon: Network,
-        shortcut: shortcuts.systemView,
-      });
-    }
-
     if (!hideFileEditor) {
       projectItems.push({
         id: 'file-editor',
@@ -190,21 +195,21 @@ export function useNavigation({
       });
     }
 
+    if (!hideAvaChat) {
+      projectItems.push({
+        id: 'chat',
+        label: 'Ava Chat',
+        icon: MessageCircle,
+        shortcut: shortcuts.chat,
+      });
+    }
+
     if (!hideDesigns) {
       projectItems.push({
         id: 'designs',
         label: 'Designs',
         icon: Palette,
         shortcut: shortcuts.designs,
-      });
-    }
-
-    if (!hideCalendar) {
-      projectItems.push({
-        id: 'calendar',
-        label: 'Calendar',
-        icon: CalendarDays,
-        shortcut: shortcuts.calendar,
       });
     }
 
@@ -272,6 +277,7 @@ export function useNavigation({
     hideSystemView,
     hideNotes,
     hideCalendar,
+    hideAvaChat,
     hasGitHubRemote,
     unviewedValidationsCount,
     unreadNotificationsCount,

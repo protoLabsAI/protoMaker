@@ -235,6 +235,7 @@ export interface KeyboardShortcuts {
   calendar: string;
   automations: string;
   projects: string;
+  chat: string;
 
   // UI shortcuts
   toggleSidebar: string;
@@ -282,6 +283,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   calendar: 'Shift+C',
   automations: 'U',
   projects: 'J',
+  chat: 'C',
 
   // UI
   toggleSidebar: '`',
