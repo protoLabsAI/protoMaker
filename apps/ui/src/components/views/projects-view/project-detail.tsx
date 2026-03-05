@@ -98,12 +98,8 @@ export function ProjectDetail({
               <FeaturesTab projectSlug={projectSlug} />
             </TabsContent>
 
-            <TabsContent value="documents">
-              <DocumentsTab projectSlug={projectSlug} />
-            </TabsContent>
-
-            <TabsContent value="links">
-              <LinksTab project={project as Project} />
+            <TabsContent value="resources">
+              <ResourcesTab projectSlug={projectSlug} project={project as Project} />
             </TabsContent>
 
             <TabsContent value="updates">
