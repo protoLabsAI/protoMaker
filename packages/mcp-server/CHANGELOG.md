@@ -1,5 +1,13 @@
 # @protolabsai/mcp-server
 
+## 0.35.3
+
+### Patch Changes
+
+- Maintenance release.
+- Updated dependencies
+  - @protolabsai/tools@0.35.3
+
 ## 0.35.2
 
 ### Patch Changes
