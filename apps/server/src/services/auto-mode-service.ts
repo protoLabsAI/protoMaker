@@ -311,6 +311,9 @@ export class AutoModeService {
     // Initialize FeatureScheduler with callbacks back into this service
     const schedulerRunner: PipelineRunner = {
       run: async (projectPath: string, featureId: string) => {
+        if (!this.leadEngineerService) {
+          throw new Error('LeadEngineerService not wired yet — cannot dispatch feature');
+        }
         await this.leadEngineerService.process(projectPath, featureId);
       },
     };

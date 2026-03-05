@@ -657,8 +657,9 @@ export class FeatureScheduler {
             feature.prNumber
           ) {
             try {
+              const prNum = String(feature.prNumber).replace(/[^0-9]/g, '');
               const { stdout: prStateRaw } = await execAsync(
-                `gh pr view ${feature.prNumber} --json state --jq '.state'`,
+                `gh pr view ${prNum} --json state --jq '.state'`,
                 { cwd: projectPath, timeout: 10000 }
               );
               if (prStateRaw.trim() === 'OPEN') {
@@ -780,8 +781,9 @@ export class FeatureScheduler {
             feature.prNumber
           ) {
             try {
+              const prNum = String(feature.prNumber).replace(/[^0-9]/g, '');
               const { stdout: prStateRaw } = await execAsync(
-                `gh pr view ${feature.prNumber} --json state --jq '.state'`,
+                `gh pr view ${prNum} --json state --jq '.state'`,
                 { cwd: projectPath, timeout: 10000 }
               );
               if (prStateRaw.trim() === 'OPEN') {
