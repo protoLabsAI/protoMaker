@@ -96,6 +96,7 @@ import {
 } from '../services/data-integrity-watchdog-service.js';
 import { ProjectPlanningService } from '../services/project-planning-service.js';
 import { changelogService } from '../services/changelog-service.js';
+import { ProjectPMService } from '../services/project-pm-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -234,6 +235,9 @@ export interface ServiceContainer {
 
   // Project planning
   projectPlanningService: ProjectPlanningService | null;
+
+  // Project PM Agent
+  projectPmService: ProjectPMService;
 
   // Discord routing
   agentDiscordRouter: AgentDiscordRouter;
@@ -639,6 +643,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     );
   }
 
+  // Project PM Service — session store for PM Agent chat
+  const projectPmService = new ProjectPMService();
+
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
@@ -756,6 +763,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     gitWorkflowService,
     contentFlowService,
     projectPlanningService,
+    projectPmService,
     driftCheckInterval: null,
   };
 }
