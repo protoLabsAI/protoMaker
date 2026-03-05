@@ -64,6 +64,7 @@ vi.mock('@protolabsai/platform', async () => {
 import { exec } from 'child_process';
 import { readdir } from '@/lib/secure-fs.js';
 import { readJsonWithRecovery, logRecoveryWarning } from '@protolabsai/utils';
+import { getFeaturesDir } from '@protolabsai/platform';
 import { AutoLoopCoordinator } from '@/services/auto-mode/auto-loop-coordinator.js';
 import { ConcurrencyManager } from '@/services/auto-mode/concurrency-manager.js';
 import { AutoModeService } from '@/services/auto-mode-service.js';
@@ -72,6 +73,7 @@ import type { Feature } from '@protolabsai/types';
 const mockExec = exec as unknown as ReturnType<typeof vi.fn>;
 const mockReaddir = readdir as unknown as ReturnType<typeof vi.fn>;
 const mockReadJsonWithRecovery = readJsonWithRecovery as unknown as ReturnType<typeof vi.fn>;
+const mockGetFeaturesDir = getFeaturesDir as unknown as ReturnType<typeof vi.fn>;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -101,9 +103,7 @@ function setupDefaultExecMocks() {
 
 function setupFeaturesOnDisk(features: Feature[]) {
   // readdir returns one entry per feature
-  mockReaddir.mockResolvedValue(
-    features.map((f) => ({ name: f.id, isDirectory: () => true }))
-  );
+  mockReaddir.mockResolvedValue(features.map((f) => ({ name: f.id, isDirectory: () => true })));
   // readJsonWithRecovery returns each feature in order
   for (const f of features) {
     mockReadJsonWithRecovery.mockResolvedValueOnce({
@@ -381,6 +381,8 @@ describe('AutoModeService - loadPendingFeatures', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-establish platform mocks cleared by vitest's mockReset: true
+    mockGetFeaturesDir.mockReturnValue('/fake/project/.automaker/features');
     service = new AutoModeService(mockEvents as any);
   });
 
@@ -565,9 +567,7 @@ describe('AutoModeService - concurrency and race prevention', () => {
   });
 
   it('different project+branch combinations can run concurrently', async () => {
-    await expect(
-      service.startAutoLoopForProject('/test/project', null, 2)
-    ).resolves.not.toThrow();
+    await expect(service.startAutoLoopForProject('/test/project', null, 2)).resolves.not.toThrow();
 
     await expect(
       service.startAutoLoopForProject('/test/project', 'feature/branch', 2)
