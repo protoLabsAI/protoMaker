@@ -5,7 +5,9 @@ import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import { ProjectHeader } from './components/project-header';
 import { ProjectSidebar } from './components/project-sidebar';
+import { PmChatPanel } from './components/pm-chat-panel';
 import { useProject, useProjectDelete } from './hooks/use-project';
+import { useAppStore } from '@/store/app-store';
 import { PrdTab } from './tabs/prd-tab';
 import { FeaturesTab } from './tabs/features-tab';
 import { ResourcesTab } from './tabs/resources-tab';
@@ -19,9 +21,11 @@ export function ProjectDetail({
   projectSlug: string;
   onBack: () => void;
 }) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
   const { data: project, isLoading } = useProject(projectSlug);
   const deleteMutation = useProjectDelete();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pmChatOpen, setPmChatOpen] = useState(false);
 
   const handleDelete = () => {
     deleteMutation.mutate(projectSlug, {
@@ -65,6 +69,8 @@ export function ProjectDetail({
         onDelete={handleDelete}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         sidebarOpen={sidebarOpen}
+        onTogglePmChat={() => setPmChatOpen((v) => !v)}
+        pmChatOpen={pmChatOpen}
       />
 
       <div className="flex-1 flex min-h-0">
@@ -113,6 +119,13 @@ export function ProjectDetail({
           </Tabs>
         </div>
       </div>
+
+      <PmChatPanel
+        open={pmChatOpen}
+        onClose={() => setPmChatOpen(false)}
+        project={project as Project}
+        projectPath={projectPath}
+      />
     </div>
   );
 }

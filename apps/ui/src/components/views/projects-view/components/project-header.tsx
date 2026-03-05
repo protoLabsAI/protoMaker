@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Trash2, PanelLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Trash2, PanelLeft, MessageSquareDot } from 'lucide-react';
 import { Badge } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
@@ -13,6 +13,8 @@ interface ProjectHeaderProps {
   onDelete?: () => void;
   onToggleSidebar?: () => void;
   sidebarOpen?: boolean;
+  onTogglePmChat?: () => void;
+  pmChatOpen?: boolean;
 }
 
 export function ProjectHeader({
@@ -21,6 +23,8 @@ export function ProjectHeader({
   onDelete,
   onToggleSidebar,
   sidebarOpen,
+  onTogglePmChat,
+  pmChatOpen,
 }: ProjectHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -57,6 +61,19 @@ export function ProjectHeader({
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{project.slug}</p>
         </div>
+        {onTogglePmChat && (
+          <Button
+            size="sm"
+            variant={pmChatOpen ? 'secondary' : 'ghost'}
+            onClick={onTogglePmChat}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Toggle PM chat"
+            data-testid="pm-chat-toggle"
+          >
+            <MessageSquareDot className="w-4 h-4" />
+            <span className="ml-1 text-xs">PM</span>
+          </Button>
+        )}
         {project.linearProjectUrl && (
           <a
             href={project.linearProjectUrl}
