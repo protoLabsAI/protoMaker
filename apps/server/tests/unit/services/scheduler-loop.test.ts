@@ -377,12 +377,14 @@ describe('AutoModeService - loadPendingFeatures', () => {
   const mockEvents = {
     subscribe: vi.fn(),
     emit: vi.fn(),
+    on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Re-establish platform mocks cleared by vitest's mockReset: true
     mockGetFeaturesDir.mockReturnValue('/fake/project/.automaker/features');
+    mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
     service = new AutoModeService(mockEvents as any);
   });
 
@@ -532,10 +534,12 @@ describe('AutoModeService - concurrency and race prevention', () => {
   const mockEvents = {
     subscribe: vi.fn(),
     emit: vi.fn(),
+    on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
     service = new AutoModeService(mockEvents as any);
   });
 

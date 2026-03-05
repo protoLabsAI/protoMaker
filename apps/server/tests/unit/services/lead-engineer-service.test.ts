@@ -30,6 +30,7 @@ const mockGetWorkflowSettings = getWorkflowSettings as unknown as ReturnType<typ
 
 function createMockEvents() {
   const subscribers: Array<(type: EventType, payload: unknown) => void> = [];
+  const typedSubscribers: Array<{ type: EventType; cb: (payload: unknown) => void }> = [];
   return {
     emit: vi.fn(),
     subscribe: vi.fn((cb: (type: EventType, payload: unknown) => void) => {
@@ -41,8 +42,20 @@ function createMockEvents() {
       (unsub as any).unsubscribe = unsub;
       return unsub;
     }),
+    on: vi.fn((type: EventType, cb: (payload: unknown) => void) => {
+      typedSubscribers.push({ type, cb });
+      return {
+        unsubscribe: () => {
+          const idx = typedSubscribers.findIndex((s) => s.type === type && s.cb === cb);
+          if (idx >= 0) typedSubscribers.splice(idx, 1);
+        },
+      };
+    }),
     _fire(type: EventType, payload: unknown) {
       for (const cb of subscribers) cb(type, payload);
+      for (const s of typedSubscribers) {
+        if (s.type === type) s.cb(payload);
+      }
     },
     _subscribers: subscribers,
   };
