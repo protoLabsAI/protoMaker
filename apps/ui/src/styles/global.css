@@ -879,3 +879,28 @@ input[type='datetime-local'] {
   user-select: none;
   font-style: italic;
 }
+
+/* Streaming cursor — blinking block appended to last prose element */
+@keyframes ava-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.streaming-cursor > *:last-child::after {
+  content: '▋';
+  display: inline-block;
+  animation: ava-cursor-blink 1s step-end infinite;
+  color: var(--primary);
+  margin-left: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-cursor > *:last-child::after {
+    animation: none;
+  }
+}

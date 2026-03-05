@@ -1,10 +1,10 @@
 import { useState, lazy, Suspense } from 'react';
+import { Outlet, useChildMatches } from '@tanstack/react-router';
 import { FolderKanban, BarChart3, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { ProjectsList } from './projects-list';
-import { ProjectDetail } from './project-detail';
 import { ProjectMetricsTab } from '../dashboard-view/metrics/project-tab';
 import { TimeRangeSelector, type TimeRange } from '../dashboard-view/metrics/time-range';
 
@@ -28,9 +28,9 @@ function toggleBtnClass(active: boolean) {
 
 export function ProjectsView() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProjectsTab>('plans');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
+  const childMatches = useChildMatches();
 
   if (!projectPath) {
     return (
@@ -40,8 +40,8 @@ export function ProjectsView() {
     );
   }
 
-  if (selectedSlug) {
-    return <ProjectDetail projectSlug={selectedSlug} onBack={() => setSelectedSlug(null)} />;
+  if (childMatches.length > 0) {
+    return <Outlet />;
   }
 
   return (
@@ -85,7 +85,7 @@ export function ProjectsView() {
         )}
       </div>
 
-      {activeTab === 'plans' && <ProjectsList onSelect={setSelectedSlug} />}
+      {activeTab === 'plans' && <ProjectsList />}
       {activeTab === 'issues' && (
         <Suspense
           fallback={

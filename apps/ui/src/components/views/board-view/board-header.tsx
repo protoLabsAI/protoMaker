@@ -118,7 +118,6 @@ export function BoardHeader({
 
   // Ava Anywhere shortcut for discoverability hint
   const avaAnywhereShortcut = useAppStore((state) => state.keyboardShortcuts.avaAnywhere);
-  const avaChat = useAppStore((state) => state.featureFlags.avaChat);
 
   // Calculate cumulative project cost from all features
   const features = useAppStore((state) => state.features);
@@ -191,7 +190,7 @@ export function BoardHeader({
                   skipVerificationInAutoMode={skipVerificationInAutoMode}
                   onSkipVerificationChange={setSkipVerificationInAutoMode}
                   onOpenPlanDialog={onOpenPlanDialog}
-                  showPlanButton={avaChat}
+                  showPlanButton={true}
                   showClaudeUsage={showClaudeUsage}
                   showCodexUsage={showCodexUsage}
                 />
@@ -255,8 +254,8 @@ export function BoardHeader({
                 </div>
               )}
 
-              {/* Plan Button with Settings - gated behind Ava Anywhere flag */}
-              {isMounted && !isTablet && avaChat && (
+              {/* Plan Button with Settings */}
+              {isMounted && !isTablet && (
                 <div className={controlContainerClass} data-testid="plan-button-container">
                   {hasPendingPlan && (
                     <button

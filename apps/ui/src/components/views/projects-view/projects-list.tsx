@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FolderKanban, Plus, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Input, Textarea } from '@protolabsai/ui/atoms';
@@ -56,9 +57,10 @@ const PROJECT_STATUS_LABELS: Record<string, string> = {
   completed: 'Completed',
 };
 
-export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void }) {
+export function ProjectsList() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -284,11 +286,16 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
                           key={project.slug}
                           role="button"
                           tabIndex={0}
-                          onClick={() => onSelect(project.slug)}
+                          onClick={() =>
+                            navigate({ to: '/projects/$slug', params: { slug: project.slug } })
+                          }
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              onSelect(project.slug);
+                              navigate({
+                                to: '/projects/$slug',
+                                params: { slug: project.slug },
+                              });
                             }
                           }}
                           className={cn(

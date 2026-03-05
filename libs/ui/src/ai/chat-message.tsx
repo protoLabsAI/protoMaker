@@ -27,7 +27,6 @@ import { TaskBlock, type ToolInvocationItem, type TaskToolState } from './task-b
 import { ChatMessageMarkdown } from './chat-message-markdown.js';
 import { MessageSources } from './message-sources.js';
 import type { Citation } from './inline-citation.js';
-import { AILoader } from './loader.js';
 import { MessageActions } from './message-actions.js';
 import { MessageBranches } from './message-branches.js';
 import { PlanPart, extractPlanData, type PlanData } from './plan-part.js';
@@ -201,17 +200,6 @@ function buildSegments(rawParts: Array<Record<string, unknown>>): PartSegment[] 
   return segments;
 }
 
-/** Terminal tool states — the tool has finished (success, error, or denied). */
-const TERMINAL_TOOL_STATES = new Set(['output-available', 'output-error', 'output-denied']);
-
-/**
- * Returns true when the message still has at least one tool in a running state,
- * meaning the agentic loop has not yet finished.
- */
-function isMessageStreaming(rawParts: Array<Record<string, unknown>>): boolean {
-  return rawParts.some((p) => isToolPart(p) && !TERMINAL_TOOL_STATES.has(p.state as string));
-}
-
 /**
  * Extract resolved citations from message parts.
  * The server writes these as `data-citations` UIMessageChunks; the AI SDK
@@ -263,16 +251,18 @@ function extractGroupText(group: PartSegment[]): string {
 function MessagePartRenderer({
   part,
   citations,
+  isStreaming,
 }: {
   part: Record<string, unknown>;
   citations: Citation[];
+  isStreaming?: boolean;
 }) {
   const type = part.type as string;
 
   if (type === 'text') {
     const text = part.text as string;
     if (!text) return null;
-    return <ChatMessageMarkdown content={text} citations={citations} />;
+    return <ChatMessageMarkdown content={text} citations={citations} isStreaming={isStreaming} />;
   }
 
   if (type === 'reasoning') {
@@ -333,6 +323,7 @@ function groupByStep(segments: PartSegment[]): PartSegment[][] {
 export function ChatMessage({
   message,
   className,
+  isStreaming,
   onToolApprove,
   onToolReject,
   onRegenerate,
@@ -346,6 +337,8 @@ export function ChatMessage({
 }: {
   message: UIMessage;
   className?: string;
+  /** When true, shows the streaming cursor on the last text part. */
+  isStreaming?: boolean;
   /** Called when the user approves a destructive tool call (HITL). Receives the approval ID. */
   onToolApprove?: (approvalId: string) => void;
   /** Called when the user rejects a destructive tool call (HITL). Receives the approval ID. */
@@ -408,9 +401,23 @@ export function ChatMessage({
   const segments = buildSegments(rawParts);
   const stepGroups = groupByStep(segments);
 
-  // Stats for the progress indicator
-  const stepCount = rawParts.filter((p) => p.type === 'step-start').length;
-  const streaming = isMessageStreaming(rawParts);
+  // Find the index of the last 'other' text segment in the last group,
+  // used to place the streaming cursor only on the final text part.
+  const lastGroupIdx = stepGroups.length - 1;
+  let lastTextSegIdxInLastGroup = -1;
+  if (isStreaming && lastGroupIdx >= 0) {
+    const lastGroup = stepGroups[lastGroupIdx];
+    for (let k = lastGroup.length - 1; k >= 0; k--) {
+      if (
+        lastGroup[k].kind === 'other' &&
+        (lastGroup[k] as { kind: 'other'; part: Record<string, unknown>; partIndex: number }).part
+          .type === 'text'
+      ) {
+        lastTextSegIdxInLastGroup = k;
+        break;
+      }
+    }
+  }
 
   // Build onFeedback handler from separate thumbs up/down callbacks
   const onFeedback =
@@ -420,21 +427,6 @@ export function ChatMessage({
           else onThumbsDown?.();
         }
       : undefined;
-
-  /** Find the live progress label for the first running tool in a step group. */
-  const getActiveToolProgressLabel = (group: PartSegment[]): string | undefined => {
-    if (!getToolProgressLabel) return undefined;
-    for (const seg of group) {
-      if (seg.kind !== 'tool-group') continue;
-      for (const tool of seg.tools) {
-        if (!TERMINAL_TOOL_STATES.has(tool.state)) {
-          const label = getToolProgressLabel(tool.toolCallId);
-          if (label) return label;
-        }
-      }
-    }
-    return undefined;
-  };
 
   return (
     <div data-slot="chat-message" className={cn('flex flex-col gap-1', className)}>
@@ -450,15 +442,6 @@ export function ChatMessage({
             )}
             <div className="flex min-w-0 flex-1 flex-col">
               <ChatMessageBubble role={role}>
-                {/* AILoader only on the last (active) bubble while streaming */}
-                {groupIdx === stepGroups.length - 1 && streaming && stepCount >= 1 && (
-                  <AILoader
-                    stepCount={stepCount}
-                    label={getActiveToolProgressLabel(group)}
-                    className="mb-1.5"
-                  />
-                )}
-
                 {group.map((seg, i) => {
                   // step-start segments are filtered out by groupByStep
                   if (seg.kind === 'step-start') return null;
@@ -501,7 +484,16 @@ export function ChatMessage({
                   }
 
                   // 'other': text, reasoning, source-url, data-citations, etc.
-                  return <MessagePartRenderer key={i} part={seg.part} citations={citations} />;
+                  const isLastTextPart =
+                    isStreaming && groupIdx === lastGroupIdx && i === lastTextSegIdxInLastGroup;
+                  return (
+                    <MessagePartRenderer
+                      key={i}
+                      part={seg.part}
+                      citations={citations}
+                      isStreaming={isLastTextPart}
+                    />
+                  );
                 })}
 
                 {/* Sources section — only on the last bubble */}

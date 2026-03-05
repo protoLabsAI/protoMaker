@@ -90,27 +90,27 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const suggestions = useContextualSuggestions(features ?? []);
   const { getProgressLabel, activeLabel: activeToolLabel } = useToolProgress();
 
-  // Accumulate real token usage from data-usage parts on assistant messages.
-  // The server writes a data-usage chunk after each response with exact
-  // inputTokens/outputTokens from the AI provider (works for any model).
-  // Falls back to chars/4 estimate only before the first response arrives.
+  // Show current context window size from the most recent data-usage part.
+  // The server sends inputTokens (= prompt size sent to the model) after each
+  // response. The latest value is the best measure of context window usage.
+  // Falls back to chars/4 estimate before the first response arrives.
   const tokenUsage = useMemo(() => {
-    let input = 0;
-    let output = 0;
+    let latestInput = 0;
+    let latestOutput = 0;
     let hasReal = false;
     for (const msg of messages) {
       if (msg.role !== 'assistant' || !msg.parts) continue;
       for (const part of msg.parts) {
         if (part.type === 'data-usage' && part.data) {
           const d = part.data as { inputTokens?: number; outputTokens?: number };
-          input += d.inputTokens ?? 0;
-          output += d.outputTokens ?? 0;
+          latestInput = d.inputTokens ?? 0;
+          latestOutput = d.outputTokens ?? 0;
           hasReal = true;
         }
       }
     }
     if (hasReal) {
-      return { total: input + output, input, output, estimated: false };
+      return { total: latestInput, input: latestInput, output: latestOutput, estimated: false };
     }
     // Fallback: rough estimate before first response completes
     if (messages.length === 0) return { total: 0, input: 0, output: 0, estimated: true };
@@ -478,8 +478,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
                       )}
                       title={
                         tokenUsage.estimated
-                          ? `~${tokenUsage.total.toLocaleString()} estimated tokens`
-                          : `${tokenUsage.input.toLocaleString()} input + ${tokenUsage.output.toLocaleString()} output tokens`
+                          ? `~${tokenUsage.total.toLocaleString()} estimated context size`
+                          : `Context: ${tokenUsage.input.toLocaleString()} tokens (last response: ${tokenUsage.output.toLocaleString()} output)`
                       }
                     >
                       {tokenUsage.estimated && '~'}

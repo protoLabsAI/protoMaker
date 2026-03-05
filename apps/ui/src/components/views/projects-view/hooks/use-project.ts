@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { Project } from '@protolabsai/types';
 
 export function useProject(projectSlug: string | null) {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
@@ -11,7 +10,7 @@ export function useProject(projectSlug: string | null) {
     queryFn: async () => {
       const api = getHttpApiClient();
       const res = await api.lifecycle.getProject(projectPath, projectSlug!);
-      if (res.success && res.project) return res.project as unknown as Project;
+      if (res.success && res.project) return res.project;
       return null;
     },
     enabled: !!projectPath && !!projectSlug,
@@ -44,6 +43,54 @@ export function useProjectDelete() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
+    },
+  });
+}
+
+export function useApprovePrd(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const api = getHttpApiClient();
+      return api.lifecycle.approvePrd(projectPath, projectSlug, {
+        createEpics: true,
+        setupDependencies: true,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
+
+export function useRequestChanges(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (feedback: string) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.requestChanges(projectPath, projectSlug, feedback);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
+
+export function useLaunchProject(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (maxConcurrency?: number) => {
+      const api = getHttpApiClient();
+      return api.lifecycle.launch(projectPath, projectSlug, maxConcurrency);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
     },
   });
 }

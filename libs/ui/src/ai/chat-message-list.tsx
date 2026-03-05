@@ -12,7 +12,7 @@
  *    bottom, so a manually-scrolled-up view is never hijacked.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDown } from 'lucide-react';
 import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
@@ -88,7 +88,7 @@ export function ChatMessageList({
   const checkIfAtBottom = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
   }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -180,12 +180,22 @@ export function ChatMessageList({
   // When a new message is appended, scroll to bottom only if the user
   // has not manually scrolled away. This prevents hijacking reading position
   // during long conversations / streaming.
-  useEffect(() => {
+  // useLayoutEffect fires before paint, preventing a one-frame lag vs useEffect.
+  useLayoutEffect(() => {
     if (!userScrolledRef.current) {
       scrollToBottom('instant');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
+
+  // Force-scroll to bottom on stream completion regardless of lock state.
+  const prevIsStreamingRef = useRef(isStreaming);
+  useLayoutEffect(() => {
+    if (prevIsStreamingRef.current && !isStreaming) {
+      scrollToBottom('instant');
+    }
+    prevIsStreamingRef.current = isStreaming;
+  }, [isStreaming, scrollToBottom]);
 
   // Determine if ShimmerLoader should be shown:
   // Show when streaming and the last message has no text content yet (pending response).
@@ -207,12 +217,14 @@ export function ChatMessageList({
               <p className="text-sm text-muted-foreground">{emptyMessage}</p>
             </div>
           ) : (
-            messages.map((message) => {
+            messages.map((message, idx) => {
               const branchInfo = branchInfoMap?.get(message.id);
+              const isLastMessage = idx === messages.length - 1;
               return (
                 <ChatMessage
                   key={message.id}
                   message={message}
+                  isStreaming={isStreaming && isLastMessage}
                   onRegenerate={onRegenerate}
                   onThumbsUp={onThumbsUp}
                   onThumbsDown={onThumbsDown}
