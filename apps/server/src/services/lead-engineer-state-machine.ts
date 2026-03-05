@@ -6,7 +6,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { Feature, ExecuteOptions, GoalGateResult, EventType } from '@protolabsai/types';
+import type { Feature, GoalGateResult, EventType } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import { IntakeProcessor, PlanProcessor } from './lead-engineer-processors.js';
@@ -128,7 +128,6 @@ export class FeatureStateMachine {
   async processFeature(
     feature: Feature,
     projectPath: string,
-    options: ExecuteOptions,
     resumeFromCheckpoint?: {
       state: FeatureProcessingState;
       restoredContext?: Partial<StateContext>;
@@ -137,7 +136,6 @@ export class FeatureStateMachine {
     const ctx: StateContext = {
       feature,
       projectPath,
-      options,
       retryCount: 0,
       infraRetryCount: 0,
       planRequired: false,

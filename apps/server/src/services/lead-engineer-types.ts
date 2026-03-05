@@ -4,7 +4,7 @@
  * All types shared across the lead-engineer subsystem files.
  */
 
-import type { Feature, ExecuteOptions, AgentRole } from '@protolabsai/types';
+import type { Feature, AgentRole } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -126,7 +126,8 @@ export interface StateTransitionResult {
 export interface StateContext {
   feature: Feature;
   projectPath: string;
-  options: ExecuteOptions;
+  /** Model selected during INTAKE phase. Used by ExecuteProcessor to run the agent. */
+  selectedModel?: string;
   /** Number of full agent re-runs triggered by agent-level failures (bad code, logic errors). */
   retryCount: number;
   /**
