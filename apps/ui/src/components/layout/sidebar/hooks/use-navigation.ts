@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, createElement } from 'react';
 import type { NavigateOptions } from '@tanstack/react-router';
 import {
   FileText,
@@ -14,8 +14,30 @@ import {
   CalendarDays,
   FolderOpen,
   FolderKanban,
-  MessageCircle,
 } from 'lucide-react';
+
+/** protoLabs logo icon sized for sidebar nav (matches lucide icon API) */
+function ProtoLabsIcon({ className }: { className?: string }) {
+  return createElement(
+    'svg',
+    {
+      xmlns: 'http://www.w3.org/2000/svg',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      className,
+    },
+    createElement('rect', { width: 16, height: 12, x: 4, y: 8, rx: 2 }),
+    createElement('path', { d: 'M12 8V4H8' }),
+    createElement('path', { d: 'M2 14h2' }),
+    createElement('path', { d: 'M20 14h2' }),
+    createElement('path', { d: 'M15 13v2' }),
+    createElement('path', { d: 'M9 13v2' })
+  );
+}
 import type { NavSection, NavItem } from '../types';
 import type { KeyboardShortcut } from '@/hooks/use-keyboard-shortcuts';
 import type { Project } from '@/lib/electron';
@@ -32,13 +54,10 @@ interface UseNavigationProps {
     notes: string;
     docs: string;
     board: string;
-    graph: string;
-    agent: string;
     settings: string;
     projectSettings: string;
     githubIssues: string;
     githubPrs: string;
-    notifications: string;
     systemView: string;
     inbox: string;
     fileEditor: string;
@@ -139,7 +158,7 @@ export function useNavigation({
       },
       {
         id: 'notes',
-        label: 'Notes',
+        label: 'Content',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
       },
@@ -163,8 +182,14 @@ export function useNavigation({
     // Build project items
     const projectItems: NavItem[] = [
       {
+        id: 'projects',
+        label: 'Projects',
+        icon: FolderKanban,
+        shortcut: shortcuts.projects,
+      },
+      {
         id: 'board',
-        label: 'Board',
+        label: 'Features',
         icon: LayoutGrid,
         shortcut: shortcuts.board,
       },
@@ -179,17 +204,10 @@ export function useNavigation({
       });
     }
 
-    projectItems.push({
-      id: 'projects',
-      label: 'Projects',
-      icon: FolderKanban,
-      shortcut: shortcuts.projects,
-    });
-
     if (!hideFileEditor) {
       projectItems.push({
         id: 'file-editor',
-        label: 'File Editor',
+        label: 'Editor',
         icon: FolderOpen,
         shortcut: shortcuts.fileEditor,
       });
@@ -198,8 +216,8 @@ export function useNavigation({
     if (!hideAvaChat) {
       projectItems.push({
         id: 'chat',
-        label: 'Ava Chat',
-        icon: MessageCircle,
+        label: 'Ava',
+        icon: ProtoLabsIcon,
         shortcut: shortcuts.chat,
       });
     }
@@ -260,7 +278,7 @@ export function useNavigation({
         },
         {
           id: 'project-settings',
-          label: 'Project Settings',
+          label: 'Settings',
           icon: Settings,
           shortcut: shortcuts.projectSettings,
         },

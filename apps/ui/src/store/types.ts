@@ -216,16 +216,12 @@ export function formatShortcut(shortcut: string | undefined | null, forDisplay =
 export interface KeyboardShortcuts {
   // Navigation shortcuts
   board: string;
-  graph: string;
-  agent: string;
   spec: string;
   settings: string;
   projectSettings: string;
   terminal: string;
-  ideation: string;
   notes: string;
   docs: string;
-  notifications: string;
   githubIssues: string;
   githubPrs: string;
   systemView: string;
@@ -263,27 +259,23 @@ export interface KeyboardShortcuts {
 // Default keyboard shortcuts
 export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   // Navigation
-  board: 'K',
-  graph: 'H',
-  agent: 'A',
+  board: 'F',
   spec: 'D',
-  settings: 'S',
-  projectSettings: 'Shift+S',
+  settings: 'Shift+S',
+  projectSettings: 'S',
   terminal: 'Cmd+`',
-  ideation: 'I',
-  notes: 'W',
+  notes: 'C',
   docs: 'Cmd+D',
-  notifications: 'X',
-  githubIssues: 'G',
-  githubPrs: 'R',
+  githubIssues: 'I',
+  githubPrs: 'P',
   systemView: 'V',
   inbox: 'B',
-  fileEditor: 'F',
+  fileEditor: 'E',
   designs: 'Shift+D',
   calendar: 'Shift+C',
   automations: 'U',
-  projects: 'J',
-  chat: 'C',
+  projects: 'R',
+  chat: 'A',
 
   // UI
   toggleSidebar: '`',
@@ -296,9 +288,9 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   startNext: 'G', // Only active in board view
   newSession: 'N', // Only active in agent view
   openProject: 'O', // Global shortcut
-  projectPicker: 'P', // Global shortcut
+  projectPicker: 'Shift+P', // Global shortcut
   cyclePrevProject: 'Q', // Global shortcut
-  cycleNextProject: 'E', // Global shortcut
+  cycleNextProject: 'W', // Global shortcut
 
   // Terminal shortcuts (only active in terminal view)
   // Using Alt modifier to avoid conflicts with both terminal signals AND browser shortcuts
