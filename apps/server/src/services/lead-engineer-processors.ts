@@ -7,6 +7,7 @@
 
 import { createLogger } from '@protolabsai/utils';
 import { resolveModelString } from '@protolabsai/model-resolver';
+import { areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
 import type { AgentRole, Feature } from '@protolabsai/types';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
@@ -37,19 +38,20 @@ export class IntakeProcessor implements StateProcessor {
   async process(ctx: StateContext): Promise<StateTransitionResult> {
     const { feature } = ctx;
 
-    // Validate dependencies against real feature state
+    // Validate dependencies using the shared resolver (same logic as loadPendingFeatures)
     if (feature.dependencies && feature.dependencies.length > 0) {
       const allFeatures = await this.serviceContext.featureLoader.getAll(ctx.projectPath);
-      const unmetDeps: string[] = [];
 
-      for (const depId of feature.dependencies) {
-        const dep = allFeatures.find((f) => f.id === depId);
-        if (!dep || (dep.status !== 'done' && dep.status !== 'verified')) {
-          unmetDeps.push(depId);
-        }
-      }
+      if (!areDependenciesSatisfied(feature, allFeatures)) {
+        const unmetDeps = feature.dependencies.filter((depId) => {
+          const dep = allFeatures.find((f) => f.id === depId);
+          if (!dep) return true;
+          if (dep.isFoundation) {
+            return dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified';
+          }
+          return !dep.status || !['completed', 'verified', 'done', 'review'].includes(dep.status);
+        });
 
-      if (unmetDeps.length > 0) {
         ctx.escalationReason = `Unmet dependencies: ${unmetDeps.join(', ')}`;
         logger.warn(`[INTAKE] Feature has ${unmetDeps.length} unmet dependencies`, {
           featureId: feature.id,
