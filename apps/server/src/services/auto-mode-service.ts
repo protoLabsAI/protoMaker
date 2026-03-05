@@ -1155,16 +1155,23 @@ export class AutoModeService {
           // Reset idle event flag since we're doing work again
           projectState.hasEmittedIdleEvent = false;
 
-          // Safety timeout: Remove from starting set after 30 seconds if still there
-          // This prevents features from getting permanently stuck in "starting" state
+          // Safety timeout: Remove from starting set after 120 seconds if still there.
+          // The LE pipeline's INTAKE→worktree creation→rebase→agent launch sequence can take
+          // >30s under concurrency (3+ agents starting simultaneously). Using 120s gives the
+          // pipeline enough time to complete before cleanup fires and creates ghost agents.
+          const STARTING_TIMEOUT_MS = 120000;
           const startingTimeout = setTimeout(() => {
             if (projectState.startingFeatures.has(nextFeature.id)) {
-              logger.warn(
-                `[AutoLoop] Feature ${nextFeature.id} stuck in starting state for 30s, cleaning up`
-              );
-              projectState.startingFeatures.delete(nextFeature.id);
+              // Only clean up if not already tracked in runningFeatures — if it's running,
+              // the executionPromise .then() handler will clean up startingFeatures normally.
+              if (!this.runningFeatures.has(nextFeature.id)) {
+                logger.warn(
+                  `[AutoLoop] Feature ${nextFeature.id} stuck in starting state for ${STARTING_TIMEOUT_MS / 1000}s, cleaning up`
+                );
+                projectState.startingFeatures.delete(nextFeature.id);
+              }
             }
-          }, 30000);
+          }, STARTING_TIMEOUT_MS);
 
           // Start feature execution in background.
           // Content features (featureType === 'content') always route through leadEngineerService
