@@ -41,6 +41,11 @@ import { loadAvaConfig, DEFAULT_AVA_CONFIG, type AvaConfig } from './ava-config.
 import { getSitrep } from './sitrep.js';
 import { buildAvaTools } from './ava-tools.js';
 import type { PlanData } from './ava-tools.js';
+import {
+  estimateTokens,
+  compactMessageHistory,
+  COMPACTION_BUDGET_TOKENS,
+} from './message-compaction.js';
 import { ToolProgressEmitter } from './tool-progress.js';
 import { compactToolResult } from './tool-compaction.js';
 import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
@@ -410,7 +415,18 @@ export function createChatRoutes(services: ServiceContainer): Router {
       // Convert UIMessages (with tool-invocation, reasoning, approval parts) to
       // ModelMessages that streamText understands. This preserves tool call/result
       // pairs required for HITL approval continuation and multi-turn tool use.
-      const messages = await convertToModelMessages(rawMessages, { tools });
+      const convertedMessages = await convertToModelMessages(rawMessages, { tools });
+
+      // Apply message-level compaction when the estimated token count exceeds the
+      // budget. Older tool results are summarized to one-line and long assistant
+      // responses are truncated; the most recent messages are preserved verbatim.
+      const preCompactionTokens = estimateTokens(convertedMessages);
+      const messages = compactMessageHistory(convertedMessages, COMPACTION_BUDGET_TOKENS);
+      if (messages !== convertedMessages) {
+        logger.info(
+          `Message compaction applied: ${preCompactionTokens} -> ${estimateTokens(messages)} est. tokens, ${convertedMessages.length} messages`
+        );
+      }
 
       // Estimate payload size for perf tracking
       const systemPromptChars = systemPrompt.length;
