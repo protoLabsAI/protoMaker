@@ -11,9 +11,7 @@ export default defineConfig({
   ],
   format: ['esm'],
   external: [/^@rjsf\//],
-  dts: {
-    resolve: true,
-  },
+  dts: true,
   clean: true,
   sourcemap: true,
   treeshake: true,
