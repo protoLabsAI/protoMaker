@@ -1679,7 +1679,8 @@ export class DiscordBotService {
   ): Promise<void> {
     switch (workflow.workflow) {
       case 'bug_triage':
-        await this.handleBugWorkflow(message, workflow);
+        // Disabled: bug triage now only fires via reaction ability (bug emoji).
+        // Channel workflow auto-trigger on every message was too noisy.
         break;
       case 'agent_conversation':
         await this.handleAgentConversationWorkflow(message, workflow);
@@ -1857,8 +1858,15 @@ export class DiscordBotService {
 
     const channelId = data.channelId as string;
     const messageId = data.messageId as string;
+    const username = data.username as string;
 
     if (!channelId || !messageId) return;
+
+    // Only chukz can trigger bug triage via reaction
+    if (username !== 'chukz') {
+      logger.debug(`Bug reaction from ${username} ignored — only chukz can trigger bug triage`);
+      return;
+    }
 
     try {
       const channel = (await this.client.channels.fetch(channelId)) as TextChannel;

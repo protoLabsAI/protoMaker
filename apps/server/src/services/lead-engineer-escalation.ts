@@ -35,9 +35,11 @@ export class EscalateProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    // Move feature to blocked
+    // Move feature to blocked with reason and failure tracking
     await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
       status: 'blocked',
+      statusChangeReason: ctx.escalationReason || 'Escalated by lead engineer',
+      failureCount: (ctx.feature.failureCount ?? 0) + 1,
     });
 
     // Classify the failure for structured analysis
