@@ -1,5 +1,34 @@
 # @protolabsai/types
 
+## 0.40.0
+
+### Minor Changes
+
+- ### Features
+  - wire PRWatcherService — webhook handler, Ava tool, and UI push notifications (#1854)
+  - add research summary tab and project progress indicator (#1846)
+  - make Ava Anywhere GA — enable avaChat flag by default
+
+  ### Bug Fixes
+  - correct build badge repo URL and Discord invite links
+  - regenerate lockfile with rehype-highlight dependency (#1853)
+  - regenerate lockfile with rehype-highlight dependency
+  - show feature title and reason in escalation notifications
+  - correct @protolabsai/ui import path in documents-tab (#1847)
+  - show current context window size, not cumulative token spend
+  - remove inline Step indicator from chat messages
+
+  ### Refactors
+  - Project page: add members edit UI and project color picker to sidebar (#1852)
+  - remove avaChat feature flag — Ava Anywhere is now GA
+  - Project page: wire PRD lifecycle actions (Approve, Request Changes, Laun (#1850)
+  - Gate rehype-highlight behind isComplete + wire sanitizeStreamingMarkdown (#1849)
+  - CSS streaming cursor + post-completion static render handoff (#1848)
+  - useScrollLock hook — auto-scroll with user override (#1842)
+  - segment memoization for long messages (5k+ tokens) (#1840)
+  - sanitizeStreamingMarkdown() helper + react-markdown plugin memoization f (#1836)
+  - Project page: fix getProject response type (remove `as unknown as Projec (#1835)
+
 ## 0.39.0
 
 ### Minor Changes
