@@ -1,7 +1,7 @@
-import { LayoutGrid, List, BookOpen, Brain } from 'lucide-react';
+import { LayoutGrid, List, BookOpen, Brain, GitPullRequest } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ViewMode = 'kanban' | 'list' | 'context' | 'memory';
+export type ViewMode = 'kanban' | 'list' | 'prs' | 'context' | 'memory';
 
 interface ViewToggleProps {
   viewMode: ViewMode;
@@ -55,6 +55,17 @@ export function ViewToggle({ viewMode, onViewModeChange, className }: ViewToggle
       >
         <List className="w-4 h-4" />
         <span className="sr-only">List</span>
+      </button>
+      <button
+        role="tab"
+        aria-selected={viewMode === 'prs'}
+        aria-label="Pull Requests view"
+        onClick={() => onViewModeChange('prs')}
+        className={toggleBtnClass(viewMode === 'prs')}
+        data-testid="view-toggle-prs"
+      >
+        <GitPullRequest className="w-4 h-4" />
+        <span className="sr-only">Pull Requests</span>
       </button>
       <button
         role="tab"

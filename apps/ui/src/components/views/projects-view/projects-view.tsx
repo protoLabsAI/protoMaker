@@ -1,13 +1,18 @@
-import { useState } from 'react';
-import { FolderKanban, BarChart3 } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
+import { FolderKanban, BarChart3, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { ProjectsList } from './projects-list';
 import { ProjectDetail } from './project-detail';
 import { ProjectMetricsTab } from '../dashboard-view/metrics/project-tab';
 import { TimeRangeSelector, type TimeRange } from '../dashboard-view/metrics/time-range';
 
-type ProjectsTab = 'plans' | 'metrics';
+const GitHubIssuesView = lazy(() =>
+  import('../github-issues-view').then((m) => ({ default: m.GitHubIssuesView }))
+);
+
+type ProjectsTab = 'plans' | 'issues' | 'metrics';
 
 const tabBtnClass =
   'inline-flex h-[calc(100%-1px)] items-center justify-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
@@ -57,6 +62,14 @@ export function ProjectsView() {
           </button>
           <button
             role="tab"
+            aria-selected={activeTab === 'issues'}
+            onClick={() => setActiveTab('issues')}
+            className={toggleBtnClass(activeTab === 'issues')}
+          >
+            <CircleDot className="w-4 h-4" />
+          </button>
+          <button
+            role="tab"
             aria-selected={activeTab === 'metrics'}
             onClick={() => setActiveTab('metrics')}
             className={toggleBtnClass(activeTab === 'metrics')}
@@ -72,9 +85,19 @@ export function ProjectsView() {
         )}
       </div>
 
-      {activeTab === 'plans' ? (
-        <ProjectsList onSelect={setSelectedSlug} />
-      ) : (
+      {activeTab === 'plans' && <ProjectsList onSelect={setSelectedSlug} />}
+      {activeTab === 'issues' && (
+        <Suspense
+          fallback={
+            <div className="flex-1 flex items-center justify-center">
+              <Spinner size="lg" />
+            </div>
+          }
+        >
+          <GitHubIssuesView />
+        </Suspense>
+      )}
+      {activeTab === 'metrics' && (
         <div className="flex-1 overflow-y-auto px-4 py-2 sm:px-8 sm:py-2">
           <div className="max-w-6xl mx-auto">
             <ProjectMetricsTab projectPath={projectPath} timeRange={timeRange} />

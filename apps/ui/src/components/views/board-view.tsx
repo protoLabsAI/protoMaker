@@ -96,7 +96,10 @@ import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
 
-// Lazy-loaded views for context and memory tabs
+// Lazy-loaded views for PRs, context, and memory tabs
+const LazyGitHubPRsView = React.lazy(() =>
+  import('./github-prs-view').then((m) => ({ default: m.GitHubPRsView }))
+);
 const LazyContextView = React.lazy(() =>
   import('./context-view').then((m) => ({ default: m.ContextView }))
 );
@@ -1466,7 +1469,17 @@ export function BoardView() {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* View Content */}
-          {viewMode === 'context' ? (
+          {viewMode === 'prs' ? (
+            <React.Suspense
+              fallback={
+                <div className="flex-1 flex items-center justify-center">
+                  <Spinner />
+                </div>
+              }
+            >
+              <LazyGitHubPRsView />
+            </React.Suspense>
+          ) : viewMode === 'context' ? (
             <React.Suspense
               fallback={
                 <div className="flex-1 flex items-center justify-center">

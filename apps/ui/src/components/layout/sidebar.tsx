@@ -35,7 +35,6 @@ import {
   useProjectCreation,
   useSetupDialog,
   useTrashOperations,
-  useUnviewedValidations,
 } from './sidebar/hooks';
 
 export function Sidebar() {
@@ -171,9 +170,6 @@ export function Sidebar() {
   // Auto-collapse sidebar on small screens and update Electron window minWidth
   useSidebarAutoCollapse({ sidebarOpen, toggleSidebar: handleToggleSidebar });
 
-  // Unviewed validations count
-  const { count: unviewedValidationsCount } = useUnviewedValidations(currentProject);
-
   // Trash operations
   const {
     activeTrashId,
@@ -275,7 +271,6 @@ export function Sidebar() {
     handleOpenFolder,
     cyclePrevProject,
     cycleNextProject,
-    unviewedValidationsCount,
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating: isCurrentProjectGeneratingSpec,

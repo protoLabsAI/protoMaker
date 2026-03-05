@@ -42,7 +42,13 @@ const DEFAULT_STATE: ListViewPersistedState = {
  * Validates and returns a valid ViewMode, defaulting to 'kanban' if invalid
  */
 function validateViewMode(value: unknown): ViewMode {
-  if (value === 'kanban' || value === 'list' || value === 'context' || value === 'memory') {
+  if (
+    value === 'kanban' ||
+    value === 'list' ||
+    value === 'prs' ||
+    value === 'context' ||
+    value === 'memory'
+  ) {
     return value;
   }
   return 'kanban';
@@ -167,7 +173,7 @@ export function useListViewState(): UseListViewStateReturn {
   // Cycle through view modes: kanban → list → context → memory → kanban
   const toggleViewMode = useCallback(() => {
     setViewModeState((prev) => {
-      const cycle: ViewMode[] = ['kanban', 'list', 'context', 'memory'];
+      const cycle: ViewMode[] = ['kanban', 'list', 'prs', 'context', 'memory'];
       const idx = cycle.indexOf(prev);
       return cycle[(idx + 1) % cycle.length];
     });
