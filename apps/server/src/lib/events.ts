@@ -80,20 +80,6 @@ export function createEventEmitter(): EventEmitter {
       });
     },
 
-    on<T extends EventType>(type: T, callback: TypedEventCallback<T>) {
-      const wrapper: EventCallback = (eventType, payload) => {
-        if (eventType === type) {
-          callback(payload as Parameters<TypedEventCallback<T>>[0]);
-        }
-      };
-      subscribers.add(wrapper);
-      return {
-        unsubscribe: () => {
-          subscribers.delete(wrapper);
-        },
-      };
-    },
-
     broadcast(type: EventType, payload?: unknown) {
       // In single-instance mode, broadcast === emit.
       // In hivemind mode, this will also publish to the mesh.
