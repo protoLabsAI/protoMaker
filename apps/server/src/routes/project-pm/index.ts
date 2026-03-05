@@ -108,7 +108,11 @@ export function createProjectPmRoutes(
    */
   router.post('/chat', async (req: Request, res: Response) => {
     try {
-      const { projectPath, projectSlug, messages: rawMessages } = req.body as {
+      const {
+        projectPath,
+        projectSlug,
+        messages: rawMessages,
+      } = req.body as {
         projectPath: string;
         projectSlug: string;
         messages: UIMessage[];
@@ -294,8 +298,7 @@ export function createProjectPmRoutes(
         }),
 
         notify_operator: makeTool({
-          description:
-            'Send a notification to the operator about an important project event.',
+          description: 'Send a notification to the operator about an important project event.',
           inputSchema: z.object({
             message: z.string().describe('The notification message'),
             severity: z
