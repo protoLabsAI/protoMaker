@@ -573,6 +573,7 @@ export interface EventPayloadMap {
   };
 
   // Auto-mode events
+  'auto-mode:event': { type: string; projectPath?: string; data?: Record<string, unknown> };
   'auto-mode:started': { projectPath?: string };
   'auto-mode:stopped': { projectPath?: string; reason?: string };
   'auto-mode:idle': { projectPath?: string };

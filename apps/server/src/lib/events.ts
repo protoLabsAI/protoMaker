@@ -6,7 +6,13 @@
  * (NATS, Redis) can be swapped in for hivemind distribution.
  */
 
-import type { EventType, EventCallback, EventBus, EventSubscription } from '@protolabsai/types';
+import type {
+  EventType,
+  EventCallback,
+  EventBus,
+  EventSubscription,
+  EventPayload,
+} from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('Events');
@@ -21,10 +27,18 @@ export type UnsubscribeFn = (() => void) & EventSubscription;
 export interface EventEmitter extends EventBus {
   emit: (type: EventType, payload: unknown) => void;
   subscribe: (callback: EventCallback) => UnsubscribeFn;
+  on: <T extends EventType>(type: T, handler: (payload: EventPayload<T>) => void) => UnsubscribeFn;
 }
 
 export function createEventEmitter(): EventEmitter {
   const subscribers = new Set<EventCallback>();
+  const typedHandlers = new Map<EventType, Set<(payload: unknown) => void>>();
+
+  function makeUnsub(fn: () => void): UnsubscribeFn {
+    const unsub = fn as UnsubscribeFn;
+    unsub.unsubscribe = fn;
+    return unsub;
+  }
 
   const bus: EventEmitter = {
     emit(type: EventType, payload: unknown) {
@@ -35,18 +49,34 @@ export function createEventEmitter(): EventEmitter {
           logger.error('Error in event subscriber:', error);
         }
       }
+      const handlers = typedHandlers.get(type);
+      if (handlers) {
+        for (const handler of handlers) {
+          try {
+            handler(payload);
+          } catch (error) {
+            logger.error('Error in typed event handler:', error);
+          }
+        }
+      }
     },
 
     subscribe(callback: EventCallback) {
       subscribers.add(callback);
-      // Return cleanup function (legacy pattern, still works)
-      const unsub = () => {
+      return makeUnsub(() => {
         subscribers.delete(callback);
-      };
-      // Attach EventSubscription interface for new consumers
-      const unsubWithMethod = unsub as UnsubscribeFn;
-      unsubWithMethod.unsubscribe = unsub;
-      return unsubWithMethod;
+      });
+    },
+
+    on<T extends EventType>(type: T, handler: (payload: EventPayload<T>) => void): UnsubscribeFn {
+      if (!typedHandlers.has(type)) {
+        typedHandlers.set(type, new Set());
+      }
+      const typed = handler as (payload: unknown) => void;
+      typedHandlers.get(type)!.add(typed);
+      return makeUnsub(() => {
+        typedHandlers.get(type)?.delete(typed);
+      });
     },
 
     broadcast(type: EventType, payload?: unknown) {
