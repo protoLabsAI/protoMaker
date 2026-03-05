@@ -16,11 +16,7 @@ import type { CeremonyPhase, CeremonyState, CeremonyTransition } from '@protolab
  * indicates no remaining milestones ({ remainingMilestones: 0 }), otherwise
  * it moves back to milestone_active for the next milestone.
  */
-export function transition(
-  state: CeremonyState,
-  event: string,
-  payload: unknown,
-): CeremonyState {
+export function transition(state: CeremonyState, event: string, payload: unknown): CeremonyState {
   const { phase } = state;
   let nextPhase: CeremonyPhase | null = null;
 
