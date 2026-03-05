@@ -5,6 +5,7 @@ import { Button } from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
 import { getProjectStatusVariant } from '../lib/status-variants';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
+import { useProjectFeatures } from '../hooks/use-project-features';
 import type { Project, ProjectHealth } from '@protolabsai/types';
 
 interface ProjectHeaderProps {
@@ -27,6 +28,11 @@ export function ProjectHeader({
   pmChatOpen,
 }: ProjectHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { data: featuresData } = useProjectFeatures(project.slug);
+
+  const features = (featuresData?.data?.features ?? []) as Array<{ status?: string }>;
+  const totalFeatures = features.length;
+  const doneFeatures = features.filter((f) => f.status === 'done').length;
 
   return (
     <div className="shrink-0 px-6 py-4 border-b border-border/40">
@@ -57,6 +63,11 @@ export function ProjectHeader({
             >
               {project.status}
             </Badge>
+            {totalFeatures > 0 && (
+              <span className="text-xs text-muted-foreground shrink-0">
+                {doneFeatures} / {totalFeatures} done
+              </span>
+            )}
             {project.health && <HealthIndicator health={project.health as ProjectHealth} />}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">{project.slug}</p>
