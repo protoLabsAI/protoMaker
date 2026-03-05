@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Trash2, PanelLeft } from 'lucide-react';
 import { Badge } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
@@ -11,9 +11,17 @@ interface ProjectHeaderProps {
   project: Project;
   onBack: () => void;
   onDelete?: () => void;
+  onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
 }
 
-export function ProjectHeader({ project, onBack, onDelete }: ProjectHeaderProps) {
+export function ProjectHeader({
+  project,
+  onBack,
+  onDelete,
+  onToggleSidebar,
+  sidebarOpen,
+}: ProjectHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   return (
@@ -22,6 +30,17 @@ export function ProjectHeader({ project, onBack, onDelete }: ProjectHeaderProps)
         <Button size="sm" variant="ghost" onClick={onBack}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
+        {onToggleSidebar && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onToggleSidebar}
+            className={`md:hidden ${sidebarOpen ? 'text-foreground' : 'text-muted-foreground'}`}
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-foreground tracking-tight truncate">
