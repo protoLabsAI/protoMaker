@@ -105,13 +105,6 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     return (lastMsg.parts ?? []).filter((p) => p.type === 'step-start').length;
   }, [messages, isStreaming]);
 
-  // Estimate token count from conversation messages (chars / 4 approximation)
-  const estimatedTokens = useMemo(() => {
-    if (messages.length === 0) return 0;
-    const chars = JSON.stringify(messages).length;
-    return Math.ceil(chars / 4);
-  }, [messages]);
-
   // onSubmit receives the trimmed text from ChatInput (via PromptInputProvider).
   // ChatInput clears the input immediately after calling this.
   const handleSubmit = useCallback(
