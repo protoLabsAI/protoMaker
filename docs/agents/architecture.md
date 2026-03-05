@@ -46,7 +46,9 @@ protoLabs's agent system is built on three key concepts from Claude's agent ecos
 ┌──────────────────────▼──────────────────────────────────────┐
 │  Service Layer                                              │
 │  - AgentService (interactive chat agents)                  │
-│  - AutoModeService (feature execution agents)              │
+│  - LeadEngineerService (feature lifecycle state machine)   │
+│  - FeatureScheduler (scheduling loop, dep resolution)      │
+│  - AutoModeService (orchestration, worktree management)    │
 │  - AuthorityService + Authority Agents (PM, ProjM, EM)     │
 └──────────────────────┬──────────────────────────────────────┘
                        │
@@ -99,13 +101,15 @@ User → UI/CLI → AgentService.sendMessage()
 #### 2. Feature Execution Agents (Auto-Mode)
 
 ```
-Feature (backlog) → AutoModeService.executeFeature()
-  → Create worktree for isolation
-  → Load context files (.automaker/context/, CLAUDE.md)
-  → ProviderFactory → ClaudeProvider → SDK query()
-  → Stream progress events via WebSocket
-  → Create PR when complete
-  → Move feature to "review" status
+Feature (backlog) → FeatureScheduler.runLoop()
+  → PipelineRunner.run() → LeadEngineerService.process()
+  → State machine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE
+  → EXECUTE phase:
+    → Create worktree for isolation
+    → Load context files (.automaker/context/, CLAUDE.md)
+    → ProviderFactory → ClaudeProvider → SDK query()
+    → Stream progress events via WebSocket
+    → Create PR when complete → REVIEW phase
 ```
 
 #### 3. Authority Agents (Autonomous Team)
@@ -130,14 +134,14 @@ Event (idea-injected) → PMAgent listens
 **Context:** Conversation history, user messages, optional images
 **Tools:** Full tool suite (Read, Write, Edit, Glob, Grep, Bash, WebSearch, WebFetch, Task, Skill)
 
-### 2. Feature Execution Agents (AutoModeService)
+### 2. Feature Execution Agents (Lead Engineer Pipeline)
 
-**Purpose:** Autonomous implementation of board features
-**Location:** `apps/server/src/services/auto-mode-service.ts`
-**Trigger:** Auto-mode loop, MCP `start_agent` tool, UI "Start Agent" button
+**Purpose:** Autonomous implementation of board features through a state machine
+**Location:** `apps/server/src/services/lead-engineer-service.ts` (state machine), `apps/server/src/services/feature-scheduler.ts` (scheduling), `apps/server/src/services/auto-mode-service.ts` (orchestration)
+**Trigger:** Auto-mode loop (via `FeatureScheduler`), MCP `start_agent` tool, UI "Start Agent" button
 **Context:** Feature description, dependencies, context files, CLAUDE.md, project memory
 **Tools:** Same as interactive agents, but with worktree isolation
-**Special:** Session resume on failure, cost tracking per feature, PR creation on success
+**Special:** State machine lifecycle (INTAKE through DONE), model auto-escalation, session resume on failure, cost tracking per feature, PR creation on success
 
 ### 3. Authority Agents (Autonomous Team)
 
@@ -203,11 +207,11 @@ const contextResult = await loadContextFiles({
 
 ### Context Injection Points
 
-| Agent Type        | Context Sources                                      | Injection Point                                    |
-| ----------------- | ---------------------------------------------------- | -------------------------------------------------- |
-| Interactive       | Conversation history, context files, memory          | `AgentService.sendMessage()` before SDK call       |
-| Feature Execution | Feature data, context files, memory, CLAUDE.md       | `AutoModeService.executeFeature()` before SDK call |
-| Authority Agents  | Codebase patterns, authority policies, project goals | PM/ProjM/EM prompts in `authority-agents/*.ts`     |
+| Agent Type        | Context Sources                                      | Injection Point                                     |
+| ----------------- | ---------------------------------------------------- | --------------------------------------------------- |
+| Interactive       | Conversation history, context files, memory          | `AgentService.sendMessage()` before SDK call        |
+| Feature Execution | Feature data, context files, memory, CLAUDE.md       | `LeadEngineerService` EXECUTE phase before SDK call |
+| Authority Agents  | Codebase patterns, authority policies, project goals | PM/ProjM/EM prompts in `authority-agents/*.ts`      |
 
 ## Related Documentation
 

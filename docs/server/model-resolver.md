@@ -66,16 +66,18 @@ const agentTemplate: AgentTemplate = {
 
 ```typescript
 import { resolveModelString } from '@protolabsai/model-resolver';
-import type { ExecuteOptions } from '@protolabsai/types';
 
-const executeOptions: ExecuteOptions = {
-  featureId: 'feature-123',
-  model: resolveModelString('opus'), // Use opus for complex task
-  branchName: 'feature/my-feature',
+// Model resolution happens inside the Lead Engineer INTAKE phase.
+// When creating a feature, specify the alias — the pipeline resolves it:
+mcp__protolabs__create_feature({
+  projectPath: '/path/to/project',
+  title: 'Core Infrastructure',
+  model: 'opus', // Resolved to claude-opus-4-6 at INTAKE
   complexity: 'architectural',
-};
+});
 
-await executeFeature(executeOptions);
+// Or resolve manually for direct SDK calls:
+const model = resolveModelString('opus'); // → 'claude-opus-4-6'
 ```
 
 ### In MCP Tools
@@ -242,30 +244,14 @@ const model = getModelForComplexity('architectural'); // → 'claude-opus-4-6'
 
 ## Auto-Escalation
 
-When a feature fails multiple times, protoLabs Studio auto-escalates to a more capable model:
+When a feature fails multiple times, the Lead Engineer state machine auto-escalates to a more capable model:
 
-```typescript
-async function executeWithEscalation(feature: Feature) {
-  let currentModel = resolveModelString(feature.model || 'sonnet');
-  let failureCount = 0;
+1. Feature fails at current tier (e.g., Sonnet)
+2. `LeadEngineerService` increments `failureCount` and transitions to ESCALATE
+3. On retry, the INTAKE phase checks `failureCount >= 2` and selects Opus
+4. If Opus also fails, the feature stays in ESCALATE for human intervention
 
-  while (failureCount < 3) {
-    try {
-      return await executeFeature({ ...feature, model: currentModel });
-    } catch (error) {
-      failureCount++;
-
-      if (failureCount >= 2) {
-        // Escalate to opus after 2 failures
-        currentModel = resolveModelString('opus');
-        logger.warn('Escalating to opus after failures', { featureId: feature.id });
-      }
-    }
-  }
-
-  throw new Error('Feature failed after escalation');
-}
-```
+This is handled automatically by the pipeline — no manual escalation code needed. The `FeatureScheduler` tracks failures via `DispatchResult` outcomes and the circuit breaker pauses after 3 consecutive failures.
 
 ## Version Pinning
 
@@ -346,18 +332,16 @@ describe('resolveModelString', () => {
 
 ```typescript
 import { resolveModelString } from '@protolabsai/model-resolver';
-import { executeFeature } from './agent-service.js';
 
-describe('Model resolution in agent execution', () => {
-  it('uses resolved model', async () => {
-    const feature = {
-      id: 'feature-123',
-      model: 'haiku', // Alias
-    };
+describe('Model resolution in feature pipeline', () => {
+  it('resolves alias to full model string', () => {
+    expect(resolveModelString('haiku')).toBe('claude-haiku-4-5-20251001');
+    expect(resolveModelString('sonnet')).toBe('claude-sonnet-4-6');
+    expect(resolveModelString('opus')).toBe('claude-opus-4-6');
+  });
 
-    const result = await executeFeature(feature);
-
-    expect(result.modelUsed).toBe('claude-haiku-4-5-20251001');
+  it('returns default for undefined', () => {
+    expect(resolveModelString(undefined)).toBe('claude-sonnet-4-6');
   });
 });
 ```

@@ -170,14 +170,13 @@ this.events.on('prd:approved', async (data) => {
 **Example:** Feature Agents implementing multiple features
 
 ```typescript
-// Auto-mode starts multiple feature agents
-const readyFeatures = await this.loadPendingFeatures(projectPath);
-for (const feature of readyFeatures.slice(0, maxConcurrency)) {
-  this.executeFeature(projectPath, feature.id); // Fire and forget
-}
-
-// Each agent runs in isolated worktree
-// Progress tracked via WebSocket events
+// FeatureScheduler.runLoop() handles parallel execution:
+// 1. loadPendingFeatures() resolves dependencies, filters ready work
+// 2. For each ready feature (up to maxConcurrency):
+//    PipelineRunner.run(projectPath, feature.id)
+//      → LeadEngineerService.process() (state machine lifecycle)
+// 3. Each agent runs in isolated worktree
+// 4. Progress tracked via WebSocket events
 ```
 
 ### 3. Review & Feedback Loop

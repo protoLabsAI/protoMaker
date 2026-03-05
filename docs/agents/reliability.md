@@ -81,12 +81,13 @@ Haiku → Sonnet → Opus → ESCALATE (human)
 
 ### How it works
 
-`AutoModeService` tracks retry count per feature. On the 3rd failure:
+The Lead Engineer state machine tracks `failureCount` per feature. On the 2nd+ failure:
 
-1. Current model tier is noted
-2. Next tier is selected (Haiku → Sonnet, Sonnet → Opus)
+1. Feature enters ESCALATE state, `FailureClassifierService` categorizes the error
+2. INTAKE phase on retry selects the next model tier (Haiku → Sonnet, Sonnet → Opus)
 3. Feature retries with the higher-capability model
-4. If Opus also fails → ESCALATE state, human intervention required
+4. If Opus also fails → stays in ESCALATE, human intervention required
+5. `FeatureScheduler` circuit breaker pauses auto-mode after 3 consecutive failures
 
 This captures the human pattern: "This is harder than I thought, let me think more carefully."
 

@@ -157,7 +157,7 @@ When a git workflow step (commit, push, PR creation) fails, the error is persist
 
 ## Status Change Events
 
-`AutoModeService.updateFeatureStatus()` emits events on every status transition:
+Status transitions emit typed events (via pipeline processors and `FeatureLoader.update()`):
 
 | Event                    | When                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
@@ -189,11 +189,9 @@ To configure the webhook in GitHub:
 4. Secret: value from `credentials.json > webhookSecrets.github`
 5. Events: **Pull requests** + **Pull request reviews**
 
-### Layer 3 — Periodic Drift Scan (catch-all)
+### Layer 3 — Lead Engineer Fast-Path Rules (catch-all)
 
-`GitHubStateChecker` runs every 5 minutes and scans all `review`, `in_progress`, and `blocked` features. For each, it finds the associated PR via `gh pr list` and emits a `pr-merged-status-stale` drift event if the PR is already merged. `ReconciliationService` handles that drift by calling `featureLoader.update(..., { status: 'done' })`.
-
-The drift check also detects and emits events for: CI failures, changes requested, approved-but-not-merged, and stale PRs (>7 days inactive).
+The Lead Engineer's fast-path rules evaluate on every event and catch drift that webhooks miss. The `pr-merged-drift` rule detects features stuck in `review` or `blocked` whose PRs have already merged and transitions them to `done`. Additional rules detect CI failures, stale PRs, and unresolved review threads.
 
 ### Maximum Drift Window
 

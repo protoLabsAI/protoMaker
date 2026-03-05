@@ -169,15 +169,15 @@ After creation, project files are organized as:
 
 ## Key files
 
-| File                                                             | Purpose                                    |
-| ---------------------------------------------------------------- | ------------------------------------------ |
-| `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle        |
-| `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator      |
-| `apps/server/src/services/lead-engineer-rules.ts`                | 8 fast-path rules (pure functions, no LLM) |
-| `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                             |
-| `packages/mcp-server/plugins/automaker/commands/plan-project.md` | Skill file                                 |
-| `libs/types/src/project.ts`                                      | `ProjectLifecyclePhase` type               |
-| `libs/types/src/lead-engineer.ts`                                | `LeadWorldState`, session types            |
+| File                                                             | Purpose                                     |
+| ---------------------------------------------------------------- | ------------------------------------------- |
+| `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle         |
+| `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator       |
+| `apps/server/src/services/lead-engineer-rules.ts`                | 14 fast-path rules (pure functions, no LLM) |
+| `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                              |
+| `packages/mcp-server/plugins/automaker/commands/plan-project.md` | Skill file                                  |
+| `libs/types/src/project.ts`                                      | `ProjectLifecyclePhase` type                |
+| `libs/types/src/lead-engineer.ts`                                | `LeadWorldState`, session types             |
 
 ## Related documentation
 

@@ -298,11 +298,18 @@ import { getFeatureDir } from '@protolabsai/platform';
 
 const logger = createLogger('FeatureExecutor');
 
-async function executeFeature(feature: Feature, allFeatures: Feature[], projectPath: string) {
+// Note: In production, feature execution is handled by the Lead Engineer
+// state machine (leadEngineerService.process()). This example shows how
+// shared packages compose for lower-level operations.
+async function checkFeatureReadiness(
+  feature: Feature,
+  allFeatures: Feature[],
+  projectPath: string
+) {
   // Check dependencies
   if (!areDependenciesSatisfied(feature, allFeatures)) {
     logger.warn(`Dependencies not satisfied for ${feature.id}`);
-    return;
+    return false;
   }
 
   // Resolve model
