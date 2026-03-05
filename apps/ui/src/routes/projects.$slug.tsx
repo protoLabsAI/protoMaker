@@ -5,12 +5,7 @@ function ProjectDetailRoute() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
 
-  return (
-    <ProjectDetail
-      projectSlug={slug}
-      onBack={() => navigate({ to: '/projects' })}
-    />
-  );
+  return <ProjectDetail projectSlug={slug} onBack={() => navigate({ to: '/projects' })} />;
 }
 
 export const Route = createFileRoute('/projects/$slug')({
