@@ -1,7 +1,7 @@
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { getMilestoneStatusVariant } from '../lib/status-variants';
-import type { Project } from '@protolabs-ai/types';
+import type { Project } from '@protolabsai/types';
 
 export function MilestonesTab({ project }: { project: Project }) {
   if (!project.milestones || project.milestones.length === 0) {

@@ -11,7 +11,7 @@ import { X, Bot, Zap, AlertTriangle, Activity, Settings } from 'lucide-react';
 import { getElectronAPI } from '@/lib/electron';
 import { queryKeys } from '@/lib/query-keys';
 import { useGlobalSettings } from '@/hooks/queries/use-settings';
-import { DEFAULT_MAX_CONCURRENCY } from '@protolabs-ai/types';
+import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 
 interface AutoModeWorktreeEntry {

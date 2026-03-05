@@ -311,7 +311,7 @@ The preview decorator applies theme classes to the document root. All theme CSS 
 
 ## Extracted UI package
 
-UI primitives are extracted to `@protolabs-ai/ui` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.) and 6+ molecule components (confirm-dialog, autocomplete, markdown, etc.).
+UI primitives are extracted to `@protolabsai/ui` at `libs/ui/`. The package uses an atoms/molecules/organisms structure with 26+ atom components (button, card, dialog, badge, etc.) and 6+ molecule components (confirm-dialog, autocomplete, markdown, etc.).
 
 ### Package structure
 
@@ -326,12 +326,12 @@ libs/ui/
     themes/          # CSS theme files (base, studio-dark, nord, etc.)
     index.ts         # Barrel export
   .storybook/        # Storybook configuration
-  package.json       # @protolabs-ai/ui
+  package.json       # @protolabsai/ui
   tsconfig.json
   README.md          # Installation and usage guide
 ```
 
-`apps/ui/` depends on `@protolabs-ai/ui` via workspace linking. This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
+`apps/ui/` depends on `@protolabsai/ui` via workspace linking. This enables sharing UI components across future apps (docs site, template repos, setupLab offerings).
 
 ### Documentation and usage
 
@@ -348,15 +348,15 @@ The package includes comprehensive documentation in `libs/ui/README.md` covering
 
 ```tsx
 // Install
-npm install @protolabs-ai/ui
+npm install @protolabsai/ui
 
 // Import theme CSS
-import '@protolabs-ai/ui/themes.css';
+import '@protolabsai/ui/themes.css';
 
 // Use components
-import { Button, Card, Dialog } from '@protolabs-ai/ui';
-import { ConfirmDialog, Autocomplete } from '@protolabs-ai/ui/molecules';
-import { cn } from '@protolabs-ai/ui/lib';
+import { Button, Card, Dialog } from '@protolabsai/ui';
+import { ConfirmDialog, Autocomplete } from '@protolabsai/ui/molecules';
+import { cn } from '@protolabsai/ui/lib';
 ```
 
 See `libs/ui/README.md` for complete documentation.
@@ -433,7 +433,7 @@ Lucide React is the standard icon library. It provides tree-shakeable, consisten
 ### Build pipeline
 
 ```
-npm run build:packages   →  Build shared libs (@protolabs-ai/types, etc.)
+npm run build:packages   →  Build shared libs (@protolabsai/types, etc.)
 npm run build            →  Vite builds apps/ui/ for web
 npm run build:electron   →  Vite build + electron-builder for desktop
 ```
@@ -448,7 +448,7 @@ Current gaps between philosophy and implementation. These are tracked as future 
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | -------- |
 | Monolithic terminal  | `terminal-panel.tsx` decomposed: `TerminalToolbar`, `TerminalSettingsPopover`, and `TerminalContextMenu` (keyboard shortcut map) extracted; barrel at `terminal-view/index.ts`; panel now ~1,718 lines | Further decomposition toward sub-800-line target remains (WebSocket, xterm init hooks) | Low      |
 | Storybook coverage   | 27 stories in `libs/ui/` (25 atoms + 2 ai); 5 legacy stories in `apps/ui/`                                                                                                                             | Stories for all UI primitives, interaction tests, Chromatic CI                         | High     |
-| UI package gaps      | 25 atoms extracted to `@protolabs-ai/ui`; molecules/organisms pending                                                                                                                                  | Full extraction of all primitives to `libs/ui/`                                        | Medium   |
+| UI package gaps      | 25 atoms extracted to `@protolabsai/ui`; molecules/organisms pending                                                                                                                                   | Full extraction of all primitives to `libs/ui/`                                        | Medium   |
 | Static theme files   | 8 hand-written CSS files in `libs/ui/src/themes/`                                                                                                                                                      | Generate from TypeScript config                                                        | Medium   |
 | Minimal a11y         | Relies on Radix defaults, no linting or testing                                                                                                                                                        | `eslint-plugin-jsx-a11y`, Storybook `addon-a11y`, skip-to-content link                 | Medium   |
 | Loose files          | 5 components at `src/components/` root level                                                                                                                                                           | Move to `shared/` or `layout/`                                                         | Low      |

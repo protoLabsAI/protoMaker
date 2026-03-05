@@ -6,14 +6,14 @@
  */
 
 import type { EventEmitter } from '../../lib/events.js';
-import type { Feature, BacklogPlanResult } from '@protolabs-ai/types';
+import type { Feature, BacklogPlanResult } from '@protolabsai/types';
 import {
   DEFAULT_PHASE_MODELS,
   isCursorModel,
   stripProviderPrefix,
   type ThinkingLevel,
-} from '@protolabs-ai/types';
-import { resolvePhaseModel } from '@protolabs-ai/model-resolver';
+} from '@protolabsai/types';
+import { resolvePhaseModel } from '@protolabsai/model-resolver';
 import { FeatureLoader } from '../../services/feature-loader.js';
 import { ProviderFactory } from '../../providers/provider-factory.js';
 import { extractJsonWithArray } from '../../lib/json-extractor.js';
@@ -124,10 +124,8 @@ export async function generateBacklogPlan(
     // Get the model to use from settings or provided override with provider info
     let effectiveModel = model;
     let thinkingLevel: ThinkingLevel | undefined;
-    let claudeCompatibleProvider:
-      | import('@protolabs-ai/types').ClaudeCompatibleProvider
-      | undefined;
-    let credentials: import('@protolabs-ai/types').Credentials | undefined;
+    let claudeCompatibleProvider: import('@protolabsai/types').ClaudeCompatibleProvider | undefined;
+    let credentials: import('@protolabsai/types').Credentials | undefined;
 
     if (effectiveModel) {
       // Use explicit override - just get credentials

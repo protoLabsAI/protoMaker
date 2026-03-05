@@ -209,7 +209,7 @@ usageStats:
 
 #### [Gotcha] Switched from Playwright test runner to simple Node.js verification script due to module import errors in test environment (2026-02-13)
 
-- **Situation:** Initial approach used Playwright as specified in docs, but faced module resolution issues with @protolabs-ai/types and @protolabs-ai/utils imports.
+- **Situation:** Initial approach used Playwright as specified in docs, but faced module resolution issues with @protolabsai/types and @protolabsai/utils imports.
 - **Root cause:** Playwright is designed for E2E browser testing. For pure TypeScript library validation, Node.js runtime is simpler and has correct module resolution via tsconfig. Avoids webpack/bundler complexity.
 - **How to avoid:** Lost browser automation capability (not needed here) but gained faster test execution and simpler debugging. Pure logic doesn't benefit from Playwright.
 
@@ -635,13 +635,13 @@ usageStats:
 
 #### [Gotcha] Node.js ESM import test from browser app context requires explicit path verification and absolute imports due to CWD unpredictability in worktrees (2026-02-18)
 
-- **Situation:** Test command 'import from @protolabs-ai/ui/themes' executed from apps/ui directory, but actual resolution depends on package.json exports and workspace symlinks being correct
+- **Situation:** Test command 'import from @protolabsai/ui/themes' executed from apps/ui directory, but actual resolution depends on package.json exports and workspace symlinks being correct
 - **Root cause:** Package resolution in monorepos relies on workspace symlinks + exports field, not relative paths; CWD shifts in worktrees can cause relative path lookups to fail; Node.js import() resolves package names globally first
 - **How to avoid:** Using package name requires correct workspace setup and build artifacts in place; moving code between projects just works; adding new exports requires coordinated changes to tsup + package.json
 
 #### [Gotcha] Storybook major version upgrades (8.x→10.x) introduce breaking changes in internal APIs (internal/theming, internal/preview-api) that aren't caught at build time. The tsup build succeeds, but Storybook dev server fails at runtime when importing addon code. (2026-02-18)
 
-- **Situation:** Build succeeded (`npm run build -w @protolabs-ai/ui` passed), but `npm run storybook -w @protolabs-ai/ui` failed with internal module errors. This suggests internal APIs aren't part of the public type definitions, making breakage invisible until runtime.
+- **Situation:** Build succeeded (`npm run build -w @protolabsai/ui` passed), but `npm run storybook -w @protolabsai/ui` failed with internal module errors. This suggests internal APIs aren't part of the public type definitions, making breakage invisible until runtime.
 - **Root cause:** Storybook maintains internal APIs without semantic versioning guarantees. Addons depend on these internals, making major upgrades fragile. The pattern of exposing internals in package exports (e.g., '@storybook/blocks/internal/theming') creates a hidden API surface.
 - **How to avoid:** Testing Storybook locally requires running the dev server, which only fails at runtime. CI that only runs builds won't catch these errors. Adding a Storybook build step (`build-storybook`) to CI would catch errors, but slows CI and adds false positives when Storybook config is unrelated to the change.
 
@@ -843,7 +843,7 @@ usageStats:
 - **Trade-offs:** Doesn't catch behavioral bugs (only structural rendering); enables rapid iteration feedback at cost of coverage depth
 - **Breaking if changed:** If scope expands to interactions, test time increases and CI becomes slower; if timeout is removed, hanging components won't be caught quickly
 
-#### [Gotcha] Pre-existing build error in @protolabs-ai/platform (p-limit import) prevented full server build, but feature code verified independently using `node -c` syntax checking showed no errors. (2026-02-22)
+#### [Gotcha] Pre-existing build error in @protolabsai/platform (p-limit import) prevented full server build, but feature code verified independently using `node -c` syntax checking showed no errors. (2026-02-22)
 
 - **Situation:** Feature implementation complete but unable to run `npm run build:server` to verify integration due to unrelated package error.
 - **Root cause:** Isolated syntax verification (node -c) can validate code independently of build system. Prevents false negative where feature appears broken when only build infrastructure has issues.
@@ -889,7 +889,7 @@ usageStats:
 
 #### [Gotcha] Pre-existing build errors in unrelated packages completely block verification of correct implementation code. Solution: isolate verification by building individual packages, running type checks on dist outputs, creating tests for future execution. (2026-02-23)
 
-- **Situation:** p-limit import error in @protolabs-ai/platform prevented npm run build:server from running, even though AnalyticsService implementation was syntactically correct and logically sound.
+- **Situation:** p-limit import error in @protolabsai/platform prevented npm run build:server from running, even though AnalyticsService implementation was syntactically correct and logically sound.
 - **Root cause:** Build systems are monolithic - one error propagates to all dependents. Proves that implementation correctness is orthogonal to build success. Verification must be decoupled from infrastructure blockers.
 - **How to avoid:** Partial verification (individual packages, type tests) is less complete than e2e testing, but proves logic independently and unblocks handoff decision-making while infrastructure is fixed.
 
@@ -925,7 +925,7 @@ usageStats:
 
 ### Verification through comprehensive unit tests rather than full build validation when worktree environment has dependency resolution issues. (2026-02-24)
 
-- **Context:** The fix couldn't be verified via `npm run build:server` due to pre-existing TypeScript module resolution issues with `@protolabs-ai/*` packages in the worktree, but logic correctness was proven through 7 test cases covering all eligibility scenarios.
+- **Context:** The fix couldn't be verified via `npm run build:server` due to pre-existing TypeScript module resolution issues with `@protolabsai/*` packages in the worktree, but logic correctness was proven through 7 test cases covering all eligibility scenarios.
 - **Why:** Eligibility logic is stateless and deterministic - it can be verified independently of the build environment. Unit tests on pure functions provide stronger confidence for logic correctness than environment-dependent builds would.
 - **Rejected:** Waiting for or attempting to fix the worktree build environment, or assuming the code is correct without explicit test coverage.
 - **Trade-offs:** Unit test verification is faster and more reliable for logic changes but doesn't catch integration issues or type-system problems. The worktree's build issues masked a potential type safety problem.
@@ -1051,10 +1051,10 @@ usageStats:
 - **Why this works:** Events are fired synchronously but handlers may run async (e.g., awaiting mocked db calls, event propagation). Without delays, assertions run before handlers complete, causing false failures.
 - **Trade-offs:** Delays make tests slower but reliable. Missing delays cause flaky tests. Suggests service is inherently async/event-driven, not synchronous.
 
-#### [Pattern] Unit tests pass despite pre-existing TypeScript build errors in transitive dependencies (@protolabs-ai/platform). Test isolation via comprehensive mocking prevents build-time failures from blocking test-time verification. (2026-02-25)
+#### [Pattern] Unit tests pass despite pre-existing TypeScript build errors in transitive dependencies (@protolabsai/platform). Test isolation via comprehensive mocking prevents build-time failures from blocking test-time verification. (2026-02-25)
 
 - **Problem solved:** secure-fs.ts has p-limit type error; test files compile and run successfully.
-- **Why this works:** Tests mock external dependencies (db, event emitter, services). They don't import the broken @protolabs-ai/platform code at runtime, only the service code being tested. Build-time type checking and runtime test execution are decoupled.
+- **Why this works:** Tests mock external dependencies (db, event emitter, services). They don't import the broken @protolabsai/platform code at runtime, only the service code being tested. Build-time type checking and runtime test execution are decoupled.
 - **Trade-offs:** Tests prove the service code is correct but don't catch errors in dependencies. Build will still fail. Good for iteration; bad for shipping without a passing build.
 
 #### [Gotcha] Mock return types must include ALL interface fields, not just primary data. readJsonWithRecovery mocks initially returned {data: T} but actual signature requires {data: T, recovered: boolean, source: string}. TypeScript compiled with partial mocks but tests failed at runtime when code accessed .recovered or .source. (2026-02-25)

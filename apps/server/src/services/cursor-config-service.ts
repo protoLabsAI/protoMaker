@@ -11,17 +11,17 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   CursorCliConfigFile,
   CursorCliPermissions,
   CursorPermissionProfile,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   CURSOR_STRICT_PROFILE,
   CURSOR_DEVELOPMENT_PROFILE,
   CURSOR_PERMISSION_PROFILES,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 const logger = createLogger('CursorConfigService');
 

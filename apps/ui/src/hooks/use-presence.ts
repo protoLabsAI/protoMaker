@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getServerUrlSync, getApiKey, getSessionToken } from '@/lib/http-api-client';
 

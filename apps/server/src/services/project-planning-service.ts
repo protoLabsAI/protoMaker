@@ -12,7 +12,7 @@
  *   4. Repeat until all HITL gates pass → create issues → done
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import {
   createProjectPlanningFlow,
   createLinearIssueCreator,
@@ -21,8 +21,8 @@ import {
   type HITLResponse,
   type PlanningArtifact,
   type PlanningStage,
-} from '@protolabs-ai/flows';
-import type { ConversationSurface } from '@protolabs-ai/types';
+} from '@protolabsai/flows';
+import type { ConversationSurface } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import { LinearMCPClient } from './linear-mcp-client.js';

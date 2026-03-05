@@ -2,7 +2,7 @@ import { createRootRoute, Outlet, useLocation, useNavigate } from '@tanstack/rea
 import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { Sidebar } from '@/components/layout/sidebar';
 import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { ChatModal, useChatModalShortcut } from '@/components/layout/chat-modal';
@@ -42,7 +42,7 @@ import { type ThemeOption, themeOptions } from '@/config/theme-options';
 import { SandboxRiskDialog } from '@/components/dialogs/sandbox-risk-dialog';
 import { HITLFormDialog } from '@/components/shared/hitl-form/hitl-form-dialog';
 import { SandboxRejectionScreen } from '@/components/dialogs/sandbox-rejection-screen';
-import { LoadingState } from '@protolabs-ai/ui/molecules';
+import { LoadingState } from '@protolabsai/ui/molecules';
 import { useProjectSettingsLoader } from '@/hooks/use-project-settings-loader';
 import { useBrowserNotifications } from '@/hooks/use-browser-notifications';
 import { setDemoMode } from '@/hooks/use-demo-mode';

@@ -304,7 +304,7 @@ async function safeNode(state: typeof State.State) {
 Log progress for debugging and monitoring:
 
 ```typescript
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('my-graph');
 

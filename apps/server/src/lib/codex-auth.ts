@@ -5,9 +5,9 @@
  * Never assumes authenticated - only returns true if CLI confirms.
  */
 
-import { spawnProcess } from '@protolabs-ai/platform';
-import { findCodexCliPath } from '@protolabs-ai/platform';
-import { createLogger } from '@protolabs-ai/utils';
+import { spawnProcess } from '@protolabsai/platform';
+import { findCodexCliPath } from '@protolabsai/platform';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('CodexAuth');
 

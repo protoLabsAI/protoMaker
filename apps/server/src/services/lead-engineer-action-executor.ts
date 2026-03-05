@@ -7,7 +7,7 @@
 
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   EventType,
   LeadEngineerSession,
@@ -15,7 +15,7 @@ import type {
   LeadFastPathRule,
   LeadRuleLogEntry,
   WorkflowSettings,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';

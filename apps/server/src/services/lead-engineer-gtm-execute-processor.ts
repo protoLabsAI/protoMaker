@@ -11,7 +11,7 @@
  *   4. On failure or timeout → transitions to ESCALATE
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { StateContext, StateProcessor, StateTransitionResult } from './lead-engineer-types.js';
 import { contentFlowService } from './content-flow-service.js';
 

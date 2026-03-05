@@ -37,7 +37,7 @@ import type {
   ToolExecution,
 } from '../types';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { EventType } from '@protolabs-ai/types';
+import type { EventType } from '@protolabsai/types';
 
 /** Engine status response shape from /api/engine/status */
 interface EngineStatusResponse {

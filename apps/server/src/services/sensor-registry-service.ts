@@ -14,8 +14,8 @@
  *   sensor:data-received — when a sensor reports a reading
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { SensorConfig, SensorReading, SensorState } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { SensorConfig, SensorReading, SensorState } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('SensorRegistry');

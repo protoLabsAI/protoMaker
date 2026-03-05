@@ -2,7 +2,7 @@
  * Frame renderer with flexbox layout support
  */
 
-import type { PenFrame } from '@protolabs-ai/types';
+import type { PenFrame } from '@protolabsai/types';
 import { PenNodeRenderer } from './pen-node-renderer';
 import { fillToCSS, strokeToCSS, layoutToFlexDirection } from './style-utils';
 import { usePenTheme } from './pen-theme-context';

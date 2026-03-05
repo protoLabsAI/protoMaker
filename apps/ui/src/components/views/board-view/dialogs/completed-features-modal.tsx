@@ -6,9 +6,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Card, CardHeader, CardTitle, CardDescription } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Card, CardHeader, CardTitle, CardDescription } from '@protolabsai/ui/atoms';
 import { ArchiveRestore, Trash2 } from 'lucide-react';
 import { Feature } from '@/store/types';
 

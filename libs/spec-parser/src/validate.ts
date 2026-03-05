@@ -2,7 +2,7 @@
  * Validation utilities for SpecOutput objects.
  */
 
-import type { SpecOutput } from '@protolabs-ai/types';
+import type { SpecOutput } from '@protolabsai/types';
 
 /**
  * Validation result containing errors if any.

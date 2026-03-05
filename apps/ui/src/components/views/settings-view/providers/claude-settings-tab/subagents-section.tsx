@@ -9,13 +9,13 @@
  * - Project-level: .claude/agents/
  */
 
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { Bot, RefreshCw, Users, ExternalLink, Globe, FolderOpen, Sparkles } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { useSubagents } from './hooks/use-subagents';
 import { useSubagentsSettings } from './hooks/use-subagents-settings';
 import { SubagentCard } from './subagent-card';

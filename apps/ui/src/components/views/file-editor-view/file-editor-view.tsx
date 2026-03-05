@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { FolderOpen, FileCode, Settings, GitCompareArrows } from 'lucide-react';
-import { Button, Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Button, Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { apiPost } from '@/lib/api-fetch';
 import { useFileEditorStore } from './use-file-editor-store';

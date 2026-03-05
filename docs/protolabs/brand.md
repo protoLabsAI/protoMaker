@@ -4,24 +4,24 @@ This is the living brand bible for protoLabs. All agents, content, and external 
 
 ## Names & Domains
 
-| Name                           | What It Is                          | Usage                                                                                                                                                                |
-| ------------------------------ | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **protoLabs**                  | The AI-native development agency    | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                                                                        |
-| **protoLabs.studio**           | Primary domain                      | Website, social bios, email                                                                                                                                          |
-| **protoMaker**                 | GitHub repo name (lineage only)     | The repo slug `proto-labs-ai/protoMaker` preserves lineage to the original Automaker project. Do not use as a product name in content or docs.                       |
-| **proto-labs-ai**              | GitHub organization                 | `github.com/proto-labs-ai`                                                                                                                                           |
-| **Automaker**                  | Internal codename for board engine  | Used in code (`@protolabs-ai/*` packages, `.automaker/` directory, Kanban board, auto-mode internals). NOT used in external marketing, docs, or user-facing strings. |
-| **create-protolab**            | npx CLI tool                        | Scaffolds new projects with protoLabs methodology                                                                                                                    |
-| **MythXEngine**                | AI-powered TTRPG engine             | Built with protoLabs. Portfolio proof of methodology.                                                                                                                |
-| **SVGVal**                     | SVG validation toolkit              | Built with protoLabs. Portfolio proof of methodology.                                                                                                                |
-| **rabbit-hole**                | AI-powered research platform        | Built with protoLabs. Portfolio proof of methodology.                                                                                                                |
-| **intelligent product engine** | Product category / positioning term | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full.                                                         |
+| Name                           | What It Is                          | Usage                                                                                                                                                               |
+| ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **protoLabs**                  | The AI-native development agency    | Always camelCase: "protoLabs" (not "ProtoLabs", "Protolabs", or "Proto Labs")                                                                                       |
+| **protoLabs.studio**           | Primary domain                      | Website, social bios, email                                                                                                                                         |
+| **protoMaker**                 | GitHub repo name (lineage only)     | The repo slug `protoLabsAI/protoMaker` preserves lineage to the original Automaker project. Do not use as a product name in content or docs.                        |
+| **protoLabsAI**                | GitHub organization                 | `github.com/protoLabsAI`                                                                                                                                            |
+| **Automaker**                  | Internal codename for board engine  | Used in code (`@protolabsai/*` packages, `.automaker/` directory, Kanban board, auto-mode internals). NOT used in external marketing, docs, or user-facing strings. |
+| **create-protolab**            | npx CLI tool                        | Scaffolds new projects with protoLabs methodology                                                                                                                   |
+| **MythXEngine**                | AI-powered TTRPG engine             | Built with protoLabs. Portfolio proof of methodology.                                                                                                               |
+| **SVGVal**                     | SVG validation toolkit              | Built with protoLabs. Portfolio proof of methodology.                                                                                                               |
+| **rabbit-hole**                | AI-powered research platform        | Built with protoLabs. Portfolio proof of methodology.                                                                                                               |
+| **intelligent product engine** | Product category / positioning term | Describes the autonomous system architecture. NOT an acronym — always lowercase, always spelled out in full.                                                        |
 
 ### Naming Rules
 
 - External content uses **protoLabs** or **protoLabs Studio** — never "Automaker" or "protoMaker"
 - The repo slug stays `protoMaker` on GitHub to preserve lineage — but never use it as a product name
-- Internal code keeps `@protolabs-ai/*` package names, `.automaker/` directories, and "Automaker" references for the board engine and auto-mode (intentional — renaming the codebase would break everything)
+- Internal code keeps `@protolabsai/*` package names, `.automaker/` directories, and "Automaker" references for the board engine and auto-mode (intentional — renaming the codebase would break everything)
 - When referring to the product in docs, UI, or content: "protoLabs" or "protoLabs Studio"
 - protoLabs is both the agency AND the tool. No separate product name.
 - In docs, use "protoLabs Studio" when referring to the running application (server, UI, agents) and "protoLabs" when referring to the methodology or agency.

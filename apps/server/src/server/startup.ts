@@ -2,7 +2,7 @@
 
 import { access, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createLogger, setLogLevel, LogLevel } from '@protolabs-ai/utils';
+import { createLogger, setLogLevel, LogLevel } from '@protolabsai/utils';
 
 import type { ServiceContainer } from './services.js';
 import { initOtel } from '../lib/otel.js';

@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { ScrollText, Wrench } from 'lucide-react';
 import { ArrayFieldEditor } from './array-field-editor';
 

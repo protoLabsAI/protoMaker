@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { KnowledgeStoreService } from '../../../services/knowledge-store-service.js';
 
 const logger = createLogger('KnowledgeRoutes');

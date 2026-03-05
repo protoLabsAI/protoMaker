@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AgentScoringService } from '../../../src/services/agent-scoring-service.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 // ============================================================================
 // Mock Langfuse singleton
@@ -31,8 +31,8 @@ vi.mock('../../../src/lib/langfuse-singleton.js', () => ({
 // Mock logger
 // ============================================================================
 
-vi.mock('@protolabs-ai/utils', async () => {
-  const actual = await vi.importActual('@protolabs-ai/utils');
+vi.mock('@protolabsai/utils', async () => {
+  const actual = await vi.importActual('@protolabsai/utils');
   return {
     ...actual,
     createLogger: vi.fn(() => ({

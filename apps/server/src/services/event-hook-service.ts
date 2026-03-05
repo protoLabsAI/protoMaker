@@ -23,7 +23,7 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventHistoryService } from './event-history-service.js';
@@ -36,7 +36,7 @@ import type {
   EventHookHttpAction,
   EventHookDiscordAction,
   EventSeverity,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 const execAsync = promisify(exec);
 const logger = createLogger('EventHooks');

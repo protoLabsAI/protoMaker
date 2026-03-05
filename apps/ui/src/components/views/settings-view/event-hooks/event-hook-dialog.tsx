@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -10,15 +10,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabsai/ui/atoms';
 import { Terminal, Globe } from 'lucide-react';
 import type {
   EventHook,
@@ -26,8 +26,8 @@ import type {
   EventHookHttpMethod,
   EventHookShellAction,
   EventHookHttpAction,
-} from '@protolabs-ai/types';
-import { EVENT_HOOK_TRIGGER_LABELS } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { EVENT_HOOK_TRIGGER_LABELS } from '@protolabsai/types';
 import { generateUUID } from '@/lib/utils';
 
 interface EventHookDialogProps {

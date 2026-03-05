@@ -3,7 +3,7 @@
  * Adds implementation details and technical specifications.
  */
 
-import type { EnhancementExample } from '@protolabs-ai/types';
+import type { EnhancementExample } from '@protolabsai/types';
 
 /**
  * System prompt for the "technical" enhancement mode.

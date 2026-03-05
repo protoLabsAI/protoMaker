@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@protolabs-ai/types';
+import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@protolabsai/types';
 import { getHttpApiClient } from '@/lib/http-api-client';
 
 interface NotesState {

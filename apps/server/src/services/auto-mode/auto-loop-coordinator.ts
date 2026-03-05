@@ -15,8 +15,8 @@
  * • Rolling 60-second failure-window tracking with a 3-failure threshold
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { AutoLoopState } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { AutoLoopState } from '@protolabsai/types';
 
 const logger = createLogger('AutoLoopCoordinator');
 

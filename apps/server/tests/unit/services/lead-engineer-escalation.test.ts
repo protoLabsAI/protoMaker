@@ -9,7 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@protolabs-ai/utils', () => ({
+vi.mock('@protolabsai/utils', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -24,7 +24,7 @@ import type {
   ProcessorServiceContext,
   StateContext,
 } from '../../../src/services/lead-engineer-types.js';
-import type { HITLFormRequest } from '@protolabs-ai/types';
+import type { HITLFormRequest } from '@protolabsai/types';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 

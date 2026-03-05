@@ -2,7 +2,7 @@
 
 Internal planning document for the protoLabs Studio open-source launch.
 
-**Repository:** `proto-labs-ai/protoMaker` (currently private)
+**Repository:** `protoLabsAI/protoMaker` (currently private)
 **License:** MIT (already in place)
 
 ---
@@ -80,7 +80,7 @@ contact_links:
     url: https://discord.gg/protolabs-studio
     about: Chat with the team and community
   - name: Discussions
-    url: https://github.com/proto-labs-ai/protoMaker/discussions
+    url: https://github.com/protoLabsAI/protoMaker/discussions
     about: Ideas, Q&A, and general conversation
 ```
 
@@ -184,10 +184,10 @@ New file at repository root:
 
 ```
 # Sensitive paths require core team review
-/.github/workflows/        @proto-labs-ai/core
-/.env*                     @proto-labs-ai/core
-/apps/server/src/lib/auth* @proto-labs-ai/core
-/packages/mcp-server/      @proto-labs-ai/core
+/.github/workflows/        @protoLabsAI/core
+/.env*                     @protoLabsAI/core
+/apps/server/src/lib/auth* @protoLabsAI/core
+/packages/mcp-server/      @protoLabsAI/core
 ```
 
 ---

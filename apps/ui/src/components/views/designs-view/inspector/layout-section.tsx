@@ -2,9 +2,9 @@
  * Layout section for editing layout properties
  */
 
-import type { PenFrame, PenNode } from '@protolabs-ai/types';
+import type { PenFrame, PenNode } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
-import { Input } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
 
 interface LayoutSectionProps {
   node: PenFrame;

@@ -9,12 +9,12 @@
  *   START → loadBoardState → analyzeHealth → reportToDiscord → END
  *
  * Dependencies are injected via MaintenanceFlowDeps — structural interfaces only,
- * so this flow has no hard dependencies on @protolabs-ai/tools or concrete service classes.
+ * so this flow has no hard dependencies on @protolabsai/tools or concrete service classes.
  */
 
 import { StateGraph, Annotation, END, START } from '@langchain/langgraph';
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Minimal structural interfaces (dependency injection without concrete imports)
@@ -148,7 +148,7 @@ function createReportToDiscordNode(deps: MaintenanceFlowDeps) {
  *
  * Usage (server-side):
  * ```typescript
- * import { createMaintenanceFlow } from '@protolabs-ai/flows';
+ * import { createMaintenanceFlow } from '@protolabsai/flows';
  *
  * const flow = createMaintenanceFlow({
  *   featureLoader,

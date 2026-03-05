@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { History } from 'lucide-react';
 import type { Feature } from '@/store/types';
 

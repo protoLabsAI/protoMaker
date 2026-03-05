@@ -12,7 +12,7 @@ import type {
   AutomationRunRecord,
   CreateAutomationInput,
   UpdateAutomationInput,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 export const api = getHttpApiClient();
 

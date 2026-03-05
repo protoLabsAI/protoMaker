@@ -18,8 +18,8 @@ import { useCeremonyStore } from '@/store/ceremony-store';
 import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
 import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import {
   Inbox,
   FileText,
@@ -48,9 +48,9 @@ import type {
   ActionableItemActionType,
   ActionableItemPriority,
   CeremonyAuditEntry,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { Feature } from '@/store/types';
-import { getEffectivePriority } from '@protolabs-ai/types';
+import { getEffectivePriority } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 

@@ -4,7 +4,7 @@
 
 import { spawn } from 'child_process';
 import type { Request, Response } from 'express';
-import type { GitHubComment, IssueCommentsResult } from '@protolabs-ai/types';
+import type { GitHubComment, IssueCommentsResult } from '@protolabsai/types';
 import { execEnv, getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';
 

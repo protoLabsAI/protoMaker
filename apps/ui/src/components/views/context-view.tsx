@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { useAppStore } from '@/store/app-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { HotkeyButton } from '@protolabs-ai/ui/molecules';
-import { Card } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { HotkeyButton } from '@protolabsai/ui/molecules';
+import { Card } from '@protolabsai/ui/atoms';
 import {
   HeaderActionsPanel,
   HeaderActionsPanelTrigger,
@@ -27,7 +27,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import {
   useKeyboardShortcuts,
   useKeyboardShortcutsConfig,
@@ -40,22 +40,22 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { sanitizeFilename, isMarkdownFilename, isImageFilename } from '@/lib/image-utils';
 
 const logger = createLogger('ContextView');
-import { Markdown } from '@protolabs-ai/ui/molecules';
+import { Markdown } from '@protolabsai/ui/molecules';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
 
 const FILE_LIST_BASE_CLASSES = 'border-r border-border flex flex-col overflow-hidden';
 

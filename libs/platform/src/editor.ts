@@ -12,7 +12,7 @@ import { promisify } from 'util';
 import { homedir } from 'os';
 import { join } from 'path';
 import { access } from 'fs/promises';
-import type { EditorInfo } from '@protolabs-ai/types';
+import type { EditorInfo } from '@protolabsai/types';
 const execFileAsync = promisify(execFile);
 
 // Platform detection

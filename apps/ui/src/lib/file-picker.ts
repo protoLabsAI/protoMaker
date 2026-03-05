@@ -10,7 +10,7 @@
  * user confirmation or server-side path resolution.
  */
 
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 
 const logger = createLogger('FilePicker');
 

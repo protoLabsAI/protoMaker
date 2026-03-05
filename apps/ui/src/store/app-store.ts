@@ -2,7 +2,7 @@ import { create } from 'zustand';
 // Note: persist middleware removed - settings now sync via API (use-settings-sync.ts)
 import type { Project, TrashedProject } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { UI_SANS_FONT_OPTIONS, UI_MONO_FONT_OPTIONS } from '@/config/ui-font-options';
 import type {
   PlanningMode,
@@ -12,8 +12,8 @@ import type {
   ServerLogLevel,
   EventHook,
   FeatureFlags,
-} from '@protolabs-ai/types';
-import { DEFAULT_FEATURE_FLAGS } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_FEATURE_FLAGS } from '@protolabsai/types';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from './types';
 import type {
   ViewMode,
@@ -201,8 +201,8 @@ export interface AppActions {
   // Project Phase Model Overrides
   setProjectPhaseModelOverride: (
     projectId: string,
-    phase: import('@protolabs-ai/types').PhaseModelKey,
-    entry: import('@protolabs-ai/types').PhaseModelEntry | null // null = use global
+    phase: import('@protolabsai/types').PhaseModelKey,
+    entry: import('@protolabsai/types').PhaseModelEntry | null // null = use global
   ) => void;
   clearAllProjectPhaseModelOverrides: (projectId: string) => void;
 

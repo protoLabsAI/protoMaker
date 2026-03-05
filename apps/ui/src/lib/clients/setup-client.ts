@@ -8,7 +8,7 @@
  *   - setupLab          (repo research, gap analysis, proposals)
  */
 import type { ModelDefinition, ProviderStatus } from '@/types/electron';
-import type { RepoResearchResult, GapAnalysisReport, AlignmentProposal } from '@protolabs-ai/types';
+import type { RepoResearchResult, GapAnalysisReport, AlignmentProposal } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withSetupClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>

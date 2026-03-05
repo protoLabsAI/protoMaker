@@ -15,8 +15,8 @@
 import { memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, ExternalLink, ChevronRight, Loader2, Hand, SkipForward } from 'lucide-react';
-import type { PipelinePhase, PipelineState, PipelineBranch } from '@protolabs-ai/types';
-import { PIPELINE_PHASES, GTM_SKIP_PHASES } from '@protolabs-ai/types';
+import type { PipelinePhase, PipelineState, PipelineBranch } from '@protolabsai/types';
+import { PIPELINE_PHASES, GTM_SKIP_PHASES } from '@protolabsai/types';
 import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
 import { cn } from '@/lib/utils';
 

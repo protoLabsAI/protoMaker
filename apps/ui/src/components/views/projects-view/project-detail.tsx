@@ -1,6 +1,6 @@
 import { FileText, Milestone, Layers, FileEdit, ExternalLink, MessageSquare } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import { ProjectHeader } from './components/project-header';
 import { ProjectSidebar } from './components/project-sidebar';
@@ -11,7 +11,7 @@ import { FeaturesTab } from './tabs/features-tab';
 import { DocumentsTab } from './tabs/documents-tab';
 import { LinksTab } from './tabs/links-tab';
 import { UpdatesTab } from './tabs/updates-tab';
-import type { Project } from '@protolabs-ai/types';
+import type { Project } from '@protolabsai/types';
 
 export function ProjectDetail({
   projectSlug,

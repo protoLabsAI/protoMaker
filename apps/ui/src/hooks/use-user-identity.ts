@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 
 const logger = createLogger('useUserIdentity');
 

@@ -7,8 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Badge } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { Loader2, Save } from 'lucide-react';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
@@ -18,12 +18,12 @@ import type {
   PipelinePhase,
   GateMode,
   PipelineGateConfig,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   DEFAULT_WORKFLOW_SETTINGS,
   DEFAULT_PIPELINE_GATES,
   PIPELINE_PHASES,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 function ToggleRow({
   label,

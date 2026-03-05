@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { isElectron } from '@/lib/electron';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { toast } from 'sonner';
 
 const logger = createLogger('UpdateNotification');

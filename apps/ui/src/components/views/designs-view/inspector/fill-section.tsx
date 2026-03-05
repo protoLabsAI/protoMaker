@@ -2,9 +2,9 @@
  * Fill section for editing colors
  */
 
-import type { PenNode, PenText, PenColor } from '@protolabs-ai/types';
+import type { PenNode, PenText, PenColor } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
-import { Input } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
 
 /** Extract r/g/b from a PenColor or hex string */
 function extractRGB(color: string | PenColor): { r: number; g: number; b: number } | null {

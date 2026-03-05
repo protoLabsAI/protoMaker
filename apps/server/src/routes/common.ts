@@ -2,7 +2,7 @@
  * Common utilities shared across all route modules
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 // Re-export git utilities from shared package
 export {
@@ -16,7 +16,7 @@ export {
   listAllFilesInDirectory,
   generateDiffsForNonGitDirectory,
   getGitRepositoryDiffs,
-} from '@protolabs-ai/git-utils';
+} from '@protolabsai/git-utils';
 
 type Logger = ReturnType<typeof createLogger>;
 

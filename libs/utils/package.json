@@ -1,5 +1,5 @@
 {
-  "name": "@protolabs-ai/utils",
+  "name": "@protolabsai/utils",
   "version": "0.33.1",
   "type": "module",
   "description": "Shared utility functions for AutoMaker",
@@ -35,8 +35,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabs-ai/platform": "^0.33.1",
-    "@protolabs-ai/types": "^0.33.1"
+    "@protolabsai/platform": "^0.33.1",
+    "@protolabsai/types": "^0.33.1"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

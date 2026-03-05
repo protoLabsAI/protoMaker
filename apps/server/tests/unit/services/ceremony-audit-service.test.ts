@@ -10,13 +10,13 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CeremonyAuditLogService } from '../../../src/services/ceremony-audit-service.js';
-import type { CeremonyAuditEntry } from '@protolabs-ai/types';
+import type { CeremonyAuditEntry } from '@protolabsai/types';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-vi.mock('@protolabs-ai/utils', async () => {
-  const actual = await vi.importActual('@protolabs-ai/utils');
+vi.mock('@protolabsai/utils', async () => {
+  const actual = await vi.importActual('@protolabsai/utils');
   return {
     ...actual,
     createLogger: vi.fn(() => ({

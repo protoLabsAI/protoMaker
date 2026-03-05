@@ -5,11 +5,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import type { PlanningMode } from '@protolabs-ai/types';
+import type { PlanningMode } from '@protolabsai/types';
 
 interface PlanningModeSelectProps {
   mode: PlanningMode;

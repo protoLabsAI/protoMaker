@@ -4,7 +4,7 @@
  * Defines the JSON schema for Claude's structured output and
  * helper functions for building validation prompts.
  *
- * Note: The system prompt is now centralized in @protolabs-ai/prompts
+ * Note: The system prompt is now centralized in @protolabsai/prompts
  * and accessed via getPromptCustomization() in validate-issue.ts
  */
 

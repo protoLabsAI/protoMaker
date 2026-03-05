@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { cn } from '@/lib/utils';
 
 const logger = createLogger('DescriptionImageDropZone');
 import { ImageIcon, X, FileText } from 'lucide-react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
 import { getElectronAPI } from '@/lib/electron';
 import { getAuthenticatedImageUrl } from '@/lib/api-fetch';
 import { useAppStore, type FeatureImagePath, type FeatureTextFilePath } from '@/store/app-store';

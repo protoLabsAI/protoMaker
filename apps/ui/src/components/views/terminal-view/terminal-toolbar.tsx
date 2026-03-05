@@ -14,8 +14,8 @@ import {
   Minimize2,
   GitBranch,
 } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import type { DraggableAttributes, DraggableSyntheticListeners } from '@dnd-kit/core';
 import { TerminalSettingsPopover } from './terminal-settings-popover';

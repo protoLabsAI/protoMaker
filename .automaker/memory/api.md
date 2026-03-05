@@ -202,7 +202,7 @@ usageStats:
 ### Exporting all public types from src/index.ts rather than requiring users to import from submodules (2026-02-13)
 - **Context:** Users need LangfuseClient, CreateSpanOptions, CreateScoreOptions, and other types for TypeScript support
 - **Why:** Single import point reduces cognitive load and prevents users from importing from internal implementation details (langfuse/client, langfuse/types). Enables internal refactoring without breaking imports.
-- **Rejected:** Requiring `import { LangfuseClient } from '@protolabs-ai/observability/dist/langfuse/client'` exposes internal structure
+- **Rejected:** Requiring `import { LangfuseClient } from '@protolabsai/observability/dist/langfuse/client'` exposes internal structure
 - **Trade-offs:** Central barrel export is easier to use (one source of truth), requires explicit re-exports (minor maintenance overhead)
 - **Breaking if changed:** If index.ts stops re-exporting types, any code importing from it breaks. Users must be aware of public API guarantees.
 
@@ -351,7 +351,7 @@ usageStats:
 - **Trade-offs:** One operation is faster but less flexible. Can't approve without creating feature. But given use case (Twitch polls are final), this is acceptable.
 - **Breaking if changed:** If approval and creation are ever decoupled (e.g., approve now, create later), this endpoint becomes misleading.
 
-#### [Gotcha] TwitchSuggestion type already exists in @protolabs-ai/types, but no API endpoint exists to fetch suggestions — ChatResponseHandler.readSuggestions() currently returns empty array (2026-02-17)
+#### [Gotcha] TwitchSuggestion type already exists in @protolabsai/types, but no API endpoint exists to fetch suggestions — ChatResponseHandler.readSuggestions() currently returns empty array (2026-02-17)
 - **Situation:** Suggestion queue component and chat `!queue` command both need to display suggestions, but the data model exists while the data transport does not
 - **Root cause:** Type was defined during initial Twitch feature planning (types are infrastructure), but the HTTP endpoint to serialize/transmit suggestions was not implemented. This is a common gap: types built first, implementation deferred
 - **How to avoid:** Suggestions display 'empty state' currently. Once endpoint is added, queue and chat command will work automatically because types are already aligned
@@ -623,12 +623,12 @@ usageStats:
 - **Trade-offs:** Easier: Flexibility, testability; Harder: Caller must manage theme context and pass it correctly
 - **Breaking if changed:** If theme was baked into document, couldn't generate multiple theme variants from single parsed file without re-parsing
 
-### VariableResolver type imported from @protolabs-ai/types rather than defined inline in style-utils.ts (2026-02-25)
+### VariableResolver type imported from @protolabsai/types rather than defined inline in style-utils.ts (2026-02-25)
 - **Context:** Style utilities need to accept a resolver function with specific signature for theme variable resolution
 - **Why:** Centralized type definition ensures consistency across the codebase; changes to resolver contract stay synchronized across all consumers
 - **Rejected:** Inline types or use 'any' would avoid the import but creates risk of signature drift between utils and context
 - **Trade-offs:** Requires monorepo type coordination but prevents silent breaking changes when resolver signature evolves
-- **Breaking if changed:** If types are changed in @protolabs-ai/types without updating callers, style-utils become type-incompatible at compile time (safe failure)
+- **Breaking if changed:** If types are changed in @protolabsai/types without updating callers, style-utils become type-incompatible at compile time (safe failure)
 
 #### [Gotcha] Environment variable interpolation in Grafana provisioned configs uses ${VAR_NAME} syntax, not $VAR_NAME or ${VAR_NAME} as bash/Docker (2026-02-25)
 - **Situation:** Discord webhook URL stored in DISCORD_WEBHOOK_INFRA environment variable, referenced in contactpoints.yml as ${DISCORD_WEBHOOK_INFRA}
@@ -699,7 +699,7 @@ usageStats:
 - **Trade-offs:** More precise semantics vs simpler implementation (could return 404 for everything). Precision helps with monitoring and client-side error recovery.
 - **Breaking if changed:** If changed to always 404, clients cannot distinguish attacks from legitimate missing files. Monitoring/alerting on 400s helps detect traversal attempts.
 
-#### [Pattern] Use canonical type guard function (isClaudeModel() from @protolabs-ai/types) to identify model types rather than inline string pattern matching (2026-03-01)
+#### [Pattern] Use canonical type guard function (isClaudeModel() from @protolabsai/types) to identify model types rather than inline string pattern matching (2026-03-01)
 - **Problem solved:** Adapter needs to route Claude models to ChatAnthropic, other models to appropriate providers. Model identification could be string-based or type-guard-based.
 - **Why this works:** Single source of truth for 'what is a Claude model'. Model identification logic is testable, versioned, and changes propagate automatically. Prevents duplicate/inconsistent checks across codebase.
 - **Trade-offs:** Adds import dependency on types package (tighter coupling) but gains centralized, testable model identity logic. Slightly slower lookup (function call vs string comparison) but negligible.

@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type { ActionableItem, ActionableItemStatus } from '@protolabs-ai/types';
+import type { ActionableItem, ActionableItemStatus } from '@protolabsai/types';
 
 // ============================================================================
 // State Interface

@@ -4,7 +4,7 @@
  * Extracted from http-api-client.ts. Owns server URL resolution,
  * API key caching, session token management, and auth operations.
  */
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 
 const logger = createLogger('HttpClient');
 

@@ -158,7 +158,7 @@
         "Chromatic CI for visual regression detection",
         "Accessibility auditing with @storybook/addon-a11y",
         "E2E test coverage for core user workflows",
-        "UI package extraction — full @protolabs-ai/ui library"
+        "UI package extraction — full @protolabsai/ui library"
       ]
     },
     {

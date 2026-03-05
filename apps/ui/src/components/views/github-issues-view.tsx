@@ -1,15 +1,15 @@
 // @ts-nocheck -- Electron API types pending strict validation refactor
 import { useState, useCallback, useMemo } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { CircleDot, RefreshCw, SearchX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getElectronAPI, GitHubIssue, IssueValidationResult } from '@/lib/electron';
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { ConfirmDialog } from '@protolabs-ai/ui/molecules';
-import { LoadingState } from '@protolabs-ai/ui/molecules';
-import { ErrorState } from '@protolabs-ai/ui/molecules';
+import { Button } from '@protolabsai/ui/atoms';
+import { ConfirmDialog } from '@protolabsai/ui/molecules';
+import { LoadingState } from '@protolabsai/ui/molecules';
+import { ErrorState } from '@protolabsai/ui/molecules';
 import { cn, pathsEqual, generateUUID } from '@/lib/utils';
 import { toast } from 'sonner';
 import { queryKeys } from '@/lib/query-keys';

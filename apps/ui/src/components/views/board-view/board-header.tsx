@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Switch } from '@protolabs-ai/ui/atoms';
-import { Label, Kbd, KbdGroup } from '@protolabs-ai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
+import { Label, Kbd, KbdGroup } from '@protolabsai/ui/atoms';
 import { LayoutGrid, Wand2, GitBranch, ClipboardCheck, DollarSign, Sparkles } from 'lucide-react';
 
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabs-ai/ui/atoms';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { UsagePopover } from '@/components/usage-popover';
 import { PanelHeader } from '@/components/shared/panel-header';
 import { useAppStore } from '@/store/app-store';

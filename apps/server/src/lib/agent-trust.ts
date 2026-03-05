@@ -13,7 +13,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import type { CanUseTool, EventType } from '@protolabs-ai/types';
+import type { CanUseTool, EventType } from '@protolabsai/types';
 import type { EventEmitter } from './events.js';
 
 /** Timeout duration before an unresponded approval request is auto-denied. */

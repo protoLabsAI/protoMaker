@@ -182,7 +182,7 @@ EOF
 Use the skills loader utility:
 
 ```typescript
-import { createSkill } from '@protolabs-ai/utils';
+import { createSkill } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 const skill = await createSkill(
@@ -252,7 +252,7 @@ The skill will only load if these variables are set.
 ### Checking Requirements
 
 ```typescript
-import { checkRequirements } from '@protolabs-ai/utils';
+import { checkRequirements } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 const { satisfied, missing } = await checkRequirements(
@@ -278,7 +278,7 @@ if (!satisfied) {
 Skills are automatically loaded based on relevance to the current task:
 
 ```typescript
-import { loadRelevantSkills } from '@protolabs-ai/utils';
+import { loadRelevantSkills } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 const result = await loadRelevantSkills(
@@ -310,7 +310,7 @@ Skills are scored based on:
 Load a specific skill by name:
 
 ```typescript
-import { getSkill } from '@protolabs-ai/utils';
+import { getSkill } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 const skill = await getSkill('/path/to/project', 'code-review-checklist', fs);
@@ -323,7 +323,7 @@ if (skill) {
 ### List All Skills
 
 ```typescript
-import { listSkills } from '@protolabs-ai/utils';
+import { listSkills } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 const skills = await listSkills('/path/to/project', fs);
@@ -342,7 +342,7 @@ for (const skill of skills) {
 Track skill usage to improve recommendations:
 
 ```typescript
-import { recordSkillUsage } from '@protolabs-ai/utils';
+import { recordSkillUsage } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 // Record successful usage
@@ -381,7 +381,7 @@ interface SkillMetadata {
 Update skill content or metadata:
 
 ```typescript
-import { updateSkill } from '@protolabs-ai/utils';
+import { updateSkill } from '@protolabsai/utils';
 import fs from 'fs/promises';
 
 const updated = await updateSkill(

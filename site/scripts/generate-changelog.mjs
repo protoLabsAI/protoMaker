@@ -21,7 +21,7 @@ const OUTPUT = resolve(DATA_DIR, 'changelog.json');
 
 const CHANGELOG_HTML = resolve(__dirname, '../changelog/index.html');
 const STATS_JSON = resolve(DATA_DIR, 'stats.json');
-const GITHUB_REPO = 'proto-labs-ai/protoMaker';
+const GITHUB_REPO = 'protoLabsAI/protoMaker';
 
 // Only include entries from the protoMaker era (post-rebrand)
 const CUTOFF_DATE = '2026-02-04T00:00:00Z';

@@ -14,7 +14,7 @@ import type {
   CreateActionableItemInput,
   HITLFormRequest,
   HITLFormRequestSummary,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { NotificationsAPI, EventHistoryAPI } from '../electron';
 import type { EventCallback } from './base-http-client';
 import { BaseHttpClient, type Constructor } from './base-http-client';

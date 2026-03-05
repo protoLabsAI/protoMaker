@@ -16,8 +16,8 @@ import {
   detectAllTerminals,
   detectDefaultTerminal,
   openInExternalTerminal,
-} from '@protolabs-ai/platform';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/platform';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
 
 const logger = createLogger('open-in-terminal');

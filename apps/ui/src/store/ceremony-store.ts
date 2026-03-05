@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type { CeremonyAuditEntry, CeremonyDeliveryStatus } from '@protolabs-ai/types';
+import type { CeremonyAuditEntry, CeremonyDeliveryStatus } from '@protolabsai/types';
 
 // ============================================================================
 // State Interface

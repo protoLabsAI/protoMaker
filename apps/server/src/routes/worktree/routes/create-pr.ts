@@ -13,8 +13,8 @@ import {
   isGhCliAvailable,
 } from '../common.js';
 import { updateWorktreePRInfo } from '../../../lib/worktree-metadata.js';
-import { createLogger } from '@protolabs-ai/utils';
-import { validatePRState } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import { validatePRState } from '@protolabsai/types';
 import { buildPROwnershipWatermark } from '../../github/utils/pr-ownership.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 

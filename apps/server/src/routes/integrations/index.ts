@@ -3,13 +3,13 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { SettingsService } from '../../services/settings-service.js';
 import type {
   ProjectIntegrations,
   ReactionAbility,
   DiscordChannelSignalConfig,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import { integrationService } from '../../services/integration-service.js';
 import type { IntegrationRegistryService } from '../../services/integration-registry-service.js';
 import type { SignalIntakeService } from '../../services/signal-intake-service.js';

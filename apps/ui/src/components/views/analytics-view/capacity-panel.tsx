@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { Gauge } from 'lucide-react';
 
 interface CapacityPanelProps {

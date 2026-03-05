@@ -19,7 +19,7 @@ Start with a Zod schema defining what goes in and what comes out.
 ```typescript
 import { z } from 'zod';
 import { Annotation } from '@langchain/langgraph';
-import { appendReducer } from '@protolabs-ai/flows';
+import { appendReducer } from '@protolabsai/flows';
 
 // Define the shape of your data
 const FindingSchema = z.object({
@@ -100,7 +100,7 @@ router.post('/research', async (req, res) => {
 Wire nodes into a graph using `GraphBuilder`. Use `TestChatModel` for deterministic testing.
 
 ```typescript
-import { GraphBuilder, createTestModels } from '@protolabs-ai/flows';
+import { GraphBuilder, createTestModels } from '@protolabsai/flows';
 
 const graph = new GraphBuilder(ResearchState)
   .setEntryPoint('research')
@@ -128,7 +128,7 @@ const result = await graph.invoke({
 Swap mocks for real models, add Langfuse tracing, configure fallbacks.
 
 ```typescript
-import { LangfuseClient, executeTrackedPrompt } from '@protolabs-ai/observability';
+import { LangfuseClient, executeTrackedPrompt } from '@protolabsai/observability';
 
 const langfuse = new LangfuseClient();
 const smartModel = ProviderFactory.create('anthropic', {
@@ -171,10 +171,10 @@ Workers should return error objects, never crash. The aggregator handles partial
 
 ## Package Map
 
-| Package                       | Role                                 | Key Exports                                                              |
-| ----------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
-| `@protolabs-ai/flows`         | State graphs, reducers, builders     | `GraphBuilder`, `createStateAnnotation`, `appendReducer`, `wrapSubgraph` |
-| `@protolabs-ai/observability` | Langfuse tracing + prompt versioning | `LangfuseClient`, `executeTrackedPrompt`                                 |
+| Package                      | Role                                 | Key Exports                                                              |
+| ---------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
+| `@protolabsai/flows`         | State graphs, reducers, builders     | `GraphBuilder`, `createStateAnnotation`, `appendReducer`, `wrapSubgraph` |
+| `@protolabsai/observability` | Langfuse tracing + prompt versioning | `LangfuseClient`, `executeTrackedPrompt`                                 |
 
 ## Existing Implementations
 

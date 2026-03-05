@@ -5,8 +5,8 @@
  * Sentry needs to be initialized early to capture errors during module loading.
  */
 
-import { initializeSentry } from '@protolabs-ai/error-tracking';
-import type { GlobalSettings } from '@protolabs-ai/types';
+import { initializeSentry } from '@protolabsai/error-tracking';
+import type { GlobalSettings } from '@protolabsai/types';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 

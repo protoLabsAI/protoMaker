@@ -20,7 +20,7 @@ import type {
   AlignmentProposal,
   GlobalSettings,
   ProjectSettings,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 import { getJSON, setJSON, removeItem } from './storage';
 
@@ -470,7 +470,7 @@ import type {
   StoredEventSummary,
   EventHistoryFilter,
   EventReplayResult,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 export interface NotificationsAPI {
   list: (projectPath: string) => Promise<{
@@ -1118,7 +1118,7 @@ export interface Project {
    * Keys are phase names (e.g., 'enhancementModel'), values are PhaseModelEntry.
    * If a phase is not present, the global setting is used.
    */
-  phaseModelOverrides?: Partial<import('@protolabs-ai/types').PhaseModelConfig>;
+  phaseModelOverrides?: Partial<import('@protolabsai/types').PhaseModelConfig>;
 }
 
 export interface TrashedProject extends Project {

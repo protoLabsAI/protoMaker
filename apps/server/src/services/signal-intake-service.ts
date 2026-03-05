@@ -8,9 +8,9 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { createLogger } from '@protolabs-ai/utils';
-import type { HITLFormRequestInput, SignalChannel } from '@protolabs-ai/types';
-import type { SignalIntent, RecentSignal } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { HITLFormRequestInput, SignalChannel } from '@protolabsai/types';
+import type { SignalIntent, RecentSignal } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';

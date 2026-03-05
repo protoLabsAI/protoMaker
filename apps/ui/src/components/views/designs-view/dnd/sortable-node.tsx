@@ -9,7 +9,7 @@ import {
   horizontalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import type { ReactNode } from 'react';
-import type { PenFrame } from '@protolabs-ai/types';
+import type { PenFrame } from '@protolabsai/types';
 
 interface SortableNodeProps {
   frame: PenFrame;

@@ -1,13 +1,13 @@
-import type { SpecOutput } from '@protolabs-ai/spec-parser';
-import { Card, CardContent, CardHeader, CardTitle } from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
-import { ScrollArea } from '@protolabs-ai/ui/atoms';
+import type { SpecOutput } from '@protolabsai/spec-parser';
+import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
+import { ScrollArea } from '@protolabsai/ui/atoms';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   CheckCircle2,
   Circle,

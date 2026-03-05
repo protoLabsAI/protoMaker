@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Checkbox } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Checkbox } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { ChevronDown, ChevronRight, Users, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { AncestorContext } from '@protolabs-ai/dependency-resolver';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabs-ai/ui/atoms';
+import type { AncestorContext } from '@protolabsai/dependency-resolver';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@protolabsai/ui/atoms';
 
 interface ParentFeatureContext {
   id: string;

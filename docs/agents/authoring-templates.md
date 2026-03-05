@@ -7,7 +7,7 @@ Agent templates are reusable configurations that define agent identity, capabili
 **Create a simple agent template in 5 minutes:**
 
 ```typescript
-import { AgentTemplateSchema } from '@protolabs-ai/types';
+import { AgentTemplateSchema } from '@protolabsai/types';
 
 const securityAuditorTemplate = {
   // Identity
@@ -371,7 +371,7 @@ Provide constructive feedback with specific examples.`,
 ### Step 2: Validate
 
 ```typescript
-import { AgentTemplateSchema } from '@protolabs-ai/types';
+import { AgentTemplateSchema } from '@protolabsai/types';
 
 try {
   const validated = AgentTemplateSchema.parse(myTemplate);
@@ -668,7 +668,7 @@ Generate detailed reports with:
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { AgentTemplateSchema } from '@protolabs-ai/types';
+import { AgentTemplateSchema } from '@protolabsai/types';
 
 describe('Agent Template Validation', () => {
   it('validates a valid template', () => {

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -8,14 +8,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { ArrowRight, Cloud, Server, Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type {
@@ -23,8 +23,8 @@ import type {
   PhaseModelEntry,
   ClaudeCompatibleProvider,
   ClaudeModelAlias,
-} from '@protolabs-ai/types';
-import { DEFAULT_PHASE_MODELS } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_PHASE_MODELS } from '@protolabsai/types';
 
 interface BulkReplaceDialogProps {
   open: boolean;

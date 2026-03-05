@@ -17,11 +17,11 @@
  * All tasks emit events for UI display and logging.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import type { FlowFactory } from '@protolabs-ai/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
+import type { FlowFactory } from '@protolabsai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
@@ -31,7 +31,7 @@ import type { SettingsService } from './settings-service.js';
 import { mergeEligibilityService } from './merge-eligibility-service.js';
 import { githubMergeService } from './github-merge-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 import { Octokit } from '@octokit/rest';
 
 const execFileAsync = promisify(execFile);

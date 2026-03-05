@@ -1,4 +1,4 @@
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { CheckCircle2, Sparkles } from 'lucide-react';
 
 interface CompleteStepProps {

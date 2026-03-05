@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ClaudeUsageService } from '../../services/claude-usage-service.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('Claude');
 

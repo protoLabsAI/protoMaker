@@ -214,7 +214,7 @@ export const setupTools: Tool[] = [
   {
     name: 'deliver_alignment',
     description:
-      'Deliver alignment work back to client repository via fork+PR. Forks the client repo to proto-labs-ai org, creates an aligned-by-protolabs branch with branding (footer component + README badge), and opens a PR with alignment details.',
+      'Deliver alignment work back to client repository via fork+PR. Forks the client repo to protoLabsAI org, creates an aligned-by-protolabs branch with branding (footer component + README badge), and opens a PR with alignment details.',
     inputSchema: {
       type: 'object',
       properties: {

@@ -11,7 +11,7 @@ TypeScript types are erased at runtime. A `number`-typed field (e.g. `prNumber`)
 await execAsync(`gh pr view ${ctx.prNumber} --json state`);
 
 // ✅ CORRECT — validate first with assertSafeShellInteger
-import { assertSafeShellInteger } from '@protolabs-ai/platform';
+import { assertSafeShellInteger } from '@protolabsai/platform';
 
 assertSafeShellInteger(ctx.prNumber, 'gh pr view');
 await execAsync(`gh pr view ${ctx.prNumber} --json state`);

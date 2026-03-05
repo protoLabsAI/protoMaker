@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import type { PromptCustomization, CustomPrompt } from '@protolabs-ai/types';
+import type { PromptCustomization, CustomPrompt } from '@protolabsai/types';
 
 /** Props for the PromptField component */
 export interface PromptFieldProps {

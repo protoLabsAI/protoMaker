@@ -5,7 +5,7 @@
  * When a LangfuseClient instance passes through graph state, `isAvailable()`
  * becomes undefined. This guard checks both existence and callable-ness.
  */
-import type { LangfuseClient } from '@protolabs-ai/observability';
+import type { LangfuseClient } from '@protolabsai/observability';
 
 export function isLangfuseReady(
   client: LangfuseClient | undefined | null

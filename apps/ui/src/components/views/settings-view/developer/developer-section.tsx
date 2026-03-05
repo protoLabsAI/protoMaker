@@ -1,10 +1,10 @@
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
 import { Code2, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore, type ServerLogLevel } from '@/store/app-store';
 import { toast } from 'sonner';
-import type { FeatureFlags } from '@protolabs-ai/types';
+import type { FeatureFlags } from '@protolabsai/types';
 
 const LOG_LEVEL_OPTIONS: { value: ServerLogLevel; label: string; description: string }[] = [
   { value: 'error', label: 'Error', description: 'Only show error messages' },

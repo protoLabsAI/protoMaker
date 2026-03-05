@@ -9,17 +9,17 @@ import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 import type {
   Feature,
   GitWorkflowSettings,
   GitWorkflowResult,
   GlobalSettings,
-} from '@protolabs-ai/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
+} from '@protolabsai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { updateWorktreePRInfo } from '../lib/worktree-metadata.js';
-import { validatePRState } from '@protolabs-ai/types';
+import { validatePRState } from '@protolabsai/types';
 import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -982,18 +982,18 @@ export class GitWorkflowService {
 
     // Map directory prefixes to package names
     const DIR_TO_PACKAGE: Record<string, string> = {
-      'libs/types/': '@protolabs-ai/types',
-      'libs/utils/': '@protolabs-ai/utils',
-      'libs/platform/': '@protolabs-ai/platform',
-      'libs/prompts/': '@protolabs-ai/prompts',
-      'libs/tools/': '@protolabs-ai/tools',
-      'libs/model-resolver/': '@protolabs-ai/model-resolver',
-      'libs/dependency-resolver/': '@protolabs-ai/dependency-resolver',
-      'libs/spec-parser/': '@protolabs-ai/spec-parser',
-      'libs/flows/': '@protolabs-ai/flows',
-      'libs/observability/': '@protolabs-ai/observability',
-      'libs/git-utils/': '@protolabs-ai/git-utils',
-      'libs/ui/': '@protolabs-ai/ui',
+      'libs/types/': '@protolabsai/types',
+      'libs/utils/': '@protolabsai/utils',
+      'libs/platform/': '@protolabsai/platform',
+      'libs/prompts/': '@protolabsai/prompts',
+      'libs/tools/': '@protolabsai/tools',
+      'libs/model-resolver/': '@protolabsai/model-resolver',
+      'libs/dependency-resolver/': '@protolabsai/dependency-resolver',
+      'libs/spec-parser/': '@protolabsai/spec-parser',
+      'libs/flows/': '@protolabsai/flows',
+      'libs/observability/': '@protolabsai/observability',
+      'libs/git-utils/': '@protolabsai/git-utils',
+      'libs/ui/': '@protolabsai/ui',
     };
 
     // Detect which packages were touched

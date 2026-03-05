@@ -217,7 +217,7 @@ Use this checklist for extended verification beyond automated tests.
 - [ ] Project directory picker works
 - [ ] File paths validated correctly
 - [ ] Read/write operations succeed
-- [ ] Path traversal blocked (`@protolabs-ai/platform`)
+- [ ] Path traversal blocked (`@protolabsai/platform`)
 
 #### Window Management
 
@@ -287,7 +287,7 @@ Use this checklist for extended verification beyond automated tests.
 **Path Separators**
 
 - ⚠️ Windows uses backslashes (`\`) vs. Unix forward slashes (`/`)
-- **Fix**: Use `path.join()` or `@protolabs-ai/platform` utilities
+- **Fix**: Use `path.join()` or `@protolabsai/platform` utilities
 - **Test**: Verify file operations on Windows
 
 #### Linux Known Issues

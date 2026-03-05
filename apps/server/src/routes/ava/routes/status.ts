@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { AvaGatewayService } from '../../../services/ava-gateway-service.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('AvaStatusRoute');
 

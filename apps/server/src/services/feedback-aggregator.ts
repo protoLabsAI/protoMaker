@@ -7,7 +7,7 @@
  * - Fixing CI check failures
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
 import type { PRReviewInfo, ThreadFeedbackItem } from './pr-status-checker.js';
 

@@ -4,7 +4,7 @@
  * All types shared across the lead-engineer subsystem files.
  */
 
-import type { Feature, ExecuteOptions, AgentRole } from '@protolabs-ai/types';
+import type { Feature, ExecuteOptions, AgentRole } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';

@@ -1,7 +1,7 @@
 import { useAppStore } from '@/store/app-store';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
 
 const FONT_OPTIONS = [
   { label: 'System Default', value: '' },

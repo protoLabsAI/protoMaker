@@ -10,7 +10,7 @@
  */
 
 import { Router } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { FeedbackAnalyticsService } from '../services/feedback-analytics-service.js';
 import { AnalyticsService } from '../services/analytics-service.js';
 

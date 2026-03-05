@@ -7,7 +7,7 @@
 
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   Feature,
   EventType,
@@ -16,7 +16,7 @@ import type {
   LeadAgentSnapshot,
   LeadPRSnapshot,
   LeadMilestoneSnapshot,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { ProjectService } from './project-service.js';

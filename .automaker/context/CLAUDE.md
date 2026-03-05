@@ -48,7 +48,7 @@ automaker/
 ├── apps/
 │   ├── ui/           # React + Vite frontend (port 3007)
 │   └── server/       # Express + WebSocket backend (port 3008)
-└── libs/             # Shared packages (@protolabs-ai/*)
+└── libs/             # Shared packages (@protolabsai/*)
     ├── types/        # Core TypeScript definitions (NO dependencies)
     ├── utils/        # Logging, errors, image processing
     ├── prompts/      # AI prompt templates
@@ -64,11 +64,11 @@ automaker/
 ## Package Dependency Chain (top = no deps)
 
 ```
-@protolabs-ai/types
+@protolabsai/types
     ↓
-@protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver, policy-engine, spec-parser
+@protolabsai/utils, prompts, platform, model-resolver, dependency-resolver, policy-engine, spec-parser
     ↓
-@protolabs-ai/git-utils
+@protolabsai/git-utils
     ↓
 apps/server, apps/ui
 ```
@@ -87,9 +87,9 @@ Stale `dist/` = wrong types = wasted work.
 
 ```typescript
 // ALWAYS import from packages
-import type { Feature, ExecutionRecord } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import type { Feature, ExecutionRecord } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 // NEVER import from relative paths to other packages
 // ❌ import { Feature } from '../services/feature-loader';
@@ -97,12 +97,12 @@ import { resolveModelString } from '@protolabs-ai/model-resolver';
 
 ## Frontend UI Standards
 
-For all frontend work, follow the UI standards in `ui-standards.md`. Always use shared components from `@protolabs-ai/ui` -- never bare HTML elements (`<button>`, `<input>`, `<select>`, `<textarea>`, `<label>`). Never hardcode color classes (`bg-gray-*`, `text-blue-*`); always use semantic tokens (`bg-card`, `text-foreground`, `border-border`).
+For all frontend work, follow the UI standards in `ui-standards.md`. Always use shared components from `@protolabsai/ui` -- never bare HTML elements (`<button>`, `<input>`, `<select>`, `<textarea>`, `<label>`). Never hardcode color classes (`bg-gray-*`, `text-blue-*`); always use semantic tokens (`bg-card`, `text-foreground`, `border-border`).
 
 ## Before Creating New Types
 
 ALWAYS check `libs/types/src/` first. Types for features, settings, events, ceremonies, etc. already exist.
-If a type exists, import it from `@protolabs-ai/types`. Do NOT recreate it.
+If a type exists, import it from `@protolabsai/types`. Do NOT recreate it.
 
 ## Key Existing Types (libs/types/src/)
 
@@ -117,7 +117,7 @@ If a type exists, import it from `@protolabs-ai/types`. Do NOT recreate it.
 Services are classes in `apps/server/src/services/`:
 
 ```typescript
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('MyService');

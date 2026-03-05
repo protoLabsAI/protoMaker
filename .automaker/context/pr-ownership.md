@@ -9,7 +9,7 @@ Each Automaker instance has a unique `instanceId` (auto-generated UUID if not co
 ```json
 {
   "instanceId": "ava-staging",
-  "teamId": "proto-labs-ai",
+  "teamId": "protoLabsAI",
   "prOwnershipStaleTtlHours": 24
 }
 ```
@@ -21,7 +21,7 @@ Each Automaker instance has a unique `instanceId` (auto-generated UUID if not co
 Every PR created by Automaker contains a hidden HTML comment in the body:
 
 ```html
-<!-- automaker:owner instance=ava-staging team=proto-labs-ai created=2026-02-25T19:00:00.000Z -->
+<!-- automaker:owner instance=ava-staging team=protoLabsAI created=2026-02-25T19:00:00.000Z -->
 ```
 
 This is invisible in rendered GitHub markdown but parseable by `gh pr view --json body`.
@@ -40,7 +40,7 @@ Utility functions in `apps/server/src/routes/github/utils/pr-ownership.ts`:
 {
   "ownership": {
     "instanceId": "ava-staging",
-    "teamId": "proto-labs-ai",
+    "teamId": "protoLabsAI",
     "isOwnedByThisInstance": true,
     "isStale": false
   }
@@ -85,7 +85,7 @@ gh pr create --base dev --title "..." --body "$(cat <<EOF
 ## Summary
 ...
 
-<!-- automaker:owner instance=${INSTANCE_ID} team=proto-labs-ai created=$(date -u +%Y-%m-%dT%H:%M:%S.000Z) -->
+<!-- automaker:owner instance=${INSTANCE_ID} team=protoLabsAI created=$(date -u +%Y-%m-%dT%H:%M:%S.000Z) -->
 EOF
 )"
 ```

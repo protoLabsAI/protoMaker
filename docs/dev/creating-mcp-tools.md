@@ -61,7 +61,7 @@ export * from './domains/example/index.js';
 Update `packages/mcp-server/src/index.ts`:
 
 ```typescript
-import { helloWorldTool, toMCPTool } from '@protolabs-ai/tools';
+import { helloWorldTool, toMCPTool } from '@protolabsai/tools';
 
 // In list_tools handler
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -128,7 +128,7 @@ AI Agent (Claude Code, etc.)
 
 ```typescript
 import { z } from 'zod';
-import { defineSharedTool } from '@protolabs-ai/tools';
+import { defineSharedTool } from '@protolabsai/tools';
 
 export const myTool = defineSharedTool({
   // Unique identifier (kebab-case)
@@ -657,7 +657,7 @@ libs / tools / src / domains / agents / start - agent.ts;
 Update `packages/mcp-server/src/index.ts`:
 
 ```typescript
-import { helloWorldTool, anotherTool, toMCPTool } from '@protolabs-ai/tools';
+import { helloWorldTool, anotherTool, toMCPTool } from '@protolabsai/tools';
 
 // List all tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {

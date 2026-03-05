@@ -8,11 +8,11 @@
  */
 
 import type { Request, Response } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
 import { execAsync, execEnv, getErrorMessage, logError } from './common.js';
 import { checkGitHubRemote } from './check-github-remote.js';
-import { assertSafeShellInteger } from '@protolabs-ai/platform';
+import { assertSafeShellInteger } from '@protolabsai/platform';
 
 const logger = createLogger('ResolvePRThreads');
 

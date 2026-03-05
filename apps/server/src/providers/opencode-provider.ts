@@ -24,9 +24,9 @@ import type {
   ModelDefinition,
   InstallationStatus,
   ContentBlock,
-} from '@protolabs-ai/types';
-import { type SubprocessOptions, getOpenCodeAuthIndicators } from '@protolabs-ai/platform';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/types';
+import { type SubprocessOptions, getOpenCodeAuthIndicators } from '@protolabsai/platform';
+import { createLogger } from '@protolabsai/utils';
 
 // Create logger for OpenCode operations
 const opencodeLogger = createLogger('OpencodeProvider');

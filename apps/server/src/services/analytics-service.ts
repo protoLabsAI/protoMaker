@@ -7,8 +7,8 @@
  * - Retry trends across multiple attempts
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { PipelinePhase } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { PipelinePhase } from '@protolabsai/types';
 import { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('AnalyticsService');

@@ -27,9 +27,9 @@ setupSentry();
 import { execSync } from 'node:child_process';
 import express from 'express';
 import { createServer } from 'http';
-import { initAllowedPaths } from '@protolabs-ai/platform';
-import { createLogger, registerLogTransport } from '@protolabs-ai/utils';
-import { MAX_SYSTEM_CONCURRENCY } from '@protolabs-ai/types';
+import { initAllowedPaths } from '@protolabsai/platform';
+import { createLogger, registerLogTransport } from '@protolabsai/utils';
+import { MAX_SYSTEM_CONCURRENCY } from '@protolabsai/types';
 import { createFileLogTransport } from './lib/server-log.js';
 import { isTerminalEnabled, isTerminalPasswordRequired } from './routes/terminal/index.js';
 
@@ -81,7 +81,7 @@ if (process.env.ANTHROPIC_API_KEY) {
   logger.info('Claude auth: API key detected');
 } else {
   // Check for OAuth/CLI auth before warning
-  const { getClaudeAuthIndicators } = await import('@protolabs-ai/platform');
+  const { getClaudeAuthIndicators } = await import('@protolabsai/platform');
   const indicators = await getClaudeAuthIndicators();
   const hasOAuth =
     indicators.hasStatsCacheWithActivity ||

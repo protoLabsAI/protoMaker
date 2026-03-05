@@ -10,8 +10,8 @@
  */
 
 import path from 'node:path';
-import { createLogger, atomicWriteJson } from '@protolabs-ai/utils';
-import type { VerifiedTrajectory } from '@protolabs-ai/types';
+import { createLogger, atomicWriteJson } from '@protolabsai/utils';
+import type { VerifiedTrajectory } from '@protolabsai/types';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 
 const logger = createLogger('TrajectoryStoreService');

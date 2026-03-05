@@ -2,11 +2,11 @@
  * Typography section for editing text content and properties
  */
 
-import type { PenText } from '@protolabs-ai/types';
+import type { PenText } from '@protolabsai/types';
 import { useDesignsStore } from '@/store/designs-store';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Textarea } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 
 interface TypographySectionProps {
   node: PenText;

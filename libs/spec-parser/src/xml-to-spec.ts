@@ -5,7 +5,7 @@
  */
 
 import { XMLParser } from 'fast-xml-parser';
-import type { SpecOutput } from '@protolabs-ai/types';
+import type { SpecOutput } from '@protolabsai/types';
 
 /**
  * Result of parsing XML content.

@@ -1,6 +1,6 @@
 // @ts-nocheck -- DnD kit type conflicts with Feature index signature
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import {
   DndContext,
   PointerSensor,
@@ -36,11 +36,11 @@ import { usePipelineStore } from '@/store/pipeline-store';
 import { useTerminalStore } from '@/store/terminal-store';
 import { getElectronAPI } from '@/lib/electron';
 import { getHttpApiClient } from '@/lib/http-api-client';
-import type { BacklogPlanResult } from '@protolabs-ai/types';
+import type { BacklogPlanResult } from '@protolabsai/types';
 import { pathsEqual } from '@/lib/utils';
 import { toast } from 'sonner';
 import { BoardBackgroundModal } from '@/components/dialogs/board-background-modal';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { useShallow } from 'zustand/react/shallow';
 import { useAutoMode } from '@/hooks/use-auto-mode';
 import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
@@ -94,7 +94,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { useAutoModeQueryInvalidation } from '@/hooks/use-query-invalidation';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
-import { DEFAULT_MAX_CONCURRENCY } from '@protolabs-ai/types';
+import { DEFAULT_MAX_CONCURRENCY } from '@protolabsai/types';
 
 // Stable empty array to avoid infinite loop in selector
 const EMPTY_WORKTREES: ReturnType<ReturnType<typeof useWorktreeStore.getState>['getWorktrees']> =

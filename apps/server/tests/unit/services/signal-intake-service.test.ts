@@ -12,7 +12,7 @@ import { SignalIntakeService } from '../../../src/services/signal-intake-service
 import type { EventEmitter } from '../../../src/lib/events.js';
 import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { SettingsService } from '../../../src/services/settings-service.js';
-import type { Feature, ProjectSettings } from '@protolabs-ai/types';
+import type { Feature, ProjectSettings } from '@protolabsai/types';
 
 // Mock factories
 const createMockEventEmitter = (): EventEmitter => {

@@ -6,10 +6,10 @@
  * for the old service with zero changes to calling code.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import { createAntagonisticReviewGraph } from '@protolabs-ai/flows';
-import type { SPARCPrd } from '@protolabs-ai/types';
-import { LangfuseClient, calculateCost } from '@protolabs-ai/observability';
+import { createLogger } from '@protolabsai/utils';
+import { createAntagonisticReviewGraph } from '@protolabsai/flows';
+import type { SPARCPrd } from '@protolabsai/types';
+import { LangfuseClient, calculateCost } from '@protolabsai/observability';
 import { v4 as uuidv4 } from 'uuid';
 import { createFlowModel } from '../lib/flow-model-factory.js';
 import type { SettingsService } from './settings-service.js';
@@ -18,7 +18,7 @@ const logger = createLogger('AntagonisticReviewAdapter');
 
 /**
  * Shape of a reviewer perspective in flow results.
- * Handles both @protolabs-ai/types ReviewerPerspective and node-local formats.
+ * Handles both @protolabsai/types ReviewerPerspective and node-local formats.
  */
 interface FlowReviewPerspective {
   overallVerdict?: string;
@@ -469,7 +469,7 @@ ${prd.constraints || 'None specified'}
 
   /**
    * Extract Ava's review from flow result
-   * Handles both @protolabs-ai/types ReviewerPerspective (overallVerdict, sections, generalComments)
+   * Handles both @protolabsai/types ReviewerPerspective (overallVerdict, sections, generalComments)
    * and node-local ReviewerPerspective (verdict, sections, comments)
    */
   private extractAvaReview(result: Record<string, unknown>): ReviewResult {
@@ -507,7 +507,7 @@ ${prd.constraints || 'None specified'}
 
   /**
    * Extract Jon's review from flow result
-   * Handles both @protolabs-ai/types ReviewerPerspective and node-local format
+   * Handles both @protolabsai/types ReviewerPerspective and node-local format
    */
   private extractJonReview(result: Record<string, unknown>): ReviewResult {
     const jonReview = result.jonReview as FlowReviewPerspective | undefined;

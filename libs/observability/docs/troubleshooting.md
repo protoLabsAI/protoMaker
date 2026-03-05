@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps you diagnose and fix common issues with the `@protolabs-ai/observability` package and Langfuse integration.
+This guide helps you diagnose and fix common issues with the `@protolabsai/observability` package and Langfuse integration.
 
 ## Table of Contents
 
@@ -442,7 +442,7 @@ process.env.DEBUG = 'langfuse:*';
 ### Check Langfuse Status
 
 ```typescript
-import { LangfuseClient } from '@protolabs-ai/observability';
+import { LangfuseClient } from '@protolabsai/observability';
 
 const langfuse = new LangfuseClient({
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
@@ -461,7 +461,7 @@ console.log('Config:', {
 
 ```typescript
 // minimal-test.ts
-import { LangfuseClient } from '@protolabs-ai/observability';
+import { LangfuseClient } from '@protolabsai/observability';
 
 async function test() {
   const langfuse = new LangfuseClient({

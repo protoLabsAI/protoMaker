@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabs-ai/ui/atoms';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@protolabsai/ui/atoms';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { Cpu, Zap, Server } from 'lucide-react';
 import { CursorSettingsTab } from './cursor-settings-tab';

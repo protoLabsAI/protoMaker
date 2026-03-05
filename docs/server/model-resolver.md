@@ -1,6 +1,6 @@
 # Model Resolver
 
-The Model Resolver (`@protolabs-ai/model-resolver`) converts human-friendly model aliases to full model identifiers used by AI providers. This system enables consistent model selection across protoLabs Studio while simplifying configuration.
+The Model Resolver (`@protolabsai/model-resolver`) converts human-friendly model aliases to full model identifiers used by AI providers. This system enables consistent model selection across protoLabs Studio while simplifying configuration.
 
 ## Overview
 
@@ -28,7 +28,7 @@ protoLabs Studio uses a three-tier model system:
 ### Basic Resolution
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 // Alias expansion
 resolveModelString('sonnet'); // → 'claude-sonnet-4-6'
@@ -47,8 +47,8 @@ resolveModelString(null); // → 'claude-sonnet-4-6'
 ### In Agent Configuration
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import type { AgentTemplate } from '@protolabs-ai/types';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import type { AgentTemplate } from '@protolabsai/types';
 
 const agentTemplate: AgentTemplate = {
   role: 'backend-engineer',
@@ -65,8 +65,8 @@ const agentTemplate: AgentTemplate = {
 ### In Feature Execution
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
-import type { ExecuteOptions } from '@protolabs-ai/types';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import type { ExecuteOptions } from '@protolabsai/types';
 
 const executeOptions: ExecuteOptions = {
   featureId: 'feature-123',
@@ -142,7 +142,7 @@ resolveModelString('local-llama-70b'); // → 'local-llama-70b'
 The resolver can extract provider information from model strings:
 
 ```typescript
-import { stripProviderPrefix } from '@protolabs-ai/types';
+import { stripProviderPrefix } from '@protolabsai/types';
 
 // Removes provider prefix
 stripProviderPrefix('claude-sonnet-4-6'); // → 'sonnet-4-6'
@@ -228,7 +228,7 @@ const DEFAULT_MAPPING: ComplexityMapping = {
 **Usage:**
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 function getModelForComplexity(complexity: string): string {
   const mapping = settings.complexityThresholds || DEFAULT_MAPPING;
@@ -299,7 +299,7 @@ model: 'claude-sonnet-4-6-20250929'; // Specific build
 You can extend the resolver with custom logic:
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 function customResolve(input: string | undefined): string {
   // Custom logic
@@ -320,7 +320,7 @@ const model = customResolve('experimental'); // → 'claude-opus-4-6'
 ### Unit Tests
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import { describe, it, expect } from 'vitest';
 
 describe('resolveModelString', () => {
@@ -345,7 +345,7 @@ describe('resolveModelString', () => {
 ### Integration Tests
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import { executeFeature } from './agent-service.js';
 
 describe('Model resolution in agent execution', () => {
@@ -384,7 +384,7 @@ const CLAUDE_ALIASES = {
 **Solution:** Verify correct model is resolved:
 
 ```typescript
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 console.log('Resolved model:', resolveModelString('sonnet'));
 // Should print: 'claude-sonnet-4-6'

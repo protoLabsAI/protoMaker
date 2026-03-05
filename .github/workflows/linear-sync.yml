@@ -12,7 +12,7 @@ jobs:
     runs-on: self-hosted
     if: >
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.repository == 'proto-labs-ai/protoMaker' &&
+      github.repository == 'protoLabsAI/protoMaker' &&
       github.event.pull_request.merged == true
     timeout-minutes: 5
     steps:

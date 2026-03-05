@@ -6,7 +6,7 @@
  */
 
 import { ShieldX, RefreshCw } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 
 export function SandboxRejectionScreen() {
   const handleReload = () => {

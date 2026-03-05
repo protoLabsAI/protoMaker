@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useCeremonyStore } from '@/store/ceremony-store';
 import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import {
   PartyPopper,
   Megaphone,
@@ -25,7 +25,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
-import type { CeremonyAuditEntry, CeremonyAuditType } from '@protolabs-ai/types';
+import type { CeremonyAuditEntry, CeremonyAuditType } from '@protolabsai/types';
 import { cn } from '@/lib/utils';
 
 // ============================================================================

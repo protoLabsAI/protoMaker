@@ -9,7 +9,7 @@ import { useRef, useCallback } from 'react';
 import { Button } from '../../atoms/button.js';
 import { ChevronLeft, ChevronRight, Loader2, Send } from 'lucide-react';
 import { HITLFormStepRenderer } from './hitl-form-step.js';
-import type { HITLFormRequest } from '@protolabs-ai/types';
+import type { HITLFormRequest } from '@protolabsai/types';
 
 export interface HITLFormWizardProps {
   form: HITLFormRequest;

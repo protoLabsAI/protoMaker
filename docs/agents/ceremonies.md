@@ -27,7 +27,7 @@ Four additional ceremony types are defined in the type system and have settings 
 
 ## LangGraph flow architecture
 
-Each implemented ceremony is a LangGraph state graph created by a factory function in `@protolabs-ai/flows`. The `CeremonyService` subscribes to events, resolves settings, and invokes the appropriate flow.
+Each implemented ceremony is a LangGraph state graph created by a factory function in `@protolabsai/flows`. The `CeremonyService` subscribes to events, resolves settings, and invokes the appropriate flow.
 
 ```
 Event (milestone:started, milestone:completed, project:completed)
@@ -91,7 +91,7 @@ Ceremonies are configured per-project via **Project Settings** in the UI, or in 
 | `contentBriefChannelId`  | string  | --                    | Separate Discord channel for content briefs      |
 | `retroModel`             | object  | `{ model: 'sonnet' }` | Model config for LLM-generated ceremonies        |
 
-**Model configuration:** The `retroModel.model` field accepts any model alias recognized by `@protolabs-ai/model-resolver` (e.g., `"sonnet"`, `"opus"`, `"haiku"`) or a full model ID string. This controls the Claude model used for retro generation. Default is Sonnet.
+**Model configuration:** The `retroModel.model` field accepts any model alias recognized by `@protolabsai/model-resolver` (e.g., `"sonnet"`, `"opus"`, `"haiku"`) or a full model ID string. This controls the Claude model used for retro generation. Default is Sonnet.
 
 **Type definition:** `libs/types/src/settings.ts` -> `CeremonySettings`
 
@@ -294,7 +294,7 @@ CeremonyService
 - `ProjectService` -- loads project/milestone data
 - `CeremonyAuditLogService` -- records audit entries
 
-**LangGraph flow factories** (from `@protolabs-ai/flows`):
+**LangGraph flow factories** (from `@protolabsai/flows`):
 
 - `createStandupFlow()` -- milestone standup
 - `createRetroFlow()` -- milestone retrospective

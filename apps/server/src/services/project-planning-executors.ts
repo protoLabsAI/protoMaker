@@ -15,8 +15,8 @@ import {
   createLLMDeepResearchExecutor,
   createLLMPRDGenerator,
   createLLMMilestonePlanner,
-} from '@protolabs-ai/flows';
-import { createLogger } from '@protolabs-ai/utils';
+} from '@protolabsai/flows';
+import { createLogger } from '@protolabsai/utils';
 import { createFlowModel } from '../lib/flow-model-factory.js';
 import type { SettingsService } from './settings-service.js';
 

@@ -12,7 +12,7 @@ import { ContentFlowService } from '../../../src/services/content-flow-service.j
 import type { EventEmitter } from '../../../src/lib/events.js';
 
 // Mock the flows package
-vi.mock('@protolabs-ai/flows', () => ({
+vi.mock('@protolabsai/flows', () => ({
   createContentCreationFlow: vi.fn(() => ({
     stream: vi.fn(),
     getState: vi.fn(),
@@ -48,11 +48,11 @@ vi.mock('node:fs/promises', () => ({
 }));
 
 // Mock getAutomakerDir
-vi.mock('@protolabs-ai/platform', () => ({
+vi.mock('@protolabsai/platform', () => ({
   getAutomakerDir: vi.fn(() => '/test/automaker'),
 }));
 
-import { createContentCreationFlow } from '@protolabs-ai/flows';
+import { createContentCreationFlow } from '@protolabsai/flows';
 
 // Mock event emitter
 const createMockEventEmitter = (): EventEmitter => {

@@ -5,7 +5,7 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { validatePath, PathNotAllowedError } from '@protolabs-ai/platform';
+import { validatePath, PathNotAllowedError } from '@protolabsai/platform';
 
 /**
  * Regex for valid slug characters: letters, numbers, hyphens, underscores

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
-import { Badge } from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
 import { getProjectStatusVariant } from '../lib/status-variants';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
-import type { Project, ProjectHealth } from '@protolabs-ai/types';
+import type { Project, ProjectHealth } from '@protolabsai/types';
 
 interface ProjectHeaderProps {
   project: Project;

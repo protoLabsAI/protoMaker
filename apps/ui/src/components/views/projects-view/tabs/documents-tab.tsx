@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Plus, Trash2, FileText } from 'lucide-react';
-import { Button, Card, Input, Textarea } from '@protolabs-ai/ui/atoms';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Button, Card, Input, Textarea } from '@protolabsai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { useProjectDocs } from '../hooks/use-project-docs';
 import { toast } from 'sonner';

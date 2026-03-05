@@ -14,11 +14,11 @@
  */
 
 import { Router } from 'express';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { QuarantineService } from '../services/quarantine-service.js';
 import { TrustTierService } from '../services/trust-tier-service.js';
-import type { QuarantineResult, TrustTier } from '@protolabs-ai/types';
-import { secureFs } from '@protolabs-ai/platform';
+import type { QuarantineResult, TrustTier } from '@protolabsai/types';
+import { secureFs } from '@protolabsai/platform';
 import path from 'path';
 
 const logger = createLogger('QuarantineRoutes');

@@ -101,7 +101,7 @@ If no meaningful commits remain after filtering, the prompt instructs Claude to 
 ## Programmatic Usage
 
 ```typescript
-import { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from '@protolabs-ai/prompts';
+import { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from '@protolabsai/prompts';
 
 const prompt = buildReleaseNotesPrompt({
   version: 'v0.30.1',

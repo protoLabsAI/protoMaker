@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ChevronsUpDown, X, GitBranch, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   Command,
   CommandEmpty,
@@ -9,11 +9,11 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@protolabs-ai/ui/atoms';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
-import { wouldCreateCircularDependency } from '@protolabs-ai/dependency-resolver';
-import type { Feature } from '@protolabs-ai/types';
+} from '@protolabsai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
+import { wouldCreateCircularDependency } from '@protolabsai/dependency-resolver';
+import type { Feature } from '@protolabsai/types';
 
 interface DependencySelectorProps {
   /** The current feature being edited (null for add mode) */

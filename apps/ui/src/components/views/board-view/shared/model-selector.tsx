@@ -1,17 +1,17 @@
 // @ts-nocheck -- model alias union types need refactoring for strict checks
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Badge } from '@protolabs-ai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Badge } from '@protolabsai/ui/atoms';
 import { Brain, AlertTriangle } from 'lucide-react';
 import { AnthropicIcon, CursorIcon, OpenAIIcon } from '@/components/shared/provider-icon';
 import { cn } from '@/lib/utils';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import type { CursorModelId } from '@protolabs-ai/types';
+import type { CursorModelId } from '@protolabsai/types';
 import { useSetupStore } from '@/store/setup-store';
-import { getModelProvider } from '@protolabs-ai/types';
-import type { ModelProvider } from '@protolabs-ai/types';
+import { getModelProvider } from '@protolabsai/types';
+import type { ModelProvider } from '@protolabsai/types';
 import { CLAUDE_MODELS, CURSOR_MODELS, ModelOption } from './model-constants';
 import { useEffect } from 'react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 
 interface ModelSelectorProps {
   selectedModel: string; // Can be ModelAlias or "cursor-{id}"

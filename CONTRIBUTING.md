@@ -32,8 +32,8 @@ Have an idea for a new feature or improvement? We'd love to hear it!
 
 **Process:**
 
-1. [Search existing issues](https://github.com/proto-labs-ai/protoMaker/issues) to avoid duplicates
-2. [Submit an idea](https://github.com/proto-labs-ai/protoMaker/issues/new/choose) using the "Idea Submission" template
+1. [Search existing issues](https://github.com/protoLabsAI/protoMaker/issues) to avoid duplicates
+2. [Submit an idea](https://github.com/protoLabsAI/protoMaker/issues/new/choose) using the "Idea Submission" template
 3. Provide a clear problem statement and proposed solution
 4. Our team will review and respond
 
@@ -52,8 +52,8 @@ Found a bug? Help us fix it by reporting it properly.
 
 **Process:**
 
-1. [Search existing bug reports](https://github.com/proto-labs-ai/protoMaker/issues?q=is%3Aissue+label%3Abug) to avoid duplicates
-2. [Submit a bug report](https://github.com/proto-labs-ai/protoMaker/issues/new/choose) using the "Bug Report" template
+1. [Search existing bug reports](https://github.com/protoLabsAI/protoMaker/issues?q=is%3Aissue+label%3Abug) to avoid duplicates
+2. [Submit a bug report](https://github.com/protoLabsAI/protoMaker/issues/new/choose) using the "Bug Report" template
 3. Include all requested information: steps to reproduce, expected behavior, actual behavior, environment details
 4. Add screenshots or logs if available
 
@@ -92,7 +92,7 @@ Documentation improvements are valuable contributions!
 
 Help grow the protoMaker community:
 
-- ⭐ Star the [GitHub repository](https://github.com/proto-labs-ai/protoMaker)
+- ⭐ Star the [GitHub repository](https://github.com/protoLabsAI/protoMaker)
 - Share your experience on social media
 - Write blog posts about your use cases
 - Recommend protoMaker to others
@@ -228,8 +228,8 @@ Need help using protoMaker or have questions?
 
 - **Documentation:** [https://docs.protolabs.studio](https://docs.protolabs.studio)
 - **Discord:** Discord invite link TBA
-- **Bug Reports:** [Submit an issue](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
-- **Feature Ideas:** [Submit an idea](https://github.com/proto-labs-ai/protoMaker/issues/new/choose)
+- **Bug Reports:** [Submit an issue](https://github.com/protoLabsAI/protoMaker/issues/new/choose)
+- **Feature Ideas:** [Submit an idea](https://github.com/protoLabsAI/protoMaker/issues/new/choose)
 
 ## Thank You
 

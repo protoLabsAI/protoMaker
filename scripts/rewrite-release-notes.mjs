@@ -130,7 +130,7 @@ async function postToDiscord(version, notes) {
     return false;
   }
 
-  const releaseUrl = `https://github.com/proto-labs-ai/protoMaker/releases/tag/${version}`;
+  const releaseUrl = `https://github.com/protoLabsAI/protoMaker/releases/tag/${version}`;
 
   // Truncate to Discord embed limit
   const truncated = notes.length > 3900 ? notes.slice(0, 3900) + '\n...' : notes;

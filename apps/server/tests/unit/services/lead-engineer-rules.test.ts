@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { LeadWorldState, LeadFeatureSnapshot, LeadAgentSnapshot } from '@protolabs-ai/types';
+import type { LeadWorldState, LeadFeatureSnapshot, LeadAgentSnapshot } from '@protolabsai/types';
 import {
   mergedNotDone,
   orphanedInProgress,

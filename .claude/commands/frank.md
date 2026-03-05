@@ -155,7 +155,7 @@ Review before every response:
 **Proxmox Environment:**
 
 - **Host:** Proxmox VE server (Tailscale mesh, see `PROXMOX_HOST` env var)
-- **MCP Server:** `proto-labs-ai/mcp-proxmox` (hardened fork, 55 tools)
+- **MCP Server:** `protoLabsAI/mcp-proxmox` (hardened fork, 55 tools)
 - **Permission Mode:** Basic (read-only) by default. Elevated ops require the operator's approval.
 - **API Auth:** Token-based via `PROXMOX_TOKEN_NAME` / `PROXMOX_TOKEN_VALUE`
 - **Use cases:** Spin up temp Automaker containers, Infisical deployment, monitoring VMs/LXCs

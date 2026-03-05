@@ -9,8 +9,8 @@
  * (user override > Langfuse > hardcoded default).
  */
 
-import { LangfuseClient } from '@protolabs-ai/observability';
-import { createLogger } from '@protolabs-ai/utils';
+import { LangfuseClient } from '@protolabsai/observability';
+import { createLogger } from '@protolabsai/utils';
 import { PromptResolver } from '../services/prompt-resolver.js';
 
 const logger = createLogger('LangfuseSingleton');

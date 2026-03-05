@@ -31,7 +31,7 @@ function debugNode(state: typeof State.State) {
 Use a proper logger for production:
 
 ```typescript
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('my-graph');
 

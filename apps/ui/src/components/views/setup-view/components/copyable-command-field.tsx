@@ -1,4 +1,4 @@
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 

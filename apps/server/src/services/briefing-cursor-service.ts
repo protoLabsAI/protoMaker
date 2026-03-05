@@ -8,7 +8,7 @@
 
 import * as path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('BriefingCursorService');
 

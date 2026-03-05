@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/proto-labs-ai/protolabs-studio/actions/workflows/test.yml"><img src="https://github.com/proto-labs-ai/protolabs-studio/actions/workflows/test.yml/badge.svg" alt="Build Status" /></a>
+  <a href="https://github.com/protoLabsAI/protolabs-studio/actions/workflows/test.yml"><img src="https://github.com/protoLabsAI/protolabs-studio/actions/workflows/test.yml/badge.svg" alt="Build Status" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" /></a>
   <!-- Discord badge — update href and guild ID when protoLabs Discord is live -->
   <a href="#"><img src="https://img.shields.io/badge/Discord-TBA-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
@@ -40,18 +40,18 @@ You describe what you want built. AI agents implement it in isolated git branche
 <tr>
 <td align="center">
 
-[Download .dmg](https://github.com/proto-labs-ai/protolabs-studio/releases/latest/download/protoLabs-Studio-mac.dmg)<br/>
-[Download .zip](https://github.com/proto-labs-ai/protolabs-studio/releases/latest/download/protoLabs-Studio-mac.zip)
+[Download .dmg](https://github.com/protoLabsAI/protolabs-studio/releases/latest/download/protoLabs-Studio-mac.dmg)<br/>
+[Download .zip](https://github.com/protoLabsAI/protolabs-studio/releases/latest/download/protoLabs-Studio-mac.zip)
 
 </td>
 <td align="center">
 
-[Download .exe](https://github.com/proto-labs-ai/protolabs-studio/releases/latest/download/protoLabs-Studio-win.exe)
+[Download .exe](https://github.com/protoLabsAI/protolabs-studio/releases/latest/download/protoLabs-Studio-win.exe)
 
 </td>
 <td align="center">
 
-[.AppImage](https://github.com/proto-labs-ai/protolabs-studio/releases/latest/download/protoLabs-Studio.AppImage) · [.deb](https://github.com/proto-labs-ai/protolabs-studio/releases/latest/download/protoLabs-Studio.deb) · [.rpm](https://github.com/proto-labs-ai/protolabs-studio/releases/latest/download/protoLabs-Studio.rpm)
+[.AppImage](https://github.com/protoLabsAI/protolabs-studio/releases/latest/download/protoLabs-Studio.AppImage) · [.deb](https://github.com/protoLabsAI/protolabs-studio/releases/latest/download/protoLabs-Studio.deb) · [.rpm](https://github.com/protoLabsAI/protolabs-studio/releases/latest/download/protoLabs-Studio.rpm)
 
 </td>
 </tr>
@@ -62,7 +62,7 @@ _Desktop releases coming soon. Run from source below to try now._
 ### Run from Source
 
 ```bash
-git clone https://github.com/proto-labs-ai/protolabs-studio.git
+git clone https://github.com/protoLabsAI/protolabs-studio.git
 cd protolabs-studio
 npm install
 npm run dev                 # Interactive launcher (choose web or electron)
@@ -152,7 +152,7 @@ The system stays aligned with your vision because you control every layer: the c
 Control protoLabs from your terminal:
 
 ```bash
-claude plugin marketplace add https://github.com/proto-labs-ai/protolabs-studio/tree/main/packages/mcp-server/plugins
+claude plugin marketplace add https://github.com/protoLabsAI/protolabs-studio/tree/main/packages/mcp-server/plugins
 claude plugin install protolabs
 ```
 
@@ -174,7 +174,7 @@ protolabs-studio/
 ├── apps/
 │   ├── ui/              # React + Vite + Electron (port 3007)
 │   └── server/          # Express + WebSocket backend (port 3008)
-├── libs/                # 13 shared packages (@protolabs-ai/*)
+├── libs/                # 13 shared packages (@protolabsai/*)
 │   ├── types/           # Core TypeScript definitions
 │   ├── utils/           # Logging, errors, image processing
 │   ├── git-utils/       # Git operations & worktree management
@@ -200,12 +200,12 @@ protolabs-studio/
 **Package Dependency Chain**:
 
 ```
-@protolabs-ai/types (no dependencies)
+@protolabsai/types (no dependencies)
     ↓
-@protolabs-ai/utils, prompts, platform, model-resolver, dependency-resolver,
+@protolabsai/utils, prompts, platform, model-resolver, dependency-resolver,
 spec-parser, pen-parser, tools, flows, observability
     ↓
-@protolabs-ai/git-utils, ui
+@protolabsai/git-utils, ui
     ↓
 apps/server, apps/ui
 ```
@@ -226,7 +226,7 @@ Full docs at **[protolabs.studio](https://protolabs.studio)**:
 
 Join builders exploring agentic coding and autonomous development:
 
-**Discord (TBA)** · **[protolabs.studio](https://protolabs.studio)** · **[GitHub](https://github.com/proto-labs-ai)** · **[Code of Conduct](CODE_OF_CONDUCT.md)**
+**Discord (TBA)** · **[protolabs.studio](https://protolabs.studio)** · **[GitHub](https://github.com/protoLabsAI)** · **[Code of Conduct](CODE_OF_CONDUCT.md)**
 
 We're committed to providing a welcoming and inclusive community. Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
@@ -234,8 +234,8 @@ We're committed to providing a welcoming and inclusive community. Please review 
 
 protoMaker uses an **ideas-only contribution model** — AI agents implement all code. We don't accept code PRs from the community.
 
-- **Submit an idea**: [Idea Submission template](https://github.com/proto-labs-ai/protoMaker/issues/new?template=idea_submission.yml)
-- **Report a bug**: [Bug Report template](https://github.com/proto-labs-ai/protoMaker/issues/new?template=bug_report.yml)
+- **Submit an idea**: [Idea Submission template](https://github.com/protoLabsAI/protoMaker/issues/new?template=idea_submission.yml)
+- **Report a bug**: [Bug Report template](https://github.com/protoLabsAI/protoMaker/issues/new?template=bug_report.yml)
 - **Join the discussion**: Discord (invite link TBA)
 
 [Full Contributing Guidelines](CONTRIBUTING.md)

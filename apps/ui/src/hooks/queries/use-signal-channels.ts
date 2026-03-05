@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import { STALE_TIMES } from '@/lib/query-client';
-import type { DiscordChannelSignalConfig } from '@protolabs-ai/types';
+import type { DiscordChannelSignalConfig } from '@protolabsai/types';
 
 /**
  * Fetch Discord channel signal configs for a project

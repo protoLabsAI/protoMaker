@@ -11,7 +11,7 @@ import type {
   ListFeaturesOutput,
   CompactFeature,
 } from '../../types.js';
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 
 /**
  * Convert full feature to compact representation

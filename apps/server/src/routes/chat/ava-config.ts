@@ -11,10 +11,10 @@
  */
 
 import path from 'path';
-import { createLogger } from '@protolabs-ai/utils';
-import { getAutomakerDir, ensureAutomakerDir } from '@protolabs-ai/platform';
+import { createLogger } from '@protolabsai/utils';
+import { getAutomakerDir, ensureAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../../lib/secure-fs.js';
-import type { MCPServerConfig } from '@protolabs-ai/types';
+import type { MCPServerConfig } from '@protolabsai/types';
 import type { AvaToolsConfig } from './ava-tools.js';
 
 export type { AvaToolsConfig };

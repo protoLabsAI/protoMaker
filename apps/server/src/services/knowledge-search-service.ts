@@ -8,14 +8,14 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import type * as BetterSqlite3 from 'better-sqlite3';
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type {
   KnowledgeSearchOptions,
   KnowledgeSearchResult,
   KnowledgeChunk,
   KnowledgeStoreSettings,
   RetrievalMode,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import type { EmbeddingService } from './embedding-service.js';
 
 const logger = createLogger('KnowledgeSearchService');

@@ -4,9 +4,9 @@
 
 import type { Request, Response, RequestHandler } from 'express';
 import { promises as fs } from 'fs';
-import { createSkill, type SkillsFsModule } from '@protolabs-ai/utils';
-import type { CreateSkillOptions } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import { createSkill, type SkillsFsModule } from '@protolabsai/utils';
+import type { CreateSkillOptions } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('skills:create');
 

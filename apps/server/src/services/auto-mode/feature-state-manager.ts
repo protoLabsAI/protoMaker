@@ -8,7 +8,7 @@
  *   (prevents stale data on client refresh after server restart)
  */
 
-import type { Feature } from '@protolabs-ai/types';
+import type { Feature } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
 import type { FeatureLoader } from '../feature-loader.js';
 import {
@@ -17,8 +17,8 @@ import {
   readJsonWithRecovery,
   logRecoveryWarning,
   DEFAULT_BACKUP_COUNT,
-} from '@protolabs-ai/utils';
-import { getFeatureDir } from '@protolabs-ai/platform';
+} from '@protolabsai/utils';
+import { getFeatureDir } from '@protolabsai/platform';
 import path from 'path';
 import { getNotificationService } from '../notification-service.js';
 

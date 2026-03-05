@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext, useState, useMemo, type ReactNode } from 'react';
-import type { PenDocument } from '@protolabs-ai/types';
+import type { PenDocument } from '@protolabsai/types';
 
 /**
  * Theme selections (e.g., { Mode: "Dark", Base: "Zinc", Accent: "Violet" })

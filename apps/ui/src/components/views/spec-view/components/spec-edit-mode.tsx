@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { SpecOutput } from '@protolabs-ai/spec-parser';
-import { specToXml } from '@protolabs-ai/spec-parser';
-import { ScrollArea } from '@protolabs-ai/ui/atoms';
+import type { SpecOutput } from '@protolabsai/spec-parser';
+import { specToXml } from '@protolabsai/spec-parser';
+import { ScrollArea } from '@protolabsai/ui/atoms';
 import {
   ProjectInfoSection,
   TechStackSection,

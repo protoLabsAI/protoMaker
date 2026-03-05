@@ -81,9 +81,9 @@ Security updates are released as part of regular releases. Critical security fix
 
 To stay informed about security updates:
 
-- Watch the [GitHub repository](https://github.com/proto-labs-ai/protoMaker) for release notifications
+- Watch the [GitHub repository](https://github.com/protoLabsAI/protoMaker) for release notifications
 - Join our Discord server (invite link TBA) for announcements
-- Check the [release notes](https://github.com/proto-labs-ai/protoMaker/releases) regularly
+- Check the [release notes](https://github.com/protoLabsAI/protoMaker/releases) regularly
 
 ## Contact
 

@@ -6,8 +6,8 @@
  * correlationId round-trips through the integration:discord event bridge.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
-import type { CeremonyAuditEntry, CeremonyDeliveryStatus } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { CeremonyAuditEntry, CeremonyDeliveryStatus } from '@protolabsai/types';
 import fs from 'fs';
 import path from 'path';
 

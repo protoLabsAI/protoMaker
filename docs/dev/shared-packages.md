@@ -23,7 +23,7 @@ libs/
 
 ## When to Use Each Package
 
-### @protolabs-ai/types
+### @protolabsai/types
 
 **Use when:** You need type definitions for any AutoMaker concept.
 
@@ -39,12 +39,12 @@ libs/
 **Example:**
 
 ```typescript
-import type { Feature, ExecuteOptions } from '@protolabs-ai/types';
+import type { Feature, ExecuteOptions } from '@protolabsai/types';
 ```
 
 **Never import from:** `services/feature-loader`, `providers/types`
 
-### @protolabs-ai/utils
+### @protolabsai/utils
 
 **Use when:** You need common utilities like logging, error handling, or image processing.
 
@@ -60,12 +60,12 @@ import type { Feature, ExecuteOptions } from '@protolabs-ai/types';
 **Example:**
 
 ```typescript
-import { createLogger, classifyError } from '@protolabs-ai/utils';
+import { createLogger, classifyError } from '@protolabsai/utils';
 ```
 
 **Never import from:** `lib/logger`, `lib/error-handler`, `lib/prompt-builder`, `lib/image-handler`
 
-### @protolabs-ai/prompts
+### @protolabsai/prompts
 
 **Use when:** You need AI prompt templates for text enhancement or other AI-powered features.
 
@@ -84,7 +84,7 @@ import { createLogger, classifyError } from '@protolabs-ai/utils';
 **Example:**
 
 ```typescript
-import { getEnhancementPrompt, isValidEnhancementMode } from '@protolabs-ai/prompts';
+import { getEnhancementPrompt, isValidEnhancementMode } from '@protolabsai/prompts';
 
 if (isValidEnhancementMode('improve')) {
   const { systemPrompt, userPrompt } = getEnhancementPrompt('improve', description);
@@ -101,7 +101,7 @@ if (isValidEnhancementMode('improve')) {
 - `simplify` - Make verbose descriptions concise and focused
 - `acceptance` - Add testable acceptance criteria
 
-### @protolabs-ai/platform
+### @protolabsai/platform
 
 **Use when:** You need to work with AutoMaker's directory structure, spawn processes, or detect/launch code editors.
 
@@ -128,8 +128,8 @@ if (isValidEnhancementMode('improve')) {
 **Example:**
 
 ```typescript
-import { getFeatureDir, ensureprotoLabsDir } from '@protolabs-ai/platform';
-import { detectAllEditors, openInEditor } from '@protolabs-ai/platform';
+import { getFeatureDir, ensureprotoLabsDir } from '@protolabsai/platform';
+import { detectAllEditors, openInEditor } from '@protolabsai/platform';
 
 // Detect all installed editors
 const editors = await detectAllEditors();
@@ -140,7 +140,7 @@ await openInEditor('/path/to/project', 'cursor');
 
 **Never import from:** `lib/automaker-paths`, `lib/subprocess-manager`, `lib/security`
 
-### @protolabs-ai/model-resolver
+### @protolabsai/model-resolver
 
 **Use when:** You need to convert model aliases to full model IDs.
 
@@ -152,7 +152,7 @@ await openInEditor('/path/to/project', 'cursor');
 **Example:**
 
 ```typescript
-import { resolveModelString, DEFAULT_MODELS } from '@protolabs-ai/model-resolver';
+import { resolveModelString, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 
 // Convert user input to model ID
 const modelId = resolveModelString('sonnet'); // → 'claude-sonnet-4-5-20250929'
@@ -177,7 +177,7 @@ const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
 | `DEFAULT_MODELS.autoMode` | sonnet | Auto-mode feature implementation (default) |
 | `DEFAULT_MODELS.trivial`  | haiku  | Small/quick tasks                          |
 
-### @protolabs-ai/dependency-resolver
+### @protolabsai/dependency-resolver
 
 **Use when:** You need to order features by dependencies or check if dependencies are satisfied.
 
@@ -192,7 +192,7 @@ const autoModeModel = DEFAULT_MODELS.autoMode; // → sonnet
 **Example:**
 
 ```typescript
-import { resolveDependencies, areDependenciesSatisfied } from '@protolabs-ai/dependency-resolver';
+import { resolveDependencies, areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
 
 const { orderedFeatures, hasCycle } = resolveDependencies(features);
 if (!hasCycle) {
@@ -211,7 +211,7 @@ if (!hasCycle) {
 - Auto-mode feature execution (server)
 - Board view feature ordering (UI)
 
-### @protolabs-ai/git-utils
+### @protolabsai/git-utils
 
 **Use when:** You need git operations, status parsing, or diff generation.
 
@@ -226,7 +226,7 @@ if (!hasCycle) {
 **Example:**
 
 ```typescript
-import { isGitRepo, getGitRepositoryDiffs } from '@protolabs-ai/git-utils';
+import { isGitRepo, getGitRepositoryDiffs } from '@protolabsai/git-utils';
 
 if (await isGitRepo(projectPath)) {
   const { diff, files, hasChanges } = await getGitRepositoryDiffs(projectPath);
@@ -243,7 +243,7 @@ if (await isGitRepo(projectPath)) {
 - Untracked file diffs
 - Non-git directory support
 
-### @protolabs-ai/flows
+### @protolabsai/flows
 
 **Use when:** You need LangGraph state graph primitives, multi-agent coordination, or flow orchestration.
 
@@ -260,12 +260,12 @@ if (await isGitRepo(projectPath)) {
 **Example:**
 
 ```typescript
-import { GraphBuilder, appendReducer, createBinaryRouter } from '@protolabs-ai/flows';
+import { GraphBuilder, appendReducer, createBinaryRouter } from '@protolabsai/flows';
 ```
 
 **Full documentation:** [Flows Package](./flows)
 
-### @protolabs-ai/observability
+### @protolabsai/observability
 
 **Use when:** You need Langfuse tracing, prompt versioning, or cost tracking.
 
@@ -280,7 +280,7 @@ import { GraphBuilder, appendReducer, createBinaryRouter } from '@protolabs-ai/f
 **Example:**
 
 ```typescript
-import { LangfuseClient, wrapProviderWithTracing } from '@protolabs-ai/observability';
+import { LangfuseClient, wrapProviderWithTracing } from '@protolabsai/observability';
 ```
 
 **Full documentation:** [Observability Package](./observability-package)
@@ -290,11 +290,11 @@ import { LangfuseClient, wrapProviderWithTracing } from '@protolabs-ai/observabi
 ### Creating a Feature Executor
 
 ```typescript
-import type { Feature, ExecuteOptions } from '@protolabs-ai/types';
-import { createLogger, classifyError } from '@protolabs-ai/utils';
-import { resolveModelString, DEFAULT_MODELS } from '@protolabs-ai/model-resolver';
-import { areDependenciesSatisfied } from '@protolabs-ai/dependency-resolver';
-import { getFeatureDir } from '@protolabs-ai/platform';
+import type { Feature, ExecuteOptions } from '@protolabsai/types';
+import { createLogger, classifyError } from '@protolabsai/utils';
+import { resolveModelString, DEFAULT_MODELS } from '@protolabsai/model-resolver';
+import { areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
+import { getFeatureDir } from '@protolabsai/platform';
 
 const logger = createLogger('FeatureExecutor');
 
@@ -331,8 +331,8 @@ async function executeFeature(feature: Feature, allFeatures: Feature[], projectP
 ### Analyzing Git Changes
 
 ```typescript
-import { getGitRepositoryDiffs, parseGitStatus } from '@protolabs-ai/git-utils';
-import { createLogger } from '@protolabs-ai/utils';
+import { getGitRepositoryDiffs, parseGitStatus } from '@protolabsai/git-utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('GitAnalyzer');
 
@@ -361,9 +361,9 @@ async function analyzeChanges(projectPath: string) {
 ### Ordering Features for Execution
 
 ```typescript
-import type { Feature } from '@protolabs-ai/types';
-import { resolveDependencies, getBlockingDependencies } from '@protolabs-ai/dependency-resolver';
-import { createLogger } from '@protolabs-ai/utils';
+import type { Feature } from '@protolabsai/types';
+import { resolveDependencies, getBlockingDependencies } from '@protolabsai/dependency-resolver';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('FeatureOrdering');
 
@@ -395,29 +395,29 @@ function orderAndFilterFeatures(features: Feature[]): Feature[] {
 ### ✅ DO
 
 ```typescript
-// Import types from @protolabs-ai/types
-import type { Feature, ExecuteOptions } from '@protolabs-ai/types';
+// Import types from @protolabsai/types
+import type { Feature, ExecuteOptions } from '@protolabsai/types';
 
-// Import constants from @protolabs-ai/types
-import { CLAUDE_MODEL_MAP, DEFAULT_MODELS } from '@protolabs-ai/types';
+// Import constants from @protolabsai/types
+import { CLAUDE_MODEL_MAP, DEFAULT_MODELS } from '@protolabsai/types';
 
-// Import utilities from @protolabs-ai/utils
-import { createLogger, classifyError } from '@protolabs-ai/utils';
+// Import utilities from @protolabsai/utils
+import { createLogger, classifyError } from '@protolabsai/utils';
 
-// Import prompts from @protolabs-ai/prompts
-import { getEnhancementPrompt, isValidEnhancementMode } from '@protolabs-ai/prompts';
+// Import prompts from @protolabsai/prompts
+import { getEnhancementPrompt, isValidEnhancementMode } from '@protolabsai/prompts';
 
-// Import platform utils from @protolabs-ai/platform
-import { getFeatureDir, ensureprotoLabsDir } from '@protolabs-ai/platform';
+// Import platform utils from @protolabsai/platform
+import { getFeatureDir, ensureprotoLabsDir } from '@protolabsai/platform';
 
-// Import model resolution from @protolabs-ai/model-resolver
-import { resolveModelString } from '@protolabs-ai/model-resolver';
+// Import model resolution from @protolabsai/model-resolver
+import { resolveModelString } from '@protolabsai/model-resolver';
 
-// Import dependency resolution from @protolabs-ai/dependency-resolver
-import { resolveDependencies } from '@protolabs-ai/dependency-resolver';
+// Import dependency resolution from @protolabsai/dependency-resolver
+import { resolveDependencies } from '@protolabsai/dependency-resolver';
 
-// Import git utils from @protolabs-ai/git-utils
-import { getGitRepositoryDiffs } from '@protolabs-ai/git-utils';
+// Import git utils from @protolabsai/git-utils
+import { getGitRepositoryDiffs } from '@protolabsai/git-utils';
 ```
 
 ### ❌ DON'T
@@ -436,22 +436,22 @@ import { getEnhancementPrompt } from '../lib/enhancement-prompts'; // ❌
 import { getFeatureDir } from '../lib/automaker-paths';         // ❌
 import { classifyError } from '../lib/error-handler';           // ❌
 
-// DON'T define types that exist in @protolabs-ai/types
-interface Feature { ... }  // ❌ Use: import type { Feature } from '@protolabs-ai/types';
+// DON'T define types that exist in @protolabsai/types
+interface Feature { ... }  // ❌ Use: import type { Feature } from '@protolabsai/types';
 ```
 
 ## Migration Checklist
 
 When refactoring server code, check:
 
-- [ ] All `Feature` imports use `@protolabs-ai/types`
-- [ ] All `ExecuteOptions` imports use `@protolabs-ai/types`
-- [ ] All logger usage uses `@protolabs-ai/utils`
-- [ ] All prompt templates use `@protolabs-ai/prompts`
-- [ ] All path operations use `@protolabs-ai/platform`
-- [ ] All model resolution uses `@protolabs-ai/model-resolver`
-- [ ] All dependency checks use `@protolabs-ai/dependency-resolver`
-- [ ] All git operations use `@protolabs-ai/git-utils`
+- [ ] All `Feature` imports use `@protolabsai/types`
+- [ ] All `ExecuteOptions` imports use `@protolabsai/types`
+- [ ] All logger usage uses `@protolabsai/utils`
+- [ ] All prompt templates use `@protolabsai/prompts`
+- [ ] All path operations use `@protolabsai/platform`
+- [ ] All model resolution uses `@protolabsai/model-resolver`
+- [ ] All dependency checks use `@protolabsai/dependency-resolver`
+- [ ] All git operations use `@protolabsai/git-utils`
 - [ ] No imports from old `lib/` paths
 - [ ] No imports from `services/feature-loader` for types
 - [ ] No imports from `providers/types`
@@ -461,22 +461,22 @@ When refactoring server code, check:
 Understanding the dependency chain helps prevent circular dependencies:
 
 ```
-@protolabs-ai/types (no dependencies)
+@protolabsai/types (no dependencies)
     ↓
-@protolabs-ai/utils
-@protolabs-ai/prompts
-@protolabs-ai/platform
-@protolabs-ai/model-resolver
-@protolabs-ai/dependency-resolver
-@protolabs-ai/spec-parser
-@protolabs-ai/observability
-@protolabs-ai/flows
-@protolabs-ai/tools
+@protolabsai/utils
+@protolabsai/prompts
+@protolabsai/platform
+@protolabsai/model-resolver
+@protolabsai/dependency-resolver
+@protolabsai/spec-parser
+@protolabsai/observability
+@protolabsai/flows
+@protolabsai/tools
     ↓
-@protolabs-ai/git-utils
+@protolabsai/git-utils
     ↓
-@protolabs-ai/server
-@protolabs-ai/ui
+@protolabsai/server
+@protolabsai/ui
 ```
 
 **Rule:** Packages can only depend on packages above them in the chain.
@@ -507,8 +507,8 @@ When writing tests:
 
 ```typescript
 // ✅ Import from packages
-import type { Feature } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import type { Feature } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 
 // ❌ Don't import from src
 import { Feature } from '../../../src/services/feature-loader';
@@ -518,16 +518,16 @@ import { Feature } from '../../../src/services/feature-loader';
 
 **Quick reference:**
 
-- Types → `@protolabs-ai/types`
-- Logging/Errors/Utils → `@protolabs-ai/utils`
-- AI Prompts → `@protolabs-ai/prompts`
-- Paths/Security → `@protolabs-ai/platform`
-- Model Resolution → `@protolabs-ai/model-resolver`
-- Dependency Ordering → `@protolabs-ai/dependency-resolver`
-- Git Operations → `@protolabs-ai/git-utils`
-- LangGraph Flows → `@protolabs-ai/flows`
-- Tracing/Observability → `@protolabs-ai/observability`
-- Tool Definitions → `@protolabs-ai/tools`
+- Types → `@protolabsai/types`
+- Logging/Errors/Utils → `@protolabsai/utils`
+- AI Prompts → `@protolabsai/prompts`
+- Paths/Security → `@protolabsai/platform`
+- Model Resolution → `@protolabsai/model-resolver`
+- Dependency Ordering → `@protolabsai/dependency-resolver`
+- Git Operations → `@protolabsai/git-utils`
+- LangGraph Flows → `@protolabsai/flows`
+- Tracing/Observability → `@protolabsai/observability`
+- Tool Definitions → `@protolabsai/tools`
 
 **Never import from:** `lib/*`, `services/feature-loader` (for types), `providers/types`, `routes/common`
 

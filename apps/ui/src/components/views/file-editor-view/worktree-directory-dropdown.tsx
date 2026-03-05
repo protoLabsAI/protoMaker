@@ -5,8 +5,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
-import { Button } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import { useFileEditorStore } from './use-file-editor-store';

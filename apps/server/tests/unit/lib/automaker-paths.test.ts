@@ -17,7 +17,7 @@ import {
   getCredentialsPath,
   getProjectSettingsPath,
   ensureDataDir,
-} from '@protolabs-ai/platform';
+} from '@protolabsai/platform';
 
 describe('automaker-paths.ts', () => {
   const projectPath = path.join('/test', 'project');

@@ -7,8 +7,8 @@
 
 import * as secureFs from '../../../lib/secure-fs.js';
 import path from 'path';
-import { getBranchTrackingPath, ensureAutomakerDir } from '@protolabs-ai/platform';
-import { createLogger } from '@protolabs-ai/utils';
+import { getBranchTrackingPath, ensureAutomakerDir } from '@protolabsai/platform';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('BranchTracking');
 

@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Webhook, Copy, CheckCircle2, Eye, EyeOff } from 'lucide-react';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import { useUpdateProjectSettings } from '@/hooks/mutations';
 import type { Project } from '@/lib/electron';
-import type { WebhookSettings } from '@protolabs-ai/types';
+import type { WebhookSettings } from '@protolabsai/types';
 
 interface ProjectWebhooksSectionProps {
   project: Project;

@@ -1,5 +1,5 @@
 /**
- * @protolabs-ai/dependency-resolver
+ * @protolabsai/dependency-resolver
  * Feature dependency resolution for AutoMaker
  */
 

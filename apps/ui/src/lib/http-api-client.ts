@@ -22,7 +22,7 @@
  *   ava-client.ts       — ava (getConfig, updateConfig)
  */
 
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 
 // Re-export auth utilities — consumed by login-view, terminal-panel, account-section, etc.
 export {

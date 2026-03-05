@@ -165,7 +165,7 @@ export class MyService {
 
 ### Error Handling
 \`\`\`typescript
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('MyService');
 

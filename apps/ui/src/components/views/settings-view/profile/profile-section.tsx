@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Input, Label, Textarea } from '@protolabs-ai/ui/atoms';
+import { Input, Label, Textarea } from '@protolabsai/ui/atoms';
 import { UserCog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalSettings } from '@/hooks/queries/use-settings';
 import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
-import type { UserProfile } from '@protolabs-ai/types';
+import type { UserProfile } from '@protolabsai/types';
 
 function GroupHeader({ children }: { children: React.ReactNode }) {
   return (

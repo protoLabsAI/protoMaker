@@ -31,18 +31,18 @@ const BUNDLE_DIR = join(APP_DIR, 'server-bundle');
 
 // Local workspace packages that need to be bundled
 const LOCAL_PACKAGES = [
-  '@protolabs-ai/types',
-  '@protolabs-ai/utils',
-  '@protolabs-ai/prompts',
-  '@protolabs-ai/platform',
-  '@protolabs-ai/model-resolver',
-  '@protolabs-ai/dependency-resolver',
-  '@protolabs-ai/spec-parser',
-  '@protolabs-ai/flows',
-  '@protolabs-ai/observability',
-  '@protolabs-ai/git-utils',
-  '@protolabs-ai/error-tracking',
-  '@protolabs-ai/tools',
+  '@protolabsai/types',
+  '@protolabsai/utils',
+  '@protolabsai/prompts',
+  '@protolabsai/platform',
+  '@protolabsai/model-resolver',
+  '@protolabsai/dependency-resolver',
+  '@protolabsai/spec-parser',
+  '@protolabsai/flows',
+  '@protolabsai/observability',
+  '@protolabsai/git-utils',
+  '@protolabsai/error-tracking',
+  '@protolabsai/tools',
 ];
 
 console.log('🔧 Preparing server for Electron bundling...\n');
@@ -68,7 +68,7 @@ const bundleLibsDir = join(BUNDLE_DIR, 'libs');
 mkdirSync(bundleLibsDir, { recursive: true });
 
 for (const pkgName of LOCAL_PACKAGES) {
-  const pkgDir = pkgName.replace('@protolabs-ai/', '');
+  const pkgDir = pkgName.replace('@protolabsai/', '');
   const srcDir = join(LIBS_DIR, pkgDir);
   const destDir = join(bundleLibsDir, pkgDir);
 
@@ -100,13 +100,13 @@ const serverPkg = JSON.parse(readFileSync(join(SERVER_DIR, 'package.json'), 'utf
 const dependencies = { ...serverPkg.dependencies };
 for (const pkgName of LOCAL_PACKAGES) {
   if (dependencies[pkgName]) {
-    const pkgDir = pkgName.replace('@protolabs-ai/', '');
+    const pkgDir = pkgName.replace('@protolabsai/', '');
     dependencies[pkgName] = `file:libs/${pkgDir}`;
   }
 }
 
 const bundlePkg = {
-  name: '@protolabs-ai/server-bundle',
+  name: '@protolabsai/server-bundle',
   version: serverPkg.version,
   type: 'module',
   main: 'dist/index.js',
@@ -137,7 +137,7 @@ function resolveSymlinksInDir(dir) {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir)) {
     const entryPath = join(dir, entry);
-    // Handle scoped packages (@protolabs-ai/*)
+    // Handle scoped packages (@protolabsai/*)
     if (entry.startsWith('@') && lstatSync(entryPath).isDirectory()) {
       resolveSymlinksInDir(entryPath);
       continue;

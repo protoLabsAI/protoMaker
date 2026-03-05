@@ -9,7 +9,7 @@
  * The resolved identity is cached on first request for performance.
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import type { SettingsService } from './settings-service.js';
 import { execSync } from 'node:child_process';
 

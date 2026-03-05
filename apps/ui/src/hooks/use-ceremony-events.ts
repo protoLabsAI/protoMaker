@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 import { useCeremonyStore } from '@/store/ceremony-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { apiGet } from '@/lib/api-fetch';
-import type { CeremonyAuditEntry, EventType } from '@protolabs-ai/types';
+import type { CeremonyAuditEntry, EventType } from '@protolabsai/types';
 
 interface CeremonyLogResponse {
   success: boolean;

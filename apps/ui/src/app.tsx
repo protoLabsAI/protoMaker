@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { RouterProvider } from '@tanstack/react-router';
-import { createLogger } from '@protolabs-ai/utils/logger';
+import { createLogger } from '@protolabsai/utils/logger';
 import { router } from './utils/router';
 import { SplashScreen } from './components/splash-screen';
 import { useSettingsSync } from './hooks/use-settings-sync';

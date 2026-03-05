@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import type { PenNode, PenDocument as PenDocumentParsed } from '@protolabs-ai/types';
+import type { PenNode, PenDocument as PenDocumentParsed } from '@protolabsai/types';
 import type { PenDocument } from '@/store/designs-store';
 import { useDesignsStore } from '@/store/designs-store';
 import { ComponentThumbnail } from './component-thumbnail';

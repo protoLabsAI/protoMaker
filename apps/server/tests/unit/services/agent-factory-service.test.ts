@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { AgentFactoryService } from '../../../src/services/agent-factory-service.js';
 import { RoleRegistryService } from '../../../src/services/role-registry-service.js';
-import type { AgentTemplate } from '@protolabs-ai/types';
+import type { AgentTemplate } from '@protolabsai/types';
 
 function makeTemplate(overrides: Partial<AgentTemplate> = {}): AgentTemplate {
   return {

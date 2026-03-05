@@ -16,8 +16,8 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { createLogger } from '@protolabs-ai/utils';
-import type { Feature } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { Feature } from '@protolabsai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 

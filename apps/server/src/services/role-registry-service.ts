@@ -8,8 +8,8 @@
  * Singleton pattern — one registry per server instance.
  */
 
-import { AgentTemplateSchema, type AgentTemplate, KNOWN_AGENT_ROLES } from '@protolabs-ai/types';
-import { createLogger } from '@protolabs-ai/utils';
+import { AgentTemplateSchema, type AgentTemplate, KNOWN_AGENT_ROLES } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('RoleRegistry');

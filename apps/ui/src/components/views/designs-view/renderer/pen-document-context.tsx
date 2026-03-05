@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { PenDocument, PenNode } from '@protolabs-ai/types';
+import type { PenDocument, PenNode } from '@protolabsai/types';
 
 interface PenDocumentContextValue {
   document: PenDocument;

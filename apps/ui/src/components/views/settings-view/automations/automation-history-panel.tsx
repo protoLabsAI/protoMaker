@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Spinner } from '@protolabs-ai/ui/atoms';
+import { Spinner } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, XCircle, Loader2, ExternalLink } from 'lucide-react';
-import type { AutomationRunRecord, AutomationRunStatus } from '@protolabs-ai/types';
+import type { AutomationRunRecord, AutomationRunStatus } from '@protolabsai/types';
 import { getAutomationHistory } from '@/lib/api';
 import { getLangfuseTraceUrl } from '@/lib/langfuse-url';
 

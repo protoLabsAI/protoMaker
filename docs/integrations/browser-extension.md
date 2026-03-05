@@ -3,7 +3,7 @@
 The protoLabs.studio browser extension brings protoLabs Studio into any browser tab. Chat with Ava, monitor agent status, and extract context from GitHub pages -- all from Chrome's side panel.
 
 **Status:** Optional
-**Repository:** [proto-labs-ai/protoExtension](https://github.com/proto-labs-ai/protoExtension)
+**Repository:** [protoLabsAI/protoExtension](https://github.com/protoLabsAI/protoExtension)
 **Targets:** Chrome (primary), Firefox (secondary)
 
 ## What It Does
@@ -25,7 +25,7 @@ The protoLabs.studio browser extension brings protoLabs Studio into any browser 
 ### From Source (Development)
 
 ```bash
-git clone https://github.com/proto-labs-ai/protoExtension.git
+git clone https://github.com/protoLabsAI/protoExtension.git
 cd protoExtension
 pnpm install
 pnpm dev
@@ -33,7 +33,7 @@ pnpm dev
 
 Load the unpacked extension from `.output/chrome-mv3/` in `chrome://extensions` (Developer mode enabled).
 
-See the full [Developer Quickstart](https://github.com/proto-labs-ai/protoExtension/blob/main/docs/dev-quickstart.md) for detailed instructions.
+See the full [Developer Quickstart](https://github.com/protoLabsAI/protoExtension/blob/main/docs/dev-quickstart.md) for detailed instructions.
 
 ### Configuration
 

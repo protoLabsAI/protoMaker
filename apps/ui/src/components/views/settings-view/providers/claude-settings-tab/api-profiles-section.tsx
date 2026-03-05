@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useAIModelsStore } from '@/store/ai-models-store';
-import { Button } from '@protolabs-ai/ui/atoms';
-import { Input } from '@protolabs-ai/ui/atoms';
-import { Label } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Input } from '@protolabsai/ui/atoms';
+import { Label } from '@protolabsai/ui/atoms';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@protolabs-ai/ui/atoms';
-import { Switch } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Switch } from '@protolabsai/ui/atoms';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
 import {
   ChevronDown,
@@ -39,16 +39,16 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
 import type {
   ClaudeCompatibleProvider,
   ClaudeCompatibleProviderType,
   ApiKeySource,
   ProviderModel,
   ClaudeModelAlias,
-} from '@protolabs-ai/types';
-import { CLAUDE_PROVIDER_TEMPLATES } from '@protolabs-ai/types';
-import { Badge } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/types';
+import { CLAUDE_PROVIDER_TEMPLATES } from '@protolabsai/types';
+import { Badge } from '@protolabsai/ui/atoms';
 
 // Generate unique ID for providers
 function generateProviderId(): string {

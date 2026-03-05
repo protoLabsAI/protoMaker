@@ -1,5 +1,5 @@
 {
-  "name": "@protolabs-ai/pen-parser",
+  "name": "@protolabsai/pen-parser",
   "version": "0.6.27",
   "type": "module",
   "description": "PEN file parser for Penpot design files",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabs-ai/types": "^0.33.0"
+    "@protolabsai/types": "^0.33.0"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

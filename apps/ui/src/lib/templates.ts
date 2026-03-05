@@ -22,7 +22,7 @@ export const starterTemplates: StarterTemplate[] = [
     name: 'Browser Extension',
     description:
       'Multi-browser extension template targeting Chrome and Firefox (Manifest V3). Includes typed messaging, storage helpers, popup/options pages, and CI pipeline for both stores.',
-    repoUrl: 'https://github.com/proto-labs-ai/browser-extension-template',
+    repoUrl: 'https://github.com/protoLabsAI/browser-extension-template',
     techStack: [
       'WXT',
       'React 19',

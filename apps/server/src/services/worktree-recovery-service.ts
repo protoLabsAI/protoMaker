@@ -9,9 +9,9 @@
 import { exec, execFile } from 'child_process';
 import path from 'path';
 import { promisify } from 'util';
-import { createLogger } from '@protolabs-ai/utils';
-import type { Feature } from '@protolabs-ai/types';
-import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { Feature } from '@protolabsai/types';
+import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { buildGitAddCommand } from '../lib/git-staging-utils.js';
 
 const execAsync = promisify(exec);

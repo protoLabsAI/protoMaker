@@ -46,7 +46,7 @@ The Dynamic Role Registry system enables runtime agent creation, configuration, 
 Templates are validated at runtime with Zod. A template defines everything about an agent type:
 
 ```typescript
-import type { AgentTemplate } from '@protolabs-ai/types';
+import type { AgentTemplate } from '@protolabsai/types';
 
 const myTemplate: AgentTemplate = {
   // Identity
@@ -298,7 +298,7 @@ assignments: {
 assignments: {
   github: {
     labelFilter: ['bug', 'security'],
-    repos: ['proto-labs-ai/automaker']
+    repos: ['protoLabsAI/automaker']
   }
 }
 ```

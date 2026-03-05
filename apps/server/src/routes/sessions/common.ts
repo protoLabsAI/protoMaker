@@ -2,7 +2,7 @@
  * Common utilities for sessions routes
  */
 
-import { createLogger } from '@protolabs-ai/utils';
+import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage as getErrorMessageShared, createLogError } from '../common.js';
 
 const logger = createLogger('Sessions');

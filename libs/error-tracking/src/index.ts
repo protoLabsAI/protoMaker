@@ -9,7 +9,7 @@
  *
  * @example
  * ```typescript
- * import { initializeSentry, setFeatureContext, startSpan } from '@protolabs-ai/error-tracking';
+ * import { initializeSentry, setFeatureContext, startSpan } from '@protolabsai/error-tracking';
  *
  * // Initialize at app startup
  * initializeSentry({

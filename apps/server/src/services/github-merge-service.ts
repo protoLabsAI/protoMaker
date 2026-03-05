@@ -7,8 +7,8 @@
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { createLogger } from '@protolabs-ai/utils';
-import type { PRMergeStrategy } from '@protolabs-ai/types';
+import { createLogger } from '@protolabsai/utils';
+import type { PRMergeStrategy } from '@protolabsai/types';
 
 const execAsync = promisify(exec);
 const logger = createLogger('GitHubMerge');

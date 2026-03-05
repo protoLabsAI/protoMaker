@@ -28,7 +28,7 @@ import type {
   ModelDefinition,
   ContentBlock,
 } from './types.js';
-import { validateBareModelId } from '@protolabs-ai/types';
+import { validateBareModelId } from '@protolabsai/types';
 import { validateApiKey } from '../lib/auth-utils.js';
 import { getEffectivePermissions } from '../services/cursor-config-service.js';
 import {
@@ -39,9 +39,9 @@ import {
   type CursorResultEvent,
   type CursorAuthStatus,
   CURSOR_MODEL_MAP,
-} from '@protolabs-ai/types';
-import { createLogger, isAbortError } from '@protolabs-ai/utils';
-import { spawnJSONLProcess, execInWsl } from '@protolabs-ai/platform';
+} from '@protolabsai/types';
+import { createLogger, isAbortError } from '@protolabsai/utils';
+import { spawnJSONLProcess, execInWsl } from '@protolabsai/platform';
 
 // Create logger for this module
 const logger = createLogger('CursorProvider');

@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { getAutomakerDir } from '@protolabs-ai/platform';
+import { getAutomakerDir } from '@protolabsai/platform';
 
 export function createMigrateHandler() {
   return async (req: Request, res: Response): Promise<void> => {

@@ -6,7 +6,7 @@ import type {
   ProviderMessage,
   InstallationStatus,
   ModelDefinition,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 
 // Concrete implementation for testing the abstract class
 class TestProvider extends BaseProvider {

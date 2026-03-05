@@ -13,14 +13,14 @@ import type {
   ProviderModel,
   ClaudeModelAlias,
   OpenAICompatibleConfig,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   STANDALONE_CURSOR_MODELS,
   getModelGroup,
   isGroupSelected,
   getSelectedVariant,
   codexModelHasThinking,
-} from '@protolabs-ai/types';
+} from '@protolabsai/types';
 import {
   CLAUDE_MODELS,
   CURSOR_MODELS,
@@ -42,7 +42,7 @@ import {
   MiniMaxIcon,
   getProviderIconForModel,
 } from '@/components/shared/provider-icon';
-import { Button } from '@protolabs-ai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
 import {
   Command,
   CommandEmpty,
@@ -51,8 +51,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@protolabs-ai/ui/atoms';
-import { Popover, PopoverContent, PopoverTrigger } from '@protolabs-ai/ui/atoms';
+} from '@protolabsai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
 
 const OPENCODE_CLI_GROUP_LABEL = 'OpenCode CLI';
 const OPENCODE_PROVIDER_FALLBACK = 'opencode';

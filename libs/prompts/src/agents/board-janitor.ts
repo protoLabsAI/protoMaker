@@ -2,7 +2,7 @@
  * Board Janitor prompt
  *
  * Personified prompt for the Board Janitor agent template.
- * Used by built-in-templates.ts via @protolabs-ai/prompts.
+ * Used by built-in-templates.ts via @protolabsai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';
