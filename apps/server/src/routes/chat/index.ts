@@ -357,6 +357,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
               metricsService: services.metricsService,
               settingsService: services.settingsService,
               projectService: services.projectService,
+              projectLifecycleService: services.projectLifecycleService,
+              projectPMService: undefined,
               toolProgressEmitter,
               sensorRegistryService: userPresenceDetection
                 ? services.sensorRegistryService

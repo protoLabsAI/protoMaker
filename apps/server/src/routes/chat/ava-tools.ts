@@ -33,6 +33,7 @@ import type { AgentFactoryService, AgentConfig } from '../../services/agent-fact
 import type { DynamicAgentExecutor } from '../../services/dynamic-agent-executor.js';
 import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
+import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { buildProgressHooks } from '../../lib/agent-hooks.js';
@@ -83,6 +84,15 @@ export interface AvaToolsServices {
   settingsService?: SettingsService;
   /** Project service — required for projects tools */
   projectService?: ProjectService;
+  /** Project lifecycle service — required for project lifecycle tools */
+  projectLifecycleService?: ProjectLifecycleService;
+  /** Project PM service — optional, spawns PM agent on project launch */
+  projectPMService?: {
+    getOrCreateSession(
+      projectPath: string,
+      projectSlug: string
+    ): Promise<{ sessionId: string; pmAgentStarted: boolean }>;
+  };
   /** Tool progress emitter — optional, enables real-time progress labels in chat */
   toolProgressEmitter?: ToolProgressEmitter;
   /**
@@ -1122,6 +1132,115 @@ export function buildAvaTools(
           slug: finalSlug,
         });
         return { slug: project.slug, title: project.title, status: project.status };
+      },
+    });
+
+    tools['create_project_plan'] = makeTool({
+      description:
+        'Initiate a new project by creating a local project entry and registering it with Linear (if configured). ' +
+        'Performs a duplicate check before creating. Returns the project slug and Linear URL if available.',
+      inputSchema: z.object({
+        title: z.string().describe('Project title'),
+        description: z.string().describe('Project idea description or goals'),
+      }),
+      execute: async ({ title, description }) => {
+        if (!services.projectLifecycleService) {
+          return { error: 'Project lifecycle service not available' };
+        }
+        const result = await services.projectLifecycleService.initiate(
+          projectPath,
+          title,
+          description
+        );
+        return result;
+      },
+    });
+
+    tools['approve_project'] = makeTool({
+      description:
+        'Approve the PRD for a project: creates board features and epics from the project milestones, ' +
+        'and syncs milestones to Linear if the project has a Linear ID. Returns the number of features created.',
+      inputSchema: z.object({
+        projectSlug: z.string().describe('Project slug to approve'),
+        createEpics: z
+          .boolean()
+          .optional()
+          .describe('Whether to create epic features (default: true)'),
+        setupDependencies: z
+          .boolean()
+          .optional()
+          .describe('Whether to wire feature dependencies (default: true)'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ projectSlug, createEpics, setupDependencies }) => {
+        if (!services.projectLifecycleService) {
+          return { error: 'Project lifecycle service not available' };
+        }
+        const result = await services.projectLifecycleService.approvePrd(projectPath, projectSlug, {
+          createEpics,
+          setupDependencies,
+        });
+        return result;
+      },
+    });
+
+    tools['launch_project'] = makeTool({
+      description:
+        'Launch a project: starts auto-mode to begin executing backlog features and optionally spawns a PM agent session. ' +
+        'Requires the PRD to be approved and features to be in backlog first.',
+      inputSchema: z.object({
+        projectSlug: z.string().describe('Project slug to launch'),
+        maxConcurrency: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .optional()
+          .describe('Maximum number of concurrent agents (default: 2)'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ projectSlug, maxConcurrency }) => {
+        if (!services.projectLifecycleService) {
+          return { error: 'Project lifecycle service not available' };
+        }
+        const launchResult = await services.projectLifecycleService.launch(
+          projectPath,
+          projectSlug,
+          maxConcurrency
+        );
+
+        let pmSession: { sessionId: string; pmAgentStarted: boolean } | undefined;
+        if (services.projectPMService) {
+          try {
+            pmSession = await services.projectPMService.getOrCreateSession(
+              projectPath,
+              projectSlug
+            );
+          } catch {
+            // PM session creation is best-effort
+          }
+        }
+
+        return {
+          ...launchResult,
+          pmSession: pmSession ?? null,
+        };
+      },
+    });
+
+    tools['get_project_lifecycle_status'] = makeTool({
+      description:
+        'Get the current lifecycle phase and next actions for a project. ' +
+        'Returns phase (idea, prd-approved, started, completed), board summary, and suggested next steps.',
+      inputSchema: z.object({
+        projectSlug: z.string().describe('Project slug to check'),
+      }),
+      execute: async ({ projectSlug }) => {
+        if (!services.projectLifecycleService) {
+          return { error: 'Project lifecycle service not available' };
+        }
+        const status = await services.projectLifecycleService.getStatus(projectPath, projectSlug);
+        return status;
       },
     });
   }
