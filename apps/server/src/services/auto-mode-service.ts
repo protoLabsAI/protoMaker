@@ -49,9 +49,6 @@ import {
   MAX_SYSTEM_CONCURRENCY,
   isClaudeModel,
   stripProviderPrefix,
-  normalizeFeatureStatus,
-  EscalationSource,
-  EscalationSeverity,
 } from '@protolabsai/types';
 import {
   buildPromptWithImages,
@@ -70,11 +67,7 @@ import {
 
 const logger = createLogger('AutoMode');
 import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@protolabsai/model-resolver';
-import {
-  resolveDependencies,
-  areDependenciesSatisfied,
-  getBlockingInfo,
-} from '@protolabsai/dependency-resolver';
+import { getBlockingInfo } from '@protolabsai/dependency-resolver';
 import {
   getFeatureDir,
   getAutomakerDir,
@@ -90,9 +83,13 @@ import path from 'path';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import { TypedEventBus } from './auto-mode/typed-event-bus.js';
+import {
+  FeatureScheduler,
+  type SchedulerCallbacks,
+  type PipelineRunner,
+} from './feature-scheduler.js';
 import { ConcurrencyManager } from './auto-mode/concurrency-manager.js';
 import { ensureCleanWorktree } from '../lib/worktree-guard.js';
-import { isWorktreeLocked } from '../lib/worktree-lock.js';
 import {
   agentCostTotal,
   agentExecutionDuration,
@@ -143,21 +140,6 @@ import type {
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
-
-/**
- * Get the current branch name for a git repository
- * @param projectPath - Path to the git repository
- * @returns The current branch name, or null if not in a git repo or on detached HEAD
- */
-async function getCurrentBranch(projectPath: string): Promise<string | null> {
-  try {
-    const { stdout } = await execAsync('git branch --show-current', { cwd: projectPath });
-    const branch = stdout.trim();
-    return branch || null;
-  } catch {
-    return null;
-  }
-}
 
 // PlanningMode type is imported from @protolabsai/types
 
@@ -236,19 +218,6 @@ const COOLDOWN_PERIOD_MS = 300_000; // 5 minutes
 const CONSECUTIVE_FAILURE_THRESHOLD = 2; // Pause after 2 consecutive failures (circuit breaker)
 const FAILURE_WINDOW_MS = 60000; // Failures within 1 minute count as consecutive
 
-// Auto-loop sleep interval constants — extracted for maintainability and easy tuning
-const SLEEP_INTERVAL_CAPACITY_MS = 5000; // Waiting while at max concurrency capacity
-const SLEEP_INTERVAL_IDLE_MS = 30000; // Sustained idle polling after idle event emitted
-const SLEEP_INTERVAL_NORMAL_MS = 2000; // Normal loop iteration delay
-const SLEEP_INTERVAL_ERROR_MS = 5000; // Backoff after a loop iteration error
-
-/** Structured outcome from an auto-loop feature execution attempt. */
-interface PipelineResult {
-  outcome: 'completed' | 'escalated' | 'needs_retry';
-  retryAfterMs?: number;
-  errorInfo?: ReturnType<typeof classifyError>;
-}
-
 export class AutoModeService {
   private events: EventEmitter;
   private typedEventBus: TypedEventBus;
@@ -287,6 +256,8 @@ export class AutoModeService {
   private pipelineCheckpointService: PipelineCheckpointService | null = null;
   // ExecutionService handles feature execution logic
   private executionService!: ExecutionService;
+  // FeatureScheduler owns the loop, feature loading, and concurrency resolution
+  private scheduler!: FeatureScheduler;
   // Track which projects have already been checked for interrupted features this server lifecycle.
   // Prevents the UI from re-triggering resumeInterruptedFeatures on every board mount.
   private resumeCheckedProjects = new Set<string>();
@@ -336,6 +307,35 @@ export class AutoModeService {
       this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD,
       callbacks
     );
+
+    // Initialize FeatureScheduler with callbacks back into this service
+    const schedulerRunner: PipelineRunner = {
+      run: async (projectPath: string, featureId: string) => {
+        await this.leadEngineerService.process(projectPath, featureId);
+      },
+    };
+    const schedulerCallbacks: SchedulerCallbacks = {
+      getRunningCountForWorktree: this.getRunningCountForWorktree.bind(this),
+      hasInProgressFeatures: this.hasInProgressFeatures.bind(this),
+      isFeatureRunning: this.isFeatureRunning.bind(this),
+      isFeatureFinished: this.isFeatureFinished.bind(this),
+      emitAutoModeEvent: this.emitAutoModeEvent.bind(this),
+      getHeapUsagePercent: this.getHeapUsagePercent.bind(this),
+      getMostRecentRunningFeature: this.getMostRecentRunningFeature.bind(this),
+      recordSuccessForProject: this.recordSuccessForProject.bind(this),
+      trackFailureAndCheckPauseForProject: this.trackFailureAndCheckPauseForProject.bind(this),
+      signalShouldPauseForProject: this.signalShouldPauseForProject.bind(this),
+      sleep: this.sleep.bind(this),
+      HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD,
+      HEAP_USAGE_ABORT_AGENTS_THRESHOLD: this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD,
+    };
+    this.scheduler = new FeatureScheduler({
+      featureLoader: this.featureLoader,
+      settingsService: this.settingsService,
+      events: this.events,
+      runner: schedulerRunner,
+      callbacks: schedulerCallbacks,
+    });
 
     // Stop running agents when their feature reaches a terminal state.
     // This prevents zombie agents from continuing to run (and consume API budget)
@@ -407,6 +407,7 @@ export class AutoModeService {
     service: import('./feature-health-service.js').FeatureHealthService
   ): void {
     this.featureHealthService = service;
+    this.scheduler.setFeatureHealthAuditor(service);
   }
 
   /**
@@ -787,54 +788,6 @@ export class AutoModeService {
     }
   }
 
-  private async resolveMaxConcurrency(
-    projectPath: string,
-    branchName: string | null,
-    provided?: number
-  ): Promise<number> {
-    let resolvedValue: number;
-
-    if (typeof provided === 'number' && Number.isFinite(provided)) {
-      resolvedValue = provided;
-    } else if (!this.settingsService) {
-      resolvedValue = DEFAULT_MAX_CONCURRENCY;
-    } else {
-      try {
-        const settings = await this.settingsService.getGlobalSettings();
-        const globalMax =
-          typeof settings.maxConcurrency === 'number'
-            ? settings.maxConcurrency
-            : DEFAULT_MAX_CONCURRENCY;
-        const projectId = settings.projects?.find((project) => project.path === projectPath)?.id;
-        const autoModeByWorktree = settings.autoModeByWorktree;
-
-        if (projectId && autoModeByWorktree && typeof autoModeByWorktree === 'object') {
-          const key = `${projectId}::${branchName ?? '__main__'}`;
-          const entry = autoModeByWorktree[key];
-          if (entry && typeof entry.maxConcurrency === 'number') {
-            resolvedValue = entry.maxConcurrency;
-          } else {
-            resolvedValue = globalMax;
-          }
-        } else {
-          resolvedValue = globalMax;
-        }
-      } catch {
-        resolvedValue = DEFAULT_MAX_CONCURRENCY;
-      }
-    }
-
-    // Enforce hard system limit to prevent resource exhaustion
-    if (resolvedValue > MAX_SYSTEM_CONCURRENCY) {
-      logger.warn(
-        `maxConcurrency ${resolvedValue} exceeds system limit of ${MAX_SYSTEM_CONCURRENCY}, capping to ${MAX_SYSTEM_CONCURRENCY}`
-      );
-      return MAX_SYSTEM_CONCURRENCY;
-    }
-
-    return resolvedValue;
-  }
-
   /**
    * Start the auto mode loop for a specific project/worktree (supports multiple concurrent projects and worktrees)
    * @param projectPath - The project to start auto mode for
@@ -877,7 +830,7 @@ export class AutoModeService {
     // so no concurrent caller can sneak through in the same event-loop turn.
     this.pendingLoopStarts.add(worktreeKey);
 
-    const resolvedMaxConcurrency = await this.resolveMaxConcurrency(
+    const resolvedMaxConcurrency = await this.scheduler.resolveMaxConcurrency(
       projectPath,
       branchName,
       maxConcurrency
@@ -907,7 +860,7 @@ export class AutoModeService {
 
       // Delegate loop lifecycle to coordinator
       this.coordinator.startLoop(worktreeKey, config, (state) =>
-        this.runAutoLoopForProject(worktreeKey, state)
+        this.scheduler.runLoop(worktreeKey, state)
       );
 
       return resolvedMaxConcurrency;
@@ -919,361 +872,6 @@ export class AutoModeService {
       // Release the pending claim regardless of outcome so the key can be reused
       this.pendingLoopStarts.delete(worktreeKey);
     }
-  }
-
-  /**
-   * Run the auto loop for a specific project/worktree
-   * @param worktreeKey - The worktree key (projectPath::branchName or projectPath::__main__)
-   */
-  private async runAutoLoopForProject(worktreeKey: string, loopState?: LoopState): Promise<void> {
-    const projectState = loopState ?? this.coordinator.getState(worktreeKey);
-    if (!projectState) {
-      logger.warn(`No project state found for ${worktreeKey}, stopping loop`);
-      return;
-    }
-
-    const { projectPath, branchName } = projectState.config;
-    const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
-
-    logger.info(
-      `[AutoLoop] Starting loop for ${worktreeDesc} in ${projectPath}, maxConcurrency: ${projectState.config.maxConcurrency}`
-    );
-    let iterationCount = 0;
-
-    // Configurable startup delay before first agent launch (default 10s, 0 to disable)
-    const startupDelayMs = parseInt(process.env.AUTO_MODE_STARTUP_DELAY_MS || '10000', 10);
-    if (startupDelayMs > 0) {
-      logger.info(
-        `[AutoLoop] Startup cooldown: waiting ${startupDelayMs}ms before first agent launch`
-      );
-      await this.sleep(startupDelayMs, projectState.abortController.signal);
-      if (!projectState.isRunning || projectState.abortController.signal.aborted) {
-        logger.info(`[AutoLoop] Auto-mode stopped during startup cooldown for ${worktreeDesc}`);
-        return;
-      }
-      const heapUsage = this.getHeapUsagePercent();
-      if (heapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
-        logger.warn(
-          `[AutoLoop] Heap at ${Math.round(heapUsage * 100)}% after cooldown, stopping auto-mode for ${worktreeDesc}`
-        );
-        projectState.isRunning = false;
-        return;
-      }
-    }
-
-    while (projectState.isRunning && !projectState.abortController.signal.aborted) {
-      iterationCount++;
-      logger.debug(
-        `[AutoLoop] 💓 Heartbeat - Iteration ${iterationCount} for ${worktreeDesc} in ${projectPath}`
-      );
-
-      // Periodic health sweep (every ~100 seconds at 2s interval)
-      if (iterationCount % 50 === 0 && this.featureHealthService) {
-        try {
-          const report = await this.featureHealthService.audit(projectPath, true);
-          if (report.issues.length > 0) {
-            logger.warn(
-              `[AutoLoop] Health sweep found ${report.issues.length} issues, fixed ${report.fixed.length}`
-            );
-            for (const issue of report.issues) {
-              this.events.emit(
-                'escalation:signal-received' as import('@protolabsai/types').EventType,
-                {
-                  source: 'auto_mode_health_sweep',
-                  severity: issue.type === 'stale_gate' ? 'medium' : 'low',
-                  type: issue.type,
-                  context: {
-                    featureId: issue.featureId,
-                    featureTitle: issue.featureTitle,
-                    message: issue.message,
-                    fix: issue.fix,
-                    projectPath,
-                  },
-                  deduplicationKey: `health_${issue.type}_${issue.featureId}_${projectPath}`,
-                  timestamp: new Date().toISOString(),
-                }
-              );
-            }
-          }
-        } catch (err) {
-          logger.warn('[AutoLoop] Health sweep failed:', err);
-        }
-      }
-
-      // Early heap check — prevent any work when memory is critical
-      const earlyHeapUsage = this.getHeapUsagePercent();
-      if (earlyHeapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
-        logger.warn(
-          `[AutoLoop] High heap (${Math.round(earlyHeapUsage * 100)}%), deferring iteration for ${worktreeDesc}`
-        );
-        await this.sleep(10000, projectState.abortController.signal);
-        continue;
-      }
-
-      try {
-        // Count running features for THIS project/worktree only
-        const projectRunningCount = await this.getRunningCountForWorktree(projectPath, branchName);
-
-        // Count features that are in the process of being started
-        const startingCount = projectState.startingFeatures.size;
-
-        // Total occupied slots = running + starting
-        const totalOccupied = projectRunningCount + startingCount;
-
-        // Check if we have capacity for this project/worktree
-        if (totalOccupied >= projectState.config.maxConcurrency) {
-          logger.debug(
-            `[AutoLoop] At capacity (${projectRunningCount} running + ${startingCount} starting = ${totalOccupied}/${projectState.config.maxConcurrency}), waiting...`
-          );
-          await this.sleep(SLEEP_INTERVAL_CAPACITY_MS);
-          continue;
-        }
-
-        // Load pending features for this project/worktree
-        const pendingFeatures = await this.loadPendingFeatures(projectPath, branchName);
-
-        logger.info(
-          `[AutoLoop] Iteration ${iterationCount}: Found ${pendingFeatures.length} pending features, ${projectRunningCount}/${projectState.config.maxConcurrency} running for ${worktreeDesc}`
-        );
-
-        if (pendingFeatures.length === 0) {
-          // Emit idle event only once when backlog is empty, no agents are running,
-          // AND no features are in_progress (guards against the transition window where
-          // a feature has just finished but its status hasn't flipped to done yet).
-          const inProgress = await this.hasInProgressFeatures(projectPath, branchName);
-          if (projectRunningCount === 0 && !inProgress && !projectState.hasEmittedIdleEvent) {
-            this.emitAutoModeEvent('auto_mode_idle', {
-              message: 'No pending features - auto mode idle',
-              projectPath,
-              branchName,
-            });
-            projectState.hasEmittedIdleEvent = true;
-            logger.info(`[AutoLoop] Backlog complete, auto mode now idle for ${worktreeDesc}`);
-          } else if (projectRunningCount > 0) {
-            logger.info(
-              `[AutoLoop] No pending features available, ${projectRunningCount} still running, waiting...`
-            );
-          } else if (inProgress) {
-            logger.info(
-              `[AutoLoop] No pending features available but features still in_progress, waiting for status transition...`
-            );
-          } else if (projectState.hasEmittedIdleEvent) {
-            // Still idle — keep polling at reduced frequency so we pick up
-            // features that become unblocked when dependencies complete.
-            logger.debug(
-              `[AutoLoop] Still idle for ${worktreeDesc}, polling again in ${SLEEP_INTERVAL_IDLE_MS / 1000}s...`
-            );
-          }
-          // Longer sleep when idle to reduce filesystem reads; pass abort signal
-          // so stopAutoLoopForProject() remains responsive even during idle sleep
-          await this.sleep(
-            projectState.hasEmittedIdleEvent ? SLEEP_INTERVAL_IDLE_MS : 10000,
-            projectState.abortController.signal
-          );
-          continue;
-        }
-
-        // Find a feature not currently running, not being started, and not yet finished
-        const nextFeature = pendingFeatures.find(
-          (f) =>
-            !this.runningFeatures.has(f.id) &&
-            !projectState.startingFeatures.has(f.id) &&
-            !this.isFeatureFinished(f)
-        );
-
-        // Log selection details for debugging
-        logger.info(
-          `[AutoLoop] Feature selection from ${pendingFeatures.length} pending: ${pendingFeatures.map((f) => `${f.id}(running:${this.runningFeatures.has(f.id)},finished:${this.isFeatureFinished(f)})`).join(', ')}`
-        );
-
-        if (nextFeature) {
-          // Check heap usage before starting new agents
-          const heapUsage = this.getHeapUsagePercent();
-
-          // At 90% heap usage, abort most recent agent to free memory
-          if (heapUsage >= this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD) {
-            const mostRecent = this.getMostRecentRunningFeature(projectPath);
-            if (mostRecent && mostRecent.abortController) {
-              logger.warn(
-                `[AutoLoop] Critical heap usage (${Math.round(heapUsage * 100)}%), aborting most recent agent: ${mostRecent.featureId}`
-              );
-              mostRecent.abortController.abort();
-              this.emitAutoModeEvent('auto_mode_progress', {
-                featureId: mostRecent.featureId,
-                message: `⚠️ Agent aborted due to critical memory usage (${Math.round(heapUsage * 100)}%)`,
-                projectPath,
-              });
-            } else {
-              logger.warn(
-                `[AutoLoop] Critical heap usage (${Math.round(heapUsage * 100)}%), deferring agent start (no running agents to abort)`
-              );
-            }
-            await this.sleep(2000);
-            continue;
-          }
-
-          // At 80% heap usage, stop accepting new agents
-          if (heapUsage >= this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD) {
-            logger.warn(
-              `[AutoLoop] High heap usage (${Math.round(heapUsage * 100)}%), deferring new agent start`
-            );
-            await this.sleep(5000);
-            continue;
-          }
-
-          // Double-check we're not at capacity (defensive check before starting)
-          const currentRunningCount = await this.getRunningCountForWorktree(
-            projectPath,
-            branchName
-          );
-          const currentStartingCount = projectState.startingFeatures.size;
-          const currentTotalOccupied = currentRunningCount + currentStartingCount;
-
-          if (currentTotalOccupied >= projectState.config.maxConcurrency) {
-            logger.warn(
-              `[AutoLoop] Race condition detected: at capacity ${currentRunningCount} running + ${currentStartingCount} starting = ${currentTotalOccupied}/${projectState.config.maxConcurrency} when trying to start feature ${nextFeature.id}, skipping`
-            );
-            await this.sleep(1000);
-            continue;
-          }
-
-          // Mark feature as starting BEFORE calling process() to prevent race conditions
-          projectState.startingFeatures.add(nextFeature.id);
-
-          logger.info(`[AutoLoop] Starting feature ${nextFeature.id}: ${nextFeature.title}`);
-          // Reset idle event flag since we're doing work again
-          projectState.hasEmittedIdleEvent = false;
-
-          // Safety timeout: Remove from starting set after 30 seconds if still there.
-          // Before declaring a feature stuck, check whether a lock file exists in its
-          // worktree — if it does, the agent process is alive and startup succeeded;
-          // extend the timeout rather than cleaning up prematurely.
-          const featureForTimeout = nextFeature;
-          const scheduleStartingTimeout = (delayMs: number): NodeJS.Timeout => {
-            return setTimeout(() => {
-              if (!projectState.startingFeatures.has(featureForTimeout.id)) return;
-
-              // If the feature is already in runningFeatures, startup succeeded — clear silently
-              if (this.runningFeatures.has(featureForTimeout.id)) {
-                projectState.startingFeatures.delete(featureForTimeout.id);
-                return;
-              }
-
-              // Check worktree lock file: if a live process holds the lock, extend the timeout
-              const branchForLock = featureForTimeout.branchName;
-              if (branchForLock) {
-                const worktreePathForLock = path.join(
-                  projectPath,
-                  '.worktrees',
-                  branchForLock.replace(/\//g, '-')
-                );
-                isWorktreeLocked(worktreePathForLock)
-                  .then((locked) => {
-                    if (locked) {
-                      logger.info(
-                        `[AutoLoop] Feature ${featureForTimeout.id} still starting after ${delayMs}ms but lock file shows live process — extending timeout`
-                      );
-                      scheduleStartingTimeout(30000);
-                    } else {
-                      logger.warn(
-                        `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
-                      );
-                      projectState.startingFeatures.delete(featureForTimeout.id);
-                    }
-                  })
-                  .catch(() => {
-                    // Cannot read lock file — treat as not locked and clean up
-                    logger.warn(
-                      `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
-                    );
-                    projectState.startingFeatures.delete(featureForTimeout.id);
-                  });
-              } else {
-                logger.warn(
-                  `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
-                );
-                projectState.startingFeatures.delete(featureForTimeout.id);
-              }
-            }, delayMs);
-          };
-          const startingTimeout = scheduleStartingTimeout(30000);
-
-          // Start feature execution in background.
-          // All features route through leadEngineerService.process() — the state machine
-          // handles both code and content (GTM) features.
-          // Model selection is handled inside IntakeProcessor.
-          const executionPromise = this.leadEngineerService.process(projectPath, nextFeature.id);
-
-          // Convert the raw execution promise into a structured PipelineResult so all
-          // outcomes — success, escalation, and retryable failures — are handled
-          // uniformly in the single .then() handler below.
-          const pipelineResultPromise: Promise<PipelineResult> = executionPromise
-            .then((): PipelineResult => ({ outcome: 'completed' }))
-            .catch((error: unknown): PipelineResult => {
-              const errorInfo = classifyError(error);
-              if (errorInfo.isRateLimit) {
-                const retryAfterMs = errorInfo.retryAfter
-                  ? errorInfo.retryAfter * 1000
-                  : SLEEP_INTERVAL_ERROR_MS;
-                return { outcome: 'needs_retry', retryAfterMs, errorInfo };
-              }
-              return { outcome: 'escalated', errorInfo };
-            });
-
-          pipelineResultPromise.then((result: PipelineResult) => {
-            clearTimeout(startingTimeout);
-            switch (result.outcome) {
-              case 'completed':
-                projectState.startingFeatures.delete(nextFeature.id);
-                this.recordSuccessForProject(projectPath, branchName);
-                break;
-              case 'escalated': {
-                projectState.startingFeatures.delete(nextFeature.id);
-                const errorInfo = result.errorInfo!;
-                logger.error(`[AutoLoop] Feature ${nextFeature.id} escalated:`, errorInfo);
-                if (!errorInfo.isCancellation) {
-                  const shouldPause = this.trackFailureAndCheckPauseForProject(
-                    projectPath,
-                    branchName,
-                    errorInfo
-                  );
-                  if (shouldPause) {
-                    this.signalShouldPauseForProject(projectPath, branchName, errorInfo);
-                  }
-                }
-                break;
-              }
-              case 'needs_retry': {
-                const delay = result.retryAfterMs ?? SLEEP_INTERVAL_ERROR_MS;
-                logger.info(
-                  `[AutoLoop] Feature ${nextFeature.id} scheduled for retry in ${delay}ms`
-                );
-                setTimeout(() => {
-                  projectState.startingFeatures.delete(nextFeature.id);
-                }, delay);
-                break;
-              }
-            }
-          });
-
-          // Brief sleep to ensure proper sequencing
-          await this.sleep(100);
-        } else {
-          logger.debug(`[AutoLoop] All pending features are already running or being started`);
-        }
-
-        await this.sleep(SLEEP_INTERVAL_NORMAL_MS);
-      } catch (error) {
-        logger.error(`[AutoLoop] Loop iteration error for ${projectPath}:`, error);
-        await this.sleep(SLEEP_INTERVAL_ERROR_MS);
-      }
-    }
-
-    // Mark as not running when loop exits
-    projectState.isRunning = false;
-    logger.info(
-      `[AutoLoop] Loop stopped for project: ${projectPath} after ${iterationCount} iterations`
-    );
   }
 
   /**
@@ -1420,7 +1018,7 @@ export class AutoModeService {
 
     const { config } = existingState;
     const resumed = this.coordinator.resumeLoop(worktreeKey, config, (state) =>
-      this.runAutoLoopForProject(worktreeKey, state)
+      this.scheduler.runLoop(worktreeKey, state)
     );
 
     if (resumed) {
@@ -1552,7 +1150,7 @@ export class AutoModeService {
         }
 
         // Load pending features
-        const pendingFeatures = await this.loadPendingFeatures(this.config!.projectPath);
+        const pendingFeatures = await this.scheduler.loadPendingFeatures(this.config!.projectPath);
 
         if (pendingFeatures.length === 0) {
           // Emit idle event only once when backlog is empty AND no features are running
@@ -1672,7 +1270,7 @@ export class AutoModeService {
     const branchName = feature?.branchName ?? null;
 
     // Get per-worktree limit
-    const maxAgents = await this.resolveMaxConcurrency(projectPath, branchName);
+    const maxAgents = await this.scheduler.resolveMaxConcurrency(projectPath, branchName);
 
     // Get current running count for this worktree
     const currentAgents = await this.getRunningCountForWorktree(projectPath, branchName);
@@ -3643,31 +3241,6 @@ Format your response as a structured markdown document.`;
   }
 
   /**
-   * Get all branch names that have existing worktrees
-   * Used to identify orphaned features (features with branchNames but no worktrees)
-   */
-  private async getAllWorktreeBranches(projectPath: string): Promise<Set<string>> {
-    const branches = new Set<string>();
-    try {
-      const { stdout } = await execAsync('git worktree list --porcelain', {
-        cwd: projectPath,
-      });
-
-      const lines = stdout.split('\n');
-      for (const line of lines) {
-        if (line.startsWith('branch ')) {
-          const branch = line.slice(7).replace('refs/heads/', '');
-          branches.add(branch);
-        }
-      }
-    } catch {
-      // If we can't get worktrees, return empty set
-      // This will cause all features to be treated as orphaned on main worktree
-    }
-    return branches;
-  }
-
-  /**
    * Create a new worktree for a given branch
    * Returns the worktree path on success, null on failure
    */
@@ -3845,686 +3418,6 @@ Format your response as a structured markdown document.`;
       await atomicWriteJson(featurePath, feature, { backupCount: DEFAULT_BACKUP_COUNT });
     } catch (error) {
       logger.error(`Failed to update planSpec for ${featureId}:`, error);
-    }
-  }
-
-  /**
-   * Load pending features for a specific project/worktree
-   * @param projectPath - The project path
-   * @param branchName - The branch name to filter by, or null for main worktree (features without branchName)
-   */
-  private async loadPendingFeatures(
-    projectPath: string,
-    branchName: string | null = null
-  ): Promise<Feature[]> {
-    // Features are stored in .automaker directory
-    const featuresDir = getFeaturesDir(projectPath);
-
-    // Get the actual primary branch name for the project (e.g., "main", "master", "develop")
-    // This is needed to correctly match features when branchName is null (main worktree)
-    const primaryBranch = await getCurrentBranch(projectPath);
-
-    // Get all branches that have existing worktrees
-    // Used to identify orphaned features (features with branchNames but no worktrees)
-    const worktreeBranches = await this.getAllWorktreeBranches(projectPath);
-
-    // Fetch all open PRs once — guards against re-executing features that already have open PRs.
-    // Prevents the SPEC_REVIEW gate (or dep-unblocking) from launching duplicate agents.
-    const openPrBranches = new Map<string, number>(); // branch → PR number
-    let openPrsFetchFailed = false;
-    try {
-      const { stdout: prJson } = await execAsync(
-        'gh pr list --state open --json number,headRefName --limit 200',
-        { cwd: projectPath, timeout: 15000 }
-      );
-      const prs: { number: number; headRefName: string }[] = JSON.parse(prJson || '[]');
-      for (const pr of prs) openPrBranches.set(pr.headRefName, pr.number);
-      logger.debug(
-        `[loadPendingFeatures] Found ${openPrBranches.size} open PR(s) — these branches are excluded from re-execution`
-      );
-    } catch (err) {
-      openPrsFetchFailed = true;
-      logger.warn('[loadPendingFeatures] Could not fetch open PRs (non-fatal):', err);
-    }
-
-    // Build a secondary index of open PR numbers for prNumber-based lookups.
-    // This catches cases where feature.branchName doesn't exactly match the PR's headRefName.
-    const openPrNumbers = new Set<number>(openPrBranches.values());
-
-    // Fetch recently merged PRs to reconcile blocked/review features whose PRs already landed.
-    // Catches drift from: webhook disabled, server down during merge, or feature blocked before PR was created.
-    const mergedPrBranches = new Map<string, { number: number; mergedAt?: string }>(); // branch → PR info
-    try {
-      const { stdout: mergedPrJson } = await execAsync(
-        'gh pr list --state merged --json number,headRefName,mergedAt --limit 100',
-        { cwd: projectPath, timeout: 15000 }
-      );
-      const mergedPrs: { number: number; headRefName: string; mergedAt?: string }[] = JSON.parse(
-        mergedPrJson || '[]'
-      );
-      for (const pr of mergedPrs)
-        mergedPrBranches.set(pr.headRefName, { number: pr.number, mergedAt: pr.mergedAt });
-      logger.debug(
-        `[loadPendingFeatures] Found ${mergedPrBranches.size} recently merged PR(s) — used for stale blocked/review reconciliation`
-      );
-    } catch (err) {
-      logger.warn('[loadPendingFeatures] Could not fetch merged PRs (non-fatal):', err);
-    }
-
-    try {
-      const entries = await secureFs.readdir(featuresDir, {
-        withFileTypes: true,
-      });
-      const allFeatures: Feature[] = [];
-      const pendingFeatures: Feature[] = [];
-
-      // Load all features (for dependency checking) with recovery support
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const featurePath = path.join(featuresDir, entry.name, 'feature.json');
-
-          // Use recovery-enabled read for corrupted file handling
-          const result = await readJsonWithRecovery<Feature | null>(featurePath, null, {
-            maxBackups: DEFAULT_BACKUP_COUNT,
-            autoRestore: true,
-          });
-
-          logRecoveryWarning(result, `Feature ${entry.name}`, logger);
-
-          const feature = result.data;
-          if (!feature) {
-            // Skip features that couldn't be loaded or recovered
-            continue;
-          }
-
-          // Normalize status to handle legacy values
-          const canonicalStatus = normalizeFeatureStatus(feature.status);
-
-          // Push normalized copy to allFeatures so dependency resolution sees canonical statuses
-          const normalizedFeature = {
-            ...feature,
-            status: canonicalStatus,
-          };
-          allFeatures.push(normalizedFeature);
-        }
-      }
-
-      // ── Merged PR reconciliation: fix blocked/review features whose PRs already landed ──
-      // Runs before dependency evaluation so a done feature doesn't get unblocked back to backlog.
-      const staleViaLinkedPr = allFeatures.filter(
-        (f) =>
-          (f.status === 'blocked' || f.status === 'review') &&
-          f.branchName &&
-          mergedPrBranches.has(f.branchName)
-      );
-      for (const feature of staleViaLinkedPr) {
-        const mergedPr = mergedPrBranches.get(feature.branchName!)!;
-        logger.info(
-          `[loadPendingFeatures] Feature ${feature.id} ("${feature.title}") has merged PR #${mergedPr.number} — reconciling to done`
-        );
-        const prevStatus = feature.status;
-        try {
-          await this.featureLoader.update(projectPath, feature.id, {
-            status: 'done',
-            prNumber: mergedPr.number,
-            prMergedAt: mergedPr.mergedAt ?? new Date().toISOString(),
-          });
-          feature.status = 'done';
-          this.events.emit('feature:status-changed', {
-            projectPath,
-            featureId: feature.id,
-            previousStatus: prevStatus,
-            newStatus: 'done',
-          });
-        } catch (error) {
-          feature.status = prevStatus;
-          logger.error(
-            `[loadPendingFeatures] Failed to reconcile feature ${feature.id} to done:`,
-            error
-          );
-        }
-      }
-
-      // ── Dependency re-evaluation: unblock features whose deps are now satisfied ──
-      // Features can be set to 'blocked' when their dependencies aren't ready.
-      // When those deps complete, we need to automatically move them back to 'backlog'.
-      const blockedWithDeps = allFeatures.filter(
-        (f) => f.status === 'blocked' && f.dependencies && f.dependencies.length > 0
-      );
-
-      for (const feature of blockedWithDeps) {
-        const satisfied = areDependenciesSatisfied(feature, allFeatures);
-        if (satisfied) {
-          // Guard: if deps are satisfied but feature already has an open PR, sync to 'review'
-          // rather than 'backlog' — this prevents duplicate agent launches after SPEC_REVIEW gate
-          const existingPrByBranch = feature.branchName
-            ? openPrBranches.get(feature.branchName)
-            : undefined;
-          // Secondary check: if feature already has a stored prNumber and it appears in the
-          // open-PR set, treat it as having an open PR even when branchName lookup misses.
-          const existingPrByNumber =
-            !existingPrByBranch && feature.prNumber && openPrNumbers.has(feature.prNumber)
-              ? feature.prNumber
-              : undefined;
-          // Fallback: when the bulk PR fetch failed, verify the stored prNumber directly via
-          // a single gh pr view call to prevent duplicate agent launches on transient API errors.
-          let existingPrFallback: number | undefined;
-          if (
-            !existingPrByBranch &&
-            !existingPrByNumber &&
-            openPrsFetchFailed &&
-            feature.prNumber
-          ) {
-            try {
-              const { stdout: prStateRaw } = await execAsync(
-                `gh pr view ${feature.prNumber} --json state --jq '.state'`,
-                { cwd: projectPath, timeout: 10000 }
-              );
-              if (prStateRaw.trim() === 'OPEN') {
-                existingPrFallback = feature.prNumber;
-                logger.info(
-                  `[loadPendingFeatures] Feature ${feature.id} PR #${feature.prNumber} confirmed open via direct check (bulk fetch had failed)`
-                );
-              }
-            } catch (verifyErr) {
-              // If we still can't verify, be conservative: assume the PR is open to avoid
-              // launching a duplicate agent that will fail with "PR already exists".
-              existingPrFallback = feature.prNumber;
-              logger.warn(
-                `[loadPendingFeatures] Could not verify PR #${feature.prNumber} for feature ${feature.id} — ` +
-                  `assuming open to prevent duplicate agent launch: ${verifyErr}`
-              );
-            }
-          }
-          const existingPr = existingPrByBranch ?? existingPrByNumber ?? existingPrFallback;
-          if (existingPr) {
-            logger.info(
-              `[loadPendingFeatures] Feature ${feature.id} deps satisfied but has open PR #${existingPr} — syncing to review`
-            );
-            feature.status = 'review';
-            try {
-              await this.featureLoader.update(projectPath, feature.id, {
-                status: 'review',
-                prNumber: existingPr,
-              });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: 'blocked',
-                newStatus: 'review',
-              });
-            } catch (error) {
-              logger.error(
-                `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
-                error
-              );
-            }
-          } else {
-            // Guard: if the feature was blocked due to a git commit / workflow failure,
-            // don't re-enqueue it — that would recreate the retry storm. A git workflow
-            // failure is not a transient dependency issue, so satisfying deps doesn't fix it.
-            // Human intervention is required (e.g. fix .prettierignore, Husky config).
-            const changeReason = feature.statusChangeReason ?? '';
-            const isGitWorkflowBlock =
-              changeReason.includes('git commit') ||
-              changeReason.includes('git workflow failed') ||
-              changeReason.includes('plan validation failed');
-            if (isGitWorkflowBlock) {
-              logger.warn(
-                `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
-                  `blocked after ${feature.failureCount ?? 0} git workflow failure(s). Requires human intervention.`
-              );
-              continue;
-            }
-
-            logger.info(
-              `[loadPendingFeatures] Unblocking feature ${feature.id} — all dependencies now satisfied`
-            );
-            feature.status = 'backlog';
-            try {
-              await this.featureLoader.update(projectPath, feature.id, { status: 'backlog' });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: 'blocked',
-                newStatus: 'backlog',
-              });
-            } catch (error) {
-              logger.error(`[loadPendingFeatures] Failed to unblock feature ${feature.id}:`, error);
-            }
-          }
-        }
-      }
-
-      // ── Filter eligible features for execution ──
-      for (const feature of allFeatures) {
-        const canonicalStatus = feature.status;
-
-        // Track pending features separately, filtered by worktree/branch
-        // Note: Features in 'review', 'done', or 'verified' are NOT eligible
-        // Those features have completed execution and should not be picked up again
-        const isEligibleStatus =
-          canonicalStatus === 'backlog' ||
-          (canonicalStatus !== 'done' &&
-            canonicalStatus !== 'verified' &&
-            canonicalStatus !== 'review' &&
-            canonicalStatus !== 'in_progress' &&
-            canonicalStatus !== 'blocked' &&
-            feature.planSpec?.status === 'approved' &&
-            (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
-
-        // Log ALL features with their eligibility status for debugging
-        logger.debug(
-          `[loadPendingFeatures] Feature ${feature.id}: status="${feature.status}", assignee="${feature.assignee ?? 'null'}", isEpic=${feature.isEpic ?? false}, branchName="${feature.branchName ?? 'null'}", eligible=${isEligibleStatus}`
-        );
-
-        if (isEligibleStatus) {
-          // Skip epic features - they are containers, not executable
-          if (feature.isEpic) {
-            logger.info(
-              `[loadPendingFeatures] ❌ Skipping epic feature ${feature.id} - ${feature.title}`
-            );
-            continue;
-          }
-
-          // Skip features assigned to humans (non-agent assignees)
-          if (feature.assignee && feature.assignee !== 'agent') {
-            logger.info(
-              `[loadPendingFeatures] ❌ Skipping feature ${feature.id} - assigned to "${feature.assignee}" (not agent)`
-            );
-            continue;
-          }
-
-          // Guard: if feature already has an open PR, sync it to 'review' and skip execution.
-          // Prevents duplicate agent launches when SPEC_REVIEW gate or dep-unblocking races
-          // with an existing in-flight PR.
-          // Pre-flight check per feature description: if a feature already has a prNumber
-          // and that PR is still open on GitHub, skip agent launch and move to review instead.
-          const existingPrByBranchFilter = feature.branchName
-            ? openPrBranches.get(feature.branchName)
-            : undefined;
-          // Secondary check: if feature has a stored prNumber, look it up in the open PR number
-          // set — catches cases where branchName doesn't exactly match the PR's headRefName.
-          const existingPrByNumberFilter =
-            !existingPrByBranchFilter && feature.prNumber && openPrNumbers.has(feature.prNumber)
-              ? feature.prNumber
-              : undefined;
-          // Fallback: when the bulk PR fetch failed, verify the stored prNumber directly.
-          // This is the primary safeguard against the re-launch cycle: even if the gh pr list
-          // call returned a 502, we can still check the individual PR to avoid wasted runs.
-          let existingPrFallbackFilter: number | undefined;
-          if (
-            !existingPrByBranchFilter &&
-            !existingPrByNumberFilter &&
-            openPrsFetchFailed &&
-            feature.prNumber
-          ) {
-            try {
-              const { stdout: prStateRaw } = await execAsync(
-                `gh pr view ${feature.prNumber} --json state --jq '.state'`,
-                { cwd: projectPath, timeout: 10000 }
-              );
-              if (prStateRaw.trim() === 'OPEN') {
-                existingPrFallbackFilter = feature.prNumber;
-                logger.info(
-                  `[loadPendingFeatures] Feature ${feature.id} PR #${feature.prNumber} confirmed open via direct check — skipping agent launch`
-                );
-              }
-            } catch (verifyErr) {
-              // If we still can't verify, be conservative: assume the PR is open to avoid
-              // launching a duplicate agent that will fail with "PR already exists".
-              existingPrFallbackFilter = feature.prNumber;
-              logger.warn(
-                `[loadPendingFeatures] Could not verify PR #${feature.prNumber} for feature ${feature.id} — ` +
-                  `assuming open to prevent duplicate agent launch: ${verifyErr}`
-              );
-            }
-          }
-          const existingPrFilter =
-            existingPrByBranchFilter ?? existingPrByNumberFilter ?? existingPrFallbackFilter;
-          if (existingPrFilter) {
-            logger.info(
-              `[loadPendingFeatures] ⏭ Feature ${feature.id} has open PR #${existingPrFilter} — syncing to review, skipping execution`
-            );
-            try {
-              await this.featureLoader.update(projectPath, feature.id, {
-                status: 'review',
-                prNumber: existingPrFilter,
-              });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: feature.status,
-                newStatus: 'review',
-              });
-            } catch (error) {
-              logger.error(
-                `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
-                error
-              );
-            }
-            continue;
-          }
-
-          // Filter by branchName:
-          // - If branchName is null (main worktree), include features with:
-          //   - branchName === null (unassigned), OR
-          //   - branchName === primaryBranch (e.g., "main", "master", "develop"), OR
-          //   - branchName has no corresponding worktree (orphaned - will auto-create worktree)
-          // - If branchName is set, only include features with matching branchName
-          const featureBranch = feature.branchName ?? null;
-          if (branchName === null) {
-            // Main worktree: include features that are unassigned, on primary branch, or orphaned
-            const isPrimaryOrUnassigned =
-              featureBranch === null || (primaryBranch && featureBranch === primaryBranch);
-            // Orphaned = has branchName but no corresponding worktree exists
-            const isOrphaned = featureBranch !== null && !worktreeBranches.has(featureBranch);
-            // Stale worktree = has branchName with existing worktree BUT feature is in backlog
-            // This happens when a previous agent attempt created the worktree but failed before starting.
-            // The agent service will reuse the existing worktree, so we should include these.
-            const hasStaleWorktree =
-              featureBranch !== null &&
-              worktreeBranches.has(featureBranch) &&
-              (feature.status === 'backlog' ||
-                feature.status === 'pending' ||
-                feature.status === 'ready');
-
-            logger.debug(
-              `[loadPendingFeatures] Feature ${feature.id} branch filter - featureBranch: ${featureBranch}, primaryBranch: ${primaryBranch}, isPrimaryOrUnassigned: ${isPrimaryOrUnassigned}, isOrphaned: ${isOrphaned}, hasStaleWorktree: ${hasStaleWorktree}`
-            );
-
-            if (isPrimaryOrUnassigned || isOrphaned || hasStaleWorktree) {
-              if (hasStaleWorktree) {
-                logger.info(
-                  `[loadPendingFeatures] ✅ Including feature ${feature.id} with stale worktree (branchName: ${featureBranch}, status: ${feature.status}) for main worktree`
-                );
-              } else if (isOrphaned) {
-                logger.info(
-                  `[loadPendingFeatures] ✅ Including orphaned feature ${feature.id} (branchName: ${featureBranch} has no worktree) for main worktree`
-                );
-              } else {
-                logger.info(
-                  `[loadPendingFeatures] ✅ Including feature ${feature.id} for main worktree (featureBranch: ${featureBranch})`
-                );
-              }
-              pendingFeatures.push(feature);
-            } else {
-              // Feature belongs to a specific worktree AND is actively being worked on (in_progress)
-              logger.info(
-                `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch} has worktree, status: ${feature.status}) for main worktree`
-              );
-            }
-          } else {
-            // Feature worktree: include features with matching branchName
-            if (featureBranch === branchName) {
-              logger.info(
-                `[loadPendingFeatures] ✅ Including feature ${feature.id} for worktree ${branchName}`
-              );
-              pendingFeatures.push(feature);
-            } else {
-              logger.info(
-                `[loadPendingFeatures] ❌ Filtering out feature ${feature.id} (branchName: ${featureBranch}, expected: ${branchName}) for worktree ${branchName}`
-              );
-            }
-          }
-        }
-      }
-
-      const worktreeDesc = branchName ? `worktree ${branchName}` : 'main worktree';
-      logger.info(
-        `[loadPendingFeatures] Found ${allFeatures.length} total features, ${pendingFeatures.length} candidates (pending/ready/backlog/approved_with_pending_tasks) for ${worktreeDesc}`
-      );
-
-      if (pendingFeatures.length === 0) {
-        logger.warn(
-          `[loadPendingFeatures] No pending features found for ${worktreeDesc}. Check branchName matching - looking for branchName: ${branchName === null ? 'null (main)' : branchName}`
-        );
-        // Log all backlog features to help debug branchName matching
-        const allBacklogFeatures = allFeatures.filter(
-          (f) =>
-            f.status === 'backlog' ||
-            f.status === 'pending' ||
-            f.status === 'ready' ||
-            (f.planSpec?.status === 'approved' &&
-              (f.planSpec.tasksCompleted ?? 0) < (f.planSpec.tasksTotal ?? 0))
-        );
-        if (allBacklogFeatures.length > 0) {
-          logger.info(
-            `[loadPendingFeatures] Found ${allBacklogFeatures.length} backlog features with branchNames: ${allBacklogFeatures.map((f) => `${f.id}(${f.branchName ?? 'null'})`).join(', ')}`
-          );
-        }
-      }
-
-      // Apply dependency-aware ordering
-      const { orderedFeatures, missingDependencies } = resolveDependencies(pendingFeatures);
-
-      // Remove TRULY missing dependencies (feature ID doesn't exist anywhere on the board).
-      // Dependencies that exist in allFeatures but not in pendingFeatures are NOT missing —
-      // they're just in a different status (in_progress, done, review, etc.).
-      // Previously, this code removed deps on features in non-pending statuses, causing
-      // downstream features to start before their prerequisites completed.
-      if (missingDependencies.size > 0) {
-        const allFeatureIds = new Set(allFeatures.map((f) => f.id));
-
-        for (const [featureId, missingDepIds] of missingDependencies) {
-          const feature = pendingFeatures.find((f) => f.id === featureId);
-          if (feature && feature.dependencies) {
-            // Only remove deps that are TRULY gone (not on the board at all)
-            const trulyMissingDepIds = missingDepIds.filter((depId) => !allFeatureIds.has(depId));
-
-            if (trulyMissingDepIds.length > 0) {
-              const validDependencies = feature.dependencies.filter(
-                (depId) => !trulyMissingDepIds.includes(depId)
-              );
-
-              logger.warn(
-                `[loadPendingFeatures] Feature ${featureId} has truly missing dependencies (deleted from board): ${trulyMissingDepIds.join(', ')}. Removing them.`
-              );
-
-              // Update the feature in memory
-              feature.dependencies = validDependencies.length > 0 ? validDependencies : undefined;
-
-              // Save the updated feature to disk
-              try {
-                await this.featureLoader.update(projectPath, featureId, {
-                  dependencies: feature.dependencies,
-                });
-                logger.info(
-                  `[loadPendingFeatures] Updated feature ${featureId} - removed truly missing dependencies`
-                );
-              } catch (error) {
-                logger.error(
-                  `[loadPendingFeatures] Failed to save feature ${featureId} after removing missing dependencies:`,
-                  error
-                );
-              }
-            } else {
-              // All "missing" deps actually exist on the board in non-pending statuses
-              // This is normal — they're in_progress, done, review, etc.
-              const depStatuses = missingDepIds.map((depId) => {
-                const dep = allFeatures.find((f) => f.id === depId);
-                return `${depId.slice(-12)}(${dep?.status || 'unknown'})`;
-              });
-              logger.debug(
-                `[loadPendingFeatures] Feature ${featureId} has deps in non-pending statuses: ${depStatuses.join(', ')}. Preserving dependencies.`
-              );
-            }
-          }
-        }
-      }
-
-      // Get skipVerificationInAutoMode setting
-      const settings = await this.settingsService?.getGlobalSettings();
-      const skipVerification = settings?.skipVerificationInAutoMode ?? false;
-
-      // Filter to only features with satisfied dependencies
-      const readyFeatures: Feature[] = [];
-      const blockedFeatures: Array<{ feature: Feature; reason: string }> = [];
-
-      for (const feature of orderedFeatures) {
-        const isSatisfied = areDependenciesSatisfied(feature, allFeatures, { skipVerification });
-        if (isSatisfied) {
-          readyFeatures.push(feature);
-        } else {
-          // Find which dependencies are blocking
-          const blockingDeps =
-            feature.dependencies?.filter((depId) => {
-              const dep = allFeatures.find((f) => f.id === depId);
-              if (!dep) return true; // Missing dependency
-              if (skipVerification) {
-                // When skipVerification is enabled, only block if dependency is actively running
-                return dep.status === 'running' || dep.status === 'in_progress';
-              }
-              // Foundation deps require 'done' (merged) — 'review' is NOT sufficient
-              if (dep.isFoundation) {
-                return (
-                  dep.status !== 'done' && dep.status !== 'completed' && dep.status !== 'verified'
-                );
-              }
-              // Default: block unless dependency is in a completed state
-              return (
-                dep.status !== 'completed' && dep.status !== 'verified' && dep.status !== 'done'
-              );
-            }) || [];
-
-          // Include foundation context in reason for better diagnostics
-          const reason = blockingDeps
-            .map((depId) => {
-              const dep = allFeatures.find((f) => f.id === depId);
-              const suffix = dep?.isFoundation ? ' [foundation - needs merge]' : '';
-              return `${depId}(${dep?.status || 'missing'})${suffix}`;
-            })
-            .join(', ');
-
-          blockedFeatures.push({
-            feature,
-            reason: reason ? `Blocked by dependencies: ${reason}` : 'Unknown dependency issue',
-          });
-        }
-      }
-
-      if (blockedFeatures.length > 0) {
-        logger.info(
-          `[loadPendingFeatures] ${blockedFeatures.length} features blocked by dependencies: ${blockedFeatures.map((b) => `${b.feature.id} (${b.reason})`).join('; ')}`
-        );
-      }
-
-      // ── Human-blocked dependency detection and escalation ──
-      // Categorize blocked features by whether they're blocked by human-assigned dependencies
-      const humanBlockedFeatures: Array<{ feature: Feature; humanBlockers: string[] }> = [];
-      const agentBlockedFeatures: Array<{ feature: Feature; agentBlockers: string[] }> = [];
-
-      for (const blocked of blockedFeatures) {
-        const blockingInfo = getBlockingInfo(blocked.feature, allFeatures);
-
-        if (blockingInfo.humanBlockers.length > 0) {
-          humanBlockedFeatures.push({
-            feature: blocked.feature,
-            humanBlockers: blockingInfo.humanBlockers,
-          });
-
-          // Get human blocker details for logging and escalation
-          const humanBlockerDetails = blockingInfo.humanBlockers
-            .map((blockerId) => {
-              const blocker = allFeatures.find((f) => f.id === blockerId);
-              return blocker
-                ? `${blockerId} (assigned to ${blocker.assignee || 'unknown'})`
-                : blockerId;
-            })
-            .join(', ');
-
-          // Log distinctly: '[loadPendingFeatures] Feature X human-blocked by Y (assigned to josh)'
-          logger.warn(
-            `[loadPendingFeatures] Feature ${blocked.feature.id} human-blocked by ${humanBlockerDetails}`
-          );
-
-          // Emit escalation signal for each human-blocked feature (medium severity)
-          if (this.events) {
-            this.events.emit('escalation:signal-received', {
-              source: EscalationSource.human_blocked_dependency,
-              severity: EscalationSeverity.medium,
-              type: 'feature_human_blocked',
-              context: {
-                featureId: blocked.feature.id,
-                featureTitle: blocked.feature.title || blocked.feature.description,
-                humanBlockers: blockingInfo.humanBlockers,
-                humanBlockerDetails,
-                projectPath,
-                branchName,
-              },
-              deduplicationKey: `human-blocked-${blocked.feature.id}-${blockingInfo.humanBlockers.join('-')}`,
-              timestamp: new Date().toISOString(),
-            });
-          }
-        } else if (blockingInfo.agentBlockers.length > 0) {
-          agentBlockedFeatures.push({
-            feature: blocked.feature,
-            agentBlockers: blockingInfo.agentBlockers,
-          });
-        }
-      }
-
-      // Update project state with human-blocked count
-      const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
-      const projectState = this.coordinator.getState(worktreeKey);
-      if (projectState) {
-        projectState.humanBlockedCount = humanBlockedFeatures.length;
-      }
-
-      // Log summary of human-blocked vs agent-blocked features
-      if (humanBlockedFeatures.length > 0 || agentBlockedFeatures.length > 0) {
-        logger.info(
-          `[loadPendingFeatures] Blocked feature breakdown: ${humanBlockedFeatures.length} human-blocked, ${agentBlockedFeatures.length} agent-blocked`
-        );
-      }
-
-      // ── Pipeline stall detection: ALL remaining features are human-blocked (code red) ──
-      // If we have blocked features and ALL of them are human-blocked (no agent-blocked, no ready),
-      // this means the entire pipeline is stalled waiting on human work
-      const totalPendingCount = orderedFeatures.length;
-      const allFeaturesHumanBlocked =
-        humanBlockedFeatures.length > 0 &&
-        humanBlockedFeatures.length === totalPendingCount &&
-        readyFeatures.length === 0;
-
-      if (allFeaturesHumanBlocked) {
-        logger.error(
-          `[loadPendingFeatures] 🚨 PIPELINE STALLED: All ${totalPendingCount} remaining features are human-blocked. No agent work can proceed.`
-        );
-
-        // Emit critical escalation signal
-        if (this.events) {
-          this.events.emit('escalation:signal-received', {
-            source: EscalationSource.human_blocked_dependency,
-            severity: EscalationSeverity.critical,
-            type: 'pipeline_stalled_human_blocked',
-            context: {
-              totalFeatures: totalPendingCount,
-              humanBlockedCount: humanBlockedFeatures.length,
-              humanBlockedFeatureIds: humanBlockedFeatures.map((hb) => hb.feature.id),
-              projectPath,
-              branchName,
-              message: `All ${totalPendingCount} remaining features are blocked by human-assigned dependencies. Pipeline is stalled.`,
-            },
-            deduplicationKey: `pipeline-stalled-${projectPath}-${branchName ?? 'main'}`,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      }
-
-      // Sort by priority (lower number = higher priority, picked up first)
-      // 0 = No priority and undefined both default to 3 (Normal) for sorting
-      const priorityOrder = (p?: number | null): number => (p === 0 || p == null ? 3 : p);
-      readyFeatures.sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
-
-      logger.info(
-        `[loadPendingFeatures] After dependency filtering: ${readyFeatures.length} ready features (skipVerification=${skipVerification})`
-      );
-
-      return readyFeatures;
-    } catch (error) {
-      logger.error(`[loadPendingFeatures] Error loading features:`, error);
-      return [];
     }
   }
 

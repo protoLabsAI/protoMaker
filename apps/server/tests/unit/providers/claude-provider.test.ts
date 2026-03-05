@@ -4,6 +4,19 @@ import * as sdk from '@anthropic-ai/claude-agent-sdk';
 import { collectAsyncGenerator } from '../../utils/helpers.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk');
+vi.mock('@protolabsai/platform', async () => {
+  const actual =
+    await vi.importActual<typeof import('@protolabsai/platform')>('@protolabsai/platform');
+  return {
+    ...actual,
+    getClaudeAuthIndicators: vi.fn().mockResolvedValue({
+      hasStatsCacheWithActivity: false,
+      hasSettingsFile: false,
+      hasProjectsSessions: false,
+      credentials: null,
+    }),
+  };
+});
 
 describe('claude-provider.ts', () => {
   let provider: ClaudeProvider;
