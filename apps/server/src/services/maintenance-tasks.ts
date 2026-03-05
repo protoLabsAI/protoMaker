@@ -811,6 +811,8 @@ async function autoMergeEligiblePRs(
         continue;
       }
 
+      const integrationBranch = await resolveIntegrationBranch(projectPath, settingsService);
+
       // Get all features in 'review' status
       const allFeatures = await featureLoader.getAll(projectPath);
       const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
@@ -821,6 +823,25 @@ async function autoMergeEligiblePRs(
         if (!feature.prNumber) {
           logger.debug(`Feature ${feature.id} in review status but has no PR number, skipping`);
           continue;
+        }
+
+        if (integrationBranch) {
+          try {
+            const { stdout: prViewOut } = await execFileAsync(
+              'gh',
+              ['pr', 'view', String(feature.prNumber), '--json', 'baseRefName'],
+              { cwd: projectPath, encoding: 'utf-8', timeout: 10_000 }
+            );
+            const prBaseBranch = JSON.parse(prViewOut).baseRefName;
+            if (prBaseBranch !== integrationBranch) {
+              logger.debug(
+                `PR #${feature.prNumber} targets '${prBaseBranch}', not integration branch '${integrationBranch}', skipping`
+              );
+              continue;
+            }
+          } catch (err) {
+            logger.warn(`Failed to fetch base branch for PR #${feature.prNumber}:`, err);
+          }
         }
 
         totalChecked++;
@@ -1035,6 +1056,8 @@ async function autoRebaseStalePRs(
     const skippedPRs: Array<{ pr: string; reason: string }> = [];
 
     for (const projectPath of projectPaths) {
+      const integrationBranch = await resolveIntegrationBranch(projectPath, settingsService);
+
       // Get all features in 'review' status
       const allFeatures = await featureLoader.getAll(projectPath);
       const reviewFeatures = allFeatures.filter((f) => f.status === 'review');
@@ -1060,6 +1083,13 @@ async function autoRebaseStalePRs(
             pr: `#${feature.prNumber} (${feature.title})`,
             reason: 'Failed to check behind status',
           });
+          continue;
+        }
+
+        if (integrationBranch && behindStatus.baseBranch !== integrationBranch) {
+          logger.debug(
+            `PR #${feature.prNumber} targets '${behindStatus.baseBranch}', not integration branch '${integrationBranch}', skipping`
+          );
           continue;
         }
 
