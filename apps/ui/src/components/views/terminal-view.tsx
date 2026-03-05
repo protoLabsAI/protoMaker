@@ -1475,37 +1475,22 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     );
   }
 
-  // No terminals yet - show welcome screen
+  // No terminals yet - show tab bar with just the + button
   if (terminalState.tabs.length === 0) {
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-          <div className="p-4 rounded-full bg-brand-500/10 mb-4">
-            <TerminalIcon className="h-12 w-12 text-brand-500" />
+        <div className="flex items-center bg-card border-b border-border px-2">
+          <div className="flex items-center gap-1 flex-1 overflow-x-auto py-1">
+            <button
+              className="flex items-center justify-center p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+              onClick={() => createTerminal()}
+              title="New Tab"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
           </div>
-          <p className="text-muted-foreground max-w-md mb-4">
-            Create a new terminal session to start executing commands.
-            {currentProject && (
-              <span className="block mt-2 text-sm">
-                Working directory:{' '}
-                <code className="px-1.5 py-0.5 rounded bg-muted">{currentProject.path}</code>
-              </span>
-            )}
-          </p>
-
-          <Button variant="outline" size="sm" onClick={() => createTerminal()} className="mb-6">
-            <Plus className="h-4 w-4 mr-2" />
-            New Terminal
-          </Button>
-
-          {status?.platform && (
-            <p className="text-xs text-muted-foreground">
-              Platform: {status.platform.platform}
-              {status.platform.isWSL && ' (WSL)'}
-              {' | '}Shell: {status.platform.defaultShell}
-            </p>
-          )}
         </div>
+        <div className="flex-1" />
       </div>
     );
   }
