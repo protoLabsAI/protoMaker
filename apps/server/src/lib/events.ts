@@ -6,7 +6,13 @@
  * (NATS, Redis) can be swapped in for hivemind distribution.
  */
 
-import type { EventType, EventCallback, EventBus, EventSubscription } from '@protolabsai/types';
+import type {
+  EventType,
+  EventCallback,
+  EventBus,
+  EventSubscription,
+  TypedEventCallback,
+} from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('Events');
@@ -21,6 +27,7 @@ export type UnsubscribeFn = (() => void) & EventSubscription;
 export interface EventEmitter extends EventBus {
   emit: (type: EventType, payload: unknown) => void;
   subscribe: (callback: EventCallback) => UnsubscribeFn;
+  on: <T extends EventType>(type: T, callback: TypedEventCallback<T>) => EventSubscription;
 }
 
 export function createEventEmitter(): EventEmitter {
@@ -47,6 +54,20 @@ export function createEventEmitter(): EventEmitter {
       const unsubWithMethod = unsub as UnsubscribeFn;
       unsubWithMethod.unsubscribe = unsub;
       return unsubWithMethod;
+    },
+
+    on<T extends EventType>(type: T, callback: TypedEventCallback<T>) {
+      const wrapper: EventCallback = (eventType, payload) => {
+        if (eventType === type) {
+          callback(payload as Parameters<TypedEventCallback<T>>[0]);
+        }
+      };
+      subscribers.add(wrapper);
+      return {
+        unsubscribe: () => {
+          subscribers.delete(wrapper);
+        },
+      };
     },
 
     broadcast(type: EventType, payload?: unknown) {

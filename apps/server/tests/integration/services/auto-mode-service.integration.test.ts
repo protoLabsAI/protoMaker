@@ -27,10 +27,12 @@ describe('auto-mode-service.ts (integration)', () => {
   const mockEvents = {
     subscribe: vi.fn(),
     emit: vi.fn(),
+    on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
     service = new AutoModeService(mockEvents as any);
     featureLoader = new FeatureLoader();
     testRepo = await createTestGitRepo();
