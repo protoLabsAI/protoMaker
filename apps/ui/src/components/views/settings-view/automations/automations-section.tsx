@@ -18,6 +18,7 @@ import {
   Play,
   History,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Automation, AutomationRunStatus } from '@protolabsai/types';
 import {
   listAutomations,
@@ -26,8 +27,10 @@ import {
   deleteAutomation,
   runAutomation,
 } from '@/lib/api';
+import { getHttpApiClient } from '@/lib/http-api-client';
 import { AutomationEditModal, type AutomationFormData } from './automation-edit-modal';
 import { AutomationHistoryPanel } from './automation-history-panel';
+import { SchedulerHealthGrid } from './scheduler-health-grid';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -209,6 +212,18 @@ export function AutomationsSection() {
   const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const api = getHttpApiClient();
+    return api.subscribeToEvents((type, payload) => {
+      if (type !== 'scheduler:task-failed') return;
+      const p = payload as { taskName: string; error: string };
+      toast.error(`Maintenance task failed: ${p.taskName}`, {
+        description: p.error,
+        duration: 8000,
+      });
+    });
+  }, []);
+
   const fetchAutomations = useCallback(async () => {
     try {
       setError(null);
@@ -359,6 +374,7 @@ export function AutomationsSection() {
 
       {/* Content */}
       <div className="p-4">
+        <SchedulerHealthGrid />
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Spinner className="w-6 h-6 text-muted-foreground" />

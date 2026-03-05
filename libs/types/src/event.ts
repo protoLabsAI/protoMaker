@@ -72,6 +72,7 @@ export type EventType =
   | 'scheduler:task_disabled'
   | 'scheduler:task_started'
   | 'scheduler:task_completed'
+  | 'scheduler:task-failed'
   | 'maintenance'
   | 'recovery_analysis'
   | 'recovery_started'
