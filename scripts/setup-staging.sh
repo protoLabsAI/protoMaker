@@ -366,10 +366,15 @@ setup_tailscale_https() {
   tailscale serve reset 2>/dev/null || true
 
   # Serve UI on HTTPS :443 (enables PWA install prompt)
-  tailscale serve --https=443 "http://localhost:${ui_port}"
+  # Requires `sudo tailscale set --operator=$USER` to have been run once.
+  # Non-fatal: HTTPS is a convenience for PWA install, not a deploy requirement.
+  if ! tailscale serve --https=443 "http://localhost:${ui_port}" 2>/dev/null; then
+    warn "Tailscale HTTPS setup failed (needs operator permission). Run: sudo tailscale set --operator=\$USER"
+    return 0
+  fi
 
   # Serve API on HTTPS :8443 so the UI can proxy to it
-  tailscale serve --https=8443 "http://localhost:${api_port}"
+  tailscale serve --https=8443 "http://localhost:${api_port}" 2>/dev/null || true
 
   local ts_hostname
   ts_hostname=$(tailscale status --self --json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['Self']['DNSName'].rstrip('.'))" 2>/dev/null || echo "unknown")
