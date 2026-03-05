@@ -453,13 +453,24 @@ export function createChatRoutes(services: ServiceContainer): Router {
         system: systemPrompt,
         tools,
         stopWhen: stepCountIs(10),
-        ...(extendedThinking && {
-          providerOptions: {
-            anthropic: {
+        providerOptions: {
+          anthropic: {
+            ...(extendedThinking && {
               thinking: { type: 'enabled', budgetTokens: THINKING_BUDGET_TOKENS },
+            }),
+            contextManagement: {
+              edits: [
+                {
+                  type: 'clear_tool_uses_20250919',
+                  trigger: { type: 'input_tokens', value: 80000 },
+                  keep: { type: 'tool_uses', value: 5 },
+                  clearAtLeast: { type: 'input_tokens', value: 10000 },
+                  clearToolInputs: true,
+                },
+              ],
             },
           },
-        }),
+        },
         experimental_telemetry: {
           isEnabled: true,
           metadata: {
