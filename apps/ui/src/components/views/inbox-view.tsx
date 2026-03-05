@@ -15,8 +15,6 @@ import { useAppStore } from '@/store/app-store';
 import { useActionableItemsStore } from '@/store/actionable-items-store';
 import { useHITLFormStore } from '@/store/hitl-form-store';
 import { useCeremonyStore } from '@/store/ceremony-store';
-import { useLoadActionableItems, useActionableItemEvents } from '@/hooks/use-actionable-items';
-import { useLoadCeremonyEntries, useCeremonyEventStream } from '@/hooks/use-ceremony-events';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { Button } from '@protolabsai/ui/atoms';
 import { Spinner } from '@protolabsai/ui/atoms';
@@ -217,10 +215,8 @@ export function InboxView() {
   const [approvalFeature, setApprovalFeature] = useState<Feature | null>(null);
   const [approvalLoading, setApprovalLoading] = useState(false);
 
-  useLoadActionableItems(projectPath);
-  useActionableItemEvents(projectPath);
-  useLoadCeremonyEntries(projectPath);
-  useCeremonyEventStream(projectPath);
+  // Data loading and event subscriptions are handled by the Sidebar (always mounted),
+  // so the inbox badge count is available without navigating here first.
 
   const filteredItems = useMemo(() => {
     let filtered = items;
