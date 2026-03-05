@@ -6,13 +6,16 @@
  * A "scroll to bottom" button re-appears whenever the view is not at the bottom.
  *
  * Implementation notes:
- *  - MutationObserver watches the content node for any DOM changes (streaming
- *    tokens) and scrolls only when the user has NOT manually scrolled away.
- *  - The messages.length effect only scrolls when the user is still at the
- *    bottom, so a manually-scrolled-up view is never hijacked.
+ *  - useScrollLock hook maintains a lock that is acquired when a new stream
+ *    starts or a new message arrives. useLayoutEffect inside the hook fires
+ *    synchronously after DOM mutations so the viewport is pinned before paint,
+ *    preventing the 1-frame drift that rAF-based approaches produce.
+ *  - User scroll-up >50px from bottom releases the lock; the next new message
+ *    or stream start re-acquires it.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useScrollLock } from './use-scroll-lock.js';
 import { ArrowDown } from 'lucide-react';
 import type { UIMessage } from 'ai';
 import { cn } from '../lib/utils.js';
@@ -81,111 +84,32 @@ export function ChatMessageList({
   onSubagentDeny?: (approvalId: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
-  const userScrolledRef = useRef(false);
 
-  const checkIfAtBottom = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return true;
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 20;
-  }, []);
+  // useScrollLock acquires lock on new stream start or new message and scrolls
+  // synchronously via useLayoutEffect before paint. User scroll-up >50px releases.
+  useScrollLock(scrollRef, { isStreaming: !!isStreaming, messageCount: messages.length });
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior });
-    userScrolledRef.current = false;
     setIsAtBottom(true);
   }, []);
 
-  // Track scroll position to show/hide the scroll-to-bottom button
-  // and determine whether auto-scroll should fire.
+  // Track scroll position to show/hide the scroll-to-bottom button.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     const handleScroll = () => {
-      const atBottom = checkIfAtBottom();
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
       setIsAtBottom(atBottom);
-      if (atBottom) {
-        userScrolledRef.current = false;
-      }
-      // Only mark as "user scrolled" when moving away from bottom.
-      // We detect this by checking if the user is NOT at bottom; the ref
-      // is cleared whenever we scroll back to the bottom programmatically
-      // or the user scrolls back themselves.
     };
 
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
-  }, [checkIfAtBottom]);
-
-  // Detect scroll direction via wheel/touch to set the userScrolled flag.
-  // Scrolling UP pauses auto-scroll immediately (no threshold check needed).
-  // Scrolling DOWN resumes auto-scroll only when already at the bottom.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.deltaY < 0) {
-        userScrolledRef.current = true;
-      } else if (e.deltaY > 0 && checkIfAtBottom()) {
-        userScrolledRef.current = false;
-      }
-    };
-
-    const handleTouchMove = () => {
-      userScrolledRef.current = true;
-    };
-
-    el.addEventListener('wheel', handleWheel, { passive: true });
-    el.addEventListener('touchmove', handleTouchMove, { passive: true });
-    return () => {
-      el.removeEventListener('wheel', handleWheel);
-      el.removeEventListener('touchmove', handleTouchMove);
-    };
-  }, [checkIfAtBottom]);
-
-  // Auto-scroll on streaming content changes (MutationObserver).
-  // Throttled with rAF gate so it fires at most once per frame, and uses
-  // 'instant' scroll to avoid smooth-scroll animations fighting with wheel input.
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-
-    let rafPending = false;
-    const observer = new MutationObserver(() => {
-      if (!userScrolledRef.current && !rafPending) {
-        rafPending = true;
-        requestAnimationFrame(() => {
-          rafPending = false;
-          if (!userScrolledRef.current) {
-            scrollToBottom('instant');
-          }
-        });
-      }
-    });
-
-    observer.observe(el, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
-
-    return () => observer.disconnect();
-  }, [scrollToBottom]);
-
-  // When a new message is appended, scroll to bottom only if the user
-  // has not manually scrolled away. This prevents hijacking reading position
-  // during long conversations / streaming.
-  useEffect(() => {
-    if (!userScrolledRef.current) {
-      scrollToBottom('instant');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages.length]);
+  }, []);
 
   // Determine if ShimmerLoader should be shown:
   // Show when streaming and the last message has no text content yet (pending response).
@@ -201,7 +125,7 @@ export function ChatMessageList({
   return (
     <div data-slot="chat-message-list" className={cn('relative flex-1 overflow-hidden', className)}>
       <div ref={scrollRef} className="h-full overflow-y-auto">
-        <div ref={contentRef} className="space-y-1 py-4">
+        <div className="space-y-1 py-4">
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center px-4 py-12 text-center">
               <p className="text-sm text-muted-foreground">{emptyMessage}</p>
