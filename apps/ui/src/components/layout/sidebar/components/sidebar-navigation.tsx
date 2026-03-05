@@ -70,8 +70,12 @@ export function SidebarNavigation({
                   <button
                     key={item.id}
                     onClick={() => {
-                      // Cast to the router's path type; item.id is constrained to known routes
-                      navigate({ to: `/${item.id}` as unknown as '/' });
+                      if (item.action) {
+                        item.action();
+                      } else {
+                        // Cast to the router's path type; item.id is constrained to known routes
+                        navigate({ to: `/${item.id}` as unknown as '/' });
+                      }
                       onNavItemClick?.();
                     }}
                     className={cn(

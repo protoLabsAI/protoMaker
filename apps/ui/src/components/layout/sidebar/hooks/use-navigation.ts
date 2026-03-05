@@ -77,6 +77,8 @@ interface UseNavigationProps {
   unreadCeremonyCount?: number;
   /** Whether spec generation is currently running for the current project */
   isSpecGenerating?: boolean;
+  /** Toggle the bottom panel (terminal) */
+  toggleBottomPanel?: () => void;
 }
 
 export function useNavigation({
@@ -102,6 +104,7 @@ export function useNavigation({
   unreadNotificationsCount,
   unreadCeremonyCount,
   isSpecGenerating,
+  toggleBottomPanel,
 }: UseNavigationProps) {
   // Track if current project has a GitHub remote
   const [hasGitHubRemote, setHasGitHubRemote] = useState(false);
@@ -240,6 +243,7 @@ export function useNavigation({
         label: 'Terminal',
         icon: Terminal,
         shortcut: shortcuts.terminal,
+        action: toggleBottomPanel,
       });
     }
 
@@ -314,6 +318,7 @@ export function useNavigation({
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating,
+    toggleBottomPanel,
   ]);
 
   // Build keyboard shortcuts for navigation
@@ -355,9 +360,10 @@ export function useNavigation({
           if (item.shortcut) {
             shortcutsList.push({
               key: item.shortcut,
-              // Cast to router path type; ids are constrained to known routes
-              action: () => navigate({ to: `/${item.id}` as unknown as '/' }),
-              description: `Navigate to ${item.label}`,
+              action: item.action
+                ? () => item.action!()
+                : () => navigate({ to: `/${item.id}` as unknown as '/' }),
+              description: item.action ? `Toggle ${item.label}` : `Navigate to ${item.label}`,
             });
           }
         });

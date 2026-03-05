@@ -1,5 +1,5 @@
 import { createRootRoute, Outlet, useLocation, useNavigate } from '@tanstack/react-router';
-import { useEffect, useState, useCallback, useDeferredValue, useRef } from 'react';
+import { useEffect, useState, useCallback, useDeferredValue, useRef, Suspense, lazy } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createLogger } from '@protolabsai/utils/logger';
@@ -51,7 +51,12 @@ import { useMobileVisibility } from '@/hooks/use-mobile-visibility';
 import { useVirtualKeyboardResize } from '@/hooks/use-virtual-keyboard-resize';
 import { BottomPanel } from '@/components/layout/bottom-panel';
 import { UpdateNotification } from '@/components/layout/update-notification';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import type { Project } from '@/lib/electron';
+
+const LazyTerminalView = lazy(() =>
+  import('@/components/views/terminal-view').then((m) => ({ default: m.TerminalView }))
+);
 
 const logger = createLogger('RootLayout');
 const SHOW_QUERY_DEVTOOLS = import.meta.env.DEV;
@@ -878,6 +883,8 @@ function RootLayoutContent() {
     );
   }
 
+  const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen);
+
   // Show project switcher on all app pages (not on dashboard, setup, or login)
   // Also hide on compact screens (< 1240px) - the sidebar will show a logo instead
   return (
@@ -892,9 +899,29 @@ function RootLayoutContent() {
         )}
         <Sidebar />
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <Outlet />
-          </div>
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={bottomPanelOpen ? 65 : 100} minSize={20}>
+              <div className="flex flex-col h-full min-h-0 overflow-hidden">
+                <Outlet />
+              </div>
+            </Panel>
+            {bottomPanelOpen && (
+              <>
+                <PanelResizeHandle className="h-1 w-full bg-border/60 hover:bg-brand-500 transition-colors data-[resize-handle-state=hover]:bg-brand-500 data-[resize-handle-state=drag]:bg-brand-500 cursor-row-resize" />
+                <Panel defaultSize={35} minSize={15} maxSize={70}>
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center h-full">
+                        <LoadingState message="Loading terminal..." />
+                      </div>
+                    }
+                  >
+                    <LazyTerminalView />
+                  </Suspense>
+                </Panel>
+              </>
+            )}
+          </PanelGroup>
           <BottomPanel />
         </div>
         <ChatModal />

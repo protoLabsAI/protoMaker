@@ -15,6 +15,8 @@ export interface NavItem {
   count?: number;
   /** Whether this nav item is in a loading state (shows spinner) */
   isLoading?: boolean;
+  /** Custom click action that overrides route navigation */
+  action?: () => void;
 }
 
 export interface SortableProjectItemProps {
