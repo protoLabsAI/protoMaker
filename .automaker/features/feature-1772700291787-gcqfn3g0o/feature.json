@@ -1,0 +1,31 @@
+{
+  "category": "Epic",
+  "description": "# Branch-Aware PR Tasks\n\nFix auto-merge-prs and auto-rebase-stale-prs maintenance tasks to respect the configured prBaseBranch instead of hardcoding main. These two tasks operate on PRs and must target the correct integration branch.\n\n## Phases\n1. Wire resolveIntegrationBranch into PR Tasks",
+  "title": "[Epic] Branch-Aware PR Tasks",
+  "status": "backlog",
+  "isEpic": true,
+  "epicColor": "#EC4899",
+  "branchName": "epic/branch-aware-pr-tasks",
+  "projectSlug": "automations-upgrade",
+  "id": "feature-1772700291787-gcqfn3g0o",
+  "descriptionHistory": [
+    {
+      "description": "# Branch-Aware PR Tasks\n\nFix auto-merge-prs and auto-rebase-stale-prs maintenance tasks to respect the configured prBaseBranch instead of hardcoding main. These two tasks operate on PRs and must target the correct integration branch.\n\n## Phases\n1. Wire resolveIntegrationBranch into PR Tasks",
+      "timestamp": "2026-03-05T08:44:51.787Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-05T08:44:51.787Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-05T08:44:51.787Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772700291783-zviw2oiia"
+  ]
+}

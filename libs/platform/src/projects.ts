@@ -422,10 +422,14 @@ export async function projectPlanExists(
   projectPath: string,
   projectSlug: string
 ): Promise<boolean> {
-  const projectDir = getProjectDir(projectPath, projectSlug);
+  // Check for a non-empty project.json rather than just the directory.
+  // The directory is created before project.json is written, so a failed
+  // creation leaves an empty stub directory that would block all retries
+  // if we checked directory existence alone.
+  const jsonPath = getProjectJsonPath(projectPath, projectSlug);
   try {
-    await secureFs.access(projectDir);
-    return true;
+    const stat = await secureFs.stat(jsonPath);
+    return stat.size > 0;
   } catch {
     return false;
   }
