@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/mcp-server",
-  "version": "0.37.0",
+  "version": "0.37.1",
   "description": "MCP server for interacting with protoLabs Studio board and features",
   "type": "module",
   "main": "dist/index.js",
@@ -25,7 +25,7 @@
     "kanban"
   ],
   "dependencies": {
-    "@protolabsai/tools": "^0.37.0",
+    "@protolabsai/tools": "^0.37.1",
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {

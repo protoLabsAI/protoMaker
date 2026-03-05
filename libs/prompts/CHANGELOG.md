@@ -1,5 +1,14 @@
 # @protolabsai/prompts
 
+## 0.37.1
+
+### Patch Changes
+
+- Maintenance release.
+- Updated dependencies
+  - @protolabsai/types@0.37.1
+  - @protolabsai/utils@0.37.1
+
 ## 0.37.0
 
 ### Minor Changes

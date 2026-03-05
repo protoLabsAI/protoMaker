@@ -1,5 +1,11 @@
 # @protolabsai/ui
 
+## 0.37.1
+
+### Patch Changes
+
+- Maintenance release.
+
 ## 0.37.0
 
 ### Minor Changes
