@@ -97,7 +97,8 @@ export function setupWebSockets(server: http.Server, services: ServiceContainer)
 
   // Route scheduler:task-failed events to Discord #infra channel (non-fatal)
   const DISCORD_INFRA_CHANNEL = '1469109809939742814';
-  events.on('scheduler:task-failed', (payload) => {
+  events.subscribe((type, payload) => {
+    if ((type as string) !== 'scheduler:task-failed') return;
     const { discordBotService } = services;
     if (!discordBotService || !process.env.DISCORD_TOKEN) return;
     const p = payload as { taskId: string; taskName: string; error: string; timestamp: string };

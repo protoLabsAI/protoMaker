@@ -214,7 +214,7 @@ export function AutomationsSection() {
   useEffect(() => {
     const api = getHttpApiClient();
     return api.subscribeToEvents((type, payload) => {
-      if (type !== 'scheduler:task-failed') return;
+      if ((type as string) !== 'scheduler:task-failed') return;
       const p = payload as { taskName: string; error: string };
       toast.error(`Maintenance task failed: ${p.taskName}`, {
         description: p.error,
