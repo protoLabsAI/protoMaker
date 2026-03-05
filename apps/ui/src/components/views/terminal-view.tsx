@@ -1490,7 +1490,11 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
             </button>
           </div>
         </div>
-        <div className="flex-1" />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-muted-foreground/50">
+            Press <span className="font-medium text-muted-foreground">+</span> to start a terminal
+          </p>
+        </div>
       </div>
     );
   }
