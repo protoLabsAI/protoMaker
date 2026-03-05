@@ -211,6 +211,8 @@ export interface FeatureFlags {
    * Reports readings to POST /api/sensors/report. Off by default.
    */
   userPresenceDetection: boolean;
+  /** Calendar nav item in project sidebar */
+  calendar: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -222,6 +224,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   specEditor: false,
   systemView: false,
   userPresenceDetection: false,
+  calendar: false,
 };
 
 // ============================================================================
