@@ -22,15 +22,11 @@ vi.mock('@protolabsai/utils', () => ({
 }));
 
 vi.mock('@/lib/settings-helpers.js', () => ({
-  getWorkflowSettings: vi.fn().mockResolvedValue({
-    pipeline: {
-      supervisorEnabled: false,
-      checkpointEnabled: false,
-      goalGatesEnabled: false,
-      antagonisticPlanReview: false,
-    },
-  }),
+  getWorkflowSettings: vi.fn(),
 }));
+
+import { getWorkflowSettings } from '@/lib/settings-helpers.js';
+const mockGetWorkflowSettings = getWorkflowSettings as unknown as ReturnType<typeof vi.fn>;
 
 function createMockEvents() {
   const subscribers: Array<(type: EventType, payload: unknown) => void> = [];
@@ -117,7 +113,10 @@ function createMockMetricsService() {
 
 // ────────────────────────── Mock State Processor ──────────────────────────
 
-function createMockProcessor(nextState: FeatureProcessingState | null, shouldContinue = true): StateProcessor {
+function createMockProcessor(
+  nextState: FeatureProcessingState | null,
+  shouldContinue = true
+): StateProcessor {
   return {
     enter: vi.fn().mockResolvedValue(undefined),
     process: vi.fn().mockResolvedValue({
@@ -143,6 +142,15 @@ describe('LeadEngineerService', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Re-establish settings mock cleared by vitest's mockReset: true
+    mockGetWorkflowSettings.mockResolvedValue({
+      pipeline: {
+        supervisorEnabled: false,
+        checkpointEnabled: false,
+        goalGatesEnabled: false,
+        antagonisticPlanReview: false,
+      },
+    });
     events = createMockEvents();
     featureLoader = createMockFeatureLoader([]);
     autoModeService = createMockAutoModeService();
@@ -158,7 +166,7 @@ describe('LeadEngineerService', () => {
       projectService as any,
       projectLifecycleService as any,
       settingsService as any,
-      metricsService as any,
+      metricsService as any
     );
   });
 
@@ -171,7 +179,7 @@ describe('LeadEngineerService', () => {
 
   describe('session management', () => {
     it('starts a session and emits lead-engineer:started', async () => {
-      await await service.initialize();
+      await service.initialize();
       const session = await service.start('/test/project', 'my-project');
 
       expect(session.projectPath).toBe('/test/project');
@@ -281,7 +289,7 @@ describe('LeadEngineerService', () => {
         projectService as any,
         projectLifecycleService as any,
         settingsService as any,
-        metricsService as any,
+        metricsService as any
       );
       await service.initialize();
       await service.start('/test/project', 'my-project');
@@ -308,7 +316,7 @@ describe('LeadEngineerService', () => {
         projectService as any,
         projectLifecycleService as any,
         settingsService as any,
-        metricsService as any,
+        metricsService as any
       );
       await service.initialize();
       await service.start('/test/project', 'my-project');
@@ -371,7 +379,7 @@ describe('LeadEngineerService', () => {
         projectService as any,
         projectLifecycleService as any,
         settingsService as any,
-        metricsService as any,
+        metricsService as any
       );
       await service.initialize();
       await service.start('/test/project', 'my-project');
@@ -453,7 +461,11 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
     stateMachine.registerProcessor('MERGE', createMockProcessor('DEPLOY'));
     stateMachine.registerProcessor('DEPLOY', createMockProcessor(null, false));
 
-    const { finalState } = await stateMachine.processFeature(feature, '/test/project', makeOptions());
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
     expect(finalState).toBe('DEPLOY');
   });
 
@@ -468,7 +480,11 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
     stateMachine.registerProcessor('MERGE', createMockProcessor('DEPLOY'));
     stateMachine.registerProcessor('DEPLOY', createMockProcessor(null, false));
 
-    const { finalState } = await stateMachine.processFeature(feature, '/test/project', makeOptions());
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
     expect(finalState).toBe('DEPLOY');
   });
 
@@ -502,7 +518,11 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
     stateMachine.registerProcessor('INTAKE', intakeProcessor);
     stateMachine.registerProcessor('ESCALATE', escalateProcessor);
 
-    const { finalState } = await stateMachine.processFeature(feature, '/test/project', makeOptions());
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
 
     expect(finalState).toBe('ESCALATE');
     expect(escalateProcessor.process).toHaveBeenCalled();
@@ -540,7 +560,11 @@ describe('FeatureStateMachine — pipeline state transitions', () => {
     stateMachine.registerProcessor('EXECUTE', executeProcessor);
     stateMachine.registerProcessor('ESCALATE', escalateProcessor);
 
-    const { finalState } = await stateMachine.processFeature(feature, '/test/project', makeOptions());
+    const { finalState } = await stateMachine.processFeature(
+      feature,
+      '/test/project',
+      makeOptions()
+    );
 
     expect(finalState).toBe('ESCALATE');
     expect(escalateProcessor.process).toHaveBeenCalled();
