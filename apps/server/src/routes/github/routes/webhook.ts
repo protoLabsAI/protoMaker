@@ -17,9 +17,11 @@ import type {
   GitHubPingWebhookPayload,
   WebhookVerificationResult,
   GitHubCheckSuiteWebhookPayload,
+  GitHubCheckRunWebhookPayload,
 } from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
+import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
 
 const logger = createLogger('GitHubWebhook');
 
@@ -264,6 +266,38 @@ async function handleCheckSuiteEvent(
 }
 
 /**
+ * Handle GitHub check run completed event — fast-path trigger for PRWatcherService
+ */
+async function handleCheckRunEvent(
+  payload: GitHubCheckRunWebhookPayload,
+  projectPath: string
+): Promise<void> {
+  const { action, check_run } = payload;
+
+  // Only react to completed check runs
+  if (action !== 'completed') return;
+
+  const prs = check_run.pull_requests ?? [];
+  if (prs.length === 0) return;
+
+  const watcher = getPRWatcherService();
+  if (!watcher) return;
+
+  for (const pr of prs) {
+    if (watcher.isWatching(pr.number)) {
+      logger.info(
+        `check_run completed for PR #${pr.number} (${check_run.name}) — triggering watcher check`
+      );
+      await watcher.triggerCheck(pr.number);
+    }
+  }
+
+  logger.debug(
+    `Processed check_run ${check_run.id} (${check_run.name}) for project: ${projectPath}`
+  );
+}
+
+/**
  * Create webhook handler
  *
  * Receives GitHub webhook events, verifies signatures, and processes the payload.
@@ -385,6 +419,10 @@ export function createWebhookHandler(
             projectPath,
             events
           );
+          break;
+
+        case 'check_run':
+          await handleCheckRunEvent(payload as GitHubCheckRunWebhookPayload, projectPath);
           break;
 
         case 'push':

@@ -130,6 +130,28 @@ export function useChatSession({
     return () => unsubscribe();
   }, []);
 
+  // Subscribe to pr:watch-resolved events and inject as a user message so Ava can respond
+  useEffect(() => {
+    const api = getHttpApiClient();
+    const unsubscribe = api.subscribeToEvents((type: string, payload: unknown) => {
+      if (type === 'pr:watch-resolved') {
+        const event = payload as {
+          prNumber: number;
+          status: 'passed' | 'failed';
+          checks: Array<{ name: string; conclusion: string }>;
+          timestamp: string;
+        };
+        const failedChecks = event.checks.filter((c) => c.conclusion === 'failure');
+        const messageText =
+          event.status === 'passed'
+            ? `[Background notification] PR #${event.prNumber}: all CI checks passed.`
+            : `[Background notification] PR #${event.prNumber}: CI failed. Failed checks: ${failedChecks.map((c) => c.name).join(', ')}.`;
+        void sendMessage({ text: messageText });
+      }
+    });
+    return () => unsubscribe();
+  }, [sendMessage]);
+
   /** Remove a pending approval from the list (after approve or deny). */
   const removePendingApproval = useCallback((approvalId: string) => {
     setPendingSubagentApprovals((prev) => prev.filter((a) => a.approvalId !== approvalId));
