@@ -210,13 +210,13 @@ INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
 
 Check dependencies, assign persona agent based on file-path domain detection:
 
-| File pattern                            | Persona           |
-| --------------------------------------- | ----------------- |
-| `apps/ui/`, components                  | Matt (frontend)   |
-| `apps/server/src/routes/`, services     | Kai (backend)     |
-| `libs/flows/`, providers, observability | Sam (agent infra) |
-| `scripts/`, Docker, `.github/`          | Frank (devops)    |
-| Mixed or unclear                        | Kai (default)     |
+| File pattern                            | Agent                |
+| --------------------------------------- | -------------------- |
+| `apps/ui/`, components                  | Frontend agent       |
+| `apps/server/src/routes/`, services     | Backend agent        |
+| `libs/flows/`, providers, observability | Infrastructure agent |
+| `scripts/`, Docker, `.github/`          | DevOps agent         |
+| Mixed or unclear                        | Backend (default)    |
 
 Model selection by complexity: small → Haiku, medium/large → Sonnet, architectural → Opus.
 

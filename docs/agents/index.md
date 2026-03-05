@@ -235,15 +235,15 @@ Covers:
 
 The full agent roster (names, models, domains, trust levels) is auto-generated in [Team Roles](../authority/roles.md). Below is a compact summary.
 
-| Agent | Domain                             | Model  | Surfaces                 |
-| ----- | ---------------------------------- | ------ | ------------------------ |
-| Ava   | Orchestration, routing, priorities | Opus   | CLI, Discord, Autonomous |
-| Matt  | Frontend, React, UI, Tailwind      | Sonnet | CLI, Discord, Auto-mode  |
-| Sam   | Agent infra, LangGraph, providers  | Sonnet | CLI, Discord, Auto-mode  |
-| Kai   | Backend, Express, APIs, services   | Sonnet | CLI, Discord, Auto-mode  |
-| Frank | DevOps, Docker, CI/CD, deploy      | Sonnet | CLI, Discord, Auto-mode  |
-| Cindi | Content, blog posts, docs, SEO     | Sonnet | CLI, Discord, Auto-mode  |
-| Jon   | GTM, brand, content strategy       | Sonnet | CLI, Discord             |
+| Agent                | Domain                             | Model  | Surfaces                 |
+| -------------------- | ---------------------------------- | ------ | ------------------------ |
+| Orchestrator         | Orchestration, routing, priorities | Opus   | CLI, Discord, Autonomous |
+| Frontend agent       | React, UI, Tailwind                | Sonnet | CLI, Discord, Auto-mode  |
+| Infrastructure agent | Agent infra, LangGraph, providers  | Sonnet | CLI, Discord, Auto-mode  |
+| Backend agent        | Express, APIs, services            | Sonnet | CLI, Discord, Auto-mode  |
+| DevOps agent         | Docker, CI/CD, deploy              | Sonnet | CLI, Discord, Auto-mode  |
+| Content agent        | Blog posts, docs, SEO              | Sonnet | CLI, Discord, Auto-mode  |
+| GTM agent            | Brand, content strategy            | Sonnet | CLI, Discord             |
 
 **Utility agents** (Haiku): PR Maintainer, Board Janitor — invoked on-demand via `execute_dynamic_agent`.
 
