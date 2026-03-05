@@ -301,8 +301,6 @@ function getIconPath(): string | null {
 // System Tray
 // ============================================
 
-let lastKnownAgentCount = 0;
-
 function buildTrayMenu(agentCount: number): Electron.Menu {
   const statusLabel =
     agentCount > 0 ? `● ${agentCount} agent${agentCount === 1 ? '' : 's'} running` : '○ Idle';
@@ -325,7 +323,6 @@ function buildTrayMenu(agentCount: number): Electron.Menu {
 
 function updateTray(agentCount: number): void {
   if (!tray || tray.isDestroyed()) return;
-  lastKnownAgentCount = agentCount;
   const tooltipSuffix =
     agentCount > 0 ? `${agentCount} agent${agentCount === 1 ? '' : 's'} running` : 'Idle';
   tray.setToolTip(`protoLabs Studio — ${tooltipSuffix}`);

@@ -56,7 +56,6 @@ export function useSchedulerStatus(): SchedulerStatusResult {
       mountedRef.current = false;
       clearInterval(interval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { tasks, loading, error, refresh: fetchStatus };
