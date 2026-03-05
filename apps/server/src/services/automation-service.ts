@@ -694,4 +694,71 @@ export class AutomationService {
   async loadAll(): Promise<StoredAutomation[]> {
     return this.readAutomations();
   }
+
+  // ---------------------------------------------------------------------------
+  // Scheduler status
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Task status entry returned by getSchedulerStatus() and getSchedulerStatusMap().
+   */
+  getSchedulerStatus(): Array<{
+    id: string;
+    name: string;
+    enabled: boolean;
+    cronExpression: string;
+    nextRun: string | null;
+    lastRun: string | null;
+    executionCount: number;
+    lastError: string | null;
+    averageDurationMs: number | null;
+  }> {
+    return this.schedulerService.getAllTasks().map((task) => ({
+      id: task.id,
+      name: task.name,
+      enabled: task.enabled,
+      cronExpression: task.cronExpression,
+      nextRun: task.nextRun ?? null,
+      lastRun: task.lastRun ?? null,
+      executionCount: task.executionCount,
+      lastError: task.lastError ?? null,
+      averageDurationMs: null,
+    }));
+  }
+
+  /**
+   * Returns a Map of automation ID -> scheduler task status, for easy join in list routes.
+   * Task IDs are stored as `automation:{automationId}` — this method strips the prefix.
+   */
+  getSchedulerStatusMap(): Map<
+    string,
+    {
+      nextRun: string | null;
+      lastRun: string | null;
+      executionCount: number;
+      lastError: string | null;
+    }
+  > {
+    const map = new Map<
+      string,
+      {
+        nextRun: string | null;
+        lastRun: string | null;
+        executionCount: number;
+        lastError: string | null;
+      }
+    >();
+    for (const task of this.schedulerService.getAllTasks()) {
+      const automationId = task.id.startsWith(AUTOMATION_TASK_PREFIX)
+        ? task.id.slice(AUTOMATION_TASK_PREFIX.length)
+        : task.id;
+      map.set(automationId, {
+        nextRun: task.nextRun ?? null,
+        lastRun: task.lastRun ?? null,
+        executionCount: task.executionCount,
+        lastError: task.lastError ?? null,
+      });
+    }
+    return map;
+  }
 }
