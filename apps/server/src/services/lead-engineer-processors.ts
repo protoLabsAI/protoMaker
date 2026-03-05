@@ -6,10 +6,10 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import { resolveModelString } from '@protolabsai/model-resolver';
+import { resolveModelString, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 import { areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
 import type { AgentRole, Feature } from '@protolabsai/types';
-import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import { getWorkflowSettings, getPhaseModelWithOverrides } from '../lib/settings-helpers.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import type {
   ProcessorServiceContext,
@@ -80,10 +80,15 @@ export class IntakeProcessor implements StateProcessor {
     // Determine if PLAN phase is needed
     ctx.planRequired = this.requiresPlan(feature);
 
-    // Mark feature as in_progress on the board and persist complexity
+    // Select model based on complexity and feature type, store in StateContext
+    ctx.selectedModel = await this.selectModel(feature, ctx.projectPath);
+    logger.info(`[INTAKE] Selected model: ${ctx.selectedModel}`);
+
+    // Mark feature as in_progress on the board and persist complexity + selected model
     await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
       status: 'in_progress',
       complexity: ctx.feature.complexity,
+      model: ctx.selectedModel,
     });
     logger.info('[INTAKE] Feature status updated to in_progress');
 
@@ -105,6 +110,50 @@ export class IntakeProcessor implements StateProcessor {
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[INTAKE] Completed intake processing');
+  }
+
+  private async selectModel(
+    feature: { model?: string; complexity?: string; failureCount?: number },
+    projectPath: string
+  ): Promise<string> {
+    // 1. Feature explicitly specifies a model → use it (highest priority)
+    if (feature.model) {
+      return resolveModelString(feature.model, DEFAULT_MODELS.autoMode);
+    }
+
+    // 2. Escalate to opus after multiple failures (safety net)
+    if (feature.failureCount && feature.failureCount >= 2) {
+      logger.info(`[INTAKE] Escalating to opus after ${feature.failureCount} failures`);
+      return DEFAULT_MODELS.claude; // opus
+    }
+
+    // 3. Architectural complexity always gets opus
+    if (feature.complexity === 'architectural') {
+      logger.info('[INTAKE] Using opus for architectural feature');
+      return DEFAULT_MODELS.claude; // opus
+    }
+
+    // 4. Read user's configured agent execution model from settings
+    try {
+      const { phaseModel } = await getPhaseModelWithOverrides(
+        'agentExecutionModel',
+        this.serviceContext.settingsService,
+        projectPath
+      );
+      if (phaseModel?.model) {
+        return resolveModelString(phaseModel.model, DEFAULT_MODELS.autoMode);
+      }
+    } catch (err) {
+      logger.warn(`[INTAKE] Failed to read agentExecutionModel setting, using fallback: ${err}`);
+    }
+
+    // 5. Fallback: complexity-based (only if no setting configured)
+    if (feature.complexity === 'small') {
+      logger.info('[INTAKE] Using haiku for small feature');
+      return DEFAULT_MODELS.trivial; // haiku
+    }
+
+    return DEFAULT_MODELS.autoMode; // sonnet
   }
 
   private assignPersona(feature: Feature): AgentRole {

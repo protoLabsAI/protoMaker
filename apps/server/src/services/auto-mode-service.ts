@@ -306,7 +306,6 @@ export class AutoModeService {
       resumeFeature: this.resumeFeature.bind(this),
       findExistingWorktreeForBranch: this.findExistingWorktreeForBranch.bind(this),
       createWorktreeForBranch: this.createWorktreeForBranch.bind(this),
-      getModelForFeature: this.getModelForFeature.bind(this),
       saveExecutionState: this.saveExecutionState.bind(this),
       getAutoLoopRunning: () => this.autoLoopRunning,
       updateFeatureStatus: this.updateFeatureStatus.bind(this),
@@ -1214,11 +1213,9 @@ export class AutoModeService {
           // Content features (featureType === 'content') always route through leadEngineerService
           // to the GTM execution path (guarded above — leadEngineerService is non-null here).
           // Code features use leadEngineerService if available, otherwise fall back to executeFeature.
-          const featureModelResult = await this.getModelForFeature(nextFeature, projectPath);
+          // Model selection for the LE path is handled inside IntakeProcessor.
           const executionPromise = this.leadEngineerService
-            ? this.leadEngineerService.process(projectPath, nextFeature.id, {
-                model: featureModelResult.model,
-              } as unknown as ExecuteOptions) // State machine builds full ExecuteOptions internally
+            ? this.leadEngineerService.process(projectPath, nextFeature.id)
             : this.executeFeature(
                 projectPath,
                 nextFeature.id,
