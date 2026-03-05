@@ -98,9 +98,6 @@ export interface IAutoModeCallbacks {
     updates: Partial<PlanSpec>
   ): Promise<void>;
 
-  // Event emission (rate-limited)
-  emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void;
-
   // Success / failure tracking
   recordSuccessForProject(projectPath: string, branchName: string | null): void;
   trackFailureAndCheckPauseForProject(

@@ -317,7 +317,6 @@ export class AutoModeService {
       getAutoLoopRunning: () => this.autoLoopRunning,
       updateFeatureStatus: this.updateFeatureStatus.bind(this),
       updateFeaturePlanSpec: this.updateFeaturePlanSpec.bind(this),
-      emitAutoModeEvent: this.emitAutoModeEvent.bind(this),
       recordSuccessForProject: this.recordSuccessForProject.bind(this),
       trackFailureAndCheckPauseForProject: this.trackFailureAndCheckPauseForProject.bind(this),
       signalShouldPauseForProject: this.signalShouldPauseForProject.bind(this),
