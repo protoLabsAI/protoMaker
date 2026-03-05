@@ -29,6 +29,14 @@ const generateSplitId = () => `split-${Date.now()}-${Math.random().toString(36).
 // State
 // ---------------------------------------------------------------------------
 
+/** Request to open a terminal with a specific working directory (e.g. from worktree panel). */
+export interface PendingTerminalRequest {
+  cwd: string;
+  branch?: string;
+  mode?: 'tab' | 'split';
+  nonce: number;
+}
+
 export interface TerminalStoreState {
   /** Core terminal runtime state (auth, tabs, layout, preferences). */
   terminalState: TerminalState;
@@ -47,6 +55,9 @@ export interface TerminalStoreState {
 
   /** Per-project auto-dismiss preference for the init-script indicator. */
   autoDismissInitScriptIndicatorByProject: Record<string, boolean>;
+
+  /** Pending request to open a terminal with a specific cwd (consumed by TerminalView). */
+  pendingTerminalRequest: PendingTerminalRequest | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +141,9 @@ export interface TerminalStoreActions {
   getInitScriptStatesForProject: (
     projectPath: string
   ) => Array<{ key: string; state: InitScriptState }>;
+
+  // Pending terminal request (for opening terminals from outside the terminal view)
+  setPendingTerminalRequest: (request: PendingTerminalRequest | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +173,7 @@ const initialTerminalState: TerminalStoreState = {
   initScriptState: {},
   showInitScriptIndicatorByProject: {},
   autoDismissInitScriptIndicatorByProject: {},
+  pendingTerminalRequest: null,
 };
 
 // ---------------------------------------------------------------------------
@@ -1027,5 +1042,9 @@ export const useTerminalStore = create<TerminalStoreState & TerminalStoreActions
     return Object.entries(states)
       .filter(([key]) => key.startsWith(prefix))
       .map(([key, state]) => ({ key, state }));
+  },
+
+  setPendingTerminalRequest: (request) => {
+    set({ pendingTerminalRequest: request });
   },
 }));

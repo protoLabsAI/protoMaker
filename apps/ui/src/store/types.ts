@@ -273,7 +273,7 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   memory: 'Y',
   settings: 'S',
   projectSettings: 'Shift+S',
-  terminal: 'T',
+  terminal: 'Cmd+`',
   ideation: 'I',
   notes: 'W',
   docs: 'Cmd+D',

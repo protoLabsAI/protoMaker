@@ -5,7 +5,6 @@ import {
   LayoutGrid,
   BookOpen,
   Library,
-  Terminal,
   CircleDot,
   GitPullRequest,
   Brain,
@@ -38,7 +37,6 @@ interface UseNavigationProps {
     board: string;
     graph: string;
     agent: string;
-    terminal: string;
     settings: string;
     projectSettings: string;
     githubIssues: string;
@@ -54,7 +52,6 @@ interface UseNavigationProps {
   };
   hideSpecEditor: boolean;
   hideContext: boolean;
-  hideTerminal: boolean;
   hideDesigns: boolean;
   hideDocs: boolean;
   hideFileEditor: boolean;
@@ -77,15 +74,12 @@ interface UseNavigationProps {
   unreadCeremonyCount?: number;
   /** Whether spec generation is currently running for the current project */
   isSpecGenerating?: boolean;
-  /** Toggle the bottom panel (terminal) */
-  toggleBottomPanel?: () => void;
 }
 
 export function useNavigation({
   shortcuts,
   hideSpecEditor,
   hideContext,
-  hideTerminal,
   hideDesigns,
   hideDocs,
   hideFileEditor,
@@ -104,7 +98,6 @@ export function useNavigation({
   unreadNotificationsCount,
   unreadCeremonyCount,
   isSpecGenerating,
-  toggleBottomPanel,
 }: UseNavigationProps) {
   // Track if current project has a GitHub remote
   const [hasGitHubRemote, setHasGitHubRemote] = useState(false);
@@ -236,17 +229,6 @@ export function useNavigation({
       });
     }
 
-    // Add Terminal to Project section if not hidden
-    if (!hideTerminal) {
-      projectItems.push({
-        id: 'terminal',
-        label: 'Terminal',
-        icon: Terminal,
-        shortcut: shortcuts.terminal,
-        action: toggleBottomPanel,
-      });
-    }
-
     const sections: NavSection[] = [
       {
         label: 'Project',
@@ -306,7 +288,6 @@ export function useNavigation({
     shortcuts,
     hideSpecEditor,
     hideContext,
-    hideTerminal,
     hideDesigns,
     hideDocs,
     hideFileEditor,
@@ -318,7 +299,6 @@ export function useNavigation({
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating,
-    toggleBottomPanel,
   ]);
 
   // Build keyboard shortcuts for navigation

@@ -16,8 +16,10 @@ import {
   useThemeStore,
   useAIModelsStore,
   getStoredTheme,
+  parseShortcut,
   type ThemeMode,
 } from '@/store/app-store';
+import { useKeyboardShortcutsConfig } from '@/hooks/use-keyboard-shortcuts';
 import { useSetupStore } from '@/store/setup-store';
 import { useAuthStore } from '@/store/auth-store';
 import { getElectronAPI, isElectron } from '@/lib/electron';
@@ -210,6 +212,32 @@ function RootLayoutContent() {
 
   // Global Cmd+K / Ctrl+K shortcut for the chat modal (web mode)
   useChatModalShortcut();
+
+  // Global terminal toggle shortcut (Cmd+` by default)
+  // Registered separately from useKeyboardShortcuts so it works even when
+  // focus is inside a terminal or input — you always want to be able to dismiss the panel.
+  const shortcuts = useKeyboardShortcutsConfig();
+  useEffect(() => {
+    const handleTerminalToggle = (event: KeyboardEvent) => {
+      const parsed = parseShortcut(shortcuts.terminal);
+      if (!parsed.key) return;
+
+      const cmdCtrlPressed = event.metaKey || event.ctrlKey;
+      if (parsed.cmdCtrl && !cmdCtrlPressed) return;
+      if (!parsed.cmdCtrl && cmdCtrlPressed) return;
+      if (parsed.shift && !event.shiftKey) return;
+      if (!parsed.shift && event.shiftKey) return;
+      if (parsed.alt && !event.altKey) return;
+      if (!parsed.alt && event.altKey) return;
+      if (event.key.toLowerCase() !== parsed.key.toLowerCase()) return;
+
+      event.preventDefault();
+      useAppStore.getState().toggleBottomPanel();
+    };
+
+    window.addEventListener('keydown', handleTerminalToggle);
+    return () => window.removeEventListener('keydown', handleTerminalToggle);
+  }, [shortcuts.terminal]);
 
   // Mobile device detection for PWA optimizations
   const isMobile = useIsMobile();

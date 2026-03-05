@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { createLogger } from '@protolabsai/utils/logger';
 import {
   Terminal as TerminalIcon,
@@ -214,18 +213,13 @@ function NewTabDropZone({ isDropTarget }: { isDropTarget: boolean }) {
   );
 }
 
-interface TerminalViewProps {
-  /** Initial working directory to open a terminal in (e.g., from worktree panel) */
-  initialCwd?: string;
-  /** Branch name for display in toast (optional) */
-  initialBranch?: string;
-  /** Mode for opening terminal: 'tab' for new tab, 'split' for split in current tab */
-  initialMode?: 'tab' | 'split';
-  /** Unique nonce to allow opening the same worktree multiple times */
-  nonce?: number;
-}
-
-export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: TerminalViewProps) {
+export function TerminalView() {
+  // Consume pending terminal requests from the store (e.g., from worktree panel)
+  const pendingRequest = useTerminalStore((s) => s.pendingTerminalRequest);
+  const initialCwd = pendingRequest?.cwd;
+  const initialBranch = pendingRequest?.branch;
+  const initialMode = pendingRequest?.mode;
+  const nonce = pendingRequest?.nonce;
   const { currentProject } = useAppStore();
   const {
     terminalState,
@@ -253,8 +247,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     setTerminalScreenReaderMode,
     updateTerminalPanelSizes,
   } = useTerminalStore();
-
-  const navigate = useNavigate();
 
   const [status, setStatus] = useState<TerminalStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -609,8 +601,8 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
           // Refresh session count
           fetchServerSettings();
 
-          // Clear the cwd from the URL to prevent re-creating on refresh
-          navigate({ to: '/terminal', search: {}, replace: true });
+          // Clear the pending request to prevent re-creating on re-render
+          useTerminalStore.getState().setPendingTerminalRequest(null);
         } else {
           logger.error('Failed to create terminal for cwd:', data.error);
           toast.error('Failed to create terminal', {
@@ -645,7 +637,6 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
     addTerminalToLayout,
     addTerminalTab,
     fetchServerSettings,
-    navigate,
   ]);
 
   // Handle project switching - save and restore terminal layouts

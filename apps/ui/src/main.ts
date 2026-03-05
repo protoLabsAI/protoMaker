@@ -58,7 +58,17 @@ import { spawn, execSync, ChildProcess } from 'child_process';
 import crypto from 'crypto';
 import http, { Server } from 'http';
 import net from 'net';
-import { app, BrowserWindow, ipcMain, dialog, shell, screen, globalShortcut } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  shell,
+  screen,
+  globalShortcut,
+  Tray,
+  Menu,
+} from 'electron';
 import { createLogger } from '@protolabsai/utils/logger';
 import { initAutoUpdater } from './auto-updater';
 import {
@@ -134,6 +144,9 @@ let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let serverProcess: ChildProcess | null = null;
 let staticServer: Server | null = null;
+let tray: Tray | null = null;
+let isQuittingIntentionally = false;
+let agentPollInterval: ReturnType<typeof setInterval> | null = null;
 
 // Default ports (can be overridden via env) - will be dynamically assigned if these are in use
 // When launched via root init.mjs we pass:
@@ -282,6 +295,127 @@ function getIconPath(): string | null {
   }
 
   return iconPath;
+}
+
+// ============================================
+// System Tray
+// ============================================
+
+let lastKnownAgentCount = 0;
+
+function buildTrayMenu(agentCount: number): Electron.Menu {
+  const statusLabel =
+    agentCount > 0 ? `● ${agentCount} agent${agentCount === 1 ? '' : 's'} running` : '○ Idle';
+  return Menu.buildFromTemplate([
+    { label: statusLabel, enabled: false },
+    { type: 'separator' },
+    {
+      label: 'Show protoLabs Studio',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    { type: 'separator' },
+    { label: 'Quit', click: () => app.quit() },
+  ]);
+}
+
+function updateTray(agentCount: number): void {
+  if (!tray || tray.isDestroyed()) return;
+  lastKnownAgentCount = agentCount;
+  const tooltipSuffix =
+    agentCount > 0 ? `${agentCount} agent${agentCount === 1 ? '' : 's'} running` : 'Idle';
+  tray.setToolTip(`protoLabs Studio — ${tooltipSuffix}`);
+  tray.setContextMenu(buildTrayMenu(agentCount));
+}
+
+function fetchRunningAgentCount(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const key = apiKey;
+    const options: http.RequestOptions = {
+      hostname: 'localhost',
+      port: serverPort,
+      path: '/api/agents/running',
+      method: 'GET',
+      headers: key ? { 'X-API-Key': key } : {},
+      timeout: 5000,
+    };
+    const req = http.request(options, (res) => {
+      let body = '';
+      res.on('data', (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          const count = Array.isArray(data)
+            ? data.length
+            : typeof data?.count === 'number'
+              ? data.count
+              : 0;
+          resolve(count);
+        } catch {
+          reject(new Error('Failed to parse response'));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Timeout'));
+    });
+    req.end();
+  });
+}
+
+function setupTray(): void {
+  const iconPath = getIconPath();
+  if (!iconPath) {
+    logger.warn('[Tray] No icon path available, skipping tray setup');
+    return;
+  }
+
+  try {
+    tray = new Tray(iconPath);
+    updateTray(0);
+
+    agentPollInterval = setInterval(async () => {
+      try {
+        const count = await fetchRunningAgentCount();
+        updateTray(count);
+      } catch (err) {
+        logger.warn('[Tray] Failed to fetch agent status:', (err as Error).message);
+        // Keep last known state — no crash
+      }
+    }, 10_000);
+  } catch (err) {
+    logger.error('[Tray] Failed to create system tray:', (err as Error).message);
+  }
+}
+
+/**
+ * Get tray icon path for macOS menubar (16x16).
+ * Works in both dev and packaged builds.
+ */
+function getTrayIconPath(): string | null {
+  const trayIconPath = isDev
+    ? path.join(__dirname, '../public/icons/icon-16.png')
+    : path.join(__dirname, '../dist/public/icons/icon-16.png');
+
+  try {
+    if (!electronAppExists(trayIconPath)) {
+      logger.warn('Tray icon not found at:', trayIconPath);
+      return null;
+    }
+  } catch (error) {
+    logger.warn('Tray icon check failed:', trayIconPath, error);
+    return null;
+  }
+
+  return trayIconPath;
 }
 
 /**
@@ -756,7 +890,13 @@ function createWindow(): void {
   });
 
   // Save window bounds on close, resize, and move
-  mainWindow.on('close', () => {
+  mainWindow.on('close', (e) => {
+    // On macOS, hide the window instead of closing (keeps app alive in tray)
+    if (process.platform === 'darwin' && !isQuittingIntentionally) {
+      e.preventDefault();
+      mainWindow?.hide();
+      return;
+    }
     // Save immediately before closing (not debounced)
     if (mainWindow && !mainWindow.isDestroyed()) {
       const isMaximized = mainWindow.isMaximized();
@@ -912,6 +1052,58 @@ function registerOverlayShortcut(): void {
   }
 }
 
+/**
+ * Create the macOS system tray icon and context menu.
+ * Gated behind process.platform === 'darwin'.
+ */
+function createTray(): void {
+  if (process.platform !== 'darwin') return;
+
+  const iconPath = getTrayIconPath();
+  if (!iconPath) {
+    logger.warn('Tray icon not found, skipping tray creation');
+    return;
+  }
+
+  tray = new Tray(iconPath);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open Board',
+      click: () => {
+        if (!mainWindow || mainWindow.isDestroyed()) {
+          createWindow();
+        } else {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        isQuittingIntentionally = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+  tray.setToolTip('protoLabs Studio');
+
+  tray.on('click', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow();
+    } else if (mainWindow.isVisible()) {
+      mainWindow.focus();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   // In production, use Automaker dir in appData for app isolation
@@ -1053,9 +1245,15 @@ app.whenReady().then(async () => {
     // Create window
     createWindow();
 
+    // Set up system tray with live agent status
+    setupTray();
+
     // Pre-warm overlay window and register global shortcut
     createOverlayWindow();
     registerOverlayShortcut();
+
+    // Create macOS tray icon
+    createTray();
 
     // Initialize auto-updater (no-op in development)
     if (mainWindow) {
@@ -1079,8 +1277,23 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+    } else if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
+
+  // On macOS, intercept will-quit to prevent quitting unless intentional (e.g. tray Quit)
+  if (process.platform === 'darwin') {
+    app.on('will-quit', (e) => {
+      if (!isQuittingIntentionally) {
+        e.preventDefault();
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.hide();
+        }
+      }
+    });
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -1112,8 +1325,26 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  // Stop agent polling
+  if (agentPollInterval !== null) {
+    clearInterval(agentPollInterval);
+    agentPollInterval = null;
+  }
+
+  // Destroy system tray
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
+
   // Unregister global shortcuts
   globalShortcut.unregisterAll();
+
+  // Destroy tray icon (macOS)
+  if (tray && !tray.isDestroyed()) {
+    tray.destroy();
+    tray = null;
+  }
 
   // Destroy overlay window
   if (overlayWindow && !overlayWindow.isDestroyed()) {

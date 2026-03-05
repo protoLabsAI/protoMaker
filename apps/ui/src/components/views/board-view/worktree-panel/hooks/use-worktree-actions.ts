@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { createLogger } from '@protolabsai/utils/logger';
 import { getElectronAPI } from '@/lib/electron';
 import { toast } from 'sonner';
@@ -9,12 +8,13 @@ import {
   usePushWorktree,
   useOpenInEditor,
 } from '@/hooks/mutations';
+import { useTerminalStore } from '@/store/terminal-store';
+import { useAppStore } from '@/store/app-store';
 import type { WorktreeInfo } from '../types';
 
 const logger = createLogger('WorktreeActions');
 
 export function useWorktreeActions() {
-  const navigate = useNavigate();
   const [isActivating, setIsActivating] = useState(false);
 
   // Use React Query mutations
@@ -54,15 +54,18 @@ export function useWorktreeActions() {
 
   const handleOpenInIntegratedTerminal = useCallback(
     (worktree: WorktreeInfo, mode?: 'tab' | 'split') => {
-      // Navigate to the terminal view with the worktree path and branch name
-      // The terminal view will handle creating the terminal with the specified cwd
-      // Include nonce to allow opening the same worktree multiple times
-      navigate({
-        to: '/terminal',
-        search: { cwd: worktree.path, branch: worktree.branch, mode, nonce: Date.now() },
+      // Open the bottom panel and queue a terminal creation request
+      if (!useAppStore.getState().bottomPanelOpen) {
+        useAppStore.getState().toggleBottomPanel();
+      }
+      useTerminalStore.getState().setPendingTerminalRequest({
+        cwd: worktree.path,
+        branch: worktree.branch,
+        mode,
+        nonce: Date.now(),
       });
     },
-    [navigate]
+    []
   );
 
   const handleOpenInEditor = useCallback(

@@ -60,7 +60,6 @@ export function Sidebar() {
     specCreatingForProject,
     setSpecCreatingForProject,
     featureFlags,
-    toggleBottomPanel,
   } = useAppStore();
 
   const isCompact = useIsCompact();
@@ -94,7 +93,7 @@ export function Sidebar() {
   }, [sidebarOpen, toggleSidebar]);
 
   // Environment variable flags for hiding sidebar items
-  const { hideTerminal, hideContext, hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
+  const { hideContext, hideSpecEditor } = SIDEBAR_FEATURE_FLAGS;
 
   // Get customizable keyboard shortcuts
   const shortcuts = useKeyboardShortcutsConfig();
@@ -264,7 +263,6 @@ export function Sidebar() {
     shortcuts,
     hideSpecEditor: hideSpecEditor || !featureFlags.specEditor,
     hideContext,
-    hideTerminal,
     hideDesigns: !featureFlags.designs,
     hideDocs: !featureFlags.docs,
     hideFileEditor: false,
@@ -283,17 +281,12 @@ export function Sidebar() {
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating: isCurrentProjectGeneratingSpec,
-    toggleBottomPanel,
   });
 
   // Register keyboard shortcuts
   useKeyboardShortcuts(navigationShortcuts);
 
-  const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen);
-
   const isActiveRoute = (id: string) => {
-    // Terminal lives in the bottom panel, not a route
-    if (id === 'terminal') return bottomPanelOpen;
     // Map view IDs to route paths
     const routePath = id === 'welcome' ? '/' : `/${id}`;
     return location.pathname === routePath;
