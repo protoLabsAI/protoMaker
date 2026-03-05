@@ -1,5 +1,30 @@
 # @protolabsai/platform
 
+## 0.38.0
+
+### Minor Changes
+
+- ### Features
+  - add persistent status bar to Ava chat overlay
+  - add token count indicator to Ava chat overlay + board updates
+  - add perf metrics logging to Ava chat route
+
+  ### Bug Fixes
+  - remove duplicate estimatedTokens declaration in chat overlay (#1828)
+  - use correct AI SDK v6 usage property names (inputTokens/outputTokens)
+  - make start_agent fire-and-forget in Ava chat
+  - default projects view to plans tab instead of metrics
+  - resolve 7 PM lifecycle bugs from QA audit
+
+  ### Refactors
+  - remove all Linear integration from codebase
+  - Fix bug report button URL in quick actions (#1820)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.38.0
+
 ## 0.37.1
 
 ### Patch Changes
