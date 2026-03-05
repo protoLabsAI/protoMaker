@@ -67,7 +67,6 @@ interface UseNavigationProps {
   hideDocs: boolean;
   hideFileEditor: boolean;
   hideSystemView: boolean;
-  hideAvaChat: boolean;
   currentProject: Project | null;
   projects: Project[];
   projectHistory: string[];
@@ -91,7 +90,6 @@ export function useNavigation({
   hideDocs,
   hideFileEditor,
   hideSystemView,
-  hideAvaChat,
   currentProject,
   projects,
   projectHistory,
@@ -175,14 +173,12 @@ export function useNavigation({
       });
     }
 
-    if (!hideAvaChat) {
-      projectItems.push({
-        id: 'chat',
-        label: 'Ava',
-        icon: ProtoLabsIcon,
-        shortcut: shortcuts.chat,
-      });
-    }
+    projectItems.push({
+      id: 'chat',
+      label: 'Ava',
+      icon: ProtoLabsIcon,
+      shortcut: shortcuts.chat,
+    });
 
     if (!hideDesigns) {
       projectItems.push({
@@ -233,7 +229,6 @@ export function useNavigation({
     hideDocs,
     hideFileEditor,
     hideSystemView,
-    hideAvaChat,
     unreadNotificationsCount,
     unreadCeremonyCount,
     isSpecGenerating,

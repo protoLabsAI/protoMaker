@@ -43,9 +43,7 @@ export function MobileBottomNav() {
   }
 
   let navItems = [...baseNavItems];
-  if (featureFlags.avaChat) {
-    navItems.splice(1, 0, chatNavItem);
-  }
+  navItems.splice(1, 0, chatNavItem);
   if (featureFlags.systemView) {
     navItems.splice(1, 0, systemViewItem);
   }
