@@ -70,7 +70,6 @@ export function BottomPanel() {
   const bottomPanelOpen = useAppStore((s) => s.bottomPanelOpen);
   const toggleBottomPanel = useAppStore((s) => s.toggleBottomPanel);
   const projectPath = useAppStore((s) => s.currentProject?.path);
-  const avaChat = useAppStore((s) => s.featureFlags.avaChat);
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
   const {
@@ -267,22 +266,20 @@ export function BottomPanel() {
         </span>
 
         {/* Ava Chat toggle */}
-        {avaChat && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isElectron()) {
-                getOverlayAPI()?.toggleOverlay?.();
-              } else {
-                setChatModalOpen(!chatModalOpen);
-              }
-            }}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            title="Open Ava Chat"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isElectron()) {
+              getOverlayAPI()?.toggleOverlay?.();
+            } else {
+              setChatModalOpen(!chatModalOpen);
+            }
+          }}
+          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          title="Open Ava Chat"
+        >
+          <MessageCircle className="h-3.5 w-3.5" />
+        </button>
 
         {/* Terminal toggle */}
         <button

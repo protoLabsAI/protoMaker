@@ -262,7 +262,6 @@ export function Sidebar() {
     hideDocs: !featureFlags.docs,
     hideFileEditor: false,
     hideSystemView: !featureFlags.systemView,
-    hideAvaChat: !featureFlags.avaChat,
     currentProject,
     projects,
     projectHistory,

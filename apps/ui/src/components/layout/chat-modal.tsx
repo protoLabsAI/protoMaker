@@ -10,20 +10,16 @@ import { useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@protolabsai/ui/atoms';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { useChatStore } from '@/store/chat-store';
-import { useAppStore } from '@/store/app-store';
 import { ChatOverlayContent } from '@/components/views/chat-overlay/chat-overlay-content';
 
 export function ChatModal() {
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
-  const avaChat = useAppStore((s) => s.featureFlags.avaChat);
   const chatSession = useChatSession({ defaultModel: 'sonnet' });
 
   const handleClose = useCallback(() => {
     setChatModalOpen(false);
   }, [setChatModalOpen]);
-
-  if (!avaChat) return null;
 
   return (
     <Dialog open={chatModalOpen} onOpenChange={setChatModalOpen}>
@@ -51,11 +47,8 @@ export function ChatModal() {
 export function useChatModalShortcut() {
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
-  const avaChat = useAppStore((s) => s.featureFlags.avaChat);
 
   useEffect(() => {
-    if (!avaChat) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -65,5 +58,5 @@ export function useChatModalShortcut() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [chatModalOpen, setChatModalOpen, avaChat]);
+  }, [chatModalOpen, setChatModalOpen]);
 }

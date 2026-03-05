@@ -6,7 +6,6 @@ import { ChatOverlayContent } from '@/components/views/chat-overlay/chat-overlay
 function ChatPage() {
   const navigate = useNavigate();
   const currentProject = useAppStore((s) => s.currentProject);
-  const avaChat = useAppStore((s) => s.featureFlags.avaChat);
 
   const chatSession = useChatSession({
     defaultModel: 'sonnet',
@@ -17,11 +16,6 @@ function ChatPage() {
   const handleHide = () => {
     navigate({ to: '/' });
   };
-
-  if (!avaChat) {
-    navigate({ to: '/' });
-    return null;
-  }
 
   return (
     <div className="h-full">

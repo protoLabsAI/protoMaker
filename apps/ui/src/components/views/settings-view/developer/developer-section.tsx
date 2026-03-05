@@ -14,10 +14,6 @@ const LOG_LEVEL_OPTIONS: { value: ServerLogLevel; label: string; description: st
 ];
 
 const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; description: string }> = {
-  avaChat: {
-    label: 'Ava Anywhere',
-    description: 'Chat overlay, Cmd+K modal, /chat route, and mobile chat tab.',
-  },
   designs: {
     label: 'Designs',
     description: 'Show the Designs (pen file) viewer in the project sidebar.',
