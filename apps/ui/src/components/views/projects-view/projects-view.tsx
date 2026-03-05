@@ -24,7 +24,7 @@ function toggleBtnClass(active: boolean) {
 export function ProjectsView() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ProjectsTab>('metrics');
+  const [activeTab, setActiveTab] = useState<ProjectsTab>('plans');
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   if (!projectPath) {
