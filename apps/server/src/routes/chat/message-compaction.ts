@@ -155,4 +155,3 @@ export function compactMessageHistory(
 
   return [...olderMessages, ...recentMessages];
 }
-
