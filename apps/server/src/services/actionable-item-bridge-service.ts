@@ -167,8 +167,8 @@ export class ActionableItemBridgeService {
         projectPath,
         actionType: 'escalation',
         priority,
-        title: `Escalation: ${data.type}`,
-        message: `${data.source} — ${data.severity} severity`,
+        title: `Escalation: ${(data.context?.featureTitle as string) || data.type}`,
+        message: (data.context?.reason as string) || `${data.source} — ${data.severity} severity`,
         category: 'escalations',
         actionPayload: {
           featureId,

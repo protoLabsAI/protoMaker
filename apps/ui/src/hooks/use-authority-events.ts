@@ -63,8 +63,12 @@ function formatAuthorityMessage(type: EventType, payload: Record<string, unknown
       return `Agent restart failed for PR #${payload.prNumber || '?'}`;
     case 'feature:reassigned-for-fixes':
       return `Feature reassigned for PR fixes`;
-    case 'escalation:signal-received':
-      return `Escalation ${payload.severity || 'unknown'} from ${payload.source || 'unknown'}`;
+    case 'escalation:signal-received': {
+      const ctx = payload.context as Record<string, unknown> | undefined;
+      const title = ctx?.featureTitle || 'unknown feature';
+      const reason = ctx?.reason || '';
+      return `Escalation: ${title}${reason ? ` — ${reason}` : ''}`;
+    }
     case 'escalation:signal-routed':
       return `Escalation routed to ${payload.channel || 'unknown'}`;
     case 'escalation:signal-sent':
