@@ -279,8 +279,8 @@ export class AutoModeService {
   private authorityService: AuthorityService | null = null;
   // Data integrity watchdog service for monitoring feature count (optional)
   private integrityWatchdogService: DataIntegrityWatchdogService | null = null;
-  // Lead Engineer service for delegated feature execution (optional)
-  private leadEngineerService: LeadEngineerService | null = null;
+  // Lead Engineer service for feature execution (required)
+  private leadEngineerService!: LeadEngineerService;
   // Knowledge Store service for learning deduplication (optional)
   private knowledgeStoreService: KnowledgeStoreService | null = null;
   // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
@@ -379,10 +379,11 @@ export class AutoModeService {
   }
 
   /**
-   * Wire up the Lead Engineer service for delegated feature execution.
-   * When set, auto-mode will delegate feature processing to the state machine.
+   * Wire up the Lead Engineer service for feature execution.
+   * Required — auto-mode routes all features through the state machine.
    */
   setLeadEngineerService(service: LeadEngineerService): void {
+    if (!service) throw new Error('LeadEngineerService is required');
     this.leadEngineerService = service;
   }
 
@@ -1143,18 +1144,7 @@ export class AutoModeService {
             continue;
           }
 
-          // Guard: content features (featureType === 'content') must route through
-          // leadEngineerService to the GTM execution path. They must NOT be launched
-          // with the standard code agent. If leadEngineerService is not available, skip them.
-          if (nextFeature.featureType === 'content' && !this.leadEngineerService) {
-            logger.warn(
-              `[AutoLoop] Skipping content feature ${nextFeature.id} ("${nextFeature.title}") — LeadEngineerService required for GTM execution path`
-            );
-            await this.sleep(2000);
-            continue;
-          }
-
-          // Mark feature as starting BEFORE calling executeFeature to prevent race conditions
+          // Mark feature as starting BEFORE calling process() to prevent race conditions
           projectState.startingFeatures.add(nextFeature.id);
 
           logger.info(`[AutoLoop] Starting feature ${nextFeature.id}: ${nextFeature.title}`);
@@ -1216,18 +1206,10 @@ export class AutoModeService {
           const startingTimeout = scheduleStartingTimeout(30000);
 
           // Start feature execution in background.
-          // Content features (featureType === 'content') always route through leadEngineerService
-          // to the GTM execution path (guarded above — leadEngineerService is non-null here).
-          // Code features use leadEngineerService if available, otherwise fall back to executeFeature.
-          // Model selection for the LE path is handled inside IntakeProcessor.
-          const executionPromise = this.leadEngineerService
-            ? this.leadEngineerService.process(projectPath, nextFeature.id)
-            : this.executeFeature(
-                projectPath,
-                nextFeature.id,
-                projectState.config.useWorktrees,
-                true
-              );
+          // All features route through leadEngineerService.process() — the state machine
+          // handles both code and content (GTM) features.
+          // Model selection is handled inside IntakeProcessor.
+          const executionPromise = this.leadEngineerService.process(projectPath, nextFeature.id);
 
           // Convert the raw execution promise into a structured PipelineResult so all
           // outcomes — success, escalation, and retryable failures — are handled

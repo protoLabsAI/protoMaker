@@ -7,6 +7,7 @@
 import { Router } from 'express';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
@@ -29,6 +30,7 @@ import { createReconcileHandler } from './routes/reconcile.js';
 export function createAutoModeRoutes(
   autoModeService: AutoModeService,
   featureLoader: FeatureLoader,
+  leadEngineerService: LeadEngineerService,
   settingsService: SettingsService,
   events?: EventEmitter
 ): Router {
@@ -47,7 +49,7 @@ export function createAutoModeRoutes(
   router.post(
     '/run-feature',
     validatePathParams('projectPath'),
-    createRunFeatureHandler(autoModeService, featureLoader)
+    createRunFeatureHandler(autoModeService, featureLoader, leadEngineerService)
   );
   router.post(
     '/verify-feature',
