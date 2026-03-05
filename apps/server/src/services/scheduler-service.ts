@@ -877,6 +877,12 @@ export class SchedulerService {
       task.failureCount++;
       task.lastError = error;
       logger.error(`Task "${task.name}" failed:`, err);
+      this.emitEvent('scheduler:task-failed', {
+        taskId: id,
+        taskName: task.name,
+        error,
+        timestamp: executedAt,
+      });
     }
 
     const duration = Date.now() - startTime;
