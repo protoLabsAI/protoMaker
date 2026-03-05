@@ -1478,8 +1478,8 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
   // No terminals yet - show tab bar with just the + button
   if (terminalState.tabs.length === 0) {
     return (
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center bg-card border-b border-border px-2">
+      <div className="h-full flex flex-col overflow-hidden">
+        <div className="flex items-center bg-card border-b border-border px-2 shrink-0">
           <div className="flex items-center gap-1 flex-1 overflow-x-auto py-1">
             <button
               className="flex items-center justify-center p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
@@ -1490,9 +1490,9 @@ export function TerminalView({ initialCwd, initialBranch, initialMode, nonce }: 
             </button>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center min-h-0">
           <p className="text-sm text-muted-foreground/50">
-            Press <span className="font-medium text-muted-foreground">+</span> to start a terminal
+            Press <span className="font-medium text-muted-foreground">+</span> to open a terminal
           </p>
         </div>
       </div>
