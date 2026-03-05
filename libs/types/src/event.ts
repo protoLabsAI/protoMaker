@@ -102,7 +102,6 @@ export type EventType =
   // PR review events
   | 'pr:review-submitted'
   // Integration events
-  | 'integration:linear'
   | 'integration:discord'
   // Integration registry events (unified integration management)
   | 'integration:registered'
@@ -125,56 +124,10 @@ export type EventType =
   | 'discord:dm:received'
   | 'discord:dm:sent'
   | 'discord:user-message:routed'
-  // Linear monitoring events
-  | 'linear:project:created'
-  | 'linear:project:updated'
-  | 'linear:project:status-updated'
-  | 'linear:project:milestones-synced'
-  | 'linear:issue:detected'
-  // Linear sync events (bidirectional sync)
-  | 'linear:sync:started'
-  | 'linear:sync:completed'
-  | 'linear:sync:error'
-  | 'linear:sync:conflict'
-  | 'linear:issue:updated'
-  | 'linear:approval:detected'
-  | 'linear:approval:bridged'
-  | 'linear:changes-requested:detected'
-  | 'linear:intake:triggered'
-  | 'linear:intake:bridged'
   | 'feature:agent-suggested'
   | 'feature:agent-assigned'
-  // Linear agent session events (webhook-driven)
-  | 'linear:agent-session:created'
-  | 'linear:agent-session:prompted'
-  | 'linear:agent-session:updated'
-  | 'linear:agent-session:removed'
-  // Linear project planning events
-  | 'linear:project:created'
-  // Linear comment events (webhook-driven)
-  | 'linear:comment:created'
-  | 'linear:comment:instruction'
-  | 'linear:comment:followup'
-  // Linear project update events (webhook-driven)
-  | 'linear:project-update:created'
-  | 'linear:project-update:updated'
-  | 'linear:project-update:approved'
-  // Linear SLA events (Business plan feature - HITL deepening)
-  | 'linear:sla:highRisk'
-  | 'linear:sla:breached'
   // GitHub monitoring events
   | 'github:pr:detected'
-  // Linear monitor events
-  | 'linear-monitor:started'
-  | 'linear-monitor:stopped'
-  | 'linear-monitor:poll-requested'
-  | 'linear-monitor:poll-error'
-  | 'linear-monitor:project-detected'
-  | 'linear-monitor:trigger-error'
-  // Linear agent events (webhook-based agent integration)
-  | 'linear:agent:thought'
-  | 'linear:agent:routed'
-  | 'linear:agent:error'
   // Feature assignment events
   | 'feature-assignment:started'
   | 'feature-assignment:completed'
@@ -303,9 +256,7 @@ export type EventType =
   | 'github:pr:checks-updated'
   | 'github:pr:approved'
   | 'github:pr:changes-requested'
-  // GitHub state drift events (PR to Linear sync bridge)
-  | 'github-state-drift'
-  // Project lifecycle events (Linear as source of truth)
+  // Project lifecycle events
   | 'project:lifecycle:initiated'
   | 'project:lifecycle:prd-generated'
   | 'project:lifecycle:prd-approved'
@@ -624,20 +575,6 @@ export interface EventPayloadMap {
     featureId?: string;
     projectPath?: string;
     response?: Record<string, unknown>[];
-  };
-
-  // Linear sync conflict event (manual resolution required)
-  'linear:sync:conflict': {
-    featureId: string;
-    projectPath: string;
-    /** The Linear status that would have been applied */
-    linearState: string;
-    /** The current Automaker status */
-    automakerStatus: string;
-    /** HITL form ID, set when the form was created successfully */
-    hitlFormId?: string;
-    /** ISO-8601 timestamp */
-    timestamp: string;
   };
 
   // HITL form events

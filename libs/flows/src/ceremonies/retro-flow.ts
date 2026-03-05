@@ -1,8 +1,8 @@
 /**
  * Retro ceremony LangGraph flow.
  *
- * Replaces RetroCeremony class hierarchy with four sequential nodes:
- *   START → loadFeatureHistory → generateRetroContent → createLinearIssues → postToDiscord → END
+ * Replaces RetroCeremony class hierarchy with three sequential nodes:
+ *   START -> loadFeatureHistory -> generateRetroContent -> postToDiscord -> END
  *
  * Dependencies are injected via RetroFlowDeps — structural interfaces only,
  * so this flow has no hard dependencies on concrete service classes.
@@ -10,13 +10,11 @@
  * Usage (server-side):
  * ```typescript
  * import { createRetroFlow } from '@protolabsai/flows';
- * import { createBoardTools, createDiscordTools, createLinearTools } from '@protolabsai/tools';
  *
  * const flow = createRetroFlow({
  *   featureLoader,
  *   model, // BaseChatModel instance
  *   discordBot,
- *   linearClient,
  *   projectPath: '/path/to/project',
  *   projectSlug: 'my-project',
  *   milestoneSlug: 'milestone-1',
@@ -46,19 +44,6 @@ export interface RetroFeatureLoader {
 }
 
 /**
- * Subset of LinearClient used by the retro flow.
- * Any object with a matching createIssue signature satisfies this interface.
- */
-export interface RetroLinearClient {
-  createIssue: (input: {
-    teamId: string;
-    title: string;
-    description?: string;
-    priority?: number;
-  }) => Promise<{ id: string; identifier: string; url?: string }>;
-}
-
-/**
  * Subset of DiscordBot used by the retro flow.
  */
 export interface RetroDiscordBot {
@@ -75,8 +60,6 @@ export interface RetroFlowDeps {
   model: BaseChatModel;
   /** Discord bot for posting the retro */
   discordBot: RetroDiscordBot;
-  /** Optional Linear client for creating follow-up issues */
-  linearClient?: RetroLinearClient;
   /** Absolute path to the project directory */
   projectPath: string;
   /** Project slug identifier */
@@ -91,8 +74,6 @@ export interface RetroFlowDeps {
   projectTitle: string;
   /** Discord channel ID to post the retro to */
   discordChannelId: string;
-  /** Linear team ID for issue creation (required when linearClient is provided) */
-  linearTeamId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,8 +95,6 @@ const RetroStateAnnotation = Annotation.Root({
   failureCount: Annotation<number>,
   // Generated in generateRetroContent (mirrors CeremonyAuditEntry payload)
   retroContent: Annotation<string>,
-  // Created in createLinearIssues
-  linearIssueIds: Annotation<string[]>,
   // Set in postToDiscord (mirrors CeremonyAuditEntry discordMessageId, deliveryStatus)
   discordMessageId: Annotation<string>,
   discordPosted: Annotation<boolean>,
@@ -189,43 +168,6 @@ function createGenerateRetroContentNode(deps: RetroFlowDeps) {
 }
 
 /**
- * createLinearIssues: Creates Linear follow-up issues for blocked/failed features.
- * No-ops gracefully when linearClient or linearTeamId is not provided.
- */
-function createCreateLinearIssuesNode(deps: RetroFlowDeps) {
-  return async (state: RetroState): Promise<Partial<RetroState>> => {
-    if (!deps.linearClient || !deps.linearTeamId || state.error) {
-      return { linearIssueIds: [] };
-    }
-
-    const blockedFeatures = state.features.filter(
-      (f) => f.status === 'blocked' || (f.failureCount && f.failureCount > 0)
-    );
-
-    const issueIds: string[] = [];
-    for (const feature of blockedFeatures.slice(0, 3)) {
-      try {
-        const issue = await deps.linearClient.createIssue({
-          teamId: deps.linearTeamId,
-          title: `[Retro] Follow-up: ${feature.title || feature.id}`,
-          description:
-            `Retro follow-up from milestone ${deps.milestoneNumber} (${deps.milestoneTitle}) ` +
-            `of project ${deps.projectTitle}.\n\n` +
-            `Feature had ${feature.failureCount || 0} failures.\n` +
-            `Final status: ${feature.status}`,
-          priority: 2,
-        });
-        issueIds.push(issue.id);
-      } catch {
-        // Non-blocking: continue if issue creation fails
-      }
-    }
-
-    return { linearIssueIds: issueIds };
-  };
-}
-
-/**
  * postToDiscord: Sends the retro content to the configured Discord channel.
  * Truncates to 2000 chars to stay within Discord's message limit.
  */
@@ -253,9 +195,9 @@ function createRetroPostToDiscordNode(deps: RetroFlowDeps) {
  * Creates and compiles the retro ceremony LangGraph flow.
  *
  * Flow topology:
- *   START → loadFeatureHistory → generateRetroContent → createLinearIssues → postToDiscord → END
+ *   START -> loadFeatureHistory -> generateRetroContent -> postToDiscord -> END
  *
- * @param deps - Flow dependencies (featureLoader, LLM model, discordBot, linearClient, identifiers)
+ * @param deps - Flow dependencies (featureLoader, LLM model, discordBot, identifiers)
  * @returns Compiled StateGraph ready for .invoke({})
  */
 export function createRetroFlow(deps: RetroFlowDeps) {
@@ -263,7 +205,6 @@ export function createRetroFlow(deps: RetroFlowDeps) {
 
   graph.addNode('loadFeatureHistory', createLoadFeatureHistoryNode(deps));
   graph.addNode('generateRetroContent', createGenerateRetroContentNode(deps));
-  graph.addNode('createLinearIssues', createCreateLinearIssuesNode(deps));
   graph.addNode('postToDiscord', createRetroPostToDiscordNode(deps));
 
   // TypeScript's strict node-name literal inference requires casting here.
@@ -274,8 +215,7 @@ export function createRetroFlow(deps: RetroFlowDeps) {
 
   g.addEdge(START as unknown as string, 'loadFeatureHistory');
   g.addEdge('loadFeatureHistory', 'generateRetroContent');
-  g.addEdge('generateRetroContent', 'createLinearIssues');
-  g.addEdge('createLinearIssues', 'postToDiscord');
+  g.addEdge('generateRetroContent', 'postToDiscord');
   g.addEdge('postToDiscord', END as unknown as string);
 
   return graph.compile();

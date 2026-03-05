@@ -31,14 +31,6 @@ export interface UserProfile {
     };
   };
 
-  /** Linear integration */
-  linear?: {
-    /** Linear team ID */
-    teamId?: string;
-    /** Linear "In Progress" state ID */
-    inProgressStateId?: string;
-  };
-
   /** GitHub integration */
   github?: {
     /** GitHub organization name */

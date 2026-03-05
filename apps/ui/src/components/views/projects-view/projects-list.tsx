@@ -97,7 +97,7 @@ export function ProjectsList({ onSelect }: { onSelect: (slug: string) => void })
     },
     onSuccess: (result) => {
       if (result.hasDuplicates) {
-        toast.warning('Duplicate project detected in Linear', {
+        toast.warning('Duplicate project detected', {
           description: `Found ${result.duplicates?.length} existing project(s) with a similar name.`,
         });
       } else {

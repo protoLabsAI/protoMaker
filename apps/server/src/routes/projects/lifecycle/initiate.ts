@@ -1,5 +1,5 @@
 /**
- * POST /lifecycle/initiate - Dedup check + create Linear project + write idea doc
+ * POST /lifecycle/initiate - Create local project entry
  */
 
 import type { Request, Response } from 'express';

@@ -116,20 +116,6 @@ export class HeadsdownService {
           // This will be picked up by agents monitoring that channel
           break;
 
-        case 'linear:project:updated': {
-          const project = data.project as Record<string, unknown> | undefined;
-          logger.info(`Linear project updated: ${project?.name}`);
-          // Add project to work queue for EM agents
-          break;
-        }
-
-        case 'linear:issue:detected': {
-          const issue = data.issue as Record<string, unknown> | undefined;
-          logger.info(`Linear issue detected: ${issue?.identifier}`);
-          // Add issue to work queue for engineer agents
-          break;
-        }
-
         case 'github:pr:detected': {
           const pr = data.pr as Record<string, unknown> | undefined;
           logger.info(`GitHub PR detected: #${pr?.number}`);
@@ -793,11 +779,6 @@ export class HeadsdownService {
       return null; // No messages detected yet
     }
 
-    if (goal.id === 'feature_implemented' && worldState.linear_monitoring_active) {
-      // Check for assigned Linear issues (would query Linear monitor)
-      return null; // No issues assigned yet
-    }
-
     if (goal.id === 'pr_quality_verified' && worldState.github_monitoring_active) {
       // Check for PRs needing review (would query GitHub monitor)
       return null; // No PRs to review yet
@@ -813,9 +794,6 @@ export class HeadsdownService {
     switch (workItem.type) {
       case 'discord_message':
         return `Respond to Discord message:\n\n${workItem.metadata?.content || workItem.description}`;
-
-      case 'linear_issue':
-        return `Address Linear issue:\n\nTitle: ${workItem.metadata?.title || 'Untitled'}\n\nDescription:\n${workItem.metadata?.description || workItem.description}`;
 
       case 'github_pr':
         return `Review GitHub PR #${workItem.metadata?.number || 'unknown'}:\n\nTitle: ${workItem.metadata?.title || 'Untitled'}\n\n${workItem.description}`;
@@ -878,8 +856,6 @@ export class HeadsdownService {
           agent.stats.prsReviewed++;
         } else if (workItem.type === 'idle_task') {
           agent.stats.idleTasksCompleted++;
-        } else if (workItem.type === 'linear_issue') {
-          agent.stats.featuresCompleted++;
         }
 
         // Reset consecutive errors on successful work execution

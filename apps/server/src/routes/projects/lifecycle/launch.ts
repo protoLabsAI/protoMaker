@@ -1,5 +1,5 @@
 /**
- * POST /lifecycle/launch - Set Linear status to started + start auto-mode
+ * POST /lifecycle/launch - Start auto-mode for a project
  */
 
 import type { Request, Response } from 'express';

@@ -96,39 +96,6 @@ export function ProfileSection() {
           </FieldRow>
         </div>
 
-        {/* Linear */}
-        <div className="space-y-4">
-          <GroupHeader>Linear</GroupHeader>
-          <FieldRow label="Team ID">
-            <Input
-              className="font-mono"
-              value={local.linear?.teamId ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  linear: { ...p.linear, teamId: e.target.value },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="Linear team ID"
-            />
-          </FieldRow>
-          <FieldRow label="In-Progress State ID">
-            <Input
-              className="font-mono"
-              value={local.linear?.inProgressStateId ?? ''}
-              onChange={(e) =>
-                setLocal((p) => ({
-                  ...p,
-                  linear: { ...p.linear, inProgressStateId: e.target.value },
-                }))
-              }
-              onBlur={() => save()}
-              placeholder="State ID for in-progress issues"
-            />
-          </FieldRow>
-        </div>
-
         {/* GitHub */}
         <div className="space-y-4">
           <GroupHeader>GitHub</GroupHeader>

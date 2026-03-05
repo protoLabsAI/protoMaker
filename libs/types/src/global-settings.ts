@@ -607,12 +607,6 @@ export interface GlobalSettings {
    */
   gtmEnabled?: boolean;
 
-  /**
-   * Map Linear team IDs to Automaker project paths.
-   * Webhooks from a mapped team create features in that repo's .automaker/.
-   */
-  linearTeamRoutes?: Record<string, string>;
-
   // Hivemind Configuration
   /**
    * Unique identifier for this Automaker instance in a hivemind mesh.

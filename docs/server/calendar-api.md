@@ -8,7 +8,6 @@ The calendar system aggregates events from multiple sources into a unified view:
 
 - **Custom events** -- user-created events stored in `.automaker/calendar.json`
 - **Feature due dates** -- auto-derived from features with `dueDate` set
-- **Linear milestones** -- synced from Linear project milestones
 - **Google Calendar** -- OAuth-synced events from Google Calendar
 
 All endpoints are `POST` and require `projectPath` in the request body.
@@ -21,7 +20,6 @@ All endpoints are `POST` and require `projectPath` in the request body.
 | `feature`   | Auto   | Features with a `dueDate` field |
 | `milestone` | Auto   | Project milestone dates         |
 | `google`    | Sync   | Synced from Google Calendar     |
-| `linear`    | Sync   | Synced from Linear              |
 
 ## Endpoints
 
@@ -211,7 +209,6 @@ Writes use `atomicWriteJson` with automatic recovery from corrupted files.
 CalendarService (singleton)
   ├── Custom events     ← .automaker/calendar.json
   ├── Feature due dates ← FeatureLoader
-  ├── Linear milestones ← LinearMCPClient
   └── Google events     ← GoogleCalendarSyncService
 ```
 

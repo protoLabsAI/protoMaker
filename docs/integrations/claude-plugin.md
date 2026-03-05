@@ -81,7 +81,6 @@ That's it! You now have access to ~170 MCP tools and slash commands for managing
 | `/plan-project`       | Full project orchestration pipeline               |
 | `/ship`               | Stage, commit, push, create PR, auto-merge        |
 | `/headsdown`          | Deep work mode — process features autonomously    |
-| `/linear`             | Manage Linear projects, issues, and cycles        |
 | `/create-project`     | Project orchestration from research to features   |
 | `/calendar-assistant` | Calendar and scheduling operations                |
 | `/due-diligence`      | Validate approaches with evidence-based research  |
@@ -203,7 +202,6 @@ Copy `.env.example` in that directory to get started.
 | `AUTOMAKER_API_URL`  | protoLabs API base URL                                        | `http://localhost:3008` |
 | `GH_TOKEN`           | GitHub token for PR operations (`gh auth token` to get it)    | (optional)              |
 | `DISCORD_BOT_TOKEN`  | Discord bot token for Discord MCP tools                       | (optional)              |
-| `LINEAR_API_KEY`     | Linear API key for Linear MCP tools                           | (optional)              |
 | `CONTEXT7_API_KEY`   | Context7 API key for documentation lookup                     | (optional)              |
 | `ENABLE_TOOL_SEARCH` | Tool search mode (`auto:N` to limit active tools)             | `auto:10`               |
 

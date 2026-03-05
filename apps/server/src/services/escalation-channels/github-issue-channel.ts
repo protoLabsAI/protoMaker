@@ -9,7 +9,6 @@
  * Extends existing IssueCreationService for GitHub API operations.
  * Labels: severity, source, category
  * Links to: PR, file paths, CodeRabbit thread URLs
- * Cross-references: Linear issue if both exist
  */
 
 import { execSync } from 'node:child_process';
@@ -25,7 +24,7 @@ import type { FeatureLoader } from '../feature-loader.js';
 const logger = createLogger('GitHubIssueChannel');
 
 export interface GitHubIssueChannelConfig {
-  /** FeatureLoader for accessing feature data and Linear issue references */
+  /** FeatureLoader for accessing feature data */
   featureLoader: FeatureLoader;
   /** Project path for GitHub CLI operations */
   projectPath: string;
@@ -274,13 +273,6 @@ export class GitHubIssueChannel implements EscalationChannel {
         }
         if (feature.prNumber) {
           sections.push(`- **PR**: #${feature.prNumber}`);
-        }
-
-        // Cross-reference Linear issue if it exists
-        if (feature.linearIssueId && feature.linearIssueUrl) {
-          sections.push(
-            `- **Linear Issue**: [${feature.linearIssueId}](${feature.linearIssueUrl})`
-          );
         }
       }
     }

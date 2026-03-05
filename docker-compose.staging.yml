@@ -79,14 +79,6 @@ services:
       - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-protolabs-server}
 
-      # Linear integration
-      - LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID:-}
-      - LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET:-}
-      - LINEAR_REDIRECT_URI=${LINEAR_REDIRECT_URI:-}
-      - LINEAR_WEBHOOK_SECRET=${LINEAR_WEBHOOK_SECRET:-}
-      - LINEAR_API_KEY=${LINEAR_API_KEY:-}
-      - LINEAR_API_TOKEN=${LINEAR_API_TOKEN:-}
-
       # Staging configuration
       - NODE_ENV=production
       - HOST=0.0.0.0

@@ -140,8 +140,6 @@ export interface WorkflowSettings {
   retro: {
     /** Enable automatic retrospective generation on project completion (default: true) */
     enabled: boolean;
-    /** Linear project ID for routing improvement items (optional) */
-    improvementLinearProjectId?: string;
   };
   cleanup: {
     /** Enable automatic cleanup of stale worktrees/features (default: true) */
@@ -158,19 +156,10 @@ export interface WorkflowSettings {
     autoApprovePRD: boolean;
   };
   bugs: {
-    /** Enable bug tracking pipeline (creates Linear issues from failures, default: false) */
+    /** Enable bug tracking pipeline (creates GitHub issues from failures, default: false) */
     enabled: boolean;
-    /** Linear project ID for the "Bugs" project */
-    linearProjectId?: string;
-    /**
-     * @deprecated Use `integrations.linear.teamId` in project settings instead.
-     * Supported as a fallback by LinearMcpClient.getTeamId() for backwards compatibility.
-     */
-    linearTeamId?: string;
     /** Also create GitHub issues (existing behavior, default: true) */
     createGithubIssues?: boolean;
-    /** Minimum severity to create Linear issue: 1=urgent, 2=high, 3=medium, 4=low (default: 3) */
-    minLinearPriority?: number;
   };
 }
 
@@ -202,6 +191,5 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   bugs: {
     enabled: false,
     createGithubIssues: true,
-    minLinearPriority: 3,
   },
 };

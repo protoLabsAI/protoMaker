@@ -95,7 +95,6 @@ grep "tool_name" packages/mcp-server/dist/index.js
 - `AUTOMAKER_API_URL` — API base URL (default: `http://localhost:3008`)
 - `GH_TOKEN` — GitHub token for PR operations
 - `DISCORD_BOT_TOKEN` — Discord bot token (used by MCP)
-- `LINEAR_API_KEY` — Linear API access
 - `CONTEXT7_API_KEY` — Context7 API key for documentation lookup
 - `ENABLE_TOOL_SEARCH` — tool search mode (default: `auto:10`)
 

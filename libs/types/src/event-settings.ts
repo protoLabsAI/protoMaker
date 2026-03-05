@@ -64,8 +64,6 @@
  *
  * Integrations:
  * - coderabbit_review_received: CodeRabbit posted a review
- * - linear_approval_detected: A Linear approval was detected
- * - linear_changes_requested_detected: Linear changes-requested detected
  * - discord_message_detected: A Discord message was detected
  *
  * Project / planning:
@@ -127,8 +125,6 @@ export type EventHookTrigger =
   | 'headsdown_agent_work_failed'
   // Integrations
   | 'coderabbit_review_received'
-  | 'linear_approval_detected'
-  | 'linear_changes_requested_detected'
   | 'discord_message_detected'
   // Project / planning
   | 'skill_created'
@@ -285,8 +281,6 @@ export const EVENT_HOOK_TRIGGER_LABELS: Record<EventHookTrigger, string> = {
   headsdown_agent_work_failed: 'Headsdown agent work failed',
   // Integrations
   coderabbit_review_received: 'CodeRabbit review received',
-  linear_approval_detected: 'Linear approval detected',
-  linear_changes_requested_detected: 'Linear changes requested detected',
   discord_message_detected: 'Discord message detected',
   // Project / planning
   skill_created: 'New skill created by agent',

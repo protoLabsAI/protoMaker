@@ -31,7 +31,6 @@ export function register(container: ServiceContainer): void {
 
   // Calendar service wiring
   calendarService.setFeatureLoader(featureLoader);
-  calendarService.setSettingsService(settingsService);
 
   // HeadsdownService agent execution wiring
   headsdownService.setAgentExecution(agentFactoryService, dynamicAgentExecutor);

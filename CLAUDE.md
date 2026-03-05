@@ -305,7 +305,7 @@ Use `resolveModelString()` from `@protolabsai/model-resolver` to convert model a
 The Lead Engineer service (`lead-engineer-service.ts`) is the production-phase nerve center. It manages per-feature lifecycle through a state machine, reacts to events with fast-path rules, and integrates with auto-mode for autonomous execution.
 
 ```
-Signal (Linear webhook, GitHub event, MCP tool)
+Signal (Discord event, GitHub event, MCP tool)
   --> SignalIntakeService.classifySignal() — ops vs gtm routing
   --> LeadEngineerService.process(feature)
     --> FeatureStateMachine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE

@@ -1,21 +1,20 @@
 /**
  * Project Planning Service
  *
- * Orchestrates the LangGraph project planning flow through Linear's agent protocol.
- * Listens for `linear:project:created` events to start planning, and
- * `linear:agent-session:prompted` events to resume at HITL checkpoints.
+ * Orchestrates the LangGraph project planning flow.
+ * Listens for `project:created` events to start planning, and
+ * `agent-session:prompted` events to resume at HITL checkpoints.
  *
  * Flow:
- *   1. New Linear project → create agent session → start flow
- *   2. Flow runs until HITL checkpoint → create/update document → ask user via elicitation
- *   3. User responds → prompted webhook → inject response into flow state → resume
- *   4. Repeat until all HITL gates pass → create issues → done
+ *   1. New project -> create agent session -> start flow
+ *   2. Flow runs until HITL checkpoint -> create/update document -> ask user via elicitation
+ *   3. User responds -> prompted webhook -> inject response into flow state -> resume
+ *   4. Repeat until all HITL gates pass -> create issues -> done
  */
 
 import { createLogger } from '@protolabsai/utils';
 import {
   createProjectPlanningFlow,
-  createLinearIssueCreator,
   type ProjectPlanningFlowConfig,
   type ProjectPlanningState,
   type HITLResponse,
@@ -25,12 +24,11 @@ import {
 import type { ConversationSurface } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
-import { LinearMCPClient } from './linear-mcp-client.js';
 
 const logger = createLogger('ProjectPlanningService');
 
 /**
- * Inbound event from webhook — project created in Linear
+ * Inbound event — project created
  */
 interface ProjectCreatedEvent {
   projectId: string;
@@ -63,7 +61,7 @@ const STAGE_TO_CHECKPOINT: Record<string, string> = {
 };
 
 /**
- * Plan steps shown in Linear's session plan UI
+ * Plan steps shown in the session plan UI
  */
 const PLAN_STEPS = [
   { content: 'Research codebase', status: 'pending' as const },
@@ -71,7 +69,7 @@ const PLAN_STEPS = [
   { content: 'Deep research', status: 'pending' as const },
   { content: 'Generate SPARC PRD', status: 'pending' as const },
   { content: 'Plan milestones & phases', status: 'pending' as const },
-  { content: 'Create Linear issues', status: 'pending' as const },
+  { content: 'Create board features', status: 'pending' as const },
 ];
 
 /**
@@ -111,7 +109,7 @@ export class ProjectPlanningService {
 
   /** Active planning sessions, keyed by sessionId */
   private activePlannings = new Map<string, ActivePlanning>();
-  /** Maps Linear project IDs to session IDs (for routing prompted events) */
+  /** Maps project IDs to session IDs (for routing prompted events) */
   private projectToSession = new Map<string, string>();
 
   private unsubscribe?: () => void;
@@ -127,18 +125,7 @@ export class ProjectPlanningService {
     this.settingsService = settingsService;
     this.projectPath = projectPath;
 
-    // If settingsService is provided, inject a real Linear issue creator
-    if (settingsService && !flowConfig?.issueCreator) {
-      const client = new LinearMCPClient(settingsService, projectPath);
-      const issueCreator = createLinearIssueCreator({
-        createIssue: (opts) => client.createIssue(opts),
-        createProjectMilestone: (opts) => client.createProjectMilestone(opts),
-        assignIssueToMilestone: (a, b) => client.assignIssueToMilestone(a, b),
-      });
-      this.flowConfig = { ...flowConfig, issueCreator };
-    } else {
-      this.flowConfig = flowConfig || {};
-    }
+    this.flowConfig = flowConfig || {};
   }
 
   start(): void {
@@ -146,9 +133,9 @@ export class ProjectPlanningService {
 
     logger.info('Starting ProjectPlanningService');
     this.unsubscribe = this.events.subscribe((type, payload) => {
-      if (type === 'linear:project:created') {
+      if ((type as string) === 'project:planning:created') {
         void this.handleProjectCreated(payload as ProjectCreatedEvent);
-      } else if (type === 'linear:agent-session:prompted') {
+      } else if ((type as string) === 'project:planning:session-prompted') {
         void this.handleSessionPrompted(payload as SessionPromptedEvent);
       }
     });
@@ -338,7 +325,7 @@ export class ProjectPlanningService {
       return;
     }
 
-    // Create or update the document in Linear
+    // Create or update the document
     let documentId = planning.documents[checkpoint];
     if (documentId) {
       await this.surface?.updateDocument?.(documentId, artifact.content, artifact.title);
@@ -395,14 +382,14 @@ export class ProjectPlanningService {
     const summary = [
       `## Planning Complete: ${projectName}`,
       '',
-      `Created **${milestoneCount} milestones** with **${issueCount} issues** in Linear.`,
+      `Created **${milestoneCount} milestones** with **${issueCount} features** on the board.`,
       '',
       '### Documents Created',
       ...Object.entries(planning.documents).map(
         ([checkpoint, docId]) => `- ${checkpoint}: ${docId}`
       ),
       '',
-      'The project is now ready for execution. Issues have been created in Linear with proper dependencies.',
+      'The project is now ready for execution. Features have been created on the board with proper dependencies.',
     ].join('\n');
 
     await this.surface?.sendResponse(sessionId, summary);
@@ -476,7 +463,7 @@ export class ProjectPlanningService {
   }
 
   /**
-   * Update the Linear session plan to reflect current progress
+   * Update the session plan to reflect current progress
    */
   private async updatePlanProgress(sessionId: string, stage: PlanningStage): Promise<void> {
     const stepIndex = STAGE_TO_STEP_INDEX[stage];

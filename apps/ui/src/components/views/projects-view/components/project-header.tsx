@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ExternalLink, Trash2, PanelLeft, MessageSquareDot } from 'lucide-react';
+import { ArrowLeft, Trash2, PanelLeft, MessageSquareDot } from 'lucide-react';
 import { Badge } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
@@ -73,17 +73,6 @@ export function ProjectHeader({
             <MessageSquareDot className="w-4 h-4" />
             <span className="ml-1 text-xs">PM</span>
           </Button>
-        )}
-        {project.linearProjectUrl && (
-          <a
-            href={project.linearProjectUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Open project in Linear"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
         )}
         {onDelete && (
           <Button

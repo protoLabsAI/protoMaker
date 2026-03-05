@@ -1,8 +1,8 @@
 /**
  * Project Lifecycle Service
  *
- * Orchestrates the full project lifecycle with Linear as the source of truth:
- * idea → dedup → Linear project → PRD → review → milestones → features → auto-mode
+ * Orchestrates the full project lifecycle:
+ * idea -> dedup -> PRD -> review -> milestones -> features -> auto-mode
  */
 
 import type {
@@ -10,16 +10,13 @@ import type {
   LifecycleApproveResult,
   LifecycleLaunchResult,
   LifecycleStatus,
-  LifecycleCollectResult,
   ProjectLifecyclePhase,
-  Milestone,
 } from '@protolabsai/types';
 import { createLogger, slugify } from '@protolabsai/utils';
 import type { SettingsService } from './settings-service.js';
 import type { ProjectService } from './project-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import { LinearMCPClient } from './linear-mcp-client.js';
 import { orchestrateProjectFeatures, loadProject } from './project-orchestration-service.js';
 import type { EventEmitter } from '../lib/events.js';
 
@@ -34,12 +31,8 @@ export class ProjectLifecycleService {
     private events: EventEmitter
   ) {}
 
-  private getLinearClient(projectPath: string): LinearMCPClient {
-    return new LinearMCPClient(this.settingsService, projectPath);
-  }
-
   /**
-   * Initiate a project: dedup check + create Linear project + write idea doc
+   * Initiate a project: create local project entry
    */
   async initiate(
     projectPath: string,
@@ -47,57 +40,6 @@ export class ProjectLifecycleService {
     ideaDescription: string
   ): Promise<LifecycleInitiateResult> {
     const localSlug = slugify(title);
-    let linearProjectId: string | undefined;
-    let linearProjectUrl: string | undefined;
-
-    // Try Linear integration (best-effort — works without Linear configured)
-    try {
-      const client = this.getLinearClient(projectPath);
-      const teamId = await client.getTeamId();
-
-      // Search for duplicates
-      const existingProjects = await client.searchProjects(title);
-      const duplicates = existingProjects.map((p) => ({
-        id: p.id,
-        name: p.name,
-        url: p.url,
-      }));
-
-      if (duplicates.length > 0) {
-        this.events.emit('project:lifecycle:initiated', {
-          projectPath,
-          title,
-          hasDuplicates: true,
-          duplicateCount: duplicates.length,
-        });
-
-        return {
-          duplicates,
-          localSlug,
-          hasDuplicates: true,
-        };
-      }
-
-      // Create Linear project
-      // Linear `description` has a 255-char limit; long content goes in `content`
-      const result = await client.createProject({
-        name: title,
-        description:
-          ideaDescription.length > 255
-            ? ideaDescription.substring(0, 252) + '...'
-            : ideaDescription,
-        content: ideaDescription.length > 255 ? ideaDescription : undefined,
-        teamIds: [teamId],
-      });
-
-      // Set status to planned
-      await client.updateProject(result.projectId, { status: 'planned' });
-
-      linearProjectId = result.projectId;
-      linearProjectUrl = result.url || undefined;
-    } catch (error) {
-      logger.warn('Linear integration unavailable, creating local-only project:', error);
-    }
 
     // Create local project
     await this.projectService.createProject(projectPath, {
@@ -106,29 +48,16 @@ export class ProjectLifecycleService {
       goal: ideaDescription,
     });
 
-    // Update local project with Linear IDs if available
-    if (linearProjectId) {
-      await this.projectService.updateProject(projectPath, localSlug, {
-        linearProjectId,
-        linearProjectUrl,
-      });
-    }
-
     this.events.emit('project:lifecycle:initiated', {
       projectPath,
       slug: localSlug,
-      linearProjectId,
       title,
       hasDuplicates: false,
     });
 
-    logger.info(
-      `Initiated project: ${title}${linearProjectId ? ` → Linear ${linearProjectId}` : ' (local-only)'}`
-    );
+    logger.info(`Initiated project: ${title}`);
 
     return {
-      linearProjectId,
-      linearProjectUrl,
       duplicates: [],
       localSlug,
       hasDuplicates: false,
@@ -136,7 +65,7 @@ export class ProjectLifecycleService {
   }
 
   /**
-   * Approve PRD: create features from milestones + sync to Linear
+   * Approve PRD: create features from milestones
    */
   async approvePrd(
     projectPath: string,
@@ -169,45 +98,9 @@ export class ProjectLifecycleService {
       this.events
     );
 
-    // Sync milestones to Linear if project has a Linear ID (best-effort)
-    const linearMilestones: Array<{ id: string; name: string }> = [];
-    if (project.linearProjectId) {
-      try {
-        const client = this.getLinearClient(projectPath);
-        const updatedMilestones: Milestone[] = [...project.milestones];
-
-        for (let i = 0; i < project.milestones.length; i++) {
-          const milestone = project.milestones[i];
-          try {
-            const msResult = await client.createProjectMilestone({
-              projectId: project.linearProjectId,
-              name: milestone.title,
-              description: milestone.description,
-              sortOrder: milestone.number,
-            });
-            linearMilestones.push({ id: msResult.id, name: msResult.name });
-            updatedMilestones[i] = { ...milestone, linearMilestoneId: msResult.id };
-          } catch (error) {
-            logger.warn(`Failed to create Linear milestone: ${milestone.title}`, error);
-          }
-        }
-
-        // Persist milestone IDs to project.json
-        await this.projectService.updateProject(projectPath, projectSlug, {
-          status: 'active',
-          milestones: updatedMilestones,
-        });
-      } catch (error) {
-        logger.warn('Failed to sync milestones to Linear:', error);
-        await this.projectService.updateProject(projectPath, projectSlug, {
-          status: 'active',
-        });
-      }
-    } else {
-      await this.projectService.updateProject(projectPath, projectSlug, {
-        status: 'active',
-      });
-    }
+    await this.projectService.updateProject(projectPath, projectSlug, {
+      status: 'active',
+    });
 
     this.events.emit('project:lifecycle:prd-approved', {
       projectPath,
@@ -216,19 +109,16 @@ export class ProjectLifecycleService {
       epicsCreated: Object.keys(result.milestoneEpicMap).length,
     });
 
-    logger.info(
-      `Approved PRD for ${projectSlug}: ${result.featuresCreated} features, ${linearMilestones.length} Linear milestones`
-    );
+    logger.info(`Approved PRD for ${projectSlug}: ${result.featuresCreated} features`);
 
     return {
       featuresCreated: result.featuresCreated,
       epicsCreated: Object.keys(result.milestoneEpicMap).length,
-      linearMilestones,
     };
   }
 
   /**
-   * Launch project: set Linear status to started + start auto-mode
+   * Launch project: start auto-mode
    */
   async launch(
     projectPath: string,
@@ -246,16 +136,6 @@ export class ProjectLifecycleService {
 
     if (backlogFeatures.length === 0) {
       throw new Error('No features in backlog. Approve the PRD first to create features.');
-    }
-
-    // Update Linear project status to started (best-effort)
-    if (project.linearProjectId) {
-      try {
-        const client = this.getLinearClient(projectPath);
-        await client.updateProject(project.linearProjectId, { status: 'started' });
-      } catch (error) {
-        logger.warn('Failed to update Linear project status:', error);
-      }
     }
 
     // Start auto-mode
@@ -281,12 +161,11 @@ export class ProjectLifecycleService {
     return {
       autoModeStarted,
       featuresInBacklog: backlogFeatures.length,
-      linearProjectUrl: project.linearProjectUrl || '',
     };
   }
 
   /**
-   * Get lifecycle status: read Linear + local state
+   * Get lifecycle status: read local state
    */
   async getStatus(projectPath: string, projectSlug: string): Promise<LifecycleStatus> {
     const project = await this.projectService.getProject(projectPath, projectSlug);
@@ -333,56 +212,18 @@ export class ProjectLifecycleService {
       phase = 'idea-approved';
       nextActions.push('approve_project_prd');
     } else {
-      // Project exists but has no PRD yet — suggest generating one
+      // Project exists but has no PRD yet -- suggest generating one
       phase = 'idea';
       nextActions.push('generate_project_prd');
     }
 
     return {
       phase,
-      linearStatus: project?.status,
-      linearLabels: [],
       nextActions,
-      linearUrl: project?.linearProjectUrl,
       boardSummary,
       hasPrd,
       hasMilestones,
       hasFeatures,
-    };
-  }
-
-  /**
-   * Collect related Linear issues into the project
-   */
-  async collectRelated(
-    projectPath: string,
-    projectSlug: string,
-    linearProjectId: string,
-    issueIds: string[]
-  ): Promise<LifecycleCollectResult> {
-    const client = this.getLinearClient(projectPath);
-
-    let collected = 0;
-    for (const issueId of issueIds) {
-      try {
-        await client.addIssueToProject(issueId, linearProjectId);
-        collected++;
-      } catch (error) {
-        logger.warn(`Failed to add issue ${issueId} to project:`, error);
-      }
-    }
-
-    this.events.emit('project:lifecycle:phase-changed', {
-      projectPath,
-      slug: projectSlug,
-      linearProjectId,
-      issuesCollected: collected,
-      action: 'collect-related',
-    });
-
-    return {
-      issuesCollected: collected,
-      issuesAssigned: collected,
     };
   }
 }

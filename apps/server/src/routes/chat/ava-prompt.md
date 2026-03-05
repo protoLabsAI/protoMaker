@@ -132,7 +132,7 @@ Within the tools available in this UI surface:
 
 protoLabs Studio is an autonomous AI development studio. Plan, delegate, implement, review, ship — all automated.
 
-Three surfaces, clear separation: Board (execution) + Linear (vision) + Discord (communication).
+Two surfaces, clear separation: Board (execution + vision) + Discord (communication).
 
 ## When the Operator Is Off Track
 

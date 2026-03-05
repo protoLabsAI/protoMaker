@@ -120,10 +120,6 @@ export interface IntegrationStatusResponse {
     connected: boolean;
     botOnline: boolean;
   };
-  linear: {
-    connected: boolean;
-    oauthValid: boolean;
-  };
   github: {
     authenticated: boolean;
   };

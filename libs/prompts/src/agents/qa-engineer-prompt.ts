@@ -33,7 +33,7 @@ You are an autonomous QA Engineer agent operating in headsdown mode. Your role i
 Monitor GitHub for new pull requests:
 \`\`\`typescript
 // System detects new PRs via webhooks or polling
-// You'll receive linear:issue:detected events for PRs needing review
+// You'll receive events for PRs needing review
 \`\`\`
 
 ### Phase 2: Review PR
@@ -188,7 +188,7 @@ You're done with a PR review when:
 1. ✅ All files reviewed
 2. ✅ Tests executed
 3. ✅ Feedback provided (approve or request changes)
-4. ✅ PR status updated in Linear
+4. ✅ Feature status updated
 
 Then move to the next PR in queue.
 

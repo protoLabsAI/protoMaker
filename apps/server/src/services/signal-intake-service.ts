@@ -1,7 +1,7 @@
 /**
  * Signal Intake Service
  *
- * Bridges external signals (Linear issues, GitHub issues, Discord messages)
+ * Bridges external signals (GitHub issues, Discord messages, MCP commands)
  * to the PM Agent pipeline. Subscribes to `signal:received` events from
  * IntegrationService and creates features with `workItemState: 'idea'`,
  * triggering the PM Agent research → PRD → decomposition flow.
@@ -50,7 +50,6 @@ interface ClassificationResult {
 }
 
 interface SignalCounts {
-  linear: number;
   github: number;
   discord: number;
   mcp: number;
@@ -66,7 +65,6 @@ const RING_BUFFER_MAX = 200;
 
 /** Maps a raw signal source string to a canonical SignalChannel value */
 function sourceToChannel(source: string): SignalChannel {
-  if (source === 'linear') return 'linear';
   if (source === 'github') return 'github';
   if (source === 'discord') return 'discord';
   if (source.startsWith('mcp')) return 'mcp';
@@ -76,7 +74,6 @@ function sourceToChannel(source: string): SignalChannel {
 export class SignalIntakeService {
   private processedSignals = new Set<string>();
   private signalCounts: SignalCounts = {
-    linear: 0,
     github: 0,
     discord: 0,
     mcp: 0,
@@ -173,9 +170,7 @@ export class SignalIntakeService {
    */
   private incrementSignalCount(source: string): void {
     // Normalize source to known categories
-    if (source === 'linear') {
-      this.signalCounts.linear++;
-    } else if (source === 'github') {
+    if (source === 'github') {
       this.signalCounts.github++;
     } else if (source === 'discord') {
       this.signalCounts.discord++;
@@ -214,35 +209,6 @@ export class SignalIntakeService {
     // MCP process_idea → Ops with PM pipeline
     if (source === 'mcp:process_idea') {
       return { category: 'ops', reason: 'MCP process_idea routes through PM pipeline' };
-    }
-
-    // Linear signals classified by label/project
-    if (source === 'linear') {
-      const labels = (channelContext.labels as string[]) || [];
-      const _projectId = channelContext.projectId as string | undefined;
-
-      // Check for GTM labels
-      const gtmLabels = ['marketing', 'content', 'social', 'gtm', 'campaign', 'seo'];
-      const hasGtmLabel = labels.some((label) =>
-        gtmLabels.some((gtmLabel) => label.toLowerCase().includes(gtmLabel))
-      );
-
-      if (hasGtmLabel) {
-        return { category: 'gtm', reason: `Linear issue has GTM label: ${labels.join(', ')}` };
-      }
-
-      // Check for Ops labels
-      const opsLabels = ['bug', 'feature', 'enhancement', 'engineering', 'ops', 'infra'];
-      const hasOpsLabel = labels.some((label) =>
-        opsLabels.some((opsLabel) => label.toLowerCase().includes(opsLabel))
-      );
-
-      if (hasOpsLabel) {
-        return { category: 'ops', reason: `Linear issue has Ops label: ${labels.join(', ')}` };
-      }
-
-      // Default to Ops for Linear (engineering is primary use case)
-      return { category: 'ops', reason: 'Linear issue defaults to Ops (no GTM labels found)' };
     }
 
     // Discord messages classified by channel
@@ -327,20 +293,6 @@ export class SignalIntakeService {
       return 'work_order';
     }
 
-    // Linear: classify by label
-    if (source === 'linear') {
-      const feedbackLabels = ['feedback', 'question', 'discussion'];
-      if (labels.some((l) => feedbackLabels.some((fl) => l.toLowerCase().includes(fl)))) {
-        return 'feedback';
-      }
-      const ideaLabels = ['idea', 'explore', 'research', 'proposal'];
-      if (labels.some((l) => ideaLabels.some((il) => l.toLowerCase().includes(il)))) {
-        return 'idea';
-      }
-      // Default Linear signals are concrete work orders
-      return 'work_order';
-    }
-
     // Discord: classify by channel name
     if (source === 'discord') {
       const feedbackChannels = ['feedback', 'questions', 'support'];
@@ -370,7 +322,7 @@ export class SignalIntakeService {
 
   private async handleSignal(signal: SignalPayload): Promise<void> {
     // Deduplicate by source + unique identifier.
-    // For integration sources (Linear, GitHub), use author.id which is the issue/event ID.
+    // For integration sources (GitHub), use author.id which is the issue/event ID.
     // For UI/MCP sources, include timestamp to allow repeat submissions.
     const isUserSource = signal.source.startsWith('ui:') || signal.source.startsWith('mcp:');
     const dedupeKey = isUserSource
@@ -516,32 +468,6 @@ export class SignalIntakeService {
       }
 
       // Ops signals: route to Lead Engineer state machine
-      // Guard: For Linear signals, check if feature already exists
-      if (signal.source === 'linear' && signal.channelContext?.issueId) {
-        const linearIssueId = signal.channelContext.issueId as string;
-        const existing = await this.featureLoader.findByLinearIssueId(projectPath, linearIssueId);
-        if (existing) {
-          if (existing.status === 'in_progress' || existing.status === 'blocked') {
-            // Active feature found — route signal content as a follow-up to the running agent
-            logger.info(
-              `Routing Linear signal to active feature ${existing.id} (${existing.status}) for issue ${linearIssueId}`
-            );
-            this.events.emit('linear:comment:followup', {
-              featureId: existing.id,
-              projectPath,
-              commentBody: signal.content,
-              userName: signal.author.name,
-              issueId: linearIssueId,
-            });
-          } else {
-            logger.info(
-              `Feature already exists for Linear issue ${linearIssueId}, skipping creation (feature: ${existing.id})`
-            );
-          }
-          this.updateRingBufferEntry(bufferEntry.id, 'dismissed');
-          return;
-        }
-      }
 
       // Create feature with idea state
       this.updateRingBufferEntry(bufferEntry.id, 'creating');
@@ -553,10 +479,6 @@ export class SignalIntakeService {
         complexity: 'medium',
         workItemState: 'idea',
         sourceChannel: sourceToChannel(signal.source),
-        // Store Linear issue ID if available
-        ...(signal.source === 'linear' && signal.channelContext?.issueId
-          ? { linearIssueId: signal.channelContext.issueId as string }
-          : {}),
         // Store GitHub issue number for auto-close on PR merge
         ...(signal.source === 'github' && signal.channelContext?.issueNumber
           ? { githubIssueNumber: signal.channelContext.issueNumber as number }

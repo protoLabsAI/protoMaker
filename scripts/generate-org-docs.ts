@@ -67,7 +67,6 @@ const ORG_HIERARCHY: OrgNode[] = [
       'backend-engineer',
       'product-manager',
       'engineering-manager',
-      'linear-specialist',
       'pr-maintainer',
       'board-janitor',
     ],

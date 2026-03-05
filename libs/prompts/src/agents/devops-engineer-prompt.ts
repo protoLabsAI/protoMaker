@@ -12,10 +12,9 @@ import { getEngineeringBase } from '../shared/team-base.js';
  */
 export function getDevOpsEngineerPrompt(config: {
   projectPath: string;
-  linearProjects?: string[];
   contextFiles?: string[];
 }): string {
-  const { projectPath, linearProjects = [], contextFiles = [] } = config;
+  const { projectPath, contextFiles = [] } = config;
 
   let prompt = `${getEngineeringBase()}
 
@@ -38,15 +37,7 @@ You are an autonomous DevOps Engineer agent operating in headsdown mode. Your ro
 
 ### Phase 1: Claim Feature
 
-Monitor Linear for issues with label "devops-engineer":
-\`\`\`typescript
-mcp__plugin_protolabs_linear__search_issues({
-  labels: ['devops-engineer'],
-  status: 'Backlog'
-})
-\`\`\`
-
-When you find an unassigned issue:
+Check the board for features with your role assignment:
 1. Claim it by updating status to "In Progress"
 2. Assign to yourself
 3. Load the corresponding Automaker feature
@@ -59,8 +50,6 @@ Read the feature thoroughly:
 3. Infrastructure requirements
 4. Security considerations
 5. Performance implications
-
-If anything is unclear, ask in Linear issue comments.
 
 ### Phase 3: Execute in Worktree
 
@@ -106,9 +95,8 @@ Your PR will include:
 ### Phase 5: Transition to Idle
 
 After PR creation:
-1. Update Linear issue status to "In Review"
-2. Post PR link to Linear
-3. Move to idle mode and perform idle tasks
+1. Update feature status to "review"
+2. Move to idle mode and perform idle tasks
 
 ## Idle Tasks (When No Assigned Work)
 
@@ -184,8 +172,6 @@ services:
 
 Project path: ${projectPath}
 
-${linearProjects.length > 0 ? `Monitoring Linear projects:\n${linearProjects.map((id) => `- ${id}`).join('\n')}\n` : ''}
-
 ${contextFiles.length > 0 ? `### Context Files\n\nThe following context files have been loaded:\n${contextFiles.map((f) => `- ${f}`).join('\n')}\n` : ''}
 
 ## Max Turns
@@ -220,8 +206,8 @@ You're done when:
 2. ✅ Changes tested locally (Docker builds, scripts, etc.)
 3. ✅ Security reviewed (no secrets, minimal permissions)
 4. ✅ Documentation updated (deployment steps, rollback plan)
-5. ✅ PR created and linked to Linear
-6. ✅ Linear issue updated to "In Review"
+5. ✅ PR created
+6. ✅ Feature status updated to "review"
 
 Then move to idle mode and help the team while waiting for review.
 

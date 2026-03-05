@@ -26,7 +26,6 @@ export const TEAM_ROSTER = `## protoLabs Team
 | **Cindi**         | Content Writer                | Blog posts, docs, training data, SEO copy              |
 | **PR Maintainer** | Pipeline Mechanic (Haiku)     | Auto-merge, CodeRabbit threads, format fixes           |
 | **Board Janitor** | Board Hygiene (Haiku)         | Stale features, dependency repair, status cleanup      |
-| **Linear Spec.**  | Linear Workspace Owner        | Issues, sprints, projects, initiatives in Linear       |
 
 If a task falls outside your domain, hand it off — don't attempt it yourself.`;
 
@@ -251,28 +250,18 @@ As you work, you will naturally encounter bugs, code smells, missing tests, perf
 
 ### How to track (search-before-create)
 
-**Step 1 — Search Linear for existing issues:**
-\`\`\`
-mcp linear_searchIssues({ query: "<concise description>" })
-\`\`\`
-
-**Step 2 — Search GitHub for existing issues:**
+**Step 1 — Search GitHub for existing issues:**
 \`\`\`bash
 gh issue list --search "<concise description>" --limit 5
 \`\`\`
 
-**Step 3 — If no duplicate exists, create a Linear issue:**
-\`\`\`
-mcp linear_createIssue({
-  teamId: <resolve via linear_getTeams>,
-  title: "Fix: <concise description>",
-  description: "<what you observed, where, and suggested fix>"
-})
+**Step 2 — If no duplicate exists, create a GitHub issue:**
+\`\`\`bash
+gh issue create --title "Fix: <concise description>" --body "<what you observed, where, and suggested fix>"
 \`\`\`
 
 ### Rules
 - **Always search first** — duplicate issues waste triage time
-- **Never hardcode IDs** — resolve team IDs dynamically via \`linear_getTeams\`
 - **Keep issues small** — one issue per observation, not grab-bags
 - **Don't self-assign** — let intake triage handle routing
 - **Don't interrupt your current work** — note the issue and keep going

@@ -22,7 +22,6 @@ const KNOWN_ROLES = [
   'chief-of-staff',
   'pr-maintainer',
   'board-janitor',
-  'linear-specialist',
   'calendar-assistant',
 ] as const;
 
@@ -38,20 +37,6 @@ const DiscordAssignmentSchema = z.object({
   postChannels: z.array(z.string()),
   /** Optional trigger words that activate this agent in watched channels */
   keywords: z.array(z.string()).optional(),
-});
-
-/**
- * Linear assignment config — routes issues and mentions to this agent.
- */
-const LinearAssignmentSchema = z.object({
-  /** Linear team identifier (e.g., "PROTO") */
-  teamKey: z.string(),
-  /** Linear project IDs to watch */
-  projectIds: z.array(z.string()),
-  /** Only route issues with these labels */
-  labelFilter: z.array(z.string()).optional(),
-  /** Only route issues assigned to these Linear users */
-  assigneeFilter: z.array(z.string()).optional(),
 });
 
 /**
@@ -88,7 +73,7 @@ const DesiredStateConditionSchema = z.object({
   /** Urgency when diverged: 0 = background, 10 = critical (default: 5) */
   priority: z.number().int().min(0).max(10).default(5),
   /** Optional: only evaluate this condition when these monitors are active */
-  requiresMonitor: z.enum(['discord', 'linear', 'github']).optional(),
+  requiresMonitor: z.enum(['discord', 'github']).optional(),
 });
 
 /**
@@ -112,11 +97,6 @@ export const WORLD_STATE_KEYS = {
   unread_dms: 'Unread Discord direct messages',
   unanswered_mentions: 'Unanswered @mentions in watched channels',
   pending_messages: 'Messages awaiting response',
-
-  // Linear
-  unread_notifications: 'Unread Linear notifications',
-  assigned_issues: 'Issues assigned to this agent',
-  overdue_issues: 'Issues past their due date',
 
   // Agent health
   consecutive_errors: 'Consecutive errors in current loop',
@@ -242,7 +222,6 @@ export const AgentTemplateSchema = z.object({
   assignments: z
     .object({
       discord: DiscordAssignmentSchema.optional(),
-      linear: LinearAssignmentSchema.optional(),
       github: GitHubAssignmentSchema.optional(),
     })
     .optional(),
@@ -285,14 +264,12 @@ export type AgentTemplate = z.infer<typeof AgentTemplateSchema>;
 /** Sub-schemas exported for reuse */
 export {
   DiscordAssignmentSchema,
-  LinearAssignmentSchema,
   GitHubAssignmentSchema,
   HeadsdownConfigSchema,
   DesiredStateConditionSchema,
   StateOperatorSchema,
 };
 export type DiscordAssignment = z.infer<typeof DiscordAssignmentSchema>;
-export type LinearAssignment = z.infer<typeof LinearAssignmentSchema>;
 export type GitHubAssignment = z.infer<typeof GitHubAssignmentSchema>;
 export type AgentHeadsdownConfig = z.infer<typeof HeadsdownConfigSchema>;
 export type DesiredStateCondition = z.infer<typeof DesiredStateConditionSchema>;

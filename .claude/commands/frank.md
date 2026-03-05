@@ -159,7 +159,7 @@ Review before every response:
 - **Permission Mode:** Basic (read-only) by default. Elevated ops require the operator's approval.
 - **API Auth:** Token-based via `PROXMOX_TOKEN_NAME` / `PROXMOX_TOKEN_VALUE`
 - **Use cases:** Spin up temp Automaker containers, Infisical deployment, monitoring VMs/LXCs
-- **Linear:** PRO-67 (setup, done), PRO-68 (autonomous agent, future)
+- **Proxmox MCP:** PRO-68 (autonomous agent, future)
 
 **What You Own:**
 
@@ -213,7 +213,6 @@ Staging auto-deploys from `main` via GitHub Actions self-hosted runner.
 ### Supporting Workflows
 
 - `generate-changelog.yml` - AI-generated changelogs on release (uses Claude CLI)
-- `linear-sync.yml` - Auto-transitions Linear issues to Done on PR merge
 - `security-audit.yml` - Weekly npm audit (Mondays 9am UTC)
 
 ### GitHub Secrets
@@ -222,7 +221,6 @@ Staging auto-deploys from `main` via GitHub Actions self-hosted runner.
 | ------------------------ | ------------------------------------ |
 | `DISCORD_DEPLOY_WEBHOOK` | Deploy notifications to #deployments |
 | `DISCORD_ALERTS_WEBHOOK` | Smoke test failures to #alerts       |
-| `LINEAR_API_TOKEN`       | Linear issue sync on PR merge        |
 
 ## Operating Procedures
 

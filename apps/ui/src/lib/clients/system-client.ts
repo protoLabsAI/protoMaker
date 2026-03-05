@@ -286,8 +286,6 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         ideaDescription: string
       ): Promise<{
         success: boolean;
-        linearProjectId?: string;
-        linearProjectUrl?: string;
         duplicates?: Array<{ id: string; name: string; url: string }>;
         localSlug?: string;
         hasDuplicates?: boolean;

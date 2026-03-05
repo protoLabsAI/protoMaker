@@ -2,13 +2,13 @@
  * Calendar Types
  *
  * Types for calendar events and storage infrastructure.
- * Supports feature milestones, custom events, and external integrations (Google Calendar, Linear).
+ * Supports feature milestones, custom events, and external integrations (Google Calendar).
  */
 
 /**
  * Type of calendar event
  */
-export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'linear' | 'job';
+export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'job';
 
 /**
  * Job execution status
@@ -67,7 +67,7 @@ export interface CalendarEvent {
   /** Job execution result (populated after execution) */
   jobResult?: JobExecutionResult;
 
-  /** Source ID from external system (e.g., Linear issue ID, Google Calendar event ID) */
+  /** Source ID from external system (e.g., Google Calendar event ID) */
   sourceId?: string;
 
   /** Event description/notes */

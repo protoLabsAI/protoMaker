@@ -155,8 +155,8 @@ Key changes in the plugin overhaul:
 
 - **Version synced** to monorepo (was 1.1.1, now tracks monorepo version)
 - **Hooks synced**: post-edit-typecheck (TypeScript error checking on save) and evaluate-session (session quality tracking) now active
-- **Orphaned files removed**: start-linear.sh, .orphaned_at
-- **10 new commands**: /ship, /headsdown, /linear, /create-project, /calendar-assistant, /due-diligence, /deep-research, /sparc-prd, /improve-prompts, /upgrade-plugin
+- **Orphaned files removed**: .orphaned_at
+- **9 new commands**: /ship, /headsdown, /create-project, /calendar-assistant, /due-diligence, /deep-research, /sparc-prd, /improve-prompts, /upgrade-plugin
 - **Tool count**: ~159 MCP tools (up from documented 135)
 
 ## Error Recovery

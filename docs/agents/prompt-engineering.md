@@ -41,7 +41,7 @@ All agents share a set of prompt fragments defined in `libs/prompts/src/shared/t
 | `PORT_PROTECTION`        | Never kill processes on ports 3007/3008/3009              | ~8    |
 | `PROCESS_GUARD`          | Never start long-running or background processes          | ~12   |
 | `MONOREPO_STANDARDS`     | Package dependency chain, import conventions, build order | ~20   |
-| `CONTINUOUS_IMPROVEMENT` | Track bugs/debt in Linear (search-before-create)          | ~35   |
+| `CONTINUOUS_IMPROVEMENT` | Track bugs/debt on the board (search-before-create)       | ~35   |
 
 ### Composition functions
 

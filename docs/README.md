@@ -164,9 +164,6 @@
 | Document                                                   | Description                                        |
 | ---------------------------------------------------------- | -------------------------------------------------- |
 | [Engine Architecture](./archived/engine-architecture.md)   | Lead Engineer state machine ADR (content migrated) |
-| [Linear Sync](./archived/linear-sync.md)                   | Bidirectional Linear sync (removed)                |
-| [Linear Integration](./archived/linear.md)                 | MCP-tool-only Linear integration (removed)         |
-| [Linear Deep Links](./archived/linear-deeplink.md)         | Linear deep link generation (removed)              |
 | [Competitive Analysis](./archived/competitive-analysis.md) | Early competitive landscape analysis               |
 
 ## Legal

@@ -481,7 +481,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const projectService = new ProjectService(featureLoader);
   projectService.setCalendarService(calendarService);
 
-  // Project Lifecycle Service (Linear as source of truth)
+  // Project Lifecycle Service
   const projectLifecycleService = new ProjectLifecycleService(
     settingsService,
     projectService,
@@ -623,7 +623,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     enabled: true,
   });
 
-  // Project Planning Service — LangGraph flow for Linear-native project planning
+  // Project Planning Service — LangGraph flow for project planning
   // Wrapped in try-catch: ChatAnthropic throws if ANTHROPIC_API_KEY is missing
   let projectPlanningService: ProjectPlanningService | null = null;
   try {
@@ -672,7 +672,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   ceremonyService.setAuditLog(ceremonyAuditLog);
 
   // Initialize Completion Detector Service
-  completionDetectorService.initialize(events, featureLoader, projectService, settingsService);
+  completionDetectorService.initialize(events, featureLoader, projectService);
 
   // Initialize Changelog Service for generating changelogs on milestone/project completion
   changelogService.initialize(events, settingsService, featureLoader, projectService);

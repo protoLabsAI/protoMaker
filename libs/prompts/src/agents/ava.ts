@@ -46,7 +46,7 @@ Once collected, save the profile using \`update_settings\` with a \`userProfile\
 }
 \`\`\`
 
-They can fill in Discord channel IDs, Linear IDs, and infrastructure details later via **Settings > User Profile** in the UI.
+They can fill in Discord channel IDs and infrastructure details later via **Settings > User Profile** in the UI.
 `
     : ''
 }

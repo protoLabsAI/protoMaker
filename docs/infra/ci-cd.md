@@ -15,7 +15,6 @@ protoLabs uses GitHub Actions for continuous integration and delivery. All workf
 | `auto-release.yml`      | staging→main PR merged   | self-hosted | Version bump + tag + GitHub Release |
 | `build-electron.yml`    | `v*` tag push            | matrix      | Multi-platform Electron builds      |
 | `rewrite-release-notes` | Manual / CI step         | self-hosted | LLM-powered release notes rewriting |
-| `linear-sync.yml`       | PR merged to main        | self-hosted | Linear issue sync                   |
 
 > **Note:** There are no separate `format-check.yml` or `security-audit.yml` workflows. Format checking, linting, and security audit are consolidated into `checks.yml`.
 
@@ -271,21 +270,6 @@ Wired into `auto-release.yml` as the "Rewrite and post release notes to Discord"
 
 See [release.md](../dev/release.md) for full documentation including voice guidelines and programmatic usage.
 
-## Linear Issue Sync (`linear-sync.yml`)
-
-Automatically syncs Linear issues when PRs merge to main.
-
-- Triggered when a PR is merged into `main`
-- Extracts Linear issue identifiers (e.g., `PRO-123`) from PR title, body, or branch name
-- Adds a comment to the Linear issue with PR link, merge timestamp, and commit SHA
-- Transitions the Linear issue status to "Done"
-- Posts a notification to Discord `#deployments` channel
-
-### Requirements
-
-- `LINEAR_API_TOKEN` secret for GraphQL API access
-- `DISCORD_DEPLOY_WEBHOOK` secret for Discord notifications
-
 ## Deploy Staging (`deploy-staging.yml`)
 
 Auto-deploys to the staging server when code is pushed to the `staging` branch (i.e., when a `dev→staging` PR merges). Staging always runs staging-branch code — **not** main. Includes agent draining, rollback support, and smoke tests.
@@ -403,7 +387,6 @@ IaC source of truth: `scripts/infra/rulesets/main.json`
 | `DISCORD_DEPLOY_WEBHOOK` | Staging deploy notifications (#deployments)                                |
 | `DISCORD_ALERTS_WEBHOOK` | Smoke test failure alerts (#alerts)                                        |
 | `DISCORD_DEV_WEBHOOK`    | Release notes posted to #dev (used by auto-release + rewrite script)       |
-| `LINEAR_API_TOKEN`       | Linear issue sync on PR merge                                              |
 | `ANTHROPIC_API_KEY`      | LLM release notes rewriting (Haiku 4.5)                                    |
 
 ## Self-Hosted Runner Capabilities

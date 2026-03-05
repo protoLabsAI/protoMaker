@@ -116,7 +116,7 @@ export class AgentDiscordRouter {
       case 'product-manager':
         return getProductManagerPrompt({ projectPath, discordChannels: [], contextFiles: [] });
       case 'engineering-manager':
-        return getEngineeringManagerPrompt({ projectPath, linearProjects: [], contextFiles: [] });
+        return getEngineeringManagerPrompt({ projectPath, contextFiles: [] });
       case 'frontend-engineer':
         return getFrontendEngineerPrompt({ projectPath, contextFiles: [] });
       case 'backend-engineer':

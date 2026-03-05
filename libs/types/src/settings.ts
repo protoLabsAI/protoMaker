@@ -11,7 +11,7 @@
  * - git-settings.ts     - GitWorkflowSettings, GitWorkflowResult
  * - provider-settings.ts - ClaudeCompatibleProvider, ApiKeySource, ProviderModel, ClaudeApiProfile templates
  * - event-settings.ts   - EventHookTrigger, EventHook, EventHookAction types
- * - integration-settings.ts - DiscordSettings, LinearIntegrationConfig, ProjectIntegrations
+ * - integration-settings.ts - DiscordSettings, ProjectIntegrations
  * - workflow-settings.ts - WorkflowSettings, TrustBoundaryConfig, PRDCategory
  * - project-settings.ts  - ProjectSettings, WorktreeInfo, ProjectRef
  * - global-settings.ts  - GlobalSettings, Credentials, MCPServerConfig

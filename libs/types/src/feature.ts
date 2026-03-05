@@ -275,16 +275,6 @@ export interface Feature {
    */
   dueDate?: string;
   /**
-   * Linear issue ID (if synced to Linear)
-   * Links feature to external project management system.
-   */
-  linearIssueId?: string;
-  /**
-   * Linear issue URL (if synced to Linear)
-   * Direct link to the Linear issue for this feature.
-   */
-  linearIssueUrl?: string;
-  /**
    * Work item state for the authority system.
    * Extended lifecycle: idea → research → planned → ready → in_progress → blocked → testing → done
    * Only used when authority system is enabled.
@@ -379,11 +369,6 @@ export interface Feature {
    */
   pendingFeedback?: PendingFeedback;
   /**
-   * Linear sync metadata for bidirectional sync with Linear.
-   * Tracks sync state, timestamps, and conflict detection.
-   */
-  linearSyncMetadata?: import('./linear.js').LinearSyncMetadata;
-  /**
    * Timestamp when the PR was created (ISO 8601).
    * Set by git-workflow-service when auto-creating a PR.
    */
@@ -440,7 +425,7 @@ export interface Feature {
 
   // Signal provenance — tracks which channel originated this feature
   /**
-   * The channel that originated this feature (e.g. 'linear', 'discord', 'github', 'ui').
+   * The channel that originated this feature (e.g. 'discord', 'github', 'ui').
    * Used by ChannelRouter to route approvals, forms, and notifications back to the right channel.
    */
   sourceChannel?: SignalChannel;

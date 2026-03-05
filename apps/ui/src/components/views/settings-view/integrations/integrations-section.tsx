@@ -120,7 +120,7 @@ export function IntegrationsSection() {
       {activeTab === 'integrations' && (
         <>
           <p className="text-sm text-zinc-500">
-            Manage external connections for Discord, Linear, GitHub, and more.
+            Manage external connections for Discord, GitHub, and more.
           </p>
 
           {error && (

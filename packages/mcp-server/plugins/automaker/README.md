@@ -34,7 +34,7 @@ Restart Claude Code after installation.
 - MCP server built (`npm run build:packages`)
 - `AUTOMAKER_ROOT` set in plugin `.env` to your repo's absolute path
 
-## Commands (14)
+## Commands (13)
 
 | Command               | Description                                      |
 | --------------------- | ------------------------------------------------ |
@@ -45,7 +45,6 @@ Restart Claude Code after installation.
 | `/plan-project`       | Full project orchestration pipeline              |
 | `/ship`               | Stage, commit, push, create PR, auto-merge       |
 | `/headsdown`          | Deep work mode -- process features autonomously  |
-| `/linear`             | Manage Linear projects, issues, and cycles       |
 | `/create-project`     | Project orchestration from research to features  |
 | `/calendar-assistant` | Calendar and scheduling operations               |
 | `/due-diligence`      | Validate approaches with evidence-based research |
@@ -85,7 +84,7 @@ The MCP server exposes ~159 tools organized by category:
 - **Reports** (2) -- generate, open
 - **SetupLab** (7) -- repo analysis, gap analysis, alignment
 - **Discord** (4) -- DMs, provisioning, ceremonies
-- **Integration** (4) -- Twitch, Linear sync
+- **Integration** (3) -- Twitch, Discord
 - **Settings & Health** (4) -- settings, health, logs
 - **Events** (2) -- events, notifications
 - **Metrics** (3) -- project metrics, capacity, forecasts
@@ -93,7 +92,7 @@ The MCP server exposes ~159 tools organized by category:
 
 See [MCP Tools Reference](../../../docs/integrations/mcp-tools-reference.md) for the full catalog.
 
-## Subagents (13)
+## Subagents (11)
 
 | Agent                 | Model  | Purpose                             |
 | --------------------- | ------ | ----------------------------------- |
@@ -103,10 +102,8 @@ See [MCP Tools Reference](../../../docs/integrations/mcp-tools-reference.md) for
 | `sparc-prd`           | Opus   | Create SPARC PRDs                   |
 | `prd-reviewer`        | Opus   | Validate PRD quality                |
 | `agent-reviewer`      | Sonnet | Review completed agent work         |
-| `linear-triage`       | Sonnet | Triage Linear issues                |
 | `feature-factory`     | Haiku  | Create features from project phases |
 | `project-scaffold`    | Haiku  | Scaffold project directories        |
-| `linear-board`        | Haiku  | Query Linear board state            |
 | `devops-health-check` | Haiku  | Run health diagnostics              |
 | `devops-logs`         | Haiku  | Analyze container logs              |
 | `devops-backup`       | Haiku  | Backup/restore Docker volumes       |
@@ -122,7 +119,6 @@ The plugin connects to Automaker via `start-mcp.sh`. Configure in the plugin `.e
 | `AUTOMAKER_API_URL`  | API base URL (default: localhost:3008) | No       |
 | `GH_TOKEN`           | GitHub token for PR operations         | No       |
 | `DISCORD_BOT_TOKEN`  | Discord bot token                      | No       |
-| `LINEAR_API_KEY`     | Linear API key                         | No       |
 | `CONTEXT7_API_KEY`   | Context7 API key                       | No       |
 | `ENABLE_TOOL_SEARCH` | Tool search mode (default: auto:10)    | No       |
 

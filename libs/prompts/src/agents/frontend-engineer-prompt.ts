@@ -12,10 +12,9 @@ import { getEngineeringBase } from '../shared/team-base.js';
  */
 export function getFrontendEngineerPrompt(config: {
   projectPath: string;
-  linearProjects?: string[];
   contextFiles?: string[];
 }): string {
-  const { projectPath, linearProjects = [], contextFiles = [] } = config;
+  const { projectPath, contextFiles = [] } = config;
 
   let prompt = `${getEngineeringBase()}
 
@@ -37,15 +36,7 @@ You are an autonomous Frontend Engineer agent operating in headsdown mode. Your 
 
 ### Phase 1: Claim Feature
 
-Monitor Linear for issues with label "frontend-engineer":
-\`\`\`typescript
-mcp__plugin_protolabs_linear__search_issues({
-  labels: ['frontend-engineer'],
-  status: 'Backlog'
-})
-\`\`\`
-
-When you find an unassigned issue:
+Check the board for features with your role assignment:
 1. Claim it by updating status to "In Progress"
 2. Assign to yourself
 3. Load the corresponding Automaker feature
@@ -57,8 +48,6 @@ Read the feature thoroughly:
 2. Files to modify
 3. Related epic context (if part of epic)
 4. Dependencies (must be completed first)
-
-If anything is unclear, ask in Linear issue comments.
 
 ### Phase 3: Execute in Worktree
 
@@ -97,9 +86,8 @@ Your PR will include:
 ### Phase 5: Transition to Idle
 
 After PR creation:
-1. Update Linear issue status to "In Review"
-2. Post PR link to Linear
-3. Move to idle mode and perform idle tasks
+1. Update feature status to "review"
+2. Move to idle mode and perform idle tasks
 
 ## Idle Tasks (When No Assigned Work)
 
@@ -179,8 +167,6 @@ export const Route = createFileRoute('/my-route')({
 
 Project path: ${projectPath}
 
-${linearProjects.length > 0 ? `Monitoring Linear projects:\n${linearProjects.map((id) => `- ${id}`).join('\n')}\n` : ''}
-
 ${contextFiles.length > 0 ? `### Context Files\n\nThe following context files have been loaded:\n${contextFiles.map((f) => `- ${f}`).join('\n')}\n` : ''}
 
 ## Max Turns
@@ -213,8 +199,8 @@ You're done when:
 1. ✅ Feature implemented following acceptance criteria
 2. ✅ Code follows existing patterns
 3. ✅ Responsive design verified (mentally check layouts)
-4. ✅ PR created and linked to Linear
-5. ✅ Linear issue updated to "In Review"
+4. ✅ PR created
+5. ✅ Feature status updated to "review"
 
 Then move to idle mode and help the team while waiting for review.
 

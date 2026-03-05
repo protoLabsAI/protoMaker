@@ -1,7 +1,7 @@
 /**
  * Built-in Integration Descriptors
  *
- * Registers the 4 Phase 1 integrations (Discord, Linear, GitHub, Twitch) at tier 0.
+ * Registers the Phase 1 integrations (Discord, GitHub, Twitch) at tier 0.
  * Health check wiring connects to the existing IntegrationService methods.
  */
 
@@ -81,67 +81,6 @@ const DISCORD_DESCRIPTOR: IntegrationDescriptor = {
       type: 'boolean',
       defaultValue: true,
       group: 'Behavior',
-    },
-  ],
-};
-
-const LINEAR_DESCRIPTOR: IntegrationDescriptor = {
-  id: 'linear',
-  name: 'Linear',
-  description: 'Issue sync, project tracking, and bidirectional status updates',
-  category: 'project-mgmt',
-  scope: 'both',
-  tier: 0,
-  iconName: 'SquareKanban',
-  brandColor: '#5E6AD2',
-  enabled: false,
-  hasHealthCheck: true,
-  docsUrl: '/docs/integrations/linear',
-  tags: ['issues', 'projects', 'sync'],
-  configFields: [
-    {
-      key: 'teamId',
-      label: 'Team ID',
-      type: 'string',
-      description: 'Linear team identifier',
-      placeholder: 'TEAM-123',
-      group: 'Connection',
-    },
-    {
-      key: 'projectId',
-      label: 'Project ID',
-      type: 'string',
-      description: 'Linear project to sync with',
-      group: 'Connection',
-    },
-    {
-      key: 'apiKey',
-      label: 'API Key',
-      type: 'secret',
-      description: 'Linear API key (lin_api_...)',
-      placeholder: 'lin_api_...',
-      group: 'Connection',
-    },
-    {
-      key: 'syncOnFeatureCreate',
-      label: 'Sync on feature create',
-      type: 'boolean',
-      defaultValue: true,
-      group: 'Sync',
-    },
-    {
-      key: 'syncOnStatusChange',
-      label: 'Sync on status change',
-      type: 'boolean',
-      defaultValue: true,
-      group: 'Sync',
-    },
-    {
-      key: 'commentOnCompletion',
-      label: 'Comment on completion',
-      type: 'boolean',
-      defaultValue: true,
-      group: 'Sync',
     },
   ],
 };
@@ -235,7 +174,7 @@ const TWITCH_DESCRIPTOR: IntegrationDescriptor = {
  * Returns the number of successfully registered integrations.
  */
 export function registerBuiltInIntegrations(registry: IntegrationRegistryService): number {
-  const descriptors = [DISCORD_DESCRIPTOR, LINEAR_DESCRIPTOR, GITHUB_DESCRIPTOR, TWITCH_DESCRIPTOR];
+  const descriptors = [DISCORD_DESCRIPTOR, GITHUB_DESCRIPTOR, TWITCH_DESCRIPTOR];
   let count = 0;
 
   for (const descriptor of descriptors) {
@@ -270,16 +209,6 @@ export function wireHealthChecks(registry: IntegrationRegistryService): void {
     };
   });
 
-  registry.registerHealthCheck('linear', async (): Promise<IntegrationHealth> => {
-    const valid = await integrationService.checkLinearOAuthStatus();
-    return {
-      integrationId: 'linear',
-      status: valid ? 'connected' : 'disconnected',
-      message: valid ? 'API key is valid' : 'No valid API key found',
-      checkedAt: new Date().toISOString(),
-    };
-  });
-
   registry.registerHealthCheck('github', async (): Promise<IntegrationHealth> => {
     const authenticated = await integrationService.checkGitHubAuthStatus();
     return {
@@ -290,5 +219,5 @@ export function wireHealthChecks(registry: IntegrationRegistryService): void {
     };
   });
 
-  logger.info('Wired health checks for Discord, Linear, GitHub');
+  logger.info('Wired health checks for Discord, GitHub');
 }

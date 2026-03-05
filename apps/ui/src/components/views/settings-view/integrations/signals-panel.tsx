@@ -10,10 +10,6 @@ const CHANNEL_STYLES: Record<SignalChannel, { label: string; className: string }
     label: 'Discord',
     className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
   },
-  linear: {
-    label: 'Linear',
-    className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  },
   github: {
     label: 'GitHub',
     className: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',

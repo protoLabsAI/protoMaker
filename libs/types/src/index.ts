@@ -306,7 +306,6 @@ export type {
   ChannelWorkflow,
   ChannelWorkflowType,
   DiscordChannelMap,
-  LinearIntegrationConfig,
   DiscordIntegrationConfig,
   GoogleIntegrationConfig,
   ProjectIntegrations,
@@ -362,7 +361,6 @@ export {
   // Workflow settings defaults
   DEFAULT_WORKFLOW_SETTINGS,
   // Integration config defaults
-  DEFAULT_LINEAR_INTEGRATION,
   DEFAULT_DISCORD_INTEGRATION,
   // Claude-compatible provider templates (new)
   CLAUDE_PROVIDER_TEMPLATES,
@@ -650,18 +648,6 @@ export type {
   CeremonyTransition,
 } from './ceremony.js';
 
-// Linear sync types (bidirectional sync metadata and payloads)
-export type {
-  LinearSyncMetadata,
-  LinearIssueSnapshot,
-  FeatureSnapshot,
-  LinearIssuePayload,
-  LinearProjectPayload,
-  LinearSyncStartedPayload,
-  LinearSyncCompletedPayload,
-  LinearSyncErrorPayload,
-} from './linear.js';
-
 // Setup pipeline types (ProtoLabs agency setup)
 export type {
   RepoResearchResult,
@@ -683,7 +669,6 @@ export type {
 export {
   AgentTemplateSchema,
   DiscordAssignmentSchema,
-  LinearAssignmentSchema,
   GitHubAssignmentSchema,
   HeadsdownConfigSchema,
   DesiredStateConditionSchema,
@@ -695,7 +680,6 @@ export {
 export type {
   AgentTemplate,
   DiscordAssignment,
-  LinearAssignment,
   GitHubAssignment,
   AgentHeadsdownConfig,
   DesiredStateCondition,

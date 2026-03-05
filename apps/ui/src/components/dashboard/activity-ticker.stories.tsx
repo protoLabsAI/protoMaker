@@ -39,8 +39,8 @@ const mockActivity = [
   {
     id: '4',
     icon: '',
-    source: 'linear' as const,
-    message: 'Issue AVM-142 moved to In Progress',
+    source: 'github' as const,
+    message: 'Issue #142 moved to In Progress',
     timestamp: '12m ago',
   },
   {
@@ -109,25 +109,6 @@ export const DiscordIntegration: StoryObj = {
   ),
 };
 
-export const LinearIntegration: StoryObj = {
-  render: () => (
-    <div className="w-72">
-      <IntegrationCard
-        name="Linear"
-        icon="📐"
-        connected={true}
-        color="#5E6AD2"
-        stats={[
-          { label: 'Open Issues', value: 8 },
-          { label: 'In Progress', value: 3 },
-          { label: 'Closed Today', value: 5 },
-          { label: 'Synced', value: 'Yes' },
-        ]}
-      />
-    </div>
-  ),
-};
-
 export const GitHubIntegration: StoryObj = {
   render: () => (
     <div className="w-72">
@@ -177,16 +158,6 @@ export const IntegrationGrid: StoryObj = {
         stats={[
           { label: 'Messages', value: 47 },
           { label: 'Channels', value: 3 },
-        ]}
-      />
-      <IntegrationCard
-        name="Linear"
-        icon="📐"
-        connected={true}
-        color="#5E6AD2"
-        stats={[
-          { label: 'Issues', value: 8 },
-          { label: 'In Progress', value: 3 },
         ]}
       />
       <IntegrationCard

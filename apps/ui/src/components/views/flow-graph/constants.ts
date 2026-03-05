@@ -6,7 +6,7 @@
  *   Lane 2 (middle): Production engine — lead engineer, auto-mode, agent execution, git, PR
  *   Lane 3 (bottom): Feature pipeline stages — backlog, in progress, review, done, blocked
  *
- * Integrations (GitHub, Linear, Discord) sit in a right sidebar.
+ * Integrations (GitHub, Discord) sit in a right sidebar.
  * Reflection node at the bottom completes the feedback loop.
  */
 
@@ -36,7 +36,6 @@ export const NODE_IDS = {
   reflection: 'engine-reflection',
   // Integrations (right sidebar)
   github: 'integration-github',
-  linear: 'integration-linear',
   discord: 'integration-discord',
   // Pipeline stages (Lane 3)
   pipelineBacklog: 'pipeline-backlog',
@@ -143,8 +142,7 @@ export const ENGINE_SERVICES: Array<{
 
 export const INTEGRATION_POSITIONS: Record<string, { x: number; y: number }> = {
   [NODE_IDS.github]: { x: 1400, y: 50 },
-  [NODE_IDS.linear]: { x: 1400, y: 170 },
-  [NODE_IDS.discord]: { x: 1400, y: 290 },
+  [NODE_IDS.discord]: { x: 1400, y: 170 },
 };
 
 // Dynamic feature/agent zone starts below reflection
@@ -242,12 +240,6 @@ export const STATIC_EDGES: FlowEdge[] = [
 
   // --- Integration edges ---
   // Inbound: integrations feed into signal sources
-  {
-    id: 'e-linear-sources',
-    source: NODE_IDS.linear,
-    target: NODE_IDS.signalSources,
-    type: 'integration',
-  },
   {
     id: 'e-github-sources',
     source: NODE_IDS.github,

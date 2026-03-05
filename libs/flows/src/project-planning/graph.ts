@@ -4,15 +4,15 @@
  * LangGraph state machine for the full project planning workflow.
  *
  * Flow:
- *   START → research → create_planning_doc → hitl_planning
- *     → [approve: deep_research | revise: create_planning_doc]
- *   → deep_research → create_research_doc → hitl_research
- *     → [approve: generate_prd | revise: deep_research]
- *   → generate_prd → hitl_prd
- *     → [approve: plan_milestones | revise: generate_prd]
- *   → plan_milestones → hitl_milestones
- *     → [approve: create_issues | revise: plan_milestones]
- *   → create_issues → done
+ *   START -> research -> create_planning_doc -> hitl_planning
+ *     -> [approve: deep_research | revise: create_planning_doc]
+ *   -> deep_research -> create_research_doc -> hitl_research
+ *     -> [approve: generate_prd | revise: deep_research]
+ *   -> generate_prd -> hitl_prd
+ *     -> [approve: plan_milestones | revise: generate_prd]
+ *   -> plan_milestones -> hitl_milestones
+ *     -> [approve: create_issues | revise: plan_milestones]
+ *   -> create_issues -> done
  *
  * Each HITL checkpoint pauses execution. The ConversationSurface
  * presents the artifact to the user and waits for their response.
@@ -132,7 +132,7 @@ export function createProjectPlanningFlow(config: ProjectPlanningFlowConfig = {}
 
   // ─── Edges ────────────────────────────────────────────────
 
-  // Linear flow: research → planning doc → HITL
+  // Sequential flow: research -> planning doc -> HITL
   builder
     .setEntryPoint('research')
     .addEdge('research', 'create_planning_doc')

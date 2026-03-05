@@ -2,7 +2,7 @@
  * Event Detail Panel
  *
  * Displays event details in a dialog. Custom events can be edited and deleted.
- * Feature/milestone/google/linear events are shown read-only with source links.
+ * Feature/milestone/google events are shown read-only with source links.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -35,7 +35,6 @@ const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
   milestone: 'Milestone',
   custom: 'Custom',
   google: 'Google Calendar',
-  linear: 'Linear',
   job: 'Scheduled Job',
 };
 

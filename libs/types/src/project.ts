@@ -149,9 +149,6 @@ export interface Milestone {
 
   /** Epic feature ID after scaffolding (milestone becomes an epic) */
   epicId?: string;
-
-  /** Linear project milestone ID (set when synced to Linear) */
-  linearMilestoneId?: string;
 }
 
 /**
@@ -215,19 +212,13 @@ export interface Project {
   /** Review comments */
   reviewComments?: PRDReviewComment[];
 
-  /** Linear project ID (set when synced to Linear) */
-  linearProjectId?: string;
-
-  /** Linear project URL */
-  linearProjectUrl?: string;
-
   /** Creation timestamp */
   createdAt: string;
 
   /** Last update timestamp */
   updatedAt: string;
 
-  /** Archive timestamp (set when project is archived after Linear handoff) */
+  /** Archive timestamp */
   archivedAt?: string;
 
   /** Feedback from last "request changes" review */
@@ -505,13 +496,7 @@ export interface UpdateProjectInput {
   /** Add review comments */
   reviewComments?: PRDReviewComment[];
 
-  /** Linear project ID (set when synced to Linear) */
-  linearProjectId?: string;
-
-  /** Linear project URL */
-  linearProjectUrl?: string;
-
-  /** Update milestones (e.g., to persist linearMilestoneId) */
+  /** Update milestones */
   milestones?: Milestone[];
 
   /** Feedback from "request changes" review */
@@ -539,23 +524,20 @@ export interface CreateFeaturesResult {
 }
 
 /**
- * Lifecycle phase for Linear-as-source-of-truth workflow.
- * Maps to Linear project status + labels.
+ * Lifecycle phase for project orchestration workflow.
  */
 export type ProjectLifecyclePhase =
-  | 'idea' // planned + "idea" label — user expanding the idea
-  | 'idea-approved' // planned + "idea-approved" label — PRD being generated/reviewed
-  | 'prd-approved' // planned + "prd-approved" label — milestones created, ready to launch
-  | 'started' // Linear status = started — auto-mode running
-  | 'completed' // Linear status = completed — all features done
-  | 'canceled'; // Linear status = canceled
+  | 'idea'
+  | 'idea-approved'
+  | 'prd-approved'
+  | 'started'
+  | 'completed'
+  | 'canceled';
 
 /**
  * Result from lifecycle initiate operation
  */
 export interface LifecycleInitiateResult {
-  linearProjectId?: string;
-  linearProjectUrl?: string;
   duplicates: Array<{ id: string; name: string; url: string }>;
   localSlug: string;
   hasDuplicates: boolean;
@@ -570,7 +552,6 @@ export interface LifecyclePrdResult {
   reviewSummary: string;
   priorityScore: number;
   suggestedTiming: 'now' | 'next' | 'later' | 'never';
-  linearUpdateUrl?: string;
 }
 
 /**
@@ -579,7 +560,6 @@ export interface LifecyclePrdResult {
 export interface LifecycleApproveResult {
   featuresCreated: number;
   epicsCreated: number;
-  linearMilestones: Array<{ id: string; name: string }>;
   boardUrl?: string;
 }
 
@@ -589,7 +569,6 @@ export interface LifecycleApproveResult {
 export interface LifecycleLaunchResult {
   autoModeStarted: boolean;
   featuresInBacklog: number;
-  linearProjectUrl?: string;
 }
 
 /**
@@ -597,10 +576,7 @@ export interface LifecycleLaunchResult {
  */
 export interface LifecycleStatus {
   phase: ProjectLifecyclePhase | 'unknown';
-  linearStatus?: string;
-  linearLabels?: string[];
   nextActions: string[];
-  linearUrl?: string;
   boardSummary?: {
     backlog: number;
     inProgress: number;

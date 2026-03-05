@@ -183,9 +183,7 @@ export function PrdReviewDialog({
     },
     onSuccess: () => {
       toast.success(
-        isInlineMode
-          ? 'PRD approved — pipeline advancing'
-          : 'PRD approved — creating features and Linear tickets'
+        isInlineMode ? 'PRD approved — pipeline advancing' : 'PRD approved — creating features'
       );
       onOpenChange(false);
     },

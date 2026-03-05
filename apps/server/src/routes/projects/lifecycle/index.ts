@@ -1,8 +1,8 @@
 /**
  * Project Lifecycle Routes
  *
- * Endpoints for the full project lifecycle with Linear as source of truth:
- * initiate → generate-prd → approve-prd → launch → status
+ * Endpoints for the full project lifecycle:
+ * initiate -> generate-prd -> approve-prd -> launch -> status
  */
 
 import { Router } from 'express';
@@ -14,7 +14,6 @@ import { createGeneratePrdHandler } from './generate-prd.js';
 import { createApprovePrdHandler } from './approve-prd.js';
 import { createLaunchHandler } from './launch.js';
 import { createStatusHandler } from './status.js';
-import { createCollectRelatedHandler } from './collect-related.js';
 import { createRequestChangesHandler } from './request-changes.js';
 import type { EventEmitter } from '../../../lib/events.js';
 
@@ -57,13 +56,6 @@ export function createLifecycleRoutes(
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
     createStatusHandler(lifecycleService)
-  );
-
-  router.post(
-    '/collect-related',
-    validatePathParams('projectPath'),
-    validateSlugs('projectSlug'),
-    createCollectRelatedHandler(lifecycleService)
   );
 
   router.post(

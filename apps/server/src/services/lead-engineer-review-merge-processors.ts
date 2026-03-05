@@ -314,7 +314,7 @@ export class ReviewProcessor implements StateProcessor {
 // ────────────────────────── MergeProcessor ──────────────────────────
 
 /**
- * MERGE State: Auto-merge via gh CLI. Update board. GH→Linear sync.
+ * MERGE State: Auto-merge via gh CLI. Update board.
  */
 export class MergeProcessor implements StateProcessor {
   constructor(private serviceContext: ProcessorServiceContext) {}

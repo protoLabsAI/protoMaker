@@ -1,23 +1,22 @@
 /**
- * Integration Node — GitHub, Linear, Discord
+ * Integration Node — GitHub, Discord
  *
  * Shows external integration connection status.
  */
 
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Github, MessageSquare, BarChart3 } from 'lucide-react';
+import { Github, MessageSquare } from 'lucide-react';
 import type { IntegrationNodeData } from '../types';
 import { cn } from '@/lib/utils';
 
 const INTEGRATION_ICONS: Record<string, typeof Github> = {
   github: Github,
-  linear: BarChart3,
   discord: MessageSquare,
 };
 
 function IntegrationNodeComponent({ data }: NodeProps & { data: IntegrationNodeData }) {
-  const Icon = INTEGRATION_ICONS[data.integrationType] || BarChart3;
+  const Icon = INTEGRATION_ICONS[data.integrationType] || Github;
 
   return (
     <div

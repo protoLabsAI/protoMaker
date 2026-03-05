@@ -186,7 +186,7 @@ const GRAPH_REGISTRY: GraphDefinition[] = [
       { id: 'hitl_prd', type: 'hitl', description: 'PRD approval gate' },
       { id: 'plan_milestones', type: 'processor', description: 'Plan milestones' },
       { id: 'hitl_milestones', type: 'hitl', description: 'Milestone approval gate' },
-      { id: 'create_issues', type: 'processor', description: 'Create Linear issues' },
+      { id: 'create_issues', type: 'processor', description: 'Create board features' },
       { id: 'done', type: 'processor', description: 'Completion node' },
     ],
     edges: [
@@ -210,7 +210,7 @@ const GRAPH_REGISTRY: GraphDefinition[] = [
       { from: 'done', to: 'END' },
     ],
     entryPoint: 'research',
-    features: ['multi-stage', 'hitl', 'revision-loops', 'linear-integration'],
+    features: ['multi-stage', 'hitl', 'revision-loops'],
     useCase: 'Complete project planning workflow with checkpoints',
   },
   {

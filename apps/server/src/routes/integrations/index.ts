@@ -1,5 +1,5 @@
 /**
- * Integration Routes - API endpoints for managing Linear, Discord, and other integrations
+ * Integration Routes - API endpoints for managing Discord and other integrations
  */
 
 import { Router, Request, Response } from 'express';
@@ -67,20 +67,6 @@ export function createIntegrationRoutes(
       // Validate integrations structure
       const validatedIntegrations: ProjectIntegrations = {};
 
-      if (integrations.linear) {
-        validatedIntegrations.linear = {
-          enabled: integrations.linear.enabled ?? false,
-          workspaceId: integrations.linear.workspaceId,
-          teamId: integrations.linear.teamId,
-          projectId: integrations.linear.projectId,
-          syncOnFeatureCreate: integrations.linear.syncOnFeatureCreate ?? true,
-          syncOnStatusChange: integrations.linear.syncOnStatusChange ?? true,
-          commentOnCompletion: integrations.linear.commentOnCompletion ?? true,
-          priorityMapping: integrations.linear.priorityMapping,
-          labelName: integrations.linear.labelName,
-        };
-      }
-
       if (integrations.discord) {
         validatedIntegrations.discord = {
           enabled: integrations.discord.enabled ?? false,
@@ -111,29 +97,6 @@ export function createIntegrationRoutes(
   });
 
   /**
-   * POST /api/integrations/test-linear
-   * Test Linear integration by manually triggering a sync
-   */
-  router.post('/test-linear', async (req: Request, res: Response) => {
-    try {
-      const { projectPath, featureId } = req.body;
-
-      if (!projectPath || !featureId) {
-        res.status(400).json({ error: 'projectPath and featureId are required' });
-        return;
-      }
-
-      await integrationService.triggerLinearSync(projectPath, featureId);
-
-      logger.info(`Triggered Linear sync for feature: ${featureId}`);
-      res.json({ success: true, message: 'Linear sync triggered' });
-    } catch (error) {
-      logger.error('Failed to trigger Linear sync:', error);
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  /**
    * POST /api/integrations/test-discord
    * Test Discord integration by manually sending a message
    */
@@ -158,7 +121,7 @@ export function createIntegrationRoutes(
 
   /**
    * POST /api/integrations/status
-   * Get aggregated status for Discord, Linear, and GitHub integrations
+   * Get aggregated status for Discord and GitHub integrations
    */
   router.post('/status', async (req: Request, res: Response) => {
     try {
@@ -176,10 +139,6 @@ export function createIntegrationRoutes(
       const discordConnected = integrations.discord?.enabled ?? false;
       const discordBotOnline = await integrationService.checkDiscordBotStatus();
 
-      // Check Linear OAuth status
-      const linearConnected = integrations.linear?.enabled ?? false;
-      const linearOAuthValid = await integrationService.checkLinearOAuthStatus();
-
       // Check GitHub auth status (check if gh CLI is authenticated)
       const githubAuthenticated = await integrationService.checkGitHubAuthStatus();
 
@@ -188,10 +147,6 @@ export function createIntegrationRoutes(
         discord: {
           connected: discordConnected,
           botOnline: discordBotOnline,
-        },
-        linear: {
-          connected: linearConnected,
-          oauthValid: linearOAuthValid,
         },
         github: {
           authenticated: githubAuthenticated,

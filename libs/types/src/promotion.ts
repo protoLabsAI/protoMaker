@@ -30,8 +30,6 @@ export interface PromotionCandidate {
   commitSha: string;
   /** ISO 8601 timestamp when the feature was merged to dev */
   mergedAt: string;
-  /** Linear issue ID linked to this feature (if synced to Linear) */
-  linearIssueId?: string;
   /** Current status of this candidate in the promotion pipeline */
   status: PromotionStatus;
 }
@@ -63,8 +61,6 @@ export interface PromotionBatch {
  * Controls how the promotion pipeline detects and tracks candidates.
  */
 export interface PromotionConfig {
-  /** Linear project ID for creating/tracking promotion candidate issues */
-  linearProjectId?: string;
   /** Prefix used when naming promotion batches (e.g., "release-", "promo-") */
   batchPrefix?: string;
   /** When true, automatically create a promotion candidate when a feature is merged to dev */

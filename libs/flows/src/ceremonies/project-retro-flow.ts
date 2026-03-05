@@ -1,8 +1,8 @@
 /**
  * Project retro ceremony LangGraph flow.
  *
- * Replaces ProjectRetroCeremony class hierarchy with four sequential nodes:
- *   START → loadProjectData → generateRetroDoc → createLinearProject → archiveProject → END
+ * Replaces ProjectRetroCeremony class hierarchy with three sequential nodes:
+ *   START -> loadProjectData -> generateRetroDoc -> archiveProject -> END
  *
  * Dependencies are injected via ProjectRetroFlowDeps — structural interfaces only,
  * so this flow has no hard dependencies on concrete service classes.
@@ -10,13 +10,11 @@
  * Usage (server-side):
  * ```typescript
  * import { createProjectRetroFlow } from '@protolabsai/flows';
- * import { createBoardTools, createDiscordTools, createLinearTools } from '@protolabsai/tools';
  *
  * const flow = createProjectRetroFlow({
  *   featureLoader,
  *   model, // BaseChatModel instance
  *   discordBot,
- *   linearClient,
  *   projectPath: '/path/to/project',
  *   projectSlug: 'my-project',
  *   projectTitle: 'My Project',
@@ -45,19 +43,6 @@ export interface ProjectRetroFeatureLoader {
 }
 
 /**
- * Subset of LinearClient used by the project retro flow.
- * Any object with a matching createIssue signature satisfies this interface.
- */
-export interface ProjectRetroLinearClient {
-  createIssue: (input: {
-    teamId: string;
-    title: string;
-    description?: string;
-    priority?: number;
-  }) => Promise<{ id: string; identifier: string; url?: string }>;
-}
-
-/**
  * Subset of DiscordBot used by the project retro flow.
  */
 export interface ProjectRetroDiscordBot {
@@ -74,8 +59,6 @@ export interface ProjectRetroFlowDeps {
   model: BaseChatModel;
   /** Discord bot for posting the project retro */
   discordBot: ProjectRetroDiscordBot;
-  /** Optional Linear client for creating action item issues */
-  linearClient?: ProjectRetroLinearClient;
   /** Absolute path to the project directory */
   projectPath: string;
   /** Project slug identifier */
@@ -88,8 +71,6 @@ export interface ProjectRetroFlowDeps {
   totalFeatures: number;
   /** Discord channel ID to post the retro to */
   discordChannelId: string;
-  /** Linear team ID for issue creation (required when linearClient is provided) */
-  linearTeamId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -111,8 +92,6 @@ const ProjectRetroStateAnnotation = Annotation.Root({
   dataSummary: Annotation<string>,
   // Generated in generateRetroDoc (mirrors CeremonyAuditEntry payload)
   retroDoc: Annotation<string>,
-  // Created in createLinearProject
-  linearIssueIds: Annotation<string[]>,
   // Set in archiveProject (mirrors CeremonyAuditEntry discordMessageId, deliveryStatus)
   archived: Annotation<boolean>,
   discordMessageId: Annotation<string>,
@@ -198,36 +177,6 @@ function createGenerateRetroDocNode(deps: ProjectRetroFlowDeps) {
 }
 
 /**
- * createLinearProject: Creates Linear action item issues derived from the retro document.
- * No-ops gracefully when linearClient or linearTeamId is not provided.
- */
-function createCreateLinearProjectNode(deps: ProjectRetroFlowDeps) {
-  return async (state: ProjectRetroState): Promise<Partial<ProjectRetroState>> => {
-    if (!deps.linearClient || !deps.linearTeamId || state.error) {
-      return { linearIssueIds: [] };
-    }
-
-    const issueIds: string[] = [];
-    try {
-      const issue = await deps.linearClient.createIssue({
-        teamId: deps.linearTeamId,
-        title: `[Project Complete] ${deps.projectTitle} — Retrospective Action Items`,
-        description:
-          `Project retrospective completed for ${deps.projectTitle}.\n\n` +
-          `${state.retroDoc}\n\n` +
-          `Shipped: ${state.shippedCount} features, Total Cost: $${state.totalCostUsd.toFixed(2)}`,
-        priority: 2,
-      });
-      issueIds.push(issue.id);
-    } catch {
-      // Non-blocking: continue if issue creation fails
-    }
-
-    return { linearIssueIds: issueIds };
-  };
-}
-
-/**
  * archiveProject: Posts the retro document to Discord and marks the project as archived.
  * Truncates to 2000 chars to stay within Discord's message limit.
  */
@@ -254,9 +203,9 @@ function createArchiveProjectNode(deps: ProjectRetroFlowDeps) {
  * Creates and compiles the project retro ceremony LangGraph flow.
  *
  * Flow topology:
- *   START → loadProjectData → generateRetroDoc → createLinearProject → archiveProject → END
+ *   START -> loadProjectData -> generateRetroDoc -> archiveProject -> END
  *
- * @param deps - Flow dependencies (featureLoader, LLM model, discordBot, linearClient, identifiers)
+ * @param deps - Flow dependencies (featureLoader, LLM model, discordBot, identifiers)
  * @returns Compiled StateGraph ready for .invoke({})
  */
 export function createProjectRetroFlow(deps: ProjectRetroFlowDeps) {
@@ -264,7 +213,6 @@ export function createProjectRetroFlow(deps: ProjectRetroFlowDeps) {
 
   graph.addNode('loadProjectData', createLoadProjectDataNode(deps));
   graph.addNode('generateRetroDoc', createGenerateRetroDocNode(deps));
-  graph.addNode('createLinearProject', createCreateLinearProjectNode(deps));
   graph.addNode('archiveProject', createArchiveProjectNode(deps));
 
   // TypeScript's strict node-name literal inference requires casting here.
@@ -275,8 +223,7 @@ export function createProjectRetroFlow(deps: ProjectRetroFlowDeps) {
 
   g.addEdge(START as unknown as string, 'loadProjectData');
   g.addEdge('loadProjectData', 'generateRetroDoc');
-  g.addEdge('generateRetroDoc', 'createLinearProject');
-  g.addEdge('createLinearProject', 'archiveProject');
+  g.addEdge('generateRetroDoc', 'archiveProject');
   g.addEdge('archiveProject', END as unknown as string);
 
   return graph.compile();

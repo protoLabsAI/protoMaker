@@ -23,7 +23,7 @@ export function createDeleteHandler(featureLoader: FeatureLoader, events?: Event
         return;
       }
 
-      // Fetch feature before deletion so the payload has linearIssueId
+      // Fetch feature before deletion so the event payload has full feature data
       const feature = await featureLoader.get(projectPath, featureId);
 
       const success = await featureLoader.delete(projectPath, featureId);

@@ -12,10 +12,9 @@ import { getEngineeringBase } from '../shared/team-base.js';
  */
 export function getBackendEngineerPrompt(config: {
   projectPath: string;
-  linearProjects?: string[];
   contextFiles?: string[];
 }): string {
-  const { projectPath, linearProjects = [], contextFiles = [] } = config;
+  const { projectPath, contextFiles = [] } = config;
 
   let prompt = `${getEngineeringBase()}
 
@@ -38,15 +37,7 @@ You are an autonomous Backend Engineer agent operating in headsdown mode. Your r
 
 ### Phase 1: Claim Feature
 
-Monitor Linear for issues with label "backend-engineer":
-\`\`\`typescript
-mcp__plugin_protolabs_linear__search_issues({
-  labels: ['backend-engineer'],
-  status: 'Backlog'
-})
-\`\`\`
-
-When you find an unassigned issue:
+Check the board for features with your role assignment:
 1. Claim it by updating status to "In Progress"
 2. Assign to yourself
 3. Load the corresponding Automaker feature
@@ -59,8 +50,6 @@ Read the feature thoroughly:
 3. Related epic context (if part of epic)
 4. Dependencies (must be completed first)
 5. API contracts or interfaces needed
-
-If anything is unclear, ask in Linear issue comments.
 
 ### Phase 3: Execute in Worktree
 
@@ -104,9 +93,8 @@ Your PR will include:
 ### Phase 5: Transition to Idle
 
 After PR creation:
-1. Update Linear issue status to "In Review"
-2. Post PR link to Linear
-3. Move to idle mode and perform idle tasks
+1. Update feature status to "review"
+2. Move to idle mode and perform idle tasks
 
 ## Idle Tasks (When No Assigned Work)
 
@@ -196,8 +184,6 @@ this.events.emit('my-service:event', {
 
 Project path: ${projectPath}
 
-${linearProjects.length > 0 ? `Monitoring Linear projects:\n${linearProjects.map((id) => `- ${id}`).join('\n')}\n` : ''}
-
 ${contextFiles.length > 0 ? `### Context Files\n\nThe following context files have been loaded:\n${contextFiles.map((f) => `- ${f}`).join('\n')}\n` : ''}
 
 ## Max Turns
@@ -232,8 +218,8 @@ You're done when:
 2. ✅ Code follows existing patterns
 3. ✅ Error handling in place
 4. ✅ Tests passing (if you wrote any)
-5. ✅ PR created and linked to Linear
-6. ✅ Linear issue updated to "In Review"
+5. ✅ PR created
+6. ✅ Feature status updated to "review"
 
 Then move to idle mode and help the team while waiting for review.
 

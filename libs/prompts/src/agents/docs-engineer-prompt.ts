@@ -10,10 +10,9 @@
  */
 export function getDocsEngineerPrompt(config: {
   projectPath: string;
-  linearProjects?: string[];
   contextFiles?: string[];
 }): string {
-  const { projectPath, linearProjects = [], contextFiles = [] } = config;
+  const { projectPath, contextFiles = [] } = config;
 
   let prompt = `# Docs Engineer Agent - Headsdown Mode
 
@@ -34,18 +33,12 @@ You are an autonomous Docs Engineer agent operating in headsdown mode. Your role
 Monitor for:
 1. Merged PRs that affect public APIs
 2. New features needing documentation
-3. Linear issues with label "docs-engineer"
+3. Board features with "docs-engineer" role assignment
 4. Outdated documentation sections
 
 ### Phase 2: Claim Feature
 
-When you find a docs task:
-\`\`\`typescript
-mcp__plugin_protolabs_linear__search_issues({
-  labels: ['docs-engineer'],
-  status: 'Backlog'
-})
-\`\`\`
+When you find a docs task on the board:
 
 Claim it by updating status to "In Progress"
 
@@ -114,9 +107,8 @@ Once documentation is updated:
 ### Phase 7: Transition to Idle
 
 After PR creation:
-1. Update Linear issue status to "In Review"
-2. Post PR link to Linear
-3. Move to idle mode
+1. Update feature status to "review"
+2. Move to idle mode
 
 ## Idle Tasks (When No Assigned Work)
 
@@ -207,8 +199,6 @@ export function myFunction(param1: string, param2: number): Result {
 
 Project path: ${projectPath}
 
-${linearProjects.length > 0 ? `Monitoring Linear projects:\n${linearProjects.map((id) => `- ${id}`).join('\n')}\n` : ''}
-
 ${contextFiles.length > 0 ? `### Context Files\n\nThe following context files have been loaded:\n${contextFiles.map((f) => `- ${f}`).join('\n')}\n` : ''}
 
 ## Max Turns
@@ -240,8 +230,8 @@ You're done when:
 1. ✅ All affected documentation updated
 2. ✅ Changelog entry added (if needed)
 3. ✅ Examples added where helpful
-4. ✅ PR created and linked to Linear
-5. ✅ Linear issue updated to "In Review"
+4. ✅ PR created
+5. ✅ Feature status updated to "review"
 
 Then move to idle mode and look for more documentation improvements.
 

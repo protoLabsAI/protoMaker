@@ -1,5 +1,5 @@
 /**
- * Integration Service - Manages Linear, Discord, and other external integrations
+ * Integration Service - Manages Discord and other external integrations
  *
  * Listens to ProtoMaker events and emits integration-specific events with
  * formatted payloads that can be consumed by MCP tools or external processes.
@@ -19,26 +19,10 @@ import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
-import type { LinearIntegrationConfig, ProjectIntegrations } from '@protolabsai/types';
+import type { ProjectIntegrations } from '@protolabsai/types';
 import type { Feature } from '@protolabsai/types';
 
-import { LinearMCPClient } from './linear-mcp-client.js';
-
 const logger = createLogger('Integrations');
-
-/**
- * Linear issue payload for MCP tool consumption
- */
-export interface LinearIssuePayload {
-  projectPath: string;
-  featureId: string;
-  feature: Feature;
-  teamId?: string;
-  projectId?: string;
-  priority?: number;
-  labelName?: string;
-  action: 'create' | 'update' | 'comment';
-}
 
 /**
  * Discord message payload for MCP tool consumption
@@ -69,7 +53,7 @@ interface FeatureEventPayload {
 /**
  * Integration Service
  *
- * Manages event-driven integrations with Linear, Discord, and other external services.
+ * Manages event-driven integrations with Discord and other external services.
  * Emits integration-specific events that can be handled by MCP tools or webhooks.
  */
 export class IntegrationService {
@@ -199,17 +183,6 @@ export class IntegrationService {
             }
           );
           break;
-        case 'linear:issue:detected':
-          this.handleLinearIssue(
-            payload as {
-              issueId: string;
-              title: string;
-              description?: string;
-              state?: { name: string };
-              createdAt: string;
-            }
-          );
-          break;
         case 'webhook:github:issue':
           this.handleGitHubIssue(
             payload as {
@@ -254,26 +227,6 @@ export class IntegrationService {
     const feature = await this.loadFeature(projectPath, featureId);
     if (!feature) return;
 
-    // Linear: Create issue when feature is created
-    if (integrations.linear?.enabled && integrations.linear.syncOnFeatureCreate) {
-      let teamId: string | undefined;
-      try {
-        teamId = await this.getLinearClient(projectPath).getTeamId();
-      } catch {
-        logger.warn('[Integration] No Linear teamId configured, skipping issue creation');
-      }
-      await this.emitLinearEvent({
-        projectPath,
-        featureId,
-        feature,
-        teamId,
-        projectId: integrations.linear.projectId,
-        priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
-        labelName: integrations.linear.labelName,
-        action: 'create',
-      });
-    }
-
     // Discord: Create thread when agent starts
     if (integrations.discord?.enabled && integrations.discord.createThreadsForAgents) {
       await this.emitDiscordEvent({
@@ -285,7 +238,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'create_thread',
-        content: `🤖 Agent starting work on: ${feature.title}`,
+        content: `Agent starting work on: ${feature.title}`,
       });
     }
   }
@@ -302,37 +255,6 @@ export class IntegrationService {
     const feature = await this.loadFeature(projectPath, featureId);
     if (!feature) return;
 
-    // Linear: Update issue status and add comment
-    if (integrations.linear?.enabled) {
-      let teamId: string | undefined;
-      try {
-        teamId = await this.getLinearClient(projectPath).getTeamId();
-      } catch {
-        logger.warn('[Integration] No Linear teamId configured, skipping status update');
-      }
-      if (integrations.linear.syncOnStatusChange) {
-        await this.emitLinearEvent({
-          projectPath,
-          featureId,
-          feature,
-          teamId,
-          projectId: integrations.linear.projectId,
-          action: 'update',
-        });
-      }
-
-      if (integrations.linear.commentOnCompletion) {
-        await this.emitLinearEvent({
-          projectPath,
-          featureId,
-          feature,
-          teamId,
-          projectId: integrations.linear.projectId,
-          action: 'comment',
-        });
-      }
-    }
-
     // Discord: Send completion notification
     if (integrations.discord?.enabled && integrations.discord.notifyOnCompletion) {
       await this.emitDiscordEvent({
@@ -344,7 +266,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `✅ Feature completed: **${feature.title}**`,
+        content: `Feature completed: **${feature.title}**`,
       });
     }
   }
@@ -373,7 +295,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `❌ Feature failed: **${feature.title}**\nError: ${error || 'Unknown error'}`,
+        content: `Feature failed: **${feature.title}**\nError: ${error || 'Unknown error'}`,
         mention,
       });
     }
@@ -408,29 +330,9 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: '🎉 Auto-mode completed all features in backlog!',
+        content: 'Auto-mode completed all features in backlog!',
       });
     }
-  }
-
-  /**
-   * Create a LinearMCPClient for the given project path.
-   */
-  private getLinearClient(projectPath: string): LinearMCPClient {
-    return new LinearMCPClient(this.settingsService!, projectPath);
-  }
-
-  /**
-   * Emit a Linear integration event
-   */
-  private async emitLinearEvent(payload: LinearIssuePayload): Promise<void> {
-    if (!this.emitter) return;
-
-    logger.info(
-      `Emitting Linear ${payload.action} event for feature: ${payload.feature.title} (${payload.featureId})`
-    );
-
-    this.emitter.emit('integration:linear', payload);
   }
 
   /**
@@ -476,30 +378,6 @@ export class IntegrationService {
   }
 
   /**
-   * Map ProtoMaker complexity to Linear priority
-   */
-  private mapComplexityToPriority(
-    complexity: string | undefined,
-    config: LinearIntegrationConfig
-  ): number | undefined {
-    if (!complexity || !config.priorityMapping) return undefined;
-
-    const mapping = config.priorityMapping;
-    switch (complexity) {
-      case 'small':
-        return mapping.small;
-      case 'medium':
-        return mapping.medium;
-      case 'large':
-        return mapping.large;
-      case 'architectural':
-        return mapping.architectural;
-      default:
-        return undefined;
-    }
-  }
-
-  /**
    * Handle milestone:completed event
    */
   private async handleMilestoneCompleted(payload: {
@@ -530,7 +408,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `🏁 **${projectTitle}** - Milestone ${milestoneNumber} completed: ${milestoneTitle}`,
+        content: `**${projectTitle}** - Milestone ${milestoneNumber} completed: ${milestoneTitle}`,
       });
     }
   }
@@ -566,7 +444,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `🚀 **${projectTitle}** - Milestone ${milestoneNumber} started: ${milestoneTitle}`,
+        content: `**${projectTitle}** - Milestone ${milestoneNumber} started: ${milestoneTitle}`,
       });
     }
   }
@@ -603,7 +481,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `📋 **${projectTitle}** - Milestone ${milestoneNumber} planned: ${milestoneTitle} (${phaseCount} phases)`,
+        content: `**${projectTitle}** - Milestone ${milestoneNumber} planned: ${milestoneTitle} (${phaseCount} phases)`,
       });
     }
   }
@@ -637,7 +515,7 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `🎉 **Project completed: ${projectTitle}** — All milestones done!`,
+        content: `**Project completed: ${projectTitle}** -- All milestones done!`,
       });
     }
   }
@@ -670,14 +548,14 @@ export class IntegrationService {
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
         action: 'send_message',
-        content: `📝 CoS PRD submitted: **${title}** — entering pipeline for decomposition`,
+        content: `CoS PRD submitted: **${title}** -- entering pipeline for decomposition`,
       });
     }
   }
 
   /**
    * Handle authority:pm-review-approved and authority:pm-review-changes-requested events
-   * This is the "Antagonistic Review Pipeline" - posts review summary to Discord and Linear
+   * This is the "Antagonistic Review Pipeline" - posts review summary to Discord
    */
   private async handleReviewCompleted(
     payload: {
@@ -723,7 +601,7 @@ export class IntegrationService {
 
       // Flag unresolved blocks for Josh if changes requested
       if (verdict === 'changes_requested' && integrations.discord.mentionOnError) {
-        const blockMessage = `${integrations.discord.mentionOnError} 🚨 **Review Blocked** — Feature "${feature.title}" requires changes before proceeding.\n\nReview notes: ${reviewNotes || 'See above'}`;
+        const blockMessage = `${integrations.discord.mentionOnError} **Review Blocked** -- Feature "${feature.title}" requires changes before proceeding.\n\nReview notes: ${reviewNotes || 'See above'}`;
         await this.emitDiscordEvent({
           projectPath,
           featureId,
@@ -737,26 +615,6 @@ export class IntegrationService {
         });
       }
     }
-
-    // Linear: Create issue with PRD content + review verdict
-    if (integrations.linear?.enabled) {
-      let teamId: string | undefined;
-      try {
-        teamId = await this.getLinearClient(projectPath).getTeamId();
-      } catch {
-        logger.warn('[Integration] No Linear teamId configured, skipping issue creation');
-      }
-      await this.emitLinearEvent({
-        projectPath,
-        featureId,
-        feature,
-        teamId,
-        projectId: integrations.linear.projectId,
-        priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
-        labelName: integrations.linear.labelName,
-        action: 'create',
-      });
-    }
   }
 
   /**
@@ -769,10 +627,9 @@ export class IntegrationService {
   ): string {
     const lines: string[] = [];
 
-    // Header with verdict emoji
-    const emoji = verdict === 'approved' ? '✅' : '⚠️';
+    // Header with verdict
     const verdictText = verdict === 'approved' ? 'APPROVED' : 'CHANGES REQUESTED';
-    lines.push(`${emoji} **Review ${verdictText}**: ${feature.title}`);
+    lines.push(`**Review ${verdictText}**: ${feature.title}`);
     lines.push('');
 
     // PRD content summary
@@ -811,34 +668,6 @@ export class IntegrationService {
   // ============================================================================
   // Public API for manual integration triggers
   // ============================================================================
-
-  /**
-   * Manually trigger Linear issue creation for a feature
-   */
-  async triggerLinearSync(projectPath: string, featureId: string): Promise<void> {
-    const integrations = await this.getProjectIntegrations(projectPath);
-    if (!integrations?.linear?.enabled) {
-      throw new Error('Linear integration is not enabled for this project');
-    }
-
-    const feature = await this.loadFeature(projectPath, featureId);
-    if (!feature) {
-      throw new Error(`Feature ${featureId} not found`);
-    }
-
-    const teamId = await this.getLinearClient(projectPath).getTeamId();
-
-    await this.emitLinearEvent({
-      projectPath,
-      featureId,
-      feature,
-      teamId,
-      projectId: integrations.linear.projectId,
-      priority: this.mapComplexityToPriority(feature.complexity, integrations.linear),
-      labelName: integrations.linear.labelName,
-      action: 'create',
-    });
-  }
 
   /**
    * Manually trigger Discord notification for a feature
@@ -1001,56 +830,6 @@ export class IntegrationService {
   }
 
   /**
-   * Handle Linear issue creation events and detect signals
-   */
-  private async handleLinearIssue(payload: {
-    issueId: string;
-    title: string;
-    description?: string;
-    state?: { name: string };
-    labels?: string[];
-    projectId?: string;
-    createdAt: string;
-  }): Promise<void> {
-    // Guard: skip issues not in an intake trigger state.
-    const intakeTriggerStates = ['Todo'];
-    if (
-      payload.state?.name &&
-      !intakeTriggerStates.some((s) => s.toLowerCase() === payload.state!.name.toLowerCase())
-    ) {
-      logger.debug(
-        `Skipping Linear issue signal: state "${payload.state.name}" is not an intake trigger state`,
-        { issueId: payload.issueId }
-      );
-      return;
-    }
-
-    logger.info(`Signal detected from Linear issue: ${payload.title}`, {
-      issueId: payload.issueId,
-      labels: payload.labels,
-      projectId: payload.projectId,
-    });
-
-    if (!this.emitter) return;
-
-    this.emitter.emit('signal:received', {
-      source: 'linear',
-      content: `${payload.title}\n\n${payload.description || ''}`,
-      author: {
-        id: payload.issueId,
-        name: 'Linear Issue',
-      },
-      channelContext: {
-        issueId: payload.issueId,
-        state: payload.state?.name,
-        labels: payload.labels,
-        projectId: payload.projectId,
-      },
-      timestamp: payload.createdAt,
-    });
-  }
-
-  /**
    * Handle GitHub issue creation events and detect signals
    */
   private async handleGitHubIssue(payload: {
@@ -1097,35 +876,6 @@ export class IntegrationService {
     // Check if Discord bot is connected
     // This is a placeholder - actual implementation would check Discord client status
     return false;
-  }
-
-  /**
-   * Check Linear OAuth status
-   */
-  async checkLinearOAuthStatus(): Promise<boolean> {
-    try {
-      // Check for any token source: env vars (most common in Docker/staging)
-      const token = process.env.LINEAR_API_KEY || process.env.LINEAR_API_TOKEN || '';
-      if (!token) return false;
-
-      // Validate token with a lightweight API call
-      const auth = token.startsWith('lin_api_') ? token : `Bearer ${token}`;
-
-      const res = await fetch('https://api.linear.app/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: auth,
-        },
-        body: JSON.stringify({ query: '{ viewer { id } }' }),
-        signal: AbortSignal.timeout(5000),
-      });
-
-      return res.ok;
-    } catch (error) {
-      logger.error('Failed to check Linear OAuth status:', error);
-      return false;
-    }
   }
 
   /**

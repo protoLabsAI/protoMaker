@@ -606,32 +606,8 @@ export class ProjectService {
     return { features, epics };
   }
 
-  // ---------------------------------------------------------------------------
-  // Linear Integration
-  // ---------------------------------------------------------------------------
-
   /**
-   * Find a local project by its Linear project ID
-   * Scans all project.json files for a matching linearProjectId field
-   */
-  async findByLinearProjectId(
-    projectPath: string,
-    linearProjectId: string
-  ): Promise<{ project: Project; slug: string } | null> {
-    const slugs = await this.listProjects(projectPath);
-
-    for (const slug of slugs) {
-      const project = await this.getProject(projectPath, slug);
-      if (project?.linearProjectId === linearProjectId) {
-        return { project, slug };
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Archive a project after Linear handoff.
+   * Archive a project.
    * Keeps a slim project.json with mapping data, deletes .md files and milestones/ directory.
    */
   async archiveProject(
@@ -657,8 +633,6 @@ export class ProjectService {
       title: project.title,
       goal: project.goal,
       status: project.status,
-      linearProjectId: project.linearProjectId,
-      linearProjectUrl: project.linearProjectUrl,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
       archivedAt: new Date().toISOString(),
@@ -667,7 +641,6 @@ export class ProjectService {
         slug: m.slug,
         title: m.title,
         epicId: m.epicId,
-        linearMilestoneId: m.linearMilestoneId,
         status: m.status,
         phases: m.phases.map((p) => ({
           number: p.number,

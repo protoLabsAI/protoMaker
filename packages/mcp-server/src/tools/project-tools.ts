@@ -193,7 +193,7 @@ export const projectTools: Tool[] = [
   {
     name: 'archive_project',
     description:
-      'Archive a project after Linear handoff. Slims project.json to mapping data only (slug, title, linearProjectId, milestone/phase IDs) and deletes .md files and milestones/ directory. Use after sync_project_to_linear to complete the handoff.',
+      'Archive a completed project. Slims project.json to mapping data only (slug, title, milestone/phase IDs) and deletes .md files and milestones/ directory.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -248,7 +248,7 @@ export const projectTools: Tool[] = [
   {
     name: 'initiate_project',
     description:
-      'Start a new project lifecycle. Checks for duplicate Linear projects, creates a new Linear project with the idea description, and creates a local project cache. Returns duplicates if found (caller should confirm before proceeding).',
+      'Start a new project lifecycle. Creates a local project cache with the idea description. Returns duplicates if found (caller should confirm before proceeding).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -262,7 +262,7 @@ export const projectTools: Tool[] = [
         },
         ideaDescription: {
           type: 'string',
-          description: 'Idea description (markdown). Stored as Linear project description.',
+          description: 'Idea description (markdown).',
         },
       },
       required: ['projectPath', 'title', 'ideaDescription'],
@@ -294,7 +294,7 @@ export const projectTools: Tool[] = [
   {
     name: 'approve_project_prd',
     description:
-      'Approve the PRD and create board features from project milestones. Syncs milestones to Linear. Call after the project has a PRD and milestones defined.',
+      'Approve the PRD and create board features from project milestones. Call after the project has a PRD and milestones defined.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -321,7 +321,7 @@ export const projectTools: Tool[] = [
   {
     name: 'launch_project',
     description:
-      'Launch a project: sets Linear project status to "started" and starts auto-mode. Requires features to exist in backlog (call approve_project_prd first).',
+      'Launch a project and start auto-mode. Requires features to exist in backlog (call approve_project_prd first).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -344,7 +344,7 @@ export const projectTools: Tool[] = [
   {
     name: 'get_lifecycle_status',
     description:
-      'Get the current lifecycle phase and next actions for a project. Reads both Linear state and local board state to determine where the project is in the pipeline.',
+      'Get the current lifecycle phase and next actions for a project. Reads local board state to determine where the project is in the pipeline.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -358,34 +358,6 @@ export const projectTools: Tool[] = [
         },
       },
       required: ['projectPath', 'projectSlug'],
-    },
-  },
-  {
-    name: 'collect_related_issues',
-    description:
-      'Move existing Linear issues into a project. Useful for gathering related work that was created before the project.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectPath: {
-          type: 'string',
-          description: 'Absolute path to the project directory',
-        },
-        projectSlug: {
-          type: 'string',
-          description: 'Project slug',
-        },
-        linearProjectId: {
-          type: 'string',
-          description: 'Linear project ID to add issues to',
-        },
-        issueIds: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Array of Linear issue IDs to add to the project',
-        },
-      },
-      required: ['projectPath', 'projectSlug', 'linearProjectId', 'issueIds'],
     },
   },
 ];

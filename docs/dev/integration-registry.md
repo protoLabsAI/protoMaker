@@ -1,6 +1,6 @@
 # Integration Registry
 
-Unified registry for external integrations (Discord, Linear, GitHub, Twitch, etc.).
+Unified registry for external integrations (Discord, GitHub, Twitch, etc.).
 
 ## Overview
 

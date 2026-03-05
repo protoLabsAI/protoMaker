@@ -40,7 +40,6 @@ const createMockFeatureLoader = (): FeatureLoader => {
       title: 'Test Feature',
       status: 'backlog',
     }),
-    findByLinearIssueId: vi.fn().mockResolvedValue(null),
   } as unknown as FeatureLoader;
 };
 
@@ -54,7 +53,7 @@ const createMockSettingsService = (): SettingsService => {
 
 // Test data factories
 const createTestSignal = (overrides: any = {}) => ({
-  source: 'linear',
+  source: 'github',
   content: 'Test signal content',
   author: {
     id: 'test-author-123',
@@ -118,90 +117,6 @@ describe('SignalIntakeService', () => {
       expect(mockEmitter.emit).not.toHaveBeenCalledWith(
         'authority:gtm-signal-received',
         expect.any(Object)
-      );
-    });
-
-    it('should classify Linear signals with GTM labels as gtm', async () => {
-      const signal = createTestSignal({
-        source: 'linear',
-        content: 'Marketing campaign needed',
-        channelContext: {
-          labels: ['marketing', 'campaign'],
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify GTM routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
-        expect.objectContaining({
-          projectPath: '/test/path',
-        })
-      );
-
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'gtm',
-          reason: expect.stringContaining('GTM label'),
-        })
-      );
-
-      // Should NOT route to ops
-      expect(mockEmitter.emit).not.toHaveBeenCalledWith(
-        'authority:idea-injected',
-        expect.any(Object)
-      );
-    });
-
-    it('should classify Linear signals with ops labels as ops', async () => {
-      const signal = createTestSignal({
-        source: 'linear',
-        content: 'Bug fix needed',
-        channelContext: {
-          labels: ['bug', 'feature'],
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify ops routing
-      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
-
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'ops',
-          reason: expect.stringContaining('Ops label'),
-        })
-      );
-    });
-
-    it('should default Linear signals without labels to ops', async () => {
-      const signal = createTestSignal({
-        source: 'linear',
-        content: 'Some task',
-        channelContext: {
-          labels: [],
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Verify ops routing (default)
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'signal:routed',
-        expect.objectContaining({
-          category: 'ops',
-          reason: expect.stringContaining('defaults to Ops'),
-        })
       );
     });
 
@@ -344,11 +259,8 @@ describe('SignalIntakeService', () => {
 
       // Try a signal that would normally be GTM
       const signal = createTestSignal({
-        source: 'linear',
+        source: 'ui:content',
         content: 'Marketing campaign',
-        channelContext: {
-          labels: ['marketing', 'content'],
-        },
       });
 
       mockEmitter.emit('signal:received', signal);
@@ -478,26 +390,6 @@ describe('SignalIntakeService', () => {
   });
 
   describe('deduplication logic', () => {
-    it('should prevent duplicate Linear signals by issue ID', async () => {
-      const signal = createTestSignal({
-        source: 'linear',
-        author: {
-          id: 'issue-123',
-          name: 'Test Issue',
-        },
-        content: 'Bug report',
-      });
-
-      // Send same signal twice
-      mockEmitter.emit('signal:received', signal);
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Feature should only be created once
-      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
-    });
-
     it('should prevent duplicate GitHub signals by event ID', async () => {
       const signal = createTestSignal({
         source: 'github',
@@ -590,14 +482,14 @@ describe('SignalIntakeService', () => {
     it('should deduplicate by unique key (source + author/timestamp)', async () => {
       // Same source, same author ID - should dedupe
       const signal1 = createTestSignal({
-        source: 'linear',
+        source: 'discord',
         author: { id: 'issue-123', name: 'Test' },
         content: 'Bug A',
       });
 
       // Different author ID - should NOT dedupe
       const signal2 = createTestSignal({
-        source: 'linear',
+        source: 'discord',
         author: { id: 'issue-456', name: 'Test' },
         content: 'Bug B',
       });
@@ -613,62 +505,8 @@ describe('SignalIntakeService', () => {
     });
   });
 
-  describe('Linear integration guard', () => {
-    it('should skip feature creation if Linear issue already exists', async () => {
-      // Mock existing feature
-      vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue({
-        id: 'existing-feature-123',
-        title: 'Existing Feature',
-      } as Feature);
-
-      const signal = createTestSignal({
-        source: 'linear',
-        channelContext: {
-          issueId: 'LINEAR-123',
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Should NOT create a new feature
-      expect(mockFeatureLoader.create).not.toHaveBeenCalled();
-    });
-
-    it('should create feature if Linear issue does not exist', async () => {
-      // Mock no existing feature
-      vi.mocked(mockFeatureLoader.findByLinearIssueId).mockResolvedValue(null);
-
-      const signal = createTestSignal({
-        source: 'linear',
-        channelContext: {
-          issueId: 'LINEAR-456',
-        },
-      });
-
-      mockEmitter.emit('signal:received', signal);
-
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      // Should create a new feature
-      expect(mockFeatureLoader.create).toHaveBeenCalledWith(
-        '/test/path',
-        expect.objectContaining({
-          workItemState: 'idea',
-          linearIssueId: 'LINEAR-456',
-        })
-      );
-    });
-  });
-
   describe('signal statistics', () => {
     it('should track signal counts by source', async () => {
-      const linearSignal = createTestSignal({
-        source: 'linear',
-        author: { id: 'linear-1', name: 'Test' },
-      });
-
       const githubSignal = createTestSignal({
         source: 'github',
         author: { id: 'github-1', name: 'Test' },
@@ -679,14 +517,18 @@ describe('SignalIntakeService', () => {
         author: { id: 'discord-1', name: 'Test' },
       });
 
-      mockEmitter.emit('signal:received', linearSignal);
+      const mcpSignal = createTestSignal({
+        source: 'mcp:create_feature',
+        author: { id: 'mcp-1', name: 'Test' },
+      });
+
       mockEmitter.emit('signal:received', githubSignal);
       mockEmitter.emit('signal:received', discordSignal);
+      mockEmitter.emit('signal:received', mcpSignal);
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       const status = signalIntakeService.getStatus();
-      expect(status.signalCounts.linear).toBe(1);
       expect(status.signalCounts.github).toBe(1);
       expect(status.signalCounts.discord).toBe(1);
     });
@@ -713,17 +555,17 @@ describe('SignalIntakeService', () => {
   });
 
   describe('GTM signal → feature creation → pipeline initiation path', () => {
-    it('should create a feature with workItemState idea before emitting authority:gtm-signal-received', async () => {
+    it('should create a feature with workItemState idea and route through signal pipeline', async () => {
       const createdFeature = {
         id: 'gtm-feature-456',
-        title: '[linear] Marketing campaign needed',
+        title: '[discord] Marketing campaign needed',
         status: 'backlog',
         workItemState: 'idea',
       };
       vi.mocked(mockFeatureLoader.create).mockResolvedValue(createdFeature as Feature);
 
       const signal = createTestSignal({
-        source: 'linear',
+        source: 'discord',
         content: 'Marketing campaign needed',
         channelContext: {
           labels: ['marketing'],
@@ -743,9 +585,9 @@ describe('SignalIntakeService', () => {
         })
       );
 
-      // authority:gtm-signal-received must include featureId and projectPath
+      // signal:routed must include featureId and projectPath
       expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:gtm-signal-received',
+        'signal:routed',
         expect.objectContaining({
           featureId: 'gtm-feature-456',
           projectPath: '/test/path',
@@ -813,8 +655,8 @@ describe('SignalIntakeService', () => {
       } as any);
 
       const signal = createTestSignal({
-        source: 'linear',
-        author: { id: 'lin-99', name: 'Dev' },
+        source: 'discord',
+        author: { id: 'disc-99', name: 'Dev' },
         content: 'New ops work',
       });
 

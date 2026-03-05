@@ -2,7 +2,7 @@
 
 This document covers both the single-instance architecture (what runs on one machine)
 and the multi-instance topology (how multiple protoLabs instances coordinate as
-autonomous dev teams via Linear and Discord).
+autonomous dev teams via Discord).
 
 ## High-Level Architecture
 
@@ -362,8 +362,8 @@ Browser                 nginx (UI)              Express (Server)
 ## Multi-Instance Topology
 
 protoLabs is designed to run as multiple independent instances, each acting as an
-autonomous development team. Coordination happens through Linear (project management)
-and Discord (communication), not through direct instance-to-instance communication.
+autonomous development team. Coordination happens through Discord (communication)
+and GitHub (PRs, issues), not through direct instance-to-instance communication.
 
 ### Organizational Hierarchy
 
@@ -372,16 +372,16 @@ and Discord (communication), not through direct instance-to-instance communicati
 │                         Coordination Layer                                │
 │                                                                           │
 │  ┌──────────────────────────┐    ┌──────────────────────────────────┐   │
-│  │        Linear             │    │           Discord                 │   │
-│  │  (Project Management)     │    │      (Team Communication)        │   │
+│  │        GitHub              │    │           Discord                 │   │
+│  │  (Code & PRs)              │    │      (Team Communication)        │   │
 │  │                           │    │                                   │   │
-│  │  Initiatives              │    │  #dev - status updates           │   │
-│  │   └─ Projects             │    │  #alerts - CI/deploy notifs      │   │
-│  │       └─ Issues           │    │  #approvals - HITL requests      │   │
-│  │           └─ Sub-issues   │    │                                   │   │
+│  │  Issues                   │    │  #dev - status updates           │   │
+│  │   └─ Pull Requests        │    │  #alerts - CI/deploy notifs      │   │
+│  │       └─ Reviews          │    │  #approvals - HITL requests      │   │
+│  │                           │    │                                   │   │
 │  └──────────────────────────┘    └──────────────────────────────────┘   │
 │              │                                    │                       │
-│              │  distilled updates                 │  notifications        │
+│              │  PR status, reviews                │  notifications        │
 │              │  (pertinent info only)             │  (summaries only)     │
 │              │                                    │                       │
 ├──────────────┼────────────────────────────────────┼───────────────────────┤
@@ -415,11 +415,11 @@ protoLabs Board (Team Lead)      Local Kanban tracks features, manages agents
     │
     │ milestone progress, blockers, key decisions
     ▼
-Linear Issues (Project Manager)  Cross-team visibility, priority, scheduling
+GitHub Issues (Project Manager)  Cross-team visibility, priority, scheduling
     │
     │ project health, risk flags, milestone rollups
     ▼
-Linear Projects (PM / Owner)    Strategic view, resource allocation
+Project Plans (PM / Owner)      Strategic view, resource allocation
 ```
 
 **What stays local (protoLabs instance):**
@@ -429,12 +429,11 @@ Linear Projects (PM / Owner)    Strategic view, resource allocation
 - Git worktree management
 - Build/test results
 
-**What propagates to Linear:**
+**What propagates to GitHub:**
 
-- Feature completion (issue status updates)
+- Feature completion (PR status updates)
 - Blockers requiring cross-team coordination
-- Milestone progress summaries
-- Architecture decisions needing approval
+- PR reviews and architecture discussions
 
 **What goes to Discord:**
 
@@ -447,9 +446,9 @@ Linear Projects (PM / Owner)    Strategic view, resource allocation
 
 | Role                     | Where It Lives     | Responsibility                            |
 | ------------------------ | ------------------ | ----------------------------------------- |
-| Project Owner (Human)    | Linear + Discord   | Strategic direction, final approvals      |
-| PM                       | Linear projects    | What to build, why, priorities            |
-| Project Manager          | Linear issues      | When, how, milestone tracking             |
+| Project Owner (Human)    | GitHub + Discord   | Strategic direction, final approvals      |
+| PM                       | Project plans      | What to build, why, priorities            |
+| Project Manager          | GitHub issues      | When, how, milestone tracking             |
 | EM (Engineering Manager) | protoLabs instance | Who does what, capacity, agent assignment |
 | PE (Product Engineer)    | protoLabs agent    | Implementation, code, tests, PRs          |
 
@@ -461,10 +460,10 @@ Each protoLabs instance:
 - Runs its own AI agents in isolated git worktrees
 - Maintains its own project context (`.automaker/context/`)
 - Manages its own auto-mode and feature queue
-- Reports upward via MCP integrations (Linear, Discord)
+- Reports upward via MCP integrations (GitHub, Discord)
 
 Instances do NOT communicate directly with each other. All cross-team
-coordination happens through the coordination layer (Linear + Discord).
+coordination happens through the coordination layer (GitHub + Discord).
 
 ### Secret Flow
 

@@ -64,7 +64,7 @@ export interface EngineServiceNodeData {
 
 export interface IntegrationNodeData {
   label: string;
-  integrationType: 'github' | 'linear' | 'discord';
+  integrationType: 'github' | 'discord';
   connected: boolean;
   status: string;
   [key: string]: unknown;
