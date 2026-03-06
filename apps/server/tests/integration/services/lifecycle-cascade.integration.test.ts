@@ -42,11 +42,7 @@ function waitForEvent(
 ): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(
-        new Error(
-          `Timed out waiting ${timeoutMs}ms for event "${eventType}"`
-        )
-      );
+      reject(new Error(`Timed out waiting ${timeoutMs}ms for event "${eventType}"`));
     }, timeoutMs);
 
     const unsub = emitter.on(eventType as Parameters<typeof emitter.on>[0], (payload) => {
@@ -220,130 +216,126 @@ describe('lifecycle-cascade (integration)', () => {
     });
   }
 
-  it(
-    'cascades: epic → milestone → project completion with ceremony state transitions',
-    async () => {
-      // ── Ceremony state machine (pure, not mocked) ─────────────────────────
+  it('cascades: epic → milestone → project completion with ceremony state transitions', async () => {
+    // ── Ceremony state machine (pure, not mocked) ─────────────────────────
 
-      let ceremonyState: CeremonyState = {
-        phase: 'awaiting_kickoff',
-        projectPath,
-        projectSlug: 'test-cascade',
-        lastStandup: new Date().toISOString(),
-        lastRetro: new Date().toISOString(),
-        standupCadence: '0 9 * * 1',
-        history: [],
-      };
+    let ceremonyState: CeremonyState = {
+      phase: 'awaiting_kickoff',
+      projectPath,
+      projectSlug: 'test-cascade',
+      lastStandup: new Date().toISOString(),
+      lastRetro: new Date().toISOString(),
+      standupCadence: '0 9 * * 1',
+      history: [],
+    };
 
-      // Kickoff: awaiting_kickoff → milestone_active
-      ceremonyState = transition(ceremonyState, 'project:lifecycle:launched', null);
-      expect(ceremonyState.phase).toBe('milestone_active');
+    // Kickoff: awaiting_kickoff → milestone_active
+    ceremonyState = transition(ceremonyState, 'project:lifecycle:launched', null);
+    expect(ceremonyState.phase).toBe('milestone_active');
 
-      // ── Mark M1 features done ─────────────────────────────────────────────
+    // ── Mark M1 features done ─────────────────────────────────────────────
 
-      // Set up listener BEFORE triggering so we don't miss the event.
-      // Filter to the specific milestone so spurious duplicate events
-      // (from concurrent handlers) don't resolve this promise early.
-      const m1CompletedPromise = waitForEvent(
-        emitter,
-        'milestone:completed',
-        (p) => (p as Record<string, unknown>).milestoneTitle === 'Milestone 1'
-      );
+    // Set up listener BEFORE triggering so we don't miss the event.
+    // Filter to the specific milestone so spurious duplicate events
+    // (from concurrent handlers) don't resolve this promise early.
+    const m1CompletedPromise = waitForEvent(
+      emitter,
+      'milestone:completed',
+      (p) => (p as Record<string, unknown>).milestoneTitle === 'Milestone 1'
+    );
 
-      // First M1 feature done — milestone is NOT complete yet (m1p2 still backlog).
-      await markFeatureDone('feature-m1p1', 'm1');
+    // First M1 feature done — milestone is NOT complete yet (m1p2 still backlog).
+    await markFeatureDone('feature-m1p1', 'm1');
 
-      // Yield long enough for the m1p1 handler to read features from disk and
-      // find m1p2 still as "backlog" — so it returns without emitting.
-      // This prevents two concurrent handlers from both seeing M1 as complete.
-      await yieldToHandlers();
+    // Yield long enough for the m1p1 handler to read features from disk and
+    // find m1p2 still as "backlog" — so it returns without emitting.
+    // This prevents two concurrent handlers from both seeing M1 as complete.
+    await yieldToHandlers();
 
-      // Second M1 feature done — this should trigger milestone:completed for M1
-      await markFeatureDone('feature-m1p2', 'm1');
+    // Second M1 feature done — this should trigger milestone:completed for M1
+    await markFeatureDone('feature-m1p2', 'm1');
 
-      const m1Payload = (await m1CompletedPromise) as Record<string, unknown>;
+    const m1Payload = (await m1CompletedPromise) as Record<string, unknown>;
 
-      expect(m1Payload).toMatchObject({
-        projectSlug: 'test-cascade',
-        milestoneTitle: 'Milestone 1',
-        milestoneNumber: 1,
-      });
+    expect(m1Payload).toMatchObject({
+      projectSlug: 'test-cascade',
+      milestoneTitle: 'Milestone 1',
+      milestoneNumber: 1,
+    });
 
-      // ── Ceremony: milestone_active → milestone_retro (M1 done) ───────────
+    // ── Ceremony: milestone_active → milestone_retro (M1 done) ───────────
 
-      ceremonyState = transition(ceremonyState, 'milestone:completed', null);
-      expect(ceremonyState.phase).toBe('milestone_retro');
+    ceremonyState = transition(ceremonyState, 'milestone:completed', null);
+    expect(ceremonyState.phase).toBe('milestone_retro');
 
-      // Fire the retro ceremony — 1 milestone remaining → back to milestone_active
-      ceremonyState = transition(ceremonyState, 'ceremony:fired(retro)', {
-        remainingMilestones: 1,
-      });
-      expect(ceremonyState.phase).toBe('milestone_active');
+    // Fire the retro ceremony — 1 milestone remaining → back to milestone_active
+    ceremonyState = transition(ceremonyState, 'ceremony:fired(retro)', {
+      remainingMilestones: 1,
+    });
+    expect(ceremonyState.phase).toBe('milestone_active');
 
-      // ── Mark M2 features done ─────────────────────────────────────────────
+    // ── Mark M2 features done ─────────────────────────────────────────────
 
-      const m2CompletedPromise = waitForEvent(
-        emitter,
-        'milestone:completed',
-        (p) => (p as Record<string, unknown>).milestoneTitle === 'Milestone 2'
-      );
-      const projectCompletedPromise = waitForEvent(emitter, 'project:completed');
+    const m2CompletedPromise = waitForEvent(
+      emitter,
+      'milestone:completed',
+      (p) => (p as Record<string, unknown>).milestoneTitle === 'Milestone 2'
+    );
+    const projectCompletedPromise = waitForEvent(emitter, 'project:completed');
 
-      await markFeatureDone('feature-m2p1', 'm2');
-      await yieldToHandlers();
-      await markFeatureDone('feature-m2p2', 'm2');
+    await markFeatureDone('feature-m2p1', 'm2');
+    await yieldToHandlers();
+    await markFeatureDone('feature-m2p2', 'm2');
 
-      const m2Payload = (await m2CompletedPromise) as Record<string, unknown>;
-      expect(m2Payload).toMatchObject({
-        projectSlug: 'test-cascade',
-        milestoneTitle: 'Milestone 2',
-        milestoneNumber: 2,
-      });
+    const m2Payload = (await m2CompletedPromise) as Record<string, unknown>;
+    expect(m2Payload).toMatchObject({
+      projectSlug: 'test-cascade',
+      milestoneTitle: 'Milestone 2',
+      milestoneNumber: 2,
+    });
 
-      // Project should complete after all milestones are done
-      const projectPayload = (await projectCompletedPromise) as Record<string, unknown>;
-      expect(projectPayload).toMatchObject({
-        projectSlug: 'test-cascade',
-        totalMilestones: 2,
-      });
+    // Project should complete after all milestones are done
+    const projectPayload = (await projectCompletedPromise) as Record<string, unknown>;
+    expect(projectPayload).toMatchObject({
+      projectSlug: 'test-cascade',
+      totalMilestones: 2,
+    });
 
-      // ── Ceremony: milestone_active → milestone_retro (M2 done) ───────────
+    // ── Ceremony: milestone_active → milestone_retro (M2 done) ───────────
 
-      ceremonyState = transition(ceremonyState, 'milestone:completed', null);
-      expect(ceremonyState.phase).toBe('milestone_retro');
+    ceremonyState = transition(ceremonyState, 'milestone:completed', null);
+    expect(ceremonyState.phase).toBe('milestone_retro');
 
-      // No remaining milestones → project_retro
-      ceremonyState = transition(ceremonyState, 'ceremony:fired(retro)', {
-        remainingMilestones: 0,
-      });
-      expect(ceremonyState.phase).toBe('project_retro');
+    // No remaining milestones → project_retro
+    ceremonyState = transition(ceremonyState, 'ceremony:fired(retro)', {
+      remainingMilestones: 0,
+    });
+    expect(ceremonyState.phase).toBe('project_retro');
 
-      // Fire project retro → project_complete
-      ceremonyState = transition(ceremonyState, 'ceremony:fired(project_retro)', null);
-      expect(ceremonyState.phase).toBe('project_complete');
+    // Fire project retro → project_complete
+    ceremonyState = transition(ceremonyState, 'ceremony:fired(project_retro)', null);
+    expect(ceremonyState.phase).toBe('project_complete');
 
-      // ── Verify detector observability counts ─────────────────────────────
+    // ── Verify detector observability counts ─────────────────────────────
 
-      const status = detector.getStatus();
-      expect(status.completionCounts.milestones).toBe(2);
-      expect(status.completionCounts.projects).toBe(1);
-      expect(status.emittedMilestones).toBe(2);
-      expect(status.emittedProjects).toBe(1);
+    const status = detector.getStatus();
+    expect(status.completionCounts.milestones).toBe(2);
+    expect(status.completionCounts.projects).toBe(1);
+    expect(status.emittedMilestones).toBe(2);
+    expect(status.emittedProjects).toBe(1);
 
-      // ── Verify ceremony history ───────────────────────────────────────────
+    // ── Verify ceremony history ───────────────────────────────────────────
 
-      expect(ceremonyState.history).toHaveLength(6);
-      expect(ceremonyState.history.map((t) => `${t.from}→${t.to}`)).toEqual([
-        'awaiting_kickoff→milestone_active',
-        'milestone_active→milestone_retro',
-        'milestone_retro→milestone_active',
-        'milestone_active→milestone_retro',
-        'milestone_retro→project_retro',
-        'project_retro→project_complete',
-      ]);
-    },
-    15000
-  );
+    expect(ceremonyState.history).toHaveLength(6);
+    expect(ceremonyState.history.map((t) => `${t.from}→${t.to}`)).toEqual([
+      'awaiting_kickoff→milestone_active',
+      'milestone_active→milestone_retro',
+      'milestone_retro→milestone_active',
+      'milestone_active→milestone_retro',
+      'milestone_retro→project_retro',
+      'project_retro→project_complete',
+    ]);
+  }, 15000);
 
   it('does not emit milestone:completed if only one of two M1 features is done', async () => {
     const events: unknown[] = [];
