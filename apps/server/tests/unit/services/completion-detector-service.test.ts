@@ -407,6 +407,151 @@ describe('CompletionDetectorService', () => {
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
 
+    /**
+     * BUG DOCUMENTATION: If a feature has epicId but NO milestoneSlug, and the epic
+     * also has no milestoneSlug, the milestone cascade never fires.
+     *
+     * Root cause: onFeatureDone only calls checkMilestoneCompletion when feature has
+     * BOTH projectSlug AND milestoneSlug set. checkEpicCompletion only calls
+     * checkMilestoneCompletion when epic has BOTH projectSlug AND milestoneSlug set.
+     * If these fields are absent, the milestone is silently skipped.
+     *
+     * This test documents the current (broken) behavior. It should be fixed by
+     * having the epic/feature look up their milestone association from the project.
+     */
+    it('should NOT cascade to milestone when milestoneSlug is missing from feature and epic (BUG)', async () => {
+      // Feature and epic both lack milestoneSlug — milestone cascade WILL NOT fire
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: 'Epic Without Milestone Slug',
+        status: 'in_progress',
+        isEpic: true,
+        projectSlug: 'proj',
+        // intentionally NO milestoneSlug — this is the bug condition
+      });
+      const child = createTestFeature({
+        id: 'child-1',
+        epicId: 'epic-1',
+        status: 'done',
+        projectSlug: 'proj',
+        // intentionally NO milestoneSlug — this is the bug condition
+      });
+
+      // Milestone exists and has the child as a phase — but cascade won't reach it
+      const milestone = createTestMilestone({
+        slug: 'ms-1',
+        phases: [
+          {
+            number: 1,
+            name: 'p1',
+            title: 'Phase 1',
+            description: '',
+            featureId: 'child-1',
+            complexity: 'small',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'Test Project',
+        slug: 'proj',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      featureLoader = createMockFeatureLoader([epic, child]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(
+        events as any,
+        featureLoader as any,
+        projectService as any,
+        settingsService as any
+      );
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Epic WILL complete (epicId-based lookup works fine)
+      expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:completed',
+        expect.objectContaining({ featureId: 'epic-1', isEpic: true })
+      );
+
+      // BUT milestone cascade will NOT fire — milestoneSlug is missing from both feature and epic
+      expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
+    });
+
+    /**
+     * TARGET BEHAVIOR: When milestoneSlug IS set on the feature, milestone cascade fires.
+     * This is the expected (working) path — already covered by the main happy-path test above,
+     * but included here explicitly alongside the bug test for contrast.
+     */
+    it('should cascade to milestone when milestoneSlug is set on feature (target behavior)', async () => {
+      const feature = createTestFeature({
+        id: 'f1',
+        status: 'done',
+        projectSlug: 'proj',
+        milestoneSlug: 'ms-1', // milestoneSlug IS set — cascade works
+        costUsd: 1.5,
+      });
+
+      const milestone = createTestMilestone({
+        slug: 'ms-1',
+        phases: [
+          {
+            number: 1,
+            name: 'p1',
+            title: 'Phase 1',
+            description: '',
+            featureId: 'f1',
+            complexity: 'small',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'Test Project',
+        slug: 'proj',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      featureLoader = createMockFeatureLoader([feature]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(
+        events as any,
+        featureLoader as any,
+        projectService as any,
+        settingsService as any
+      );
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'f1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Milestone cascade DOES fire when milestoneSlug is present
+      expect(events.emit).toHaveBeenCalledWith(
+        'milestone:completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          projectSlug: 'proj',
+          milestoneTitle: 'Foundation',
+        })
+      );
+    });
+
     it('should deduplicate milestone completion events', async () => {
       const feature1 = createTestFeature({
         id: 'f1',
