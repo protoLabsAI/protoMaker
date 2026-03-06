@@ -313,26 +313,8 @@ export class IntegrationService {
     const integrations = await this.getProjectIntegrations(payload.projectPath);
     if (!integrations) return;
 
-    // Discord: Send auto-mode completion notification
-    if (integrations.discord?.enabled && integrations.discord.notifyOnAutoModeComplete) {
-      // Create a placeholder feature for the event
-      const placeholderFeature = {
-        id: 'auto-mode',
-        title: 'Auto-Mode Completed',
-      } as Feature;
-
-      await this.emitDiscordEvent({
-        projectPath: payload.projectPath,
-        featureId: 'auto-mode',
-        feature: placeholderFeature,
-        serverId: integrations.discord.serverId,
-        channelId: integrations.discord.channelId,
-        webhookId: integrations.discord.webhookId,
-        webhookToken: integrations.discord.webhookToken,
-        action: 'send_message',
-        content: 'Auto-mode completed all features in backlog!',
-      });
-    }
+    // Discord auto-mode completion notification disabled — fires false positives
+    // when features exist but are dependency-blocked (auto_mode_idle != backlog empty)
   }
 
   /**
