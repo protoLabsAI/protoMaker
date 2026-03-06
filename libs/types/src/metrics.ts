@@ -15,6 +15,9 @@ export interface MetricsLedgerRecord {
   recordType: 'feature_completion';
   timestamp: string; // ISO 8601 write time
 
+  /** Distinguishes the terminal state that triggered this record */
+  entryType: 'completed' | 'escalated' | 'abandoned';
+
   // Feature identity
   featureId: string;
   featureTitle: string;
@@ -49,6 +52,14 @@ export interface MetricsLedgerRecord {
   failureCount: number;
   escalated: boolean;
   finalStatus: string;
+
+  // Failure context — populated for 'escalated' and 'abandoned' entries
+  /** Reason the feature was escalated (from the escalation signal or feature record) */
+  escalationReason?: string;
+  /** Most recent status change reason at the time of recording */
+  statusChangeReason?: string;
+  /** Last Langfuse trace ID from the most recent agent execution */
+  lastTraceId?: string;
 
   // Executions (denormalized history)
   executions: LedgerExecution[];
