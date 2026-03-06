@@ -1,5 +1,14 @@
 # @protolabsai/tools
 
+## 0.40.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - fallback to feature description when plan response is too short
+- Updated dependencies
+  - @protolabsai/types@0.40.4
+
 ## 0.40.3
 
 ### Patch Changes
