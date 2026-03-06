@@ -58,7 +58,8 @@ export class LedgerService {
   }
 
   /**
-   * Subscribe to feature:status-changed events to auto-record completions.
+   * Subscribe to feature:status-changed and escalation:signal-received events
+   * to auto-record completions, escalations, and abandoned features.
    */
   initialize(): void {
     this.unsubscribe = this.events.subscribe((type, payload) => {
@@ -73,9 +74,30 @@ export class LedgerService {
             logger.error(`Failed to record ledger entry for ${data.featureId}:`, err);
           });
         }
+      } else if (type === 'escalation:signal-received') {
+        const data = payload as {
+          type?: string;
+          context?: { featureId?: string; projectPath?: string; reason?: string };
+        };
+        if (
+          data.type === 'feature_escalated' &&
+          data.context?.featureId &&
+          data.context?.projectPath
+        ) {
+          this.handleFeatureEscalated(
+            data.context.projectPath,
+            data.context.featureId,
+            data.context.reason
+          ).catch((err) => {
+            logger.error(
+              `Failed to record escalated ledger entry for ${data.context?.featureId}:`,
+              err
+            );
+          });
+        }
       }
     });
-    logger.info('LedgerService initialized, listening for feature completions');
+    logger.info('LedgerService initialized, listening for feature completions and escalations');
   }
 
   /**
@@ -90,6 +112,8 @@ export class LedgerService {
 
   /**
    * Handle a feature reaching done/verified — read feature, build record, append.
+   * Features with prior failures (failureCount > 0) are recorded as 'abandoned';
+   * features with no failures are recorded as 'completed'.
    */
   private async handleFeatureCompleted(projectPath: string, featureId: string): Promise<void> {
     try {
@@ -98,27 +122,65 @@ export class LedgerService {
         logger.warn(`Feature ${featureId} not found for ledger recording`);
         return;
       }
-      await this.recordFeatureCompletion(projectPath, feature);
+      const entryType = (feature.failureCount ?? 0) > 0 ? 'abandoned' : 'completed';
+      await this.recordFeatureCompletion(projectPath, feature, { entryType });
     } catch (err) {
       logger.error(`Error recording completion for ${featureId}:`, err);
     }
   }
 
   /**
-   * Build and append a ledger record from a completed feature.
-   * Idempotent: skips if featureId already exists in the ledger.
+   * Handle a feature_escalated signal — read feature, build escalated record.
    */
-  async recordFeatureCompletion(projectPath: string, feature: Feature): Promise<void> {
-    const ledgerPath = getLedgerPath(projectPath);
+  private async handleFeatureEscalated(
+    projectPath: string,
+    featureId: string,
+    escalationReason?: string
+  ): Promise<void> {
+    try {
+      const feature = await this.featureLoader.get(projectPath, featureId);
+      if (!feature) {
+        logger.warn(`Feature ${featureId} not found for escalated ledger recording`);
+        return;
+      }
+      await this.recordFeatureCompletion(projectPath, feature, {
+        entryType: 'escalated',
+        escalationReason,
+      });
+    } catch (err) {
+      logger.error(`Error recording escalation for ${featureId}:`, err);
+    }
+  }
 
-    // Check for existing record (idempotent)
-    const existing = await this.hasRecord(projectPath, feature.id);
+  /**
+   * Build and append a ledger record from a completed/escalated/abandoned feature.
+   * Idempotent: skips if a record of the same entryType already exists for this featureId.
+   */
+  async recordFeatureCompletion(
+    projectPath: string,
+    feature: Feature,
+    options?: {
+      entryType?: 'completed' | 'escalated' | 'abandoned';
+      escalationReason?: string;
+    }
+  ): Promise<void> {
+    const ledgerPath = getLedgerPath(projectPath);
+    const entryType =
+      options?.entryType ?? ((feature.failureCount ?? 0) > 0 ? 'abandoned' : 'completed');
+
+    // Check for existing record of the same type (idempotent per entryType)
+    const existing = await this.hasRecordOfType(projectPath, feature.id, entryType);
     if (existing) {
-      logger.debug(`Ledger record already exists for feature ${feature.id}, skipping`);
+      logger.debug(
+        `Ledger record (${entryType}) already exists for feature ${feature.id}, skipping`
+      );
       return;
     }
 
-    const record = await this.buildRecord(feature, projectPath);
+    const record = await this.buildRecord(feature, projectPath, {
+      entryType,
+      escalationReason: options?.escalationReason,
+    });
 
     // Ensure directory exists
     const dir = path.dirname(ledgerPath);
@@ -135,15 +197,35 @@ export class LedgerService {
       costUsd: record.totalCostUsd,
     });
 
-    logger.debug(`Ledger record written for feature "${feature.title || feature.id}"`);
+    logger.debug(
+      `Ledger record (${entryType}) written for feature "${feature.title || feature.id}"`
+    );
   }
 
   /**
-   * Check if a record already exists for a given featureId
+   * Check if any record already exists for a given featureId
    */
   async hasRecord(projectPath: string, featureId: string): Promise<boolean> {
     const records = await this.getRecords(projectPath, {});
     return records.some((r) => r.featureId === featureId);
+  }
+
+  /**
+   * Check if a record of a specific entryType already exists for a given featureId.
+   * Old records without an entryType field are treated as 'completed' for backward compatibility.
+   */
+  async hasRecordOfType(
+    projectPath: string,
+    featureId: string,
+    entryType: 'completed' | 'escalated' | 'abandoned'
+  ): Promise<boolean> {
+    const records = await this.getRecords(projectPath, {});
+    return records.some((r) => {
+      if (r.featureId !== featureId) return false;
+      // Backward compat: records written before entryType was added default to 'completed'
+      const rEntryType = r.entryType ?? 'completed';
+      return rEntryType === entryType;
+    });
   }
 
   /**
@@ -214,7 +296,14 @@ export class LedgerService {
    * Build a MetricsLedgerRecord from a Feature object,
    * enriching with GitHub PR data when available.
    */
-  private async buildRecord(feature: Feature, projectPath?: string): Promise<MetricsLedgerRecord> {
+  private async buildRecord(
+    feature: Feature,
+    projectPath?: string,
+    options?: {
+      entryType?: 'completed' | 'escalated' | 'abandoned';
+      escalationReason?: string;
+    }
+  ): Promise<MetricsLedgerRecord> {
     const now = new Date().toISOString();
     const completedAt = feature.completedAt || now;
     const createdAt = feature.createdAt || now;
@@ -291,10 +380,14 @@ export class LedgerService {
         ? new Date(prMergedAt).getTime() - new Date(prCreatedAt).getTime()
         : undefined);
 
+    const entryType =
+      options?.entryType ?? ((feature.failureCount ?? 0) > 0 ? 'abandoned' : 'completed');
+
     return {
       recordId: randomUUID(),
       recordType: 'feature_completion',
       timestamp: now,
+      entryType,
       featureId: feature.id,
       featureTitle: feature.title || 'Untitled',
       category: feature.category,
@@ -326,6 +419,12 @@ export class LedgerService {
       commitCount,
       branchName: feature.branchName,
       assignedModel: feature.model,
+      // Populate failure context for escalated/abandoned entries
+      escalationReason:
+        options?.escalationReason ??
+        (entryType !== 'completed' ? feature.statusChangeReason : undefined),
+      statusChangeReason: feature.statusChangeReason,
+      lastTraceId: feature.lastTraceId,
     };
   }
 
