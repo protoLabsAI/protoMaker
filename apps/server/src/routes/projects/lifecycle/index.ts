@@ -15,6 +15,7 @@ import { createApprovePrdHandler } from './approve-prd.js';
 import { createLaunchHandler } from './launch.js';
 import { createStatusHandler } from './status.js';
 import { createRequestChangesHandler } from './request-changes.js';
+import { createSaveMilestonesHandler } from './save-milestones.js';
 import type { EventEmitter } from '../../../lib/events.js';
 
 export function createLifecycleRoutes(
@@ -63,6 +64,13 @@ export function createLifecycleRoutes(
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
     createRequestChangesHandler(projectService, events)
+  );
+
+  router.post(
+    '/save-milestones',
+    validatePathParams('projectPath'),
+    validateSlugs('projectSlug'),
+    createSaveMilestonesHandler(lifecycleService)
   );
 
   return router;
