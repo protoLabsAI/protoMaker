@@ -292,6 +292,73 @@ export const projectTools: Tool[] = [
     },
   },
   {
+    name: 'save_project_milestones',
+    description:
+      'Save structured milestone/phase data to a project. This bridges the gap between PM agent PRD output and approve_project_prd. ' +
+      'Call this after the PM agent generates a PRD to persist the structured milestones. ' +
+      'Pipeline: initiate_project → PM agent drafts PRD → save_project_milestones → approve_project_prd → launch_project',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description: 'Project slug',
+        },
+        milestones: {
+          type: 'array',
+          description: 'Structured milestone and phase data parsed from PM agent PRD output',
+          items: {
+            type: 'object',
+            properties: {
+              number: { type: 'number', description: 'Milestone number (1-based)' },
+              slug: { type: 'string', description: 'Milestone slug' },
+              title: { type: 'string', description: 'Milestone title' },
+              description: { type: 'string', description: 'Milestone description' },
+              status: {
+                type: 'string',
+                enum: ['stub', 'planning', 'planned', 'pending', 'in-progress', 'completed'],
+                description: 'Milestone status (default: planned)',
+              },
+              targetDate: { type: 'string', description: 'Target date (YYYY-MM-DD)' },
+              dependencies: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Dependent milestone slugs',
+              },
+              phases: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    number: { type: 'number', description: 'Phase number (1-based)' },
+                    name: { type: 'string', description: 'Phase slug/name' },
+                    title: { type: 'string', description: 'Phase title' },
+                    description: { type: 'string', description: 'Phase description' },
+                    complexity: {
+                      type: 'string',
+                      enum: ['small', 'medium', 'large'],
+                      description: 'Complexity estimate',
+                    },
+                    filesToModify: { type: 'array', items: { type: 'string' } },
+                    acceptanceCriteria: { type: 'array', items: { type: 'string' } },
+                    dependencies: { type: 'array', items: { type: 'string' } },
+                  },
+                  required: ['number', 'name', 'title', 'description'],
+                },
+              },
+            },
+            required: ['number', 'slug', 'title', 'description', 'phases'],
+          },
+        },
+      },
+      required: ['projectPath', 'projectSlug', 'milestones'],
+    },
+  },
+  {
     name: 'approve_project_prd',
     description:
       'Approve the PRD and create board features from project milestones. Call after the project has a PRD and milestones defined.',
