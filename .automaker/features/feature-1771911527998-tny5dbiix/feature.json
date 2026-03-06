@@ -2,7 +2,7 @@
   "category": "Failure Triage & Constraint Engineering",
   "description": "**Milestone:** Failure Triage & Constraint Engineering\n\nConnect the existing but unused FailureCategory/FailureAnalysis types from libs/types/src/failure.ts to the EscalateProcessor in lead-engineer-service.ts. Create a small FailureClassifierService that pattern-matches escalation reason strings to structured categories and recovery strategies. Store the FailureAnalysis result on the escalation event and in the feature's blocked metadata so humans reviewing escalations can see a structured root-cause classification rather than a free-text string.\n\nThe failure.ts types are fully defined: FailureCategory enum (transient, rate_limit, quota, validation, tool_error, test_failure, merge_conflict, dependency, authentication, unknown), RecoveryStrategy union, and FailureAnalysis interface (category, isRetryable, suggestedDelay, maxRetries, recoveryStrategy, explanation). The classifyError() utility in @automaker/utils already exists. This phase is purely about connecting them.\n\n**Files to Modify:**\n- apps/server/src/services/failure-classifier-service.ts\n- apps/server/src/services/lead-engineer-service.ts\n\n**Acceptance Criteria:**\n- [ ] EscalateProcessor calls failure classifier and attaches FailureAnalysis to escalation event\n- [ ] All 9+ escalation reason strings map to a non-unknown FailureCategory\n- [ ] Escalation events include structured recovery strategy\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** small",
   "title": "Wire Structured Failure Classification",
-  "status": "verified",
+  "status": "done",
   "isEpic": false,
   "branchName": "feature/failure-triage-wire-structured",
   "isFoundation": true,

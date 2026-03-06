@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Refactor: decompose pr-feedback-service.ts (2,455 lines)\n\napps/server/src/services/pr-feedback-service.ts is 2,455 lines. Should be split into CodeRabbitParser, ThreadResolver, PRStatusChecker, FeedbackAggregator. Target: no single file over 400 lines.",
   "title": "[linear] Refactor: decompose pr-feedback-service.ts (2,455 lines)",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "linearIssueId": "25c232f2-485b-435b-b929-296e33389f0b",

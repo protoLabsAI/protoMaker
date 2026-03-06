@@ -2,7 +2,7 @@
   "category": "Trajectory Store & Learning Flywheel",
   "description": "**Milestone:** Trajectory Store & Learning Flywheel\n\nPopulate the existing ctx.siblingReflections placeholder (StateContext line 124) by calling trajectoryStore.loadSiblings() during StateContext hydration. Then inject the loaded trajectories into the agent system prompt via buildSystemPrompt() in dynamic-agent-executor.ts.\n\nThe sibling context should be formatted concisely: for each trajectory, show domain, complexity, what was attempted, what succeeded/failed, and any key learnings. Cap at 3 siblings and ~500 tokens total to avoid bloating prompts. Only inject trajectories where verified=true (successfully merged) to prevent propagating bad patterns.\n\n**Files to Modify:**\n- apps/server/src/services/lead-engineer-service.ts\n- apps/server/src/services/dynamic-agent-executor.ts\n\n**Acceptance Criteria:**\n- [ ] StateContext.siblingReflections populated from trajectory store during ExecuteProcessor context hydration\n- [ ] buildSystemPrompt() renders sibling trajectories under a 'Lessons from Similar Features' section when present\n- [ ] Only verified=true trajectories are injected\n- [ ] Maximum 3 siblings, ~500 token cap enforced\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** small",
   "title": "Sibling Reflection Wiring",
-  "status": "verified",
+  "status": "done",
   "isEpic": false,
   "branchName": "feature/trajectory-store-sibling-reflection",
   "isFoundation": false,

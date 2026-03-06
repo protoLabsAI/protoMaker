@@ -1,15 +1,15 @@
 {
   "category": "Signal Intake",
-  "description": "Record gameplay demo video / GIFs for marketing\n\nRecord compelling demo content showing MythxEngine in action:\\\\n- World generation flow (prompt → world pack)\\\\n- Character creation\\\\n- Gameplay: dialogue, combat, exploration\\\\n- AI GM narration and dice rolls\\\\n\\\\nFormats needed:\\\\n- Short GIFs (3-5s) for README and landing page\\\\n- 60-90s demo video for social/YouTube\\\\n- Screenshots for OG images and marketing",
+  "description": "Record gameplay demo video / GIFs for marketing\n\nRecord compelling demo content showing MythxEngine in action:\\\\n- World generation flow (prompt \u2192 world pack)\\\\n- Character creation\\\\n- Gameplay: dialogue, combat, exploration\\\\n- AI GM narration and dice rolls\\\\n\\\\nFormats needed:\\\\n- Short GIFs (3-5s) for README and landing page\\\\n- 60-90s demo video for social/YouTube\\\\n- Screenshots for OG images and marketing",
   "title": "[linear] Record gameplay demo video / GIFs for marketing",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "id": "feature-1771953010897-0emd19b8u",
   "branchName": "feature/linear-record-gameplay-demo-video-gifs",
   "descriptionHistory": [
     {
-      "description": "Record gameplay demo video / GIFs for marketing\n\nRecord compelling demo content showing MythxEngine in action:\\\\n- World generation flow (prompt → world pack)\\\\n- Character creation\\\\n- Gameplay: dialogue, combat, exploration\\\\n- AI GM narration and dice rolls\\\\n\\\\nFormats needed:\\\\n- Short GIFs (3-5s) for README and landing page\\\\n- 60-90s demo video for social/YouTube\\\\n- Screenshots for OG images and marketing",
+      "description": "Record gameplay demo video / GIFs for marketing\n\nRecord compelling demo content showing MythxEngine in action:\\\\n- World generation flow (prompt \u2192 world pack)\\\\n- Character creation\\\\n- Gameplay: dialogue, combat, exploration\\\\n- AI GM narration and dice rolls\\\\n\\\\nFormats needed:\\\\n- Short GIFs (3-5s) for README and landing page\\\\n- 60-90s demo video for social/YouTube\\\\n- Screenshots for OG images and marketing",
       "timestamp": "2026-02-24T17:10:10.897Z",
       "source": "initial"
     }

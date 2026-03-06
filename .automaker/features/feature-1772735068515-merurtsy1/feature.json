@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Claude API Context Editing\n\nWire Claude's native context management features as a second defense layer. This lets Claude itself manage context when our compaction isn't enough.\n\n## Phases\n1. Wire providerOptions for context management\n2. Server-side compaction safety net",
   "title": "[Epic] Claude API Context Editing",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#7C3AED",
   "branchName": "epic/claude-api-context-editing",

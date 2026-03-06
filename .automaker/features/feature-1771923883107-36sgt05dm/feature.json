@@ -1,8 +1,8 @@
 {
   "category": "HyPE Pre-Computed Query Embeddings",
   "description": "**Milestone:** HyPE Pre-Computed Query Embeddings\n\nAdd hype_queries TEXT column (JSON array) and hype_embeddings BLOB column to chunks table. Add a HyPE background worker in KnowledgeStoreService: after embeddings are computed for a chunk, if hype_queries is null, call Haiku with prompt: 'Generate 3 short, specific questions that this text answers. Return only a JSON array of strings, no explanation. Text: {chunk.heading} {chunk.content.slice(0,500)}'. Parse the JSON array, store in hype_queries. Then embed each question (via EmbeddingService.embedBatch), average the resulting vectors into a single representative query embedding, store in hype_embeddings BLOB. This runs as a background async job after the embedding worker completes, non-blocking. Add getHypeStatus(projectPath) returning {total, hype_ready, pending}. Configuration: hypeEnabled: boolean in KnowledgeStoreSettings (default: true when hybridRetrieval enabled). Rate-limit the Haiku calls to max 10/minute to avoid API quota issues.\n\n**Files to Modify:**\n- apps/server/src/services/knowledge-store-service.ts\n- libs/types/src/knowledge.ts\n\n**Acceptance Criteria:**\n- [ ] HyPE background worker generates 3 queries per chunk via Haiku\n- [ ] hype_queries stored as JSON array, hype_embeddings as averaged Float32Array BLOB\n- [ ] Worker rate-limited to 10 Haiku calls/minute\n- [ ] getHypeStatus() returns progress statistics\n- [ ] hypeEnabled setting toggles the worker\n- [ ] npm run build:server passes\n\n**Complexity:** medium",
-  "title": "HyPE Ingestion — Hypothetical Query Generation",
-  "status": "verified",
+  "title": "HyPE Ingestion \u2014 Hypothetical Query Generation",
+  "status": "done",
   "isEpic": false,
   "branchName": "feature/hype-pre-computed-hype-ingestion",
   "isFoundation": true,

@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "Refactor: split settings.ts types into domain files (2,485 lines)\n\nlibs/types/src/settings.ts is 2,485 lines of type definitions. Should be split by domain: git-settings.ts, agent-settings.ts, ui-settings.ts, integration-settings.ts, etc., with a barrel re-export. Target: no single file over 400 lines.",
   "title": "[linear] Refactor: split settings.ts types into domain files (2,485 lines)",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "linearIssueId": "321f8e39-3d93-4f98-a1f9-76b7cfd98fa5",

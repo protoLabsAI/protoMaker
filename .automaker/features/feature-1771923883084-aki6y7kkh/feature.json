@@ -2,7 +2,7 @@
   "category": "Knowledge Store Foundation",
   "description": "**Milestone:** Knowledge Store Foundation\n\nAdd KnowledgeChunk, KnowledgeSearchResult, KnowledgeStoreStats, and KnowledgeStoreSettings types to libs/types/src/knowledge.ts and export from libs/types/src/index.ts. Implement KnowledgeStoreService in apps/server/src/services/knowledge-store-service.ts using better-sqlite3. Schema: chunks table (id TEXT PK, source_type TEXT, source_file TEXT, project_path TEXT, chunk_index INT, heading TEXT, content TEXT, tags TEXT, importance REAL, created_at TEXT, updated_at TEXT) plus a FTS5 virtual table 'chunks_fts' that indexes heading+content. Methods: initialize(projectPath), getStats(), close(). The SQLite file lives at {projectPath}/.automaker/knowledge.db. Use WAL mode for concurrent read performance.\n\n**Files to Modify:**\n- libs/types/src/knowledge.ts\n- libs/types/src/index.ts\n- apps/server/src/services/knowledge-store-service.ts\n\n**Acceptance Criteria:**\n- [ ] KnowledgeChunk, KnowledgeSearchResult, KnowledgeStoreStats types defined and exported from @automaker/types\n- [ ] KnowledgeStoreService.initialize() creates knowledge.db with correct schema in .automaker/\n- [ ] FTS5 virtual table created with heading+content columns\n- [ ] WAL mode enabled\n- [ ] npm run build:packages && npm run build:server passes with zero type errors\n\n**Complexity:** medium",
   "title": "Types, Schema & KnowledgeStoreService",
-  "status": "verified",
+  "status": "done",
   "isEpic": false,
   "branchName": "feature/knowledge-store-types-schema",
   "isFoundation": true,

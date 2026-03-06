@@ -2,7 +2,7 @@
   "category": "Signal Intake",
   "description": "License selection and legal review\n\nDecide on licensing strategy:\\\\n- Open source license for engine/tools packages (MIT? Apache 2.0?)\\\\n- License for web app and desktop app (if different)\\\\n- Review all dependency licenses for compatibility\\\\n- Add LICENSE file to repo\\\\n- Add license headers to source files if needed\\\\n- Terms of service / privacy policy for hosted version (if applicable)",
   "title": "[linear] License selection and legal review",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "id": "feature-1771953021548-bnntoc4sd",

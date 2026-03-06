@@ -1,8 +1,8 @@
 {
   "category": "Trajectory Store & Learning Flywheel",
   "description": "**Milestone:** Trajectory Store & Learning Flywheel\n\nImplement TrajectoryStoreService that persists a structured trajectory record on every ExecuteProcessor exit (success or failure). Store to .automaker/trajectory/{featureId}/attempt-{N}.json. The service needs two primary methods: recordAttempt() called by ExecuteProcessor on completion, and loadSiblings() for retrieving recent trajectories from features in the same domain/complexity tier.\n\nTrajectory fields: featureId, domain (frontend/backend/devops etc), complexity, model used, planSummary (first 500 chars of plan), executionSummary (agent output summary), costUsd, durationMs, retryCount, escalationReason (if any), verified (true only after PR merged), timestamp.\n\nWrite must be async and non-blocking (fire-and-forget on the hot path). Add VerifiedTrajectory type to libs/types/src/trajectory.ts. Register service in apps/server/src/index.ts.\n\n**Files to Modify:**\n- libs/types/src/trajectory.ts\n- libs/types/src/index.ts\n- apps/server/src/services/trajectory-store-service.ts\n- apps/server/src/services/lead-engineer-service.ts\n- apps/server/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] VerifiedTrajectory type defined and exported from @automaker/types\n- [ ] TrajectoryStoreService.recordAttempt() writes JSON to .automaker/trajectory/{featureId}/attempt-N.json\n- [ ] TrajectoryStoreService.loadSiblings() returns up to 3 most recent verified trajectories for matching domain/complexity\n- [ ] ExecuteProcessor calls recordAttempt() on both success and failure exits (non-blocking)\n- [ ] npm run build:packages passes\n- [ ] npm run build:server passes\n- [ ] npm run test:server passes\n\n**Complexity:** medium",
-  "title": "TrajectoryStoreService — Verified Execution Trajectories",
-  "status": "verified",
+  "title": "TrajectoryStoreService \u2014 Verified Execution Trajectories",
+  "status": "done",
   "isEpic": false,
   "branchName": "feature/trajectory-store-trajectorystoreservi",
   "isFoundation": true,

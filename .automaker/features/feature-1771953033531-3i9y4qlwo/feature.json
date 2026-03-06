@@ -1,15 +1,15 @@
 {
   "category": "Signal Intake",
-  "description": "Hosted deployment: set up web app on Vercel or similar\n\nDeploy the web app to a hosted environment so users can try MythxEngine without downloading the desktop app:\\\\n\\\\n- Deploy Next.js app to Vercel (or Railway/Fly.io if server-side features need it)\\\\n- Configure environment variables (ANTHROPIC_API_KEY for demo, or require user's own key)\\\\n- Set up database (SQLite → Turso/Neon for hosted)\\\\n- Configure CORS and security headers\\\\n- Set up monitoring and logging\\\\n- Performance testing under load",
+  "description": "Hosted deployment: set up web app on Vercel or similar\n\nDeploy the web app to a hosted environment so users can try MythxEngine without downloading the desktop app:\\\\n\\\\n- Deploy Next.js app to Vercel (or Railway/Fly.io if server-side features need it)\\\\n- Configure environment variables (ANTHROPIC_API_KEY for demo, or require user's own key)\\\\n- Set up database (SQLite \u2192 Turso/Neon for hosted)\\\\n- Configure CORS and security headers\\\\n- Set up monitoring and logging\\\\n- Performance testing under load",
   "title": "[linear] Hosted deployment: set up web app on Vercel or similar",
-  "status": "verified",
+  "status": "done",
   "complexity": "medium",
   "workItemState": "research",
   "id": "feature-1771953033531-3i9y4qlwo",
   "branchName": "feature/linear-hosted-deployment-set-up-web-app",
   "descriptionHistory": [
     {
-      "description": "Hosted deployment: set up web app on Vercel or similar\n\nDeploy the web app to a hosted environment so users can try MythxEngine without downloading the desktop app:\\\\n\\\\n- Deploy Next.js app to Vercel (or Railway/Fly.io if server-side features need it)\\\\n- Configure environment variables (ANTHROPIC_API_KEY for demo, or require user's own key)\\\\n- Set up database (SQLite → Turso/Neon for hosted)\\\\n- Configure CORS and security headers\\\\n- Set up monitoring and logging\\\\n- Performance testing under load",
+      "description": "Hosted deployment: set up web app on Vercel or similar\n\nDeploy the web app to a hosted environment so users can try MythxEngine without downloading the desktop app:\\\\n\\\\n- Deploy Next.js app to Vercel (or Railway/Fly.io if server-side features need it)\\\\n- Configure environment variables (ANTHROPIC_API_KEY for demo, or require user's own key)\\\\n- Set up database (SQLite \u2192 Turso/Neon for hosted)\\\\n- Configure CORS and security headers\\\\n- Set up monitoring and logging\\\\n- Performance testing under load",
       "timestamp": "2026-02-24T17:10:33.531Z",
       "source": "initial"
     }
