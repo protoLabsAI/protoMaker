@@ -144,7 +144,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
       expect(events.emit).toHaveBeenCalledWith(
@@ -181,7 +181,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.update).not.toHaveBeenCalled();
     });
@@ -205,7 +205,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.update).not.toHaveBeenCalled();
     });
@@ -273,7 +273,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).toHaveBeenCalledWith(
         'milestone:completed',
@@ -338,7 +338,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
@@ -402,7 +402,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
@@ -475,7 +475,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Epic WILL complete (epicId-based lookup works fine)
       expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
@@ -539,7 +539,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Milestone cascade DOES fire when milestoneSlug is present
       expect(events.emit).toHaveBeenCalledWith(
@@ -598,7 +598,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -607,7 +607,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const milestoneCalls = events.emit.mock.calls.filter(
         (c: unknown[]) => c[0] === 'milestone:completed'
@@ -665,7 +665,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).toHaveBeenCalledWith(
         'project:completed',
@@ -722,7 +722,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -731,7 +731,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const projectCalls = events.emit.mock.calls.filter(
         (c: unknown[]) => c[0] === 'project:completed'
@@ -758,7 +758,7 @@ describe('CompletionDetectorService', () => {
         passes: true,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Should have called get to load the feature
       expect(featureLoader.get).toHaveBeenCalledWith('/test/path', 'f1');
@@ -779,7 +779,7 @@ describe('CompletionDetectorService', () => {
         passes: false,
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.get).not.toHaveBeenCalled();
     });
@@ -822,7 +822,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
