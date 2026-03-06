@@ -16,7 +16,10 @@ export async function register(container: ServiceContainer): Promise<void> {
 
   // Initialize ID set from disk (non-blocking — starts the Promise but doesn't await it here)
   void eventLedgerService.initialize().catch((err) => {
-    logger.warn('EventLedger: initialization failed, idempotency checks may miss existing IDs', err);
+    logger.warn(
+      'EventLedger: initialization failed, idempotency checks may miss existing IDs',
+      err
+    );
   });
 
   // Subscribe to all 13 lifecycle events

@@ -373,7 +373,10 @@ describe('EventLedgerService.subscribeToLifecycleEvents', () => {
 
   it('all 13 lifecycle event types produce at least one ledger entry', () => {
     const allEvents: Array<[string, Record<string, unknown>]> = [
-      ['feature:status-changed', { featureId: 'f1', previousStatus: 'backlog', newStatus: 'in_progress' }],
+      [
+        'feature:status-changed',
+        { featureId: 'f1', previousStatus: 'backlog', newStatus: 'in_progress' },
+      ],
       ['feature:started', { featureId: 'f2' }],
       ['feature:completed', { featureId: 'f3' }],
       ['feature:error', { featureId: 'f4' }],

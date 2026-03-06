@@ -421,9 +421,7 @@ export class EventLedgerService {
 
     unsubscribes.push(unsubscribe);
 
-    logger.info(
-      `EventLedger: subscribed to ${LIFECYCLE_EVENT_TYPES.length} lifecycle event types`
-    );
+    logger.info(`EventLedger: subscribed to ${LIFECYCLE_EVENT_TYPES.length} lifecycle event types`);
 
     return () => {
       for (const unsub of unsubscribes) unsub();
