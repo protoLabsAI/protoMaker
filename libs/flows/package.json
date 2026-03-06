@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/flows",
-  "version": "0.40.2",
+  "version": "0.40.3",
   "type": "module",
   "description": "LangGraph state graph examples and patterns for AutoMaker",
   "main": "dist/index.js",
@@ -37,11 +37,11 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "@protolabsai/model-resolver": "^0.40.2",
-    "@protolabsai/observability": "^0.40.2",
-    "@protolabsai/prompts": "^0.40.2",
-    "@protolabsai/types": "^0.40.2",
-    "@protolabsai/utils": "^0.40.2",
+    "@protolabsai/model-resolver": "^0.40.3",
+    "@protolabsai/observability": "^0.40.3",
+    "@protolabsai/prompts": "^0.40.3",
+    "@protolabsai/types": "^0.40.3",
+    "@protolabsai/utils": "^0.40.3",
     "@langchain/anthropic": "^0.3.10",
     "@langchain/core": "^0.3.33",
     "@langchain/langgraph": "^0.2.26"

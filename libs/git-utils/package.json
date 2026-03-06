@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/git-utils",
-  "version": "0.40.2",
+  "version": "0.40.3",
   "type": "module",
   "description": "Git operations utilities for AutoMaker",
   "main": "dist/index.js",
@@ -26,8 +26,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.40.2",
-    "@protolabsai/utils": "^0.40.2"
+    "@protolabsai/types": "^0.40.3",
+    "@protolabsai/utils": "^0.40.3"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
