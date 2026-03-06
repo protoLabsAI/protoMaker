@@ -169,7 +169,10 @@ export class CompletionDetectorService {
   }
 
   /**
-   * Check if all phase features in a milestone are done.
+   * Check if all features belonging to a milestone are done.
+   * Uses milestoneSlug on features as the primary signal; falls back to
+   * phase featureId links when features lack milestoneSlug (e.g. epic-child features).
+   * All milestone phases must also be scaffolded (have featureId) before completion fires.
    * If so, emit milestone:completed (CeremonyService picks this up).
    */
   private async checkMilestoneCompletion(
@@ -186,10 +189,25 @@ export class CompletionDetectorService {
     const milestone = project.milestones.find((m) => m.slug === milestoneSlug);
     if (!milestone || milestone.status === 'completed') return;
 
-    // Check all phases have featureIds and those features are done
     const allFeatures = await this.featureLoader!.getAll(projectPath);
-    const allPhasesDone = this.areMilestonePhasesDone(milestone, allFeatures);
-    if (!allPhasesDone) return;
+
+    // Guard: all phases must be scaffolded (every phase has a featureId assigned)
+    if (!milestone.phases.length || !milestone.phases.every((p) => p.featureId)) return;
+
+    // Primary check: query features by milestoneSlug
+    const milestoneFeatures = allFeatures.filter((f) => f.milestoneSlug === milestoneSlug);
+
+    if (milestoneFeatures.length > 0) {
+      // Features explicitly reference this milestone — use them as ground truth
+      if (!milestoneFeatures.every((f) => f.status === 'done')) return;
+    } else {
+      // Fallback: no features have milestoneSlug set (e.g. epic-child features)
+      // Fall back to checking each phase's feature by its featureId
+      for (const phase of milestone.phases) {
+        const feature = allFeatures.find((f) => f.id === phase.featureId);
+        if (!feature || feature.status !== 'done') return;
+      }
+    }
 
     // Mark milestone completed
     this.completionCounts.milestones++;
@@ -212,6 +230,7 @@ export class CompletionDetectorService {
       projectPath,
       projectTitle: project.title,
       projectSlug,
+      milestoneSlug,
       milestoneTitle: milestone.title,
       milestoneNumber,
       featureCount: stats.featureCount,
@@ -267,20 +286,6 @@ export class CompletionDetectorService {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────
-
-  private areMilestonePhasesDone(milestone: Milestone, allFeatures: Feature[]): boolean {
-    if (!milestone.phases.length) return false;
-
-    // All phases must have a featureId — uncreated phases mean the milestone isn't done
-    if (!milestone.phases.every((p) => p.featureId)) return false;
-
-    for (const phase of milestone.phases) {
-      const feature = allFeatures.find((f) => f.id === phase.featureId);
-      if (!feature || feature.status !== 'done') return false;
-    }
-
-    return true;
-  }
 
   private aggregateMilestoneStats(
     milestone: Milestone,
