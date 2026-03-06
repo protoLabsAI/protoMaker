@@ -85,6 +85,7 @@ import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
+import { createLedgerRoutes } from '../routes/ledger/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -412,6 +413,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createProjectPmRoutes(projectPmService, projectService, ceremonyService, featureLoader, events)
   );
   logger.info('Project PM routes mounted at /api/project-pm');
+
+  // Ledger REST endpoints (event persistence layer)
+  app.use('/api/ledger', createLedgerRoutes(ledgerService, featureLoader));
+  logger.info('Ledger routes mounted at /api/ledger');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
