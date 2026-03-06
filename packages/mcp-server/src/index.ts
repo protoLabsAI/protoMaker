@@ -1159,6 +1159,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         additionalContext: args.additionalContext,
       });
 
+    case 'save_project_milestones':
+      return apiCall('/projects/lifecycle/save-milestones', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        milestones: args.milestones,
+      });
+
     case 'approve_project_prd':
       return apiCall('/projects/lifecycle/approve-prd', {
         projectPath: args.projectPath,
