@@ -48,10 +48,7 @@ vi.mock('node:child_process', () => ({
   execFile: vi.fn(),
 }));
 vi.mock('node:util', () => ({
-  promisify: vi.fn(
-    () =>
-      async (..._args: unknown[]) => ({ stdout: '[]', stderr: '' })
-  ),
+  promisify: vi.fn(() => async (..._args: unknown[]) => ({ stdout: '[]', stderr: '' })),
 }));
 
 describe('LedgerService', () => {
@@ -90,10 +87,7 @@ describe('LedgerService', () => {
 
     events = createEventEmitter();
 
-    ledgerService = new LedgerService(
-      mockFeatureLoader as unknown as FeatureLoader,
-      events
-    );
+    ledgerService = new LedgerService(mockFeatureLoader as unknown as FeatureLoader, events);
   });
 
   describe('recordFeatureCompletion — only done/verified features get ledger entries', () => {
@@ -287,8 +281,22 @@ describe('LedgerService', () => {
     it('backfills done and verified features, skips all others', async () => {
       const now = new Date().toISOString();
       const features: Partial<Feature>[] = [
-        { id: 'f-done', status: 'done', title: 'Done', completedAt: now, category: 'ui', description: '' },
-        { id: 'f-verified', status: 'verified', title: 'Verified', completedAt: now, category: 'ui', description: '' },
+        {
+          id: 'f-done',
+          status: 'done',
+          title: 'Done',
+          completedAt: now,
+          category: 'ui',
+          description: '',
+        },
+        {
+          id: 'f-verified',
+          status: 'verified',
+          title: 'Verified',
+          completedAt: now,
+          category: 'ui',
+          description: '',
+        },
         { id: 'f-failed', status: 'failed', title: 'Failed', category: 'ui', description: '' },
         { id: 'f-blocked', status: 'blocked', title: 'Blocked', category: 'ui', description: '' },
         { id: 'f-active', status: 'in_progress', title: 'Active', category: 'ui', description: '' },
