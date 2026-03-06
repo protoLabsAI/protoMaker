@@ -327,7 +327,10 @@ export class FeatureStateMachine {
     }
 
     // Clean up checkpoint on terminal states
-    if (this.checkpointService && (currentState === 'DEPLOY' || currentState === 'ESCALATE')) {
+    if (
+      this.checkpointService &&
+      (currentState === 'DONE' || currentState === 'DEPLOY' || currentState === 'ESCALATE')
+    ) {
       try {
         await this.checkpointService.delete(projectPath, feature.id);
       } catch {

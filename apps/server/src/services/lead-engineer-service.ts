@@ -311,6 +311,20 @@ export class LeadEngineerService {
       const feature = await this.featureLoader.get(projectPath, featureId);
       if (!feature) throw new Error(`Feature ${featureId} not found`);
 
+      // Guard: skip features already in terminal states
+      const terminalStatuses = new Set(['done', 'completed', 'verified']);
+      if (feature.status && terminalStatuses.has(feature.status)) {
+        logger.info(
+          `[LeadEngineer] Skipping feature ${featureId} — already in terminal status "${feature.status}"`
+        );
+        this.activeFeatures.delete(featureId);
+        return {
+          outcome: 'completed',
+          finalState: FeatureState.DONE,
+          failureCount: 0,
+        };
+      }
+
       let resumeFromCheckpoint:
         | { state: FeatureProcessingState; restoredContext?: Partial<StateContext> }
         | undefined;
