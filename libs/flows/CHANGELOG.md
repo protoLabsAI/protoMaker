@@ -1,5 +1,18 @@
 # @protolabsai/flows
 
+## 0.40.4
+
+### Patch Changes
+
+- ### Bug Fixes
+  - fallback to feature description when plan response is too short
+- Updated dependencies
+  - @protolabsai/types@0.40.4
+  - @protolabsai/utils@0.40.4
+  - @protolabsai/prompts@0.40.4
+  - @protolabsai/model-resolver@0.40.4
+  - @protolabsai/observability@0.40.4
+
 ## 0.40.3
 
 ### Patch Changes
