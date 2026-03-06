@@ -113,7 +113,7 @@ export interface AvaToolsConfig {
   agentControl?: boolean;
   /** Enable auto-mode tools (get_auto_mode_status, start_auto_mode, stop_auto_mode) */
   autoMode?: boolean;
-  /** Enable project management tools (get_project_spec, update_project_spec) */
+  /** Enable project management tools (get_project_spec, update_project_spec, update_project) */
   projectMgmt?: boolean;
   /** Enable orchestration tools (get_execution_order, set_feature_dependencies) */
   orchestration?: boolean;
@@ -588,6 +588,48 @@ export function buildAvaTools(
         await fs.mkdir(specDir, { recursive: true });
         await fs.writeFile(specPath, content, 'utf-8');
         return { success: true, path: specPath };
+      },
+    });
+
+    tools['update_project'] = makeTool({
+      description:
+        'Update a project plan. Can update title, goal, or status (e.g. mark as completed).',
+      inputSchema: z.object({
+        projectSlug: z.string().describe('The project slug to update'),
+        title: z.string().optional().describe('New title (optional)'),
+        goal: z.string().optional().describe('New goal (optional)'),
+        status: z
+          .enum([
+            'ongoing',
+            'researching',
+            'drafting',
+            'reviewing',
+            'approved',
+            'scaffolded',
+            'active',
+            'completed',
+          ])
+          .optional()
+          .describe('New status (optional)'),
+      }),
+      execute: async ({ projectSlug, title, goal, status }) => {
+        if (!services.projectService) {
+          return { error: 'Project service not available' };
+        }
+        const updated = await services.projectService.updateProject(projectPath, projectSlug, {
+          ...(title !== undefined && { title }),
+          ...(goal !== undefined && { goal }),
+          ...(status !== undefined && { status }),
+        });
+        if (!updated) {
+          return { error: `Project "${projectSlug}" not found` };
+        }
+        return {
+          slug: updated.slug,
+          title: updated.title,
+          goal: updated.goal,
+          status: updated.status,
+        };
       },
     });
   }
