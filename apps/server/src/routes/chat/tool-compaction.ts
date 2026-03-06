@@ -222,6 +222,8 @@ export function compactToolResult(toolName: string, result: unknown): unknown {
       return truncateTextField(result, 'content');
     case 'update_project_spec':
       return result;
+    case 'update_project':
+      return result;
 
     // orchestration
     case 'get_execution_order':
