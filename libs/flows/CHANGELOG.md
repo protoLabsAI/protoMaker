@@ -1,5 +1,18 @@
 # @protolabsai/flows
 
+## 0.40.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - propagate PipelineResult outcome through FeatureScheduler
+- Updated dependencies
+  - @protolabsai/types@0.40.5
+  - @protolabsai/utils@0.40.5
+  - @protolabsai/prompts@0.40.5
+  - @protolabsai/model-resolver@0.40.5
+  - @protolabsai/observability@0.40.5
+
 ## 0.40.4
 
 ### Patch Changes

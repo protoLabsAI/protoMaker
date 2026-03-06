@@ -1,5 +1,12 @@
 # @protolabsai/types
 
+## 0.40.5
+
+### Patch Changes
+
+- ### Bug Fixes
+  - propagate PipelineResult outcome through FeatureScheduler
+
 ## 0.40.4
 
 ### Patch Changes

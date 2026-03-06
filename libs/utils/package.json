@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/utils",
-  "version": "0.40.4",
+  "version": "0.40.5",
   "type": "module",
   "description": "Shared utility functions for AutoMaker",
   "main": "dist/index.js",
@@ -35,8 +35,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/platform": "^0.40.4",
-    "@protolabsai/types": "^0.40.4"
+    "@protolabsai/platform": "^0.40.5",
+    "@protolabsai/types": "^0.40.5"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
