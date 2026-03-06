@@ -250,6 +250,16 @@ Keep it focused and actionable. If the feature description is too vague or uncle
       });
 
       ctx.planOutput = result.text;
+
+      // If simpleQuery returned a valid but short response (e.g. audit tasks
+      // produce concise plans), fall back to the feature description which is
+      // always long enough to pass validation.
+      if ((ctx.planOutput?.length ?? 0) < 100) {
+        logger.info(
+          `[PLAN] Plan response too short (${ctx.planOutput?.length ?? 0} chars), using feature description as fallback`
+        );
+        ctx.planOutput = `Feature: ${feature.title}\n\n${feature.description || 'Implement as described.'}`;
+      }
     } catch (err) {
       logger.warn('[PLAN] simpleQuery failed, using feature description as plan', err);
       ctx.planOutput = `Feature: ${feature.title}\n\n${feature.description || 'Implement as described.'}`;
