@@ -15,7 +15,10 @@ import type { Request, Response } from 'express';
 import type { LedgerService } from '../../services/ledger-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 
-export function createLedgerRoutes(ledgerService: LedgerService, featureLoader: FeatureLoader): Router {
+export function createLedgerRoutes(
+  ledgerService: LedgerService,
+  featureLoader: FeatureLoader
+): Router {
   const router = Router();
 
   /**
@@ -36,9 +39,7 @@ export function createLedgerRoutes(ledgerService: LedgerService, featureLoader: 
       >;
 
       if (!projectPath) {
-        res
-          .status(400)
-          .json({ success: false, error: 'projectPath query parameter is required' });
+        res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
         return;
       }
 
@@ -75,9 +76,7 @@ export function createLedgerRoutes(ledgerService: LedgerService, featureLoader: 
       const projectPath = req.query['projectPath'] as string | undefined;
 
       if (!projectPath) {
-        res
-          .status(400)
-          .json({ success: false, error: 'projectPath query parameter is required' });
+        res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
         return;
       }
 
