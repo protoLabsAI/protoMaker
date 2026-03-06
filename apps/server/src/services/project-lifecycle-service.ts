@@ -10,6 +10,8 @@ import type {
   LifecycleApproveResult,
   LifecycleLaunchResult,
   LifecycleStatus,
+  Milestone,
+  Project,
   ProjectLifecyclePhase,
 } from '@protolabsai/types';
 import { createLogger, slugify } from '@protolabsai/utils';
@@ -62,6 +64,21 @@ export class ProjectLifecycleService {
       localSlug,
       hasDuplicates: false,
     };
+  }
+
+  /**
+   * Save structured milestone data parsed from PM agent PRD output.
+   *
+   * This bridges the gap between PM agent PRD generation and approve_project.
+   * Call this after the PM agent drafts the PRD to persist milestones so
+   * approve_project_prd can find them.
+   */
+  async saveMilestones(
+    projectPath: string,
+    projectSlug: string,
+    milestones: Milestone[]
+  ): Promise<Project> {
+    return this.projectService.saveProjectMilestones(projectPath, projectSlug, milestones);
   }
 
   /**
