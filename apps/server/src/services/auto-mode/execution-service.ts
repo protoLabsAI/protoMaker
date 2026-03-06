@@ -2681,7 +2681,12 @@ After generating the revised spec, output:
         const lastTraceId = providerWithTrace.getLastTraceId();
         if (lastTraceId) {
           try {
-            await this.featureLoader.update(projectPath, featureId, { lastTraceId });
+            // Load current feature to get existing traceIds for array append
+            const currentFeature = await this.featureLoader.get(projectPath, featureId);
+            const existingTraceIds = currentFeature?.traceIds ?? [];
+            const traceIds = [...existingTraceIds, lastTraceId];
+            // Keep lastTraceId for backward compat; traceIds[] is the canonical source
+            await this.featureLoader.update(projectPath, featureId, { lastTraceId, traceIds });
           } catch (traceErr) {
             logger.warn(`Failed to save traceId for ${featureId}:`, traceErr);
           }
