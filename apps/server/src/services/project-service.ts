@@ -9,6 +9,7 @@ import path from 'path';
 import type {
   Project,
   Feature,
+  Milestone,
   CreateProjectInput,
   UpdateProjectInput,
   CreateFeaturesFromProjectOptions,
@@ -168,6 +169,81 @@ export class ProjectService {
       priority: 'high',
       color: '#ef4444',
     });
+  }
+
+  /**
+   * Save structured milestone data to a project.
+   *
+   * This is the missing seam between the PM agent's PRD output and approve_project.
+   * After the PM agent drafts a PRD, call this to persist the structured milestones
+   * so that approve_project can find them.
+   */
+  async saveProjectMilestones(
+    projectPath: string,
+    projectSlug: string,
+    milestones: Milestone[]
+  ): Promise<Project> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) {
+      throw new Error(`Project "${projectSlug}" not found`);
+    }
+
+    // Update project with new milestones and advance status to 'reviewing'
+    const updated: Project = {
+      ...project,
+      milestones,
+      status:
+        project.status === 'active' || project.status === 'scaffolded'
+          ? project.status
+          : 'reviewing',
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Write updated project.json
+    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+    await secureFs.writeFile(jsonPath, JSON.stringify(updated, null, 2));
+
+    // Write project.md
+    const mdPath = getProjectFilePath(projectPath, projectSlug);
+    await secureFs.writeFile(mdPath, generateProjectMarkdown(updated));
+
+    // Write milestone directories and files
+    for (const milestone of milestones) {
+      await ensureMilestoneDir(projectPath, projectSlug, milestone.slug);
+
+      // Write milestone.md
+      const milestoneMdPath = getMilestoneFilePath(projectPath, projectSlug, milestone.slug);
+      await secureFs.writeFile(milestoneMdPath, generateMilestoneMarkdown(milestone, updated));
+
+      // Write phase files
+      for (let i = 0; i < milestone.phases.length; i++) {
+        const phase = milestone.phases[i];
+        const phaseFilename = `phase-${String(i + 1).padStart(2, '0')}-${slugify(phase.title, 30)}.md`;
+        const phasePath = path.join(
+          getMilestoneDir(projectPath, projectSlug, milestone.slug),
+          phaseFilename
+        );
+        await secureFs.writeFile(phasePath, generatePhaseMarkdown(phase, milestone, updated));
+      }
+    }
+
+    // Sync milestone target dates to calendar events
+    if (this.calendarService && milestones) {
+      for (const milestone of milestones) {
+        if (milestone.targetDate) {
+          const sourceId = `project:${projectSlug}/milestone:${slugify(milestone.title)}`;
+          await this.calendarService.upsertBySourceId(projectPath, sourceId, {
+            title: `${milestone.title} (${updated.title})`,
+            date: milestone.targetDate,
+            type: 'milestone',
+            description: milestone.description,
+          });
+        }
+      }
+    }
+
+    logger.info(`Saved ${milestones.length} milestones for project: ${projectSlug}`);
+    return updated;
   }
 
   /**
