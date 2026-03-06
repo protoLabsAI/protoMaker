@@ -404,8 +404,33 @@ export interface Feature {
   /**
    * Last Langfuse trace ID from the most recent agent execution.
    * Used to correlate agent runs with observability data for scoring and analysis.
+   * @deprecated Use traceIds[] as the canonical source; kept for backward compatibility.
    */
   lastTraceId?: string;
+
+  /**
+   * All Langfuse trace IDs from every agent execution for this feature.
+   * Canonical source for observability linkage — appended on each run.
+   */
+  traceIds?: string[];
+
+  /**
+   * Structured failure classification persisted when the EscalateProcessor runs.
+   * Captures the category, confidence, recovery strategy, retryability, and timestamp
+   * of the most recent escalation for observability and post-mortem analysis.
+   */
+  failureClassification?: {
+    /** Failure category (e.g. "transient", "test_failure", "unknown") */
+    category: string;
+    /** Classifier confidence score (0–1) */
+    confidence: number;
+    /** Recommended recovery strategy */
+    recoveryStrategy: { type: string; [key: string]: unknown };
+    /** Whether the failure is auto-retryable */
+    retryable: boolean;
+    /** ISO 8601 timestamp when classification was recorded */
+    timestamp: string;
+  };
 
   /**
    * Git workflow error details when git operations (commit, push, PR) fail.

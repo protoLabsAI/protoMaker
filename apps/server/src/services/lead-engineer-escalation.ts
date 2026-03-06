@@ -55,6 +55,20 @@ export class EscalateProcessor implements StateProcessor {
       confidence: failureAnalysis.confidence,
     });
 
+    // Persist the structured failure classification to the feature ledger
+    await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+      failureClassification: {
+        category: failureAnalysis.category,
+        confidence: failureAnalysis.confidence,
+        recoveryStrategy: failureAnalysis.recoveryStrategy as {
+          type: string;
+          [key: string]: unknown;
+        },
+        retryable: failureAnalysis.isRetryable,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // Emit escalation signal with structured failure data
     this.serviceContext.events.emit('escalation:signal-received' as EventType, {
       source: 'lead_engineer_state_machine',
