@@ -620,6 +620,53 @@ export interface ProjectStats {
 }
 
 /**
+ * Artifact type — categories of persisted project artifacts
+ */
+export type ArtifactType = 'ceremony-report' | 'changelog' | 'escalation' | 'standup';
+
+/**
+ * A single entry in the artifact index
+ */
+export interface ArtifactIndexEntry {
+  /** Unique artifact ID */
+  id: string;
+
+  /** Artifact type */
+  type: ArtifactType;
+
+  /** ISO 8601 creation timestamp */
+  timestamp: string;
+
+  /** Filename within the type directory (e.g. "1700000000000.json") */
+  filename: string;
+}
+
+/**
+ * Artifact index file (.automaker/projects/{slug}/artifacts/index.json)
+ */
+export interface ArtifactIndex {
+  version: 1;
+  entries: ArtifactIndexEntry[];
+}
+
+/**
+ * Full artifact record as stored on disk
+ */
+export interface ProjectArtifact {
+  /** Unique artifact ID */
+  id: string;
+
+  /** Artifact type */
+  type: ArtifactType;
+
+  /** ISO 8601 creation timestamp */
+  timestamp: string;
+
+  /** Artifact content payload */
+  content: unknown;
+}
+
+/**
  * Discord channel mapping for a project
  * Stores the association between a project and its Discord channels
  */
