@@ -274,7 +274,13 @@ export class EventLedgerService {
    * - escalation:signal-received → featureId (if present)
    * - auto-mode:event (feature types only) → featureId (if present)
    */
-  subscribeToLifecycleEvents(events: EventEmitter): () => void {
+  subscribeToLifecycleEvents(
+    events: EventEmitter,
+    projectArtifactService?: ProjectArtifactService
+  ): () => void {
+    if (projectArtifactService) {
+      this.projectArtifactService = projectArtifactService;
+    }
     const unsubscribes: Array<() => void> = [];
 
     // Single subscription that handles all lifecycle events
@@ -437,7 +443,7 @@ export class EventLedgerService {
                 featureId: context.featureId ?? featureId,
                 source: payload.source,
                 severity: payload.severity,
-                context,
+                featureContext: context,
                 timestamp: payload.timestamp ?? new Date().toISOString(),
               })
               .catch((err) => {

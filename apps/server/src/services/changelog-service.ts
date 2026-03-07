@@ -171,12 +171,12 @@ export class ChangelogService {
 
       // Persist changelog as a project artifact
       if (this.projectArtifactService) {
-        await this.projectArtifactService.saveArtifact(
-          projectPath,
-          projectSlug,
-          'changelog',
-          changelogContent
-        );
+        await this.projectArtifactService.saveArtifact(projectPath, projectSlug, 'changelog', {
+          scope: 'milestone',
+          milestoneTitle,
+          milestoneNumber,
+          content: changelogContent,
+        });
         logger.debug(`Changelog artifact saved for milestone ${milestoneTitle}`);
       }
 
@@ -225,12 +225,11 @@ export class ChangelogService {
 
       // Persist changelog as a project artifact
       if (this.projectArtifactService) {
-        await this.projectArtifactService.saveArtifact(
-          projectPath,
-          projectSlug,
-          'changelog',
-          changelogContent
-        );
+        await this.projectArtifactService.saveArtifact(projectPath, projectSlug, 'changelog', {
+          scope: 'project',
+          projectTitle,
+          content: changelogContent,
+        });
         logger.debug(`Changelog artifact saved for project ${projectTitle}`);
       }
 
@@ -417,9 +416,11 @@ export class ChangelogService {
       let existingContent = '';
       try {
         const rawContent = await secureFs.readFile(changelogPath, 'utf-8');
-        existingContent =
-          typeof rawContent === 'string' ? rawContent : rawContent.toString('utf-8');
-        existingContent += '\n\n---\n\n';
+        if (rawContent != null) {
+          existingContent =
+            typeof rawContent === 'string' ? rawContent : (rawContent as Buffer).toString('utf-8');
+          existingContent += '\n\n---\n\n';
+        }
       } catch (error) {
         // File doesn't exist yet, that's fine
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
