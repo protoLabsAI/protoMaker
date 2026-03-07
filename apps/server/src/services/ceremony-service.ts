@@ -10,8 +10,9 @@
  */
 
 import path from 'path';
+import fs from 'fs';
 import { createLogger } from '@protolabsai/utils';
-import { secureFs, getProjectDir } from '@protolabsai/platform';
+import { secureFs, getProjectDir, getDataDirectory } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 import type { CeremonyState } from '@protolabsai/types';
@@ -139,18 +140,83 @@ export class CeremonyService {
 
   // Dedup guard for project retros
   private processedProjects = new Set<string>();
+  private dataDir: string | null = null;
+
+  private getLedgerPath(): string | null {
+    const dir = this.dataDir ?? getDataDirectory();
+    if (!dir) return null;
+    return path.join(dir, 'ledger', 'ceremony-processed.jsonl');
+  }
+
+  private async loadLedger(): Promise<void> {
+    const ledgerPath = this.getLedgerPath();
+    if (!ledgerPath) return;
+
+    if (!fs.existsSync(ledgerPath)) {
+      logger.debug('CeremonyService: no existing ledger file, starting fresh');
+      return;
+    }
+
+    try {
+      const rl = readline.createInterface({
+        input: fs.createReadStream(ledgerPath, 'utf-8'),
+        crlfDelay: Infinity,
+      });
+
+      let loaded = 0;
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const entry = JSON.parse(trimmed) as { key: string; timestamp: string };
+          if (entry.key) {
+            this.processedProjects.add(entry.key);
+            loaded++;
+          }
+        } catch {
+          // skip malformed lines
+        }
+      }
+
+      logger.debug(`CeremonyService: loaded ${loaded} processed project keys from ledger`);
+    } catch (err) {
+      logger.warn('CeremonyService: failed to load ledger:', err);
+    }
+  }
+
+  private appendLedgerEntry(key: string): void {
+    const ledgerPath = this.getLedgerPath();
+    if (!ledgerPath) return;
+
+    const entry = { key, timestamp: new Date().toISOString() };
+    const line = JSON.stringify(entry) + '\n';
+
+    void (async () => {
+      try {
+        await fs.promises.mkdir(path.dirname(ledgerPath), { recursive: true });
+        await fs.promises.appendFile(ledgerPath, line, 'utf-8');
+      } catch (err) {
+        logger.error('CeremonyService: failed to write ledger entry:', err);
+      }
+    })();
+  }
 
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
     featureLoader: FeatureLoader,
     projectService: ProjectService,
-    _metricsService: MetricsService
+    _metricsService: MetricsService,
+    dataDir?: string
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.dataDir = dataDir ?? null;
+
+    // Load persisted dedup state before subscribing to events
+    void this.loadLedger();
 
     this.unsubscribe = emitter.subscribe((type, payload) => {
       if (type === 'milestone:started') {
@@ -575,6 +641,7 @@ export class CeremonyService {
     }
 
     this.processedProjects.add(dedupeKey);
+    this.appendLedgerEntry(dedupeKey);
     this.activeReflection = projectTitle;
     this.ceremonyCounts.projectRetro++;
     this.lastCeremonyAt = new Date().toISOString();

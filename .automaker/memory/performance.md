@@ -241,3 +241,13 @@ usageStats:
 - **Rejected:** Alternative: check all review states (false positives in merged/dismissed PRs); check only pending (misses edge case where reviewer approved despite missing CI, but that's a review process issue, not our concern).
 - **Trade-offs:** One extra state check per PR per poll. Eliminates false positives in completed review flows.
 - **Breaking if changed:** Removing guard means alerting on dismissed/merged/approved PRs (noise, incorrect diagnosis of root cause).
+
+#### [Pattern] `appendFile()` instead of write/seek for ledger appends: atomic, concurrent-safe, follows EventLedgerService pattern. Fire-and-forget, no await, no error handling. (2026-03-07)
+- **Problem solved:** Multiple concurrent processes might emit events and try to append ledger entries simultaneously. Need fast non-blocking append with atomicity guarantees.
+- **Why this works:** fs.promises.appendFile is atomic at OS level (single write call), handles concurrent appends correctly. Fire-and-forget avoids blocking event processing on I/O. Consistent with existing EventLedgerService pattern in codebase.
+- **Trade-offs:** Simple API and correct concurrency behavior vs. potential buffering delays and silent append failures (no error handling).
+
+#### [Pattern] `readline` module for streaming JSONL parse on cold start: memory-efficient line-by-line reading instead of loading entire ledger file into memory. (2026-03-07)
+- **Problem solved:** Ledger file could grow large over time (weeks/months of events). Cold start must restore all state without OOM on memory-constrained systems.
+- **Why this works:** Streaming parser processes one JSONL line at a time, constant memory regardless of file size. readline handles line boundaries and backpressure automatically.
+- **Trade-offs:** Slightly more complex code (readline interface vs string split) but guaranteed constant memory footprint.

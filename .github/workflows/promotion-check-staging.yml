@@ -1,0 +1,40 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
+name: Staging Promotion Check
+
+# Enforces the branch strategy: only `dev` or `promote/*` branches may open PRs into `staging`.
+# All other source branches are rejected with a clear error message.
+on:
+  pull_request:
+    branches:
+      - staging
+
+permissions: read-all
+
+jobs:
+  source-branch:
+    runs-on: self-hosted
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Verify PR source is dev or promote/*
+        run: |
+          SOURCE="${{ github.head_ref }}"
+          echo "PR source branch: $SOURCE"
+          if [ "$SOURCE" = "dev" ]; then
+            echo "Source branch is 'dev' — promotion to staging approved"
+            exit 0
+          fi
+          if [[ "$SOURCE" == promote/* ]]; then
+            echo "Source branch is '$SOURCE' (promotion batch) — approved"
+            exit 0
+          fi
+          echo "::error::PRs to staging must come from 'dev' or a 'promote/*' branch."
+          echo "::error::Current source: '$SOURCE'"
+          echo ""
+          echo "Branch strategy:"
+          echo "  feature/* -> dev -> staging -> main"
+          echo ""
+          echo "To promote to staging:"
+          echo "  1. Merge features into dev"
+          echo "  2. Use the promotion pipeline (creates promote/* branches)"
+          echo "  3. Or open a PR from dev -> staging directly"
+          exit 1
