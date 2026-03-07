@@ -1,7 +1,7 @@
 {
   "slug": "distributed-crdt-sync",
   "title": "Distributed Product Lifecycle Platform",
-  "goal": "Transform protoLabs from a single-instance task runner into a distributed product creation platform — from idea to production. CRDT-synced operational state (features, projects, notes, calendar, todos, settings) across multiple Automaker instances on Tailscale VPN, with an agentic Stage-Gate lifecycle (8 automated gates), cross-instance work-stealing, Ava Mesh orchestration, DORA metrics as auto-regulation control signals, and outcome-driven features (success metrics, kill conditions, hypotheses). The full lifecycle flywheel: signals → gates → execution → promotion → reflection → learning → better signals.",
+  "goal": "Transform protoLabs from a single-instance task runner into a distributed product creation platform — from idea to production. CRDT-synced operational state (features, projects, calendar, todos, settings) across multiple Automaker instances on Tailscale VPN, with an agentic Stage-Gate lifecycle (8 automated gates), cross-instance work-stealing, a private Ava channel for self-organizing coordination, DORA metrics as auto-regulation control signals, and outcome-driven features. Notes sync via git. The full lifecycle flywheel: signals > gates > execution > promotion > reflection > learning > better signals.",
   "status": "approved",
   "milestones": [
     {
@@ -33,7 +33,7 @@
           "number": 2,
           "name": "libs-crdt-workspace-package",
           "title": "libs/crdt Workspace Package",
-          "description": "Create new workspace package @protolabsai/crdt. Wraps Automerge 3 + automerge-repo with a CRDTStore class that manages Automerge documents by domain (features, projects, notes, config). Provides document creation, change, subscribe, and sync lifecycle. Handles persistence to .automaker/crdt/ directory. Includes WebSocket sync adapter configured for Tailscale peer connections.",
+          "description": "Create new workspace package @protolabsai/crdt. Wraps Automerge 3 + automerge-repo with a CRDTStore class that manages Automerge documents by domain (features, projects, config). Provides document creation, change, subscribe, and sync lifecycle. Handles persistence to .automaker/crdt/ directory. Includes WebSocket sync adapter configured for Tailscale peer connections.",
           "filesToModify": [
             "libs/crdt/package.json",
             "libs/crdt/tsconfig.json",
@@ -139,15 +139,15 @@
     },
     {
       "number": 3,
-      "slug": "03-projects-notes-and-settings-sync",
-      "title": "Projects, Notes, and Settings Sync",
-      "description": "Extend CRDT sync to projects, notes workspace, and shared settings. Same pattern as features — Automerge documents per domain, change subscriptions, event propagation.",
+      "slug": "03-projects-and-settings-sync",
+      "title": "Projects and Settings Sync",
+      "description": "Extend CRDT sync to projects and shared settings. Same pattern as features — Automerge documents per domain, change subscriptions, event propagation. Notes stay on git.",
       "phases": [
         {
           "number": 1,
           "name": "project-sync",
           "title": "Project Sync",
-          "description": "Create Automerge document for projects (Record<slug, Project>). ProjectService reads/writes via CRDTStore. Project ceremonies (future) will sync as project sub-documents. PRD and milestone markdown content stored as Automerge text fields for future rich-text CRDT.",
+          "description": "Create Automerge document for projects (Record<slug, Project>). ProjectService reads/writes via CRDTStore. Project ceremonies sync as project sub-documents. PRD and milestone content stored as Automerge text fields.",
           "filesToModify": [
             "apps/server/src/services/project-service.ts",
             "apps/server/src/services/crdt-sync-service.ts",
@@ -163,24 +163,6 @@
         },
         {
           "number": 2,
-          "name": "notes-workspace-sync",
-          "title": "Notes Workspace Sync",
-          "description": "Sync NotesWorkspace JSON (tab metadata, tab order, active tab, content as HTML string) via Automerge document. This is workspace-level sync, not character-level rich-text CRDT — the full HTML content string is an LWW field. Rich-text CRDT via @automerge/prosemirror is deferred to Phase 5.",
-          "filesToModify": [
-            "apps/server/src/routes/notes/index.ts",
-            "apps/server/src/services/crdt-sync-service.ts",
-            "libs/crdt/src/documents.ts"
-          ],
-          "acceptanceCriteria": [
-            "Notes workspace syncs across instances (tabs, order, content)",
-            "Tab created on instance A appears on instance B",
-            "Content updates propagate (last-write-wins at HTML string level)",
-            "workspaceVersion counter resolves to max across instances"
-          ],
-          "complexity": "medium"
-        },
-        {
-          "number": 3,
           "name": "shared-settings-sync",
           "title": "Shared Settings Sync",
           "description": "Create a shared-settings Automerge document for configuration that should propagate across instances (shared model preferences, workflow tuning, etc). Instance-local settings remain in .automaker/settings.json. Effective config = proto.config defaults MERGED with shared CRDT settings MERGED with local overrides.",
@@ -276,35 +258,15 @@
     },
     {
       "number": 5,
-      "slug": "05-rich-text-and-polish",
-      "title": "Rich Text and Polish",
-      "description": "Upgrade notes from workspace-level sync to character-level rich-text CRDT, and add operational polish for production multi-instance use.",
+      "slug": "05-operational-hardening",
+      "title": "Operational Hardening",
+      "description": "Production readiness for the CRDT sync layer: document compaction, sync diagnostics, reconnection resilience, monitoring, alerting, and multi-instance deployment documentation.",
       "phases": [
         {
           "number": 1,
-          "name": "notes-rich-text-crdt",
-          "title": "Notes Rich-Text CRDT",
-          "description": "Replace workspace-level notes sync (HTML string LWW) with character-level collaborative editing via @automerge/prosemirror. Tiptap's ProseMirror layer wires to Automerge document for real-time co-editing. Multiple users on different instances can edit the same note tab simultaneously with conflict-free character merging.",
-          "filesToModify": [
-            "apps/ui/src/components/views/notes-view/notes-editor.tsx",
-            "libs/crdt/src/documents.ts",
-            "apps/server/src/routes/notes/index.ts",
-            "package.json"
-          ],
-          "acceptanceCriteria": [
-            "@automerge/prosemirror integrated with Tiptap editor",
-            "Two users editing same note tab see each other's changes in real-time",
-            "Concurrent edits merge without conflicts",
-            "Cursor/selection awareness across instances (stretch goal)",
-            "Backward compatible: single-instance mode still works without CRDT"
-          ],
-          "complexity": "large"
-        },
-        {
-          "number": 2,
-          "name": "operational-hardening",
-          "title": "Operational Hardening",
-          "description": "Production readiness: CRDT document compaction (prevent unbounded growth), sync conflict diagnostics, reconnection resilience, monitoring and alerting for sync health, and documentation for multi-instance deployment.",
+          "name": "compaction-and-diagnostics",
+          "title": "Compaction, Diagnostics, and Reconnection",
+          "description": "Production readiness: CRDT document compaction (prevent unbounded growth), sync conflict diagnostics, reconnection resilience after network partitions, monitoring and alerting for sync health, and documentation for multi-instance deployment.",
           "filesToModify": [
             "libs/crdt/src/maintenance.ts",
             "apps/server/src/services/crdt-sync-service.ts",
@@ -326,76 +288,78 @@
     },
     {
       "number": 6,
-      "slug": "06-ava-orchestrator-mesh",
-      "title": "Ava Orchestrator Mesh",
-      "description": "Enable Ava orchestrators on each instance to communicate with each other — sharing status, requesting help, coordinating cross-instance work, and logging conversations. An MCP tool and UI view provide visibility into inter-Ava dialogue.",
+      "slug": "06-private-ava-channel",
+      "title": "Private Ava Channel",
+      "description": "A private communication channel where Ava orchestrators on each instance talk naturally to each other — no humans can write, only observe. Avas self-organize: share status, discuss bug reports, propose system improvements, coordinate work, and help each other. Viewable via the Ava Anywhere overlay. Feeds into an ongoing System Improvements project where Avas file self-improvement tickets.",
       "phases": [
         {
           "number": 1,
-          "name": "ava-mesh-protocol",
-          "title": "Ava Mesh Communication Protocol",
-          "description": "Create a new CRDT document (doc:ava-mesh) that stores inter-Ava messages. Each message has sender instanceId, recipient (specific instance or broadcast), message type (status-update, help-request, work-handoff, escalation, heartbeat), content, and timestamp. Ava instances post to this document; all peers see the full conversation log. Messages use Automerge's append-only list CRDT for ordered history. Define cadence options: periodic check-in (configurable interval), event-driven (on feature completion, escalation, idle), or on-demand (MCP tool invocation).",
+          "name": "ava-channel-crdt-and-service",
+          "title": "Ava Channel CRDT Document and Service",
+          "description": "Create doc:ava-channel as an append-only Automerge list CRDT storing natural-language messages. AvaChatMessage has instanceId, instanceName, content (free-form text), optional structured context (featureId, boardSummary, capacity), source (ava|operator|system), and timestamp. No messageType enum — the content IS the protocol. AvaChannelService provides postMessage(), getMessages(), getRecentMessages(). Bug reports from Discord #bug-reports auto-post into the channel as system messages. Compaction archives messages older than 7 days to disk.",
           "filesToModify": [
             "libs/crdt/src/documents.ts",
-            "libs/types/src/ava-mesh.ts",
+            "libs/types/src/ava-channel.ts",
             "libs/types/src/index.ts",
-            "apps/server/src/services/crdt-sync-service.ts",
-            "apps/server/src/services/ava-mesh-service.ts"
+            "apps/server/src/services/ava-channel-service.ts",
+            "apps/server/src/services/crdt-sync-service.ts"
           ],
           "acceptanceCriteria": [
-            "AvaMeshMessage type defined with sender, recipient, messageType, content, timestamp, instanceId",
-            "Message types: status-update, help-request, help-response, work-handoff, escalation, coordination, heartbeat",
-            "doc:ava-mesh CRDT document syncs across all instances",
+            "AvaChatMessage type: id, instanceId, instanceName, content, context?, source, timestamp",
+            "doc:ava-channel CRDT document syncs across all instances",
             "Messages are append-only (grow-only list CRDT, no edits or deletes)",
-            "Configurable check-in cadence in proto.config.yaml (default: on feature completion + every 15 minutes)",
-            "AvaMeshService provides sendMessage(), getMessages(), getConversation() methods",
-            "Unit tests for message serialization and CRDT append"
+            "AvaChannelService.postMessage() appends to CRDT doc",
+            "AvaChannelService.getMessages() reads with optional time range and instance filter",
+            "Bug reports from Discord auto-posted as source:'system' messages",
+            "Compaction archives messages older than 7 days",
+            "Unit tests for message append and retrieval"
           ],
           "complexity": "medium"
         },
         {
           "number": 2,
-          "name": "ava-mesh-mcp-tools",
-          "title": "Ava Mesh MCP Tools",
-          "description": "Expose inter-Ava communication via MCP tools so Ava orchestrators (running as Claude Code sessions) can programmatically send messages to peers, request help, hand off work, and read the conversation log. Tools: send_mesh_message, list_mesh_messages, request_peer_help, broadcast_status. These tools are the API through which Ava personas on each instance interact with each other.",
+          "name": "ava-channel-mcp-tools-and-system-improvements",
+          "title": "MCP Tools and System Improvements Project",
+          "description": "Three MCP tools: send_channel_message (post to private Ava channel), read_channel_messages (read with filters), file_system_improvement (create feature on System Improvements board from channel discussion). Create an ongoing:true 'System Improvements' project where Avas file self-improvement tickets when they observe recurring friction. Update /ava skill prompt with private channel instructions: this is YOUR space, no humans can write, use it to coordinate, discuss bugs, propose improvements. The flywheel: observe friction > discuss in channel > file ticket > auto-mode fixes it > friction reduced.",
           "filesToModify": [
-            "packages/mcp-server/src/tools/ava-mesh-tools.ts",
+            "packages/mcp-server/src/tools/ava-channel-tools.ts",
             "packages/mcp-server/src/tools/index.ts",
-            "apps/server/src/routes/ava-mesh/index.ts",
+            "apps/server/src/routes/ava-channel/index.ts",
             "apps/server/src/server/routes.ts"
           ],
           "acceptanceCriteria": [
-            "send_mesh_message MCP tool sends typed message to specific peer or broadcast",
-            "list_mesh_messages MCP tool returns recent messages with filtering (by sender, type, time range)",
-            "request_peer_help MCP tool sends help-request with context (feature details, error info, what's needed)",
-            "broadcast_status MCP tool sends status-update to all peers (board summary, capacity, current work)",
-            "Ava skill prompt updated to use mesh tools when hivemind is active",
-            "Server routes: POST /api/ava-mesh/send, GET /api/ava-mesh/messages",
-            "Messages from MCP tools propagate via CRDT to all connected instances"
+            "send_channel_message MCP tool posts natural-language message to private Ava channel",
+            "read_channel_messages MCP tool returns recent messages with optional time range and instance filter",
+            "file_system_improvement MCP tool creates feature on System Improvements board from discussion context",
+            "Server routes: POST /api/ava-channel/send, GET /api/ava-channel/messages",
+            "Messages from MCP tools propagate via CRDT to all connected instances",
+            "System Improvements project created as ongoing:true on first use",
+            "/ava skill prompt updated with private channel section when hivemind active",
+            "No forced posting cadence — Avas post when they have something to say"
           ],
           "complexity": "medium"
         },
         {
           "number": 3,
-          "name": "ava-mesh-ui-view",
-          "title": "Ava Mesh Conversation View",
-          "description": "Add a UI view (accessible from the sidebar or peers panel) that displays the inter-Ava conversation log. Shows messages grouped by conversation thread or chronologically, with instance avatars/badges, message types color-coded, and real-time updates via WebSocket. Allows the human operator to observe how Ava instances coordinate, inject messages, and override decisions.",
+          "name": "ava-channel-in-ava-anywhere",
+          "title": "Ava Channel Tab in Ava Anywhere",
+          "description": "Add a second tab to the Ava Anywhere overlay (ChatOverlayView / ChatOverlayContent) and web ChatModal: 'Ava Channel' shows the private Ava-to-Ava conversation as a read-only message stream. Tab 1 remains 'Ask Ava' (human<>Ava chat, unchanged). Tab 2 'Ava Channel' shows chronological messages with instance badges, real-time CRDT updates, and an operator override input (labeled differently to make clear this is injecting into the Avas' private space). Empty state when hivemind not active shows setup instructions.",
           "filesToModify": [
-            "apps/ui/src/components/views/ava-mesh-view/ava-mesh-view.tsx",
-            "apps/ui/src/components/views/ava-mesh-view/message-card.tsx",
-            "apps/ui/src/components/views/ava-mesh-view/index.ts",
-            "apps/ui/src/routes/__root.tsx",
+            "apps/ui/src/components/views/chat-overlay/chat-overlay-content.tsx",
+            "apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx",
+            "apps/ui/src/components/layout/chat-modal.tsx",
             "apps/ui/src/store/app-store.ts"
           ],
           "acceptanceCriteria": [
-            "Ava Mesh view accessible from sidebar navigation",
-            "Messages displayed chronologically with instance badge and message type icon",
-            "Message types color-coded (status: blue, help-request: amber, escalation: red, handoff: green)",
-            "Real-time updates as new messages arrive via CRDT sync",
-            "Filter by instance, message type, or time range",
-            "Human operator can send messages into the mesh (operator override)",
-            "Conversation threads: related messages (request + response) visually grouped",
-            "Empty state when hivemind not active: shows setup instructions"
+            "Ava Anywhere overlay has two tabs: 'Ask Ava' and 'Ava Channel'",
+            "Ava Channel tab shows chronological message stream with instance badges",
+            "Messages display instance name, content, and relative timestamp",
+            "Real-time updates as new messages arrive via CRDT sync / WebSocket",
+            "Operator override: labeled input for injecting messages into Ava channel",
+            "Filter/search within the channel conversation",
+            "Web ChatModal gets the same two tabs",
+            "Empty state when hivemind not active: shows 'Enable hivemind in proto.config.yaml'",
+            "Keyboard shortcut (Cmd+Shift+Space) opens whichever tab was last active"
           ],
           "complexity": "large"
         }
@@ -406,13 +370,13 @@
       "number": 7,
       "slug": "07-calendar-and-todo-sync",
       "title": "Calendar and Todo Sync",
-      "description": "Add Calendar (events) and Todo (lists) as shared CRDT domains. Todos have a three-tier permission model: user lists (agent-readable), per-instance Ava lists (writable only by owning Ava + user, readable by all Avas), and shared lists. Calendar events sync across all instances. These complete the data model hierarchy: Parent Project > Projects/Calendar/Notes/Todo.",
+      "description": "Add Calendar (events) and Todo (lists) as shared CRDT domains. Todos have a three-tier permission model: user lists (agent-readable), per-instance Ava lists (writable only by owning Ava + user, readable by all Avas), and shared lists. Calendar events sync across all instances.",
       "phases": [
         {
           "number": 1,
           "name": "calendar-crdt-sync",
           "title": "Calendar CRDT Sync",
-          "description": "Create Automerge document (doc:calendar) storing calendar events. Events sync across all instances so deadlines, ceremonies, and milestones are visible everywhere. Integrates with existing CalendarService and MCP calendar tools (create_calendar_event, list_calendar_events, etc). Events have standard fields: title, start, end, type (deadline, ceremony, milestone, custom), linkedProjectSlug, linkedFeatureId. Calendar is a shared resource — any instance can create/edit/delete events.",
+          "description": "Create Automerge document (doc:calendar) storing calendar events. Events sync across all instances so deadlines, ceremonies, and milestones are visible everywhere. Integrates with existing CalendarService and MCP calendar tools. Calendar is a shared resource — any instance can create/edit/delete events.",
           "filesToModify": [
             "libs/crdt/src/documents.ts",
             "libs/types/src/calendar.ts",
@@ -431,51 +395,23 @@
         },
         {
           "number": 2,
-          "name": "todo-data-model-and-permissions",
-          "title": "Todo Data Model and Permission System",
-          "description": "Create Todo types and storage. A TodoList has an owner (user or instanceId), a permission tier (user-private, ava-instance, shared), and contains TodoItems. Permission tiers: (1) user lists — user read/write, all Avas read-only. (2) ava-instance lists — writable by owning instance's Ava + user, readable by all Avas on all instances. (3) shared lists — full read/write by anyone. Each Ava instance automatically gets an ava-instance list on first boot. Course correction between Avas happens via mesh chat, not by writing to each other's todo lists.",
+          "name": "todo-crdt-sync-and-permissions",
+          "title": "Todo CRDT Sync and Permissions",
+          "description": "Wire existing TodoService and TodoWorkspace to CRDT sync layer. Types and service already landed — this phase adds the CRDT document (doc:todos) and cross-instance permission enforcement. Permission tiers: (1) user lists — user read/write, all Avas read-only. (2) ava-instance lists — writable by owning instance's Ava + user, readable by all Avas on all instances. (3) shared lists — full read/write by anyone. Each Ava auto-creates its own ava-instance list on first activation. Ava-to-Ava coordination happens via the private channel, not by writing to each other's todo lists.",
           "filesToModify": [
-            "libs/types/src/todo.ts",
-            "libs/types/src/index.ts",
             "libs/crdt/src/documents.ts",
             "apps/server/src/services/todo-service.ts",
             "apps/server/src/services/crdt-sync-service.ts"
           ],
           "acceptanceCriteria": [
-            "TodoList type with id, name, ownerType (user|ava-instance|shared), ownerInstanceId, items[]",
-            "TodoItem type with id, title, description, completed, dueDate, priority, linkedFeatureId",
-            "Permission enforcement: ava-instance lists reject writes from non-owning instances",
             "doc:todos CRDT document syncs across all instances",
+            "Permission enforcement: ava-instance lists reject writes from non-owning instances",
             "Each instance's Ava auto-creates its own ava-instance list on first activation",
             "User can create user-private and shared lists",
             "All Avas can read all lists (for situational awareness)",
-            "Unit tests for permission enforcement across tiers"
-          ],
-          "complexity": "large"
-        },
-        {
-          "number": 3,
-          "name": "todo-mcp-tools-and-ui",
-          "title": "Todo MCP Tools and UI",
-          "description": "Expose todo operations via MCP tools and add a Todo view to the UI. MCP tools: create_todo_list, list_todo_lists, add_todo_item, update_todo_item, complete_todo_item, delete_todo_item. The UI shows all visible lists with permission badges, grouped by tier. Ava skill integration: Ava writes its planned work to its own todo list so the user and other Avas can see what it intends to do. Ava reads other instances' todo lists for awareness but coordinates via mesh chat.",
-          "filesToModify": [
-            "packages/mcp-server/src/tools/todo-tools.ts",
-            "packages/mcp-server/src/tools/index.ts",
-            "apps/server/src/routes/todo/index.ts",
-            "apps/server/src/server/routes.ts",
-            "apps/ui/src/components/views/todo-view/todo-view.tsx",
-            "apps/ui/src/components/views/todo-view/todo-list-card.tsx",
-            "apps/ui/src/routes/__root.tsx"
-          ],
-          "acceptanceCriteria": [
-            "MCP tools: create_todo_list, list_todo_lists, add_todo_item, update_todo_item, complete_todo_item",
-            "Permission enforcement in MCP tools (reject writes to non-owned ava-instance lists)",
-            "Todo view in sidebar showing all lists grouped by tier",
-            "Permission badges on lists (lock icon for read-only, instance badge for ava-instance)",
-            "Ava skill writes planned work items to its instance todo list on activation",
-            "Ava reads peer todo lists via list_todo_lists for cross-instance awareness",
+            "Existing TodoService routes and MCP tools work through CRDT layer",
             "Real-time updates via CRDT sync (new items appear across instances)",
-            "Linked items: todo items can reference features, showing status inline"
+            "Unit tests for permission enforcement across tiers"
           ],
           "complexity": "large"
         }
@@ -484,30 +420,33 @@
     }
   ],
   "prd": {
-    "situation": "protoLabs Studio currently operates as a single-instance system where .automaker/ files (features, projects, notes, settings) are local to each machine. The FeatureStore interface, EventBus.broadcast(), and HivemindConfig types are already extracted as seams for multi-instance operation, but no sync layer exists. Each instance maintains its own board state independently. Knowledge (context, memory, skills) syncs via git, but operational state (features, projects) does not propagate between instances.",
-    "problem": "Users with multiple machines (dev laptop, staging VM, production node) or collaborators sharing compute cannot see or act on the same board state. Features created on one instance are invisible to others. Compute sits idle when one instance finishes its backlog while another is overloaded. There is no way to assign tickets across instances, share project ceremonies, or get a unified view of work in progress. This limits the system to single-machine scaling and prevents the hivemind architecture from materializing.",
-    "approach": "Implement a CRDT-based sync layer using Automerge 3 + automerge-repo over WebSocket on Tailscale VPN. Shared data is organized into Automerge documents by domain: features, projects, notes workspace, and shared settings. A proto.config.yaml file (git-tracked) defines shared defaults and instance registry with layered overrides. Sync topology is star with automatic leader election — one instance runs the automerge-repo-sync-server, others connect as WebSocket clients. Cross-instance feature assignment uses a work-stealing protocol where idle instances request features from busy peers, with CRDT field updates propagating assignments conflict-free. The implementation phases in through the existing FeatureStore and EventBus abstractions, ensuring zero breaking changes to callers. Instance-local data (agent output, trajectories, worktrees, credentials) stays local.",
-    "results": "Multiple Automaker instances share board state with sub-100ms propagation. Features created on any instance appear on all others within milliseconds. Cross-instance assignment enables work to flow to available compute automatically. Each instance operates offline-first and merges seamlessly on reconnect. A unified dashboard shows all instances' work. The proto.config.yaml provides shared configuration with per-instance overrides. New data domains can be added by creating new Automerge documents without architectural changes.",
+    "situation": "protoLabs Studio currently operates as a single-instance system where .automaker/ files (features, projects, settings) are local to each machine. The FeatureStore interface, EventBus.broadcast(), and HivemindConfig types are already extracted as seams for multi-instance operation, but no sync layer exists. Each instance maintains its own board state independently. Knowledge (context, memory, skills, notes) syncs via git, but operational state (features, projects) does not propagate between instances.",
+    "problem": "Users with multiple machines (dev laptop, staging VM, production node) or collaborators sharing compute cannot see or act on the same board state. Features created on one instance are invisible to others. Compute sits idle when one instance finishes its backlog while another is overloaded. There is no way to assign tickets across instances, share project ceremonies, or get a unified view of work in progress. Ava orchestrators on each instance are isolated — they cannot communicate, share learnings, coordinate work, or collectively improve the system. This limits the system to single-machine scaling and prevents the hivemind architecture from materializing.",
+    "approach": "Implement a CRDT-based sync layer using Automerge 3 + automerge-repo over WebSocket on Tailscale VPN. Shared data is organized into Automerge documents by domain: features, projects, settings, calendar, todos, and the private Ava channel. Notes sync via git (low-frequency, human-curated). A proto.config.yaml file (git-tracked) defines shared defaults and instance registry with layered overrides. Sync topology is star with automatic leader election. Cross-instance feature assignment uses a work-stealing protocol. A private Ava channel gives Ava orchestrators a shared conversation space where they self-organize: discuss bug reports, propose system improvements, coordinate work, and help each other — without formal message protocols. An ongoing System Improvements project captures self-improvement tickets filed by Avas. The channel is viewable via the Ava Anywhere overlay.",
+    "results": "Multiple Automaker instances share board state with sub-100ms propagation. Features flow to available compute via work-stealing. Ava orchestrators communicate via a private channel, self-organizing around bug triage and system improvements. The system improves itself: Avas observe friction, discuss in their channel, file improvement tickets, and auto-mode executes fixes. Each instance operates offline-first. A unified dashboard shows all instances' work. The lifecycle flywheel — signals, gates, execution, promotion, reflection, learning — operates across distributed compute.",
     "constraints": [
       "Must work over Tailscale VPN (stable IPs, encrypted transport, NAT traversal handled)",
       "Must be offline-first — each instance works independently when disconnected",
       "Must not break single-instance operation — CRDT layer is opt-in via proto.config.yaml",
       "Must use existing FeatureStore and EventBus interfaces — no breaking changes to callers",
       "Agent output, trajectories, worktrees, and credentials remain instance-local (never synced)",
-      "Knowledge layer (context, memory, skills) continues syncing via git — not duplicated in CRDT",
+      "Notes and knowledge layer (context, memory, skills) sync via git — not duplicated in CRDT",
       "Automerge 3 is the CRDT library (JSON-native, 10x memory improvement, automerge-repo networking)",
       "Star topology with automatic leader election for 2-10 nodes",
       "proto.config.yaml is git-tracked; instance-local overrides in .automaker/settings.json",
       "Cross-instance assignment via work-stealing protocol, not centralized scheduler",
-      "Notes rich-text CRDT (via @automerge/prosemirror) is deferred to Phase 5 — Phase 3 syncs notes at the workspace JSON level",
-      "Ledger files (events.jsonl, completion-emitted.jsonl, ceremony-processed.jsonl) remain instance-local — append-only logs are not suitable for CRDT sync",
+      "Private Ava channel uses natural language — no structured message types or formal protocols",
+      "Avas decide their own communication patterns in the channel",
+      "Operator can observe the channel (read-only by default) and inject messages (override mode)",
+      "Bug reports from Discord #bug-reports auto-post into the Ava channel as system messages",
+      "System Improvements is an ongoing:true project — never completes, Avas file tickets continuously",
+      "Ledger files (events.jsonl, completion-emitted.jsonl) remain instance-local — append-only logs not suitable for CRDT",
       "PR tracking state (pr-tracking.json) remains instance-local — each instance owns its PRs",
-      "Calendar events (doc:calendar) and Todos (doc:todos) are future sync domains — add when those surfaces mature",
-      "M1 must include a bootstrap/migration phase: on first proto.config.yaml enable, hydrate CRDT documents from existing .automaker/ filesystem data",
-      "doc:assignments should be a separate CRDT document from doc:features — keeps work-stealing handshake messages and capacity data isolated",
+      "M1 must include bootstrap/migration: on first proto.config.yaml enable, hydrate CRDT documents from existing .automaker/ filesystem data",
+      "doc:assignments should be a separate CRDT document from doc:features",
       "When a feature is reassigned via work-stealing, PR watermarks (ownership.instanceId) must be updated on the PR"
     ]
   },
   "createdAt": "2026-03-07T06:25:41.695Z",
-  "updatedAt": "2026-03-07T10:02:46.913Z"
+  "updatedAt": "2026-03-07T10:42:00.000Z"
 }
