@@ -93,6 +93,33 @@ export const ProtoDefaultsSchema = z.object({
 export type ProtoDefaults = z.infer<typeof ProtoDefaultsSchema>;
 
 // ---------------------------------------------------------------------------
+// Work stealing — cross-instance feature assignment
+// ---------------------------------------------------------------------------
+
+export const ProtoWorkStealingSchema = z.object({
+  /**
+   * Work stealing assignment strategy.
+   *
+   * - capacity: Steal from the busiest instance (most running agents relative to capacity).
+   * - domain: Only offer features to instances whose registered domains cover filesToModify.
+   * - manual: Disable automatic stealing; features must be explicitly assigned via API.
+   */
+  strategy: z.enum(['capacity', 'domain', 'manual']).default('capacity'),
+  /**
+   * Maximum number of features this instance may steal per cycle (per idle trigger).
+   * Prevents a single idle instance from draining all work from busy peers at once.
+   */
+  stealMax: z.number().int().min(1).default(3),
+  /**
+   * TTL in milliseconds for pending WORK_REQUEST and WORK_OFFER records in the
+   * assignments document. Records older than this are ignored on reconnect.
+   */
+  offerTtlMs: z.number().int().min(1000).default(60_000),
+});
+
+export type ProtoWorkStealing = z.infer<typeof ProtoWorkStealingSchema>;
+
+// ---------------------------------------------------------------------------
 // Hive identity — multi-instance mesh coordination
 // ---------------------------------------------------------------------------
 
@@ -193,6 +220,8 @@ export const ProtoConfigSchema = z.object({
   instances: z.array(ProtoInstanceSchema).optional(),
   /** Work assignment strategy across instances */
   assignment: ProtoAssignmentSchema.optional(),
+  /** Cross-instance work stealing configuration */
+  workStealing: ProtoWorkStealingSchema.optional(),
   /**
    * Shared settings defaults — lowest-priority layer in config resolution.
    * These values are overridden by shared CRDT settings and local overrides.

@@ -125,6 +125,7 @@ import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
+import { WorkStealingService } from './work-stealing-service.js';
 import {
   AutoLoopCoordinator,
   type LoopState,
@@ -257,6 +258,8 @@ export class AutoModeService {
   private knowledgeStoreService: KnowledgeStoreService | null = null;
   // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
   private pipelineCheckpointService: PipelineCheckpointService | null = null;
+  // Work Stealing service for cross-instance feature assignment (optional)
+  private workStealingService: WorkStealingService | null = null;
   // ExecutionService handles feature execution logic
   private executionService!: ExecutionService;
   // FeatureScheduler owns the loop, feature loading, and concurrency resolution
@@ -371,6 +374,14 @@ export class AutoModeService {
         void this.handleFeatureCompletion(data.featureId, data.projectPath);
       }
     });
+
+    // Work stealing: when backlog empties, broadcast a WORK_REQUEST to busy peers.
+    // The WorkStealingService must be wired in via setWorkStealingService() first.
+    this.events.on('auto-mode:event', (data) => {
+      if (data.type === 'auto_mode_idle' && data.projectPath && this.workStealingService) {
+        void this.workStealingService.requestWork(data.projectPath as string);
+      }
+    });
   }
 
   /**
@@ -412,6 +423,16 @@ export class AutoModeService {
    */
   setPipelineCheckpointService(service: PipelineCheckpointService): void {
     this.pipelineCheckpointService = service;
+  }
+
+  /**
+   * Wire up the Work Stealing service for cross-instance feature assignment.
+   * When set, auto-mode will broadcast WORK_REQUEST messages when its backlog
+   * empties, and accept stolen features from busy peers via CRDT sync.
+   */
+  setWorkStealingService(service: WorkStealingService): void {
+    this.workStealingService = service;
+    service.registerHandlers();
   }
 
   /**

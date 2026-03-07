@@ -451,6 +451,24 @@ export interface Feature {
   domain?: string;
   /** Instance ID that has claimed this feature for execution */
   claimedBy?: string;
+  /**
+   * Instance ID this feature has been cross-assigned to via work-stealing.
+   * Set when a busy peer transfers this feature to an idle instance.
+   * Propagates to all peers via CRDT sync on the feature:updated event.
+   */
+  assignedInstance?: string;
+  /**
+   * Whether this feature is eligible for work-stealing by other instances.
+   * When false, this feature will never be included in a WORK_OFFER.
+   * Defaults to true (all features are stealable unless opted out).
+   */
+  stealable?: boolean;
+  /**
+   * List of file paths this feature is expected to modify.
+   * Used for domain-routing work-stealing: features are only offered to
+   * instances whose domains cover these paths.
+   */
+  filesToModify?: string[];
 
   // Signal provenance — tracks which channel originated this feature
   /**

@@ -324,7 +324,11 @@ export type EventType =
   | 'crdt:remote-changes'
   // Sync mesh partition and peer health events
   | 'sync:partition-recovered'
-  | 'sync:peer-unreachable';
+  | 'sync:peer-unreachable'
+  // Work-stealing handshake events (cross-instance feature assignment)
+  | 'work_stealing:request'
+  | 'work_stealing:offer'
+  | 'work_stealing:accept';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 

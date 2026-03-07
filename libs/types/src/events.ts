@@ -19,6 +19,9 @@ export const CRDT_SYNCED_EVENT_TYPES: ReadonlySet<EventType> = new Set<EventType
   'project:created',
   'project:updated',
   'project:deleted',
+  'work_stealing:request',
+  'work_stealing:offer',
+  'work_stealing:accept',
 ]);
 
 /**
