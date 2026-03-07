@@ -621,12 +621,7 @@ export class FeatureScheduler {
             prMergedAt: mergedPr.mergedAt ?? new Date().toISOString(),
           });
           feature.status = 'done';
-          this.events.emit('feature:status-changed', {
-            projectPath,
-            featureId: feature.id,
-            previousStatus: prevStatus,
-            newStatus: 'done',
-          });
+          // feature:status-changed is auto-emitted by featureLoader.update()
         } catch (error) {
           feature.status = prevStatus;
           logger.error(
@@ -689,12 +684,7 @@ export class FeatureScheduler {
                 status: 'review',
                 prNumber: existingPr,
               });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: 'blocked',
-                newStatus: 'review',
-              });
+              // feature:status-changed is auto-emitted by featureLoader.update()
             } catch (error) {
               logger.error(
                 `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
@@ -721,12 +711,7 @@ export class FeatureScheduler {
             feature.status = 'backlog';
             try {
               await this.featureLoader.update(projectPath, feature.id, { status: 'backlog' });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: 'blocked',
-                newStatus: 'backlog',
-              });
+              // feature:status-changed is auto-emitted by featureLoader.update()
             } catch (error) {
               logger.error(`[loadPendingFeatures] Failed to unblock feature ${feature.id}:`, error);
             }
@@ -813,12 +798,7 @@ export class FeatureScheduler {
                 status: 'review',
                 prNumber: existingPrFilter,
               });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: feature.status,
-                newStatus: 'review',
-              });
+              // feature:status-changed is auto-emitted by featureLoader.update()
             } catch (error) {
               logger.error(
                 `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
