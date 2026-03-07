@@ -153,6 +153,8 @@ export type {
   ArtifactIndexEntry,
   ArtifactIndex,
   ProjectArtifact,
+  MilestoneSummary,
+  ProjectSummary,
 } from './project.js';
 
 // Calendar types
