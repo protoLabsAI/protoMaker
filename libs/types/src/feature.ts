@@ -165,6 +165,9 @@ export interface Feature {
   // Project/milestone tracking for milestone-gated execution
   projectSlug?: string; // Project this feature belongs to
   milestoneSlug?: string; // Milestone this feature belongs to
+  archived?: boolean;
+  archivedAt?: string;
+  archivePath?: string;
   skipTests?: boolean;
   thinkingLevel?: ThinkingLevel;
   reasoningEffort?: ReasoningEffort;
