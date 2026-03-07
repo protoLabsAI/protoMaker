@@ -25,10 +25,46 @@
       "to": "backlog",
       "timestamp": "2026-03-07T11:08:29.669Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T15:44:33.263Z",
+      "reason": "Interrupted from \"backlog\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T15:44:36.953Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:44:39.546Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772881709668-yeuxsn0vb"
-  ]
+  ],
+  "statusChangeReason": "Interrupted from \"backlog\": server shutdown",
+  "lastTraceId": "84a0e4c8-961b-4820-8ec0-4d2d3aaea0db",
+  "traceIds": [
+    "84a0e4c8-961b-4820-8ec0-4d2d3aaea0db"
+  ],
+  "executionHistory": [
+    {
+      "id": "bdf5f5c9-1263-4e86-9387-0d3414cacdcc",
+      "startedAt": "2026-03-07T15:43:38.134Z",
+      "completedAt": "2026-03-07T15:44:33.631Z",
+      "durationMs": 55497,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "updatedAt": "2026-03-07T15:44:36.952Z",
+  "model": "claude-sonnet-4-6"
 }

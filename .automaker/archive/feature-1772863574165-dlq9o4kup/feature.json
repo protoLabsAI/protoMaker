@@ -2,7 +2,7 @@
   "category": "Project Page Hub (Frontend)",
   "description": "**Milestone:** Project Page Hub (Frontend)\n\nAdd a Discord webhook URL input field to the project settings panel. When saved, it persists to .automaker/settings.json under ceremonySettings.discordWebhookUrl via a PATCH to the existing project settings API. Include a 'Test webhook' button that posts a test message. Write a Vitest test for the webhook URL validation logic (must be a valid Discord webhook URL pattern: https://discord.com/api/webhooks/...).\n\n**Files to Modify:**\n- apps/ui/src/components/views/projects/project-settings-panel.tsx\n- apps/ui/tests/unit/webhook-settings.test.tsx\n\n**Acceptance Criteria:**\n- [ ] Discord webhook URL input visible in project settings panel\n- [ ] URL validated against Discord webhook pattern before save\n- [ ] Test webhook button posts a test message and shows success/failure\n- [ ] Persists via existing project settings PATCH endpoint\n- [ ] Vitest test covers URL validation logic\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Per-project Discord webhook settings UI",
-  "status": "in_progress",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772863574163-sol6jcrip",
   "branchName": "feature/project-page-hub-per-project-discord",
@@ -31,13 +31,13 @@
     },
     {
       "from": "in_progress",
-      "to": "backlog",
-      "timestamp": "2026-03-07T15:44:39.542Z"
+      "to": "review",
+      "timestamp": "2026-03-07T13:08:43.079Z"
     },
     {
-      "from": "backlog",
-      "to": "in_progress",
-      "timestamp": "2026-03-07T15:44:53.822Z"
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T13:17:18.330Z"
     }
   ],
   "featureType": "code",
@@ -46,5 +46,19 @@
   ],
   "complexity": "medium",
   "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T13:04:30.232Z"
+  "updatedAt": "2026-03-07T13:04:30.232Z",
+  "costUsd": 1.08462025,
+  "lastSessionId": "742ed879-569f-46aa-ba43-0c6e818134a5",
+  "lastTraceId": "5e4b5754-9de6-48d6-b48a-bbac65a4ff5a",
+  "traceIds": [
+    "5e4b5754-9de6-48d6-b48a-bbac65a4ff5a"
+  ],
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1939",
+  "prNumber": 1939,
+  "prCreatedAt": "2026-03-07T13:08:41.901Z",
+  "reviewStartedAt": "2026-03-07T13:08:43.079Z",
+  "prTrackedSince": "2026-03-07T13:08:43.080Z",
+  "prLastPolledAt": "2026-03-07T13:19:25.705Z",
+  "prMergedAt": "2026-03-07T13:17:06Z",
+  "completedAt": "2026-03-07T13:17:18.330Z"
 }

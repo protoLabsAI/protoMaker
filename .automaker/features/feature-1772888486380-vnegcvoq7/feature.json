@@ -2,7 +2,7 @@
   "category": "Documentation",
   "description": "7 doc-relevant files changed recently.\n\nChanged files requiring docs review:\n- apps/server/src/routes/setup/routes/project.ts\n- apps/server/src/services/feature-scheduler.ts\n- apps/server/src/services/repo-research-service.ts\n- libs/platform/src/index.ts\n- libs/types/src/index.ts\n- libs/types/src/project.ts\n- libs/types/src/setup.ts\n",
   "title": "Update docs after: SetupLab: Published Onboarding Tool",
-  "status": "in_progress",
+  "status": "backlog",
   "complexity": "small",
   "id": "feature-1772888486380-vnegcvoq7",
   "branchName": "feature/update-docs-after-setuplab-published",
@@ -25,6 +25,11 @@
       "from": "backlog",
       "to": "in_progress",
       "timestamp": "2026-03-07T13:03:11.119Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:44:39.548Z"
     }
   ],
   "featureType": "code",

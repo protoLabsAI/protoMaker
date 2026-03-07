@@ -10,29 +10,7 @@
       "reviewStatus": "pending",
       "remediationCount": 0,
       "trackedSince": 1772887892550
-    },
-    {
-      "featureId": "feature-1772856637963-3zeqswr5x",
-      "projectPath": "/Users/kj/dev/automaker",
-      "prNumber": 1936,
-      "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1936",
-      "branchName": "",
-      "lastCheckedAt": 1772888642526,
-      "reviewStatus": "pending",
-      "remediationCount": 0,
-      "trackedSince": 1772888579152
-    },
-    {
-      "featureId": "feature-1772863574150-pcekyxxkf",
-      "projectPath": "/Users/kj/dev/automaker",
-      "prNumber": 1937,
-      "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1937",
-      "branchName": "",
-      "lastCheckedAt": 0,
-      "reviewStatus": "pending",
-      "remediationCount": 0,
-      "trackedSince": 1772888659039
     }
   ],
-  "savedAt": "2026-03-07T13:04:19.040Z"
+  "savedAt": "2026-03-07T15:44:39.306Z"
 }

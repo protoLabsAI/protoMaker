@@ -1,0 +1,46 @@
+{
+  "category": "Project Page Hub (Frontend)",
+  "description": "**Milestone:** Project Page Hub (Frontend)\n\nTDD phase (Vitest component tests). Build a ProjectTimeline React component that fetches from /api/projects/:slug/timeline and renders a chronological activity feed. Events should be typed and rendered with icons: feature:done (check), milestone:completed (flag), ceremony:fired (celebration), escalation (warning), pr:merged (merge). Build a ProjectArtifactViewer component that renders ceremony reports and changelogs from the artifact list. Use existing atom/molecule components. Write Vitest unit tests for event rendering logic. Wire both into the existing project detail page route.\n\n**Files to Modify:**\n- apps/ui/src/components/views/projects/project-timeline.tsx\n- apps/ui/src/components/views/projects/project-artifact-viewer.tsx\n- apps/ui/src/routes/projects/$projectSlug.tsx\n- apps/ui/src/hooks/use-project-summary.ts\n- apps/ui/tests/unit/project-timeline.test.tsx\n\n**Acceptance Criteria:**\n- [ ] ProjectTimeline renders activity feed from /api/projects/:slug/timeline\n- [ ] Each event type has a distinct icon and label\n- [ ] ProjectArtifactViewer renders ceremony reports and changelogs from artifact list\n- [ ] useProjectSummary hook fetches /api/projects/:slug/summary\n- [ ] Vitest unit tests cover event rendering and empty states\n- [ ] Build passes\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Project timeline feed component + artifact viewer",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772863574163-sol6jcrip",
+  "branchName": "feature/project-page-hub-project-timeline",
+  "isFoundation": true,
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574164-qk1lfiqas",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Project Page Hub (Frontend)\n\nTDD phase (Vitest component tests). Build a ProjectTimeline React component that fetches from /api/projects/:slug/timeline and renders a chronological activity feed. Events should be typed and rendered with icons: feature:done (check), milestone:completed (flag), ceremony:fired (celebration), escalation (warning), pr:merged (merge). Build a ProjectArtifactViewer component that renders ceremony reports and changelogs from the artifact list. Use existing atom/molecule components. Write Vitest unit tests for event rendering logic. Wire both into the existing project detail page route.\n\n**Files to Modify:**\n- apps/ui/src/components/views/projects/project-timeline.tsx\n- apps/ui/src/components/views/projects/project-artifact-viewer.tsx\n- apps/ui/src/routes/projects/$projectSlug.tsx\n- apps/ui/src/hooks/use-project-summary.ts\n- apps/ui/tests/unit/project-timeline.test.tsx\n\n**Acceptance Criteria:**\n- [ ] ProjectTimeline renders activity feed from /api/projects/:slug/timeline\n- [ ] Each event type has a distinct icon and label\n- [ ] ProjectArtifactViewer renders ceremony reports and changelogs from artifact list\n- [ ] useProjectSummary hook fetches /api/projects/:slug/summary\n- [ ] Vitest unit tests cover event rendering and empty states\n- [ ] Build passes\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T06:06:14.164Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.164Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.164Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "review",
+      "timestamp": "2026-03-07T13:01:13.519Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T13:04:24.147Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574160-6h49ce6ke"
+  ],
+  "prNumber": 1930,
+  "reviewStartedAt": "2026-03-07T13:01:13.519Z",
+  "prMergedAt": "2026-03-07T13:04:02Z",
+  "completedAt": "2026-03-07T13:04:24.147Z"
+}

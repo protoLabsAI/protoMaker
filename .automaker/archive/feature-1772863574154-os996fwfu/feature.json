@@ -1,0 +1,37 @@
+{
+  "category": "Epic",
+  "description": "# Project Artifact Persistence\n\nPersist ceremony reports and changelogs as structured artifacts on the project. Maintain an artifact index. Everything stored in .automaker/projects/{slug}/artifacts/.\n\n## Phases\n1. Artifact storage service + ceremony report persistence\n2. Changelog persistence + escalation artifact recording",
+  "title": "[Epic] Project Artifact Persistence",
+  "status": "done",
+  "isEpic": true,
+  "epicColor": "#7C3AED",
+  "branchName": "epic/project-artifact-persistence",
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574154-os996fwfu",
+  "descriptionHistory": [
+    {
+      "description": "# Project Artifact Persistence\n\nPersist ceremony reports and changelogs as structured artifacts on the project. Maintain an artifact index. Everything stored in .automaker/projects/{slug}/artifacts/.\n\n## Phases\n1. Artifact storage service + ceremony report persistence\n2. Changelog persistence + escalation artifact recording",
+      "timestamp": "2026-03-07T06:06:14.154Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.154Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.154Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T13:24:45.957Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574147-mglorzdzu"
+  ],
+  "completedAt": "2026-03-07T13:24:45.957Z"
+}

@@ -1,0 +1,132 @@
+{
+  "category": "proto.config.yaml Schema & Loader",
+  "description": "**Milestone:** proto.config.yaml Schema & Loader\n\nDefine ProtoConfig TypeScript types in libs/types/src/proto-config.ts covering: name, version, techStack (language, framework, packageManager, testRunner, bundler), commands (build, test, lint, dev, format), git (baseBranch, strategy, prBaseBranch), protolab section (enabled, syncPort, instanceId), and defaults section. Export from libs/types/src/index.ts. Create a JSON Schema or Zod validator for the YAML structure.\n\n**Files to Modify:**\n- libs/types/src/proto-config.ts\n- libs/types/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] ProtoConfig type exported from @protolabsai/types\n- [ ] Zod schema validates proto.config.yaml structure\n- [ ] Schema supports all fields: name, techStack, commands, git, protolab, defaults\n- [ ] Optional fields have sensible defaults\n- [ ] Type is forward-compatible with CRDT sync project requirements\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "ProtoConfig types and YAML schema",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772881709657-be8p79osk",
+  "branchName": "feature/protoconfigyaml-protoconfig-types",
+  "isFoundation": true,
+  "projectSlug": "setuplab-published-onboarding-tool",
+  "milestoneSlug": "01-proto-config-yaml-schema-loader",
+  "phaseSlug": "protoconfig-types-and-yaml-schema",
+  "id": "feature-1772881709659-k4bjs0l1u",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** proto.config.yaml Schema & Loader\n\nDefine ProtoConfig TypeScript types in libs/types/src/proto-config.ts covering: name, version, techStack (language, framework, packageManager, testRunner, bundler), commands (build, test, lint, dev, format), git (baseBranch, strategy, prBaseBranch), protolab section (enabled, syncPort, instanceId), and defaults section. Export from libs/types/src/index.ts. Create a JSON Schema or Zod validator for the YAML structure.\n\n**Files to Modify:**\n- libs/types/src/proto-config.ts\n- libs/types/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] ProtoConfig type exported from @protolabsai/types\n- [ ] Zod schema validates proto.config.yaml structure\n- [ ] Schema supports all fields: name, techStack, commands, git, protolab, defaults\n- [ ] Optional fields have sensible defaults\n- [ ] Type is forward-compatible with CRDT sync project requirements\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T11:08:29.659Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T11:08:29.659Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T11:08:29.659Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T11:09:55.082Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T11:12:40.783Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T11:12:43.980Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T11:12:49.495Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T11:13:33.823Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T11:14:00.685Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T11:14:03.669Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T11:14:09.105Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T11:14:53.176Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T11:16:10.681Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T12:09:44.740Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T11:14:55.200Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "c6c88ec2-89dc-4786-b977-7ff949547efa",
+  "traceIds": [
+    "0ae730fe-6b1e-4eae-8611-81abbc0cb780",
+    "b608bf24-ba8b-4784-a39c-a7ca568e067a",
+    "c6c88ec2-89dc-4786-b977-7ff949547efa"
+  ],
+  "executionHistory": [
+    {
+      "id": "cfc92760-18b4-4df7-925c-b7da449ea6c8",
+      "startedAt": "2026-03-07T11:09:55.612Z",
+      "completedAt": "2026-03-07T11:12:41.301Z",
+      "durationMs": 165689,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "0adcec87-a69c-4825-b7be-c0bd43064238",
+      "startedAt": "2026-03-07T11:13:34.269Z",
+      "completedAt": "2026-03-07T11:14:01.139Z",
+      "durationMs": 26870,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 0.27010199999999995,
+  "lastSessionId": "087c5dab-09e6-4318-be37-b5777ecc2550",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1925",
+  "prNumber": 1925,
+  "prCreatedAt": "2026-03-07T11:16:10.680Z",
+  "reviewStartedAt": "2026-03-07T11:16:10.681Z",
+  "prTrackedSince": "2026-03-07T11:16:10.689Z",
+  "prLastPolledAt": "2026-03-07T12:14:14.145Z",
+  "prMergedAt": "2026-03-07T12:05:15Z",
+  "completedAt": "2026-03-07T12:09:44.740Z"
+}

@@ -1,0 +1,135 @@
+{
+  "category": "Tutorial Content & Getting Started",
+  "description": "**Milestone:** Tutorial Content & Getting Started\n\nGenerate a spec.md skeleton pre-filled with detected project information: name, description (from README or package.json), tech stack summary, architecture overview (monorepo packages or directory structure), key dependencies. Includes placeholder sections the user should fill in: product goals, target users, key workflows, constraints.\n\n**Files to Modify:**\n- apps/server/src/services/repo-research-service.ts\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] spec.md generated with detected project info\n- [ ] Placeholder sections clearly marked for user to fill\n- [ ] Architecture section reflects actual repo structure\n- [ ] Does not overwrite existing spec.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Spec.md skeleton from research",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772881709662-81w9mn7yf",
+  "branchName": "feature/tutorial-content-specmd-skeleton",
+  "isFoundation": false,
+  "projectSlug": "setuplab-published-onboarding-tool",
+  "milestoneSlug": "02-tutorial-content-getting-started",
+  "phaseSlug": "spec-md-skeleton-from-research",
+  "id": "feature-1772881709665-vfqo1fqq3",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Tutorial Content & Getting Started\n\nGenerate a spec.md skeleton pre-filled with detected project information: name, description (from README or package.json), tech stack summary, architecture overview (monorepo packages or directory structure), key dependencies. Includes placeholder sections the user should fill in: product goals, target users, key workflows, constraints.\n\n**Files to Modify:**\n- apps/server/src/services/repo-research-service.ts\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] spec.md generated with detected project info\n- [ ] Placeholder sections clearly marked for user to fill\n- [ ] Architecture section reflects actual repo structure\n- [ ] Does not overwrite existing spec.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T11:08:29.665Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T11:08:29.665Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T11:08:29.665Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:18:20.594Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T13:19:27.186Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:19:29.953Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T13:19:35.004Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:19:46.102Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T13:20:16.786Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:20:19.647Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T13:20:21.787Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:20:43.334Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T13:23:26.325Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772881709661-yvcbc1mtp",
+    "feature-1772881709664-bdnjxdbxm"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T13:23:26.325Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "5b5e0b5b-f47b-43f3-ba1e-d3cd045cd93a",
+  "traceIds": [
+    "2972c63b-30ce-4412-a925-b67b4712808b",
+    "5b5ee0f4-2952-4e14-bfff-e2cdd6d44897",
+    "5b5e0b5b-f47b-43f3-ba1e-d3cd045cd93a"
+  ],
+  "executionHistory": [
+    {
+      "id": "4e75048a-ef0a-48a6-bc58-16b97a7d404d",
+      "startedAt": "2026-03-07T13:18:20.990Z",
+      "completedAt": "2026-03-07T13:19:27.672Z",
+      "durationMs": 66682,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "c0a31284-55fe-4d66-80cc-1c6b17b66a8f",
+      "startedAt": "2026-03-07T13:19:46.494Z",
+      "completedAt": "2026-03-07T13:20:17.335Z",
+      "durationMs": 30841,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "52517a49-142c-496e-9235-def3e9689ade",
+      "startedAt": "2026-03-07T13:20:43.772Z",
+      "completedAt": "2026-03-07T13:23:26.339Z",
+      "durationMs": 162567,
+      "costUsd": 0.51921675,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 0.51921675,
+  "lastSessionId": "dbf2b6f4-d546-45a3-aa9b-1022b6905b22",
+  "completedAt": "2026-03-07T13:23:26.325Z",
+  "summary": "## Summary: Milestone — Tutorial Content & Getting Started (spec.md skeleton)\n\n### Changes Implemented\nThe feature was already fully implemented on this worktree branch. The implementation includes:\n\n1. **`extractProjectMeta(projectPath)`** in `repo-research-service.ts`:\n   - Reads `package.json` for project description\n   - Falls back to first non-heading paragraph in `README.md` (or `README.mdx`, etc.)\n   - Collects key dependencies (up to 10 production + 5 dev)\n\n2. **`generateSpecMd(projectName, meta, research?)`** in `repo-research-service.ts`:\n   - Auto-generated header with \"auto-generated by Automaker\" notice\n   - `## Project Overview` — project name + detected/placeholder description\n   - `## Tech Stack` — populated from `RepoResearchResult` (TypeScript, React, Next.js, Express, databases, testing tools, etc.) or TODO placeholder\n   - `## Architecture Overview` — lists monorepo packages (with type) or top-level dirs if detected, otherwise TODO\n   - `## Key Dependencies` — lists detected dependencies\n   - Separator + clearly marked placeholder sections: **Product Goals**, **Target Users**, **Key Workflows**, **Constraints** — all with `TODO:` markers\n\n3. **Route integration** in `project.ts` (step 3d):\n   - Checks if `spec.md` already exists via `fs.access` before writing\n   - If exists: adds `spec.md (already exists)` to `filesCreated` — no overwrite\n   - If not exists: calls `extractProjectMeta` + `generateSpecMd` and writes the file\n\n### Files Modified\n- `apps/server/src/services/repo-research-service.ts` — Added `extractProjectMeta()`, `generateSpecMd()`, and `ProjectMeta` interface\n- `apps/server/src/routes/setup/routes/project.ts` — Added step 3d to generate spec.md during project setup\n\n### Risks/Blockers Encountered\n- None. Implementation was already complete on the branch.\n\n### Learnings\n- The \"do not overwrite\" guard uses `fs.access()` in a try/catch — if it throws (file not found), generate the file; if it succeeds (file exists), skip with `(already exists)` marker.\n- `generateSpecMd` takes an optional `RepoResearchResult` to populate tech stack and architecture sections when available, gracefully degrading to TODO placeholders when not.\n\n### Notes for Developer\n- The `generateSpecMd` function is exported and can be called standalone — useful for testing or future CLI tooling.\n- Architecture section auto-detects monorepo packages (with `path` and `type`) vs. flat top-level directory listing.\n- Description capped at 500 characters from README to keep spec.md concise.\n\n### Verification Status\n- ✅ **Build**: `npm run build:server` — exit code 0, all 15 dependencies compiled successfully\n- ✅ **Tests**: 5/5 custom verification tests passed covering:\n  1. spec.md generated with project name + description from package.json + key dependencies\n  2. README fallback description extraction\n  3. TODO placeholder when no description available\n  4. Architecture overview populated from monorepo research data\n  5. No-overwrite behavior for existing spec.md\n- ✅ **Git diff**: Only the two specified feature files were changed (`repo-research-service.ts`, `project.ts`)\n- ✅ Pre-existing test failures in `changelog-artifact.test.ts` are unrelated (EventLedgerService escalation — not touched by this feature)"
+}

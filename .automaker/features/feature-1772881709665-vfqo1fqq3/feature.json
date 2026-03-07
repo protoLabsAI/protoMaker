@@ -2,7 +2,7 @@
   "category": "Tutorial Content & Getting Started",
   "description": "**Milestone:** Tutorial Content & Getting Started\n\nGenerate a spec.md skeleton pre-filled with detected project information: name, description (from README or package.json), tech stack summary, architecture overview (monorepo packages or directory structure), key dependencies. Includes placeholder sections the user should fill in: product goals, target users, key workflows, constraints.\n\n**Files to Modify:**\n- apps/server/src/services/repo-research-service.ts\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] spec.md generated with detected project info\n- [ ] Placeholder sections clearly marked for user to fill\n- [ ] Architecture section reflects actual repo structure\n- [ ] Does not overwrite existing spec.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Spec.md skeleton from research",
-  "status": "backlog",
+  "status": "blocked",
   "isEpic": false,
   "epicId": "feature-1772881709662-81w9mn7yf",
   "branchName": "feature/tutorial-content-specmd-skeleton",
@@ -25,11 +25,36 @@
       "to": "backlog",
       "timestamp": "2026-03-07T11:08:29.665Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T15:44:56.897Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "blocked",
+      "timestamp": "2026-03-07T15:44:58.206Z",
+      "reason": "Max agent retries exceeded (3)"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772881709661-yvcbc1mtp",
     "feature-1772881709664-bdnjxdbxm"
-  ]
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "statusChangeReason": "Max agent retries exceeded (3)",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Max agent retries exceeded (3)"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T15:44:58.207Z"
+  }
 }
