@@ -11,6 +11,7 @@
 
 import path from 'path';
 import fs from 'fs';
+import readline from 'readline';
 import { createLogger } from '@protolabsai/utils';
 import { secureFs, getProjectDir, getDataDirectory } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
