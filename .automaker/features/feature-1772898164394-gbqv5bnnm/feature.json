@@ -1,0 +1,113 @@
+{
+  "category": "Projects and Settings Sync",
+  "description": "**Milestone:** Projects and Settings Sync\n\nCreate Automerge document for projects (Record<slug, Project>). ProjectService reads/writes via CRDTStore. Project ceremonies sync as project sub-documents. PRD and milestone content stored as Automerge text fields.\n\n**Files to Modify:**\n- apps/server/src/services/project-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n- libs/crdt/src/documents.ts\n\n**Acceptance Criteria:**\n- [ ] Projects document syncs across instances\n- [ ] Project created on instance A visible on instance B\n- [ ] Project updates (status, milestones) propagate in real-time\n- [ ] Backward compatible: works without CRDT (falls back to filesystem)\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Project Sync",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772898164394-n290dlwzl",
+  "branchName": "feature/projects-and-project-sync",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "03-projects-and-settings-sync",
+  "phaseSlug": "project-sync",
+  "id": "feature-1772898164394-gbqv5bnnm",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Projects and Settings Sync\n\nCreate Automerge document for projects (Record<slug, Project>). ProjectService reads/writes via CRDTStore. Project ceremonies sync as project sub-documents. PRD and milestone content stored as Automerge text fields.\n\n**Files to Modify:**\n- apps/server/src/services/project-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n- libs/crdt/src/documents.ts\n\n**Acceptance Criteria:**\n- [ ] Projects document syncs across instances\n- [ ] Project created on instance A visible on instance B\n- [ ] Project updates (status, milestones) propagate in real-time\n- [ ] Backward compatible: works without CRDT (falls back to filesystem)\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.394Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.394Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.394Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T17:16:23.510Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T17:28:14.590Z"
+    },
+    {
+      "from": "review",
+      "to": "backlog",
+      "timestamp": "2026-03-07T17:36:55.054Z"
+    },
+    {
+      "from": "backlog",
+      "to": "review",
+      "timestamp": "2026-03-07T17:36:55.603Z"
+    },
+    {
+      "from": "backlog",
+      "to": "review",
+      "timestamp": "2026-03-07T17:39:48.562Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T17:54:44.196Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T18:12:17.935Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T19:54:49.991Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164391-9v1okhazn",
+    "feature-1772898164391-6jgo2lrs8"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T18:08:37.077Z",
+  "costUsd": 4.2343555,
+  "lastSessionId": "4a713ce1-6f8d-4b91-a0b1-963adfe34504",
+  "lastTraceId": "2e348422-c7d0-48df-9e9e-0d929a7cfe85",
+  "traceIds": [
+    "513d9a52-4677-4c6a-bb1d-d75217d5a52b",
+    "54dd8083-9782-41ad-8240-caa0cd8dc262",
+    "2e348422-c7d0-48df-9e9e-0d929a7cfe85"
+  ],
+  "prLastPolledAt": "2026-03-07T18:08:31.904Z",
+  "executionHistory": [
+    {
+      "id": "30aea075-513e-4be9-9bc7-aba6b87e54b1",
+      "startedAt": "2026-03-07T17:54:42.964Z",
+      "completedAt": "2026-03-07T17:59:44.802Z",
+      "durationMs": 301838,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "be686d55-8a52-434e-9776-3e882cd7dc16",
+      "startedAt": "2026-03-07T17:59:45.961Z",
+      "completedAt": "2026-03-07T18:08:35.506Z",
+      "durationMs": 529545,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Claude Code process exited with code 143",
+      "trigger": "manual"
+    }
+  ],
+  "reviewStartedAt": "2026-03-07T18:12:17.935Z",
+  "completedAt": "2026-03-07T19:54:49.991Z"
+}

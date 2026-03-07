@@ -1,0 +1,40 @@
+{
+  "category": "Private Ava Channel",
+  "description": "**Milestone:** Private Ava Channel\n\nCreate daily-sharded Ava Channel CRDT documents (doc:ava-channel/YYYY-MM-DD) as append-only Automerge list CRDTs storing natural-language messages. Daily sharding provides natural compaction — older shards receive no writes and compact efficiently. AvaChatMessage has instanceId, instanceName, content (free-form text), optional structured context (featureId, boardSummary, capacity), source (ava|operator|system), and timestamp. No messageType enum — the content IS the protocol. AvaChannelService provides postMessage(), getMessages(), getRecentMessages() with cross-shard queries for time ranges spanning multiple days. Bug reports from Discord #bug-reports auto-post into the channel as system messages. Shards older than 30 days archived to disk and unloaded from memory.\n\n**Files to Modify:**\n- libs/crdt/src/documents.ts\n- libs/types/src/ava-channel.ts\n- libs/types/src/index.ts\n- apps/server/src/services/ava-channel-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n\n**Acceptance Criteria:**\n- [ ] AvaChatMessage type: id, instanceId, instanceName, content, context?, source, timestamp\n- [ ] Daily-sharded CRDT documents (doc:ava-channel/YYYY-MM-DD) sync across all instances\n- [ ] Messages are append-only (grow-only list CRDT, no edits or deletes)\n- [ ] Cross-shard queries transparently span multiple days for getMessages() with time ranges\n- [ ] Shards older than 30 days archived to disk and unloaded from CRDT memory\n- [ ] AvaChannelService.postMessage() appends to CRDT doc\n- [ ] AvaChannelService.getMessages() reads with optional time range and instance filter\n- [ ] Bug reports from Discord auto-posted as source:'system' messages\n- [ ] Unit tests for message append, retrieval, and cross-shard queries\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Ava Channel CRDT Document and Service",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772898164398-jm0lfmldc",
+  "branchName": "feature/private-ava-channel-ava-channel-crdt",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "06-private-ava-channel",
+  "phaseSlug": "ava-channel-crdt-and-service",
+  "id": "feature-1772898164399-c3zysvnzh",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Private Ava Channel\n\nCreate daily-sharded Ava Channel CRDT documents (doc:ava-channel/YYYY-MM-DD) as append-only Automerge list CRDTs storing natural-language messages. Daily sharding provides natural compaction — older shards receive no writes and compact efficiently. AvaChatMessage has instanceId, instanceName, content (free-form text), optional structured context (featureId, boardSummary, capacity), source (ava|operator|system), and timestamp. No messageType enum — the content IS the protocol. AvaChannelService provides postMessage(), getMessages(), getRecentMessages() with cross-shard queries for time ranges spanning multiple days. Bug reports from Discord #bug-reports auto-post into the channel as system messages. Shards older than 30 days archived to disk and unloaded from memory.\n\n**Files to Modify:**\n- libs/crdt/src/documents.ts\n- libs/types/src/ava-channel.ts\n- libs/types/src/index.ts\n- apps/server/src/services/ava-channel-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n\n**Acceptance Criteria:**\n- [ ] AvaChatMessage type: id, instanceId, instanceName, content, context?, source, timestamp\n- [ ] Daily-sharded CRDT documents (doc:ava-channel/YYYY-MM-DD) sync across all instances\n- [ ] Messages are append-only (grow-only list CRDT, no edits or deletes)\n- [ ] Cross-shard queries transparently span multiple days for getMessages() with time ranges\n- [ ] Shards older than 30 days archived to disk and unloaded from CRDT memory\n- [ ] AvaChannelService.postMessage() appends to CRDT doc\n- [ ] AvaChannelService.getMessages() reads with optional time range and instance filter\n- [ ] Bug reports from Discord auto-posted as source:'system' messages\n- [ ] Unit tests for message append, retrieval, and cross-shard queries\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.399Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.399Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.399Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164390-3riuelgoa",
+    "feature-1772898164391-9v1okhazn",
+    "feature-1772898164391-6jgo2lrs8",
+    "feature-1772898164394-gbqv5bnnm",
+    "feature-1772898164395-2x6bahyy6",
+    "feature-1772898164396-zbjiwwn64",
+    "feature-1772898164398-oia6hqzt6"
+  ]
+}

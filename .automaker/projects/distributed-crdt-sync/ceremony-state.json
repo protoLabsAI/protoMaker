@@ -1,0 +1,9 @@
+{
+  "phase": "awaiting_kickoff",
+  "projectPath": "/home/josh/dev/ava",
+  "projectSlug": "distributed-crdt-sync",
+  "lastStandup": "",
+  "lastRetro": "",
+  "standupCadence": "0 9 * * 1",
+  "history": []
+}

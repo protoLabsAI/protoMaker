@@ -1,0 +1,208 @@
+{
+  "category": "Interface Extraction",
+  "description": "**Milestone:** Interface Extraction\n\nAudit all imports of the concrete FeatureLoader class across routes, services, and wiring modules. Replace with the FeatureStore interface. Wire FeatureStore via dependency injection in services.ts and wiring.ts so the concrete implementation is resolved in one place. Verify all existing tests pass against the interface without behavior changes.\n\n**Files to Modify:**\n- apps/server/src/services/feature-loader.ts\n- apps/server/src/server/services.ts\n- apps/server/src/server/wiring.ts\n- apps/server/src/routes/features/index.ts\n- apps/server/src/routes/agent/index.ts\n- apps/server/src/routes/auto-mode/index.ts\n- libs/types/src/feature-store.ts\n\n**Acceptance Criteria:**\n- [ ] Zero direct imports of FeatureLoader outside of services.ts\n- [ ] All routes and services consume FeatureStore interface\n- [ ] FeatureStore resolved via dependency injection in services.ts\n- [ ] All existing tests pass without modification\n- [ ] npm run build:server passes\n- [ ] npm run typecheck passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "FeatureLoader to FeatureStore Interface Migration",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772898164387-iqm3blu2j",
+  "branchName": "feature/interface-extraction-featureloader-to",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "00-interface-extraction",
+  "phaseSlug": "featureloader-to-featurestore-interface",
+  "id": "feature-1772898164389-4qen2e7fw",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Interface Extraction\n\nAudit all imports of the concrete FeatureLoader class across routes, services, and wiring modules. Replace with the FeatureStore interface. Wire FeatureStore via dependency injection in services.ts and wiring.ts so the concrete implementation is resolved in one place. Verify all existing tests pass against the interface without behavior changes.\n\n**Files to Modify:**\n- apps/server/src/services/feature-loader.ts\n- apps/server/src/server/services.ts\n- apps/server/src/server/wiring.ts\n- apps/server/src/routes/features/index.ts\n- apps/server/src/routes/agent/index.ts\n- apps/server/src/routes/auto-mode/index.ts\n- libs/types/src/feature-store.ts\n\n**Acceptance Criteria:**\n- [ ] Zero direct imports of FeatureLoader outside of services.ts\n- [ ] All routes and services consume FeatureStore interface\n- [ ] FeatureStore resolved via dependency injection in services.ts\n- [ ] All existing tests pass without modification\n- [ ] npm run build:server passes\n- [ ] npm run typecheck passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.389Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.389Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.389Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T15:50:18.806Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:53:40.817Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T15:55:30.921Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:57:57.856Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T15:58:20.993Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T16:04:14.240Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T16:04:15.716Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T16:06:38.669Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T16:07:09.354Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T16:22:04.537Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T16:22:06.838Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T16:24:11.194Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T16:24:31.159Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T16:51:04.191Z"
+    },
+    {
+      "from": "done",
+      "to": "blocked",
+      "timestamp": "2026-03-07T16:51:56.662Z",
+      "reason": "Budget exceeded: $12.07"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T16:54:48.628Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "architectural",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T16:51:04.191Z",
+  "lastTraceId": "f38a617a-0a86-4a83-b5c5-a133cffa77f1",
+  "traceIds": [
+    "96a8bf70-ed64-4bc9-a746-c7a53eb53aca",
+    "91fd5acb-8a0a-4136-a1cd-ad1bc1076c9a",
+    "41016d67-f208-40de-9e69-5a67560b94d7",
+    "bd79b218-a95c-4fa5-94dc-5c64d22a3fa9",
+    "6316dd5e-c576-436b-a5c4-4fc134d69321",
+    "f38a617a-0a86-4a83-b5c5-a133cffa77f1"
+  ],
+  "executionHistory": [
+    {
+      "id": "78a7826c-316d-4780-8a53-6f264a3f9356",
+      "startedAt": "2026-03-07T15:50:19.123Z",
+      "completedAt": "2026-03-07T15:55:29.640Z",
+      "durationMs": 310517,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Claude Code process exited with code 143",
+      "trigger": "manual"
+    },
+    {
+      "id": "ff76e08b-31d6-44dd-8764-643c6e4aef40",
+      "startedAt": "2026-03-07T15:58:20.745Z",
+      "completedAt": "2026-03-07T16:01:23.654Z",
+      "durationMs": 182909,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "1cfdd93b-5197-4066-b611-031cb552e499",
+      "startedAt": "2026-03-07T16:01:24.660Z",
+      "completedAt": "2026-03-07T16:04:14.316Z",
+      "durationMs": 169656,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "cd89cbf3-c3eb-4c3e-8903-0c4193fd64be",
+      "startedAt": "2026-03-07T16:07:09.013Z",
+      "completedAt": "2026-03-07T16:16:41.085Z",
+      "durationMs": 572072,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "28f6168e-53d0-4271-8872-9bf7867c5cc8",
+      "startedAt": "2026-03-07T16:16:42.089Z",
+      "completedAt": "2026-03-07T16:22:04.562Z",
+      "durationMs": 322473,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "febd6f05-64f7-4de2-b40c-34a5aaa10e56",
+      "startedAt": "2026-03-07T16:24:30.771Z",
+      "completedAt": "2026-03-07T16:51:04.203Z",
+      "durationMs": 1593432,
+      "costUsd": 12.066515750000006,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "statusChangeReason": "Budget exceeded: $12.07",
+  "costUsd": 12.066515750000006,
+  "lastSessionId": "edba1c2f-4032-4d0c-b11d-f8e72e5028c3",
+  "completedAt": "2026-03-07T16:51:04.191Z",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Budget exceeded: $12.07"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T16:51:56.666Z"
+  }
+}

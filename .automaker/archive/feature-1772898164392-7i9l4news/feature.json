@@ -1,0 +1,38 @@
+{
+  "category": "Epic",
+  "description": "# Feature Sync\n\nImplement AutomergeFeatureStore backed by CRDT documents, replacing filesystem reads/writes for feature data. Events propagate across instances via EventBus.broadcast().\n\n## Phases\n1. AutomergeFeatureStore Implementation\n2. EventBus CRDT Bridge",
+  "title": "[Epic] Feature Sync",
+  "status": "done",
+  "isEpic": true,
+  "epicColor": "#EC4899",
+  "branchName": "epic/feature-sync",
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "02-feature-sync",
+  "id": "feature-1772898164392-7i9l4news",
+  "descriptionHistory": [
+    {
+      "description": "# Feature Sync\n\nImplement AutomergeFeatureStore backed by CRDT documents, replacing filesystem reads/writes for feature data. Events propagate across instances via EventBus.broadcast().\n\n## Phases\n1. AutomergeFeatureStore Implementation\n2. EventBus CRDT Bridge",
+      "timestamp": "2026-03-07T15:42:44.392Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.392Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.392Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T17:43:48.878Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164389-p8svfuao7"
+  ],
+  "completedAt": "2026-03-07T17:43:48.878Z"
+}

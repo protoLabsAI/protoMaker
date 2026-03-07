@@ -1,0 +1,40 @@
+{
+  "category": "Calendar and Todo Sync",
+  "description": "**Milestone:** Calendar and Todo Sync\n\nCreate Automerge document (doc:calendar) storing calendar events. Events sync across all instances so deadlines, ceremonies, and milestones are visible everywhere. Integrates with existing CalendarService and MCP calendar tools. Calendar is a shared resource — any instance can create/edit/delete events.\n\n**Files to Modify:**\n- libs/crdt/src/documents.ts\n- libs/types/src/calendar.ts\n- apps/server/src/services/calendar-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n\n**Acceptance Criteria:**\n- [ ] doc:calendar CRDT document syncs across all instances\n- [ ] Events created on any instance appear on all peers\n- [ ] Existing MCP calendar tools work through CRDT layer when hivemind active\n- [ ] Ceremony events auto-created when CeremonySchedulerService fires\n- [ ] Milestone/project deadline events sync with project data\n- [ ] Backward compatible: works without CRDT (falls back to filesystem)\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Calendar CRDT Sync",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772898164400-7rasamn1h",
+  "branchName": "feature/calendar-and-todo-calendar-crdt-sync",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "07-calendar-and-todo-sync",
+  "phaseSlug": "calendar-crdt-sync",
+  "id": "feature-1772898164401-ov042x9v8",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Calendar and Todo Sync\n\nCreate Automerge document (doc:calendar) storing calendar events. Events sync across all instances so deadlines, ceremonies, and milestones are visible everywhere. Integrates with existing CalendarService and MCP calendar tools. Calendar is a shared resource — any instance can create/edit/delete events.\n\n**Files to Modify:**\n- libs/crdt/src/documents.ts\n- libs/types/src/calendar.ts\n- apps/server/src/services/calendar-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n\n**Acceptance Criteria:**\n- [ ] doc:calendar CRDT document syncs across all instances\n- [ ] Events created on any instance appear on all peers\n- [ ] Existing MCP calendar tools work through CRDT layer when hivemind active\n- [ ] Ceremony events auto-created when CeremonySchedulerService fires\n- [ ] Milestone/project deadline events sync with project data\n- [ ] Backward compatible: works without CRDT (falls back to filesystem)\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.401Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.401Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.401Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164391-9v1okhazn",
+    "feature-1772898164391-6jgo2lrs8",
+    "feature-1772898164394-gbqv5bnnm",
+    "feature-1772898164395-2x6bahyy6",
+    "feature-1772898164396-zbjiwwn64",
+    "feature-1772898164398-oia6hqzt6",
+    "feature-1772898164399-c3zysvnzh"
+  ]
+}

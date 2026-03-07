@@ -1,0 +1,56 @@
+{
+  "category": "Documentation",
+  "description": "9 doc-relevant files changed recently.\n\nChanged files requiring docs review:\n- .automaker/projects/distributed-crdt-sync/project.md\n- apps/server/src/routes/chat/ava-tools.ts\n- apps/server/src/routes/projects/index.ts\n- apps/server/src/routes/projects/routes/timeline.ts\n- apps/server/src/services/ceremony-service.ts\n- apps/server/src/services/event-ledger-service.ts\n- apps/server/src/services/project-artifact-service.ts\n- libs/types/src/index.ts\n- libs/types/src/project.ts\n",
+  "title": "Update docs after: Distributed Product Lifecycle Platform",
+  "status": "done",
+  "complexity": "small",
+  "id": "feature-1772907017699-nhw6wy855",
+  "branchName": "feature/update-docs-after-distributed-product",
+  "descriptionHistory": [
+    {
+      "description": "9 doc-relevant files changed recently.\n\nChanged files requiring docs review:\n- .automaker/projects/distributed-crdt-sync/project.md\n- apps/server/src/routes/chat/ava-tools.ts\n- apps/server/src/routes/projects/index.ts\n- apps/server/src/routes/projects/routes/timeline.ts\n- apps/server/src/services/ceremony-service.ts\n- apps/server/src/services/event-ledger-service.ts\n- apps/server/src/services/project-artifact-service.ts\n- libs/types/src/index.ts\n- libs/types/src/project.ts\n",
+      "timestamp": "2026-03-07T18:10:17.705Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T18:10:17.705Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T18:10:17.705Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T18:17:20.917Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T18:21:55.850Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T19:54:50.893Z"
+    }
+  ],
+  "featureType": "code",
+  "updatedAt": "2026-03-07T18:17:20.917Z",
+  "model": "claude-sonnet-4-6",
+  "costUsd": 2.0827739999999997,
+  "lastSessionId": "f87d1993-d8a0-4905-9714-689512a5b02f",
+  "lastTraceId": "30d1ff32-5ce1-4367-a6af-7facac91ddf6",
+  "traceIds": [
+    "30d1ff32-5ce1-4367-a6af-7facac91ddf6"
+  ],
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1968",
+  "prNumber": 1968,
+  "prCreatedAt": "2026-03-07T18:21:54.186Z",
+  "reviewStartedAt": "2026-03-07T18:21:55.850Z",
+  "prTrackedSince": "2026-03-07T18:21:55.851Z",
+  "prLastPolledAt": "2026-03-07T18:27:59.897Z",
+  "completedAt": "2026-03-07T19:54:50.893Z"
+}

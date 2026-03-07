@@ -48,34 +48,28 @@
     {
       "from": "backlog",
       "to": "in_progress",
-      "timestamp": "2026-03-07T07:15:26.645Z"
+      "timestamp": "2026-03-07T13:01:46.514Z"
     },
     {
       "from": "in_progress",
       "to": "review",
-      "timestamp": "2026-03-07T07:18:54.547Z"
+      "timestamp": "2026-03-07T13:04:19.037Z"
     },
     {
       "from": "review",
-      "to": "blocked",
-      "timestamp": "2026-03-07T07:27:54.726Z",
-      "reason": "Max state transitions exceeded"
-    },
-    {
-      "from": "blocked",
       "to": "done",
-      "timestamp": "2026-03-07T07:34:05.950Z"
+      "timestamp": "2026-03-07T13:04:24.143Z"
     }
   ],
   "featureType": "code",
   "complexity": "medium",
   "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T07:15:28.068Z",
-  "statusChangeReason": "Max state transitions exceeded",
-  "lastTraceId": "0462668c-0022-4074-b3fe-1ecd911151d4",
+  "updatedAt": "2026-03-07T13:01:49.194Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "33bf14d7-cf0e-41f5-95a1-70764343b346",
   "traceIds": [
     "b8b3baf8-0b95-4423-996e-779529ff3227",
-    "0462668c-0022-4074-b3fe-1ecd911151d4"
+    "33bf14d7-cf0e-41f5-95a1-70764343b346"
   ],
   "executionHistory": [
     {
@@ -90,24 +84,14 @@
       "trigger": "manual"
     }
   ],
-  "costUsd": 1.0381972499999998,
-  "lastSessionId": "3b00db8e-acc7-4e48-9821-e9d45d47aa3b",
-  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1910",
-  "prNumber": 1910,
-  "prCreatedAt": "2026-03-07T07:18:54.543Z",
-  "reviewStartedAt": "2026-03-07T07:18:54.547Z",
-  "prTrackedSince": "2026-03-07T07:18:54.550Z",
-  "prLastPolledAt": "2026-03-07T07:33:39.611Z",
-  "failureCount": 1,
-  "failureClassification": {
-    "category": "unknown",
-    "confidence": 0.5,
-    "recoveryStrategy": {
-      "type": "escalate_to_user",
-      "reason": "Unclassified failure - needs investigation: Max state transitions exceeded"
-    },
-    "retryable": false,
-    "timestamp": "2026-03-07T07:27:54.732Z"
-  },
-  "completedAt": "2026-03-07T07:34:05.950Z"
+  "costUsd": 0.6875827499999999,
+  "lastSessionId": "af58f6ff-cf6c-41d1-924c-0ac909121d66",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1937",
+  "prNumber": 1918,
+  "prCreatedAt": "2026-03-07T13:04:17.805Z",
+  "reviewStartedAt": "2026-03-07T13:04:19.037Z",
+  "prTrackedSince": "2026-03-07T13:04:19.039Z",
+  "prLastPolledAt": "2026-03-07T13:05:03.286Z",
+  "prMergedAt": "2026-03-07T10:29:28Z",
+  "completedAt": "2026-03-07T13:04:24.143Z"
 }

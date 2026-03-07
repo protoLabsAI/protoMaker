@@ -1,0 +1,89 @@
+{
+  "category": "Foundation",
+  "description": "**Milestone:** Foundation\n\nCreate proto.config.yaml schema and loader in libs/platform. Implements layered config resolution: proto.config.yaml (git-tracked shared defaults) -> .automaker/settings.json (instance-local overrides) -> environment variables. Defines hive identity, instance registry, sync port, assignment strategy, and shared defaults. Loader returns effective config for the current instance.\n\n**Files to Modify:**\n- libs/platform/src/proto-config.ts\n- libs/types/src/proto-config.ts\n- libs/types/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] ProtoConfig TypeScript types defined with hive, defaults, instances, and assignment sections\n- [ ] loadProtoConfig() reads YAML, merges with instance-local settings and env vars\n- [ ] Missing proto.config.yaml returns null (single-instance mode continues to work)\n- [ ] Instance identity resolved from hostname or explicit config\n- [ ] Unit tests for layered merge logic\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "proto.config Loader",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772898164389-p8svfuao7",
+  "branchName": "feature/foundation-protoconfig-loader",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "01-foundation",
+  "phaseSlug": "proto-config-loader",
+  "id": "feature-1772898164390-3riuelgoa",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Foundation\n\nCreate proto.config.yaml schema and loader in libs/platform. Implements layered config resolution: proto.config.yaml (git-tracked shared defaults) -> .automaker/settings.json (instance-local overrides) -> environment variables. Defines hive identity, instance registry, sync port, assignment strategy, and shared defaults. Loader returns effective config for the current instance.\n\n**Files to Modify:**\n- libs/platform/src/proto-config.ts\n- libs/types/src/proto-config.ts\n- libs/types/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] ProtoConfig TypeScript types defined with hive, defaults, instances, and assignment sections\n- [ ] loadProtoConfig() reads YAML, merges with instance-local settings and env vars\n- [ ] Missing proto.config.yaml returns null (single-instance mode continues to work)\n- [ ] Instance identity resolved from hostname or explicit config\n- [ ] Unit tests for layered merge logic\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.390Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.390Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.390Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T16:51:58.060Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T16:56:47.832Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T17:00:04.005Z"
+    },
+    {
+      "from": "done",
+      "to": "blocked",
+      "timestamp": "2026-03-07T17:46:48.118Z",
+      "reason": "Max same-state transitions exceeded in REVIEW (100 loops)"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T17:46:50.435Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164387-iqm3blu2j"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T16:51:59.251Z",
+  "costUsd": 1.5706657500000005,
+  "lastSessionId": "245f2a8e-d27c-46a8-940a-70a3329528fb",
+  "lastTraceId": "6055db2a-3427-419a-9bd1-18821c055600",
+  "traceIds": [
+    "6055db2a-3427-419a-9bd1-18821c055600"
+  ],
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1954",
+  "prNumber": 1954,
+  "prCreatedAt": "2026-03-07T16:56:46.483Z",
+  "reviewStartedAt": "2026-03-07T16:56:47.832Z",
+  "prTrackedSince": "2026-03-07T16:56:47.834Z",
+  "prLastPolledAt": "2026-03-07T18:08:26.621Z",
+  "prMergedAt": "2026-03-07T16:58:42Z",
+  "completedAt": "2026-03-07T17:00:04.005Z",
+  "statusChangeReason": "Max same-state transitions exceeded in REVIEW (100 loops)",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Max same-state transitions exceeded in REVIEW (100 loops)"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T17:46:48.120Z"
+  }
+}

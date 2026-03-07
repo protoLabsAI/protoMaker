@@ -119,6 +119,10 @@ blob-report/
 !.env.example
 !.env.local.example
 
+# Instance-specific CRDT sync config (each instance has its own role/peers)
+proto.config.yaml
+!proto.config.example.yaml
+
 # Codex config (contains API keys)
 .codex/config.toml
 

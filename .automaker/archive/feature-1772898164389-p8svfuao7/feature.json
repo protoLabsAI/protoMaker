@@ -1,0 +1,38 @@
+{
+  "category": "Epic",
+  "description": "# Foundation\n\nCore CRDT infrastructure: proto.config loader, libs/crdt workspace package, Automerge document management, and WebSocket sync adapter for Tailscale.\n\n## Phases\n1. proto.config Loader\n2. libs/crdt Workspace Package\n3. Sync Server and Leader Election",
+  "title": "[Epic] Foundation",
+  "status": "done",
+  "isEpic": true,
+  "epicColor": "#7C3AED",
+  "branchName": "epic/foundation",
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "01-foundation",
+  "id": "feature-1772898164389-p8svfuao7",
+  "descriptionHistory": [
+    {
+      "description": "# Foundation\n\nCore CRDT infrastructure: proto.config loader, libs/crdt workspace package, Automerge document management, and WebSocket sync adapter for Tailscale.\n\n## Phases\n1. proto.config Loader\n2. libs/crdt Workspace Package\n3. Sync Server and Leader Election",
+      "timestamp": "2026-03-07T15:42:44.389Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.389Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.389Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T17:16:25.819Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164387-iqm3blu2j"
+  ],
+  "completedAt": "2026-03-07T17:16:25.819Z"
+}

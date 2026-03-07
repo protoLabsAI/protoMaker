@@ -26,12 +26,12 @@
     {
       "from": "backlog",
       "to": "done",
-      "timestamp": "2026-03-07T07:17:26.861Z"
+      "timestamp": "2026-03-07T13:05:04.466Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772856637958-j1b2je1mg"
   ],
-  "completedAt": "2026-03-07T07:17:26.861Z"
+  "completedAt": "2026-03-07T13:05:04.466Z"
 }

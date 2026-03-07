@@ -1,0 +1,68 @@
+{
+  "category": "Feature Sync",
+  "description": "**Milestone:** Feature Sync\n\nWire EventBus.broadcast() to emit events across instances via CRDT change subscriptions. When a remote peer changes a feature, the local EventBus emits the corresponding event (feature:updated, feature:status-changed, etc.) so the UI and auto-mode react as if the change were local. This is the glue between CRDT sync and the existing event-driven architecture.\n\n**Files to Modify:**\n- apps/server/src/lib/events.ts\n- apps/server/src/server/wiring.ts\n- libs/types/src/events.ts\n\n**Acceptance Criteria:**\n- [ ] broadcast() publishes events to CRDT ephemeral messages when sync is active\n- [ ] Remote CRDT changes trigger local EventBus.emit() with correct event type\n- [ ] Feature status changes from peers trigger feature:status-changed events\n- [ ] UI receives WebSocket events for remote changes (board updates in real-time)\n- [ ] Auto-mode reacts to remote feature status changes (dep resolution, work stealing)\n- [ ] No duplicate events when change originates locally\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "EventBus CRDT Bridge",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772898164392-7i9l4news",
+  "branchName": "feature/feature-sync-eventbus-crdt-bridge",
+  "isFoundation": false,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "02-feature-sync",
+  "phaseSlug": "eventbus-crdt-bridge",
+  "id": "feature-1772898164393-ssx86sx64",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Feature Sync\n\nWire EventBus.broadcast() to emit events across instances via CRDT change subscriptions. When a remote peer changes a feature, the local EventBus emits the corresponding event (feature:updated, feature:status-changed, etc.) so the UI and auto-mode react as if the change were local. This is the glue between CRDT sync and the existing event-driven architecture.\n\n**Files to Modify:**\n- apps/server/src/lib/events.ts\n- apps/server/src/server/wiring.ts\n- libs/types/src/events.ts\n\n**Acceptance Criteria:**\n- [ ] broadcast() publishes events to CRDT ephemeral messages when sync is active\n- [ ] Remote CRDT changes trigger local EventBus.emit() with correct event type\n- [ ] Feature status changes from peers trigger feature:status-changed events\n- [ ] UI receives WebSocket events for remote changes (board updates in real-time)\n- [ ] Auto-mode reacts to remote feature status changes (dep resolution, work stealing)\n- [ ] No duplicate events when change originates locally\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.393Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.393Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.393Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T17:33:51.850Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T17:43:16.493Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T17:45:16.456Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164389-4qen2e7fw",
+    "feature-1772898164391-6jgo2lrs8",
+    "feature-1772898164392-jm8u92kz5"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T17:33:53.147Z",
+  "costUsd": 3.7004625,
+  "lastSessionId": "d118f3ee-3671-4b63-ab05-30d13dba2cae",
+  "lastTraceId": "b002eda1-1b54-4e44-99d8-188715046ca0",
+  "traceIds": [
+    "b002eda1-1b54-4e44-99d8-188715046ca0"
+  ],
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1962",
+  "prNumber": 1962,
+  "prCreatedAt": "2026-03-07T17:43:14.635Z",
+  "reviewStartedAt": "2026-03-07T17:43:16.493Z",
+  "prTrackedSince": "2026-03-07T17:43:16.494Z",
+  "prLastPolledAt": "2026-03-07T18:04:28.424Z",
+  "prMergedAt": "2026-03-07T17:45:13Z",
+  "completedAt": "2026-03-07T17:45:16.456Z"
+}

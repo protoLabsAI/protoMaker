@@ -39,7 +39,7 @@
     {
       "from": "review",
       "to": "done",
-      "timestamp": "2026-03-07T13:18:20.578Z"
+      "timestamp": "2026-03-07T15:44:50.592Z"
     }
   ],
   "featureType": "code",
@@ -60,7 +60,7 @@
   "prCreatedAt": "2026-03-07T12:51:30.213Z",
   "reviewStartedAt": "2026-03-07T12:51:32.546Z",
   "prTrackedSince": "2026-03-07T12:51:32.550Z",
-  "prLastPolledAt": "2026-03-07T13:19:25.177Z",
+  "prLastPolledAt": "2026-03-07T13:05:02.126Z",
   "prMergedAt": "2026-03-07T13:18:07Z",
-  "completedAt": "2026-03-07T13:18:20.578Z"
+  "completedAt": "2026-03-07T15:44:50.592Z"
 }

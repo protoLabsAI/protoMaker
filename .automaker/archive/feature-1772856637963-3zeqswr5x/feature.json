@@ -69,12 +69,17 @@
     {
       "from": "backlog",
       "to": "in_progress",
-      "timestamp": "2026-03-07T07:14:03.670Z"
+      "timestamp": "2026-03-07T13:01:13.536Z"
     },
     {
       "from": "in_progress",
-      "to": "verified",
-      "timestamp": "2026-03-07T07:15:01.329Z"
+      "to": "review",
+      "timestamp": "2026-03-07T13:02:59.149Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T13:03:04.719Z"
     }
   ],
   "featureType": "code",
@@ -83,13 +88,13 @@
   ],
   "complexity": "medium",
   "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T07:15:01.328Z",
+  "updatedAt": "2026-03-07T13:01:15.922Z",
   "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
-  "lastTraceId": "9e49d82d-b799-47b1-bd0d-5d611a8b5e22",
+  "lastTraceId": "a93bff83-064c-426d-b492-2aa058a8affd",
   "traceIds": [
     "17158e30-d43a-437f-91a7-d2780d796978",
     "c465c6e0-3065-4913-97e0-806cf33d59b6",
-    "9e49d82d-b799-47b1-bd0d-5d611a8b5e22"
+    "a93bff83-064c-426d-b492-2aa058a8affd"
   ],
   "executionHistory": [
     {
@@ -113,20 +118,16 @@
       "success": false,
       "error": "Operation was cancelled",
       "trigger": "manual"
-    },
-    {
-      "id": "1b768365-0166-44cc-b37d-4d3d5e5ae784",
-      "startedAt": "2026-03-07T07:14:04.087Z",
-      "completedAt": "2026-03-07T07:15:01.349Z",
-      "durationMs": 57262,
-      "costUsd": 0.38054175,
-      "model": "claude-sonnet-4-6",
-      "success": true,
-      "trigger": "manual"
     }
   ],
-  "costUsd": 0.38054175,
-  "lastSessionId": "b7b17480-d939-4f3a-893f-d5864511138d",
-  "completedAt": "2026-03-07T07:15:01.329Z",
-  "summary": "## Summary: Milestone: Ceremony Dedup Durability\n\n### Changes Implemented\n- **No new code was required** — the feature was already fully implemented in the target files prior to this task execution.\n- `ceremony-service.ts` already contained: `getLedgerPath()`, `loadLedger()` (reads JSONL on startup, pre-populates `processedProjects` Set), and `appendLedgerEntry()` (atomic append on each new dedup key).\n- `ceremony-service.test.ts` already contained the full `ledger persistence` test suite with 4 tests covering cold start, warm restart, malformed line handling, and JSONL append verification.\n\n### Files Modified\n- None — both files were already complete.\n\n### Risks/Blockers Encountered\n- **Pre-existing build errors** in unrelated files (`project-artifact-service.ts`, `project-orchestration-service.ts`, `project-service.ts`) cause `npm run build:server` to fail with exit code 2. These errors are not related to this feature.\n\n### Learnings\n- The feature was likely implemented in a prior session and the board card was not marked done. Future work: ensure board state stays in sync with code state.\n- JSONL ledger pattern: `getLedgerPath()` → `loadLedger()` on init → `appendLedgerEntry()` on write. Clean and reusable pattern for durable dedup across restarts.\n\n### Notes for Developer\n- All 25 tests pass (including 4 ledger persistence tests): `npx vitest run tests/unit/services/ceremony-service.test.ts`\n- The pre-existing TypeScript build errors in `project-artifact-service.ts` and `project-orchestration-service.ts` should be addressed separately — they are P1 blockers for CI.\n- No Playwright verification was performed: this is a pure backend service with no UI surface.\n\n### Verification Status\n- Unit tests: ✅ 25/25 passed\n- Build: ⚠️ Pre-existing failures in unrelated files (not caused by this feature)\n- Playwright: N/A — no UI surface for this backend-only feature"
+  "costUsd": 0.6994142499999998,
+  "lastSessionId": "d2d858e8-a85e-4209-964b-a7c808f1eab2",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1936",
+  "prNumber": 1917,
+  "prCreatedAt": "2026-03-07T13:02:58.120Z",
+  "reviewStartedAt": "2026-03-07T13:02:59.149Z",
+  "prTrackedSince": "2026-03-07T13:02:59.152Z",
+  "prLastPolledAt": "2026-03-07T13:05:02.807Z",
+  "prMergedAt": "2026-03-07T10:07:26Z",
+  "completedAt": "2026-03-07T13:03:04.719Z"
 }

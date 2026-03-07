@@ -1,0 +1,126 @@
+{
+  "category": "Operational Hardening",
+  "description": "**Milestone:** Operational Hardening\n\nProduction readiness: CRDT document compaction (prevent unbounded growth), sync conflict diagnostics, reconnection resilience after network partitions, monitoring and alerting for sync health, and documentation for multi-instance deployment.\n\n**Files to Modify:**\n- libs/crdt/src/maintenance.ts\n- apps/server/src/services/crdt-sync-service.ts\n- docs/dev/distributed-sync.md\n- docs/infra/multi-instance-deployment.md\n\n**Acceptance Criteria:**\n- [ ] Full compaction diagnostics: document size tracking, compaction history, and alerting when docs exceed size thresholds\n- [ ] Sync health metrics exposed via /api/health/detailed\n- [ ] Reconnection after network partition replays queued changes correctly\n- [ ] Partition detection via heartbeat TTL with UI indicator showing 'Sync disconnected since [time]'\n- [ ] Post-reconnection audit checks for dual-claimed features and resolves by instance priority\n- [ ] Alert when peer is unreachable for > peerTtlMs\n- [ ] Deploy-drain procedure documented: sync server extraction into sidecar container planned for future (accept in-process for now)\n- [ ] Trust model documentation: Tailscale transport security, instanceId attribution, authority tiers roadmap\n- [ ] Document Automerge.getHistory(doc) availability for time-travel debugging in distributed-sync docs\n- [ ] Deployment guide for multi-instance setup on Tailscale\n- [ ] Runbook for common sync issues (split-brain, stuck peers, doc corruption, partition recovery)\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Compaction, Diagnostics, and Reconnection",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772898164397-042v3mpw3",
+  "branchName": "feature/operational-compaction-diagnosti",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "05-operational-hardening",
+  "phaseSlug": "compaction-and-diagnostics",
+  "id": "feature-1772898164398-oia6hqzt6",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Operational Hardening\n\nProduction readiness: CRDT document compaction (prevent unbounded growth), sync conflict diagnostics, reconnection resilience after network partitions, monitoring and alerting for sync health, and documentation for multi-instance deployment.\n\n**Files to Modify:**\n- libs/crdt/src/maintenance.ts\n- apps/server/src/services/crdt-sync-service.ts\n- docs/dev/distributed-sync.md\n- docs/infra/multi-instance-deployment.md\n\n**Acceptance Criteria:**\n- [ ] Full compaction diagnostics: document size tracking, compaction history, and alerting when docs exceed size thresholds\n- [ ] Sync health metrics exposed via /api/health/detailed\n- [ ] Reconnection after network partition replays queued changes correctly\n- [ ] Partition detection via heartbeat TTL with UI indicator showing 'Sync disconnected since [time]'\n- [ ] Post-reconnection audit checks for dual-claimed features and resolves by instance priority\n- [ ] Alert when peer is unreachable for > peerTtlMs\n- [ ] Deploy-drain procedure documented: sync server extraction into sidecar container planned for future (accept in-process for now)\n- [ ] Trust model documentation: Tailscale transport security, instanceId attribution, authority tiers roadmap\n- [ ] Document Automerge.getHistory(doc) availability for time-travel debugging in distributed-sync docs\n- [ ] Deployment guide for multi-instance setup on Tailscale\n- [ ] Runbook for common sync issues (split-brain, stuck peers, doc corruption, partition recovery)\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.398Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.398Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.398Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T18:50:47.746Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T18:57:11.219Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T18:57:12.520Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T18:58:57.120Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T18:59:19.079Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T19:03:26.535Z"
+    },
+    {
+      "from": "review",
+      "to": "blocked",
+      "timestamp": "2026-03-07T19:53:26.893Z",
+      "reason": "Max same-state transitions exceeded in REVIEW (100 loops)"
+    },
+    {
+      "from": "blocked",
+      "to": "review",
+      "timestamp": "2026-03-07T19:59:59.694Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T20:01:34.159Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164391-6jgo2lrs8",
+    "feature-1772898164394-gbqv5bnnm",
+    "feature-1772898164395-2x6bahyy6",
+    "feature-1772898164396-zbjiwwn64"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T18:59:19.079Z",
+  "statusChangeReason": "Max same-state transitions exceeded in REVIEW (100 loops)",
+  "lastTraceId": "6547953a-29af-46e7-ad20-6e7611f5db8b",
+  "traceIds": [
+    "358906b4-3ee5-45ab-876a-32e98a8b36ad",
+    "6547953a-29af-46e7-ad20-6e7611f5db8b"
+  ],
+  "executionHistory": [
+    {
+      "id": "19e3f4ef-742e-4b6a-9559-eaf0ccb54832",
+      "startedAt": "2026-03-07T18:50:49.787Z",
+      "completedAt": "2026-03-07T18:57:11.250Z",
+      "durationMs": 381463,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 1.317504,
+  "lastSessionId": "347f5403-d608-4afa-ae09-4cf8a6e57673",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1975",
+  "prNumber": 1975,
+  "prCreatedAt": "2026-03-07T19:03:24.928Z",
+  "reviewStartedAt": "2026-03-07T19:03:26.535Z",
+  "prTrackedSince": "2026-03-07T19:03:26.537Z",
+  "prLastPolledAt": "2026-03-07T20:01:26.322Z",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Max same-state transitions exceeded in REVIEW (100 loops)"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T19:53:26.898Z"
+  },
+  "completedAt": "2026-03-07T20:01:34.159Z"
+}

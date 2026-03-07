@@ -1,0 +1,36 @@
+# protoLabs Multi-Instance Configuration
+# Copy to proto.config.yaml and customize for your instance.
+# See docs/dev/distributed-sync.md for full documentation.
+#
+# This file activates CRDT sync — without it, the server runs in
+# single-instance mode (plain filesystem reads/writes).
+
+protolab:
+  # role: primary | worker
+  # primary: owns leader election, workers defer to primary
+  role: primary
+  # WebSocket port for CRDT sync mesh
+  syncPort: 9800
+  # Stable unique identifier for this instance
+  instanceId: my-instance
+
+hivemind:
+  # How often to broadcast capacity heartbeats (ms)
+  heartbeatIntervalMs: 30000
+  # Mark a peer as unreachable after this duration without heartbeat (ms)
+  peerTtlMs: 120000
+  # All instances in the mesh (including self)
+  peers:
+    - ws://100.x.x.x:9800
+    - ws://100.y.y.y:9800
+
+workStealing:
+  # strategy: capacity | domain | manual
+  # capacity: idle instances request work from busy peers
+  # domain: match features to instances by filesToModify patterns
+  # manual: disable automatic work stealing
+  strategy: capacity
+  # Max features per work offer
+  stealMax: 3
+  # Offer expiry time (ms)
+  offerTtlMs: 60000

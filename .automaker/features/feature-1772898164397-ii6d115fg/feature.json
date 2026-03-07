@@ -1,0 +1,34 @@
+{
+  "category": "Cross-Instance Assignment",
+  "description": "**Milestone:** Cross-Instance Assignment\n\nUI aggregates board state across all connected instances. Shows which instance owns each feature, peer status (online/offline/draining), capacity metrics per instance, and cross-instance assignment history. Leverages existing board view with instance badges and a new peers panel.\n\n**Files to Modify:**\n- apps/ui/src/components/views/board/board-view.tsx\n- apps/ui/src/components/views/peers-panel.tsx\n- apps/ui/src/store/app-store.ts\n- apps/server/src/routes/hivemind/index.ts\n\n**Acceptance Criteria:**\n- [ ] Board view shows instance badge on each feature card\n- [ ] Peers panel shows all connected instances with status and capacity\n- [ ] Features from all instances visible in unified board\n- [ ] Filter by instance (show only my features, show all)\n- [ ] Cross-instance assignment visible in feature detail view\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Unified Dashboard View",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772898164395-qmv4z1g8t",
+  "branchName": "feature/cross-instance-unified-dashboard",
+  "isFoundation": false,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "04-cross-instance-assignment",
+  "phaseSlug": "unified-dashboard-view",
+  "id": "feature-1772898164397-ii6d115fg",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Cross-Instance Assignment\n\nUI aggregates board state across all connected instances. Shows which instance owns each feature, peer status (online/offline/draining), capacity metrics per instance, and cross-instance assignment history. Leverages existing board view with instance badges and a new peers panel.\n\n**Files to Modify:**\n- apps/ui/src/components/views/board/board-view.tsx\n- apps/ui/src/components/views/peers-panel.tsx\n- apps/ui/src/store/app-store.ts\n- apps/server/src/routes/hivemind/index.ts\n\n**Acceptance Criteria:**\n- [ ] Board view shows instance badge on each feature card\n- [ ] Peers panel shows all connected instances with status and capacity\n- [ ] Features from all instances visible in unified board\n- [ ] Filter by instance (show only my features, show all)\n- [ ] Cross-instance assignment visible in feature detail view\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.397Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.397Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.397Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164396-78dwpei02"
+  ]
+}

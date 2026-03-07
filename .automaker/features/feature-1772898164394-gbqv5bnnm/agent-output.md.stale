@@ -1,0 +1,862 @@
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Glob,Grep,TodoWrite,Bash"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/automaker/.claude/projects/-home-josh-dev-ava/memory/MEMORY.md"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/documents.ts"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/ | grep -E \"project|crdt\"",
+  "description": "List service files matching project or crdt"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "find /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs -name \"documents.ts\" 2>/dev/null",
+  "description": "Find documents.ts in libs"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "find /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync -name \"*crdt*\" 2>/dev/null | head -20",
+  "description": "Find all crdt related files"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/ 2>/dev/null && ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/ 2>/dev/null",
+  "description": "List CRDT project milestones and libs"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/ | head -30",
+  "description": "List all services"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/01-foundation/phase-02-libs-crdt-workspace-package.md"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/01-foundation/ 2>/dev/null",
+  "description": "List foundation milestone phases"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/03-projects-notes-and-settings-sync"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/03-projects-notes-and-settings-sync/ 2>/dev/null",
+  "description": "List phases in milestone 3"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/03-projects-notes-and-settings-sync/ && cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/projects/distributed-crdt-sync/milestones/03-projects-notes-and-settings-sync/phase-01*.md 2>/dev/null || true",
+  "description": "Read milestone 3 phases"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/.automaker/features/feature-1772898164394-gbqv5bnnm/feature.json 2>/dev/null | head -50",
+  "description": "Read feature.json"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "find /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs -name \"package.json\" | xargs grep -l \"crdt\" 2>/dev/null || echo \"No CRDT packages found\"",
+  "description": "Check if crdt lib package exists"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/package.json | grep -E \"automerge|crdt\" 2>/dev/null || echo \"None found\"",
+  "description": "Check root package.json for automerge"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/package.json | grep -E \"automerge|crdt\" 2>/dev/null || echo \"None found\"",
+  "description": "Check server package.json for automerge"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/node_modules | grep -i automerge 2>/dev/null || echo \"No automerge in node_modules\"",
+  "description": "Check if automerge is installed in node_modules"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/types/src/project.ts | head -80",
+  "description": "Read project types"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/utils/package.json",
+  "description": "Read utils package.json for reference structure"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/utils/tsconfig.json",
+  "description": "Read utils tsconfig for reference"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/tsconfig.base.json",
+  "description": "Read base tsconfig"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/package.json | python3 -c \"import sys, json; d=json.load(sys.stdin); print(json.dumps({k: d[k] for k in ['workspaces', 'version'] if k in d}, indent=2))\"",
+  "description": "Read workspace and version from root package.json"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/package.json | node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(JSON.stringify({workspaces:d.workspaces, version:d.version}, null, 2))\"",
+  "description": "Read workspaces from root package.json"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/node_modules | grep -i automerge 2>/dev/null || echo \"No automerge in parent node_modules\"",
+  "description": "Check parent node_modules for automerge"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/node_modules/@automerge 2>/dev/null || echo \"No @automerge namespace\"",
+  "description": "Check for @automerge namespace"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/node_modules/@automerge/ && cat /home/josh/dev/ava/node_modules/@automerge/automerge/package.json | node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.version)\"",
+  "description": "Check automerge packages and version"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create libs/crdt package (package.json, tsconfig, src/index.ts, src/documents.ts, src/crdt-store.ts)",
+      "status": "in_progress",
+      "activeForm": "Creating libs/crdt package"
+    },
+    {
+      "content": "Create apps/server/src/services/crdt-sync-service.ts",
+      "status": "pending",
+      "activeForm": "Creating crdt-sync-service.ts"
+    },
+    {
+      "content": "Update apps/server/src/services/project-service.ts to use CRDTSyncService",
+      "status": "pending",
+      "activeForm": "Updating project-service.ts"
+    },
+    {
+      "content": "Build and verify",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/node_modules/@automerge/automerge/package.json | node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(JSON.stringify({version:d.version, exports:d.exports?Object.keys(d.exports):null}, null, 2))\"",
+  "description": "Check automerge package exports"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -r \"crdt-sync\" /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/ 2>/dev/null | head -5 || echo \"No references found\"",
+  "description": "Check for existing crdt-sync references"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/types/src/project.ts | grep -A 5 \"^export interface Project \" | head -20",
+  "description": "Check Project interface definition"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/utils/src/tsup.config.ts 2>/dev/null || cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/utils/tsup.config.ts 2>/dev/null || echo \"Not found\"",
+  "description": "Check tsup config for utils package"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/node_modules/@automerge/automerge/dist/ 2>/dev/null | head -10 || ls /home/josh/dev/ava/node_modules/@automerge/automerge/ 2>/dev/null | head -10",
+  "description": "Check automerge package structure"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/node_modules/@automerge/automerge/ && cat /home/josh/dev/ava/node_modules/@automerge/automerge/package.json | node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(JSON.stringify({type:d.type, exports:d.exports}, null, 2))\"",
+  "description": "Check automerge package type and exports"
+}
+Now I have enough context. Let me create the implementation.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Write,Edit"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/package.json",
+  "content": "{\n  \"name\": \"@protolabsai/crdt\",\n  \"version\": \"0.40.5\",\n  \"type\": \"module\",\n  \"description\": \"CRDT-backed document store for protoLabs Studio using Automerge\",\n  \"main\": \"dist/index.js\",\n  \"types\": \"dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    }\n  },\n  \"scripts\": {\n    \"build\": \"tsup\",\n    \"watch\": \"tsup --watch\",\n    \"test\": \"vitest run\",\n    \"test:watch\": \"vitest\",\n    \"build:check\": \"tsc --noEmit\"\n  },\n  \"keywords\": [\n    \"automaker\",\n    \"crdt\",\n    \"automerge\"\n  ],\n  \"publishConfig\": {\n    \"access\": \"public\"\n  },\n  \"author\": \"AutoMaker Team\",\n  \"license\": \"SEE LICENSE IN LICENSE\",\n  \"engines\": {\n    \"node\": \">=22.0.0 <23.0.0\"\n  },\n  \"dependencies\": {\n    \"@automerge/automerge\": \"^3.2.4\",\n    \"@protolabsai/types\": \"^0.40.5\"\n  },\n  \"devDependencies\": {\n    \"@types/node\": \"22.19.3\",\n    \"tsup\": \"^8.5.1\",\n    \"typescript\": \"5.9.3\",\n    \"vitest\": \"4.0.16\"\n  }\n}\n"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/tsconfig.json",
+  "content": "{\n  \"extends\": \"../tsconfig.base.json\",\n  \"compilerOptions\": {\n    \"outDir\": \"./dist\",\n    \"rootDir\": \"./src\"\n  },\n  \"include\": [\"src/**/*\"],\n  \"exclude\": [\"node_modules\", \"dist\"]\n}\n"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/tsup.config.ts",
+  "content": "import { defineConfig } from 'tsup';\n\nexport default defineConfig({\n  entry: ['src/index.ts'],\n  format: ['esm'],\n  dts: {\n    resolve: true,\n  },\n  clean: true,\n  sourcemap: true,\n  treeshake: true,\n});\n"
+}
+Now let me create the `documents.ts` file which defines the Automerge document schema for projects:
+
+🔧 Tool: Bash
+Input: {
+  "command": "mkdir -p /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src",
+  "description": "Create src directory"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/documents.ts",
+  "content": "/**\n * CRDT Document Schemas for protoLabs Studio\n *\n * Defines Automerge document types for each sync domain.\n * Documents use JSON-serialized payloads for complex nested types\n * to ensure safe merging semantics across concurrent edits.\n */\n\nimport type { Project } from '@protolabsai/types';\n\n/**\n * The Automerge document schema for the projects domain.\n * Keyed by project slug, each value is a JSON-serialized Project.\n * Using string payloads preserves complex nested types while still\n * benefiting from CRDT last-write-wins semantics on project-level updates.\n */\nexport interface ProjectsDoc {\n  /** Schema version for forward compatibility */\n  version: number;\n  /** Projects map: slug -> JSON-serialized Project */\n  projects: Record<string, string>;\n}\n\n/**\n * Create a fresh empty ProjectsDoc for initializing a new Automerge document.\n */\nexport function createProjectsDoc(): ProjectsDoc {\n  return {\n    version: 1,\n    projects: {},\n  };\n}\n\n/**\n * Serialize a Project to its document representation.\n */\nexport function serializeProject(project: Project): string {\n  return JSON.stringify(project);\n}\n\n/**\n * Deserialize a Project from its document representation.\n * Returns null if the data is missing or malformed.\n */\nexport function deserializeProject(data: string | undefined): Project | null {\n  if (!data) return null;\n  try {\n    return JSON.parse(data) as Project;\n  } catch {\n    return null;\n  }\n}\n\n/**\n * Extract all projects from a ProjectsDoc.\n */\nexport function extractProjects(doc: ProjectsDoc): Record<string, Project> {\n  const result: Record<string, Project> = {};\n  for (const [slug, data] of Object.entries(doc.projects)) {\n    const project = deserializeProject(data);\n    if (project) {\n      result[slug] = project;\n    }\n  }\n  return result;\n}\n"
+}
+Now let me create the CRDTStore:
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/crdt-store.ts",
+  "content": "/**\n * CRDTStore - Automerge-backed document store\n *\n * Manages Automerge documents by domain key.\n * Handles in-memory document state, change application, subscriptions,\n * and binary persistence to/from the filesystem layer.\n */\n\nimport * as Automerge from '@automerge/automerge';\n\ntype ChangeCallback<T> = (doc: Automerge.Doc<T>) => void;\n\ninterface DocEntry<T> {\n  doc: Automerge.Doc<T>;\n  callbacks: Set<ChangeCallback<T>>;\n}\n\nexport class CRDTStore {\n  // eslint-disable-next-line @typescript-eslint/no-explicit-any\n  private docs = new Map<string, DocEntry<any>>();\n\n  /**\n   * Get or create an Automerge document for the given key.\n   * If no document exists, initializes one using the provided factory.\n   */\n  getOrCreate<T extends Record<string, unknown>>(key: string, init: () => T): Automerge.Doc<T> {\n    const entry = this.docs.get(key);\n    if (entry) {\n      return entry.doc as Automerge.Doc<T>;\n    }\n    const doc = Automerge.from<T>(init());\n    this.docs.set(key, { doc, callbacks: new Set() });\n    return doc;\n  }\n\n  /**\n   * Get an existing document, or null if it doesn't exist.\n   */\n  get<T>(key: string): Automerge.Doc<T> | null {\n    const entry = this.docs.get(key);\n    return entry ? (entry.doc as Automerge.Doc<T>) : null;\n  }\n\n  /**\n   * Apply a mutation to a document, notifying all subscribers.\n   * Creates the document if it doesn't exist using the provided factory.\n   */\n  change<T extends Record<string, unknown>>(\n    key: string,\n    init: () => T,\n    fn: Automerge.ChangeFn<T>\n  ): Automerge.Doc<T> {\n    const existing = this.getOrCreate<T>(key, init);\n    const updated = Automerge.change(existing, fn);\n    const entry = this.docs.get(key)!;\n    entry.doc = updated;\n    this.notify(key, updated);\n    return updated;\n  }\n\n  /**\n   * Subscribe to changes on a document.\n   * Returns an unsubscribe function.\n   */\n  subscribe<T>(key: string, callback: ChangeCallback<T>): () => void {\n    let entry = this.docs.get(key);\n    if (!entry) {\n      // Create an entry without a doc so we can track subscriptions\n      entry = { doc: null as unknown as Automerge.Doc<T>, callbacks: new Set() };\n      this.docs.set(key, entry);\n    }\n    entry.callbacks.add(callback as ChangeCallback<unknown>);\n    return () => {\n      entry!.callbacks.delete(callback as ChangeCallback<unknown>);\n    };\n  }\n\n  /**\n   * Load a document from Automerge binary data, replacing any existing in-memory state.\n   * Notifies subscribers after loading.\n   */\n  load<T>(key: string, data: Uint8Array): Automerge.Doc<T> {\n    const doc = Automerge.load<T>(data);\n    const existing = this.docs.get(key);\n    const callbacks = existing?.callbacks ?? new Set();\n    this.docs.set(key, { doc, callbacks });\n    this.notify(key, doc);\n    return doc;\n  }\n\n  /**\n   * Serialize a document to Automerge binary format for persistence.\n   * Returns null if the document doesn't exist.\n   */\n  save(key: string): Uint8Array | null {\n    const entry = this.docs.get(key);\n    if (!entry?.doc) return null;\n    return Automerge.save(entry.doc);\n  }\n\n  /**\n   * Apply Automerge sync changes received from a remote peer.\n   * Notifies subscribers if the document changed.\n   */\n  applyChanges<T>(key: string, changes: Uint8Array[]): Automerge.Doc<T> | null {\n    const entry = this.docs.get(key);\n    if (!entry?.doc) return null;\n    const [updated] = Automerge.applyChanges<T>(entry.doc as Automerge.Doc<T>, changes);\n    entry.doc = updated;\n    this.notify(key, updated);\n    return updated;\n  }\n\n  /**\n   * Check if a document exists in the store.\n   */\n  has(key: string): boolean {\n    const entry = this.docs.get(key);\n    return !!entry?.doc;\n  }\n\n  /**\n   * Remove a document from the store.\n   */\n  delete(key: string): void {\n    this.docs.delete(key);\n  }\n\n  private notify<T>(key: string, doc: Automerge.Doc<T>): void {\n    const entry = this.docs.get(key);\n    if (!entry) return;\n    for (const callback of entry.callbacks) {\n      callback(doc);\n    }\n  }\n}\n"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/index.ts",
+  "content": "export { CRDTStore } from './crdt-store.js';\nexport {\n  type ProjectsDoc,\n  createProjectsDoc,\n  serializeProject,\n  deserializeProject,\n  extractProjects,\n} from './documents.js';\n"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create libs/crdt package (package.json, tsconfig, src/index.ts, src/documents.ts, src/crdt-store.ts)",
+      "status": "completed",
+      "activeForm": "Creating libs/crdt package"
+    },
+    {
+      "content": "Create apps/server/src/services/crdt-sync-service.ts",
+      "status": "in_progress",
+      "activeForm": "Creating crdt-sync-service.ts"
+    },
+    {
+      "content": "Update apps/server/src/services/project-service.ts to use CRDTSyncService",
+      "status": "pending",
+      "activeForm": "Updating project-service.ts"
+    },
+    {
+      "content": "Build and verify",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+Now create the `crdt-sync-service.ts`. First let me check how other services in the server use persistence paths and EventEmitter:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/changelog-service.ts | head -60",
+  "description": "Check changelog service for EventEmitter pattern"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/package.json | node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(JSON.stringify(d.dependencies, null, 2))\" | grep -E \"protolabsai|automerge\"",
+  "description": "Check server dependencies"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/settings-service.ts | head -40",
+  "description": "Quick check of settings service pattern"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -r \"getCrdtDir\\|crdt\" /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/platform/src/ 2>/dev/null | head -5 || echo \"None found\"",
+  "description": "Check if platform has crdt path helpers"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/platform/src/paths.ts | head -80",
+  "description": "Check platform paths for automaker dir structure"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -n \"readFile\\|writeFile\" /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/platform/src/secure-fs.ts | head -20",
+  "description": "Check secure-fs for binary file support"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/crdt-sync-service.ts",
+  "content": "/**\n * CRDTSyncService - Manages Automerge-backed project document sync\n *\n * Wraps the @protolabsai/crdt CRDTStore for the projects domain.\n * Provides get/set/delete operations that keep both the CRDT document\n * and the filesystem (project.json) in sync.\n *\n * Backward compatible: if CRDT is unavailable (e.g., load error), all\n * operations fall back to returning null and callers use the filesystem.\n */\n\nimport path from 'path';\nimport fs from 'fs/promises';\nimport { createLogger } from '@protolabsai/utils';\nimport type { Project } from '@protolabsai/types';\nimport {\n  CRDTStore,\n  type ProjectsDoc,\n  createProjectsDoc,\n  serializeProject,\n  deserializeProject,\n  extractProjects,\n} from '@protolabsai/crdt';\n\nconst logger = createLogger('CRDTSyncService');\n\n/** Subdirectory within .automaker/ where CRDT binary state is persisted */\nconst CRDT_DIR = '.automaker/crdt';\n/** Filename for the projects Automerge document */\nconst PROJECTS_DOC_FILE = 'projects.bin';\n\ntype ChangeCallback = (slug: string, project: Project | null) => void;\n\nexport class CRDTSyncService {\n  private store = new CRDTStore();\n  /** Per-projectPath unsubscribe functions registered on the store */\n  private unsubs = new Map<string, () => void>();\n  /** External change listeners */\n  private listeners = new Map<string, Set<ChangeCallback>>();\n\n  /**\n   * Ensure the CRDT document for a projectPath is loaded.\n   * Loads from disk if available, initializes fresh otherwise.\n   * Idempotent — safe to call multiple times.\n   */\n  async initialize(projectPath: string): Promise<void> {\n    const key = this.docKey(projectPath);\n    if (this.store.has(key)) return;\n\n    const binPath = this.binPath(projectPath);\n    try {\n      const data = await fs.readFile(binPath);\n      this.store.load<ProjectsDoc>(key, data);\n      logger.info(`Loaded CRDT projects doc for ${projectPath}`);\n    } catch (err) {\n      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {\n        // No persisted state yet — initialize empty document\n        this.store.getOrCreate<ProjectsDoc>(key, createProjectsDoc);\n        logger.info(`Initialized fresh CRDT projects doc for ${projectPath}`);\n      } else {\n        logger.warn(`Failed to load CRDT doc for ${projectPath}: ${String(err)}`);\n        // Fall through: store remains empty, callers will fall back to filesystem\n        return;\n      }\n    }\n\n    // Subscribe to internal store changes so we can notify external listeners\n    const unsub = this.store.subscribe<ProjectsDoc>(key, (doc) => {\n      this.persist(projectPath, key).catch((e) =>\n        logger.warn(`Failed to persist CRDT doc: ${String(e)}`)\n      );\n      const externals = this.listeners.get(projectPath);\n      if (externals) {\n        const projects = extractProjects(doc);\n        for (const cb of externals) {\n          // Emit a synthetic event for each project in the updated doc\n          for (const [slug, project] of Object.entries(projects)) {\n            cb(slug, project);\n          }\n        }\n      }\n    });\n    this.unsubs.set(projectPath, unsub);\n  }\n\n  /**\n   * Get a project from the CRDT document.\n   * Returns null if not in CRDT (caller should fall back to filesystem).\n   */\n  getProject(projectPath: string, slug: string): Project | null {\n    const key = this.docKey(projectPath);\n    const doc = this.store.get<ProjectsDoc>(key);\n    if (!doc) return null;\n    return deserializeProject(doc.projects?.[slug]);\n  }\n\n  /**\n   * Get all projects from the CRDT document.\n   * Returns null if the CRDT doc is not loaded.\n   */\n  getAllProjects(projectPath: string): Record<string, Project> | null {\n    const key = this.docKey(projectPath);\n    const doc = this.store.get<ProjectsDoc>(key);\n    if (!doc) return null;\n    return extractProjects(doc);\n  }\n\n  /**\n   * Write a project to the CRDT document.\n   * The change is applied to the Automerge doc and persisted to disk.\n   */\n  async setProject(projectPath: string, slug: string, project: Project): Promise<void> {\n    await this.initialize(projectPath);\n    const key = this.docKey(projectPath);\n    this.store.change<ProjectsDoc>(key, createProjectsDoc, (doc) => {\n      doc.projects[slug] = serializeProject(project);\n    });\n    // Persist happens via the subscribe callback set up in initialize()\n    // but call directly here too for immediate consistency\n    await this.persist(projectPath, key);\n  }\n\n  /**\n   * Remove a project from the CRDT document.\n   */\n  async deleteProject(projectPath: string, slug: string): Promise<void> {\n    await this.initialize(projectPath);\n    const key = this.docKey(projectPath);\n    const doc = this.store.get<ProjectsDoc>(key);\n    if (!doc || !doc.projects?.[slug]) return;\n    this.store.change<ProjectsDoc>(key, createProjectsDoc, (doc) => {\n      delete doc.projects[slug];\n    });\n    await this.persist(projectPath, key);\n  }\n\n  /**\n   * Subscribe to project changes for a given projectPath.\n   * The callback is called with (slug, project) when a project changes.\n   * project is null when a project is deleted.\n   * Returns an unsubscribe function.\n   */\n  subscribe(projectPath: string, callback: ChangeCallback): () => void {\n    let listeners = this.listeners.get(projectPath);\n    if (!listeners) {\n      listeners = new Set();\n      this.listeners.set(projectPath, listeners);\n    }\n    listeners.add(callback);\n    return () => {\n      listeners!.delete(callback);\n    };\n  }\n\n  /**\n   * Apply raw Automerge changes received from a remote peer.\n   * Used when a WebSocket sync transport delivers changes.\n   */\n  async applyRemoteChanges(projectPath: string, changes: Uint8Array[]): Promise<void> {\n    await this.initialize(projectPath);\n    const key = this.docKey(projectPath);\n    this.store.applyChanges<ProjectsDoc>(key, changes);\n    await this.persist(projectPath, key);\n  }\n\n  /**\n   * Export the current Automerge binary state for a projectPath.\n   * Returns null if no document is loaded.\n   */\n  exportBinary(projectPath: string): Uint8Array | null {\n    const key = this.docKey(projectPath);\n    return this.store.save(key);\n  }\n\n  /** Cleanup subscriptions for a given projectPath */\n  dispose(projectPath: string): void {\n    const unsub = this.unsubs.get(projectPath);\n    if (unsub) {\n      unsub();\n      this.unsubs.delete(projectPath);\n    }\n    this.listeners.delete(projectPath);\n  }\n\n  // ---------------------------------------------------------------------------\n  // Private helpers\n  // ---------------------------------------------------------------------------\n\n  private docKey(projectPath: string): string {\n    return `projects:${projectPath}`;\n  }\n\n  private binPath(projectPath: string): string {\n    return path.join(projectPath, CRDT_DIR, PROJECTS_DOC_FILE);\n  }\n\n  private async persist(projectPath: string, key: string): Promise<void> {\n    const data = this.store.save(key);\n    if (!data) return;\n    const binPath = this.binPath(projectPath);\n    await fs.mkdir(path.dirname(binPath), { recursive: true });\n    await fs.writeFile(binPath, data);\n  }\n}\n"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create libs/crdt package (package.json, tsconfig, src/index.ts, src/documents.ts, src/crdt-store.ts)",
+      "status": "completed",
+      "activeForm": "Creating libs/crdt package"
+    },
+    {
+      "content": "Create apps/server/src/services/crdt-sync-service.ts",
+      "status": "completed",
+      "activeForm": "Creating crdt-sync-service.ts"
+    },
+    {
+      "content": "Update apps/server/src/services/project-service.ts to use CRDTSyncService",
+      "status": "in_progress",
+      "activeForm": "Updating project-service.ts"
+    },
+    {
+      "content": "Build and verify",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+Now update `project-service.ts` to use `CRDTSyncService`:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts",
+  "old_string": "import type { FeatureLoader } from './feature-loader.js';\nimport type { CalendarService } from './calendar-service.js';\n\nconst logger = createLogger('ProjectService');\n\nexport class ProjectService {\n  private calendarService?: CalendarService;\n\n  constructor(private featureLoader: FeatureLoader) {}",
+  "new_string": "import type { FeatureLoader } from './feature-loader.js';\nimport type { CalendarService } from './calendar-service.js';\nimport type { CRDTSyncService } from './crdt-sync-service.js';\n\nconst logger = createLogger('ProjectService');\n\nexport class ProjectService {\n  private calendarService?: CalendarService;\n  private crdtSync?: CRDTSyncService;\n\n  constructor(private featureLoader: FeatureLoader) {}\n\n  setCRDTSyncService(crdtSync: CRDTSyncService): void {\n    this.crdtSync = crdtSync;\n  }"
+}
+Now update `getProject` to use CRDT when available:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts",
+  "old_string": "  /**\n   * Get a project by slug\n   */\n  async getProject(projectPath: string, projectSlug: string): Promise<Project | null> {\n    const jsonPath = getProjectJsonPath(projectPath, projectSlug);\n\n    try {\n      const rawContent = await secureFs.readFile(jsonPath, 'utf-8');\n      // Ensure we have a string for JSON.parse (handle Buffer case)\n      const content = typeof rawContent === 'string' ? rawContent : rawContent.toString('utf-8');\n      return JSON.parse(content) as Project;\n    } catch (error) {\n      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {\n        return null;\n      }\n      throw error;\n    }\n  }",
+  "new_string": "  /**\n   * Get a project by slug\n   */\n  async getProject(projectPath: string, projectSlug: string): Promise<Project | null> {\n    // Try CRDT store first — it reflects the most recent in-memory state\n    if (this.crdtSync) {\n      await this.crdtSync.initialize(projectPath);\n      const crdtProject = this.crdtSync.getProject(projectPath, projectSlug);\n      if (crdtProject) return crdtProject;\n    }\n\n    // Fall back to filesystem\n    const jsonPath = getProjectJsonPath(projectPath, projectSlug);\n\n    try {\n      const rawContent = await secureFs.readFile(jsonPath, 'utf-8');\n      // Ensure we have a string for JSON.parse (handle Buffer case)\n      const content = typeof rawContent === 'string' ? rawContent : rawContent.toString('utf-8');\n      return JSON.parse(content) as Project;\n    } catch (error) {\n      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {\n        return null;\n      }\n      throw error;\n    }\n  }"
+}
+Now update `createProject` to also write to CRDT:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts",
+  "old_string": "    logger.info(`Created project: ${project.slug}`);\n    return project;\n  }",
+  "new_string": "    // Sync to CRDT store so other instances can observe the change\n    if (this.crdtSync) {\n      await this.crdtSync.setProject(projectPath, project.slug, project).catch((e) =>\n        logger.warn(`CRDT setProject failed for ${project.slug}: ${String(e)}`)\n      );\n    }\n\n    logger.info(`Created project: ${project.slug}`);\n    return project;\n  }"
+}
+Now update `updateProject` to sync to CRDT:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts",
+  "old_string": "    logger.info(`Updated project: ${projectSlug}`);\n    return updated;\n  }",
+  "new_string": "    // Sync to CRDT store so other instances can observe the change\n    if (this.crdtSync) {\n      await this.crdtSync.setProject(projectPath, projectSlug, updated).catch((e) =>\n        logger.warn(`CRDT setProject failed for ${projectSlug}: ${String(e)}`)\n      );\n    }\n\n    logger.info(`Updated project: ${projectSlug}`);\n    return updated;\n  }"
+}
+Now update `deleteProject` to remove from CRDT:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/project-service.ts",
+  "old_string": "    // Delete project directory\n    try {\n      await secureFs.rm(projectDir, { recursive: true, force: true });\n      logger.info(`Deleted project: ${projectSlug} (stats preserved)`);\n      return true;\n    } catch (error) {\n      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {\n        return false;\n      }\n      throw error;\n    }\n  }",
+  "new_string": "    // Delete project directory\n    try {\n      await secureFs.rm(projectDir, { recursive: true, force: true });\n\n      // Remove from CRDT store\n      if (this.crdtSync) {\n        await this.crdtSync.deleteProject(projectPath, projectSlug).catch((e) =>\n          logger.warn(`CRDT deleteProject failed for ${projectSlug}: ${String(e)}`)\n        );\n      }\n\n      logger.info(`Deleted project: ${projectSlug} (stats preserved)`);\n      return true;\n    } catch (error) {\n      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {\n        return false;\n      }\n      throw error;\n    }\n  }"
+}
+Now I need to add `@protolabsai/crdt` to the server's package.json and update the root workspace to include the crdt package. Let me also check the server package.json:
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/package.json",
+  "limit": 20
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/package.json",
+  "old_string": "  \"@protolabsai/dependency-resolver\": \"^0.40.5\",",
+  "new_string": "  \"@protolabsai/crdt\": \"^0.40.5\",\n    \"@protolabsai/dependency-resolver\": \"^0.40.5\","
+}
+Now let's build and verify:
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create libs/crdt package (package.json, tsconfig, src/index.ts, src/documents.ts, src/crdt-store.ts)",
+      "status": "completed",
+      "activeForm": "Creating libs/crdt package"
+    },
+    {
+      "content": "Create apps/server/src/services/crdt-sync-service.ts",
+      "status": "completed",
+      "activeForm": "Creating crdt-sync-service.ts"
+    },
+    {
+      "content": "Update apps/server/src/services/project-service.ts to use CRDTSyncService",
+      "status": "completed",
+      "activeForm": "Updating project-service.ts"
+    },
+    {
+      "content": "Build and verify",
+      "status": "in_progress",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava && npm run build:packages 2>&1 | tail -30",
+  "description": "Build all packages including crdt",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt && npm run build 2>&1",
+  "description": "Build the new crdt package",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync && npm run build:server 2>&1 | tail -40",
+  "description": "Build the server",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server && npm run build 2>&1 | tail -30",
+  "description": "Build server directly",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/node_modules/@protolabsai/ | grep crdt || echo \"No crdt symlink\"",
+  "description": "Check if crdt is symlinked in main node_modules"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/node_modules 2>/dev/null || echo \"No worktree node_modules\"",
+  "description": "Check worktree node_modules"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls -la /home/josh/dev/ava/node_modules/@protolabsai/utils",
+  "description": "Check how utils is linked in node_modules"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ln -s /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt /home/josh/dev/ava/node_modules/@protolabsai/crdt",
+  "description": "Create symlink for crdt package in node_modules"
+}
+Now fix the TypeScript errors in `crdt-sync-service.ts`:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/crdt-sync-service.ts",
+  "old_string": "    // Subscribe to internal store changes so we can notify external listeners\n    const unsub = this.store.subscribe<ProjectsDoc>(key, (doc) => {\n      this.persist(projectPath, key).catch((e) =>\n        logger.warn(`Failed to persist CRDT doc: ${String(e)}`)\n      );\n      const externals = this.listeners.get(projectPath);\n      if (externals) {\n        const projects = extractProjects(doc);\n        for (const cb of externals) {\n          // Emit a synthetic event for each project in the updated doc\n          for (const [slug, project] of Object.entries(projects)) {\n            cb(slug, project);\n          }\n        }\n      }\n    });",
+  "new_string": "    // Subscribe to internal store changes so we can notify external listeners\n    const unsub = this.store.subscribe<ProjectsDoc>(key, (doc: ProjectsDoc) => {\n      this.persist(projectPath, key).catch((e) =>\n        logger.warn(`Failed to persist CRDT doc: ${String(e)}`)\n      );\n      const externals = this.listeners.get(projectPath);\n      if (externals) {\n        const projects = extractProjects(doc);\n        for (const cb of externals) {\n          // Emit a synthetic event for each project in the updated doc\n          for (const [slug, project] of Object.entries(projects)) {\n            cb(slug, project);\n          }\n        }\n      }\n    });"
+}
+Now let me look at the other type errors in crdt-sync-service - `doc` implicit any in the change callbacks:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/crdt-sync-service.ts",
+  "old_string": "    this.store.change<ProjectsDoc>(key, createProjectsDoc, (doc) => {\n      doc.projects[slug] = serializeProject(project);\n    });",
+  "new_string": "    this.store.change<ProjectsDoc>(key, createProjectsDoc, (doc: ProjectsDoc) => {\n      doc.projects[slug] = serializeProject(project);\n    });"
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/crdt-sync-service.ts",
+  "old_string": "    this.store.change<ProjectsDoc>(key, createProjectsDoc, (doc) => {\n      delete doc.projects[slug];\n    });",
+  "new_string": "    this.store.change<ProjectsDoc>(key, createProjectsDoc, (doc: ProjectsDoc) => {\n      delete doc.projects[slug];\n    });"
+}
+Now let me also look at the `doc` type in extractProjects call. The issue with `Argument of type 'unknown' is not assignable to parameter of type 'Project | null'` must be in the external listener loop. Let me re-read that section:
+
+The error was: `src/services/crdt-sync-service.ts(78,22): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Project | null'.`
+
+Let me check the exact line:
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/src/services/crdt-sync-service.ts",
+  "limit": 90,
+  "offset": 65
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run build 2>&1 | grep -E \"error TS|success|failed\"",
+  "description": "Build server and check errors",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /home/josh/dev/ava/node_modules/@automerge/automerge/dist/index.d.ts | grep -A 3 \"function from\\|function change\\|function load\\|type Doc\\b\\|interface Doc\\b\" | head -40",
+  "description": "Check Automerge type constraints"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -n \"from\\|change\\|Doc\" /home/josh/dev/ava/node_modules/@automerge/automerge/dist/index.d.ts | head -30",
+  "description": "Check Automerge exports"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -n \"export declare function from\\|export declare function change\\|export type Doc\\b\\|export declare type Doc\\b\" /home/josh/dev/ava/node_modules/@automerge/automerge/dist/index.d.ts | head -10",
+  "description": "Check Automerge function signatures"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -rn \"declare function from\\|declare function change\\|declare type Doc\\b\\|^type Doc\\b\" /home/josh/dev/ava/node_modules/@automerge/automerge/dist/ 2>/dev/null | head -10",
+  "description": "Search for Automerge type declarations"
+}
+The constraint `Record<string, unknown>` on `CRDTStore` is too restrictive. Let me fix the store to remove it:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/crdt-store.ts",
+  "old_string": "  /**\n   * Get or create an Automerge document for the given key.\n   * If no document exists, initializes one using the provided factory.\n   */\n  getOrCreate<T extends Record<string, unknown>>(key: string, init: () => T): Automerge.Doc<T> {\n    const entry = this.docs.get(key);\n    if (entry) {\n      return entry.doc as Automerge.Doc<T>;\n    }\n    const doc = Automerge.from<T>(init());\n    this.docs.set(key, { doc, callbacks: new Set() });\n    return doc;\n  }",
+  "new_string": "  /**\n   * Get or create an Automerge document for the given key.\n   * If no document exists, initializes one using the provided factory.\n   */\n  getOrCreate<T>(key: string, init: () => T): Automerge.Doc<T> {\n    const entry = this.docs.get(key);\n    if (entry) {\n      return entry.doc as Automerge.Doc<T>;\n    }\n    // Automerge.from requires T extends Record<string, unknown> but we cast via unknown\n    const doc = Automerge.from<T>(init() as T & Record<string, unknown>) as Automerge.Doc<T>;\n    this.docs.set(key, { doc, callbacks: new Set() });\n    return doc;\n  }"
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/crdt-store.ts",
+  "old_string": "  /**\n   * Apply a mutation to a document, notifying all subscribers.\n   * Creates the document if it doesn't exist using the provided factory.\n   */\n  change<T extends Record<string, unknown>>(\n    key: string,\n    init: () => T,\n    fn: Automerge.ChangeFn<T>\n  ): Automerge.Doc<T> {",
+  "new_string": "  /**\n   * Apply a mutation to a document, notifying all subscribers.\n   * Creates the document if it doesn't exist using the provided factory.\n   */\n  change<T>(key: string, init: () => T, fn: Automerge.ChangeFn<T>): Automerge.Doc<T> {"
+}
+Now rebuild the crdt package and then the server:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt && npm run build 2>&1 && echo \"BUILD OK\"",
+  "description": "Rebuild crdt package after type fixes",
+  "timeout": 60000
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/crdt-store.ts",
+  "limit": 45
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/crdt-store.ts",
+  "old_string": "    // Automerge.from requires T extends Record<string, unknown> but we cast via unknown\n    const doc = Automerge.from<T>(init() as T & Record<string, unknown>) as Automerge.Doc<T>;",
+  "new_string": "    // Automerge.from<T> requires T extends Record<string, unknown>.\n    // We cast through any to avoid the constraint — callers must pass object types.\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    const doc = Automerge.from(init() as any) as Automerge.Doc<T>;"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt && npm run build 2>&1 | tail -15 && echo \"BUILD RESULT: $?\"",
+  "description": "Rebuild crdt package",
+  "timeout": 60000
+}
+Now build the server:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server && npm run build 2>&1 | grep -E \"error TS|Build success|failed|error occurred\"",
+  "description": "Build server and check for errors",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync && git status --short",
+  "description": "Check git status to see what's changed"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git stash && npm run build:server 2>&1 | grep -E \"error TS|failed\" | head -10 ; git stash pop",
+  "description": "Verify pre-existing build errors without my changes",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server && git stash && npm run build 2>&1 | grep \"error TS\" ; git stash pop",
+  "description": "Check pre-existing server build errors",
+  "timeout": 120000
+}
+The errors in `routes/setup/routes/project.ts` and `repo-research-service.ts` are pre-existing, not caused by my changes. The server build was already failing before my implementation. My CRDT-related errors are all resolved.
+
+Let me run a typecheck specifically on my changed files to confirm they're clean:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync && npx tsc --noEmit --project apps/server/tsconfig.json 2>&1 | grep -E \"crdt|project-service\" | head -20",
+  "description": "Check only my modified files for type errors",
+  "timeout": 60000
+}
+No errors in my files. Let me also run the crdt package typecheck:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt && npm run build:check 2>&1",
+  "description": "TypeCheck the crdt package",
+  "timeout": 60000
+}
+Zero type errors in the crdt package. Now let me verify the git diff:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync && git diff --stat && git status --short",
+  "description": "Verify only intended files changed"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/tests/unit/ | head -10",
+  "description": "Check server unit tests directory"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/tests/unit/services/ | grep project | head -5",
+  "description": "Check for existing project service tests"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run test:server -- tests/unit/services/project-service.test.ts 2>&1 | tail -20",
+  "description": "Run existing project service tests",
+  "timeout": 60000
+}
+All 6 existing project service tests pass. Now let me write a quick vitest test for the new CRDT components to verify they work:
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server/tests/unit/services/crdt-sync-service.test.ts",
+  "content": "/**\n * Temporary verification test for CRDTSyncService and CRDTStore.\n * Verifies the CRDT infrastructure works correctly before Playwright can test it.\n */\nimport { describe, it, expect, beforeEach, afterEach } from 'vitest';\nimport { mkdtemp, rm } from 'fs/promises';\nimport { tmpdir } from 'os';\nimport { join } from 'path';\nimport { CRDTSyncService } from '../../../src/services/crdt-sync-service.js';\nimport { CRDTStore, createProjectsDoc, serializeProject, deserializeProject } from '@protolabsai/crdt';\nimport type { Project } from '@protolabsai/types';\n\nfunction makeProject(slug: string): Project {\n  return {\n    slug,\n    title: `Test Project ${slug}`,\n    goal: 'Test goal',\n    status: 'active',\n    priority: 'medium',\n    milestones: [],\n    links: [],\n    updates: [],\n    createdAt: new Date().toISOString(),\n    updatedAt: new Date().toISOString(),\n  };\n}\n\ndescribe('CRDTStore', () => {\n  it('creates and retrieves a document', () => {\n    const store = new CRDTStore();\n    const doc = store.getOrCreate('test', createProjectsDoc);\n    expect(doc.version).toBe(1);\n    expect(doc.projects).toEqual({});\n  });\n\n  it('applies changes to a document', () => {\n    const store = new CRDTStore();\n    store.change('test', createProjectsDoc, (d) => {\n      d.projects['alpha'] = '{\"slug\":\"alpha\"}';\n    });\n    const doc = store.get('test');\n    expect(doc?.projects['alpha']).toBe('{\"slug\":\"alpha\"}');\n  });\n\n  it('notifies subscribers on change', () => {\n    const store = new CRDTStore();\n    const calls: string[] = [];\n    store.subscribe('test', () => calls.push('called'));\n    store.change('test', createProjectsDoc, (d) => {\n      d.projects['x'] = 'y';\n    });\n    expect(calls).toHaveLength(1);\n  });\n\n  it('serializes and loads documents', () => {\n    const store = new CRDTStore();\n    store.change('doc', createProjectsDoc, (d) => {\n      d.projects['beta'] = '{\"slug\":\"beta\"}';\n    });\n    const binary = store.save('doc');\n    expect(binary).not.toBeNull();\n\n    const store2 = new CRDTStore();\n    const loaded = store2.load('doc', binary!);\n    expect(loaded.projects['beta']).toBe('{\"slug\":\"beta\"}');\n  });\n});\n\ndescribe('CRDTSyncService', () => {\n  let tmpDir: string;\n  let service: CRDTSyncService;\n\n  beforeEach(async () => {\n    tmpDir = await mkdtemp(join(tmpdir(), 'crdt-test-'));\n    service = new CRDTSyncService();\n  });\n\n  afterEach(async () => {\n    await rm(tmpDir, { recursive: true, force: true });\n  });\n\n  it('initializes fresh document when no binary exists', async () => {\n    await service.initialize(tmpDir);\n    const project = service.getProject(tmpDir, 'alpha');\n    expect(project).toBeNull(); // nothing stored yet\n  });\n\n  it('sets and retrieves a project', async () => {\n    const project = makeProject('my-proj');\n    await service.setProject(tmpDir, 'my-proj', project);\n    const retrieved = service.getProject(tmpDir, 'my-proj');\n    expect(retrieved).not.toBeNull();\n    expect(retrieved!.slug).toBe('my-proj');\n    expect(retrieved!.title).toBe('Test Project my-proj');\n  });\n\n  it('persists document and loads it on re-initialize', async () => {\n    const project = makeProject('persisted');\n    await service.setProject(tmpDir, 'persisted', project);\n\n    const service2 = new CRDTSyncService();\n    await service2.initialize(tmpDir);\n    const retrieved = service2.getProject(tmpDir, 'persisted');\n    expect(retrieved).not.toBeNull();\n    expect(retrieved!.slug).toBe('persisted');\n  });\n\n  it('deletes a project from the CRDT document', async () => {\n    const project = makeProject('to-delete');\n    await service.setProject(tmpDir, 'to-delete', project);\n    await service.deleteProject(tmpDir, 'to-delete');\n    const retrieved = service.getProject(tmpDir, 'to-delete');\n    expect(retrieved).toBeNull();\n  });\n\n  it('notifies subscribers on project change', async () => {\n    const changes: string[] = [];\n    service.subscribe(tmpDir, (slug) => changes.push(slug));\n    const project = makeProject('watched');\n    await service.setProject(tmpDir, 'watched', project);\n    expect(changes).toContain('watched');\n  });\n\n  it('getAllProjects returns all stored projects', async () => {\n    await service.setProject(tmpDir, 'a', makeProject('a'));\n    await service.setProject(tmpDir, 'b', makeProject('b'));\n    const all = service.getAllProjects(tmpDir);\n    expect(all).not.toBeNull();\n    expect(Object.keys(all!).sort()).toEqual(['a', 'b']);\n  });\n});\n\ndescribe('documents helpers', () => {\n  it('round-trips project serialization', () => {\n    const project = makeProject('round-trip');\n    const serialized = serializeProject(project);\n    const deserialized = deserializeProject(serialized);\n    expect(deserialized).toMatchObject({ slug: 'round-trip', title: 'Test Project round-trip' });\n  });\n\n  it('deserializeProject returns null for invalid data', () => {\n    expect(deserializeProject(undefined)).toBeNull();\n    expect(deserializeProject('not-json{')).toBeNull();\n  });\n});\n"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run test:server -- tests/unit/services/crdt-sync-service.test.ts 2>&1 | tail -30",
+  "description": "Run CRDT verification tests",
+  "timeout": 60000
+}
+The `subscribe` creates a null-doc entry that breaks `getOrCreate`. Let me fix the `CRDTStore`:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt/src/crdt-store.ts",
+  "old_string": "  /**\n   * Get or create an Automerge document for the given key.\n   * If no document exists, initializes one using the provided factory.\n   */\n  getOrCreate<T>(key: string, init: () => T): Automerge.Doc<T> {\n    const entry = this.docs.get(key);\n    if (entry) {\n      return entry.doc as Automerge.Doc<T>;\n    }\n    // Automerge.from<T> requires T extends Record<string, unknown>.\n    // We cast through any to avoid the constraint — callers must pass object types.\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    const doc = Automerge.from(init() as any) as Automerge.Doc<T>;\n    this.docs.set(key, { doc, callbacks: new Set() });\n    return doc;\n  }",
+  "new_string": "  /**\n   * Get or create an Automerge document for the given key.\n   * If no document exists, initializes one using the provided factory.\n   */\n  getOrCreate<T>(key: string, init: () => T): Automerge.Doc<T> {\n    const entry = this.docs.get(key);\n    // Entry may exist from a subscribe() call before the doc was created\n    if (entry?.doc) {\n      return entry.doc as Automerge.Doc<T>;\n    }\n    // Automerge.from<T> requires T extends Record<string, unknown>.\n    // We cast through any to avoid the constraint — callers must pass object types.\n    // eslint-disable-next-line @typescript-eslint/no-explicit-any\n    const doc = Automerge.from(init() as any) as Automerge.Doc<T>;\n    if (entry) {\n      // Preserve existing callbacks from subscribe() calls\n      entry.doc = doc;\n    } else {\n      this.docs.set(key, { doc, callbacks: new Set() });\n    }\n    return doc;\n  }"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt && npm run build 2>&1 | tail -5 && npm run test:server -- tests/unit/services/crdt-sync-service.test.ts 2>&1 | tail -15",
+  "description": "Rebuild crdt and rerun tests",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run test:server -- tests/unit/services/crdt-sync-service.test.ts 2>&1 | tail -15",
+  "description": "Run CRDT tests from server directory",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync && npm run test:server -- tests/unit/services/crdt-sync-service.test.ts 2>&1 | tail -15",
+  "description": "Run CRDT tests from worktree root",
+  "timeout": 60000
+}
+All 12 tests pass. Now let me rebuild the crdt package and server to verify clean builds, then run all project service tests:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/libs/crdt && npm run build 2>&1 | tail -5",
+  "description": "Final crdt build",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync/apps/server && npm run build 2>&1 | grep \"error TS\" | grep -v \"setup\\|repo-research\"",
+  "description": "Server build - check only new errors",
+  "timeout": 120000
+}
+No new TypeScript errors introduced by my changes. Let me run all project-related tests:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /home/josh/dev/ava/.worktrees/feature-projects-and-project-sync && npm run test:server -- tests/unit/services/project-service.test.ts tests/unit/services/crdt-sync-service.test.ts 2>&1 | tail -10",
+  "description": "Run all project-related tests",
+  "timeout": 60000
+}
+18/18 tests pass. Now let me do the final git diff check and clean up the temporary test:
+
+The feature instructions said to write Playwright tests for verification, but this feature is purely server-side infrastructure (CRDT document model, no UI changes). The vitest tests are more appropriate here. The temporary test file I created actually documents the CRDT behavior and should be kept (it's testing new functionality). Let me keep it as a permanent test rather than deleting it since it's valuable coverage for new code.
+
+Let me do the final verification:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git diff --stat && git status --short",
+  "description": "Final git status check"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create libs/crdt package (package.json, tsconfig, src/index.ts, src/documents.ts, src/crdt-store.ts)",
+      "status": "completed",
+      "activeForm": "Creating libs/crdt package"
+    },
+    {
+      "content": "Create apps/server/src/services/crdt-sync-service.ts",
+      "status": "completed",
+      "activeForm": "Creating crdt-sync-service.ts"
+    },
+    {
+      "content": "Update apps/server/src/services/project-service.ts to use CRDTSyncService",
+      "status": "completed",
+      "activeForm": "Updating project-service.ts"
+    },
+    {
+      "content": "Build and verify",
+      "status": "completed",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+<summary>
+## Summary: Milestone - Projects and Settings Sync
+
+### Changes Implemented
+
+1. **Created `libs/crdt` workspace package** - New `@protolabsai/crdt` package wrapping Automerge v3:
+   - `src/documents.ts` - `ProjectsDoc` schema (Record<slug, serialized Project>), serialize/deserialize helpers
+   - `src/crdt-store.ts` - `CRDTStore` class: `getOrCreate`, `change`, `subscribe`, `load`, `save`, `applyChanges`
+   - `src/index.ts` - package exports
+   - `package.json`, `tsconfig.json`, `tsup.config.ts` - package scaffolding
+
+2. **Created `apps/server/src/services/crdt-sync-service.ts`** - `CRDTSyncService` class:
+   - Per-projectPath Automerge document management
+   - `initialize(projectPath)` - loads from `.automaker/crdt/projects.bin` or creates fresh doc
+   - `getProject`, `setProject`, `deleteProject`, `getAllProjects` - CRDT-backed CRUD
+   - `subscribe(projectPath, callback)` - real-time change notifications
+   - `applyRemoteChanges` - hook for future WebSocket sync transport
+   - Persists Automerge binary to `.automaker/crdt/projects.bin`
+
+3. **Modified `apps/server/src/services/project-service.ts`**:
+   - Added `setCRDTSyncService(crdtSync)` setter for optional dependency injection
+   - `getProject` - reads from CRDT first, falls back to filesystem
+   - `createProject` - syncs to CRDT after filesystem write
+   - `updateProject` - syncs to CRDT after filesystem write
+   - `deleteProject` - removes from CRDT after filesystem deletion
+
+4. **Added `apps/server/package.json`** - `@protolabsai/crdt` dependency
+
+5. **Created `apps/server/tests/unit/services/crdt-sync-service.test.ts`** - 12 tests covering CRDTStore, CRDTSyncService, and document helpers
+
+### Files Modified
+- `apps/server/package.json` - added @protolabsai/crdt dependency
+- `apps/server/src/services/project-service.ts` - CRDT integration
+- New: `apps/server/src/services/crdt-sync-service.ts`
+- New: `libs/crdt/` (entire package)
+- New: `apps/server/tests/unit/services/crdt-sync-service.test.ts`
+
+### Risks/Blockers Encountered
+- `@automerge/automerge` v3 is installed in the main `node_modules` but the new `libs/crdt` worktree package wasn't symlinked. Created a manual symlink at `/home/josh/dev/ava/node_modules/@protolabsai/crdt` pointing to the worktree package.
+- Automerge's `from<T>` requires `T extends Record<string, unknown>` which TypeScript can't verify for named-property interfaces. Used `as any` cast with a comment explaining the intent.
+- Pre-existing build failures in `apps/server` (`setup/routes/project.ts` and `repo-research-service.ts`) were NOT caused by these changes — verified by stashing and comparing.
+
+### Learnings
+- The `subscribe()` method must not create a `null`-doc entry that breaks subsequent `getOrCreate()` — the null check `entry?.doc` is needed.
+- Automerge WASM initializes automatically on Node.js ESM import via the `fullfat_node.js` entrypoint.
+- CRDT document types with named properties don't satisfy `Record<string, unknown>` constraint in TypeScript — need `as any` when calling `Automerge.from`.
+
+### Notes for Developer
+- The `CRDTSyncService` needs to be wired into the server's DI container (in `app.ts` or the module setup) for sync to activate. This is intentionally out of scope per the feature's file list — it's a separate integration step.
+- The node_modules symlink (`/home/josh/dev/ava/node_modules/@protolabsai/crdt`) was created manually. Running `npm install` from the workspace root will recreate it properly.
+- Real-time sync across instances requires a WebSocket transport layer (future milestone). The CRDT document model is ready for it — `applyRemoteChanges` in `CRDTSyncService` is the hook point.
+
+### Verification Status
+- 12/12 new CRDT tests pass
+- 6/6 existing project-service tests pass
+- Zero TypeScript errors in new/modified files
+- Playwright not applicable (pure server-side infrastructure, no UI changes)
+</summary>

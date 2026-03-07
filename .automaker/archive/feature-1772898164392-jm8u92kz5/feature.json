@@ -1,0 +1,98 @@
+{
+  "category": "Feature Sync",
+  "description": "**Milestone:** Feature Sync\n\nImplement the FeatureStore interface using CRDTStore as the backing store. Features document is a Record<featureId, Feature>. All reads come from in-memory Automerge doc (instant, no disk I/O). All writes use CRDTStore.change() which handles CRDT mutation, persistence, and sync. Maintains backward compatibility: if CRDT is disabled (no proto.config), falls back to existing FeatureLoader.\n\n**Files to Modify:**\n- apps/server/src/services/automerge-feature-store.ts\n- apps/server/src/services/feature-loader.ts\n- apps/server/src/server/services.ts\n- apps/server/src/server/wiring.ts\n\n**Acceptance Criteria:**\n- [ ] AutomergeFeatureStore implements FeatureStore interface\n- [ ] getAll() reads from Automerge doc (in-memory, no disk I/O)\n- [ ] create/update/delete use CRDTStore.change() for mutations\n- [ ] claim() uses optimistic-claim-with-post-sync-verification: conditional write (only if unassigned), wait for sync settle (~200ms), re-read to verify ownership, release if another instance won\n- [ ] Remote changes from peers trigger feature:updated events via EventBus\n- [ ] Fallback to FeatureLoader when proto.config is absent\n- [ ] Unit tests for all FeatureStore methods against Automerge doc\n- [ ] Integration test: feature created on instance A appears on instance B\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "AutomergeFeatureStore Implementation",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772898164392-7i9l4news",
+  "branchName": "feature/feature-sync-automergefeaturestor",
+  "isFoundation": true,
+  "projectSlug": "distributed-crdt-sync",
+  "milestoneSlug": "02-feature-sync",
+  "phaseSlug": "automergefeaturestore-implementation",
+  "id": "feature-1772898164392-jm8u92kz5",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Feature Sync\n\nImplement the FeatureStore interface using CRDTStore as the backing store. Features document is a Record<featureId, Feature>. All reads come from in-memory Automerge doc (instant, no disk I/O). All writes use CRDTStore.change() which handles CRDT mutation, persistence, and sync. Maintains backward compatibility: if CRDT is disabled (no proto.config), falls back to existing FeatureLoader.\n\n**Files to Modify:**\n- apps/server/src/services/automerge-feature-store.ts\n- apps/server/src/services/feature-loader.ts\n- apps/server/src/server/services.ts\n- apps/server/src/server/wiring.ts\n\n**Acceptance Criteria:**\n- [ ] AutomergeFeatureStore implements FeatureStore interface\n- [ ] getAll() reads from Automerge doc (in-memory, no disk I/O)\n- [ ] create/update/delete use CRDTStore.change() for mutations\n- [ ] claim() uses optimistic-claim-with-post-sync-verification: conditional write (only if unassigned), wait for sync settle (~200ms), re-read to verify ownership, release if another instance won\n- [ ] Remote changes from peers trigger feature:updated events via EventBus\n- [ ] Fallback to FeatureLoader when proto.config is absent\n- [ ] Unit tests for all FeatureStore methods against Automerge doc\n- [ ] Integration test: feature created on instance A appears on instance B\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T15:42:44.392Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T15:42:44.392Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T15:42:44.392Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T17:03:52.657Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T17:33:43.540Z"
+    },
+    {
+      "from": "done",
+      "to": "blocked",
+      "timestamp": "2026-03-07T17:34:22.879Z",
+      "reason": "Budget exceeded: $13.38"
+    },
+    {
+      "from": "blocked",
+      "to": "review",
+      "timestamp": "2026-03-07T17:35:18.349Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T19:54:41.459Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772898164389-4qen2e7fw",
+    "feature-1772898164391-6jgo2lrs8"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T17:33:43.539Z",
+  "costUsd": 13.379590999999996,
+  "lastSessionId": "12d68613-444d-4f99-a10f-b910e612bb87",
+  "lastTraceId": "048d6427-3341-498f-b728-02ad22363053",
+  "traceIds": [
+    "048d6427-3341-498f-b728-02ad22363053"
+  ],
+  "completedAt": "2026-03-07T17:33:43.540Z",
+  "executionHistory": [
+    {
+      "id": "73e28d38-9522-4c0c-b7e4-9be070923156",
+      "startedAt": "2026-03-07T17:03:52.953Z",
+      "completedAt": "2026-03-07T17:33:43.552Z",
+      "durationMs": 1790599,
+      "costUsd": 13.379590999999996,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "summary": "**Build:** Passes (`tsc` exit 0)",
+  "statusChangeReason": "Budget exceeded: $13.38",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Budget exceeded: $13.38"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T17:34:22.880Z"
+  },
+  "prNumber": 1961,
+  "reviewStartedAt": "2026-03-07T17:35:18.349Z"
+}

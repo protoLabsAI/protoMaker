@@ -4,6 +4,7 @@
   "title": "Wire config generation into setup_lab",
   "status": "done",
   "isEpic": false,
+  "epicId": "feature-1772881709657-be8p79osk",
   "branchName": "feature/protoconfigyaml-wire-config",
   "isFoundation": false,
   "projectSlug": "setuplab-published-onboarding-tool",
