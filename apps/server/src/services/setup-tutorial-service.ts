@@ -1,10 +1,6 @@
 import crypto from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
-import {
-  getNotesWorkspacePath,
-  ensureNotesDir,
-  secureFs,
-} from '@protolabsai/platform';
+import { getNotesWorkspacePath, ensureNotesDir, secureFs } from '@protolabsai/platform';
 import type { NotesWorkspace, NoteTab } from '@protolabsai/types';
 import type { RepoResearchResult } from '@protolabsai/types';
 
