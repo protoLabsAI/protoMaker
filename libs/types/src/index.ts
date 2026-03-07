@@ -871,6 +871,24 @@ export type {
   SensorReading,
 } from './sensor.js';
 
+// ProtoConfig types and schema (proto.config.yaml structure)
+export {
+  ProtoConfigSchema,
+  ProtoTechStackSchema,
+  ProtoCommandsSchema,
+  ProtoGitSchema,
+  ProtoLabSchema,
+  ProtoDefaultsSchema,
+} from './proto-config.js';
+export type {
+  ProtoConfig,
+  ProtoTechStack,
+  ProtoCommands,
+  ProtoGit,
+  ProtoLab,
+  ProtoDefaults,
+} from './proto-config.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
