@@ -58,7 +58,7 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
 
       // Downgrade pre-existing base rule violations to warnings.
       // These should be fixed over time but must not block CI.

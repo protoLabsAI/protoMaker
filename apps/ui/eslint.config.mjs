@@ -126,7 +126,7 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       // TS handles these — ESLint's base rules don't understand TS overloads or DOM types
       'no-undef': 'off',
       'no-redeclare': 'off',
