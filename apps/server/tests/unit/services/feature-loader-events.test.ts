@@ -1,12 +1,12 @@
 /**
- * FeatureLoader.update() — statusHistory and event gap baseline tests.
+ * FeatureLoader.update() — auto-emission of feature:status-changed
  *
- * These tests document two behaviors:
+ * Verifies:
  * 1. Status changes ARE recorded in statusHistory[] by update()
- * 2. feature:status-changed is NOT auto-emitted by update() (the gap)
- *
- * The gap means LedgerService won't see status changes unless callers
- * explicitly emit the event after calling featureLoader.update().
+ * 2. feature:status-changed IS auto-emitted by update() when EventEmitter is injected
+ * 3. Event fires exactly once per status change (no double-fires)
+ * 4. skipEventEmission option suppresses emission when needed
+ * 5. No event emitted when status does not change
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FeatureLoader } from '@/services/feature-loader.js';
@@ -14,8 +14,24 @@ import * as fs from 'fs/promises';
 
 vi.mock('fs/promises');
 
-describe('FeatureLoader.update() — statusHistory and event gap', () => {
+// Minimal EventEmitter mock
+function createMockEmitter() {
+  const emitted: Array<{ type: string; payload: unknown }> = [];
+  return {
+    emit: vi.fn((type: string, payload: unknown) => {
+      emitted.push({ type, payload });
+    }),
+    subscribe: vi.fn(),
+    on: vi.fn(),
+    broadcast: vi.fn(),
+    _emitted: emitted,
+  };
+}
+
+describe('FeatureLoader.update() — statusHistory and event auto-emission', () => {
   let loader: FeatureLoader;
+  let mockEmitter: ReturnType<typeof createMockEmitter>;
+
   const testProjectPath = '/test/project';
   const featureId = 'feature-1000-abc';
 
@@ -44,6 +60,8 @@ describe('FeatureLoader.update() — statusHistory and event gap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     loader = new FeatureLoader();
+    mockEmitter = createMockEmitter();
+    loader.setEventEmitter(mockEmitter as unknown as import('@/lib/events.js').EventEmitter);
     vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(baseFeature));
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
@@ -135,67 +153,143 @@ describe('FeatureLoader.update() — statusHistory and event gap', () => {
     });
   });
 
-  describe('feature:status-changed event — NOT emitted by update() (gap documentation)', () => {
-    it('FeatureLoader has no EventEmitter — it structurally cannot emit feature:status-changed', () => {
-      // FeatureLoader's constructor takes zero arguments.
-      // There is no EventEmitter dependency injected.
-      // This means update() physically cannot emit events.
-      const freshLoader = new FeatureLoader();
+  describe('feature:status-changed auto-emission', () => {
+    it('emits feature:status-changed exactly once when status changes', async () => {
+      await loader.update(testProjectPath, featureId, { status: 'done' });
 
-      // Confirm there is no 'events' property on the loader
-      expect((freshLoader as unknown as Record<string, unknown>).events).toBeUndefined();
+      const statusChangedEvents = mockEmitter._emitted.filter(
+        (e) => e.type === 'feature:status-changed'
+      );
+      expect(statusChangedEvents).toHaveLength(1);
     });
 
-    it('update() with a status change returns updated statusHistory but emits nothing', async () => {
-      // If FeatureLoader had access to an EventEmitter, we would track calls here.
-      // Since it has no EventEmitter, we verify the gap:
-      // - statusHistory IS updated in the returned feature
-      // - No event is emitted anywhere
-      const emittedEvents: Array<{ type: string }> = [];
+    it('emits with correct featureId, projectPath, oldStatus, newStatus', async () => {
+      await loader.update(testProjectPath, featureId, { status: 'review' });
 
-      const result = await loader.update(testProjectPath, featureId, { status: 'done' });
-
-      // statusHistory IS recorded
-      const last = result.statusHistory![result.statusHistory!.length - 1];
-      expect(last.to).toBe('done');
-
-      // No events were emitted — emittedEvents is empty because there is
-      // no event bus in FeatureLoader for it to emit to
-      expect(emittedEvents).toHaveLength(0);
+      const event = mockEmitter._emitted.find((e) => e.type === 'feature:status-changed');
+      expect(event).toBeDefined();
+      const payload = event!.payload as Record<string, unknown>;
+      expect(payload.featureId).toBe(featureId);
+      expect(payload.projectPath).toBe(testProjectPath);
+      expect(payload.oldStatus).toBe('in_progress');
+      expect(payload.newStatus).toBe('review');
     });
 
-    it('documents the gap: LedgerService will not react unless caller emits feature:status-changed', async () => {
-      // This test documents the integration gap:
-      //
-      // FeatureLoader.update() → writes statusHistory to disk
-      // LedgerService.initialize() → subscribes to 'feature:status-changed'
-      //
-      // The gap: nothing connects them. After update(), LedgerService has not
-      // been notified. If the caller doesn't emit 'feature:status-changed'
-      // explicitly, the ledger will never get a record for this status change.
-      //
-      // Fix (not in this phase): route service or execution service must emit
-      // the event after calling featureLoader.update().
-
-      const result = await loader.update(testProjectPath, featureId, { status: 'done' });
-
-      // statusHistory is updated — the change IS recorded on disk
-      expect(result.statusHistory!.some((t) => t.to === 'done')).toBe(true);
-
-      // But FeatureLoader has no events object to call emit() on
-      // The fact that (loader as any).events === undefined proves the gap
-      expect((loader as unknown as Record<string, unknown>).events).toBeUndefined();
-    });
-
-    it('update() with a non-status change also emits nothing', async () => {
-      const result = await loader.update(testProjectPath, featureId, {
-        description: 'Updated description',
+    it('emits with reason from statusChangeReason when provided', async () => {
+      await loader.update(testProjectPath, featureId, {
+        status: 'blocked',
+        statusChangeReason: 'Dependency not ready',
       });
 
-      // No status change — statusHistory unchanged
-      expect(result.statusHistory!.length).toBe(2);
-      // No events mechanism exists in FeatureLoader
-      expect((loader as unknown as Record<string, unknown>).events).toBeUndefined();
+      const event = mockEmitter._emitted.find((e) => e.type === 'feature:status-changed');
+      const payload = event!.payload as Record<string, unknown>;
+      expect(payload.reason).toBe('Dependency not ready');
+    });
+
+    it('emits with default reason "status updated" when no statusChangeReason', async () => {
+      await loader.update(testProjectPath, featureId, { status: 'done' });
+
+      const event = mockEmitter._emitted.find((e) => e.type === 'feature:status-changed');
+      const payload = event!.payload as Record<string, unknown>;
+      expect(payload.reason).toBe('status updated');
+    });
+
+    it('emits previousStatus as backward-compat alias for oldStatus', async () => {
+      await loader.update(testProjectPath, featureId, { status: 'done' });
+
+      const event = mockEmitter._emitted.find((e) => e.type === 'feature:status-changed');
+      const payload = event!.payload as Record<string, unknown>;
+      expect(payload.previousStatus).toBe('in_progress');
+      expect(payload.oldStatus).toBe('in_progress');
+    });
+
+    it('does NOT emit feature:status-changed when status is unchanged', async () => {
+      await loader.update(testProjectPath, featureId, { title: 'New Title Only' });
+
+      const statusChangedEvents = mockEmitter._emitted.filter(
+        (e) => e.type === 'feature:status-changed'
+      );
+      expect(statusChangedEvents).toHaveLength(0);
+    });
+
+    it('does NOT emit when no EventEmitter is injected', async () => {
+      const bareLoader = new FeatureLoader();
+      vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(baseFeature));
+
+      // Should not throw — just silently skips emission
+      await expect(
+        bareLoader.update(testProjectPath, featureId, { status: 'done' })
+      ).resolves.toBeDefined();
+
+      // Our mock emitter never called — bare loader has no emitter
+      expect(mockEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('fires exactly once per status change — not twice', async () => {
+      await loader.update(testProjectPath, featureId, { status: 'review' });
+
+      // Ensure there is only 1 emission even if callers previously added manual emissions
+      expect(mockEmitter.emit).toHaveBeenCalledTimes(1);
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        'feature:status-changed',
+        expect.objectContaining({ newStatus: 'review' })
+      );
+    });
+
+    it('suppressess emission when skipEventEmission is true', async () => {
+      await loader.update(
+        testProjectPath,
+        featureId,
+        { status: 'done' },
+        undefined,
+        undefined,
+        undefined,
+        { skipEventEmission: true }
+      );
+
+      const statusChangedEvents = mockEmitter._emitted.filter(
+        (e) => e.type === 'feature:status-changed'
+      );
+      expect(statusChangedEvents).toHaveLength(0);
+    });
+
+    it('emits normally when skipEventEmission is false (explicit)', async () => {
+      await loader.update(
+        testProjectPath,
+        featureId,
+        { status: 'done' },
+        undefined,
+        undefined,
+        undefined,
+        { skipEventEmission: false }
+      );
+
+      const statusChangedEvents = mockEmitter._emitted.filter(
+        (e) => e.type === 'feature:status-changed'
+      );
+      expect(statusChangedEvents).toHaveLength(1);
+    });
+
+    it('persists to disk BEFORE emitting (persist-before-emit guarantee)', async () => {
+      const callOrder: string[] = [];
+
+      vi.mocked(fs.writeFile).mockImplementation(async () => {
+        callOrder.push('disk-write');
+        return undefined;
+      });
+      mockEmitter.emit.mockImplementation((type: string) => {
+        if (type === 'feature:status-changed') {
+          callOrder.push('event-emit');
+        }
+      });
+
+      await loader.update(testProjectPath, featureId, { status: 'done' });
+
+      // disk write must happen before event emission
+      const writeIdx = callOrder.indexOf('disk-write');
+      const emitIdx = callOrder.indexOf('event-emit');
+      expect(writeIdx).toBeGreaterThanOrEqual(0);
+      expect(emitIdx).toBeGreaterThan(writeIdx);
     });
   });
 });
