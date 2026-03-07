@@ -3739,3 +3739,18 @@ usageStats:
 - **Rejected:** Alternative: Keep in same file with tight class organization. Rejected because 2000+ line file becomes hard to navigate, and reusability is lost.
 - **Trade-offs:** Gained: Reusability, reduced class size, explicit concern boundary. Lost: Must trace between two files to understand full flow, additional import complexity.
 - **Breaking if changed:** If scheduler moves back into auto-mode-service or its responsibility expands elsewhere without interface abstraction, reusability advantage is lost and duplication risk increases.
+
+#### [Gotcha] Fire-and-forget ledger load creates race condition: `loadLedger()` is not awaited in `initialize()`, so ledger Set pre-population races with incoming events. Tests must use `await setTimeout(100)` before firing events to let ledger load complete. (2026-03-07)
+- **Situation:** Completion detector needs to restore dedup state on restart, but service initialization must not block waiting for I/O.
+- **Root cause:** Non-blocking initialization avoids service startup delays; async load happens concurrently with service becoming available.
+- **How to avoid:** Faster service startup vs. test brittleness and race condition between ledger load and first events. Runtime behavior is correct (eventually consistent) but tests must be aware of timing.
+
+#### [Pattern] Ledger file acts as stateless durability layer separate from in-memory Sets: JSONL is append-only source of truth for recovery, Sets are runtime cache for performance. Cold start reads ledger into Sets, warm restart skips duplicate events using Sets. (2026-03-07)
+- **Problem solved:** Need dedup across restarts without blocking service with every event write, but must recover state after crashes.
+- **Why this works:** Ledger provides durable recovery log; Sets provide O(1) runtime dedup. Separation of concerns: ledger doesn't need to be queried for events (append-only), Sets don't need to be durable (rebuilt from ledger).
+- **Trade-offs:** Two sources of truth must stay in sync (slight complexity) but clean separation between durable log and runtime cache; ledger append is fire-and-forget (fast) but requires eventual consistency.
+
+#### [Pattern] Silent graceful degradation when `dataDir` is null/missing: all ledger operations (load, append) silently skip, service continues without persistence. Ledger is optional feature, not hard requirement. (2026-03-07)
+- **Problem solved:** Service runs in multiple contexts: production (needs durability), tests (don't care about durability), ephemeral deployments (no persistent storage).
+- **Why this works:** Avoids conditional logic throughout codebase and error handling burden. Ledger is optimization (prevents duplicate work) not correctness requirement.
+- **Trade-offs:** Simpler deployment story (dataDir optional) vs. subtle bugs if caller expects durability but doesn't provide dataDir. Silent failure is convenient but less explicit.
