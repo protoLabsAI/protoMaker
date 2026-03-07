@@ -399,14 +399,35 @@ export class ExecutionService {
           );
         }
 
+        // Guard: if the feature was interrupted by a server shutdown, the agent-output.md
+        // is stale — no live Claude session exists to resume. Skip the resume path and
+        // let contextExists handle cleanup (or start fresh).
+        const wasInterrupted =
+          feature?.statusChangeReason?.includes('server shutdown') ||
+          feature?.statusChangeReason?.includes('Interrupted');
+
         const hasExistingContext = await this.callbacks.contextExists(projectPath, featureId);
-        if (hasExistingContext) {
+        if (hasExistingContext && !wasInterrupted) {
           logger.info(
             `Feature ${featureId} has existing context, resuming instead of starting fresh`
           );
           // Remove from running features temporarily, resumeFeature will add it back
           this.runningFeatures.delete(featureId);
           return this.callbacks.resumeFeature(projectPath, featureId, useWorktrees);
+        }
+
+        // If interrupted with stale context, clean it up so we start fresh
+        if (hasExistingContext && wasInterrupted) {
+          logger.info(
+            `Feature ${featureId} has stale context from server shutdown — clearing for fresh start`
+          );
+          const featureDir = getFeatureDir(projectPath, featureId);
+          const contextPath = path.join(featureDir, 'agent-output.md');
+          try {
+            await secureFs.rename(contextPath, `${contextPath}.stale`);
+          } catch {
+            // Already cleaned up or missing — safe to continue
+          }
         }
       }
 
