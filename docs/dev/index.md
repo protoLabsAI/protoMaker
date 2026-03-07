@@ -15,6 +15,10 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 - **[Observability](./observability-package)** — Langfuse tracing and cost tracking
 - **[Langfuse Integration](../integrations/langfuse)** — Tracing, scoring, cost tracking
 
+## Distributed Systems
+
+- **[Distributed Sync](./distributed-sync)** — CRDT sync mesh, partition detection, reconnection resilience, compaction diagnostics, and Automerge time-travel debugging
+
 ## Pipeline & Orchestration
 
 - **[Idea to Production](./idea-to-production)** — The canonical 9-phase pipeline reference

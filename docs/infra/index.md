@@ -4,22 +4,23 @@ Deploy protoLabs. Docker, systemd, staging — pick what fits your stack.
 
 ## Quick Links
 
-| Document                                                      | Description                                              |
-| ------------------------------------------------------------- | -------------------------------------------------------- |
-| [Docker](./docker.md)                                         | Dockerfile architecture, multi-stage builds, base images |
-| [Docker Compose](./docker-compose.md)                         | Compose variants, environment variables, volumes         |
-| [Deployment](./deployment.md)                                 | Production deployment options (systemd, Docker)          |
-| [CI/CD](./ci-cd.md)                                           | GitHub Actions workflows explained                       |
-| [Monitoring](./monitoring.md)                                 | Health checks, logging, observability                    |
-| [Backup & Recovery](./backup-recovery.md)                     | Volume backups, restore procedures                       |
-| [systemd](./systemd.md)                                       | systemd service configuration                            |
-| [Networking](./networking.md)                                 | Ports, nginx, CORS, WebSocket proxying                   |
-| [Secrets](./secrets.md)                                       | Infisical deployment, MCP secret injection, team setup   |
-| [Security](./security.md)                                     | Container security, credentials management               |
-| [Troubleshooting](./troubleshooting.md)                       | Common issues and solutions                              |
-| [Staging](./staging-deployment.md)                            | Staging server setup, high-concurrency agent config      |
-| [Architecture](./architecture.md)                             | System architecture diagrams                             |
-| [Landing Page](./deployment.md#landing-page-cloudflare-pages) | Cloudflare Pages config for protolabs.studio             |
+| Document                                                      | Description                                                 |
+| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| [Docker](./docker.md)                                         | Dockerfile architecture, multi-stage builds, base images    |
+| [Docker Compose](./docker-compose.md)                         | Compose variants, environment variables, volumes            |
+| [Deployment](./deployment.md)                                 | Production deployment options (systemd, Docker)             |
+| [CI/CD](./ci-cd.md)                                           | GitHub Actions workflows explained                          |
+| [Monitoring](./monitoring.md)                                 | Health checks, logging, observability                       |
+| [Backup & Recovery](./backup-recovery.md)                     | Volume backups, restore procedures                          |
+| [systemd](./systemd.md)                                       | systemd service configuration                               |
+| [Networking](./networking.md)                                 | Ports, nginx, CORS, WebSocket proxying                      |
+| [Secrets](./secrets.md)                                       | Infisical deployment, MCP secret injection, team setup      |
+| [Security](./security.md)                                     | Container security, credentials management                  |
+| [Troubleshooting](./troubleshooting.md)                       | Common issues and solutions                                 |
+| [Staging](./staging-deployment.md)                            | Staging server setup, high-concurrency agent config         |
+| [Architecture](./architecture.md)                             | System architecture diagrams                                |
+| [Multi-Instance Deployment](./multi-instance-deployment.md)   | Tailscale mesh setup, trust model, drain procedure, runbook |
+| [Landing Page](./deployment.md#landing-page-cloudflare-pages) | Cloudflare Pages config for protolabs.studio                |
 
 ## Infrastructure Overview
 
