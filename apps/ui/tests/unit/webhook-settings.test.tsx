@@ -22,25 +22,19 @@ describe('validateDiscordWebhookUrl', () => {
 
     it('accepts a webhook URL with a token containing hyphens and underscores', () => {
       expect(
-        validateDiscordWebhookUrl(
-          'https://discord.com/api/webhooks/9876543210/abc-def_ghi-123'
-        )
+        validateDiscordWebhookUrl('https://discord.com/api/webhooks/9876543210/abc-def_ghi-123')
       ).toBe(true);
     });
 
     it('accepts a canary.discord.com webhook URL', () => {
       expect(
-        validateDiscordWebhookUrl(
-          'https://canary.discord.com/api/webhooks/1234567890/sometoken123'
-        )
+        validateDiscordWebhookUrl('https://canary.discord.com/api/webhooks/1234567890/sometoken123')
       ).toBe(true);
     });
 
     it('accepts a ptb.discord.com webhook URL', () => {
       expect(
-        validateDiscordWebhookUrl(
-          'https://ptb.discord.com/api/webhooks/1234567890/sometoken123'
-        )
+        validateDiscordWebhookUrl('https://ptb.discord.com/api/webhooks/1234567890/sometoken123')
       ).toBe(true);
     });
 
@@ -78,9 +72,7 @@ describe('validateDiscordWebhookUrl', () => {
 
     it('rejects a Discord URL with http instead of https', () => {
       expect(
-        validateDiscordWebhookUrl(
-          'http://discord.com/api/webhooks/1234567890/sometoken123'
-        )
+        validateDiscordWebhookUrl('http://discord.com/api/webhooks/1234567890/sometoken123')
       ).toBe(false);
     });
 
@@ -91,9 +83,9 @@ describe('validateDiscordWebhookUrl', () => {
     });
 
     it('rejects a non-numeric webhook ID', () => {
-      expect(
-        validateDiscordWebhookUrl('https://discord.com/api/webhooks/abc/sometoken123')
-      ).toBe(false);
+      expect(validateDiscordWebhookUrl('https://discord.com/api/webhooks/abc/sometoken123')).toBe(
+        false
+      );
     });
 
     it('rejects a random string', () => {
