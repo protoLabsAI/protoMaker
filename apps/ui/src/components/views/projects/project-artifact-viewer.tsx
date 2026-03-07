@@ -87,10 +87,7 @@ export interface ProjectArtifactViewerProps {
   filterTypes?: ArtifactType[];
 }
 
-export function ProjectArtifactViewer({
-  artifacts,
-  filterTypes,
-}: ProjectArtifactViewerProps) {
+export function ProjectArtifactViewer({ artifacts, filterTypes }: ProjectArtifactViewerProps) {
   const SUPPORTED: ArtifactType[] = filterTypes ?? ['ceremony-report', 'changelog'];
 
   const filtered = artifacts.filter((a) => SUPPORTED.includes(a.type as ArtifactType));

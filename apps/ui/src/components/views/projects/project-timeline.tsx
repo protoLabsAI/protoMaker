@@ -6,14 +6,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import {
-  CheckCircle,
-  Flag,
-  PartyPopper,
-  AlertTriangle,
-  GitMerge,
-  Activity,
-} from 'lucide-react';
+import { CheckCircle, Flag, PartyPopper, AlertTriangle, GitMerge, Activity } from 'lucide-react';
 import {
   getServerUrlSync,
   getApiKey,
@@ -54,10 +47,7 @@ interface TimelineResponse {
   error?: string;
 }
 
-async function fetchTimeline(
-  projectPath: string,
-  projectSlug: string
-): Promise<TimelineEvent[]> {
+async function fetchTimeline(projectPath: string, projectSlug: string): Promise<TimelineEvent[]> {
   await waitForApiKeyInit();
   const serverUrl = getServerUrlSync();
   const headers: Record<string, string> = {
