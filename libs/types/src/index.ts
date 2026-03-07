@@ -6,6 +6,10 @@
 // Event Ledger types — append-only JSONL event persistence layer
 export type { EventLedgerCorrelationIds, EventLedgerEntry } from './event-ledger.js';
 
+// EventBus-CRDT bridge types
+export { CRDT_SYNCED_EVENT_TYPES } from './events.js';
+export type { CrdtFeatureEvent } from './events.js';
+
 // Automation registry supplementary types (CreateAutomationInput, UpdateAutomationInput, FlowFactory)
 // Core types (Automation, AutomationRunRecord, etc.) are already exported from the base workspace types
 export type {

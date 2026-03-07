@@ -11,7 +11,15 @@ import os from 'node:os';
 import { WebSocket, WebSocketServer } from 'ws';
 import { createLogger } from '@protolabsai/utils';
 import { loadProtoConfig } from '@protolabsai/platform';
-import type { HivemindPeer, HivemindConfig, SyncRole, SyncServerStatus } from '@protolabsai/types';
+import type {
+  HivemindPeer,
+  HivemindConfig,
+  SyncRole,
+  SyncServerStatus,
+  CrdtFeatureEvent,
+} from '@protolabsai/types';
+import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
+import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('CrdtSyncService');
 
@@ -21,13 +29,15 @@ const DEFAULT_SYNC_PORT = 4444;
 const RECONNECT_INTERVAL_MS = 5_000;
 const TTL_CHECK_INTERVAL_MS = 10_000;
 
-interface SyncMessage {
+interface PeerMessage {
   type: 'heartbeat' | 'goodbye' | 'identity' | 'promote';
   instanceId: string;
   url?: string;
   timestamp: string;
   priority?: number;
 }
+
+type SyncMessage = PeerMessage | CrdtFeatureEvent;
 
 interface TrackedPeer extends HivemindPeer {
   ws?: WebSocket;
@@ -51,9 +61,49 @@ export class CrdtSyncService {
   private lastPrimaryContact: number | null = null;
   private selfPriority = -1;
   private promotionPending = false;
+  private _eventBus: EventEmitter | null = null;
 
   constructor() {
     this.instanceId = os.hostname();
+  }
+
+  /**
+   * Attach an EventBus to bridge CRDT sync with the local event system.
+   *
+   * - Registers a remote broadcaster: when `broadcast()` is called locally for
+   *   a synced event type, the event is published to all connected peers.
+   * - Incoming `feature_event` CRDT messages trigger a local `emit()` (NOT
+   *   `broadcast()`) to prevent feedback loops.
+   *
+   * Must be called before `start()` or immediately after; safe to call multiple
+   * times (replaces previous registration).
+   */
+  attachEventBus(bus: EventEmitter): void {
+    this._eventBus = bus;
+
+    bus.setRemoteBroadcaster((type, payload) => {
+      if (!CRDT_SYNCED_EVENT_TYPES.has(type)) return;
+      if (!this.started) return;
+
+      const msg: CrdtFeatureEvent = {
+        type: 'feature_event',
+        instanceId: this.instanceId,
+        eventType: type,
+        payload,
+        timestamp: new Date().toISOString(),
+      };
+      const raw = JSON.stringify(msg);
+
+      if (this.role === 'primary') {
+        this._broadcastToServer(raw);
+      } else if (this.wsClient?.readyState === WebSocket.OPEN) {
+        try {
+          this.wsClient.send(raw);
+        } catch {
+          // Best effort
+        }
+      }
+    });
   }
 
   /**
@@ -512,6 +562,20 @@ export class CrdtSyncService {
     }
   }
 
+  /** Broadcast to all connected peers except the given sender socket. */
+  private _broadcastToServerExcept(msg: string, except: WebSocket): void {
+    if (!this.wsServer) return;
+    for (const client of this.wsServer.clients) {
+      if (client !== except && client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(msg);
+        } catch {
+          // Ignore send errors
+        }
+      }
+    }
+  }
+
   // ─── Private: TTL Check ───────────────────────────────────────────────────
 
   private _startTtlCheck(): void {
@@ -563,10 +627,28 @@ export class CrdtSyncService {
         }
         break;
       }
+      case 'feature_event': {
+        // Ignore events originating from this instance (shouldn't happen in normal flow
+        // since we only send to peers, but guard against misconfigured loops).
+        if (msg.instanceId === this.instanceId) break;
+        if (!this._eventBus) break;
+
+        logger.debug(
+          `[CRDT] Received remote feature event: ${msg.eventType} from ${msg.instanceId}`
+        );
+        // Use emit() NOT broadcast() to avoid re-publishing to peers.
+        this._eventBus.emit(msg.eventType, msg.payload);
+
+        // Primary relays feature events to all other connected workers.
+        if (this.role === 'primary') {
+          this._broadcastToServerExcept(JSON.stringify(msg), ws);
+        }
+        break;
+      }
     }
   }
 
-  private _upsertPeer(msg: SyncMessage, ws: WebSocket, now: string): void {
+  private _upsertPeer(msg: PeerMessage, ws: WebSocket, now: string): void {
     const existing = this.peers.get(msg.instanceId);
     if (existing) {
       existing.lastSeen = now;

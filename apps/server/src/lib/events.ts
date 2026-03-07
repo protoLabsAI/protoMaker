@@ -25,15 +25,24 @@ export type { EventType, EventCallback };
 // subscribe() returns a function (legacy cleanup pattern) that also has .unsubscribe()
 export type UnsubscribeFn = (() => void) & EventSubscription;
 
+/** Callback invoked by broadcast() to publish an event to remote peers. */
+export type RemoteBroadcastFn = (type: EventType, payload: unknown) => void;
+
 export interface EventEmitter extends EventBus {
   emit: (type: EventType, payload: unknown) => void;
   subscribe: (callback: EventCallback) => UnsubscribeFn;
   on: <T extends EventType>(type: T, callback: TypedEventCallback<T>) => UnsubscribeFn;
+  /**
+   * Register a function that publishes events to remote peers (e.g. via CRDT sync).
+   * Called once during service wiring. Replaces any previously registered broadcaster.
+   */
+  setRemoteBroadcaster(fn: RemoteBroadcastFn): void;
 }
 
 export function createEventEmitter(): EventEmitter {
   const subscribers = new Set<EventCallback>();
   const typedHandlers = new Map<EventType, Set<(payload: unknown) => void>>();
+  let remoteBroadcaster: RemoteBroadcastFn | null = null;
 
   function makeUnsub(fn: () => void): UnsubscribeFn {
     const unsub = fn as UnsubscribeFn;
@@ -81,9 +90,20 @@ export function createEventEmitter(): EventEmitter {
     },
 
     broadcast(type: EventType, payload?: unknown) {
-      // In single-instance mode, broadcast === emit.
-      // In hivemind mode, this will also publish to the mesh.
+      // Always emit locally first.
       bus.emit(type, payload);
+      // In hivemind mode, also publish to remote peers via the registered broadcaster.
+      if (remoteBroadcaster) {
+        try {
+          remoteBroadcaster(type, payload ?? null);
+        } catch (error) {
+          logger.error('Error in remote broadcaster:', error);
+        }
+      }
+    },
+
+    setRemoteBroadcaster(fn: RemoteBroadcastFn) {
+      remoteBroadcaster = fn;
     },
   };
 
