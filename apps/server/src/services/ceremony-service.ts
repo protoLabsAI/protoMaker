@@ -17,6 +17,7 @@ import { secureFs, getProjectDir, getDataDirectory } from '@protolabsai/platform
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 import type { CeremonyState } from '@protolabsai/types';
+import { flowRegistry } from './automation-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -216,6 +217,21 @@ export class CeremonyService {
     this.featureLoader = featureLoader;
     this.projectService = projectService;
     this.dataDir = dataDir ?? null;
+
+    // Register ceremony flow factories in the global FlowRegistry so that
+    // AutomationService.executeAutomation() can resolve them by flowId without
+    // throwing "Flow not registered: standup-flow" (or retro-flow / project-retro-flow).
+    // The real execution is handled event-driven inside this service; these factories
+    // serve as registry stubs so the automation dispatch layer finds the entries.
+    flowRegistry.register('standup-flow', async (_modelConfig) => {
+      logger.info('standup-flow: execution handled via ceremony event system');
+    });
+    flowRegistry.register('retro-flow', async (_modelConfig) => {
+      logger.info('retro-flow: execution handled via ceremony event system');
+    });
+    flowRegistry.register('project-retro-flow', async (_modelConfig) => {
+      logger.info('project-retro-flow: execution handled via ceremony event system');
+    });
 
     // Load persisted dedup state before subscribing to events
     void this.loadLedger();
