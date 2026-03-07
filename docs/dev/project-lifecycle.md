@@ -110,7 +110,7 @@ All endpoints are under `POST /api/projects/lifecycle/`:
 
 ### Project timeline endpoint
 
-```
+```text
 GET /api/projects/:slug/timeline
 ```
 
@@ -167,7 +167,7 @@ This enables launching existing projects that were set up before the lifecycle f
 
 `ProjectArtifactService` persists structured artifacts alongside project files:
 
-```
+```text
 {projectPath}/.automaker/projects/{slug}/artifacts/
 ├── index.json                      # Artifact index (id, type, timestamp)
 ├── ceremony-report/

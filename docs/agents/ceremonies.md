@@ -141,7 +141,7 @@ After each implemented ceremony flow completes, `CeremonyService` persists a str
 
 Artifacts are stored at:
 
-```
+```text
 {projectPath}/.automaker/projects/{slug}/artifacts/ceremony-report/{id}.json
 ```
 

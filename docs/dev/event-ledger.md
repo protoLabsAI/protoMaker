@@ -10,7 +10,7 @@ Writes are fire-and-forget: `append()` returns void immediately and never blocks
 
 ## Storage format
 
-```
+```text
 data/
 └── ledger/
     └── events.jsonl    # Append-only JSONL — one EventLedgerEntry per line
@@ -20,16 +20,16 @@ Each line is a JSON-serialized `EventLedgerEntry`:
 
 ```typescript
 interface EventLedgerEntry {
-  id: string;                      // UUID — auto-generated if not provided
-  timestamp: string;               // ISO 8601
-  eventType: string;               // e.g. 'feature:status-changed'
+  id: string; // UUID — auto-generated if not provided
+  timestamp: string; // ISO 8601
+  eventType: string; // e.g. 'feature:status-changed'
   correlationIds: {
     featureId?: string;
     projectSlug?: string;
     milestoneSlug?: string;
   };
-  payload: object;                 // Event-specific data
-  source: string;                  // e.g. 'EventLedgerService'
+  payload: object; // Event-specific data
+  source: string; // e.g. 'EventLedgerService'
 }
 ```
 
@@ -37,21 +37,21 @@ interface EventLedgerEntry {
 
 `EventLedgerService` subscribes to 13 lifecycle event types:
 
-| Event type                       | Correlation IDs         |
-| -------------------------------- | ----------------------- |
-| `feature:status-changed`         | `featureId`             |
-| `feature:started`                | `featureId`             |
-| `feature:completed`              | `featureId`             |
-| `feature:error`                  | `featureId`             |
-| `feature:pr-merged`              | `featureId`             |
-| `lead-engineer:feature-processed`| `featureId`             |
-| `pipeline:state-entered`         | `featureId`             |
-| `milestone:completed`            | `projectSlug`, `milestoneSlug` |
-| `project:completed`              | `projectSlug`           |
-| `project:lifecycle:launched`     | `projectSlug`           |
-| `ceremony:fired`                 | `projectSlug`, `milestoneSlug` |
-| `escalation:signal-received`     | `featureId`             |
-| `auto-mode:event` (feature types only) | `featureId`       |
+| Event type                             | Correlation IDs                |
+| -------------------------------------- | ------------------------------ |
+| `feature:status-changed`               | `featureId`                    |
+| `feature:started`                      | `featureId`                    |
+| `feature:completed`                    | `featureId`                    |
+| `feature:error`                        | `featureId`                    |
+| `feature:pr-merged`                    | `featureId`                    |
+| `lead-engineer:feature-processed`      | `featureId`                    |
+| `pipeline:state-entered`               | `featureId`                    |
+| `milestone:completed`                  | `projectSlug`, `milestoneSlug` |
+| `project:completed`                    | `projectSlug`                  |
+| `project:lifecycle:launched`           | `projectSlug`                  |
+| `ceremony:fired`                       | `projectSlug`, `milestoneSlug` |
+| `escalation:signal-received`           | `featureId`                    |
+| `auto-mode:event` (feature types only) | `featureId`                    |
 
 Only feature-lifecycle sub-types of `auto-mode:event` are recorded (`feature_started`, `feature_completed`, `feature_error`, `feature_queued`, `feature_running`, `feature_retrying`). Progress and UI noise events are skipped.
 
@@ -59,19 +59,19 @@ Only feature-lifecycle sub-types of `auto-mode:event` are recorded (`feature_sta
 
 ```typescript
 // All events for a feature
-await eventLedger.getByFeatureId(featureId)
+await eventLedger.getByFeatureId(featureId);
 
 // All events for a project slug
-await eventLedger.getByProjectSlug(projectSlug)
+await eventLedger.getByProjectSlug(projectSlug);
 
 // Events within a time window
-await eventLedger.getByTimeRange(startDate, endDate)
+await eventLedger.getByTimeRange(startDate, endDate);
 
 // Events of a specific type
-await eventLedger.getByEventType('feature:status-changed')
+await eventLedger.getByEventType('feature:status-changed');
 
 // Chronological events for a project, with optional filtering
-await eventLedger.queryByProject(slug, { since: '2025-01-01T00:00:00Z', type: 'ceremony:fired' })
+await eventLedger.queryByProject(slug, { since: '2025-01-01T00:00:00Z', type: 'ceremony:fired' });
 ```
 
 Each query reads the JSONL file and filters in a single pass.
@@ -80,16 +80,16 @@ Each query reads the JSONL file and filters in a single pass.
 
 The event ledger is exposed via a REST endpoint on the projects router:
 
-```
+```text
 GET /api/projects/:slug/timeline
 ```
 
 **Query parameters:**
 
-| Parameter | Type       | Description                                                       |
-| --------- | ---------- | ----------------------------------------------------------------- |
-| `since`   | ISO 8601   | Return only events after this timestamp (exclusive)               |
-| `type`    | string     | Return only events of this `eventType`                            |
+| Parameter | Type     | Description                                         |
+| --------- | -------- | --------------------------------------------------- |
+| `since`   | ISO 8601 | Return only events after this timestamp (exclusive) |
+| `type`    | string   | Return only events of this `eventType`              |
 
 **Response:**
 
@@ -127,11 +127,11 @@ When `escalation:signal-received` events contain project context (`projectPath` 
 
 ## Key files
 
-| File                                                          | Purpose                                |
-| ------------------------------------------------------------- | -------------------------------------- |
-| `apps/server/src/services/event-ledger-service.ts`            | EventLedgerService implementation      |
-| `apps/server/src/routes/projects/routes/timeline.ts`          | `GET /api/projects/:slug/timeline`     |
-| `libs/types/src/event-ledger.ts`                              | `EventLedgerEntry`, `EventLedgerCorrelationIds` types |
+| File                                                 | Purpose                                               |
+| ---------------------------------------------------- | ----------------------------------------------------- |
+| `apps/server/src/services/event-ledger-service.ts`   | EventLedgerService implementation                     |
+| `apps/server/src/routes/projects/routes/timeline.ts` | `GET /api/projects/:slug/timeline`                    |
+| `libs/types/src/event-ledger.ts`                     | `EventLedgerEntry`, `EventLedgerCorrelationIds` types |
 
 ## Related
 
