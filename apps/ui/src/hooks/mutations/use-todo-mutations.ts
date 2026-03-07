@@ -93,7 +93,9 @@ export function useUpdateTodoItem(projectPath: string) {
     }: {
       listId: string;
       itemId: string;
-      updates: Partial<Pick<TodoItem, 'title' | 'completed' | 'completedAt' | 'dueDate' | 'priority'>>;
+      updates: Partial<
+        Pick<TodoItem, 'title' | 'completed' | 'completedAt' | 'dueDate' | 'priority'>
+      >;
     }): Promise<TodoItem> => {
       const client = getHttpApiClient();
       const result = await client.todos.updateItem(projectPath, listId, itemId, updates);
@@ -140,13 +142,7 @@ export function useDeleteTodoItem(projectPath: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      listId,
-      itemId,
-    }: {
-      listId: string;
-      itemId: string;
-    }): Promise<void> => {
+    mutationFn: async ({ listId, itemId }: { listId: string; itemId: string }): Promise<void> => {
       const client = getHttpApiClient();
       const result = await client.todos.deleteItem(projectPath, listId, itemId);
       if (!result?.success) throw new Error('Failed to delete item');
