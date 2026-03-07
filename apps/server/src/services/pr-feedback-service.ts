@@ -14,7 +14,9 @@
  * 5. EM agent picks up and handles reassignment or merge
  */
 
-import { createLogger } from '@protolabsai/utils';
+import path from 'node:path';
+import { mkdir } from 'node:fs/promises';
+import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -35,6 +37,30 @@ import { FeedbackAggregator } from './feedback-aggregator.js';
 import { ThreadResolver } from './thread-resolver.js';
 
 const logger = createLogger('PRFeedbackRemediation');
+
+/** Persisted format for a single tracked PR entry */
+interface PersistedPREntry {
+  featureId: string;
+  projectPath: string;
+  prNumber: number;
+  prUrl: string;
+  branchName: string;
+  lastCheckedAt: number;
+  ciStatus?: {
+    headSha: string;
+    startedAt: number;
+    lastPolledAt: number;
+  };
+  reviewStatus: TrackedPR['reviewState'];
+  remediationCount: number;
+  trackedSince?: number;
+}
+
+/** Root persisted structure for pr-tracking.json */
+interface PersistedPRTracking {
+  trackedPRs: PersistedPREntry[];
+  savedAt: string;
+}
 
 /** How often to poll for PR reviews */
 const POLL_INTERVAL_MS = 60_000;
@@ -66,6 +92,9 @@ export class PRFeedbackService {
   private readonly featureLoader: FeatureLoader;
   private autoModeService: AutoModeService | null = null;
   private leadEngineerService: { isFeatureActive(featureId: string): boolean } | null = null;
+
+  /** Path to persisted PR tracking state */
+  private readonly prTrackingPath = path.join(process.cwd(), '.automaker', 'pr-tracking.json');
 
   /** PRs we're actively monitoring, keyed by featureId */
   private trackedPRs = new Map<string, TrackedPR>();
@@ -103,6 +132,8 @@ export class PRFeedbackService {
     if (this.initialized) return;
     this.initialized = true;
 
+    void this.loadPrTracking();
+
     // TODO: migrate to bus.on()
     this.events.subscribe((type, payload) => {
       if (type === 'auto-mode:event') {
@@ -118,6 +149,7 @@ export class PRFeedbackService {
         if (featureId && this.trackedPRs.has(featureId)) {
           logger.info(`PR merged for feature ${featureId}, stopping tracking`);
           this.trackedPRs.delete(featureId);
+          void this.savePrTracking();
         }
       }
 
@@ -200,6 +232,7 @@ export class PRFeedbackService {
     if (this.trackedPRs.has(featureId)) {
       logger.info(`Cleaning up tracked PR for feature ${featureId}`);
       this.trackedPRs.delete(featureId);
+      void this.savePrTracking();
     }
     this.remediatingFeatures.delete(featureId);
     this.collectedDecisions.delete(featureId);
@@ -291,6 +324,7 @@ export class PRFeedbackService {
       iterationCount: existing?.iterationCount || 0,
       trackedSince: existing?.trackedSince ?? Date.now(),
     });
+    void this.savePrTracking();
 
     void this.featureLoader.update(projectPath, featureId, {
       prUrl,
@@ -326,6 +360,7 @@ export class PRFeedbackService {
         iterationCount: feature.prIterationCount || 0,
         trackedSince: Date.now(),
       });
+      void this.savePrTracking();
 
       logger.info(
         `Tracking PR #${feature.prNumber} for feature ${featureId} (entered review via status change)`
@@ -427,6 +462,7 @@ export class PRFeedbackService {
 
         pr.reviewState = 'changes_requested';
         pr.iterationCount++;
+        void this.savePrTracking();
 
         const feedbackSummary = reviewInfo.reviews
           .filter((r) => r.state === 'CHANGES_REQUESTED')
@@ -516,6 +552,7 @@ export class PRFeedbackService {
           });
 
           this.trackedPRs.delete(featureId);
+          void this.savePrTracking();
           return;
         }
 
@@ -725,12 +762,14 @@ export class PRFeedbackService {
         });
 
         this.trackedPRs.delete(featureId);
+        void this.savePrTracking();
         break;
       }
 
       case 'COMMENTED': {
         if (previousState !== 'commented') {
           pr.reviewState = 'commented';
+          void this.savePrTracking();
 
           const isActionable = this.feedbackAggregator.isCommentedReviewActionable(reviewInfo);
 
@@ -740,6 +779,7 @@ export class PRFeedbackService {
             );
 
             pr.iterationCount++;
+            void this.savePrTracking();
 
             const feedbackSummary = reviewInfo.comments
               .map((c) => `${c.author}: ${c.body}`)
@@ -1180,6 +1220,7 @@ export class PRFeedbackService {
         });
 
         this.trackedPRs.delete(featureId);
+        void this.savePrTracking();
         return;
       }
 
@@ -1311,6 +1352,92 @@ export class PRFeedbackService {
     } catch (error) {
       logger.error(`Failed to build thread feedback prompt for PR #${pr.prNumber}:`, error);
       return `Error fetching review threads: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  /** Persist current trackedPRs map to disk */
+  private async savePrTracking(): Promise<void> {
+    try {
+      await mkdir(path.dirname(this.prTrackingPath), { recursive: true });
+      const entries: PersistedPREntry[] = Array.from(this.trackedPRs.values()).map((pr) => ({
+        featureId: pr.featureId,
+        projectPath: pr.projectPath,
+        prNumber: pr.prNumber,
+        prUrl: pr.prUrl,
+        branchName: pr.branchName,
+        lastCheckedAt: pr.lastCheckedAt,
+        ciStatus: pr.ciMonitoring
+          ? {
+              headSha: pr.ciMonitoring.headSha,
+              startedAt: pr.ciMonitoring.startedAt,
+              lastPolledAt: pr.ciMonitoring.lastPolledAt,
+            }
+          : undefined,
+        reviewStatus: pr.reviewState,
+        remediationCount: pr.iterationCount,
+        trackedSince: pr.trackedSince,
+      }));
+      const data: PersistedPRTracking = {
+        trackedPRs: entries,
+        savedAt: new Date().toISOString(),
+      };
+      await atomicWriteJson(this.prTrackingPath, data);
+    } catch (error) {
+      logger.error('Failed to persist PR tracking state:', error);
+    }
+  }
+
+  /** Load persisted PR tracking state on startup, filtering out stale entries */
+  private async loadPrTracking(): Promise<void> {
+    try {
+      const result = await readJsonWithRecovery<PersistedPRTracking | null>(
+        this.prTrackingPath,
+        null
+      );
+      if (!result.data?.trackedPRs?.length) return;
+
+      let restored = 0;
+      let stale = 0;
+
+      for (const entry of result.data.trackedPRs) {
+        if (this.trackedPRs.has(entry.featureId)) continue;
+
+        try {
+          const feature = await this.featureLoader.get(entry.projectPath, entry.featureId);
+          if (!feature || feature.status === 'done' || feature.status === 'merged') {
+            stale++;
+            continue;
+          }
+
+          this.trackedPRs.set(entry.featureId, {
+            featureId: entry.featureId,
+            projectPath: entry.projectPath,
+            prNumber: entry.prNumber,
+            prUrl: entry.prUrl,
+            branchName: entry.branchName,
+            lastCheckedAt: entry.lastCheckedAt,
+            reviewState: entry.reviewStatus,
+            iterationCount: entry.remediationCount,
+            trackedSince: entry.trackedSince,
+            ciMonitoring: entry.ciStatus,
+          });
+          restored++;
+        } catch (err) {
+          logger.warn(`Failed to validate PR tracking entry for feature ${entry.featureId}:`, err);
+          stale++;
+        }
+      }
+
+      if (stale > 0) {
+        // Rewrite file without stale entries
+        void this.savePrTracking();
+      }
+
+      if (restored > 0) {
+        logger.info(`Restored ${restored} tracked PRs from disk (${stale} stale entries removed)`);
+      }
+    } catch (error) {
+      logger.error('Failed to load PR tracking state from disk:', error);
     }
   }
 }
