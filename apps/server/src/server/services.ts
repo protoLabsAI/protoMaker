@@ -667,7 +667,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   }
 
   // Wire project-pm module event subscriptions (status sync)
-  await projectPmModule.register({ events, projectPmService, projectService } as any);
+  await projectPmModule.register({ events, projectPmService, projectService });
 
   return {
     dataDir,

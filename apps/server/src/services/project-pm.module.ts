@@ -12,7 +12,10 @@ import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('ProjectPMModule');
 
-export async function register(services: ServiceContainer): Promise<void> {
+type ProjectPmModuleDeps = Pick<ServiceContainer, 'events' | 'projectPmService'> &
+  Partial<Pick<ServiceContainer, 'projectService'>>;
+
+export async function register(services: ProjectPmModuleDeps): Promise<void> {
   const { events, projectPmService, projectService } = services;
 
   events.on('project:lifecycle:launched', (payload) => {
@@ -32,9 +35,11 @@ export async function register(services: ServiceContainer): Promise<void> {
     );
     logger.info(`PM session initialized for project ${projectSlug}`);
 
-    projectService
-      .updateProject(projectPath, projectSlug, { status: 'active' })
-      .catch((err) => logger.warn(`Failed to set project ${projectSlug} to active:`, err));
+    if (projectService) {
+      projectService
+        .updateProject(projectPath, projectSlug, { status: 'active' })
+        .catch((err) => logger.warn(`Failed to set project ${projectSlug} to active:`, err));
+    }
   });
 
   events.on('project:completed', (payload) => {
@@ -50,12 +55,14 @@ export async function register(services: ServiceContainer): Promise<void> {
       .archiveSession(projectPath, resolvedSlug)
       .catch((err) => logger.warn(`Failed to archive PM session for ${resolvedSlug}:`, err));
 
-    projectService
-      .updateProject(projectPath, resolvedSlug, {
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-      })
-      .catch((err) => logger.warn(`Failed to set project ${resolvedSlug} to completed:`, err));
+    if (projectService) {
+      projectService
+        .updateProject(projectPath, resolvedSlug, {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+        })
+        .catch((err) => logger.warn(`Failed to set project ${resolvedSlug} to completed:`, err));
+    }
   });
 
   events.on('feature:completed', (payload) => {
