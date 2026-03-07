@@ -352,6 +352,20 @@ export function createCreatePRHandler(settingsService?: SettingsService) {
                 } catch (metadataError) {
                   logger.error('Failed to store PR metadata:', metadataError);
                 }
+
+                // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
+                if (!draft) {
+                  try {
+                    await execFileAsync(
+                      'gh',
+                      ['pr', 'merge', String(prNumber), '--auto', '--squash'],
+                      { cwd: worktreePath, env: execEnv }
+                    );
+                    logger.info(`Auto-merge enabled on PR #${prNumber}`);
+                  } catch (autoMergeError) {
+                    logger.warn(`Failed to enable auto-merge on PR #${prNumber}:`, autoMergeError);
+                  }
+                }
               }
             }
           } catch (ghError: unknown) {

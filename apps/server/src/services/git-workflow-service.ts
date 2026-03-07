@@ -1443,6 +1443,17 @@ export class GitWorkflowService {
           state: 'OPEN',
           createdAt: prCreatedAt,
         });
+
+        // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
+        try {
+          await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', '--squash'], {
+            cwd: workDir,
+            env: execEnv,
+          });
+          logger.info(`Auto-merge enabled on PR #${prNumber}`);
+        } catch (autoMergeError) {
+          logger.warn(`Failed to enable auto-merge on PR #${prNumber}:`, autoMergeError);
+        }
       }
 
       return { prUrl, prNumber, prAlreadyExisted: false, prCreatedAt };
