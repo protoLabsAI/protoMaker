@@ -768,6 +768,9 @@ export { DEFAULT_TWITCH_SETTINGS } from './twitch.js';
 // Notes types (Tiptap-based project notes workspace)
 export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
 
+// Todo types (project-level todo lists and items)
+export type { TodoItem, TodoList, TodoWorkspace } from './todo.js';
+
 // Pipeline checkpoint types (crash recovery and goal gates)
 export type { PipelineCheckpoint, GoalGateResult } from './pipeline-checkpoint.js';
 
