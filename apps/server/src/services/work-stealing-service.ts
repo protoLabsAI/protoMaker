@@ -425,9 +425,7 @@ export class WorkStealingService {
     }
 
     // capacity strategy: return first N candidates (sorted by priority)
-    return candidates
-      .sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3))
-      .slice(0, max);
+    return candidates.sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3)).slice(0, max);
   }
 
   /**
@@ -455,14 +453,10 @@ export class WorkStealingService {
     const matched = candidates.filter((f) => {
       if (!f.domain) return true; // No domain constraint — safe to offer
       const featureDomain = f.domain.toLowerCase();
-      return instanceSegments.some(
-        (seg) => seg.length > 2 && featureDomain.includes(seg)
-      );
+      return instanceSegments.some((seg) => seg.length > 2 && featureDomain.includes(seg));
     });
 
-    return matched
-      .sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3))
-      .slice(0, max);
+    return matched.sort((a, b) => (a.priority ?? 3) - (b.priority ?? 3)).slice(0, max);
   }
 
   // ---------------------------------------------------------------------------
@@ -524,14 +518,14 @@ export class WorkStealingService {
 
     // Check which requests have already been accepted
     const acceptedOfferIds = new Set(
-      doc.records
-        .filter((r): r is WorkAccept => r.type === 'accept')
-        .map((r) => r.offerId)
+      doc.records.filter((r): r is WorkAccept => r.type === 'accept').map((r) => r.offerId)
     );
 
     const offeredRequestIds = new Set(
       doc.records
-        .filter((r): r is WorkOffer => r.type === 'offer' && r.offeringInstanceId === this.instanceId)
+        .filter(
+          (r): r is WorkOffer => r.type === 'offer' && r.offeringInstanceId === this.instanceId
+        )
         .filter((r) => !acceptedOfferIds.has(r.offerId))
         .map((r) => r.requestId)
     );
