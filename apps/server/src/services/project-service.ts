@@ -46,13 +46,19 @@ import {
 } from '@protolabsai/platform';
 import type { FeatureLoader } from './feature-loader.js';
 import type { CalendarService } from './calendar-service.js';
+import type { CRDTSyncService } from './crdt-sync-service.js';
 
 const logger = createLogger('ProjectService');
 
 export class ProjectService {
   private calendarService?: CalendarService;
+  private crdtSync?: CRDTSyncService;
 
   constructor(private featureLoader: FeatureLoader) {}
+
+  setCRDTSyncService(crdtSync: CRDTSyncService): void {
+    this.crdtSync = crdtSync;
+  }
 
   setCalendarService(calendarService: CalendarService): void {
     this.calendarService = calendarService;
@@ -83,6 +89,14 @@ export class ProjectService {
    * Get a project by slug
    */
   async getProject(projectPath: string, projectSlug: string): Promise<Project | null> {
+    // Try CRDT store first — it reflects the most recent in-memory state
+    if (this.crdtSync) {
+      await this.crdtSync.initialize(projectPath);
+      const crdtProject = this.crdtSync.getProject(projectPath, projectSlug);
+      if (crdtProject) return crdtProject;
+    }
+
+    // Fall back to filesystem
     const jsonPath = getProjectJsonPath(projectPath, projectSlug);
 
     try {
@@ -148,6 +162,13 @@ export class ProjectService {
           });
         }
       }
+    }
+
+    // Sync to CRDT store so other instances can observe the change
+    if (this.crdtSync) {
+      await this.crdtSync
+        .setProject(projectPath, project.slug, project)
+        .catch((e) => logger.warn(`CRDT setProject failed for ${project.slug}: ${String(e)}`));
     }
 
     logger.info(`Created project: ${project.slug}`);
@@ -292,6 +313,13 @@ export class ProjectService {
       }
     }
 
+    // Sync to CRDT store so other instances can observe the change
+    if (this.crdtSync) {
+      await this.crdtSync
+        .setProject(projectPath, projectSlug, updated)
+        .catch((e) => logger.warn(`CRDT setProject failed for ${projectSlug}: ${String(e)}`));
+    }
+
     logger.info(`Updated project: ${projectSlug}`);
     return updated;
   }
@@ -359,6 +387,14 @@ export class ProjectService {
     // Delete project directory
     try {
       await secureFs.rm(projectDir, { recursive: true, force: true });
+
+      // Remove from CRDT store
+      if (this.crdtSync) {
+        await this.crdtSync
+          .deleteProject(projectPath, projectSlug)
+          .catch((e) => logger.warn(`CRDT deleteProject failed for ${projectSlug}: ${String(e)}`));
+      }
+
       logger.info(`Deleted project: ${projectSlug} (stats preserved)`);
       return true;
     } catch (error) {

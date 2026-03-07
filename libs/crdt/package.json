@@ -1,0 +1,44 @@
+{
+  "name": "@protolabsai/crdt",
+  "version": "0.40.5",
+  "type": "module",
+  "description": "CRDT-backed document store for protoLabs Studio using Automerge",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "watch": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:check": "tsc --noEmit"
+  },
+  "keywords": [
+    "automaker",
+    "crdt",
+    "automerge"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "AutoMaker Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22.0.0 <23.0.0"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^3.2.4",
+    "@protolabsai/types": "^0.40.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "tsup": "^8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "4.0.16"
+  }
+}
