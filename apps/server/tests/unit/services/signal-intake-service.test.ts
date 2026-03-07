@@ -13,43 +13,15 @@ import type { EventEmitter } from '../../../src/lib/events.js';
 import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { SettingsService } from '../../../src/services/settings-service.js';
 import type { Feature, ProjectSettings } from '@protolabsai/types';
-
-// Mock factories
-const createMockEventEmitter = (): EventEmitter => {
-  const listeners: Array<(type: string, payload: any) => void> = [];
-
-  return {
-    emit: vi.fn((type: string, payload: any) => {
-      // Call all subscribed handlers with the event type and payload
-      listeners.forEach((handler) => handler(type, payload));
-    }),
-    subscribe: vi.fn((handler: (type: string, payload: any) => void) => {
-      listeners.push(handler);
-      return () => {
-        const index = listeners.indexOf(handler);
-        if (index > -1) listeners.splice(index, 1);
-      };
-    }),
-  } as unknown as EventEmitter;
-};
-
-const createMockFeatureLoader = (): FeatureLoader => {
-  return {
-    create: vi.fn().mockResolvedValue({
-      id: 'feature-123',
-      title: 'Test Feature',
-      status: 'backlog',
-    }),
-  } as unknown as FeatureLoader;
-};
-
-const createMockSettingsService = (): SettingsService => {
-  return {
-    getGlobalSettings: vi.fn().mockResolvedValue({
-      gtmEnabled: true,
-    }),
-  } as unknown as SettingsService;
-};
+import {
+  createMockFeatureLoader,
+  createMockSettingsService,
+} from '../../helpers/mock-factories.js';
+import {
+  createMockEventEmitter,
+  createMockFeatureLoader,
+  createMockSettingsService,
+} from '../../helpers/mock-factories.js';
 
 // Test data factories
 const createTestSignal = (overrides: any = {}) => ({
@@ -71,9 +43,9 @@ describe('SignalIntakeService', () => {
   let mockSettingsService: SettingsService;
 
   beforeEach(() => {
-    mockEmitter = createMockEventEmitter();
-    mockFeatureLoader = createMockFeatureLoader();
-    mockSettingsService = createMockSettingsService();
+    mockEmitter = createMockEventEmitter() as unknown as EventEmitter;
+    mockFeatureLoader = createMockFeatureLoader() as unknown as FeatureLoader;
+    mockSettingsService = createMockSettingsService() as unknown as SettingsService;
 
     signalIntakeService = new SignalIntakeService(
       mockEmitter,
