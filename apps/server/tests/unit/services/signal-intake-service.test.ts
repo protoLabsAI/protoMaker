@@ -14,10 +14,6 @@ import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { SettingsService } from '../../../src/services/settings-service.js';
 import type { Feature, ProjectSettings } from '@protolabsai/types';
 import {
-  createMockFeatureLoader,
-  createMockSettingsService,
-} from '../../helpers/mock-factories.js';
-import {
   createMockEventEmitter,
   createMockFeatureLoader,
   createMockSettingsService,
@@ -44,8 +40,18 @@ describe('SignalIntakeService', () => {
 
   beforeEach(() => {
     mockEmitter = createMockEventEmitter() as unknown as EventEmitter;
-    mockFeatureLoader = createMockFeatureLoader() as unknown as FeatureLoader;
-    mockSettingsService = createMockSettingsService() as unknown as SettingsService;
+    mockFeatureLoader = createMockFeatureLoader([], {
+      create: vi.fn().mockResolvedValue({
+        id: 'feature-signal-test',
+        title: 'Test Signal Feature',
+        status: 'backlog',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+    }) as unknown as FeatureLoader;
+    mockSettingsService = createMockSettingsService({
+      getGlobalSettings: vi.fn().mockResolvedValue({ gtmEnabled: true }),
+    }) as unknown as SettingsService;
 
     signalIntakeService = new SignalIntakeService(
       mockEmitter,
@@ -81,7 +87,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('GitHub'),
+          reason: expect.stringContaining('GitHub events'),
         })
       );
 
@@ -115,7 +121,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'gtm',
-          reason: expect.stringContaining('Discord channel is GTM'),
+          reason: expect.stringContaining('Discord channel is GTM: marketing'),
         })
       );
     });
@@ -140,7 +146,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('Discord channel is Ops'),
+          reason: expect.stringContaining('Discord channel is Ops: engineering'),
         })
       );
     });
@@ -183,7 +189,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('MCP create_feature'),
+          reason: expect.stringContaining('MCP create_feature is engineering'),
         })
       );
     });
@@ -613,7 +619,7 @@ describe('SignalIntakeService', () => {
         intent: 'work_order',
         preview: 'Fix the bug now',
         status: 'created',
-        featureId: 'feature-123',
+        featureId: 'feature-signal-test',
       });
       expect(recent[0].id).toBeTruthy();
       expect(recent[0].createdAt).toBeTruthy();

@@ -71,12 +71,6 @@ function createMockProjectService(project: Partial<Project> | null = null) {
   };
 }
 
-function createMockSettingsService() {
-  return {
-    getProjectSettings: vi.fn().mockResolvedValue({}),
-  };
-}
-
 // ────────────────────────── Tests ──────────────────────────
 
 describe('CompletionDetectorService', () => {
@@ -84,35 +78,22 @@ describe('CompletionDetectorService', () => {
   let events: ReturnType<typeof createMockEvents>;
   let featureLoader: ReturnType<typeof createMockFeatureLoader>;
   let projectService: ReturnType<typeof createMockProjectService>;
-  let settingsService: ReturnType<typeof createMockSettingsService>;
-
   beforeEach(() => {
     service = new CompletionDetectorService();
     events = createMockEvents();
     featureLoader = createMockFeatureLoader();
     projectService = createMockProjectService();
-    settingsService = createMockSettingsService();
     vi.clearAllMocks();
   });
 
   describe('initialization', () => {
     it('should initialize and subscribe to events', () => {
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
       expect(events.subscribe).toHaveBeenCalledOnce();
     });
 
     it('should cleanup on destroy', () => {
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
       expect(() => service.destroy()).not.toThrow();
     });
   });
@@ -129,12 +110,7 @@ describe('CompletionDetectorService', () => {
       const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'done' });
 
       featureLoader = createMockFeatureLoader([epic, child1, child2]);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       // Simulate feature:status-changed for child-2 moving to done
       events._fire('feature:status-changed', {
@@ -167,12 +143,7 @@ describe('CompletionDetectorService', () => {
       const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'in_progress' });
 
       featureLoader = createMockFeatureLoader([epic, child1, child2]);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -191,12 +162,7 @@ describe('CompletionDetectorService', () => {
       const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
 
       featureLoader = createMockFeatureLoader([epic, child1]);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -259,12 +225,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1, feature2]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -324,12 +285,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -388,12 +344,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1, feature2]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -461,12 +412,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([epic, child]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -525,12 +471,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -583,12 +524,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       // Fire twice
       events._fire('feature:status-changed', {
@@ -651,12 +587,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -708,12 +639,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -744,12 +670,7 @@ describe('CompletionDetectorService', () => {
     it('should trigger cascade on auto_mode_feature_complete with passes=true', async () => {
       const feature1 = createTestFeature({ id: 'f1', status: 'done' });
       featureLoader = createMockFeatureLoader([feature1]);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('auto-mode:event', {
         type: 'auto_mode_feature_complete',
@@ -765,12 +686,7 @@ describe('CompletionDetectorService', () => {
     });
 
     it('should NOT trigger on auto_mode_feature_complete with passes=false', async () => {
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('auto-mode:event', {
         type: 'auto_mode_feature_complete',
@@ -808,12 +724,7 @@ describe('CompletionDetectorService', () => {
 
       featureLoader = createMockFeatureLoader([feature1]);
       projectService = createMockProjectService(project as Project);
-      service.initialize(
-        events as any,
-        featureLoader as any,
-        projectService as any,
-        settingsService as any
-      );
+      service.initialize(events as any, featureLoader as any, projectService as any, undefined);
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
