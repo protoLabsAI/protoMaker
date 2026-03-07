@@ -80,6 +80,7 @@ import { createLangfuseRoutes } from '../routes/langfuse/index.js';
 import { createChatRoutes } from '../routes/chat/index.js';
 import { createAIRoutes } from '../routes/ai/index.js';
 import { createNotesRoutes } from '../routes/notes/index.js';
+import { createTodoRoutes } from '../routes/todo/index.js';
 import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
@@ -389,6 +390,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
+  app.use('/api/todo', createTodoRoutes(events));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
