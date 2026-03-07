@@ -416,10 +416,9 @@ export function buildAvaTools(
         status: z.enum(FEATURE_STATUS_ENUM).describe('Target status column'),
       }),
       execute: async ({ featureId, status }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const feature = await services.featureLoader.update(projectPath, featureId, {
           status,
-        } as any);
+        });
         services.events?.emit('feature:moved', { projectPath, featureId, status, feature });
         return { featureId, newStatus: feature.status };
       },
@@ -663,10 +662,9 @@ export function buildAvaTools(
           .describe('Array of feature IDs that must be completed before this feature can start'),
       }),
       execute: async ({ featureId, dependencies }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const feature = await services.featureLoader.update(projectPath, featureId, {
           dependencies,
-        } as any);
+        });
         return { featureId, dependencies: feature.dependencies ?? [] };
       },
     });
