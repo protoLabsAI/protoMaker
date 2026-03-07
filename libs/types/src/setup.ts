@@ -10,8 +10,6 @@
 export interface RepoResearchResult {
   projectPath: string;
   projectName: string;
-  /** Raw scripts from root package.json (e.g. { build: "tsc", test: "vitest", dev: "vite" }) */
-  scripts?: Record<string, string>;
 
   git: {
     isRepo: boolean;

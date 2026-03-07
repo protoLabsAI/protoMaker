@@ -17,7 +17,6 @@ import { secureFs, getProjectDir, getDataDirectory } from '@protolabsai/platform
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 import type { CeremonyState } from '@protolabsai/types';
-import { flowRegistry } from './automation-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -26,7 +25,6 @@ import type { MetricsService } from './metrics-service.js';
 import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 import type { SchedulerService } from './scheduler-service.js';
 import { transition } from './ceremony-state-machine.js';
-import { projectArtifactService } from './project-artifact-service.js';
 
 const logger = createLogger('CeremonyService');
 
@@ -101,27 +99,6 @@ function createDiscordAdapter(emitter: EventEmitter) {
         content,
         action: 'send_message',
       });
-      return { id: '' };
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// HTTP webhook adapter
-// Posts ceremony output directly to a Discord webhook URL.
-// ---------------------------------------------------------------------------
-
-function createWebhookAdapter(webhookUrl: string) {
-  return {
-    sendMessage: async (_channelId: string, content: string): Promise<{ id: string }> => {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      if (!response.ok) {
-        throw new Error(`Webhook POST failed: ${response.status} ${response.statusText}`);
-      }
       return { id: '' };
     },
   };
@@ -238,21 +215,6 @@ export class CeremonyService {
     this.featureLoader = featureLoader;
     this.projectService = projectService;
     this.dataDir = dataDir ?? null;
-
-    // Register ceremony flow factories in the global FlowRegistry so that
-    // AutomationService.executeAutomation() can resolve them by flowId without
-    // throwing "Flow not registered: standup-flow" (or retro-flow / project-retro-flow).
-    // The real execution is handled event-driven inside this service; these factories
-    // serve as registry stubs so the automation dispatch layer finds the entries.
-    flowRegistry.register('standup-flow', async (_modelConfig) => {
-      logger.info('standup-flow: execution handled via ceremony event system');
-    });
-    flowRegistry.register('retro-flow', async (_modelConfig) => {
-      logger.info('retro-flow: execution handled via ceremony event system');
-    });
-    flowRegistry.register('project-retro-flow', async (_modelConfig) => {
-      logger.info('project-retro-flow: execution handled via ceremony event system');
-    });
 
     // Load persisted dedup state before subscribing to events
     void this.loadLedger();
@@ -590,23 +552,6 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
-
-      // Persist ceremony report artifact
-      void projectArtifactService
-        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
-          ceremonyType: 'milestone_retro',
-          milestoneSlug,
-          milestoneTitle,
-          milestoneNumber,
-          projectTitle,
-          completedAt: new Date().toISOString(),
-        })
-        .catch((err) => {
-          logger.warn(
-            `Failed to save milestone retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
-          );
-        });
-
       this.auditLog?.record({
         id: correlationId,
         timestamp: new Date().toISOString(),
@@ -719,24 +664,6 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
-
-      // Persist ceremony report artifact
-      void projectArtifactService
-        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
-          ceremonyType: 'project_retro',
-          projectTitle,
-          totalMilestones: payload.totalMilestones,
-          totalFeatures: payload.totalFeatures,
-          totalCostUsd: payload.totalCostUsd,
-          failureCount: payload.failureCount,
-          milestoneSummaries: payload.milestoneSummaries,
-          completedAt: new Date().toISOString(),
-        })
-        .catch((err) => {
-          logger.warn(
-            `Failed to save project retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
-          );
-        });
 
       this.reflectionCount++;
       this.lastReflection = {

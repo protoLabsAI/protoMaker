@@ -20,7 +20,6 @@ import { randomUUID } from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
 import type { EventLedgerEntry, EventLedgerCorrelationIds } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { ProjectArtifactService } from './project-artifact-service.js';
 
 const logger = createLogger('EventLedgerService');
 
@@ -72,11 +71,9 @@ export class EventLedgerService {
   /** In-memory set of known IDs for fast idempotency checks */
   private seenIds: Set<string> | null = null;
   private initPromise: Promise<void> | null = null;
-  private projectArtifactService: ProjectArtifactService | null = null;
 
-  constructor(dataDir: string, projectArtifactService?: ProjectArtifactService) {
+  constructor(dataDir: string) {
     this.dataDir = dataDir;
-    this.projectArtifactService = projectArtifactService ?? null;
   }
 
   /**
@@ -230,30 +227,6 @@ export class EventLedgerService {
   async getByEventType(eventType: string): Promise<EventLedgerEntry[]> {
     const all = await this._readAll();
     return all.filter((e) => e.eventType === eventType);
-  }
-
-  /**
-   * Return all events correlated to a specific project slug, sorted chronologically.
-   * Supports optional filtering by `since` (ISO 8601) and `type` (eventType).
-   */
-  async queryByProject(
-    projectSlug: string,
-    opts?: { since?: string; type?: string }
-  ): Promise<EventLedgerEntry[]> {
-    const all = await this._readAll();
-    const sinceMs = opts?.since ? new Date(opts.since).getTime() : undefined;
-
-    const filtered = all.filter((e) => {
-      if (e.correlationIds.projectSlug !== projectSlug) return false;
-      if (sinceMs !== undefined && new Date(e.timestamp).getTime() <= sinceMs) return false;
-      if (opts?.type && e.eventType !== opts.type) return false;
-      return true;
-    });
-
-    // Sort chronologically (oldest first)
-    filtered.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    return filtered;
   }
 
   // ---------------------------------------------------------------------------
@@ -424,26 +397,6 @@ export class EventLedgerService {
             payload,
             source: 'EventLedgerService',
           });
-
-          // Persist escalation as a project artifact when project context is available
-          const context = payload.context as
-            | { projectPath?: string; projectSlug?: string; featureId?: string; reason?: string }
-            | undefined;
-          if (this.projectArtifactService && context?.projectPath && context?.projectSlug) {
-            void this.projectArtifactService
-              .saveArtifact(context.projectPath, context.projectSlug, 'escalation', {
-                signal: payload.type as string | undefined,
-                reason: context.reason,
-                featureId: context.featureId ?? featureId,
-                source: payload.source,
-                severity: payload.severity,
-                context,
-                timestamp: payload.timestamp ?? new Date().toISOString(),
-              })
-              .catch((err) => {
-                logger.error('EventLedger: failed to save escalation artifact:', err);
-              });
-          }
           break;
         }
 

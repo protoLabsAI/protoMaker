@@ -13,11 +13,43 @@ import type { EventEmitter } from '../../../src/lib/events.js';
 import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { SettingsService } from '../../../src/services/settings-service.js';
 import type { Feature, ProjectSettings } from '@protolabsai/types';
-import {
-  createMockEventEmitter,
-  createMockFeatureLoader,
-  createMockSettingsService,
-} from '../../helpers/mock-factories.js';
+
+// Mock factories
+const createMockEventEmitter = (): EventEmitter => {
+  const listeners: Array<(type: string, payload: any) => void> = [];
+
+  return {
+    emit: vi.fn((type: string, payload: any) => {
+      // Call all subscribed handlers with the event type and payload
+      listeners.forEach((handler) => handler(type, payload));
+    }),
+    subscribe: vi.fn((handler: (type: string, payload: any) => void) => {
+      listeners.push(handler);
+      return () => {
+        const index = listeners.indexOf(handler);
+        if (index > -1) listeners.splice(index, 1);
+      };
+    }),
+  } as unknown as EventEmitter;
+};
+
+const createMockFeatureLoader = (): FeatureLoader => {
+  return {
+    create: vi.fn().mockResolvedValue({
+      id: 'feature-123',
+      title: 'Test Feature',
+      status: 'backlog',
+    }),
+  } as unknown as FeatureLoader;
+};
+
+const createMockSettingsService = (): SettingsService => {
+  return {
+    getGlobalSettings: vi.fn().mockResolvedValue({
+      gtmEnabled: true,
+    }),
+  } as unknown as SettingsService;
+};
 
 // Test data factories
 const createTestSignal = (overrides: any = {}) => ({
@@ -39,19 +71,9 @@ describe('SignalIntakeService', () => {
   let mockSettingsService: SettingsService;
 
   beforeEach(() => {
-    mockEmitter = createMockEventEmitter() as unknown as EventEmitter;
-    mockFeatureLoader = createMockFeatureLoader([], {
-      create: vi.fn().mockResolvedValue({
-        id: 'feature-signal-test',
-        title: 'Test Signal Feature',
-        status: 'backlog',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-    }) as unknown as FeatureLoader;
-    mockSettingsService = createMockSettingsService({
-      getGlobalSettings: vi.fn().mockResolvedValue({ gtmEnabled: true }),
-    }) as unknown as SettingsService;
+    mockEmitter = createMockEventEmitter();
+    mockFeatureLoader = createMockFeatureLoader();
+    mockSettingsService = createMockSettingsService();
 
     signalIntakeService = new SignalIntakeService(
       mockEmitter,
@@ -87,7 +109,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('GitHub events'),
+          reason: expect.stringContaining('GitHub'),
         })
       );
 
@@ -121,7 +143,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'gtm',
-          reason: expect.stringContaining('Discord channel is GTM: marketing'),
+          reason: expect.stringContaining('Discord channel is GTM'),
         })
       );
     });
@@ -146,7 +168,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('Discord channel is Ops: engineering'),
+          reason: expect.stringContaining('Discord channel is Ops'),
         })
       );
     });
@@ -189,7 +211,7 @@ describe('SignalIntakeService', () => {
         'signal:routed',
         expect.objectContaining({
           category: 'ops',
-          reason: expect.stringContaining('MCP create_feature is engineering'),
+          reason: expect.stringContaining('MCP create_feature'),
         })
       );
     });
@@ -619,7 +641,7 @@ describe('SignalIntakeService', () => {
         intent: 'work_order',
         preview: 'Fix the bug now',
         status: 'created',
-        featureId: 'feature-signal-test',
+        featureId: 'feature-123',
       });
       expect(recent[0].id).toBeTruthy();
       expect(recent[0].createdAt).toBeTruthy();

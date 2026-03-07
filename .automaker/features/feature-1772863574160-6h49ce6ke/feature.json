@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Project Timeline API\n\nAdd a project-scoped timeline endpoint combining EventLedger events and project artifacts into a unified, chronologically ordered feed.\n\n## Phases\n1. EventLedger project-scoped query + /api/projects/:slug/timeline route\n2. Project artifact aggregation endpoint + combined project summary",
   "title": "[Epic] Project Timeline API",
-  "status": "done",
+  "status": "backlog",
   "isEpic": true,
   "epicColor": "#EF4444",
   "branchName": "epic/project-timeline-api",
@@ -22,16 +22,10 @@
       "to": "backlog",
       "timestamp": "2026-03-07T06:06:14.160Z",
       "reason": "Feature created"
-    },
-    {
-      "from": "backlog",
-      "to": "done",
-      "timestamp": "2026-03-07T13:05:04.472Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772863574157-znqqlnyfp"
-  ],
-  "completedAt": "2026-03-07T13:05:04.472Z"
+  ]
 }

@@ -165,7 +165,6 @@ export interface Feature {
   // Project/milestone tracking for milestone-gated execution
   projectSlug?: string; // Project this feature belongs to
   milestoneSlug?: string; // Milestone this feature belongs to
-  phaseSlug?: string; // Phase this feature was created from
   archived?: boolean;
   archivedAt?: string;
   archivePath?: string;

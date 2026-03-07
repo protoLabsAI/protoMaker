@@ -2,7 +2,7 @@
   "category": "Ceremony Dedup Durability",
   "description": "**Milestone:** Ceremony Dedup Durability\n\nAdd a JSONL sidecar file (data/ledger/ceremony-processed.jsonl) that records each key added to processedProjects. On CeremonyService startup, load this file and pre-populate the Set. Use atomic appends. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] ceremony-processed.jsonl is created and appended to on each ceremony dedup key\n- [ ] On startup with existing file processedProjects is pre-populated\n- [ ] After reload ceremonies do not double-fire for already-processed projects\n- [ ] Unit tests pass\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Persist and reload ceremony processedProjects dedup",
-  "status": "done",
+  "status": "backlog",
   "isEpic": false,
   "epicId": "feature-1772856637962-xkfba976l",
   "branchName": "feature/ceremony-dedup-persist-and-reload",
@@ -65,21 +65,6 @@
       "from": "in_progress",
       "to": "backlog",
       "timestamp": "2026-03-07T06:14:41.523Z"
-    },
-    {
-      "from": "backlog",
-      "to": "in_progress",
-      "timestamp": "2026-03-07T13:01:13.536Z"
-    },
-    {
-      "from": "in_progress",
-      "to": "review",
-      "timestamp": "2026-03-07T13:02:59.149Z"
-    },
-    {
-      "from": "review",
-      "to": "done",
-      "timestamp": "2026-03-07T13:03:04.719Z"
     }
   ],
   "featureType": "code",
@@ -88,13 +73,12 @@
   ],
   "complexity": "medium",
   "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T13:01:15.922Z",
+  "updatedAt": "2026-03-07T06:14:35.793Z",
   "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
-  "lastTraceId": "a93bff83-064c-426d-b492-2aa058a8affd",
+  "lastTraceId": "c465c6e0-3065-4913-97e0-806cf33d59b6",
   "traceIds": [
     "17158e30-d43a-437f-91a7-d2780d796978",
-    "c465c6e0-3065-4913-97e0-806cf33d59b6",
-    "a93bff83-064c-426d-b492-2aa058a8affd"
+    "c465c6e0-3065-4913-97e0-806cf33d59b6"
   ],
   "executionHistory": [
     {
@@ -119,15 +103,5 @@
       "error": "Operation was cancelled",
       "trigger": "manual"
     }
-  ],
-  "costUsd": 0.6994142499999998,
-  "lastSessionId": "d2d858e8-a85e-4209-964b-a7c808f1eab2",
-  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1936",
-  "prNumber": 1917,
-  "prCreatedAt": "2026-03-07T13:02:58.120Z",
-  "reviewStartedAt": "2026-03-07T13:02:59.149Z",
-  "prTrackedSince": "2026-03-07T13:02:59.152Z",
-  "prLastPolledAt": "2026-03-07T13:05:02.807Z",
-  "prMergedAt": "2026-03-07T10:07:26Z",
-  "completedAt": "2026-03-07T13:03:04.719Z"
+  ]
 }

@@ -149,11 +149,6 @@ export class FeatureStateMachine {
     let currentState: FeatureProcessingState = resumeFromCheckpoint?.state || 'INTAKE';
     let transitionCount = 0;
     const MAX_TRANSITIONS = 20;
-    // Self-transitions (e.g. REVIEW → REVIEW polling) don't burn the main transition
-    // budget — they have their own timeouts. But cap them to prevent infinite loops
-    // if a processor's timeout fails to fire.
-    let sameStateCount = 0;
-    const MAX_SAME_STATE_TRANSITIONS = 100;
     const completedStates: string[] = [];
     const goalGateResults: GoalGateResult[] = [];
 
@@ -170,11 +165,7 @@ export class FeatureStateMachine {
       });
     }
 
-    while (
-      currentState &&
-      transitionCount < MAX_TRANSITIONS &&
-      sameStateCount < MAX_SAME_STATE_TRANSITIONS
-    ) {
+    while (currentState && transitionCount < MAX_TRANSITIONS) {
       const processor = this.processors.get(currentState);
       if (!processor) {
         logger.error(`No processor found for state: ${currentState}`);
@@ -301,15 +292,8 @@ export class FeatureStateMachine {
           break;
         }
 
-        // Self-transitions (e.g. REVIEW → REVIEW) are poll loops with their own
-        // timeouts. Don't burn the main transition budget on them.
-        if (result.nextState === currentState) {
-          sameStateCount++;
-        } else {
-          sameStateCount = 0;
-          transitionCount++;
-        }
         currentState = result.nextState;
+        transitionCount++;
       } catch (error) {
         logger.error('Error processing state', {
           state: currentState,
@@ -321,19 +305,13 @@ export class FeatureStateMachine {
       }
     }
 
-    if (transitionCount >= MAX_TRANSITIONS || sameStateCount >= MAX_SAME_STATE_TRANSITIONS) {
-      const reason =
-        sameStateCount >= MAX_SAME_STATE_TRANSITIONS
-          ? `Max same-state transitions exceeded in ${currentState} (${sameStateCount} loops)`
-          : 'Max state transitions exceeded';
-      logger.error(reason, {
+    if (transitionCount >= MAX_TRANSITIONS) {
+      logger.error('Max transitions exceeded, escalating', {
         featureId: feature.id,
         transitionCount,
-        sameStateCount,
-        lastState: currentState,
       });
       currentState = 'ESCALATE';
-      ctx.escalationReason = reason;
+      ctx.escalationReason = 'Max state transitions exceeded';
 
       // Run the ESCALATE processor so the feature is properly blocked and signaled
       const escalateProcessor = this.processors.get('ESCALATE');

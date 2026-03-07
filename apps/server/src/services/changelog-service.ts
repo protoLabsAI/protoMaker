@@ -17,7 +17,6 @@ import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { ProjectService } from './project-service.js';
-import type { ProjectArtifactService } from './project-artifact-service.js';
 import type { Feature } from '@protolabsai/types';
 
 const logger = createLogger('ChangelogService');
@@ -75,7 +74,6 @@ export class ChangelogService {
   private settingsService: SettingsService | null = null;
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
-  private projectArtifactService: ProjectArtifactService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -85,14 +83,12 @@ export class ChangelogService {
     emitter: EventEmitter,
     settingsService: SettingsService,
     featureLoader: FeatureLoader,
-    projectService: ProjectService,
-    projectArtifactService?: ProjectArtifactService
+    projectService: ProjectService
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
-    this.projectArtifactService = projectArtifactService ?? null;
 
     // Subscribe to milestone and project completion events
     this.unsubscribe = emitter.subscribe((type, payload) => {
@@ -118,7 +114,6 @@ export class ChangelogService {
     this.settingsService = null;
     this.featureLoader = null;
     this.projectService = null;
-    this.projectArtifactService = null;
   }
 
   /**
@@ -169,17 +164,6 @@ export class ChangelogService {
       // Store changelog in the project directory
       await this.storeChangelog(projectPath, projectSlug, changelogContent, milestone.slug);
 
-      // Persist changelog as a project artifact
-      if (this.projectArtifactService) {
-        await this.projectArtifactService.saveArtifact(
-          projectPath,
-          projectSlug,
-          'changelog',
-          changelogContent
-        );
-        logger.debug(`Changelog artifact saved for milestone ${milestoneTitle}`);
-      }
-
       // Post to Discord
       await this.postToDiscord(
         projectPath,
@@ -222,17 +206,6 @@ export class ChangelogService {
 
       // Store changelog in the project directory
       await this.storeChangelog(projectPath, projectSlug, changelogContent);
-
-      // Persist changelog as a project artifact
-      if (this.projectArtifactService) {
-        await this.projectArtifactService.saveArtifact(
-          projectPath,
-          projectSlug,
-          'changelog',
-          changelogContent
-        );
-        logger.debug(`Changelog artifact saved for project ${projectTitle}`);
-      }
 
       // Post to Discord
       await this.postToDiscord(

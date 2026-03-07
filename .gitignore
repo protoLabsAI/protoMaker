@@ -14,9 +14,6 @@ docs/.vitepress/cache/
 .next/
 .turbo/
 
-# Automaker - runtime lock file (PID lock, changes every agent run)
-.automaker-lock
-
 # Automaker - runtime artifacts and user-generated content
 .automaker/**/agent-output.md
 .automaker/**/images/

@@ -9,16 +9,6 @@ import type {
   StateTransitionResult,
   FeatureProcessingState,
 } from '@/services/lead-engineer-types.js';
-import {
-  createMockFeatureLoader,
-  createMockSettingsService,
-  createMockProjectService,
-  createMockMetricsService,
-  type MockFeatureLoader,
-  type MockSettingsService,
-  type MockProjectService,
-  type MockMetricsService,
-} from '../../helpers/mock-factories.js';
 
 // ────────────────────────── Mocks ──────────────────────────
 
@@ -81,6 +71,16 @@ function createMockFeature(overrides: Partial<Feature> = {}): Feature {
   };
 }
 
+function createMockFeatureLoader(features: Feature[] = []) {
+  return {
+    getAll: vi.fn().mockResolvedValue(features),
+    update: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn().mockImplementation(async (_path: string, id: string) => {
+      return features.find((f) => f.id === id) || null;
+    }),
+  };
+}
+
 function createMockAutoModeService() {
   return {
     getRunningAgents: vi.fn().mockResolvedValue([]),
@@ -91,9 +91,36 @@ function createMockAutoModeService() {
   };
 }
 
+function createMockProjectService() {
+  return {
+    getProject: vi.fn().mockResolvedValue({
+      title: 'Test Project',
+      slug: 'test-project',
+      milestones: [],
+    }),
+  };
+}
+
 function createMockProjectLifecycleService() {
   return {
     launch: vi.fn().mockResolvedValue({ autoModeStarted: true }),
+  };
+}
+
+function createMockSettingsService() {
+  return {
+    getGlobalSettings: vi.fn().mockResolvedValue({ maxConcurrency: 3 }),
+    getProjectSettings: vi.fn().mockResolvedValue({ workflow: {} }),
+  };
+}
+
+function createMockMetricsService() {
+  return {
+    getProjectMetrics: vi.fn().mockResolvedValue({
+      avgCycleTimeMs: 60000,
+      totalCostUsd: 5.0,
+      completedFeatures: 3,
+    }),
   };
 }
 
@@ -119,12 +146,12 @@ function createMockProcessor(
 describe('LeadEngineerService', () => {
   let service: LeadEngineerService;
   let events: ReturnType<typeof createMockEvents>;
-  let featureLoader: MockFeatureLoader;
+  let featureLoader: ReturnType<typeof createMockFeatureLoader>;
   let autoModeService: ReturnType<typeof createMockAutoModeService>;
-  let projectService: MockProjectService;
+  let projectService: ReturnType<typeof createMockProjectService>;
   let projectLifecycleService: ReturnType<typeof createMockProjectLifecycleService>;
-  let settingsService: MockSettingsService;
-  let metricsService: MockMetricsService;
+  let settingsService: ReturnType<typeof createMockSettingsService>;
+  let metricsService: ReturnType<typeof createMockMetricsService>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -140,25 +167,10 @@ describe('LeadEngineerService', () => {
     events = createMockEvents();
     featureLoader = createMockFeatureLoader([]);
     autoModeService = createMockAutoModeService();
-    projectService = createMockProjectService({
-      getProject: vi.fn().mockResolvedValue({
-        title: 'Test Project',
-        slug: 'test-project',
-        milestones: [],
-      }),
-    });
+    projectService = createMockProjectService();
     projectLifecycleService = createMockProjectLifecycleService();
-    settingsService = createMockSettingsService({
-      getGlobalSettings: vi.fn().mockResolvedValue({ maxConcurrency: 3 }),
-      getProjectSettings: vi.fn().mockResolvedValue({ workflow: {} }),
-    });
-    metricsService = createMockMetricsService({
-      getProjectMetrics: vi.fn().mockResolvedValue({
-        avgCycleTimeMs: 60000,
-        totalCostUsd: 5.0,
-        completedFeatures: 3,
-      }),
-    });
+    settingsService = createMockSettingsService();
+    metricsService = createMockMetricsService();
 
     service = new LeadEngineerService(
       events as any,

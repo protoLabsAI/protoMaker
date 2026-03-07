@@ -96,7 +96,6 @@ import {
 import { ProjectPlanningService } from '../services/project-planning-service.js';
 import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
-import * as projectPmModule from '../services/project-pm.module.js';
 
 const logger = createLogger('Server:Services');
 
@@ -665,9 +664,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   if (projectPlanningService) {
     projectPlanningService.start();
   }
-
-  // Wire project-pm module event subscriptions (status sync)
-  await projectPmModule.register({ events, projectPmService, projectService } as any);
 
   return {
     dataDir,

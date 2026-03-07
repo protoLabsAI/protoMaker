@@ -13,7 +13,7 @@ import type { ServiceContainer } from '../server/services.js';
 const logger = createLogger('ProjectPMModule');
 
 export async function register(services: ServiceContainer): Promise<void> {
-  const { events, projectPmService, projectService } = services;
+  const { events, projectPmService } = services;
 
   events.on('project:lifecycle:launched', (payload) => {
     const { projectPath, projectSlug } = payload as {
@@ -31,10 +31,6 @@ export async function register(services: ServiceContainer): Promise<void> {
       `Project "${projectSlug}" launched. PM session initialized.`
     );
     logger.info(`PM session initialized for project ${projectSlug}`);
-
-    projectService
-      .updateProject(projectPath, projectSlug, { status: 'active' })
-      .catch((err) => logger.warn(`Failed to set project ${projectSlug} to active:`, err));
   });
 
   events.on('project:completed', (payload) => {
@@ -49,13 +45,6 @@ export async function register(services: ServiceContainer): Promise<void> {
     projectPmService
       .archiveSession(projectPath, resolvedSlug)
       .catch((err) => logger.warn(`Failed to archive PM session for ${resolvedSlug}:`, err));
-
-    projectService
-      .updateProject(projectPath, resolvedSlug, {
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-      })
-      .catch((err) => logger.warn(`Failed to set project ${resolvedSlug} to completed:`, err));
   });
 
   events.on('feature:completed', (payload) => {

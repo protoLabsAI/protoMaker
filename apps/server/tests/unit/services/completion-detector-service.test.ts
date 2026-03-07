@@ -7,27 +7,13 @@
  * Also tests deduplication and the areMilestonePhasesDone guard.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CompletionDetectorService } from '@/services/completion-detector-service.js';
 import type { Feature, Milestone, Project } from '@protolabsai/types';
 import type { EventType } from '@protolabsai/types';
-
-/** Poll until fn() stops throwing, or timeout (default 5s). */
-async function poll(fn: () => void, timeout = 5000, interval = 50): Promise<void> {
-  const deadline = Date.now() + timeout;
-  while (true) {
-    try {
-      fn();
-      return;
-    } catch (err) {
-      if (Date.now() > deadline) throw err;
-      await new Promise((r) => setTimeout(r, interval));
-    }
-  }
-}
-
-/** Wait long enough for async cascades to settle (negative assertions). */
-const settle = () => new Promise((r) => setTimeout(r, 200));
 
 // ────────────────────────── Mocks ──────────────────────────
 
@@ -130,6 +116,7 @@ describe('CompletionDetectorService', () => {
       featureLoader = createMockFeatureLoader([epic, child1, child2]);
       service.initialize(events as any, featureLoader as any, projectService as any);
 
+      // Simulate feature:status-changed for child-2 moving to done
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
         featureId: 'child-2',
@@ -137,18 +124,16 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await poll(() => {
-        expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', {
-          status: 'done',
-        });
-        expect(events.emit).toHaveBeenCalledWith(
-          'feature:completed',
-          expect.objectContaining({
-            featureId: 'epic-1',
-            isEpic: true,
-          })
-        );
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:completed',
+        expect.objectContaining({
+          featureId: 'epic-1',
+          isEpic: true,
+        })
+      );
     });
 
     it('should NOT mark epic done when some children are not done', async () => {
@@ -159,11 +144,7 @@ describe('CompletionDetectorService', () => {
         isEpic: true,
       });
       const child1 = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
-      const child2 = createTestFeature({
-        id: 'child-2',
-        epicId: 'epic-1',
-        status: 'in_progress',
-      });
+      const child2 = createTestFeature({ id: 'child-2', epicId: 'epic-1', status: 'in_progress' });
 
       featureLoader = createMockFeatureLoader([epic, child1, child2]);
       service.initialize(events as any, featureLoader as any, projectService as any);
@@ -175,7 +156,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.update).not.toHaveBeenCalled();
     });
@@ -194,7 +175,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.update).not.toHaveBeenCalled();
     });
@@ -257,17 +238,17 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await poll(() => {
-        expect(events.emit).toHaveBeenCalledWith(
-          'milestone:completed',
-          expect.objectContaining({
-            projectPath: '/test/path',
-            projectTitle: 'Test Project',
-            projectSlug: 'proj',
-            milestoneTitle: 'Foundation',
-          })
-        );
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(events.emit).toHaveBeenCalledWith(
+        'milestone:completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          projectTitle: 'Test Project',
+          projectSlug: 'proj',
+          milestoneTitle: 'Foundation',
+        })
+      );
     });
 
     it('should NOT emit milestone:completed when phases lack featureId', async () => {
@@ -317,7 +298,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
@@ -376,7 +357,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
@@ -394,20 +375,24 @@ describe('CompletionDetectorService', () => {
      * having the epic/feature look up their milestone association from the project.
      */
     it('should NOT cascade to milestone when milestoneSlug is missing from feature and epic (BUG)', async () => {
+      // Feature and epic both lack milestoneSlug — milestone cascade WILL NOT fire
       const epic = createTestFeature({
         id: 'epic-1',
         title: 'Epic Without Milestone Slug',
         status: 'in_progress',
         isEpic: true,
         projectSlug: 'proj',
+        // intentionally NO milestoneSlug — this is the bug condition
       });
       const child = createTestFeature({
         id: 'child-1',
         epicId: 'epic-1',
         status: 'done',
         projectSlug: 'proj',
+        // intentionally NO milestoneSlug — this is the bug condition
       });
 
+      // Milestone exists and has the child as a phase — but cascade won't reach it
       const milestone = createTestMilestone({
         slug: 'ms-1',
         phases: [
@@ -440,27 +425,30 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      // Wait for epic completion first
-      await poll(() => {
-        expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', {
-          status: 'done',
-        });
-        expect(events.emit).toHaveBeenCalledWith(
-          'feature:completed',
-          expect.objectContaining({ featureId: 'epic-1', isEpic: true })
-        );
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Epic WILL complete (epicId-based lookup works fine)
+      expect(featureLoader.update).toHaveBeenCalledWith('/test/path', 'epic-1', { status: 'done' });
+      expect(events.emit).toHaveBeenCalledWith(
+        'feature:completed',
+        expect.objectContaining({ featureId: 'epic-1', isEpic: true })
+      );
 
       // BUT milestone cascade will NOT fire — milestoneSlug is missing from both feature and epic
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
     });
 
+    /**
+     * TARGET BEHAVIOR: When milestoneSlug IS set on the feature, milestone cascade fires.
+     * This is the expected (working) path — already covered by the main happy-path test above,
+     * but included here explicitly alongside the bug test for contrast.
+     */
     it('should cascade to milestone when milestoneSlug is set on feature (target behavior)', async () => {
       const feature = createTestFeature({
         id: 'f1',
         status: 'done',
         projectSlug: 'proj',
-        milestoneSlug: 'ms-1',
+        milestoneSlug: 'ms-1', // milestoneSlug IS set — cascade works
         costUsd: 1.5,
       });
 
@@ -496,16 +484,17 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await poll(() => {
-        expect(events.emit).toHaveBeenCalledWith(
-          'milestone:completed',
-          expect.objectContaining({
-            projectPath: '/test/path',
-            projectSlug: 'proj',
-            milestoneTitle: 'Foundation',
-          })
-        );
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Milestone cascade DOES fire when milestoneSlug is present
+      expect(events.emit).toHaveBeenCalledWith(
+        'milestone:completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          projectSlug: 'proj',
+          milestoneTitle: 'Foundation',
+        })
+      );
     });
 
     it('should deduplicate milestone completion events', async () => {
@@ -549,9 +538,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await poll(() => {
-        expect(events.emit).toHaveBeenCalledWith('milestone:completed', expect.anything());
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -560,7 +547,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const milestoneCalls = events.emit.mock.calls.filter(
         (c: unknown[]) => c[0] === 'milestone:completed'
@@ -613,16 +600,16 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await poll(() => {
-        expect(events.emit).toHaveBeenCalledWith(
-          'project:completed',
-          expect.objectContaining({
-            projectPath: '/test/path',
-            projectTitle: 'Test Project',
-            projectSlug: 'proj',
-          })
-        );
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(events.emit).toHaveBeenCalledWith(
+        'project:completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          projectTitle: 'Test Project',
+          projectSlug: 'proj',
+        })
+      );
     });
 
     it('should deduplicate project completion events', async () => {
@@ -665,9 +652,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await poll(() => {
-        expect(events.emit).toHaveBeenCalledWith('project:completed', expect.anything());
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       events._fire('feature:status-changed', {
         projectPath: '/test/path',
@@ -676,7 +661,7 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const projectCalls = events.emit.mock.calls.filter(
         (c: unknown[]) => c[0] === 'project:completed'
@@ -698,9 +683,10 @@ describe('CompletionDetectorService', () => {
         passes: true,
       });
 
-      await poll(() => {
-        expect(featureLoader.get).toHaveBeenCalledWith('/test/path', 'f1');
-      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should have called get to load the feature
+      expect(featureLoader.get).toHaveBeenCalledWith('/test/path', 'f1');
     });
 
     it('should NOT trigger on auto_mode_feature_complete with passes=false', async () => {
@@ -713,7 +699,7 @@ describe('CompletionDetectorService', () => {
         passes: false,
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.get).not.toHaveBeenCalled();
     });
@@ -751,9 +737,151 @@ describe('CompletionDetectorService', () => {
         newStatus: 'done',
       });
 
-      await settle();
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
+    });
+  });
+
+  // ────────────────────────── Ledger durability ──────────────────────────
+
+  describe('JSONL ledger durability', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'completion-detector-test-'));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('cold start: creates completion-emitted.jsonl and records entries on completion', async () => {
+      const feature1 = createTestFeature({
+        id: 'f1',
+        status: 'done',
+        projectSlug: 'proj',
+        milestoneSlug: 'ms-1',
+        costUsd: 1.0,
+      });
+
+      const milestone = createTestMilestone({
+        slug: 'ms-1',
+        phases: [
+          {
+            number: 1,
+            name: 'p1',
+            title: 'Phase 1',
+            description: '',
+            featureId: 'f1',
+            complexity: 'small',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'Cold Start Project',
+        slug: 'proj',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      featureLoader = createMockFeatureLoader([feature1]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(events as any, featureLoader as any, projectService as any, tmpDir);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'f1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      // Wait for async cascade + file writes
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const ledgerPath = path.join(tmpDir, 'ledger', 'completion-emitted.jsonl');
+      expect(fs.existsSync(ledgerPath)).toBe(true);
+
+      const lines = fs
+        .readFileSync(ledgerPath, 'utf-8')
+        .split('\n')
+        .filter((l) => l.trim());
+      expect(lines.length).toBeGreaterThanOrEqual(1);
+
+      const entries = lines.map((l) => JSON.parse(l) as { type: string; key: string });
+      const types = entries.map((e) => e.type);
+      expect(types).toContain('milestone');
+      expect(types).toContain('project');
+    });
+
+    it('warm restart: pre-populates Sets from ledger and suppresses duplicate events', async () => {
+      const feature1 = createTestFeature({
+        id: 'f1',
+        status: 'done',
+        projectSlug: 'proj',
+        milestoneSlug: 'ms-1',
+      });
+
+      const milestone = createTestMilestone({
+        slug: 'ms-1',
+        phases: [
+          {
+            number: 1,
+            name: 'p1',
+            title: 'Phase 1',
+            description: '',
+            featureId: 'f1',
+            complexity: 'small',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'Warm Restart Project',
+        slug: 'proj',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      // Pre-write a ledger that records milestone + project as already emitted
+      const ledgerDir = path.join(tmpDir, 'ledger');
+      fs.mkdirSync(ledgerDir, { recursive: true });
+      const ledgerPath = path.join(ledgerDir, 'completion-emitted.jsonl');
+      const milestoneKey = '/test/path:proj:ms-1';
+      const projectKey = '/test/path:proj';
+      fs.writeFileSync(
+        ledgerPath,
+        [
+          JSON.stringify({
+            type: 'milestone',
+            key: milestoneKey,
+            timestamp: '2026-01-01T00:00:00Z',
+          }),
+          JSON.stringify({ type: 'project', key: projectKey, timestamp: '2026-01-01T00:00:00Z' }),
+        ].join('\n') + '\n',
+        'utf-8'
+      );
+
+      featureLoader = createMockFeatureLoader([feature1]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(events as any, featureLoader as any, projectService as any, tmpDir);
+
+      // Wait for ledger load to complete before firing events
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'f1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // milestone and project completions should be suppressed (already in ledger)
+      expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
+      expect(events.emit).not.toHaveBeenCalledWith('project:completed', expect.anything());
     });
   });
 });

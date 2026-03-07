@@ -1,13 +1,5 @@
 import { useState } from 'react';
-import {
-  FileText,
-  Layers,
-  BookOpen,
-  MessageSquare,
-  FlaskConical,
-  Activity,
-  Archive,
-} from 'lucide-react';
+import { FileText, Layers, BookOpen, MessageSquare, FlaskConical } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
@@ -21,9 +13,7 @@ import { FeaturesTab } from './tabs/features-tab';
 import { ResourcesTab } from './tabs/resources-tab';
 import { UpdatesTab } from './tabs/updates-tab';
 import { ResearchTab } from './tabs/research-tab';
-import { ProjectTimeline } from '@/components/views/projects/project-timeline';
-import { ProjectArtifactViewer } from '@/components/views/projects/project-artifact-viewer';
-import type { Project, ArtifactIndexEntry } from '@protolabsai/types';
+import type { Project } from '@protolabsai/types';
 
 export function ProjectDetail({
   projectSlug,
@@ -110,14 +100,6 @@ export function ProjectDetail({
                   <span className="hidden sm:inline">Research</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="timeline">
-                <Activity />
-                <span className="hidden sm:inline">Timeline</span>
-              </TabsTrigger>
-              <TabsTrigger value="artifacts">
-                <Archive />
-                <span className="hidden sm:inline">Artifacts</span>
-              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="prd">
@@ -141,22 +123,6 @@ export function ProjectDetail({
                 <ResearchTab project={project as Project} />
               </TabsContent>
             )}
-
-            <TabsContent value="timeline">
-              <div className="py-4">
-                <ProjectTimeline projectSlug={projectSlug} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="artifacts">
-              <div className="py-4">
-                <ProjectArtifactViewer
-                  artifacts={
-                    (project as Project & { artifacts?: ArtifactIndexEntry[] }).artifacts ?? []
-                  }
-                />
-              </div>
-            </TabsContent>
           </Tabs>
         </div>
       </div>
