@@ -1,0 +1,32 @@
+{
+  "category": "Project Timeline API",
+  "description": "**Milestone:** Project Timeline API\n\nTDD phase. Write integration tests for a new route GET /api/projects/:slug/timeline that: (1) returns all EventLedger events with matching projectSlug, (2) supports ?since and ?type query params for filtering, (3) returns events in chronological order with type, timestamp, correlationIds, and payload. Implement by adding a queryByProject(projectSlug, opts) method to EventLedgerService and wiring the route in apps/server/src/routes/projects/. Test with seeded JSONL data.\n\n**Files to Modify:**\n- apps/server/src/services/event-ledger-service.ts\n- apps/server/src/routes/projects/index.ts\n- apps/server/tests/integration/routes/project-timeline.test.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/projects/:slug/timeline returns chronological EventLedger events for the project\n- [ ] ?since= and ?type= query params filter correctly\n- [ ] EventLedgerService.queryByProject() method implemented and tested\n- [ ] Integration tests use seeded JSONL data and verify ordering and filtering\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "EventLedger project-scoped query + /api/projects/:slug/timeline route",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772863574160-6h49ce6ke",
+  "branchName": "feature/project-timeline-api-eventledger-project",
+  "isFoundation": true,
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574161-niv0lxcp4",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Project Timeline API\n\nTDD phase. Write integration tests for a new route GET /api/projects/:slug/timeline that: (1) returns all EventLedger events with matching projectSlug, (2) supports ?since and ?type query params for filtering, (3) returns events in chronological order with type, timestamp, correlationIds, and payload. Implement by adding a queryByProject(projectSlug, opts) method to EventLedgerService and wiring the route in apps/server/src/routes/projects/. Test with seeded JSONL data.\n\n**Files to Modify:**\n- apps/server/src/services/event-ledger-service.ts\n- apps/server/src/routes/projects/index.ts\n- apps/server/tests/integration/routes/project-timeline.test.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/projects/:slug/timeline returns chronological EventLedger events for the project\n- [ ] ?since= and ?type= query params filter correctly\n- [ ] EventLedgerService.queryByProject() method implemented and tested\n- [ ] Integration tests use seeded JSONL data and verify ordering and filtering\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T06:06:14.161Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.161Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.161Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574156-lfw9o8r99"
+  ]
+}
