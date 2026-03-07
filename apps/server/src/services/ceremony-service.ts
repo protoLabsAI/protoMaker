@@ -25,6 +25,7 @@ import type { MetricsService } from './metrics-service.js';
 import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 import type { SchedulerService } from './scheduler-service.js';
 import { transition } from './ceremony-state-machine.js';
+import { projectArtifactService } from './project-artifact-service.js';
 
 const logger = createLogger('CeremonyService');
 
@@ -552,6 +553,23 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+
+      // Persist ceremony report artifact
+      void projectArtifactService
+        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
+          ceremonyType: 'milestone_retro',
+          milestoneSlug,
+          milestoneTitle,
+          milestoneNumber,
+          projectTitle,
+          completedAt: new Date().toISOString(),
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to save milestone retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+
       this.auditLog?.record({
         id: correlationId,
         timestamp: new Date().toISOString(),
@@ -664,6 +682,24 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+
+      // Persist ceremony report artifact
+      void projectArtifactService
+        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
+          ceremonyType: 'project_retro',
+          projectTitle,
+          totalMilestones: payload.totalMilestones,
+          totalFeatures: payload.totalFeatures,
+          totalCostUsd: payload.totalCostUsd,
+          failureCount: payload.failureCount,
+          milestoneSummaries: payload.milestoneSummaries,
+          completedAt: new Date().toISOString(),
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to save project retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
 
       this.reflectionCount++;
       this.lastReflection = {

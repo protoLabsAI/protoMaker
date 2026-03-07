@@ -149,6 +149,10 @@ export type {
   LifecycleStatus,
   LifecycleCollectResult,
   ProjectStats,
+  ArtifactType,
+  ArtifactIndexEntry,
+  ArtifactIndex,
+  ProjectArtifact,
 } from './project.js';
 
 // Calendar types
