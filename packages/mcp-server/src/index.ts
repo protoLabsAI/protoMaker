@@ -688,6 +688,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return digestResult;
     }
 
+    case 'get_sitrep':
+      return apiCall('/sitrep', { projectPath: args.projectPath });
+
     case 'get_board_summary': {
       const result = (await apiCall('/features/summary', {
         projectPath: args.projectPath,
