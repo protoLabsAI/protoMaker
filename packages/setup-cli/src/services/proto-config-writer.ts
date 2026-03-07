@@ -56,7 +56,8 @@ function detectFramework(research: RepoResearchResult): string | undefined {
 
 /** Infer common build/test/dev commands from research */
 function inferCommands(research: RepoResearchResult): ProtoConfig['commands'] {
-  const pm = research.monorepo.packageManager === 'unknown' ? 'npm' : research.monorepo.packageManager;
+  const pm =
+    research.monorepo.packageManager === 'unknown' ? 'npm' : research.monorepo.packageManager;
   const run = pm === 'npm' ? 'npm run' : pm === 'yarn' ? 'yarn' : `${pm} run`;
   return {
     build: `${run} build`,
@@ -69,7 +70,8 @@ function inferCommands(research: RepoResearchResult): ProtoConfig['commands'] {
 
 /** Build a ProtoConfig object from research results */
 export function buildProtoConfig(research: RepoResearchResult): ProtoConfig {
-  const pm = research.monorepo.packageManager === 'unknown' ? 'npm' : research.monorepo.packageManager;
+  const pm =
+    research.monorepo.packageManager === 'unknown' ? 'npm' : research.monorepo.packageManager;
   const framework = detectFramework(research);
 
   const config: ProtoConfig = {

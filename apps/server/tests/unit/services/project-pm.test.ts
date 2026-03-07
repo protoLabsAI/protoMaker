@@ -1,10 +1,10 @@
 /**
- * ProjectPM Module — ProjectStatusSync subscription tests
+ * ProjectPM Module — event subscription tests
  *
  * Verifies that the project-pm.module register() function wires event
- * subscriptions that update project.json status on:
- *   - project:completed        → status: 'completed', completedAt: <ISO timestamp>
- *   - project:lifecycle:launched → status: 'active'
+ * subscriptions that:
+ *   - project:lifecycle:launched → create PM session + append welcome message
+ *   - project:completed          → archive PM session
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -44,85 +44,62 @@ function createMockProjectPmService() {
   };
 }
 
-function createMockProjectService() {
-  return {
-    updateProject: vi.fn().mockResolvedValue(null),
-  };
-}
-
 // ────────────────────────── Tests ──────────────────────────
 
-describe('project-pm.module — ProjectStatusSync subscriptions', () => {
+describe('project-pm.module — event subscriptions', () => {
   let events: ReturnType<typeof createMockEvents>;
   let projectPmService: ReturnType<typeof createMockProjectPmService>;
-  let projectService: ReturnType<typeof createMockProjectService>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     events = createMockEvents();
     projectPmService = createMockProjectPmService();
-    projectService = createMockProjectService();
 
-    await register({ events, projectPmService, projectService } as any);
+    await register({ events, projectPmService } as any);
   });
 
   describe('project:completed', () => {
-    it('should call projectService.updateProject with status completed and completedAt', async () => {
-      const before = Date.now();
-
+    it('should archive PM session on project:completed', async () => {
       events._fire('project:completed', {
         projectPath: '/workspace/my-project',
         projectSlug: 'my-project',
       });
 
-      // Allow any async work to settle
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(projectService.updateProject).toHaveBeenCalledWith(
+      expect(projectPmService.archiveSession).toHaveBeenCalledWith(
         '/workspace/my-project',
-        'my-project',
-        expect.objectContaining({
-          status: 'completed',
-          completedAt: expect.any(String),
-        })
+        'my-project'
       );
-
-      const call = projectService.updateProject.mock.calls[0];
-      const completedAt = new Date(call[2].completedAt as string).getTime();
-      expect(completedAt).toBeGreaterThanOrEqual(before);
-      expect(completedAt).toBeLessThanOrEqual(Date.now());
     });
 
     it('should resolve projectSlug from project field when projectSlug is absent', async () => {
       events._fire('project:completed', {
         projectPath: '/workspace/my-project',
         project: 'my-project-alt',
-        // no projectSlug
       });
 
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(projectService.updateProject).toHaveBeenCalledWith(
+      expect(projectPmService.archiveSession).toHaveBeenCalledWith(
         '/workspace/my-project',
-        'my-project-alt',
-        expect.objectContaining({ status: 'completed' })
+        'my-project-alt'
       );
     });
 
-    it('should NOT call updateProject when projectPath is missing', async () => {
+    it('should NOT archive when projectPath is missing', async () => {
       events._fire('project:completed', {
         projectSlug: 'my-project',
-        // no projectPath
       });
 
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(projectService.updateProject).not.toHaveBeenCalled();
+      expect(projectPmService.archiveSession).not.toHaveBeenCalled();
     });
   });
 
   describe('project:lifecycle:launched', () => {
-    it('should call projectService.updateProject with status active', async () => {
+    it('should create PM session and append welcome message', async () => {
       events._fire('project:lifecycle:launched', {
         projectPath: '/workspace/my-project',
         projectSlug: 'my-project',
@@ -130,22 +107,25 @@ describe('project-pm.module — ProjectStatusSync subscriptions', () => {
 
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(projectService.updateProject).toHaveBeenCalledWith(
+      expect(projectPmService.getOrCreateSession).toHaveBeenCalledWith(
+        '/workspace/my-project',
+        'my-project'
+      );
+      expect(projectPmService.appendSystemMessage).toHaveBeenCalledWith(
         '/workspace/my-project',
         'my-project',
-        expect.objectContaining({ status: 'active' })
+        expect.stringContaining('my-project')
       );
     });
 
-    it('should NOT call updateProject when projectPath or projectSlug is missing', async () => {
+    it('should NOT create session when projectPath or projectSlug is missing', async () => {
       events._fire('project:lifecycle:launched', {
         projectSlug: 'my-project',
-        // no projectPath
       });
 
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(projectService.updateProject).not.toHaveBeenCalled();
+      expect(projectPmService.getOrCreateSession).not.toHaveBeenCalled();
     });
   });
 });
