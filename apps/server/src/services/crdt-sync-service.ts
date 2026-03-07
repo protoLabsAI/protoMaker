@@ -203,7 +203,9 @@ export class CrdtSyncService {
    * Returns all known peers (including offline).
    */
   getPeers(): HivemindPeer[] {
-    return [...this.peers.values()].map(({ ws: _ws, priority: _priority, ...peer }) => peer as HivemindPeer);
+    return [...this.peers.values()].map(
+      ({ ws: _ws, priority: _priority, ...peer }) => peer as HivemindPeer
+    );
   }
 
   // ─── Private: Server (Primary) ───────────────────────────────────────────
@@ -363,7 +365,7 @@ export class CrdtSyncService {
         Date.now() - this.lastPrimaryContact > ttl &&
         !this.promotionPending
       ) {
-        this._tryPromote();
+        void this._tryPromote();
         return;
       }
 
@@ -420,7 +422,7 @@ export class CrdtSyncService {
    * Promote this worker to primary if it has the highest priority among
    * reachable instances (lowest index in the peers list).
    */
-  private _tryPromote(): void {
+  private async _tryPromote(): Promise<void> {
     if (this.promotionPending) return;
 
     const peers = this.config?.peers ?? [];
@@ -459,14 +461,15 @@ export class CrdtSyncService {
     // Broadcast to any currently connected workers (if there are any)
     this._broadcastToServer(JSON.stringify(promote));
 
-    this._startServer().then(() => {
+    try {
+      await this._startServer();
       logger.info('[CRDT] Successfully promoted to primary');
-      this.promotionPending = false;
-    }).catch((err) => {
+    } catch (err) {
       logger.error('[CRDT] Failed to start server during promotion:', err);
       this.role = 'worker';
+    } finally {
       this.promotionPending = false;
-    });
+    }
   }
 
   // ─── Private: Heartbeat ───────────────────────────────────────────────────
