@@ -27,6 +27,8 @@ interface EventLedgerEntry {
     featureId?: string;
     projectSlug?: string;
     milestoneSlug?: string;
+    ceremonyId?: string;
+    traceId?: string;
   };
   payload: object; // Event-specific data
   source: string; // e.g. 'EventLedgerService'

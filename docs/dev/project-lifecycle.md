@@ -174,9 +174,16 @@ interface ProjectStats {
   title: string;
   goal: string;
   status: ProjectStatus;
+  health?: ProjectHealth;
+  priority?: ProjectPriority;
+  lead?: string;
   milestoneCount: number;
   phaseCount: number;
+  linkedPhaseCount: number; // phases linked to board features
   featureCount: number;
+  updateCount: number; // status updates posted
+  linkCount: number; // external links attached
+  documentCount: number; // project documents
   createdAt: string;
   deletedAt: string;
 }
