@@ -97,6 +97,9 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
   const rootPkg = await readJson(path.join(absolutePath, 'package.json'));
   const allPkgs: Record<string, unknown>[] = rootPkg ? [rootPkg] : [];
 
+  // Extract root-level scripts for proto.config.yaml generation
+  const scripts = (rootPkg?.scripts ?? {}) as Record<string, string>;
+
   // ---- Git ----
   const gitDir = await exists(path.join(absolutePath, '.git'));
   const remoteUrl = gitDir
@@ -635,6 +638,7 @@ export async function researchRepo(projectPath: string): Promise<RepoResearchRes
   return {
     projectPath: absolutePath,
     projectName,
+    scripts,
     git,
     monorepo,
     frontend,
