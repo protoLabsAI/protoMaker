@@ -104,8 +104,8 @@ export function Sidebar() {
   useLoadCeremonyEntries(projectPath);
   useCeremonyEventStream(projectPath);
 
-  // Get pending actionable items count (drives the inbox badge)
-  const unreadNotificationsCount = useActionableItemsStore((s) => s.pendingCount);
+  // Get unread actionable items count (drives the inbox badge)
+  const unreadNotificationsCount = useActionableItemsStore((s) => s.unreadCount);
 
   // Get unread ceremony event count
   const unreadCeremonyCount = useCeremonyStore((s) => s.unreadCount);
