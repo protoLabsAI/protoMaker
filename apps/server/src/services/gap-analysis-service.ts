@@ -15,8 +15,8 @@ import type {
 
 const logger = createLogger('gap-analysis');
 
-/** Weight for score calculation: critical=3, recommended=2, optional=1 */
-const SEVERITY_WEIGHTS = { critical: 3, recommended: 2, optional: 1 } as const;
+/** Weight for score calculation: critical=3, required=2 */
+const SEVERITY_WEIGHTS = { critical: 3, required: 2 } as const;
 
 /**
  * Run gap analysis against the ProtoLabs gold standard.
@@ -266,14 +266,14 @@ export function analyzeGaps(
     addCompliant({ category: 'monorepo', title: 'pnpm', detail: 'Using pnpm as package manager' });
   }
 
-  // ===================== RECOMMENDED GAPS =====================
+  // ===================== REQUIRED GAPS =====================
 
   // --- Turborepo ---
   if (research.monorepo.isMonorepo && research.monorepo.tool !== 'turbo') {
     addGap({
       id: 'turborepo',
       category: 'monorepo',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing Turborepo',
       current: research.monorepo.tool
         ? `Using ${research.monorepo.tool}`
@@ -296,7 +296,7 @@ export function analyzeGaps(
     addGap({
       id: 'prettier',
       category: 'quality',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing Prettier',
       current: 'No code formatter configured',
       target: 'Prettier with consistent configuration',
@@ -313,7 +313,7 @@ export function analyzeGaps(
     addGap({
       id: 'storybook',
       category: 'frontend',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing Storybook',
       current: 'No component development environment',
       target: 'Storybook 10+ with nextjs-vite adapter',
@@ -334,7 +334,7 @@ export function analyzeGaps(
     addGap({
       id: 'shadcn',
       category: 'frontend',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing shadcn/ui',
       current: 'No component library',
       target: 'shadcn/ui with Radix primitives',
@@ -355,7 +355,7 @@ export function analyzeGaps(
     addGap({
       id: 'tailwind',
       category: 'frontend',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing Tailwind CSS',
       current: 'No utility-first CSS framework',
       target: 'Tailwind CSS 4',
@@ -376,7 +376,7 @@ export function analyzeGaps(
     addGap({
       id: 'playwright',
       category: 'testing',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing Playwright E2E tests',
       current: 'No E2E testing framework',
       target: 'Playwright for end-to-end testing',
@@ -397,7 +397,7 @@ export function analyzeGaps(
     addGap({
       id: 'eslint',
       category: 'quality',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing ESLint',
       current: 'No linter configured',
       target: 'ESLint 9 with flat config and typescript-eslint strict',
@@ -413,7 +413,7 @@ export function analyzeGaps(
       addGap({
         id: 'eslint-v9',
         category: 'quality',
-        severity: 'recommended',
+        severity: 'required',
         title: 'ESLint needs upgrade to v9 flat config',
         current: `ESLint ${research.codeQuality.eslintVersion} (legacy config)`,
         target: 'ESLint 9 with flat config',
@@ -431,7 +431,7 @@ export function analyzeGaps(
     addGap({
       id: 'pre-commit-hooks',
       category: 'quality',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing pre-commit hooks',
       current: research.codeQuality.hasHusky
         ? 'Husky installed but no lint-staged'
@@ -454,7 +454,7 @@ export function analyzeGaps(
     addGap({
       id: 'discord',
       category: 'automation',
-      severity: 'recommended',
+      severity: 'required',
       title: 'No Discord project channels',
       current: 'No Discord integration',
       target: 'Discord category with #general, #updates, #dev channels',
@@ -475,7 +475,7 @@ export function analyzeGaps(
     addGap({
       id: 'coderabbit',
       category: 'ci',
-      severity: 'recommended',
+      severity: 'required',
       title: 'Missing CodeRabbit AI review',
       current: 'No AI code review',
       target: 'CodeRabbit as required CI check',
@@ -492,7 +492,7 @@ export function analyzeGaps(
     addGap({
       id: 'analytics',
       category: 'automation',
-      severity: 'recommended',
+      severity: 'required',
       title: 'No privacy-friendly analytics',
       current: 'No analytics tracking',
       target: 'Umami analytics (self-hosted or cloud)',
@@ -508,7 +508,7 @@ export function analyzeGaps(
     });
   }
 
-  // ===================== OPTIONAL GAPS =====================
+  // ===================== REQUIRED GAPS (continued) =====================
 
   // --- Payload CMS ---
   if (
@@ -519,7 +519,7 @@ export function analyzeGaps(
     addGap({
       id: 'payload',
       category: 'backend',
-      severity: 'optional',
+      severity: 'required',
       title: 'No CMS for database-backed project',
       current: `Database: ${research.backend.database}, no CMS`,
       target: 'Payload CMS 3.x for content management',
@@ -534,7 +534,7 @@ export function analyzeGaps(
     addGap({
       id: 'mcp-servers',
       category: 'agents',
-      severity: 'optional',
+      severity: 'required',
       title: 'No MCP servers',
       current: 'No Model Context Protocol servers',
       target: 'Domain-specific MCP server in packages/',
@@ -555,7 +555,7 @@ export function analyzeGaps(
     addGap({
       id: 'agent-sdk',
       category: 'agents',
-      severity: 'optional',
+      severity: 'required',
       title: 'No agent framework',
       current: 'No Claude SDK or LangGraph',
       target: 'Claude Agent SDK or LangGraph integration',
@@ -576,7 +576,7 @@ export function analyzeGaps(
     addGap({
       id: 'python-ruff',
       category: 'python',
-      severity: 'optional',
+      severity: 'required',
       title: 'Python services missing Ruff linter',
       current: research.python.hasBlack ? 'Using Black (formatter only)' : 'No Python linter',
       target: 'Ruff for fast Python linting and formatting',
@@ -591,7 +591,7 @@ export function analyzeGaps(
     addGap({
       id: 'python-pytest',
       category: 'python',
-      severity: 'optional',
+      severity: 'required',
       title: 'Python services missing pytest',
       current: 'No Python test framework',
       target: 'pytest with coverage',
@@ -612,7 +612,7 @@ export function analyzeGaps(
       overallScore: 100,
       gaps: [],
       compliant,
-      summary: { critical: 0, recommended: 0, optional: 0, compliant: compliant.length },
+      summary: { critical: 0, required: 0, compliant: compliant.length },
     };
   }
 
@@ -633,8 +633,7 @@ export function analyzeGaps(
 
   const summary = {
     critical: gaps.filter((g) => g.severity === 'critical').length,
-    recommended: gaps.filter((g) => g.severity === 'recommended').length,
-    optional: gaps.filter((g) => g.severity === 'optional').length,
+    required: gaps.filter((g) => g.severity === 'required').length,
     compliant: compliant.length,
   };
 

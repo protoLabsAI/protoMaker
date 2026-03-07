@@ -35,8 +35,7 @@ export function generateReport(options: ReportOptions): string {
 
   // Group gaps by severity
   const criticalGaps = report.gaps.filter((g) => g.severity === 'critical');
-  const recommendedGaps = report.gaps.filter((g) => g.severity === 'recommended');
-  const optionalGaps = report.gaps.filter((g) => g.severity === 'optional');
+  const requiredGaps = report.gaps.filter((g) => g.severity === 'required');
 
   // Build tech stack summary
   const techStack: string[] = [];
@@ -218,12 +217,8 @@ export function generateReport(options: ReportOptions): string {
               <div class="text-xs text-zinc-500 mt-1">Critical Gaps</div>
             </div>
             <div class="rounded-lg border border-white/5 p-4" style="background: rgba(250, 204, 21, 0.06)">
-              <div class="text-3xl font-bold font-mono text-yellow-400">${report.summary.recommended}</div>
-              <div class="text-xs text-zinc-500 mt-1">Recommended</div>
-            </div>
-            <div class="rounded-lg border border-white/5 p-4" style="background: rgba(96, 165, 250, 0.06)">
-              <div class="text-3xl font-bold font-mono text-blue-400">${report.summary.optional}</div>
-              <div class="text-xs text-zinc-500 mt-1">Optional</div>
+              <div class="text-3xl font-bold font-mono text-yellow-400">${report.summary.required}</div>
+              <div class="text-xs text-zinc-500 mt-1">Required</div>
             </div>
             <div class="rounded-lg border border-white/5 p-4" style="background: rgba(74, 222, 128, 0.06)">
               <div class="text-3xl font-bold font-mono text-green-400">${report.summary.compliant}</div>
@@ -292,23 +287,23 @@ export function generateReport(options: ReportOptions): string {
       }
 
       ${
-        recommendedGaps.length > 0
+        requiredGaps.length > 0
           ? `
-      <!-- Recommended Gaps -->
+      <!-- Required Gaps -->
       <div class="mb-8">
         <h3 class="text-base font-semibold text-yellow-400 mb-3 flex items-center gap-2">
-          <span class="badge badge-amber">${recommendedGaps.length}</span>
-          Recommended Improvements
+          <span class="badge badge-amber">${requiredGaps.length}</span>
+          Required
         </h3>
         <div class="space-y-3">
-          ${recommendedGaps
+          ${requiredGaps
             .map(
               (gap, index) => `
-          <div class="gap-card border-l-2 border-yellow-500/60 rounded-lg p-4" style="background: rgba(250, 204, 21, 0.04)" data-gap-id="recommended-${index}">
+          <div class="gap-card border-l-2 border-yellow-500/60 rounded-lg p-4" style="background: rgba(250, 204, 21, 0.04)" data-gap-id="required-${index}">
             <div class="flex items-start justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="badge badge-amber">Recommended</span>
+                  <span class="badge badge-amber">Required</span>
                   <span class="font-medium text-zinc-200">${gap.title}</span>
                 </div>
               </div>
@@ -322,51 +317,6 @@ export function generateReport(options: ReportOptions): string {
                 <div><span class="text-zinc-500">Target:</span> <span class="text-zinc-300">${gap.target}</span></div>
                 <div class="flex flex-wrap gap-2 mt-3">
                   <span class="badge badge-amber">${gap.effort} effort</span>
-                  <span class="badge" style="background: rgba(255,255,255,0.05); color: #71717a">${gap.category}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          `
-            )
-            .join('\n          ')}
-        </div>
-      </div>
-      `
-          : ''
-      }
-
-      ${
-        optionalGaps.length > 0
-          ? `
-      <!-- Optional Gaps -->
-      <div class="mb-8">
-        <h3 class="text-base font-semibold text-blue-400 mb-3 flex items-center gap-2">
-          <span class="badge badge-blue">${optionalGaps.length}</span>
-          Optional Enhancements
-        </h3>
-        <div class="space-y-3">
-          ${optionalGaps
-            .map(
-              (gap, index) => `
-          <div class="gap-card border-l-2 border-blue-500/60 rounded-lg p-4" style="background: rgba(96, 165, 250, 0.04)" data-gap-id="optional-${index}">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="badge badge-blue">Optional</span>
-                  <span class="font-medium text-zinc-200">${gap.title}</span>
-                </div>
-              </div>
-              <svg class="expand-icon w-5 h-5 text-zinc-500 flex-shrink-0 ml-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="gap-details">
-              <div class="text-sm mt-3 pt-3 border-t border-white/5 space-y-2">
-                <div><span class="text-zinc-500">Current:</span> <span class="text-zinc-300">${gap.current}</span></div>
-                <div><span class="text-zinc-500">Target:</span> <span class="text-zinc-300">${gap.target}</span></div>
-                <div class="flex flex-wrap gap-2 mt-3">
-                  <span class="badge badge-blue">${gap.effort} effort</span>
                   <span class="badge" style="background: rgba(255,255,255,0.05); color: #71717a">${gap.category}</span>
                 </div>
               </div>

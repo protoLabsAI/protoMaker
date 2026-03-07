@@ -70,13 +70,11 @@ const MILESTONE_DEFS: { title: string; gapIds: string[] }[] = [
 function severityToPriority(severity: string): number {
   switch (severity) {
     case 'critical':
-      return 1; // Urgent
-    case 'recommended':
-      return 2; // High
-    case 'optional':
-      return 3; // Normal
+      return 1;
+    case 'required':
+      return 2;
     default:
-      return 3;
+      return 2;
   }
 }
 

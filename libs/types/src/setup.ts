@@ -129,7 +129,7 @@ export type GapCategory =
   | 'agents'
   | 'python';
 
-export type GapSeverity = 'critical' | 'recommended' | 'optional';
+export type GapSeverity = 'critical' | 'required';
 
 export type GapEffort = 'small' | 'medium' | 'large';
 
@@ -160,8 +160,7 @@ export interface GapAnalysisReport {
 
   summary: {
     critical: number;
-    recommended: number;
-    optional: number;
+    required: number;
     compliant: number;
   };
 }

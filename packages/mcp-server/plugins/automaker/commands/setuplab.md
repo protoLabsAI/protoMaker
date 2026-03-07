@@ -1,6 +1,6 @@
 ---
 name: setuplab
-description: Point at any repo — scan it, measure the gap against our gold standard, initialize automation, and propose alignment work. The entry point for onboarding projects to protoLabs Studio. Accepts either a git URL or a local path.
+description: Point at any repo — scan it, measure the gap against our gold standard, initialize automation, and create alignment work. The entry point for onboarding projects to protoLabs Studio. Accepts either a git URL or a local path.
 argument-hint: <git URL or project path>
 allowed-tools:
   - AskUserQuestion
@@ -28,26 +28,17 @@ allowed-tools:
 model: sonnet
 ---
 
-# /setuplab — protoLabs Studio Project Onboarding Pipeline
+# /setuplab — protoLabs Studio Project Onboarding
 
-You are the protoLabs Studio setup orchestrator. Your job is to take any repository, assess its current state against **our gold standard**, and bring it into the protoLabs Studio system.
+You are the protoLabs Studio setup orchestrator. Your job is to take any repository, assess its current state against **our gold standard**, and bring it into alignment.
 
-**This is prescriptive, not adaptive.** We define the standard, measure the gap, and propose the alignment work. We don't accommodate — we upgrade.
+**This is prescriptive, not adaptive.** We define the standard, measure the gap, and create the alignment work. People adapt to us, not vice versa.
 
 ## Multi-Project Awareness
 
 setuplab onboards projects into the protoLabs Studio ecosystem. Each project gets its own `.automaker/` configuration at the project root, making it independently manageable by Ava and other protoLabs agents.
 
 **Every MCP tool call requires `projectPath`.** After resolving the target project path, pass it explicitly to every `mcp__plugin_protolabs_studio__*` call.
-
-**What setuplab creates:**
-
-- `{projectPath}/.automaker/` — Project automation root (features, context, settings, spec)
-- `{projectPath}/.automaker/context/` — AI agent coding rules and conventions (tailored to detected stack)
-- `{projectPath}/.automaker/settings.json` — Workflow config (git settings, model preferences)
-- `{projectPath}/.automaker/spec.md` — Project specification
-
-Once initialized, the project is ready for `/ava <projectPath>` to manage it.
 
 ## Our Gold Standard
 
@@ -67,254 +58,158 @@ Once initialized, the project is ready for `/ava <projectPath>` to manage it.
 
 ## Pipeline Flow
 
-Execute these phases in order, presenting results to the user between phases.
+Execute these phases in order, presenting results between phases.
 
 ### Phase 1: Health Check & Path Resolution
 
-1. Verify protoLabs Studio server is running:
+1. Verify server:
 
    ```
    mcp__plugin_protolabs_studio__health_check()
    ```
 
-   If down, tell the user: "protoLabs Studio server is not running. Start it with `npm run dev` in the protoMaker directory."
-
-2. Resolve the project path from the user's argument:
-   - **If argument is a git URL** (starts with `https://`, `git@`, or ends with `.git`):
-     - Use `mcp__plugin_protolabs_studio__clone_repo({ gitUrl })` to clone to `./labs/{repo-name}/`
-     - The tool returns `{ success: true, path: "/absolute/path/to/labs/repo-name", message: "..." }`
-     - Use the returned path as `projectPath` for all subsequent phases
-     - Present to user: "Cloned {gitUrl} to {path}"
-   - **If argument is a local path**:
-     - Resolve to absolute path (handle `~` expansion and relative paths)
-     - Validate the path exists and is a directory
+2. Resolve path from user argument:
+   - **Git URL** (starts with `https://`, `git@`, or ends with `.git`):
+     - `mcp__plugin_protolabs_studio__clone_repo({ gitUrl })` → clone to `./labs/{repo-name}/`
+     - Use returned path as `projectPath`
+   - **Local path**: resolve to absolute, validate exists
    - If not provided, ask the user
 
 ### Phase 2: Repository Research
-
-Scan the target repo to understand its current state:
 
 ```
 mcp__plugin_protolabs_studio__research_repo({ projectPath })
 ```
 
-**Present results to the user:**
+Present results:
 
 ```markdown
 ## Repository Research: {projectName}
 
-**Git:** {isRepo ? remoteUrl : "Not a git repo"}
+**Git:** {remoteUrl}
 **Package Manager:** {packageManager}
 **Monorepo:** {isMonorepo ? tool : "No"}
 
 ### Detected Stack
 
-- **Frontend:** {framework} {reactVersion} + {metaFramework} {metaFrameworkVersion}
-- **Styling:** {hasTailwind ? "Tailwind " + tailwindVersion : "None"} | {hasShadcn ? "shadcn/ui" : "No shadcn"}
-- **Backend:** {hasExpress ? "Express" : ""} {hasPayload ? "Payload " + payloadVersion : ""} {database}
-- **Testing:** {hasVitest ? "Vitest" : ""} {hasPlaywright ? "Playwright" : ""} {hasJest ? "Jest (legacy)" : ""}
-- **CI/CD:** {hasCI ? provider + " (" + workflows.length + " workflows)" : "None"}
-- **Quality:** {hasTypeScript ? "TS " + tsVersion + (tsStrict ? " strict" : "") : "No TS"} | {hasESLint ? "ESLint " + eslintVersion : "No ESLint"} | {hasPrettier ? "Prettier" : "No Prettier"}
-- **Automation:** {hasAutomaker ? ".automaker (already initialized)" : "No .automaker"}
+- **Frontend:** {framework} | **Styling:** {tailwind/shadcn}
+- **Backend:** {express/payload} | **Database:** {database}
+- **Testing:** {vitest/playwright/jest}
+- **CI/CD:** {provider} ({workflows} workflows)
+- **Quality:** {TS version} {strict?} | {ESLint} | {Prettier}
+- **Automation:** {.automaker status}
 ```
 
-### Phase 3: Gap Analysis & Report Generation
-
-Compare against our standard:
+### Phase 3: Gap Analysis & Report
 
 ```
 mcp__plugin_protolabs_studio__analyze_gaps({ projectPath, research })
-```
-
-Then generate an HTML report and auto-open it:
-
-```
 mcp__plugin_protolabs_studio__generate_report({ projectPath, research, report })
 ```
 
-This will create an HTML report at `{projectPath}/.automaker/gap-report.html` and automatically open it in the default browser.
-
-**Present the gap report:**
+Present the gap report:
 
 ```markdown
 ## Gap Analysis — {overallScore}% aligned
 
 ### Summary
 
-- **Critical:** {summary.critical} (must fix for agents to work)
-- **Recommended:** {summary.recommended} (needed for full automation)
-- **Optional:** {summary.optional} (nice to have)
+- **Critical:** {summary.critical} (blocks agent execution)
+- **Required:** {summary.required} (needed for full standard)
 - **Compliant:** {summary.compliant} (already meets standard)
 
 ### Critical Gaps
 
-{for each critical gap:}
-| {title} | Current: {current} | Target: {target} | Effort: {effort} |
+| Gap | Current | Target | Effort |
+| --- | ------- | ------ | ------ |
 
-### Recommended Gaps
+{for each critical gap}
 
-{for each recommended gap:}
-| {title} | Current: {current} | Target: {target} | Effort: {effort} |
+### Required Gaps
 
-### Optional Gaps
+| Gap | Current | Target | Effort |
+| --- | ------- | ------ | ------ |
 
-{for each optional gap:}
-| {title} | Current: {current} | Target: {target} | Effort: {effort} |
-
-### Already Compliant
-
-{for each compliant item:}
-
-- {title}: {detail}
+{for each required gap}
 ```
 
-### Phase 4: Interactive Scope Selection
+### Phase 4: Initialize
 
-Present the user with alignment scope options:
-
-```
-AskUserQuestion:
-  header: "Alignment"
-  question: "How would you like to proceed with alignment?"
-  options:
-    - label: "Full alignment"
-      description: "Initialize .automaker, create all alignment features"
-    - label: "Critical only"
-      description: "Initialize automation and create features for critical gaps only"
-    - label: "Report only"
-      description: "Just view the HTML report, don't initialize automation yet"
-```
-
-- **Full alignment**: Proceed with Phases 5-6, create all alignment features
-- **Critical only**: Proceed with Phases 5-6, but only create features for critical gaps when calling propose_alignment
-- **Report only**: Stop here, user can review the HTML report and run `/setuplab` again later
-
-### Phase 5: Initialize
-
-**5a. protoLabs Studio Init:**
+**4a. protoLabs Studio Init:**
 
 ```
 mcp__plugin_protolabs_studio__setup_lab({ projectPath })
 ```
 
-Then create tailored context files based on research results:
+Create tailored context files from research:
 
-- Create `.automaker/context/CLAUDE.md` with project-specific commands, architecture notes, and conventions detected from research
-- Create `.automaker/context/coding-rules.md` with rules appropriate for the detected tech stack (TypeScript, React, Python as applicable)
-- Update `.automaker/spec.md` with a project overview generated from research data
+- `.automaker/context/CLAUDE.md` — project-specific commands, architecture, conventions
+- `.automaker/context/coding-rules.md` — rules for detected tech stack
+- `.automaker/spec.md` — project overview from research data
 
-Use `mcp__plugin_protolabs_studio__create_context_file` and `mcp__plugin_protolabs_studio__update_project_spec` to write these.
+Use `create_context_file` and `update_project_spec`.
 
-**5b. Discord Provisioning (ask first):**
+**4b. Discord Provisioning (ask first):**
 
-```
-AskUserQuestion:
-  header: "Discord"
-  question: "Set up Discord channels for this project?"
-  options:
-    - label: "Yes"
-      description: "Create category with #general, #updates, #dev channels"
-    - label: "Skip"
-      description: "No Discord integration for now"
-```
+Ask if the user wants Discord channels. If yes, create category with #general, #updates, #dev using Discord MCP tools.
 
-If yes, use the Discord MCP tools to create channels:
+### Phase 5: Create Alignment Work
 
-1. `mcp__plugin_protolabs_discord__discord_create_category({ guildId, name: projectName })`
-2. Create channels: general, updates, dev under the category
-3. Create webhook on updates channel
-
-### Phase 6: Propose Alignment Work
-
-Generate the alignment proposal:
+Generate and create ALL alignment features — no scope selection, no filtering:
 
 ```
-mcp__plugin_protolabs_studio__propose_alignment({ projectPath, gapAnalysis })
+mcp__plugin_protolabs_studio__propose_alignment({ projectPath, gapAnalysis, autoCreate: true })
 ```
 
-**Present the proposal:**
+Present the proposal:
 
 ```markdown
-## Alignment Proposal — {totalFeatures} features across {milestones.length} milestones
-
-### Estimated Effort
-
-- Small: {estimatedEffort.small} features
-- Medium: {estimatedEffort.medium} features
-- Large: {estimatedEffort.large} features
+## Alignment Work — {totalFeatures} features across {milestones.length} milestones
 
 {for each milestone:}
 
-### Milestone: {title}
+### {title}
 
 {for each feature:}
 
-- [{complexity}] {title} (Priority: {priority})
-  {description (first line)}
+- [{complexity}] {title}
 ```
 
-Ask if the user wants to create these features:
+Create features on the board:
 
-```
-AskUserQuestion:
-  header: "Create features"
-  question: "Create these {totalFeatures} alignment features on the board?"
-  options:
-    - label: "Create all"
-      description: "Create all features with milestones and dependencies"
-    - label: "Critical only"
-      description: "Only create features for critical gaps"
-    - label: "Skip"
-      description: "Don't create features yet"
-```
+1. Create an epic for each milestone with `create_feature` (`isEpic: true`)
+2. Create individual features under each epic
+3. Set up dependencies between milestones with `set_feature_dependencies`
 
-If approved, create features on the board:
-
-1. Create an epic for each milestone using `create_feature` with `isEpic: true`
-2. Create individual features under each epic with proper descriptions and complexity
-3. Set up dependencies between milestones using `set_feature_dependencies`:
-   - Quality Gates depends on Foundation
-   - Testing depends on Foundation
-   - UI & Components has no hard dependencies
-   - Automation & Agents depends on Quality Gates
-
-### Phase 7: Summary
+### Phase 6: Summary
 
 ```markdown
 ## Setup Complete
 
 **Project:** {projectName}
 **Path:** {projectPath}
-{if cloned:}**Cloned from:** {gitUrl}
 **Alignment Score:** {overallScore}%
 
 ### What was done:
 
-{if cloned:}- Cloned repository from {gitUrl}
-
 - Scanned repository structure and tech stack
 - Analyzed {gaps.length} gaps against protoLabs standard
-- Generated HTML gap report (opened in browser)
+- Generated HTML gap report
 - Initialized .automaker/ with tailored context files
-  {if discord provisioned:}- Created Discord channels
-  {if features created:}- Created {featuresCreated} alignment features on the board
+- Created {featuresCreated} alignment features on the board
 
 ### Next Steps:
 
-1. Review the gap report in your browser
-2. Review the board: `/board {projectPath}`
-3. Start agents on alignment work: `/auto-mode start {projectPath}`
-4. Monitor progress: `/board {projectPath}`
-5. Manage the project: `/ava {projectPath}`
-6. Customize context: `/context {projectPath}`
+1. Review the board: `/board`
+2. Start agents: `/auto-mode start`
+3. Plan new work: `/plan-project`
+4. Manage the project: `/ava`
 ```
 
 ## Important Notes
 
-- **Phases 1-4 are non-destructive.** They scan, report, and propose. No code changes.
-- **Phase 5 creates files** (.automaker/) but doesn't modify existing code.
-- **Phase 6 creates board features** but doesn't execute them.
-- **Actual code changes** only happen when agents are started (Phase 7 next steps).
-- Always present results between phases so the user stays informed.
-- If any phase fails, show the error and ask if the user wants to continue with remaining phases.
-- All `projectPath` references are resolved once in Phase 1 and reused throughout — never assume CWD.
+- **Phases 1-3 are non-destructive.** Scan, report, and analyze only.
+- **Phase 4 creates .automaker/ files** but doesn't modify existing code.
+- **Phase 5 creates board features** but doesn't execute them.
+- **Actual code changes** only happen when agents are started.
+- All `projectPath` references are resolved once in Phase 1 and reused throughout.
