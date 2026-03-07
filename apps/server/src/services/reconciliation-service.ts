@@ -384,15 +384,8 @@ export class ReconciliationService {
         logger.info(
           `Resetting in-flight feature ${featureId} to backlog (was "${feature.status}")`
         );
+        // feature:status-changed is auto-emitted by featureLoader.update()
         await this.featureLoader.update(projectPath, featureId, { status: 'backlog' });
-
-        // Emit status-changed event so clients reflect the corrected state
-        this.events.emit('feature:status-changed', {
-          projectPath,
-          featureId,
-          previousStatus: feature.status,
-          newStatus: 'backlog',
-        });
       } catch (error) {
         logger.error(`Failed to recover feature ${featureId} during startup:`, error);
       }
