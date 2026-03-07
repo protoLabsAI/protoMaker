@@ -193,6 +193,7 @@ export async function orchestrateProjectFeatures(
           isFoundation: phase.number === 1,
           projectSlug,
           milestoneSlug: milestone.slug,
+          phaseSlug: phase.name,
         });
 
         result.phaseFeatureMap[phaseKey] = feature.id;

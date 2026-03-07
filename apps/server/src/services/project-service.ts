@@ -426,6 +426,7 @@ export class ProjectService {
           isEpic: true,
           branchName: `epic/${slugify(milestone.title, 30)}`,
           projectSlug,
+          milestoneSlug: milestone.slug,
         });
         epicId = epicFeature.id;
         epicIds.push(epicId);
@@ -453,6 +454,8 @@ export class ProjectService {
           epicId,
           dependencies,
           projectSlug,
+          milestoneSlug: milestone.slug,
+          phaseSlug: phase.name,
         });
 
         featureIds.push(feature.id);
