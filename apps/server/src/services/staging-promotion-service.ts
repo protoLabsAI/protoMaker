@@ -187,7 +187,7 @@ export class StagingPromotionService {
    *    continues with remaining candidates.
    * 4. Pushes the promotion branch to origin.
    * 5. Creates a PR from the promotion branch into staging (via gh cli).
-   * 6. Enables auto-merge on the staging PR (--squash).
+   * 6. Enables auto-merge on the staging PR (--merge commit).
    * 7. Updates each successfully cherry-picked candidate to status=promoted
    *    and sets batch.stagingPrUrl.
    */
@@ -288,7 +288,7 @@ export class StagingPromotionService {
     if (prNumber && /^\d+$/.test(prNumber)) {
       logger.info(`[batch=${batch.batchId}] Enabling auto-merge on staging PR #${prNumber}`);
       try {
-        await execFileAsync('gh', ['pr', 'merge', '--auto', '--squash', prNumber], {
+        await execFileAsync('gh', ['pr', 'merge', '--auto', '--merge', prNumber], {
           cwd: projectPath,
         });
       } catch (err) {
