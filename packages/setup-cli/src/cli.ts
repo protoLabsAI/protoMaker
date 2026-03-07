@@ -109,8 +109,7 @@ function displaySummary(
   const { summary, overallScore } = report;
 
   // Score line
-  const scoreColor =
-    overallScore >= 80 ? c.green : overallScore >= 60 ? c.yellow : c.red;
+  const scoreColor = overallScore >= 80 ? c.green : overallScore >= 60 ? c.yellow : c.red;
   clack.log.info(
     `${c.bold('Score:')} ${scoreColor(overallScore + '%')}  ` +
       `${c.red(summary.critical + ' critical')}  ` +
@@ -230,9 +229,7 @@ async function main(): Promise<void> {
         await open(reportPath);
         clack.log.info(pc.dim('Opening report in browser…'));
       } catch {
-        clack.log.warn(
-          pc.yellow(`Could not open browser. View report at: ${pc.cyan(reportPath)}`)
-        );
+        clack.log.warn(pc.yellow(`Could not open browser. View report at: ${pc.cyan(reportPath)}`));
       }
     }
 
