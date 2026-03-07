@@ -1,5 +1,54 @@
 # @protolabsai/model-resolver
 
+## 0.41.0
+
+### Minor Changes
+
+- ### Features
+  - add Todo UI view with sidebar entry and keyboard shortcut (#1913)
+  - add get_sitrep MCP tool for unified operational status
+  - add Todo types, service, routes, and unit tests
+  - e2e pipeline hardening — dedup persistence + staging CI guard
+
+  ### Bug Fixes
+  - changelog-artifact tests match staging API
+  - use poll-based assertions for async cascade tests
+  - ci failures for formatting and test stability
+  - update tests to match refactored service signatures
+  - add missing types for buildProtoConfig (scripts field, MilestoneSummary, ProjectSummary)
+  - add missing buildProtoConfig function and platform proto-config exports
+  - lazy-load yaml in proto-config to fix ESM/CJS crash
+  - strip large stale fields from get_settings MCP response
+  - prevent escalation loop by guarding dep-unblock against agent failures
+  - local rebase fallback for auto-rebase maintenance task
+  - enable auto-merge on all PR creation paths
+  - escalate no-explicit-any to error in source files
+  - gitignore .automaker-lock to stop rebase conflicts
+  - format todo UI files to pass prettier check
+  - mount todo routes at /api/todos to match UI client paths
+  - prevent REVIEW→REVIEW self-transition loop from exhausting state machine budget
+  - inbox badge shows unread count instead of pending count
+  - add phaseSlug field to Feature type
+  - pass milestoneSlug + phaseSlug in both project services
+  - rename sidebar Content label back to Notes + update CRDT project constraints
+  - set milestoneSlug on features created by orchestrateProjectFeatures (#1909)
+  - auto-clear stale agent context after server shutdown (resume trap)
+  - use --merge for staging promotion auto-merge to preserve DAG
+  - add .automaker-lock to tsx watch ignore list
+  - disable false-positive auto-mode completion Discord notification
+  - bump express-rate-limit to 8.3.0 for CVE fix
+
+  ### Refactors
+  - EventLedgerService implementation (#1893)
+  - Bug: Project creation pipeline missing milestone persistence step (#1886)
+  - Add update_project tool to Ava UI chat surface (#1887)
+  - Feature scaffolding tests (#1888)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.41.0
+
 ## 0.40.6
 
 ### Patch Changes

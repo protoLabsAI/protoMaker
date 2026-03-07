@@ -133,15 +133,57 @@ export const normalizeConfigDocument: SchemaNormalizer<ConfigDocument> = (raw) =
 };
 
 // ---------------------------------------------------------------------------
+// SharedSettings domain
+// ---------------------------------------------------------------------------
+
+/**
+ * SharedSettingsDocument stores settings that should propagate across
+ * all instances in a hive. Credentials and API keys MUST NOT be included.
+ *
+ * Resolution order (lowest → highest priority):
+ *   proto.config defaults < shared CRDT settings < local .automaker/settings.json
+ *
+ * Use document id="shared" within the 'settings' domain.
+ */
+export interface SharedSettingsDocument extends CRDTDocumentRoot {
+  schemaVersion: 1;
+  /**
+   * Shared settings payload. Keys map to project settings fields that are
+   * safe to propagate: phaseModelOverrides, maxConcurrency, workflow tuning.
+   * Credentials, API keys, and UI-only preferences are excluded.
+   */
+  settings: Record<string, unknown>;
+  updatedAt: string;
+}
+
+export const normalizeSharedSettingsDocument: SchemaNormalizer<SharedSettingsDocument> = (raw) => {
+  const doc = raw as Partial<SharedSettingsDocument>;
+
+  const _meta = doc._meta ?? {
+    instanceId: 'unknown',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    schemaVersion: 1,
+    _meta,
+    settings: doc.settings ?? {},
+    updatedAt: doc.updatedAt ?? _meta.updatedAt,
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Normalizer registry
 // ---------------------------------------------------------------------------
 
-type AnyDocument = FeatureDocument | ProjectDocument | ConfigDocument;
+type AnyDocument = FeatureDocument | ProjectDocument | ConfigDocument | SharedSettingsDocument;
 
 const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   features: normalizeFeatureDocument as SchemaNormalizer<AnyDocument>,
   projects: normalizeProjectDocument as SchemaNormalizer<AnyDocument>,
   config: normalizeConfigDocument as SchemaNormalizer<AnyDocument>,
+  settings: normalizeSharedSettingsDocument as SchemaNormalizer<AnyDocument>,
 };
 
 /**

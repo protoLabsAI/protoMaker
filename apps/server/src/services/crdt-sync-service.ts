@@ -37,7 +37,18 @@ interface PeerMessage {
   priority?: number;
 }
 
-type SyncMessage = PeerMessage | CrdtFeatureEvent;
+/**
+ * Wire message carrying shared settings from one instance to all peers.
+ * Credentials and API keys MUST NOT be included in the settings payload.
+ */
+interface CrdtSettingsEvent {
+  type: 'settings_event';
+  instanceId: string;
+  settings: Record<string, unknown>;
+  timestamp: string;
+}
+
+type SyncMessage = PeerMessage | CrdtFeatureEvent | CrdtSettingsEvent;
 
 interface TrackedPeer extends HivemindPeer {
   ws?: WebSocket;
@@ -62,9 +73,45 @@ export class CrdtSyncService {
   private selfPriority = -1;
   private promotionPending = false;
   private _eventBus: EventEmitter | null = null;
+  private _settingsCallback: ((settings: Record<string, unknown>) => void) | null = null;
 
   constructor() {
     this.instanceId = os.hostname();
+  }
+
+  /**
+   * Register a callback invoked when shared settings arrive from a remote peer.
+   * The callback receives a plain settings record (never contains credentials).
+   * Call this before `start()`.
+   */
+  onSettingsReceived(callback: (settings: Record<string, unknown>) => void): void {
+    this._settingsCallback = callback;
+  }
+
+  /**
+   * Broadcast shared settings to all connected peers.
+   * Credentials and API keys MUST NOT be included in the settings object.
+   */
+  publishSettings(settings: Record<string, unknown>): void {
+    if (!this.started) return;
+
+    const msg: CrdtSettingsEvent = {
+      type: 'settings_event',
+      instanceId: this.instanceId,
+      settings,
+      timestamp: new Date().toISOString(),
+    };
+    const raw = JSON.stringify(msg);
+
+    if (this.role === 'primary') {
+      this._broadcastToServer(raw);
+    } else if (this.wsClient?.readyState === WebSocket.OPEN) {
+      try {
+        this.wsClient.send(raw);
+      } catch {
+        // Best effort
+      }
+    }
   }
 
   /**
@@ -643,6 +690,22 @@ export class CrdtSyncService {
         this._eventBus.emit(msg.eventType, msg.payload);
 
         // Primary relays feature events to all other connected workers.
+        if (this.role === 'primary') {
+          this._broadcastToServerExcept(JSON.stringify(msg), ws);
+        }
+        break;
+      }
+      case 'settings_event': {
+        // Ignore settings from this instance to prevent feedback loops.
+        if (msg.instanceId === this.instanceId) break;
+
+        logger.debug(`[CRDT] Received remote settings update from ${msg.instanceId}`);
+
+        if (this._settingsCallback) {
+          this._settingsCallback(msg.settings);
+        }
+
+        // Primary relays settings events to all other connected workers.
         if (this.role === 'primary') {
           this._broadcastToServerExcept(JSON.stringify(msg), ws);
         }
