@@ -692,15 +692,24 @@ export class FeatureScheduler {
               );
             }
           } else {
+            // Don't unblock features that were blocked by agent failure / escalation.
+            // Only unblock features that were blocked because their dependencies weren't met.
+            const failureCount = feature.failureCount ?? 0;
+            const failureClassification = feature.failureClassification as
+              | { retryable?: boolean }
+              | undefined;
+            const isAgentFailureBlock =
+              failureCount >= 3 || failureClassification?.retryable === false;
             const changeReason = feature.statusChangeReason ?? '';
             const isGitWorkflowBlock =
               changeReason.includes('git commit') ||
               changeReason.includes('git workflow failed') ||
-              changeReason.includes('plan validation failed');
-            if (isGitWorkflowBlock) {
+              changeReason.includes('plan validation failed') ||
+              changeReason.includes('Max agent retries exceeded');
+            if (isAgentFailureBlock || isGitWorkflowBlock) {
               logger.warn(
                 `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
-                  `blocked after ${feature.failureCount ?? 0} git workflow failure(s). Requires human intervention.`
+                  `blocked after ${failureCount} failure(s) (retryable: ${failureClassification?.retryable ?? 'unknown'}). Requires human intervention.`
               );
               continue;
             }
