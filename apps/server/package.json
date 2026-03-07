@@ -27,6 +27,7 @@
     "@ai-sdk/anthropic": "^3.0.45",
     "@ai-sdk/react": "^3.0.92",
     "@anthropic-ai/claude-agent-sdk": "^0.2.36",
+    "@automerge/automerge": "^3.2.4",
     "@anthropic-ai/sdk": "^0.65.0",
     "@langchain/anthropic": "^0.3.34",
     "@langchain/core": "^0.3.80",
