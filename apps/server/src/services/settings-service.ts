@@ -53,6 +53,7 @@ import {
   migrateCursorModelIds,
   migrateOpencodeModelIds,
 } from '@protolabsai/types';
+import type { SharedSettings } from '@protolabsai/types';
 
 const logger = createLogger('SettingsService');
 
@@ -90,6 +91,29 @@ async function fileExists(filePath: string): Promise<boolean> {
  */
 async function writeSettingsJson(filePath: string, data: unknown): Promise<void> {
   await atomicWriteJson(filePath, data, { backupCount: DEFAULT_BACKUP_COUNT });
+}
+
+/**
+ * Apply shared settings fields onto a ProjectSettings base.
+ *
+ * Only the fields defined in SharedSettings are applied — credentials and
+ * UI-only preferences are never touched by this function.
+ */
+function applySharedSettings(base: ProjectSettings, shared: SharedSettings): ProjectSettings {
+  const result = { ...base };
+
+  if (shared.maxConcurrentAgents !== undefined) {
+    result.maxConcurrentAgents = shared.maxConcurrentAgents;
+  }
+
+  if (shared.workflow !== undefined) {
+    result.workflow = {
+      ...base.workflow,
+      ...shared.workflow,
+    } as ProjectSettings['workflow'];
+  }
+
+  return result;
 }
 
 /**
@@ -844,6 +868,49 @@ export class SettingsService {
       ...DEFAULT_PROJECT_SETTINGS,
       ...settings,
     };
+  }
+
+  /**
+   * Get the effective project settings by merging three layers in order:
+   *
+   *   proto.config defaults < shared CRDT settings < local .automaker/settings.json overrides
+   *
+   * The local file always wins. Shared CRDT settings override proto.config defaults.
+   * Credentials and API keys are never accepted in the shared settings layers.
+   *
+   * @param projectPath - Absolute path to project directory
+   * @param protoConfigDefaults - Optional shared settings from proto.config.yaml (lowest priority)
+   * @param sharedSettings - Optional shared settings from CRDT store (middle priority)
+   * @returns Promise resolving to merged ProjectSettings with local overrides applied last
+   */
+  async getEffectiveProjectSettings(
+    projectPath: string,
+    protoConfigDefaults?: SharedSettings,
+    sharedSettings?: SharedSettings
+  ): Promise<ProjectSettings> {
+    const localSettings = await this.getProjectSettings(projectPath);
+
+    // Start from defaults then apply each layer in priority order
+    let effective: ProjectSettings = { ...DEFAULT_PROJECT_SETTINGS };
+
+    // Layer 1: proto.config.yaml sharedSettings (lowest priority)
+    if (protoConfigDefaults) {
+      effective = applySharedSettings(effective, protoConfigDefaults);
+    }
+
+    // Layer 2: shared CRDT settings (middle priority)
+    if (sharedSettings) {
+      effective = applySharedSettings(effective, sharedSettings);
+    }
+
+    // Layer 3: local .automaker/settings.json (highest priority — always wins)
+    effective = {
+      ...effective,
+      ...localSettings,
+      version: PROJECT_SETTINGS_VERSION,
+    };
+
+    return effective;
   }
 
   /**

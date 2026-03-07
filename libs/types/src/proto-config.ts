@@ -136,6 +136,39 @@ export const ProtoAssignmentSchema = z.object({
 export type ProtoAssignment = z.infer<typeof ProtoAssignmentSchema>;
 
 // ---------------------------------------------------------------------------
+// Shared Settings — settings that propagate across instances via CRDT sync
+// ---------------------------------------------------------------------------
+
+/**
+ * SharedSettings defines which settings are eligible for cross-instance
+ * propagation. Credentials and API keys are NEVER included here.
+ *
+ * Resolution order: proto.config defaults < shared CRDT settings < local overrides
+ */
+export const SharedSettingsSchema = z.object({
+  /**
+   * Maximum concurrent agents across all projects on this hive.
+   * Maps to ProjectSettings.maxConcurrentAgents.
+   */
+  maxConcurrentAgents: z.number().int().min(1).optional(),
+  /** Shared workflow tuning parameters */
+  workflow: z
+    .object({
+      /** Maximum retries before escalation (default varies by implementation) */
+      maxRetries: z.number().int().min(0).optional(),
+      /** Whether to automatically commit after each agent step */
+      enableAutoCommit: z.boolean().optional(),
+      /** Whether to automatically open PRs after feature completion */
+      enableAutoPR: z.boolean().optional(),
+      /** Whether to skip validation phase in the pipeline */
+      skipValidation: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export type SharedSettings = z.infer<typeof SharedSettingsSchema>;
+
+// ---------------------------------------------------------------------------
 // Root ProtoConfig
 // ---------------------------------------------------------------------------
 
@@ -160,6 +193,12 @@ export const ProtoConfigSchema = z.object({
   instances: z.array(ProtoInstanceSchema).optional(),
   /** Work assignment strategy across instances */
   assignment: ProtoAssignmentSchema.optional(),
+  /**
+   * Shared settings defaults — lowest-priority layer in config resolution.
+   * These values are overridden by shared CRDT settings and local overrides.
+   * Credentials and API keys MUST NOT be placed here.
+   */
+  sharedSettings: SharedSettingsSchema.optional(),
 });
 
 export type ProtoConfig = z.infer<typeof ProtoConfigSchema>;

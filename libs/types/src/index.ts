@@ -890,6 +890,7 @@ export {
   ProtoHiveSchema,
   ProtoInstanceSchema,
   ProtoAssignmentSchema,
+  SharedSettingsSchema,
 } from './proto-config.js';
 export type {
   ProtoConfig,
@@ -901,6 +902,7 @@ export type {
   ProtoHive,
   ProtoInstance,
   ProtoAssignment,
+  SharedSettings,
 } from './proto-config.js';
 
 // PenFile types (vector graphics format v2.8)

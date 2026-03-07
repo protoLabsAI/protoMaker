@@ -15,9 +15,15 @@ export {
   normalizeFeatureDocument,
   normalizeProjectDocument,
   normalizeConfigDocument,
+  normalizeSharedSettingsDocument,
 } from './documents.js';
 
-export type { FeatureDocument, ProjectDocument, ConfigDocument } from './documents.js';
+export type {
+  FeatureDocument,
+  ProjectDocument,
+  ConfigDocument,
+  SharedSettingsDocument,
+} from './documents.js';
 
 export type {
   CRDTDocumentRoot,
