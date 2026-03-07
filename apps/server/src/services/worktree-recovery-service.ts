@@ -270,6 +270,22 @@ export async function checkAndRecoverUncommittedWork(
     result.prCreatedAt = new Date().toISOString();
     result.recovered = true;
 
+    // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
+    if (prNumber) {
+      try {
+        await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', '--squash'], {
+          cwd: worktreePath,
+          env: execEnv,
+        });
+        logger.info(`[PostAgentHook] Auto-merge enabled on PR #${prNumber}`);
+      } catch (autoMergeError) {
+        logger.warn(
+          `[PostAgentHook] Failed to enable auto-merge on PR #${prNumber}:`,
+          autoMergeError
+        );
+      }
+    }
+
     logger.info(
       `[PostAgentHook] Recovery successful for feature ${feature.id}: PR created at ${prUrl}`
     );
