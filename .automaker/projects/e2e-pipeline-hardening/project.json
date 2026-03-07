@@ -1,0 +1,110 @@
+{
+  "slug": "e2e-pipeline-hardening",
+  "title": "E2E Pipeline Hardening",
+  "goal": "Fix the 3 known durability and enforcement gaps in the idea-to-production pipeline: completion event dedup loses state on restart causing double-ceremonies, ceremony dedup loses state on restart causing double-retros, and no CI enforcement preventing arbitrary branches from targeting staging.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-completiondetector-durability",
+      "title": "CompletionDetector Durability",
+      "description": "Persist epic/milestone/project completion dedup state to disk so server restarts do not re-fire completion events and ceremonies.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "persist-and-reload-completiondetector-dedup-state",
+          "title": "Persist and reload CompletionDetector dedup state",
+          "description": "Add a JSONL sidecar file (data/ledger/completion-emitted.jsonl) that records each emitted key when added to the in-memory Sets. On startup, load this file to pre-populate the Sets before subscribing to events. Use atomic appends consistent with EventLedgerService pattern. Write unit tests covering cold start and warm restart scenarios.",
+          "filesToModify": [
+            "apps/server/src/services/completion-detector-service.ts",
+            "apps/server/tests/unit/services/completion-detector-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "completion-emitted.jsonl is created and appended to on each completion event",
+            "On startup with existing file emittedEpics/emittedMilestones/emittedProjects are pre-populated",
+            "After reload duplicate completion events are suppressed",
+            "Unit tests pass for cold start and warm restart scenarios",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772856637960-2a18zuzao"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772856637958-j1b2je1mg"
+    },
+    {
+      "number": 2,
+      "slug": "02-ceremony-dedup-durability",
+      "title": "Ceremony Dedup Durability",
+      "description": "Persist CeremonyService.processedProjects to disk so server restarts do not cause duplicate retros.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "persist-and-reload-ceremony-processedprojects-dedup",
+          "title": "Persist and reload ceremony processedProjects dedup",
+          "description": "Add a JSONL sidecar file (data/ledger/ceremony-processed.jsonl) that records each key added to processedProjects. On CeremonyService startup, load this file and pre-populate the Set. Use atomic appends. Write unit tests covering cold start and warm restart scenarios.",
+          "filesToModify": [
+            "apps/server/src/services/ceremony-service.ts",
+            "apps/server/tests/unit/services/ceremony-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "ceremony-processed.jsonl is created and appended to on each ceremony dedup key",
+            "On startup with existing file processedProjects is pre-populated",
+            "After reload ceremonies do not double-fire for already-processed projects",
+            "Unit tests pass",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772856637963-3zeqswr5x"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772856637962-xkfba976l"
+    },
+    {
+      "number": 3,
+      "slug": "03-staging-branch-protection",
+      "title": "Staging Branch Protection",
+      "description": "Add a GitHub Actions workflow enforcing that PRs targeting staging must originate from dev or a promote/* branch.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-promotion-check-staging-yml-ci-workflow",
+          "title": "Add promotion-check-staging.yml CI workflow",
+          "description": "Create .github/workflows/promotion-check-staging.yml that runs on pull_request events targeting the staging branch. Allow head branches matching dev or promote/*. Reject all others with a descriptive error explaining the required promotion flow. Model on existing promotion-check.yml. Update docs/dev/branch-strategy.md to document this enforcement.",
+          "filesToModify": [
+            ".github/workflows/promotion-check-staging.yml",
+            "docs/dev/branch-strategy.md"
+          ],
+          "acceptanceCriteria": [
+            "Workflow file exists and runs on pull_request targeting staging",
+            "PRs from dev branch are allowed",
+            "PRs from promote/* branches are allowed",
+            "PRs from any other branch fail with clear error",
+            "docs/dev/branch-strategy.md updated",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772856637966-vl4u7ydsr"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772856637965-t1jxyo84w"
+    }
+  ],
+  "prd": {
+    "situation": "protoLabs Studio has a fully implemented idea-to-production pipeline: signal intake → PM triage → feature planning → auto-mode execution → completion cascade → ceremonies → staging promotion → main (HITL). The pipeline has been battle-tested across 103 shipped features and 14 completed projects.",
+    "problem": "Three gaps remain that create reliability risks: (1) CompletionDetectorService uses in-memory Sets to deduplicate epic/milestone/project completion events — server restart clears these Sets, causing the completion cascade to re-fire and triggering duplicate ceremonies. (2) CeremonyService uses an in-memory processedProjects Set to prevent double-retros — same problem, restart clears it. (3) The promotion-check.yml CI workflow enforces staging→main only; there is no enforcement that PRs targeting staging originate from dev or promote/* branches.",
+    "approach": "Milestone 1: Persist CompletionDetector dedup state to disk (JSONL sidecar) and reload on startup. Milestone 2: Persist CeremonyService.processedProjects to disk and reload on startup. Milestone 3: Add a GitHub Actions workflow (promotion-check-staging.yml) that rejects PRs targeting staging unless they originate from dev or a promote/* branch.",
+    "results": "Server restarts no longer cause double-ceremonies or double-completion cascades. Staging branch is protected from arbitrary PRs. The full e2e pipeline is durable and safe under production operational conditions.",
+    "constraints": [
+      "No changes to existing JSONL file formats for EventLedger or LedgerService",
+      "Persistence must be append-only JSONL with startup reload consistent with existing patterns",
+      "CI workflow must allow promote/* branches used by StagingPromotionService and dev",
+      "No breaking changes to existing service interfaces"
+    ]
+  },
+  "createdAt": "2026-03-07T04:10:33.762Z",
+  "updatedAt": "2026-03-07T04:10:37.977Z"
+}

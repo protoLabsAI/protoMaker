@@ -2,7 +2,7 @@
   "slug": "frontend-tech-debt-remediation",
   "title": "Frontend Tech Debt Remediation",
   "goal": "Eliminate the remaining frontend tech debt: decompose the monolithic terminal panel, reach full Storybook coverage with Chromatic CI, extract organisms to the shared UI package, and establish the a11y linting baseline.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -246,5 +246,5 @@
     ]
   },
   "createdAt": "2026-03-04T00:07:32.862Z",
-  "updatedAt": "2026-03-04T00:07:41.275Z"
+  "updatedAt": "2026-03-07T02:55:43.082Z"
 }

@@ -2,7 +2,7 @@
   "slug": "server-pipeline-refactor",
   "title": "Server Pipeline Refactor",
   "goal": "Consolidate the overlapping auto-mode and Lead Engineer control planes into a clean Scheduler + Feature Pipeline architecture, eliminate the broadcast event storm, and make the system ready for Ava chat as the primary operator interface.",
-  "status": "active",
+  "status": "completed",
   "prd": {
     "situation": "protoLabs Studio has two overlapping control planes: AutoModeService (5,007 lines) doing scheduling, execution, failure tracking, status management, and event routing; and LeadEngineerService with 15 companion files (~4,700 lines total) that wraps auto-mode and adds real value (PR lifecycle closure, plan generation, failure classification, 14 board rules). The delegation runs in circles: auto-mode → LE.process() → EXECUTE processor → auto-mode.executeFeature() → ExecutionService → callbacks back into auto-mode. The event bus has 263 types with 30+ services subscribing to ALL events and filtering internally — a broadcast storm. The product is shifting from a CLI operator (Ava skill) to a UI chat interface as the primary entry point, making the architecture seams visible and painful.",
     "problem": "The circular delegation between auto-mode and LE causes repeated integration bugs (dep check inconsistency, circuit breaker not firing, cooldown race). The god-object auto-mode-service is untestable at the seams — ExecutionService has zero direct unit tests. The broadcast-all event bus means every event wakes 30+ services. There is no clean contract between the scheduler and the pipeline, making it impossible to route Ava chat requests through the same path as auto-mode without duplicating logic. Escalation and authority systems are currently flagged off, creating a window to refactor before they reactivate.",
@@ -296,5 +296,5 @@
     }
   ],
   "createdAt": "2026-03-05T05:10:00.000Z",
-  "updatedAt": "2026-03-05T05:12:04.593Z"
+  "updatedAt": "2026-03-07T02:55:46.085Z"
 }
