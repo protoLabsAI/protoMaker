@@ -487,6 +487,9 @@ export interface UpdateProjectInput {
   /** Update status */
   status?: ProjectStatus;
 
+  /** ISO timestamp of when the project was completed */
+  completedAt?: string;
+
   /** Update PRD */
   prd?: SPARCPrd;
 
@@ -664,6 +667,45 @@ export interface ProjectArtifact {
 
   /** Artifact content payload */
   content: unknown;
+}
+
+/**
+ * Slim milestone summary returned by the project summary endpoint
+ */
+export interface MilestoneSummary {
+  slug: string;
+  title: string;
+  status: MilestoneStatus;
+  completionPct: number;
+  phaseCount: number;
+  completedPhaseCount: number;
+}
+
+/**
+ * Unified project summary returned by GET /api/projects/:slug/summary
+ */
+export interface ProjectSummary {
+  project: {
+    slug: string;
+    title: string;
+    goal: string;
+    status: ProjectStatus;
+    health?: ProjectHealth;
+    priority?: ProjectPriority;
+    lead?: string;
+    startDate?: string;
+    targetDate?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  featureCount: Record<string, number>;
+  milestones: MilestoneSummary[];
+  artifacts: {
+    ceremonies: ArtifactIndexEntry[];
+    changelogs: ArtifactIndexEntry[];
+    escalations: ArtifactIndexEntry[];
+  };
+  recentTimeline: unknown[];
 }
 
 /**
