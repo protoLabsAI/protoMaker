@@ -18,7 +18,7 @@ Instance roles are set in `proto.config.yaml`:
 
 ```yaml
 protolab:
-  role: primary          # or: worker
+  role: primary # or: worker
   syncPort: 4444
   instanceId: prod-01
   instanceUrl: ws://100.x.x.x:4444
@@ -27,9 +27,9 @@ hivemind:
   heartbeatIntervalMs: 30000
   peerTtlMs: 120000
   peers:
-    - ws://100.64.0.1:4444   # primary (index 0 = highest priority)
-    - ws://100.64.0.2:4444   # worker-1
-    - ws://100.64.0.3:4444   # worker-2
+    - ws://100.64.0.1:4444 # primary (index 0 = highest priority)
+    - ws://100.64.0.2:4444 # worker-1
+    - ws://100.64.0.3:4444 # worker-2
 ```
 
 ## Sync Health Metrics
@@ -57,12 +57,12 @@ Sync health is exposed at `GET /api/health/detailed` under the `sync` key:
 }
 ```
 
-| Field | Description |
-| --- | --- |
-| `role` | `primary` or `worker` |
-| `connected` | Whether this instance is connected to the sync mesh |
-| `partitionSince` | ISO timestamp when connectivity was lost, or `null` |
-| `queuedChanges` | Number of changes buffered while disconnected |
+| Field                   | Description                                         |
+| ----------------------- | --------------------------------------------------- |
+| `role`                  | `primary` or `worker`                               |
+| `connected`             | Whether this instance is connected to the sync mesh |
+| `partitionSince`        | ISO timestamp when connectivity was lost, or `null` |
+| `queuedChanges`         | Number of changes buffered while disconnected       |
 | `compactionDiagnostics` | CRDT document size summary (see Compaction section) |
 
 ## Partition Detection and UI Indicator
@@ -135,9 +135,9 @@ interface CompactionDiagnostics {
     totalSizeBytes: number;
     docSizeMap: Record<string, number>; // "domain:id" -> bytes
   } | null;
-  history: CompactionRecord[];   // Rolling 20-entry history
+  history: CompactionRecord[]; // Rolling 20-entry history
   totalSizeBytes: number;
-  alerts: CompactionAlert[];     // Unacknowledged threshold violations
+  alerts: CompactionAlert[]; // Unacknowledged threshold violations
 }
 ```
 
@@ -166,6 +166,7 @@ for (const entry of history) {
 ```
 
 Each entry includes:
+
 - `change.hash` — unique change identifier
 - `change.timestamp` — wall clock time at the originating instance
 - `change.actor` — `instanceId` of the authoring instance (from CRDT actor ID)
@@ -175,9 +176,9 @@ This is useful for diagnosing merge conflicts, identifying the source of unexpec
 
 ## Sync Events
 
-| Event | Payload | Description |
-| --- | --- | --- |
+| Event                      | Payload                               | Description                                                      |
+| -------------------------- | ------------------------------------- | ---------------------------------------------------------------- |
 | `sync:partition-recovered` | `{ instanceId, partitionDurationMs }` | Emitted after a network partition heals and changes are replayed |
-| `sync:peer-unreachable` | `{ instanceId, lastSeen, peerTtlMs }` | Emitted when a peer exceeds its TTL |
+| `sync:peer-unreachable`    | `{ instanceId, lastSeen, peerTtlMs }` | Emitted when a peer exceeds its TTL                              |
 
 These events are emitted on the internal `EventEmitter` passed to `crdtSyncService.attachEventBus()`.
