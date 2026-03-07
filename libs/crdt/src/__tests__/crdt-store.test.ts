@@ -314,39 +314,33 @@ describe('CRDTStore — two-node sync', () => {
   let storeA: CRDTStore;
   let storeB: CRDTStore;
 
-  beforeEach(
-    async () => {
-      dirA = makeTempDir();
-      dirB = makeTempDir();
+  beforeEach(async () => {
+    dirA = makeTempDir();
+    dirB = makeTempDir();
 
-      // Start WebSocket server on a random port
-      wss = new WebSocketServer({ port: 0 });
-      await new Promise<void>((resolve) => wss.once('listening', resolve));
-      port = (wss.address() as { port: number }).port;
+    // Start WebSocket server on a random port
+    wss = new WebSocketServer({ port: 0 });
+    await new Promise<void>((resolve) => wss.once('listening', resolve));
+    port = (wss.address() as { port: number }).port;
 
-      // Node A acts as server (directly attaches server adapter after init)
-      storeA = new CRDTStore({ storageDir: dirA, instanceId: 'node-A' });
-      await storeA.init();
-      storeA.attachServerAdapter(new WebSocketServerAdapter(wss));
+    // Node A acts as server (directly attaches server adapter after init)
+    storeA = new CRDTStore({ storageDir: dirA, instanceId: 'node-A' });
+    await storeA.init();
+    storeA.attachServerAdapter(new WebSocketServerAdapter(wss));
 
-      // Node B connects to Node A as client
-      storeB = await makeStore(dirB, 'node-B', [{ url: `ws://localhost:${port}` }]);
-    },
-    15000
-  );
+    // Node B connects to Node A as client
+    storeB = await makeStore(dirB, 'node-B', [{ url: `ws://localhost:${port}` }]);
+  }, 15000);
 
-  afterEach(
-    async () => {
-      await storeA.close();
-      await storeB.close();
-      // Terminate any remaining clients before closing the server
-      wss.clients.forEach((client) => client.terminate());
-      await new Promise<void>((resolve) => wss.close(() => resolve()));
-      fs.rmSync(dirA, { recursive: true, force: true });
-      fs.rmSync(dirB, { recursive: true, force: true });
-    },
-    15000
-  );
+  afterEach(async () => {
+    await storeA.close();
+    await storeB.close();
+    // Terminate any remaining clients before closing the server
+    wss.clients.forEach((client) => client.terminate());
+    await new Promise<void>((resolve) => wss.close(() => resolve()));
+    fs.rmSync(dirA, { recursive: true, force: true });
+    fs.rmSync(dirB, { recursive: true, force: true });
+  }, 15000);
 
   it('change on node A appears on node B within 200ms', async () => {
     // Wait for WebSocket connection to establish between the two nodes
