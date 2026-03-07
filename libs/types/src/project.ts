@@ -487,6 +487,9 @@ export interface UpdateProjectInput {
   /** Update status */
   status?: ProjectStatus;
 
+  /** ISO timestamp of when the project was completed */
+  completedAt?: string;
+
   /** Update PRD */
   prd?: SPARCPrd;
 
@@ -617,6 +620,92 @@ export interface ProjectStats {
   documentCount: number;
   createdAt: string;
   deletedAt: string;
+}
+
+/**
+ * Artifact type — categories of persisted project artifacts
+ */
+export type ArtifactType = 'ceremony-report' | 'changelog' | 'escalation' | 'standup';
+
+/**
+ * A single entry in the artifact index
+ */
+export interface ArtifactIndexEntry {
+  /** Unique artifact ID */
+  id: string;
+
+  /** Artifact type */
+  type: ArtifactType;
+
+  /** ISO 8601 creation timestamp */
+  timestamp: string;
+
+  /** Filename within the type directory (e.g. "1700000000000.json") */
+  filename: string;
+}
+
+/**
+ * Artifact index file (.automaker/projects/{slug}/artifacts/index.json)
+ */
+export interface ArtifactIndex {
+  version: 1;
+  entries: ArtifactIndexEntry[];
+}
+
+/**
+ * Full artifact record as stored on disk
+ */
+export interface ProjectArtifact {
+  /** Unique artifact ID */
+  id: string;
+
+  /** Artifact type */
+  type: ArtifactType;
+
+  /** ISO 8601 creation timestamp */
+  timestamp: string;
+
+  /** Artifact content payload */
+  content: unknown;
+}
+
+/**
+ * Slim milestone summary returned by the project summary endpoint
+ */
+export interface MilestoneSummary {
+  slug: string;
+  title: string;
+  status: MilestoneStatus;
+  completionPct: number;
+  phaseCount: number;
+  completedPhaseCount: number;
+}
+
+/**
+ * Unified project summary returned by GET /api/projects/:slug/summary
+ */
+export interface ProjectSummary {
+  project: {
+    slug: string;
+    title: string;
+    goal: string;
+    status: ProjectStatus;
+    health?: ProjectHealth;
+    priority?: ProjectPriority;
+    lead?: string;
+    startDate?: string;
+    targetDate?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  featureCount: Record<string, number>;
+  milestones: MilestoneSummary[];
+  artifacts: {
+    ceremonies: ArtifactIndexEntry[];
+    changelogs: ArtifactIndexEntry[];
+    escalations: ArtifactIndexEntry[];
+  };
+  recentTimeline: unknown[];
 }
 
 /**

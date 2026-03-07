@@ -4,6 +4,7 @@ import type { FeatureLoader } from '@/services/feature-loader.js';
 import * as secureFs from '@/lib/secure-fs.js';
 import { atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import type { Feature, CalendarEvent } from '@protolabsai/types';
+import { createMockFeatureLoader } from '../../helpers/mock-factories.js';
 
 // Mock modules
 vi.mock('@/lib/secure-fs.js');
@@ -34,9 +35,7 @@ describe('calendar-service.ts', () => {
     service = CalendarService.getInstance();
 
     // Mock FeatureLoader
-    mockFeatureLoader = {
-      getAll: vi.fn().mockResolvedValue([]),
-    } as unknown as FeatureLoader;
+    mockFeatureLoader = createMockFeatureLoader() as unknown as FeatureLoader;
 
     service.setFeatureLoader(mockFeatureLoader);
 

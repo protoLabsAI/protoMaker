@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
-import { ensureAutomakerDir } from '@protolabsai/platform';
+import { ensureAutomakerDir, writeProtoConfig, type ProtoConfig } from '@protolabsai/platform';
 import { SettingsService } from '../../../services/settings-service.js';
 import type { RepoResearchResult } from '@protolabsai/types';
 
@@ -156,6 +156,18 @@ export function createSetupProjectHandler(
             filesCreated.push('.automaker/context/coding-rules.md');
           }
         }
+      }
+
+      // 3c. Generate proto.config.yaml from research results
+      const protoConfigPath = path.join(realPath, 'proto.config.yaml');
+      try {
+        await fs.access(protoConfigPath);
+        filesCreated.push('proto.config.yaml (already exists)');
+      } catch {
+        // File doesn't exist — generate from research
+        const protoConfig = buildProtoConfig(projectName, research);
+        await writeProtoConfig(realPath, protoConfig);
+        filesCreated.push('proto.config.yaml');
       }
 
       // 4. Add project to Automaker settings if not already present
@@ -393,4 +405,79 @@ function generateCodingRules(research: RepoResearchResult): string | null {
   }
 
   return sections.join('\n');
+}
+
+/**
+ * Build a ProtoConfig object from research results.
+ * Maps detected tech stack, package.json scripts, and git config into the schema.
+ */
+function buildProtoConfig(projectName: string, research?: RepoResearchResult): ProtoConfig {
+  const config: ProtoConfig = {
+    name: projectName,
+  };
+
+  if (!research) return config;
+
+  // Tech stack from detection
+  const techStack: Record<string, unknown> = {
+    packageManager: research.monorepo.packageManager,
+  };
+
+  if (research.codeQuality.hasTypeScript) {
+    techStack.language = 'typescript';
+    if (research.codeQuality.tsVersion) {
+      techStack.typescriptVersion = research.codeQuality.tsVersion;
+    }
+  }
+
+  if (research.frontend.framework && research.frontend.framework !== 'none') {
+    techStack.framework = research.frontend.framework;
+    if (research.frontend.reactVersion) {
+      techStack.reactVersion = research.frontend.reactVersion;
+    }
+  }
+
+  if (research.frontend.metaFramework && research.frontend.metaFramework !== 'none') {
+    techStack.metaFramework = research.frontend.metaFramework;
+    if (research.frontend.metaFrameworkVersion) {
+      techStack.metaFrameworkVersion = research.frontend.metaFrameworkVersion;
+    }
+  }
+
+  if (research.backend.database && research.backend.database !== 'none') {
+    techStack.database = research.backend.database;
+  }
+
+  if (research.monorepo.isMonorepo && research.monorepo.tool) {
+    techStack.monorepoTool = research.monorepo.tool;
+  }
+
+  config['techStack'] = techStack;
+
+  // Commands from package.json scripts
+  const scripts = research.scripts ?? {};
+  const commands: Record<string, unknown> = {};
+  if (scripts['build']) commands['build'] = scripts['build'];
+  if (scripts['test']) commands['test'] = scripts['test'];
+  if (scripts['dev']) commands['dev'] = scripts['dev'];
+  if (scripts['start']) commands['start'] = scripts['start'];
+  if (scripts['lint']) commands['lint'] = scripts['lint'];
+  if (scripts['format']) commands['format'] = scripts['format'];
+
+  if (Object.keys(commands).length > 0) {
+    config['commands'] = commands;
+  }
+
+  // Git section from detected branch strategy
+  if (research.git.isRepo) {
+    const git: Record<string, unknown> = {};
+    if (research.git.defaultBranch) git['defaultBranch'] = research.git.defaultBranch;
+    if (research.git.provider) git['provider'] = research.git.provider;
+    if (research.git.remoteUrl) git['remoteUrl'] = research.git.remoteUrl;
+    if (Object.keys(git).length > 0) {
+      config['git'] = git;
+    }
+  }
+
+  return config;
 }

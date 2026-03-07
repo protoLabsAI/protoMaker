@@ -1,0 +1,37 @@
+{
+  "category": "Epic",
+  "description": "# Ceremony Dedup Durability\n\nPersist CeremonyService.processedProjects to disk so server restarts do not cause duplicate retros.\n\n## Phases\n1. Persist and reload ceremony processedProjects dedup",
+  "title": "[Epic] Ceremony Dedup Durability",
+  "status": "done",
+  "isEpic": true,
+  "epicColor": "#7C3AED",
+  "branchName": "epic/ceremony-dedup-durability",
+  "projectSlug": "e2e-pipeline-hardening",
+  "id": "feature-1772856637962-xkfba976l",
+  "descriptionHistory": [
+    {
+      "description": "# Ceremony Dedup Durability\n\nPersist CeremonyService.processedProjects to disk so server restarts do not cause duplicate retros.\n\n## Phases\n1. Persist and reload ceremony processedProjects dedup",
+      "timestamp": "2026-03-07T04:10:37.962Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T04:10:37.962Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T04:10:37.962Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T07:17:26.861Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772856637958-j1b2je1mg"
+  ],
+  "completedAt": "2026-03-07T07:17:26.861Z"
+}

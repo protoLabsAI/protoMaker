@@ -1,0 +1,37 @@
+{
+  "category": "Epic",
+  "description": "# Per-Project Discord Webhook\n\nReplace hardcoded global Discord channel IDs with per-project webhook config. Fix standup flow registration.\n\n## Phases\n1. Per-project Discord webhook config + ceremony routing\n2. Fix standup flow registration",
+  "title": "[Epic] Per-Project Discord Webhook",
+  "status": "done",
+  "isEpic": true,
+  "epicColor": "#EC4899",
+  "branchName": "epic/per-project-discord-webhook",
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574157-znqqlnyfp",
+  "descriptionHistory": [
+    {
+      "description": "# Per-Project Discord Webhook\n\nReplace hardcoded global Discord channel IDs with per-project webhook config. Fix standup flow registration.\n\n## Phases\n1. Per-project Discord webhook config + ceremony routing\n2. Fix standup flow registration",
+      "timestamp": "2026-03-07T06:06:14.157Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.157Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.157Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T13:25:25.384Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574154-os996fwfu"
+  ],
+  "completedAt": "2026-03-07T13:25:25.384Z"
+}

@@ -1,0 +1,182 @@
+I'll start by reading the relevant files to understand the existing patterns.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Edit,Write,TodoWrite"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Read ceremony-service.ts and its test file",
+      "status": "in_progress",
+      "activeForm": "Reading ceremony-service.ts and its test file"
+    },
+    {
+      "content": "Implement JSONL sidecar ledger in ceremony-service.ts",
+      "status": "pending",
+      "activeForm": "Implementing JSONL sidecar ledger in ceremony-service.ts"
+    },
+    {
+      "content": "Write unit tests for cold start and warm restart scenarios",
+      "status": "pending",
+      "activeForm": "Writing unit tests for cold start and warm restart scenarios"
+    },
+    {
+      "content": "Run build and tests, verify gates pass",
+      "status": "pending",
+      "activeForm": "Running build and tests, verifying gates pass"
+    }
+  ]
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/ceremony-service.ts"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/apps/server/tests/unit/services/ 2>/dev/null || echo \"Directory not found\"",
+  "description": "Check if test directory exists"
+}
+The service already has the JSONL ledger implementation! Let me check the existing test file to see what's covered.
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony-service.test.ts"
+}
+Both the implementation and tests are already complete! The `ceremony-service.ts` already has the full JSONL ledger implementation and the test file has comprehensive ledger persistence tests. Let me update the todo and run the verification gates.
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Read ceremony-service.ts and its test file",
+      "status": "completed",
+      "activeForm": "Reading ceremony-service.ts and its test file"
+    },
+    {
+      "content": "Implement JSONL sidecar ledger in ceremony-service.ts",
+      "status": "completed",
+      "activeForm": "Implementing JSONL sidecar ledger in ceremony-service.ts"
+    },
+    {
+      "content": "Write unit tests for cold start and warm restart scenarios",
+      "status": "completed",
+      "activeForm": "Writing unit tests for cold start and warm restart scenarios"
+    },
+    {
+      "content": "Run build and tests, verify gates pass",
+      "status": "in_progress",
+      "activeForm": "Running build and tests, verifying gates pass"
+    }
+  ]
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npm run build:server 2>&1",
+  "description": "Build the server",
+  "timeout": 120000
+}
+Build passed! Now let me run the tests:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npx vitest run apps/server/tests/unit/services/ceremony-service.test.ts 2>&1",
+  "description": "Run ceremony-service unit tests",
+  "timeout": 60000
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/.claude/projects/-Users-kj-dev-automaker--worktrees-feature-ceremony-dedup-persist-and-reload/7173da8f-7b57-4d6e-91d8-4c26b80ac170/tool-results/b5i1qgmn1.txt",
+  "offset": 1,
+  "limit": 100
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "tail -30 /Users/kj/.claude/projects/-Users-kj-dev-automaker--worktrees-feature-ceremony-dedup-persist-and-reload/7173da8f-7b57-4d6e-91d8-4c26b80ac170/tool-results/b5i1qgmn1.txt",
+  "description": "Get test results summary"
+}
+All 25 tests pass. Let me also check the git diff to confirm no unintended file changes:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git diff --stat 2>&1",
+  "description": "Check git diff stat"
+}
+The git diff shows no changes to the ceremony-service files — confirming the implementation was already complete in the worktree. The 25 tests all pass and the build succeeds.
+
+For the Playwright verification: this is a pure backend service feature (JSONL file persistence) with no UI surface to verify. Playwright tests are not applicable here — the unit tests are the correct verification mechanism.
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Read ceremony-service.ts and its test file",
+      "status": "completed",
+      "activeForm": "Reading ceremony-service.ts and its test file"
+    },
+    {
+      "content": "Implement JSONL sidecar ledger in ceremony-service.ts",
+      "status": "completed",
+      "activeForm": "Implementing JSONL sidecar ledger in ceremony-service.ts"
+    },
+    {
+      "content": "Write unit tests for cold start and warm restart scenarios",
+      "status": "completed",
+      "activeForm": "Writing unit tests for cold start and warm restart scenarios"
+    },
+    {
+      "content": "Run build and tests, verify gates pass",
+      "status": "completed",
+      "activeForm": "Running build and tests, verifying gates pass"
+    }
+  ]
+}
+<summary>
+## Summary: Milestone: Ceremony Dedup Durability
+
+### Changes Implemented
+The implementation was already complete in the worktree prior to this task run. The feature is fully implemented:
+
+**`apps/server/src/services/ceremony-service.ts`:**
+- `getLedgerPath()` — resolves `data/ledger/ceremony-processed.jsonl` relative to the data directory
+- `loadLedger()` — reads the JSONL file at startup using `readline`, pre-populates `processedProjects` Set, skips malformed lines
+- `appendLedgerEntry(key)` — fire-and-forget async append using `fs.promises.appendFile` (atomic appends via O_APPEND semantics), creates parent directory with `mkdir -p` if needed
+- `initialize()` — calls `void this.loadLedger()` before subscribing to events
+- `handleProjectCompleted()` — calls `this.appendLedgerEntry(dedupeKey)` when a new project key is added to `processedProjects`
+- `dataDir` parameter added to `initialize()` to support injecting a custom data dir in tests
+
+**`apps/server/tests/unit/services/ceremony-service.test.ts`:**
+- `ledger persistence` describe block with 4 tests:
+  - Cold start: no ledger file → processedProjects empty → retro fires
+  - Warm restart: existing ledger → processedProjects pre-populated → retro skipped
+  - Malformed lines: skips bad JSON/missing key fields, still loads valid entries
+  - Append: verifies JSONL entry is written to the correct path with correct key/timestamp
+
+### Files Modified
+- `apps/server/src/services/ceremony-service.ts` (implementation already present)
+- `apps/server/tests/unit/services/ceremony-service.test.ts` (tests already present)
+
+### Risks/Blockers Encountered
+None. The implementation was already complete in the worktree.
+
+### Learnings
+- The `dataDir` optional parameter on `initialize()` is a clean pattern for testability of file-path-dependent services — allows tests to inject a mock path and spy on `fs.promises.appendFile` without touching real filesystem.
+- Using `readline` with `for await...of` on a stream gives clean async iteration over JSONL lines.
+- Fire-and-forget `void (async () => { await appendFile(...) })()` pattern keeps the hot path synchronous while ensuring the ledger write is non-blocking.
+
+### Notes for Developer
+- The ledger file is append-only — `clearProcessedProject()` removes the key from the in-memory Set but does NOT remove it from the JSONL file. This is intentional: the ledger records history. On next restart, a cleared project could be re-blocked if the entry is still in the file. If "clear" needs to be durable across restarts, a tombstone entry or rewrite would be needed (out of scope for this feature).
+- All 25 unit tests pass, build exits 0.
+
+### Verification Status
+- **Unit tests**: 25/25 passing — covers cold start, warm restart, malformed lines, and append scenarios
+- **Build**: `npm run build:server` exits 0 (all packages + server compiled successfully)
+- **Playwright**: Not applicable — this is a pure backend persistence feature with no UI surface to verify via browser automation
+</summary>

@@ -80,11 +80,14 @@ import { createLangfuseRoutes } from '../routes/langfuse/index.js';
 import { createChatRoutes } from '../routes/chat/index.js';
 import { createAIRoutes } from '../routes/ai/index.js';
 import { createNotesRoutes } from '../routes/notes/index.js';
+import { createTodoRoutes } from '../routes/todo/index.js';
+import { createSitrepRoutes } from '../routes/sitrep/index.js';
 import { createLeadEngineerRoutes } from '../routes/lead-engineer/index.js';
 import { createPrometheusRoute } from '../routes/metrics/prometheus.js';
 import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
+import { createLedgerRoutes } from '../routes/ledger/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -388,6 +391,8 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
+  app.use('/api/todos', createTodoRoutes(events));
+  app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {
     app.use('/api/knowledge', createKnowledgeRoutes(knowledgeStoreService));
@@ -412,6 +417,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createProjectPmRoutes(projectPmService, projectService, ceremonyService, featureLoader, events)
   );
   logger.info('Project PM routes mounted at /api/project-pm');
+
+  // Ledger REST endpoints (event persistence layer)
+  app.use('/api/ledger', createLedgerRoutes(ledgerService, featureLoader));
+  logger.info('Ledger routes mounted at /api/ledger');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }

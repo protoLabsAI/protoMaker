@@ -1,0 +1,113 @@
+{
+  "category": "Cascade Fix (TDD)",
+  "description": "**Milestone:** Cascade Fix (TDD)\n\nTDD phase. First write a failing integration test in apps/server/tests/integration/services/project-cascade.integration.test.ts that: (1) creates a project with 2 milestones and 2 features each, (2) marks all features done, (3) asserts milestone:completed fired for each milestone, (4) asserts project:completed fired once. The test will fail because createProjectFeatures does not set milestoneSlug on features. Then fix apps/server/src/services/project-orchestration-service.ts to pass milestoneSlug and phaseSlug when calling featureLoader.create(). Verify the test goes green. Also check that CompletionDetectorService.checkMilestoneCompletion() correctly groups features by milestoneSlug — fix if needed.\n\n**Files to Modify:**\n- apps/server/src/services/project-orchestration-service.ts\n- apps/server/src/services/completion-detector-service.ts\n- apps/server/tests/integration/services/project-cascade.integration.test.ts\n\n**Acceptance Criteria:**\n- [ ] Integration test proves full cascade: feature:done → epic:done → milestone:completed → project:completed\n- [ ] createProjectFeatures sets milestoneSlug and phaseSlug on all created features\n- [ ] CompletionDetectorService correctly groups by milestoneSlug for milestone completion check\n- [ ] All new and existing tests pass\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Integration tests for full cascade + fix milestoneSlug on createProjectFeatures",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772863574147-mglorzdzu",
+  "branchName": "feature/cascade-fix-tdd-integration-tests",
+  "isFoundation": true,
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574150-pcekyxxkf",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Cascade Fix (TDD)\n\nTDD phase. First write a failing integration test in apps/server/tests/integration/services/project-cascade.integration.test.ts that: (1) creates a project with 2 milestones and 2 features each, (2) marks all features done, (3) asserts milestone:completed fired for each milestone, (4) asserts project:completed fired once. The test will fail because createProjectFeatures does not set milestoneSlug on features. Then fix apps/server/src/services/project-orchestration-service.ts to pass milestoneSlug and phaseSlug when calling featureLoader.create(). Verify the test goes green. Also check that CompletionDetectorService.checkMilestoneCompletion() correctly groups features by milestoneSlug — fix if needed.\n\n**Files to Modify:**\n- apps/server/src/services/project-orchestration-service.ts\n- apps/server/src/services/completion-detector-service.ts\n- apps/server/tests/integration/services/project-cascade.integration.test.ts\n\n**Acceptance Criteria:**\n- [ ] Integration test proves full cascade: feature:done → epic:done → milestone:completed → project:completed\n- [ ] createProjectFeatures sets milestoneSlug and phaseSlug on all created features\n- [ ] CompletionDetectorService correctly groups by milestoneSlug for milestone completion check\n- [ ] All new and existing tests pass\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T06:06:14.151Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.151Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.151Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T06:06:36.674Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T06:10:51.156Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T06:10:53.821Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:10:59.075Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:15:26.645Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T07:18:54.547Z"
+    },
+    {
+      "from": "review",
+      "to": "blocked",
+      "timestamp": "2026-03-07T07:27:54.726Z",
+      "reason": "Max state transitions exceeded"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T07:34:05.950Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T07:15:28.068Z",
+  "statusChangeReason": "Max state transitions exceeded",
+  "lastTraceId": "0462668c-0022-4074-b3fe-1ecd911151d4",
+  "traceIds": [
+    "b8b3baf8-0b95-4423-996e-779529ff3227",
+    "0462668c-0022-4074-b3fe-1ecd911151d4"
+  ],
+  "executionHistory": [
+    {
+      "id": "8952e740-c40e-4eb2-99a6-170d8edeaa03",
+      "startedAt": "2026-03-07T06:06:37.090Z",
+      "completedAt": "2026-03-07T06:10:51.605Z",
+      "durationMs": 254515,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 1.0381972499999998,
+  "lastSessionId": "3b00db8e-acc7-4e48-9821-e9d45d47aa3b",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1910",
+  "prNumber": 1910,
+  "prCreatedAt": "2026-03-07T07:18:54.543Z",
+  "reviewStartedAt": "2026-03-07T07:18:54.547Z",
+  "prTrackedSince": "2026-03-07T07:18:54.550Z",
+  "prLastPolledAt": "2026-03-07T07:33:39.611Z",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Max state transitions exceeded"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T07:27:54.732Z"
+  },
+  "completedAt": "2026-03-07T07:34:05.950Z"
+}

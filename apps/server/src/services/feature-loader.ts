@@ -15,6 +15,7 @@ import type {
   StatusTransition,
 } from '@protolabsai/types';
 import { normalizeFeatureStatus } from '@protolabsai/types';
+import type { EventEmitter } from '../lib/events.js';
 import {
   createLogger,
   atomicWriteJson,
@@ -25,6 +26,7 @@ import {
 } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import {
+  getAutomakerDir,
   getFeaturesDir,
   getFeatureDir,
   getFeatureImagesDir,
@@ -45,9 +47,14 @@ export type { Feature };
 
 export class FeatureLoader implements FeatureStore {
   private integrityWatchdog: DataIntegrityWatchdogService | null = null;
+  private events: EventEmitter | null = null;
 
   setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
     this.integrityWatchdog = watchdog;
+  }
+
+  setEventEmitter(events: EventEmitter): void {
+    this.events = events;
   }
   /**
    * Normalize feature status to canonical values
@@ -55,6 +62,13 @@ export class FeatureLoader implements FeatureStore {
    */
   private normalizeFeature(feature: Feature): Feature {
     let normalized = feature;
+
+    // Guard: archived features are always treated as 'done' regardless of what
+    // the stub file says. This prevents the LE state machine from picking up
+    // archived stubs as active work items.
+    if (normalized.archived === true) {
+      normalized = { ...normalized, status: 'done' as FeatureStatus };
+    }
 
     // Normalize status
     if (!normalized.status) {
@@ -569,6 +583,7 @@ export class FeatureLoader implements FeatureStore {
    * @param descriptionHistorySource - Source of description change ('enhance' or 'edit')
    * @param enhancementMode - Enhancement mode if source is 'enhance'
    * @param preEnhancementDescription - Description before enhancement (for restoring original)
+   * @param options - Optional flags, e.g. skipEventEmission for batch operations
    */
   async update(
     projectPath: string,
@@ -576,7 +591,8 @@ export class FeatureLoader implements FeatureStore {
     updates: Partial<Feature>,
     descriptionHistorySource?: 'enhance' | 'edit',
     enhancementMode?: 'improve' | 'technical' | 'simplify' | 'acceptance' | 'ux-reviewer',
-    preEnhancementDescription?: string
+    preEnhancementDescription?: string,
+    options?: { skipEventEmission?: boolean }
   ): Promise<Feature> {
     const feature = await this.get(projectPath, featureId);
     if (!feature) {
@@ -683,6 +699,26 @@ export class FeatureLoader implements FeatureStore {
       backupDir,
     });
 
+    // Auto-emit feature:status-changed when status changes (persist-before-emit ordering)
+    if (
+      updates.status !== undefined &&
+      updates.status !== feature.status &&
+      this.events &&
+      !options?.skipEventEmission
+    ) {
+      this.events.emit('feature:status-changed', {
+        featureId,
+        projectPath,
+        oldStatus: feature.status,
+        previousStatus: feature.status, // backward-compat alias
+        newStatus: updates.status,
+        reason:
+          typeof updates.statusChangeReason === 'string'
+            ? updates.statusChangeReason
+            : 'status updated',
+      });
+    }
+
     logger.info(`Updated feature ${featureId}`);
     return updatedFeature;
   }
@@ -715,6 +751,117 @@ export class FeatureLoader implements FeatureStore {
       logger.error(`Failed to delete feature ${featureId}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Archive a feature by moving its directory to .automaker/archive/{featureId}/.
+   *
+   * Copies feature.json, agent-output.md, and handoff-*.json files to the archive
+   * directory, then removes the original feature directory. A minimal stub is
+   * written back to the original feature.json path so that FeatureLoader.get()
+   * can return an archived indicator without treating the feature as missing.
+   *
+   * The stub always includes `status: "done"` and the original `title` so that
+   * downstream consumers (e.g. LE state machine) recognise the feature as
+   * completed rather than an invalid or unknown work item.
+   *
+   * @param projectPath - Absolute path to the project root
+   * @param featureId   - Feature identifier
+   * @returns Absolute path to the archive directory
+   */
+  async archiveFeature(projectPath: string, featureId: string): Promise<string> {
+    const featureDir = this.getFeatureDir(projectPath, featureId);
+    const archiveDir = path.join(getAutomakerDir(projectPath), 'archive', featureId);
+
+    // Create the archive directory
+    await secureFs.mkdir(archiveDir, { recursive: true });
+
+    const archivedAt = new Date().toISOString();
+
+    // 1. Always copy feature.json (full — contains statusHistory, executionHistory, etc.)
+    try {
+      await secureFs.copyFile(
+        path.join(featureDir, 'feature.json'),
+        path.join(archiveDir, 'feature.json')
+      );
+    } catch {
+      // If feature.json is missing, continue — stub will still be written
+    }
+
+    // 2. Copy agent-output.md if present
+    try {
+      await secureFs.copyFile(
+        path.join(featureDir, 'agent-output.md'),
+        path.join(archiveDir, 'agent-output.md')
+      );
+    } catch {
+      // File may not exist — that's fine
+    }
+
+    // 3. Copy handoff-*.json files
+    try {
+      const entries = (await secureFs.readdir(featureDir, { withFileTypes: true })) as Dirent[];
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.startsWith('handoff-') && entry.name.endsWith('.json')) {
+          try {
+            await secureFs.copyFile(
+              path.join(featureDir, entry.name),
+              path.join(archiveDir, entry.name)
+            );
+          } catch {
+            logger.warn(`Could not copy handoff file ${entry.name} for feature ${featureId}`);
+          }
+        }
+      }
+    } catch {
+      // Directory unreadable — skip
+    }
+
+    // 4. Delete the feature's backup directory (operational only, not needed post-archive)
+    try {
+      const backupDir = getFeatureBackupDir(projectPath, featureId);
+      await secureFs.rm(backupDir, { recursive: true, force: true });
+    } catch {
+      // Not critical if backup cleanup fails
+    }
+
+    // 5. Get the feature now (before deletion) so we can include title in the stub
+    const featureForStatus = await this.get(projectPath, featureId);
+    const statusBeforeArchive = featureForStatus?.status;
+
+    // 6. Delete the entire original feature directory
+    await secureFs.rm(featureDir, { recursive: true, force: true });
+
+    // 7. Re-create the feature directory with a minimal archived stub.
+    //    Always include status: "done" and title so consumers (e.g. LE state machine)
+    //    can recognise this as a completed feature without treating it as an invalid stub.
+    await secureFs.mkdir(featureDir, { recursive: true });
+    const stub = {
+      id: featureId,
+      archived: true,
+      archivedAt,
+      archivePath: archiveDir,
+      status: 'done' as FeatureStatus,
+      title: featureForStatus?.title ?? '',
+    };
+    await secureFs.writeFile(
+      path.join(featureDir, 'feature.json'),
+      JSON.stringify(stub, null, 2),
+      'utf-8'
+    );
+
+    // 8. Update Prometheus gauge — the feature is no longer in its pre-archive status
+    if (statusBeforeArchive) {
+      featuresByStatus.dec({ status: statusBeforeArchive });
+    }
+
+    // 9. Notify integrity watchdog — stub still exists, so no data-loss alert needed
+    if (this.integrityWatchdog) {
+      await this.integrityWatchdog.notifyFeatureDeleted(projectPath);
+    }
+
+    logger.info(`Archived feature ${featureId} → ${archiveDir}`);
+    return archiveDir;
   }
 
   /**

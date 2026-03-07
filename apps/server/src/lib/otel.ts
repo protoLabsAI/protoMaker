@@ -67,7 +67,8 @@ export async function initOtel(): Promise<void> {
     });
 
     const sdk = new NodeSDK({
-      spanProcessors: [new BatchSpanProcessor(otlpExporter), langfuseProcessor as any],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OTLP + Langfuse SDK types don't extend SpanProcessor
+      spanProcessors: [new BatchSpanProcessor(otlpExporter as any), langfuseProcessor as any],
       // Auto-instruments Express HTTP, pg, fs, and other common Node.js modules
       instrumentations: [getNodeAutoInstrumentations()],
     });

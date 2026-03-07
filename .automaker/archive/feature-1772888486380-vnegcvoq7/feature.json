@@ -1,0 +1,62 @@
+{
+  "category": "Documentation",
+  "description": "7 doc-relevant files changed recently.\n\nChanged files requiring docs review:\n- apps/server/src/routes/setup/routes/project.ts\n- apps/server/src/services/feature-scheduler.ts\n- apps/server/src/services/repo-research-service.ts\n- libs/platform/src/index.ts\n- libs/types/src/index.ts\n- libs/types/src/project.ts\n- libs/types/src/setup.ts\n",
+  "title": "Update docs after: SetupLab: Published Onboarding Tool",
+  "status": "done",
+  "complexity": "small",
+  "id": "feature-1772888486380-vnegcvoq7",
+  "branchName": "feature/update-docs-after-setuplab-published",
+  "descriptionHistory": [
+    {
+      "description": "7 doc-relevant files changed recently.\n\nChanged files requiring docs review:\n- apps/server/src/routes/setup/routes/project.ts\n- apps/server/src/services/feature-scheduler.ts\n- apps/server/src/services/repo-research-service.ts\n- libs/platform/src/index.ts\n- libs/types/src/index.ts\n- libs/types/src/project.ts\n- libs/types/src/setup.ts\n",
+      "timestamp": "2026-03-07T13:01:26.384Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T13:01:26.385Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T13:01:26.385Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:03:11.119Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T13:06:54.371Z"
+    }
+  ],
+  "featureType": "code",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T13:06:54.371Z",
+  "costUsd": 1.1244217500000002,
+  "lastSessionId": "ccdf7f96-7edf-44f6-baac-c0ac5c21a73e",
+  "lastTraceId": "6244c1b5-39d4-4d66-a71e-0f0d5b311f7f",
+  "traceIds": [
+    "6244c1b5-39d4-4d66-a71e-0f0d5b311f7f"
+  ],
+  "completedAt": "2026-03-07T13:06:54.371Z",
+  "executionHistory": [
+    {
+      "id": "742d1cf5-bc98-4c46-ac72-27c7c3e33810",
+      "startedAt": "2026-03-07T13:03:11.526Z",
+      "completedAt": "2026-03-07T13:06:54.386Z",
+      "durationMs": 222860,
+      "costUsd": 1.1244217500000002,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "summary": "## Summary: 7 doc-relevant files changed recently\n\n### Changes Implemented\n\nUpdated `docs/protolabs/setup-pipeline.md` to accurately reflect the current state of the setup pipeline, covering all 7 recently changed files:\n\n1. **`RepoResearchResult` type documentation** — Added `scripts`, `agents`, `structure`, and `ci.hasBranchProtection` fields to the type reference (matching `libs/types/src/setup.ts`)\n2. **Phase 1 detection details** — Documented agent/AI tooling detection, analytics detection (Umami/Plausible/Google Analytics via deps and env files), script extraction, and branch protection ruleset fallback (matching `repo-research-service.ts`)\n3. **Phase 3 file generation table** — Documented that `project.ts` now generates CLAUDE.md, coding-rules.md, and proto.config.yaml from research data, with conditions for each\n4. **proto.config.yaml schema section** — Added new section documenting the schema and how to load/write via `@protolabsai/platform` (matching `libs/platform/src/index.ts` exports)\n5. **`DiscordChannelMapping` reference** — Added new Related Types section for this interface added in `libs/types/src/project.ts`\n6. **File manifest** — Updated Modified Files table to reflect `libs/types/src/index.ts`, `libs/platform/src/index.ts`, and `project.ts` changes; added `libs/types/src/proto-config.ts` to New Files\n\n### Files Modified\n- `docs/protolabs/setup-pipeline.md`\n\n### Risks/Blockers Encountered\n- None. This was a pure documentation update task.\n\n### Learnings\n- The `feature-scheduler.ts` changes were minor bug fixes (escalation loop guard, PipelineResult propagation) that don't require documentation updates — the architecture doc in `docs/agents/architecture.md` already captures FeatureScheduler correctly.\n- `DiscordChannelMapping` is defined in `libs/types/src/project.ts` but not yet exported from `libs/types/src/index.ts` — this is likely intentional pending consumer setup.\n\n### Notes for Developer\n- The `proto.config.yaml` schema types (`ProtoConfig`, `ProtoConfigSchema`, etc.) are now exported from both `@protolabsai/types` (Zod schemas + type aliases) and `@protolabsai/platform` (loader/writer functions). Consumers should import types from `@protolabsai/types` and loader functions from `@protolabsai/platform`.\n\n### Verification Status\n- Build: `npm run build:server` exits with code 0\n- No Playwright tests required — pure documentation change with no executable code paths\n- `git diff --stat` confirms only `docs/protolabs/setup-pipeline.md` was the intended code change (plus normal `.automaker/` board state files)",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1938",
+  "prNumber": 1938,
+  "prMergedAt": "2026-03-07T13:08:02.158Z",
+  "prLastPolledAt": "2026-03-07T13:11:03.572Z"
+}

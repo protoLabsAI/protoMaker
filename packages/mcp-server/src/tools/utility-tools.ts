@@ -59,6 +59,21 @@ export const utilityTools: Tool[] = [
     },
   },
   {
+    name: 'get_sitrep',
+    description:
+      'Get a full operational status report in one call. Returns board summary, running agents, auto-mode status, blocked features, escalations, open PRs with CI status, staging delta, recent commits, and server health. Use this instead of calling get_board_summary + list_running_agents + get_auto_mode_status + check PRs separately.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['projectPath'],
+    },
+  },
+  {
     name: 'get_board_summary',
     description: 'Get a summary of the board state showing feature counts by status.',
     inputSchema: {

@@ -10,11 +10,14 @@
  */
 
 import path from 'path';
+import fs from 'fs';
+import readline from 'readline';
 import { createLogger } from '@protolabsai/utils';
-import { secureFs, getProjectDir } from '@protolabsai/platform';
+import { secureFs, getProjectDir, getDataDirectory } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 import type { CeremonyState } from '@protolabsai/types';
+import { flowRegistry } from './automation-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -23,6 +26,7 @@ import type { MetricsService } from './metrics-service.js';
 import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 import type { SchedulerService } from './scheduler-service.js';
 import { transition } from './ceremony-state-machine.js';
+import { projectArtifactService } from './project-artifact-service.js';
 
 const logger = createLogger('CeremonyService');
 
@@ -103,6 +107,27 @@ function createDiscordAdapter(emitter: EventEmitter) {
 }
 
 // ---------------------------------------------------------------------------
+// HTTP webhook adapter
+// Posts ceremony output directly to a Discord webhook URL.
+// ---------------------------------------------------------------------------
+
+function createWebhookAdapter(webhookUrl: string) {
+  return {
+    sendMessage: async (_channelId: string, content: string): Promise<{ id: string }> => {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        throw new Error(`Webhook POST failed: ${response.status} ${response.statusText}`);
+      }
+      return { id: '' };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // CeremonyService
 // ---------------------------------------------------------------------------
 
@@ -139,18 +164,98 @@ export class CeremonyService {
 
   // Dedup guard for project retros
   private processedProjects = new Set<string>();
+  private dataDir: string | null = null;
+
+  private getLedgerPath(): string | null {
+    const dir = this.dataDir ?? getDataDirectory();
+    if (!dir) return null;
+    return path.join(dir, 'ledger', 'ceremony-processed.jsonl');
+  }
+
+  private async loadLedger(): Promise<void> {
+    const ledgerPath = this.getLedgerPath();
+    if (!ledgerPath) return;
+
+    if (!fs.existsSync(ledgerPath)) {
+      logger.debug('CeremonyService: no existing ledger file, starting fresh');
+      return;
+    }
+
+    try {
+      const rl = readline.createInterface({
+        input: fs.createReadStream(ledgerPath, 'utf-8'),
+        crlfDelay: Infinity,
+      });
+
+      let loaded = 0;
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const entry = JSON.parse(trimmed) as { key: string; timestamp: string };
+          if (entry.key) {
+            this.processedProjects.add(entry.key);
+            loaded++;
+          }
+        } catch {
+          // skip malformed lines
+        }
+      }
+
+      logger.debug(`CeremonyService: loaded ${loaded} processed project keys from ledger`);
+    } catch (err) {
+      logger.warn('CeremonyService: failed to load ledger:', err);
+    }
+  }
+
+  private appendLedgerEntry(key: string): void {
+    const ledgerPath = this.getLedgerPath();
+    if (!ledgerPath) return;
+
+    const entry = { key, timestamp: new Date().toISOString() };
+    const line = JSON.stringify(entry) + '\n';
+
+    void (async () => {
+      try {
+        await fs.promises.mkdir(path.dirname(ledgerPath), { recursive: true });
+        await fs.promises.appendFile(ledgerPath, line, 'utf-8');
+      } catch (err) {
+        logger.error('CeremonyService: failed to write ledger entry:', err);
+      }
+    })();
+  }
 
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
     featureLoader: FeatureLoader,
     projectService: ProjectService,
-    _metricsService: MetricsService
+    _metricsService: MetricsService,
+    dataDir?: string
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.dataDir = dataDir ?? null;
+
+    // Register ceremony flow factories in the global FlowRegistry so that
+    // AutomationService.executeAutomation() can resolve them by flowId without
+    // throwing "Flow not registered: standup-flow" (or retro-flow / project-retro-flow).
+    // The real execution is handled event-driven inside this service; these factories
+    // serve as registry stubs so the automation dispatch layer finds the entries.
+    flowRegistry.register('standup-flow', async (_modelConfig) => {
+      logger.info('standup-flow: execution handled via ceremony event system');
+    });
+    flowRegistry.register('retro-flow', async (_modelConfig) => {
+      logger.info('retro-flow: execution handled via ceremony event system');
+    });
+    flowRegistry.register('project-retro-flow', async (_modelConfig) => {
+      logger.info('project-retro-flow: execution handled via ceremony event system');
+    });
+
+    // Load persisted dedup state before subscribing to events
+    void this.loadLedger();
 
     this.unsubscribe = emitter.subscribe((type, payload) => {
       if (type === 'milestone:started') {
@@ -485,6 +590,23 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+
+      // Persist ceremony report artifact
+      void projectArtifactService
+        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
+          ceremonyType: 'milestone_retro',
+          milestoneSlug,
+          milestoneTitle,
+          milestoneNumber,
+          projectTitle,
+          completedAt: new Date().toISOString(),
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to save milestone retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+
       this.auditLog?.record({
         id: correlationId,
         timestamp: new Date().toISOString(),
@@ -575,6 +697,7 @@ export class CeremonyService {
     }
 
     this.processedProjects.add(dedupeKey);
+    this.appendLedgerEntry(dedupeKey);
     this.activeReflection = projectTitle;
     this.ceremonyCounts.projectRetro++;
     this.lastCeremonyAt = new Date().toISOString();
@@ -596,6 +719,24 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+
+      // Persist ceremony report artifact
+      void projectArtifactService
+        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
+          ceremonyType: 'project_retro',
+          projectTitle,
+          totalMilestones: payload.totalMilestones,
+          totalFeatures: payload.totalFeatures,
+          totalCostUsd: payload.totalCostUsd,
+          failureCount: payload.failureCount,
+          milestoneSummaries: payload.milestoneSummaries,
+          completedAt: new Date().toISOString(),
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to save project retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
 
       this.reflectionCount++;
       this.lastReflection = {

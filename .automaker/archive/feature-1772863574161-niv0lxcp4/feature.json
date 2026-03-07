@@ -1,0 +1,65 @@
+{
+  "category": "Project Timeline API",
+  "description": "**Milestone:** Project Timeline API\n\nTDD phase. Write integration tests for a new route GET /api/projects/:slug/timeline that: (1) returns all EventLedger events with matching projectSlug, (2) supports ?since and ?type query params for filtering, (3) returns events in chronological order with type, timestamp, correlationIds, and payload. Implement by adding a queryByProject(projectSlug, opts) method to EventLedgerService and wiring the route in apps/server/src/routes/projects/. Test with seeded JSONL data.\n\n**Files to Modify:**\n- apps/server/src/services/event-ledger-service.ts\n- apps/server/src/routes/projects/index.ts\n- apps/server/tests/integration/routes/project-timeline.test.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/projects/:slug/timeline returns chronological EventLedger events for the project\n- [ ] ?since= and ?type= query params filter correctly\n- [ ] EventLedgerService.queryByProject() method implemented and tested\n- [ ] Integration tests use seeded JSONL data and verify ordering and filtering\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "EventLedger project-scoped query + /api/projects/:slug/timeline route",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772863574160-6h49ce6ke",
+  "branchName": "feature/project-timeline-api-eventledger-project",
+  "isFoundation": true,
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574161-niv0lxcp4",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Project Timeline API\n\nTDD phase. Write integration tests for a new route GET /api/projects/:slug/timeline that: (1) returns all EventLedger events with matching projectSlug, (2) supports ?since and ?type query params for filtering, (3) returns events in chronological order with type, timestamp, correlationIds, and payload. Implement by adding a queryByProject(projectSlug, opts) method to EventLedgerService and wiring the route in apps/server/src/routes/projects/. Test with seeded JSONL data.\n\n**Files to Modify:**\n- apps/server/src/services/event-ledger-service.ts\n- apps/server/src/routes/projects/index.ts\n- apps/server/tests/integration/routes/project-timeline.test.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/projects/:slug/timeline returns chronological EventLedger events for the project\n- [ ] ?since= and ?type= query params filter correctly\n- [ ] EventLedgerService.queryByProject() method implemented and tested\n- [ ] Integration tests use seeded JSONL data and verify ordering and filtering\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T06:06:14.161Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.161Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.161Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:03:04.735Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "blocked",
+      "timestamp": "2026-03-07T13:03:06.015Z",
+      "reason": "Max agent retries exceeded (3)"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T13:03:08.003Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574156-lfw9o8r99"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "statusChangeReason": "Max agent retries exceeded (3)",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Max agent retries exceeded (3)"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T13:03:06.017Z"
+  },
+  "prNumber": 1915,
+  "prMergedAt": "2026-03-07T10:03:56Z",
+  "completedAt": "2026-03-07T13:03:08.003Z"
+}

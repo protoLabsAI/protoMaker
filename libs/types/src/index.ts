@@ -3,6 +3,9 @@
  * Shared type definitions for AutoMaker
  */
 
+// Event Ledger types — append-only JSONL event persistence layer
+export type { EventLedgerCorrelationIds, EventLedgerEntry } from './event-ledger.js';
+
 // Automation registry supplementary types (CreateAutomationInput, UpdateAutomationInput, FlowFactory)
 // Core types (Automation, AutomationRunRecord, etc.) are already exported from the base workspace types
 export type {
@@ -146,6 +149,12 @@ export type {
   LifecycleStatus,
   LifecycleCollectResult,
   ProjectStats,
+  ArtifactType,
+  ArtifactIndexEntry,
+  ArtifactIndex,
+  ProjectArtifact,
+  MilestoneSummary,
+  ProjectSummary,
 } from './project.js';
 
 // Calendar types
@@ -765,6 +774,9 @@ export { DEFAULT_TWITCH_SETTINGS } from './twitch.js';
 // Notes types (Tiptap-based project notes workspace)
 export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
 
+// Todo types (project-level todo lists and items)
+export type { TodoItem, TodoList, TodoWorkspace } from './todo.js';
+
 // Pipeline checkpoint types (crash recovery and goal gates)
 export type { PipelineCheckpoint, GoalGateResult } from './pipeline-checkpoint.js';
 
@@ -860,6 +872,24 @@ export type {
   SensorConfig,
   SensorReading,
 } from './sensor.js';
+
+// ProtoConfig types and schema (proto.config.yaml structure)
+export {
+  ProtoConfigSchema,
+  ProtoTechStackSchema,
+  ProtoCommandsSchema,
+  ProtoGitSchema,
+  ProtoLabSchema,
+  ProtoDefaultsSchema,
+} from './proto-config.js';
+export type {
+  ProtoConfig,
+  ProtoTechStack,
+  ProtoCommands,
+  ProtoGit,
+  ProtoLab,
+  ProtoDefaults,
+} from './proto-config.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {

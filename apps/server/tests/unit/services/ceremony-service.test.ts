@@ -10,7 +10,9 @@
  * - Error handling (flow throws → discordPostFailures++)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'fs';
+import readline from 'readline';
 import { CeremonyService } from '../../../src/services/ceremony-service.js';
 import { createEventEmitter } from '../../../src/lib/events.js';
 import type { EventEmitter } from '../../../src/lib/events.js';
@@ -19,6 +21,12 @@ import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { ProjectService } from '../../../src/services/project-service.js';
 import type { MetricsService } from '../../../src/services/metrics-service.js';
 import type { ProjectSettings } from '@protolabsai/types';
+import {
+  createMockSettingsService,
+  createMockFeatureLoader,
+  createMockProjectService,
+  createMockMetricsService,
+} from '../../helpers/mock-factories.js';
 
 // ---------------------------------------------------------------------------
 // Module mocks — prevent real LLM calls
@@ -35,21 +43,6 @@ vi.mock('@protolabsai/flows', () => ({
 }));
 
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
-
-// ---------------------------------------------------------------------------
-// Mock factories
-// ---------------------------------------------------------------------------
-
-const createMockSettingsService = (): SettingsService =>
-  ({ getProjectSettings: vi.fn() }) as unknown as SettingsService;
-
-const createMockFeatureLoader = (): FeatureLoader =>
-  ({ getAll: vi.fn() }) as unknown as FeatureLoader;
-
-const createMockProjectService = (): ProjectService =>
-  ({ getProject: vi.fn() }) as unknown as ProjectService;
-
-const createMockMetricsService = (): MetricsService => ({}) as unknown as MetricsService;
 
 /** Settings with ceremonies enabled and a Discord channel configured. */
 const enabledSettings = (
@@ -91,10 +84,10 @@ describe('CeremonyService', () => {
   beforeEach(() => {
     ceremonyService = new CeremonyService();
     emitter = createEventEmitter();
-    mockSettingsService = createMockSettingsService();
-    mockFeatureLoader = createMockFeatureLoader();
-    mockProjectService = createMockProjectService();
-    mockMetricsService = createMockMetricsService();
+    mockSettingsService = createMockSettingsService() as unknown as SettingsService;
+    mockFeatureLoader = createMockFeatureLoader() as unknown as FeatureLoader;
+    mockProjectService = createMockProjectService() as unknown as ProjectService;
+    mockMetricsService = createMockMetricsService() as unknown as MetricsService;
     vi.clearAllMocks();
   });
 
@@ -667,6 +660,191 @@ describe('CeremonyService', () => {
       await new Promise((r) => setTimeout(r, 20));
       // No flow should have been called
       expect(createStandupFlow).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Ledger persistence — cold start and warm restart
+  // -------------------------------------------------------------------------
+
+  describe('ledger persistence', () => {
+    const TEST_DATA_DIR = '/mock/data';
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('cold start: processedProjects is empty when no ledger file exists', async () => {
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined as any);
+      vi.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined as any);
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue(enabledSettings());
+      vi.mocked(createProjectRetroFlow).mockReturnValue(makeFlow() as any);
+
+      ceremonyService.initialize(
+        emitter,
+        mockSettingsService,
+        mockFeatureLoader,
+        mockProjectService,
+        mockMetricsService,
+        TEST_DATA_DIR
+      );
+
+      // Wait for loadLedger to complete (fire-and-forget async)
+      await new Promise((r) => setTimeout(r, 50));
+
+      emitter.emit('project:completed', {
+        projectPath: '/test',
+        projectTitle: 'My Project',
+        projectSlug: 'my-project',
+        totalMilestones: 1,
+        totalFeatures: 2,
+        totalCostUsd: 5,
+        failureCount: 0,
+        milestoneSummaries: [],
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+      // Cold start: processedProjects was empty → flow should run
+      expect(createProjectRetroFlow).toHaveBeenCalledTimes(1);
+    });
+
+    it('warm restart: pre-populates processedProjects from existing ledger file', async () => {
+      const existingKey = '/test:my-project';
+      const ledgerLines = [
+        JSON.stringify({ key: existingKey, timestamp: '2026-01-01T00:00:00.000Z' }),
+      ];
+
+      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      vi.spyOn(fs, 'createReadStream').mockReturnValue({} as any);
+      vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined as any);
+      vi.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined as any);
+      vi.spyOn(readline, 'createInterface').mockReturnValue({
+        [Symbol.asyncIterator]: async function* () {
+          for (const line of ledgerLines) yield line;
+        },
+      } as any);
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue(enabledSettings());
+      vi.mocked(createProjectRetroFlow).mockReturnValue(makeFlow() as any);
+
+      ceremonyService.initialize(
+        emitter,
+        mockSettingsService,
+        mockFeatureLoader,
+        mockProjectService,
+        mockMetricsService,
+        TEST_DATA_DIR
+      );
+
+      // Wait for ledger load to complete
+      await new Promise((r) => setTimeout(r, 50));
+
+      emitter.emit('project:completed', {
+        projectPath: '/test',
+        projectTitle: 'My Project',
+        projectSlug: 'my-project',
+        totalMilestones: 1,
+        totalFeatures: 2,
+        totalCostUsd: 5,
+        failureCount: 0,
+        milestoneSummaries: [],
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+      // Warm restart: key already in processedProjects from ledger → flow skipped
+      expect(createProjectRetroFlow).not.toHaveBeenCalled();
+    });
+
+    it('warm restart: skips malformed lines and loads valid ones', async () => {
+      const validKey = '/test:good-project';
+      const ledgerLines = [
+        'not valid json {{{',
+        '',
+        JSON.stringify({ key: validKey, timestamp: '2026-01-01T00:00:00.000Z' }),
+        JSON.stringify({ timestamp: '2026-01-02T00:00:00.000Z' }), // missing key field
+      ];
+
+      vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+      vi.spyOn(fs, 'createReadStream').mockReturnValue({} as any);
+      vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined as any);
+      vi.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined as any);
+      vi.spyOn(readline, 'createInterface').mockReturnValue({
+        [Symbol.asyncIterator]: async function* () {
+          for (const line of ledgerLines) yield line;
+        },
+      } as any);
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue(enabledSettings());
+      vi.mocked(createProjectRetroFlow).mockReturnValue(makeFlow() as any);
+
+      ceremonyService.initialize(
+        emitter,
+        mockSettingsService,
+        mockFeatureLoader,
+        mockProjectService,
+        mockMetricsService,
+        TEST_DATA_DIR
+      );
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // The valid key should be loaded → blocked
+      emitter.emit('project:completed', {
+        projectPath: '/test',
+        projectTitle: 'Good Project',
+        projectSlug: 'good-project',
+        totalMilestones: 1,
+        totalFeatures: 1,
+        totalCostUsd: 1,
+        failureCount: 0,
+        milestoneSummaries: [],
+      });
+
+      await new Promise((r) => setTimeout(r, 20));
+      expect(createProjectRetroFlow).not.toHaveBeenCalled();
+    });
+
+    it('appends a JSONL entry to the ledger when a project retro fires', async () => {
+      vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+      vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined as any);
+      const appendFileSpy = vi.spyOn(fs.promises, 'appendFile').mockResolvedValue(undefined as any);
+
+      vi.mocked(mockSettingsService.getProjectSettings).mockResolvedValue(enabledSettings());
+      vi.mocked(createProjectRetroFlow).mockReturnValue(makeFlow() as any);
+
+      ceremonyService.initialize(
+        emitter,
+        mockSettingsService,
+        mockFeatureLoader,
+        mockProjectService,
+        mockMetricsService,
+        TEST_DATA_DIR
+      );
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      emitter.emit('project:completed', {
+        projectPath: '/test',
+        projectTitle: 'My Project',
+        projectSlug: 'my-project',
+        totalMilestones: 1,
+        totalFeatures: 2,
+        totalCostUsd: 5,
+        failureCount: 0,
+        milestoneSummaries: [],
+      });
+
+      // Wait for both the ceremony handler and the fire-and-forget appendFile
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(appendFileSpy).toHaveBeenCalledOnce();
+      const [writtenPath, writtenContent] = appendFileSpy.mock.calls[0] as [string, string];
+      expect(writtenPath).toContain('ceremony-processed.jsonl');
+      const parsed = JSON.parse(writtenContent.trim()) as { key: string; timestamp: string };
+      expect(parsed.key).toBe('/test:my-project');
+      expect(parsed.timestamp).toBeDefined();
     });
   });
 });

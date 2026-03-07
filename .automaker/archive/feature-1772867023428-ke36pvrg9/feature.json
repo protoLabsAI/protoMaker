@@ -1,0 +1,64 @@
+{
+  "category": "Uncategorized",
+  "description": "Wire TodoService into the server and expose via REST API and MCP tools.\n\n**Routes** (`apps/server/src/routes/todo/index.ts`):\nCreate a createTodoRoutes function following the same pattern as notes routes. 8 POST endpoints on the todo router:\n- list — list all lists (returns lists with item counts)\n- get — get single list with all items { projectPath, listId }\n- create-list — create new list { projectPath, name, ownerType? }\n- delete-list — delete list { projectPath, listId }\n- add-item — add item { projectPath, listId, title, description?, priority?, dueDate?, linkedFeatureId? }\n- update-item — update item { projectPath, listId, itemId, ...updates }\n- delete-item — delete item { projectPath, listId, itemId }\n- reorder — reorder items { projectPath, listId, itemIds }\n- Use validatePathParams middleware for projectPath\n\n**Server wiring:**\n- Instantiate TodoService in `apps/server/src/server/services.ts`\n- Mount todo routes in `apps/server/src/server/routes.ts`\n\n**MCP Tools** (`packages/mcp-server/src/tools/todo-tools.ts`):\n- create_todo_list — projectPath, name, ownerType (default 'shared')\n- list_todo_lists — projectPath (returns lists with item counts and completion %)\n- add_todo_item — projectPath, listId, title, description?, priority?, dueDate?, linkedFeatureId?\n- update_todo_item — projectPath, listId, itemId, title?, description?, completed?, priority?, dueDate?\n- complete_todo_item — projectPath, listId, itemId (shortcut)\n- delete_todo_item — projectPath, listId, itemId\n- Wire into packages/mcp-server/src/tools/index.ts\n- Follow the pattern from workspace-tools.ts and calendar-tools.ts\n\n**Files to Modify:**\n- apps/server/src/routes/todo/index.ts (new)\n- apps/server/src/server/routes.ts\n- apps/server/src/server/services.ts\n- packages/mcp-server/src/tools/todo-tools.ts (new)\n- packages/mcp-server/src/tools/index.ts\n\n**Acceptance Criteria:**\n- [ ] All 8 REST endpoints work and return correct responses\n- [ ] All 6 MCP tools registered and callable\n- [ ] validatePathParams enforced on all routes\n- [ ] Error handling returns proper 400/404/500 responses\n- [ ] Build passes (server + mcp-server)",
+  "title": "Todo routes + MCP tools",
+  "status": "done",
+  "branchName": "feature/todo-routes-mcp",
+  "dependencies": [
+    "feature-1772867000039-wiajni623"
+  ],
+  "complexity": "medium",
+  "priority": 2,
+  "source": "api",
+  "trustTier": 1,
+  "quarantineStatus": "passed",
+  "quarantineId": "9ba5b079-5538-4c79-8aca-91586d840078",
+  "id": "feature-1772867023428-ke36pvrg9",
+  "descriptionHistory": [
+    {
+      "description": "Wire TodoService into the server and expose via REST API and MCP tools.\n\n**Routes** (`apps/server/src/routes/todo/index.ts`):\nCreate a createTodoRoutes function following the same pattern as notes routes. 8 POST endpoints on the todo router:\n- list — list all lists (returns lists with item counts)\n- get — get single list with all items { projectPath, listId }\n- create-list — create new list { projectPath, name, ownerType? }\n- delete-list — delete list { projectPath, listId }\n- add-item — add item { projectPath, listId, title, description?, priority?, dueDate?, linkedFeatureId? }\n- update-item — update item { projectPath, listId, itemId, ...updates }\n- delete-item — delete item { projectPath, listId, itemId }\n- reorder — reorder items { projectPath, listId, itemIds }\n- Use validatePathParams middleware for projectPath\n\n**Server wiring:**\n- Instantiate TodoService in `apps/server/src/server/services.ts`\n- Mount todo routes in `apps/server/src/server/routes.ts`\n\n**MCP Tools** (`packages/mcp-server/src/tools/todo-tools.ts`):\n- create_todo_list — projectPath, name, ownerType (default 'shared')\n- list_todo_lists — projectPath (returns lists with item counts and completion %)\n- add_todo_item — projectPath, listId, title, description?, priority?, dueDate?, linkedFeatureId?\n- update_todo_item — projectPath, listId, itemId, title?, description?, completed?, priority?, dueDate?\n- complete_todo_item — projectPath, listId, itemId (shortcut)\n- delete_todo_item — projectPath, listId, itemId\n- Wire into packages/mcp-server/src/tools/index.ts\n- Follow the pattern from workspace-tools.ts and calendar-tools.ts\n\n**Files to Modify:**\n- apps/server/src/routes/todo/index.ts (new)\n- apps/server/src/server/routes.ts\n- apps/server/src/server/services.ts\n- packages/mcp-server/src/tools/todo-tools.ts (new)\n- packages/mcp-server/src/tools/index.ts\n\n**Acceptance Criteria:**\n- [ ] All 8 REST endpoints work and return correct responses\n- [ ] All 6 MCP tools registered and callable\n- [ ] validatePathParams enforced on all routes\n- [ ] Error handling returns proper 400/404/500 responses\n- [ ] Build passes (server + mcp-server)",
+      "timestamp": "2026-03-07T07:03:43.428Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T07:03:43.428Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T07:03:43.428Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:15:59.732Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T07:24:01.290Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T07:38:03.368Z"
+    }
+  ],
+  "featureType": "code",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T07:16:02.563Z",
+  "costUsd": 3.581867499999999,
+  "lastSessionId": "d3235aee-079e-4421-bc0c-e24f454d6748",
+  "lastTraceId": "5d7bfdaa-f344-4c1d-93da-8fe9f358b7c5",
+  "traceIds": [
+    "5d7bfdaa-f344-4c1d-93da-8fe9f358b7c5"
+  ],
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1911",
+  "prNumber": 1911,
+  "prCreatedAt": "2026-03-07T07:24:01.288Z",
+  "reviewStartedAt": "2026-03-07T07:24:01.290Z",
+  "prTrackedSince": "2026-03-07T07:24:01.292Z",
+  "prLastPolledAt": "2026-03-07T07:37:15.976Z",
+  "completedAt": "2026-03-07T07:38:03.368Z"
+}

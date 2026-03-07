@@ -152,6 +152,7 @@ export async function orchestrateProjectFeatures(
           epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],
           branchName: `epic/${slugify(milestone.title, 40)}`,
           projectSlug,
+          milestoneSlug: milestone.slug,
         });
         epicId = epicFeature.id;
         result.milestoneEpicMap[milestone.slug] = epicId;
@@ -191,6 +192,8 @@ export async function orchestrateProjectFeatures(
           branchName: `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`,
           isFoundation: phase.number === 1,
           projectSlug,
+          milestoneSlug: milestone.slug,
+          phaseSlug: phase.name,
         });
 
         result.phaseFeatureMap[phaseKey] = feature.id;

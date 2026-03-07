@@ -1,0 +1,65 @@
+{
+  "category": "Project Timeline API",
+  "description": "**Milestone:** Project Timeline API\n\nTDD phase. Write tests for GET /api/projects/:slug/summary that returns: { project metadata, featureCount by status, milestones with completion %, artifacts: { ceremonies, changelogs, escalations } (from artifact index), recentTimeline: last 20 events }. Implement using ProjectArtifactService and EventLedgerService. This is the single API the frontend project page will call. Test that all sections are present and correctly typed.\n\n**Files to Modify:**\n- apps/server/src/routes/projects/index.ts\n- apps/server/tests/integration/routes/project-summary.test.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/projects/:slug/summary returns unified project data including features, artifacts, and recent timeline\n- [ ] Response is correctly typed with a ProjectSummary type in libs/types\n- [ ] Integration tests cover the full response shape with mocked dependencies\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Project artifact aggregation endpoint + combined project summary",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772863574160-6h49ce6ke",
+  "branchName": "feature/project-timeline-api-project-artifact",
+  "isFoundation": false,
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574162-p23b25fl5",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Project Timeline API\n\nTDD phase. Write tests for GET /api/projects/:slug/summary that returns: { project metadata, featureCount by status, milestones with completion %, artifacts: { ceremonies, changelogs, escalations } (from artifact index), recentTimeline: last 20 events }. Implement using ProjectArtifactService and EventLedgerService. This is the single API the frontend project page will call. Test that all sections are present and correctly typed.\n\n**Files to Modify:**\n- apps/server/src/routes/projects/index.ts\n- apps/server/tests/integration/routes/project-summary.test.ts\n\n**Acceptance Criteria:**\n- [ ] GET /api/projects/:slug/summary returns unified project data including features, artifacts, and recent timeline\n- [ ] Response is correctly typed with a ProjectSummary type in libs/types\n- [ ] Integration tests cover the full response shape with mocked dependencies\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T06:06:14.162Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.162Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.162Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T13:03:08.023Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "blocked",
+      "timestamp": "2026-03-07T13:03:09.259Z",
+      "reason": "Max agent retries exceeded (3)"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T13:03:11.112Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574161-niv0lxcp4"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "statusChangeReason": "Max agent retries exceeded (3)",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Max agent retries exceeded (3)"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T13:03:09.261Z"
+  },
+  "prNumber": 1926,
+  "prMergedAt": "2026-03-07T12:07:21Z",
+  "completedAt": "2026-03-07T13:03:11.112Z"
+}

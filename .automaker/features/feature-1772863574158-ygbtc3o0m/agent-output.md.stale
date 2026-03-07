@@ -1,0 +1,73 @@
+I'll start by reading the key files to understand the current state of the implementation.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Edit,Write",
+  "max_results": 4
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/libs/types/src/global-settings.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/ceremony-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony-webhook.test.ts"
+}
+I see the worktree is at `/Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord`. Let me read the relevant files from there.
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord/libs/types/src/agent-settings.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord/apps/server/src/services/ceremony-service.ts"
+}
+Now I can see the current state clearly. The implementation from the previous attempt is NOT present - I need to:
+1. Add `discordWebhookUrl` to `CeremonySettings` in `agent-settings.ts`
+2. Add webhook HTTP posting to `ceremony-service.ts`  
+3. Create the test file
+
+Let me check the test directory structure:
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord/apps/server/tests/unit/services/ | head -20",
+  "description": "List unit test files in services directory"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord/apps/server/tests/unit/services/ceremony-service.test.ts",
+  "limit": 60
+}
+Now I have a clear picture. Let me implement:
+1. Add `discordWebhookUrl` to `CeremonySettings` in `agent-settings.ts`
+2. Add webhook HTTP posting to `ceremony-service.ts`
+3. Create test file
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord/libs/types/src/agent-settings.ts",
+  "old_string": "export interface CeremonySettings {\n  /** Whether ceremony features are enabled for this project */\n  enabled: boolean;\n  /** Discord channel ID for ceremony announcements (overrides project default) */\n  discordChannelId?: string;",
+  "new_string": "export interface CeremonySettings {\n  /** Whether ceremony features are enabled for this project */\n  enabled: boolean;\n  /** Discord channel ID for ceremony announcements (overrides project default) */\n  discordChannelId?: string;\n  /**\n   * Discord webhook URL for ceremony announcements.\n   * When set, ceremony output is POSTed directly to this webhook URL instead of\n   * routing through the Discord bot channel. Takes precedence over discordChannelId.\n   */\n  discordWebhookUrl?: string;"
+}
+Now update `ceremony-service.ts` to add the webhook adapter and update all 3 handlers:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-per-project-discord-per-project-discord/apps/server/src/services/ceremony-service.ts",
+  "old_string": "// ---------------------------------------------------------------------------\n// EventEmitter-based discordBot adapter\n// Satisfies StandupDiscordBot / RetroDiscordBot structural interfaces without\n// a hard dependency on DiscordBotService.\n// ---------------------------------------------------------------------------\n\nfunction createDiscordAdapter(emitter: EventEmitter) {\n  return {\n    sendMessage: async (channelId: string, content: string): Promise<{ id: string }> => {\n      emitter.emit('integration:discord', {\n        channelId,\n        content,\n        action: 'send_message',\n      });\n      return { id: '' };\n    },\n  };\n}",
+  "new_string": "// ---------------------------------------------------------------------------\n// EventEmitter-based discordBot adapter\n// Satisfies StandupDiscordBot / RetroDiscordBot structural interfaces without\n// a hard dependency on DiscordBotService.\n// ---------------------------------------------------------------------------\n\nfunction createDiscordAdapter(emitter: EventEmitter) {\n  return {\n    sendMessage: async (channelId: string, content: string): Promise<{ id: string }> => {\n      emitter.emit('integration:discord', {\n        channelId,\n        content,\n        action: 'send_message',\n      });\n      return { id: '' };\n    },\n  };\n}\n\n// ---------------------------------------------------------------------------\n// HTTP webhook adapter\n// Posts ceremony output directly to a Discord webhook URL.\n// ---------------------------------------------------------------------------\n\nfunction createWebhookAdapter(webhookUrl: string) {\n  return {\n    sendMessage: async (_channelId: string, content: string): Promise<{ id: string }> => {\n      const response = await fetch(webhookUrl, {\n        method: 'POST',\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ content }),\n      });\n      if (!response.ok) {\n        throw new Error(`Webhook POST failed: ${response.status} ${response.statusText}`);\n      }\n      return { id: '' };\n    },\n  };\n}"
+}
+Now add a private `resolveDiscordAdapter` method and update the handlers. First let me add the method after `getCeremonyChannelId`:

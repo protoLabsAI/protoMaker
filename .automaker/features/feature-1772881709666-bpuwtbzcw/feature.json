@@ -1,0 +1,36 @@
+{
+  "category": "Tutorial Content & Getting Started",
+  "description": "**Milestone:** Tutorial Content & Getting Started\n\nImprove the existing coding-rules.md template to be more useful out of the box. Include detected linting config (ESLint rules, Prettier config), import conventions (from tsconfig paths), testing patterns (framework, test file location, run command), and formatting requirements. Make it immediately useful as agent context.\n\n**Files to Modify:**\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] coding-rules.md includes detected lint/format config\n- [ ] Import conventions derived from tsconfig paths\n- [ ] Testing section includes framework and run commands\n- [ ] File is immediately useful as agent context without editing\n- [ ] Does not overwrite existing coding-rules.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Refined coding-rules.md generation",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772881709662-81w9mn7yf",
+  "branchName": "feature/tutorial-content-refined-coding",
+  "isFoundation": false,
+  "projectSlug": "setuplab-published-onboarding-tool",
+  "milestoneSlug": "02-tutorial-content-getting-started",
+  "phaseSlug": "refined-coding-rules-md-generation",
+  "id": "feature-1772881709666-bpuwtbzcw",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Tutorial Content & Getting Started\n\nImprove the existing coding-rules.md template to be more useful out of the box. Include detected linting config (ESLint rules, Prettier config), import conventions (from tsconfig paths), testing patterns (framework, test file location, run command), and formatting requirements. Make it immediately useful as agent context.\n\n**Files to Modify:**\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] coding-rules.md includes detected lint/format config\n- [ ] Import conventions derived from tsconfig paths\n- [ ] Testing section includes framework and run commands\n- [ ] File is immediately useful as agent context without editing\n- [ ] Does not overwrite existing coding-rules.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T11:08:29.666Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T11:08:29.666Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T11:08:29.666Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772881709661-yvcbc1mtp",
+    "feature-1772881709664-bdnjxdbxm",
+    "feature-1772881709665-vfqo1fqq3"
+  ]
+}

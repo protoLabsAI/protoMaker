@@ -2,7 +2,7 @@
   "slug": "sdk-deep-integration",
   "title": "SDK Deep Integration",
   "goal": "Wire the full Claude Agent SDK surface — native hooks, per-surface custom MCP servers, and a configurable canUseTool trust model — through the entire agent execution stack. Default is full trust (bypassPermissions). Users opt into gated review mode.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -242,5 +242,5 @@
     ]
   },
   "createdAt": "2026-03-04T19:24:24.033Z",
-  "updatedAt": "2026-03-04T19:24:32.101Z"
+  "updatedAt": "2026-03-07T02:55:45.652Z"
 }

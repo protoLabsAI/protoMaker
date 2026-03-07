@@ -234,6 +234,9 @@ export {
   electronAppReadFile,
 } from './system-paths.js';
 
+// Todo paths (project-level todo workspace)
+export { getTodosDir, getTodoWorkspacePath, ensureTodoDir } from './todo-paths.js';
+
 // Port configuration
 export { STATIC_PORT, SERVER_PORT, RESERVED_PORTS } from './config/ports.js';
 
@@ -257,3 +260,13 @@ export {
   findTerminalById,
   openInExternalTerminal,
 } from './terminal.js';
+
+// proto.config.yaml schema & loader
+export {
+  loadProtoConfig,
+  writeProtoConfig,
+  type ProtoConfig,
+  type ProtoConfigBrand,
+  type ProtoConfigDiscord,
+  type ProtoConfigServer,
+} from './proto-config.js';

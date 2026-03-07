@@ -12,6 +12,7 @@ import {
   CalendarDays,
   FolderOpen,
   FolderKanban,
+  ListTodo,
 } from 'lucide-react';
 
 /** protoLabs logo icon sized for sidebar nav (matches lucide icon API) */
@@ -58,6 +59,7 @@ interface UseNavigationProps {
     fileEditor: string;
     designs: string;
     calendar: string;
+    todo: string;
     automations: string;
     projects: string;
     chat: string;
@@ -120,7 +122,7 @@ export function useNavigation({
       },
       {
         id: 'notes',
-        label: 'Content',
+        label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
       },
@@ -129,6 +131,12 @@ export function useNavigation({
         label: 'Calendar',
         icon: CalendarDays,
         shortcut: shortcuts.calendar,
+      },
+      {
+        id: 'todo',
+        label: 'Todo',
+        icon: ListTodo,
+        shortcut: shortcuts.todo,
       },
     ];
 

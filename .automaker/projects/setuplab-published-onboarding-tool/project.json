@@ -1,0 +1,230 @@
+{
+  "slug": "setuplab-published-onboarding-tool",
+  "title": "SetupLab: Published Onboarding Tool",
+  "goal": "Refine the existing setuplab pipeline into a polished, published onboarding tool that any developer can run against their repo to get set up with protoLabs Studio. Generates proto.config.yaml, initializes .automaker/, creates tutorial content, and produces an HTML report — all from pure heuristics, no API key required.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-proto-config-yaml-schema-loader",
+      "title": "proto.config.yaml Schema & Loader",
+      "description": "Define the proto.config.yaml schema, create the loader in libs/platform, and wire it into the setup pipeline. This is the foundation — the CRDT sync project depends on this schema.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "protoconfig-types-and-yaml-schema",
+          "title": "ProtoConfig types and YAML schema",
+          "description": "Define ProtoConfig TypeScript types in libs/types/src/proto-config.ts covering: name, version, techStack (language, framework, packageManager, testRunner, bundler), commands (build, test, lint, dev, format), git (baseBranch, strategy, prBaseBranch), protolab section (enabled, syncPort, instanceId), and defaults section. Export from libs/types/src/index.ts. Create a JSON Schema or Zod validator for the YAML structure.",
+          "filesToModify": [
+            "libs/types/src/proto-config.ts",
+            "libs/types/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "ProtoConfig type exported from @protolabsai/types",
+            "Zod schema validates proto.config.yaml structure",
+            "Schema supports all fields: name, techStack, commands, git, protolab, defaults",
+            "Optional fields have sensible defaults",
+            "Type is forward-compatible with CRDT sync project requirements"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772881709659-k4bjs0l1u"
+        },
+        {
+          "number": 2,
+          "name": "config-loader-with-layered-resolution",
+          "title": "Config loader with layered resolution",
+          "description": "Create loadProtoConfig() in libs/platform/src/proto-config.ts. Reads proto.config.yaml from project root, merges with .automaker/settings.json overrides, then env var overrides. Returns null if no proto.config.yaml exists (single-instance mode). Includes writeProtoConfig() for setuplab to generate the initial file.",
+          "filesToModify": [
+            "libs/platform/src/proto-config.ts",
+            "libs/platform/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "loadProtoConfig(projectPath) reads and parses YAML",
+            "Layered merge: YAML -> settings.json -> env vars",
+            "Returns null when no proto.config.yaml exists",
+            "writeProtoConfig(projectPath, config) writes formatted YAML",
+            "Unit tests for merge logic and missing file handling",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772881709660-o2k0czmqt"
+        },
+        {
+          "number": 3,
+          "name": "wire-config-generation-into-setup-lab",
+          "title": "Wire config generation into setup_lab",
+          "description": "Update the setup_lab MCP tool and repo-research-service to generate proto.config.yaml from research results. Map detected tech stack, package.json scripts, and git config into the ProtoConfig schema. Write the file during initialization phase.",
+          "filesToModify": [
+            "apps/server/src/services/repo-research-service.ts",
+            "apps/server/src/routes/setup/routes/project.ts",
+            "packages/mcp-server/src/tools/setup-tools.ts"
+          ],
+          "acceptanceCriteria": [
+            "setup_lab generates proto.config.yaml at project root",
+            "Config populated from repo research: name from package.json, techStack from detection, commands from scripts",
+            "Git section populated from detected branch strategy",
+            "Existing setup_lab flow not broken",
+            "Proto.config.yaml is valid per Zod schema"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772881709661-yvcbc1mtp"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1772881709657-be8p79osk"
+    },
+    {
+      "number": 2,
+      "slug": "02-tutorial-content-getting-started",
+      "title": "Tutorial Content & Getting Started",
+      "description": "Create the guided onboarding experience. Tutorial content for each product domain, notes tab template, spec.md skeleton, and refined coding-rules.md generation.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "getting-started-notes-tab-template",
+          "title": "Getting Started notes tab template",
+          "description": "Create a notes tab template engine that generates a 'Getting Started' tab with tutorial copy for each product domain. Content is structured as collapsible sections with: Board (feature lifecycle, status flow, how to create/move features), Agents (what happens when you start one, worktrees, PRs), Context (what coding-rules.md does, how to customize), Auto-mode (what it is, how to start, dependency chains), Projects (PRDs, milestones, phases), Git Workflow (three-branch flow, worktree isolation, PR auto-merge). Template uses detected tech stack to customize examples.",
+          "filesToModify": [
+            "apps/server/src/services/setup-tutorial-service.ts",
+            "apps/server/src/routes/setup/routes/project.ts"
+          ],
+          "acceptanceCriteria": [
+            "SetupTutorialService generates structured tutorial content",
+            "Content covers all 6 product domains",
+            "Examples are customized to detected tech stack",
+            "Notes tab created via existing notes tab API during setup",
+            "Tutorial is helpful without being overwhelming — concise, actionable"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772881709664-bdnjxdbxm"
+        },
+        {
+          "number": 2,
+          "name": "spec-md-skeleton-from-research",
+          "title": "Spec.md skeleton from research",
+          "description": "Generate a spec.md skeleton pre-filled with detected project information: name, description (from README or package.json), tech stack summary, architecture overview (monorepo packages or directory structure), key dependencies. Includes placeholder sections the user should fill in: product goals, target users, key workflows, constraints.",
+          "filesToModify": [
+            "apps/server/src/services/repo-research-service.ts",
+            "apps/server/src/routes/setup/routes/project.ts"
+          ],
+          "acceptanceCriteria": [
+            "spec.md generated with detected project info",
+            "Placeholder sections clearly marked for user to fill",
+            "Architecture section reflects actual repo structure",
+            "Does not overwrite existing spec.md"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772881709665-vfqo1fqq3"
+        },
+        {
+          "number": 3,
+          "name": "refined-coding-rules-md-generation",
+          "title": "Refined coding-rules.md generation",
+          "description": "Improve the existing coding-rules.md template to be more useful out of the box. Include detected linting config (ESLint rules, Prettier config), import conventions (from tsconfig paths), testing patterns (framework, test file location, run command), and formatting requirements. Make it immediately useful as agent context.",
+          "filesToModify": [
+            "apps/server/src/routes/setup/routes/project.ts"
+          ],
+          "acceptanceCriteria": [
+            "coding-rules.md includes detected lint/format config",
+            "Import conventions derived from tsconfig paths",
+            "Testing section includes framework and run commands",
+            "File is immediately useful as agent context without editing",
+            "Does not overwrite existing coding-rules.md"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772881709666-bpuwtbzcw"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772881709662-81w9mn7yf"
+    },
+    {
+      "number": 3,
+      "slug": "03-cli-package-polish",
+      "title": "CLI Package & Polish",
+      "description": "Create a standalone CLI that runs the setup pipeline without requiring a running server. Polish the HTML report and end-to-end flow.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "standalone-setup-cli-package",
+          "title": "Standalone setup CLI package",
+          "description": "Create packages/setup-cli/ — a lightweight Node.js CLI that bundles repo-research-service, gap-analysis-service, report-generator-service, and the new proto.config writer. Runs without a server or API key. Entry point: npx @protolabsai/setup (or npx protolabs-setup). Accepts a path argument (defaults to cwd). Outputs proto.config.yaml, .automaker/ structure, and HTML report. Does NOT create notes tabs or board features (those require the server).",
+          "filesToModify": [
+            "packages/setup-cli/package.json",
+            "packages/setup-cli/src/index.ts",
+            "packages/setup-cli/src/cli.ts",
+            "package.json"
+          ],
+          "acceptanceCriteria": [
+            "CLI runs standalone with no server dependency",
+            "npx protolabs-setup . works end-to-end",
+            "Generates proto.config.yaml, .automaker/ structure, HTML report",
+            "Opens HTML report in default browser",
+            "Clean terminal output with progress indicators",
+            "No API key required",
+            "Package publishable to npm"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1772881709668-yeuxsn0vb"
+        },
+        {
+          "number": 2,
+          "name": "html-report-refinements",
+          "title": "HTML report refinements",
+          "description": "Polish the HTML report to serve as the onboarding 'aha moment'. Add: project identity section (name, detected stack, commands), getting started quick links, visual score breakdown by category, and clear next-steps section pointing to the Getting Started notes tab and /setuplab command. Ensure the report works as a standalone artifact users can share.",
+          "filesToModify": [
+            "apps/server/src/services/report-generator-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Report includes project identity section",
+            "Getting started section with actionable next steps",
+            "Visual score breakdown is clear and scannable",
+            "Report references proto.config.yaml and .automaker/ structure",
+            "Self-contained HTML with no external dependencies except CDN CSS",
+            "Looks polished — this is the first impression"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772881709668-pyw9n6fbo"
+        },
+        {
+          "number": 3,
+          "name": "update-setuplab-skill-and-docs",
+          "title": "Update /setuplab skill and docs",
+          "description": "Update the setuplab skill definition to use the new proto.config.yaml generation and tutorial content flow. Remove the gap-based feature creation prompt in favor of the tutorial experience. Update docs/protolabs/setup-pipeline.md with the new flow. Add setuplab to the main docs navigation.",
+          "filesToModify": [
+            "packages/mcp-server/plugins/automaker/commands/setuplab.md",
+            "docs/protolabs/setup-pipeline.md"
+          ],
+          "acceptanceCriteria": [
+            "/setuplab skill uses new proto.config.yaml generation",
+            "Tutorial content created during setup flow",
+            "No gap-based feature creation in default flow",
+            "Documentation reflects new pipeline",
+            "Existing /setuplab users get the improved experience"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772881709669-0o5trwe3f"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772881709667-5ufnhxhs1"
+    }
+  ],
+  "prd": {
+    "situation": "SetupLab exists as a fully implemented 7-phase pipeline with repo research (heuristic stack detection), gap analysis, alignment proposals, HTML report generation, and .automaker/ initialization. Six MCP tools are registered (research_repo, analyze_gaps, propose_alignment, setup_lab, run_full_setup, clone_repo). Services total ~2,300 lines across repo-research-service.ts, gap-analysis-service.ts, alignment-proposal-service.ts, report-generator-service.ts, and labs-service.ts. Types are defined in libs/types/src/setup.ts (247 lines). The skill definition orchestrates the full flow via /setuplab.",
+    "problem": "The current implementation is designed for internal use through the Claude Code plugin — it requires a running automaker server and MCP connectivity. There is no standalone entry point for new users. The initialization creates .automaker/context/ files but does not generate proto.config.yaml (the canonical project config that the CRDT sync project will read). There is no tutorial/walkthrough content to orient new users. The gap analysis creates board features from detected gaps, but new users need guided tutorial content, not an auto-generated backlog. The tool does not create a Getting Started experience that walks users through each product domain.",
+    "approach": "Restructure setuplab into a publishable onboarding tool with three layers: (1) Standalone CLI package that runs repo research and generates proto.config.yaml + .automaker/ structure without requiring a server — pure Node.js, no API key. (2) Enhanced initialization that creates tutorial-oriented content: a Getting Started notes tab with domain walkthroughs (board, agents, context, auto-mode, projects), a spec.md skeleton filled from research, and stack-aware coding-rules.md. (3) Refined HTML report as the 'aha moment' — opens in browser showing what was detected and how to proceed. The proto.config.yaml file becomes the single root-level artifact, compatible with the distributed CRDT sync project's config loader (proto.config -> .automaker/settings.json -> env var layering).",
+    "results": "A developer can run a single command against any repo and get: proto.config.yaml at the root with detected stack/commands/git config, .automaker/ directory with context, memory, features, and spec.md, a Getting Started notes tab with tutorial copy for each product domain, and an HTML report showing their repo's alignment score. No CLAUDE.md is touched. No features are auto-created from gaps. The experience is a guided hello-world tour, not an automated backlog dump.",
+    "constraints": [
+      "Must not modify or create CLAUDE.md — that is the user's territory",
+      "proto.config.yaml schema must be forward-compatible with the distributed CRDT sync project's proto.config loader (libs/platform/src/proto-config.ts)",
+      "Repo research must remain pure heuristics — no AI calls, no API key required for the CLI path",
+      "Must not break existing /setuplab skill flow — enhance, don't replace",
+      "HTML report must be self-contained (single file, no external deps except CDN CSS)",
+      "Tutorial content must cover all product domains: board, agents, context, auto-mode, projects, git workflow",
+      "Single tutorial feature on the board is acceptable but no gap-based feature creation"
+    ]
+  },
+  "createdAt": "2026-03-07T11:04:42.297Z",
+  "updatedAt": "2026-03-07T13:01:26.351Z"
+}

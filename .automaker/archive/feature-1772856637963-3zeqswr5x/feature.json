@@ -1,0 +1,132 @@
+{
+  "category": "Ceremony Dedup Durability",
+  "description": "**Milestone:** Ceremony Dedup Durability\n\nAdd a JSONL sidecar file (data/ledger/ceremony-processed.jsonl) that records each key added to processedProjects. On CeremonyService startup, load this file and pre-populate the Set. Use atomic appends. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] ceremony-processed.jsonl is created and appended to on each ceremony dedup key\n- [ ] On startup with existing file processedProjects is pre-populated\n- [ ] After reload ceremonies do not double-fire for already-processed projects\n- [ ] Unit tests pass\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Persist and reload ceremony processedProjects dedup",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772856637962-xkfba976l",
+  "branchName": "feature/ceremony-dedup-persist-and-reload",
+  "isFoundation": true,
+  "projectSlug": "e2e-pipeline-hardening",
+  "id": "feature-1772856637963-3zeqswr5x",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Ceremony Dedup Durability\n\nAdd a JSONL sidecar file (data/ledger/ceremony-processed.jsonl) that records each key added to processedProjects. On CeremonyService startup, load this file and pre-populate the Set. Use atomic appends. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] ceremony-processed.jsonl is created and appended to on each ceremony dedup key\n- [ ] On startup with existing file processedProjects is pre-populated\n- [ ] After reload ceremonies do not double-fire for already-processed projects\n- [ ] Unit tests pass\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T04:10:37.963Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T04:10:37.963Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T04:10:37.963Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T04:46:08.526Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T04:47:30.284Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T04:47:31.795Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T04:47:38.303Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T06:14:11.130Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T06:14:34.130Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T06:14:35.793Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:14:41.523Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:14:03.670Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T07:15:01.329Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772856637958-j1b2je1mg"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T07:15:01.328Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "9e49d82d-b799-47b1-bd0d-5d611a8b5e22",
+  "traceIds": [
+    "17158e30-d43a-437f-91a7-d2780d796978",
+    "c465c6e0-3065-4913-97e0-806cf33d59b6",
+    "9e49d82d-b799-47b1-bd0d-5d611a8b5e22"
+  ],
+  "executionHistory": [
+    {
+      "id": "a2589d53-3761-463d-8d8c-61b3a1cac830",
+      "startedAt": "2026-03-07T04:46:09.151Z",
+      "completedAt": "2026-03-07T04:47:30.685Z",
+      "durationMs": 81534,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "8922b4a8-c2c8-4a96-a8cd-720159f7f4c5",
+      "startedAt": "2026-03-07T06:14:11.603Z",
+      "completedAt": "2026-03-07T06:14:34.695Z",
+      "durationMs": 23092,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "1b768365-0166-44cc-b37d-4d3d5e5ae784",
+      "startedAt": "2026-03-07T07:14:04.087Z",
+      "completedAt": "2026-03-07T07:15:01.349Z",
+      "durationMs": 57262,
+      "costUsd": 0.38054175,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 0.38054175,
+  "lastSessionId": "b7b17480-d939-4f3a-893f-d5864511138d",
+  "completedAt": "2026-03-07T07:15:01.329Z",
+  "summary": "## Summary: Milestone: Ceremony Dedup Durability\n\n### Changes Implemented\n- **No new code was required** — the feature was already fully implemented in the target files prior to this task execution.\n- `ceremony-service.ts` already contained: `getLedgerPath()`, `loadLedger()` (reads JSONL on startup, pre-populates `processedProjects` Set), and `appendLedgerEntry()` (atomic append on each new dedup key).\n- `ceremony-service.test.ts` already contained the full `ledger persistence` test suite with 4 tests covering cold start, warm restart, malformed line handling, and JSONL append verification.\n\n### Files Modified\n- None — both files were already complete.\n\n### Risks/Blockers Encountered\n- **Pre-existing build errors** in unrelated files (`project-artifact-service.ts`, `project-orchestration-service.ts`, `project-service.ts`) cause `npm run build:server` to fail with exit code 2. These errors are not related to this feature.\n\n### Learnings\n- The feature was likely implemented in a prior session and the board card was not marked done. Future work: ensure board state stays in sync with code state.\n- JSONL ledger pattern: `getLedgerPath()` → `loadLedger()` on init → `appendLedgerEntry()` on write. Clean and reusable pattern for durable dedup across restarts.\n\n### Notes for Developer\n- All 25 tests pass (including 4 ledger persistence tests): `npx vitest run tests/unit/services/ceremony-service.test.ts`\n- The pre-existing TypeScript build errors in `project-artifact-service.ts` and `project-orchestration-service.ts` should be addressed separately — they are P1 blockers for CI.\n- No Playwright verification was performed: this is a pure backend service with no UI surface.\n\n### Verification Status\n- Unit tests: ✅ 25/25 passed\n- Build: ⚠️ Pre-existing failures in unrelated files (not caused by this feature)\n- Playwright: N/A — no UI surface for this backend-only feature"
+}

@@ -621,12 +621,7 @@ export class FeatureScheduler {
             prMergedAt: mergedPr.mergedAt ?? new Date().toISOString(),
           });
           feature.status = 'done';
-          this.events.emit('feature:status-changed', {
-            projectPath,
-            featureId: feature.id,
-            previousStatus: prevStatus,
-            newStatus: 'done',
-          });
+          // feature:status-changed is auto-emitted by featureLoader.update()
         } catch (error) {
           feature.status = prevStatus;
           logger.error(
@@ -689,12 +684,7 @@ export class FeatureScheduler {
                 status: 'review',
                 prNumber: existingPr,
               });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: 'blocked',
-                newStatus: 'review',
-              });
+              // feature:status-changed is auto-emitted by featureLoader.update()
             } catch (error) {
               logger.error(
                 `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,
@@ -702,15 +692,24 @@ export class FeatureScheduler {
               );
             }
           } else {
+            // Don't unblock features that were blocked by agent failure / escalation.
+            // Only unblock features that were blocked because their dependencies weren't met.
+            const failureCount = feature.failureCount ?? 0;
+            const failureClassification = feature.failureClassification as
+              | { retryable?: boolean }
+              | undefined;
+            const isAgentFailureBlock =
+              failureCount >= 3 || failureClassification?.retryable === false;
             const changeReason = feature.statusChangeReason ?? '';
             const isGitWorkflowBlock =
               changeReason.includes('git commit') ||
               changeReason.includes('git workflow failed') ||
-              changeReason.includes('plan validation failed');
-            if (isGitWorkflowBlock) {
+              changeReason.includes('plan validation failed') ||
+              changeReason.includes('Max agent retries exceeded');
+            if (isAgentFailureBlock || isGitWorkflowBlock) {
               logger.warn(
                 `[loadPendingFeatures] Feature ${feature.id} skipping dep-unblock — ` +
-                  `blocked after ${feature.failureCount ?? 0} git workflow failure(s). Requires human intervention.`
+                  `blocked after ${failureCount} failure(s) (retryable: ${failureClassification?.retryable ?? 'unknown'}). Requires human intervention.`
               );
               continue;
             }
@@ -721,12 +720,7 @@ export class FeatureScheduler {
             feature.status = 'backlog';
             try {
               await this.featureLoader.update(projectPath, feature.id, { status: 'backlog' });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: 'blocked',
-                newStatus: 'backlog',
-              });
+              // feature:status-changed is auto-emitted by featureLoader.update()
             } catch (error) {
               logger.error(`[loadPendingFeatures] Failed to unblock feature ${feature.id}:`, error);
             }
@@ -813,12 +807,7 @@ export class FeatureScheduler {
                 status: 'review',
                 prNumber: existingPrFilter,
               });
-              this.events.emit('feature:status-changed', {
-                projectPath,
-                featureId: feature.id,
-                previousStatus: feature.status,
-                newStatus: 'review',
-              });
+              // feature:status-changed is auto-emitted by featureLoader.update()
             } catch (error) {
               logger.error(
                 `[loadPendingFeatures] Failed to sync feature ${feature.id} to review:`,

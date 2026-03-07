@@ -1,0 +1,131 @@
+{
+  "category": "Uncategorized",
+  "description": "Create the Todo data model and service layer following the Notes workspace pattern.\n\n**Types** (`libs/types/src/todo.ts`):\n- `TodoItem` — id, title, description?, completed, completedAt?, dueDate?, priority (0-4 same as features), linkedFeatureId?, linkedProjectSlug?, createdAt, updatedAt\n- `TodoList` — id, name, ownerType ('user'|'ava-instance'|'shared'), ownerInstanceId?, items: TodoItem[], createdAt, updatedAt\n- `TodoWorkspace` — version: 1, lists: Record&lt;string, TodoList&gt;, listOrder: string[]\n- Export all from `libs/types/src/index.ts`\n\n**Platform helpers** (`libs/platform/src/todo-paths.ts`):\n- `getTodoWorkspacePath(projectPath)` → `.automaker/todos/workspace.json`\n- `ensureTodoDir(projectPath)` → ensures `.automaker/todos/` exists\n- Export from `libs/platform/src/index.ts`\n\n**TodoService** (`apps/server/src/services/todo-service.ts`):\n- Storage: single JSON file `.automaker/todos/workspace.json` (same pattern as notes workspace)\n- Methods: createList(projectPath, name, ownerType?), deleteList(projectPath, listId), getList(projectPath, listId), getAllLists(projectPath), addItem(projectPath, listId, item), updateItem(projectPath, listId, itemId, updates), deleteItem(projectPath, listId, itemId), completeItem(projectPath, listId, itemId), reorderItems(projectPath, listId, itemIds)\n- Default workspace created on first access with one \"Todo\" shared list\n- Use atomicWriteJson from @protolabsai/utils for safe writes\n- Emit events via EventEmitter: todo:list-created, todo:item-added, todo:item-updated, todo:item-completed\n\n**Tests** (`apps/server/tests/unit/services/todo-service.test.ts`):\n- Full coverage of all CRUD methods\n- Default workspace creation on first access\n- Item completion sets completedAt timestamp\n- Reorder preserves all items\n- Delete list removes from listOrder\n\n**Files to Modify:**\n- libs/types/src/todo.ts (new)\n- libs/types/src/index.ts\n- libs/platform/src/todo-paths.ts (new)\n- libs/platform/src/index.ts\n- apps/server/src/services/todo-service.ts (new)\n- apps/server/tests/unit/services/todo-service.test.ts (new)\n\n**Acceptance Criteria:**\n- [ ] TodoItem, TodoList, TodoWorkspace types compile and export correctly\n- [ ] getTodoWorkspacePath and ensureTodoDir work correctly\n- [ ] TodoService CRUD methods all work against filesystem\n- [ ] Default workspace created with one shared \"Todo\" list on first access\n- [ ] All unit tests pass\n- [ ] npm run build:packages passes",
+  "title": "Todo types, service, and unit tests",
+  "status": "done",
+  "branchName": "feature/todo-types-service",
+  "complexity": "medium",
+  "priority": 2,
+  "isFoundation": true,
+  "source": "api",
+  "trustTier": 1,
+  "quarantineStatus": "passed",
+  "quarantineId": "6736a865-3203-4c3a-a760-8022220e57d0",
+  "id": "feature-1772867000039-wiajni623",
+  "descriptionHistory": [
+    {
+      "description": "Create the Todo data model and service layer following the Notes workspace pattern.\n\n**Types** (`libs/types/src/todo.ts`):\n- `TodoItem` — id, title, description?, completed, completedAt?, dueDate?, priority (0-4 same as features), linkedFeatureId?, linkedProjectSlug?, createdAt, updatedAt\n- `TodoList` — id, name, ownerType ('user'|'ava-instance'|'shared'), ownerInstanceId?, items: TodoItem[], createdAt, updatedAt\n- `TodoWorkspace` — version: 1, lists: Record&lt;string, TodoList&gt;, listOrder: string[]\n- Export all from `libs/types/src/index.ts`\n\n**Platform helpers** (`libs/platform/src/todo-paths.ts`):\n- `getTodoWorkspacePath(projectPath)` → `.automaker/todos/workspace.json`\n- `ensureTodoDir(projectPath)` → ensures `.automaker/todos/` exists\n- Export from `libs/platform/src/index.ts`\n\n**TodoService** (`apps/server/src/services/todo-service.ts`):\n- Storage: single JSON file `.automaker/todos/workspace.json` (same pattern as notes workspace)\n- Methods: createList(projectPath, name, ownerType?), deleteList(projectPath, listId), getList(projectPath, listId), getAllLists(projectPath), addItem(projectPath, listId, item), updateItem(projectPath, listId, itemId, updates), deleteItem(projectPath, listId, itemId), completeItem(projectPath, listId, itemId), reorderItems(projectPath, listId, itemIds)\n- Default workspace created on first access with one \"Todo\" shared list\n- Use atomicWriteJson from @protolabsai/utils for safe writes\n- Emit events via EventEmitter: todo:list-created, todo:item-added, todo:item-updated, todo:item-completed\n\n**Tests** (`apps/server/tests/unit/services/todo-service.test.ts`):\n- Full coverage of all CRUD methods\n- Default workspace creation on first access\n- Item completion sets completedAt timestamp\n- Reorder preserves all items\n- Delete list removes from listOrder\n\n**Files to Modify:**\n- libs/types/src/todo.ts (new)\n- libs/types/src/index.ts\n- libs/platform/src/todo-paths.ts (new)\n- libs/platform/src/index.ts\n- apps/server/src/services/todo-service.ts (new)\n- apps/server/tests/unit/services/todo-service.test.ts (new)\n\n**Acceptance Criteria:**\n- [ ] TodoItem, TodoList, TodoWorkspace types compile and export correctly\n- [ ] getTodoWorkspacePath and ensureTodoDir work correctly\n- [ ] TodoService CRUD methods all work against filesystem\n- [ ] Default workspace created with one shared \"Todo\" list on first access\n- [ ] All unit tests pass\n- [ ] npm run build:packages passes",
+      "timestamp": "2026-03-07T07:03:20.039Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T07:03:20.039Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T07:03:20.039Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:03:20.505Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T07:07:34.092Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:07:36.077Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T07:07:41.380Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:08:10.127Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T07:09:27.440Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:09:28.969Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T07:13:19.394Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T07:13:30.481Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T07:15:30.271Z"
+    }
+  ],
+  "featureType": "code",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T07:15:30.271Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "048ecb0b-dc0d-4999-825b-df340bcfc412",
+  "traceIds": [
+    "89c7673d-1041-4313-967a-70c50fd620cd",
+    "810439a0-f5fe-4542-96af-d0281e38ded5",
+    "048ecb0b-dc0d-4999-825b-df340bcfc412"
+  ],
+  "executionHistory": [
+    {
+      "id": "87cc9cb3-dd70-48ba-b0a8-2a782e88808a",
+      "startedAt": "2026-03-07T07:03:20.959Z",
+      "completedAt": "2026-03-07T07:07:34.997Z",
+      "durationMs": 254038,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "7dcef45c-e863-4cb2-a7b1-84a0a72dd2af",
+      "startedAt": "2026-03-07T07:08:10.511Z",
+      "completedAt": "2026-03-07T07:09:27.860Z",
+      "durationMs": 77349,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "71a5f71d-075a-4e77-b327-acdf774bb062",
+      "startedAt": "2026-03-07T07:13:30.896Z",
+      "completedAt": "2026-03-07T07:15:30.276Z",
+      "durationMs": 119380,
+      "costUsd": 0.72421975,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 0.72421975,
+  "lastSessionId": "5489d1d2-c23a-4245-8ecb-e19a1956ed11",
+  "completedAt": "2026-03-07T07:15:30.271Z",
+  "summary": "## Summary: Create the Todo data model and service layer\n\n### Changes Implemented\n- All required files were already present (created by a prior run of the same agent task), fully implemented and correct. No additional code was needed.\n- Verified all 6 required files exist with complete, correct implementations.\n\n### Files Modified\n- `libs/types/src/todo.ts` (new) — `TodoItem`, `TodoList`, `TodoWorkspace` interfaces\n- `libs/types/src/index.ts` (modified) — exports todo types\n- `libs/platform/src/todo-paths.ts` (new) — `getTodosDir`, `getTodoWorkspacePath`, `ensureTodoDir`\n- `libs/platform/src/index.ts` (modified) — exports todo path helpers\n- `apps/server/src/services/todo-service.ts` (new) — `TodoService` class extending EventEmitter with all CRUD methods\n- `apps/server/tests/unit/services/todo-service.test.ts` (new) — 26 unit tests\n\n### Risks/Blockers Encountered\n- `npm run build:packages` / `@protolabsai/server` build has pre-existing failures in unrelated files (`project-artifact-service.ts`, `project-orchestration-service.ts`, `project-service.ts`) added by other feature agents. These are not caused by this feature.\n- The types and platform packages themselves build cleanly (exit 0).\n- `tsc --noEmit` on `todo-service.ts` passes cleanly.\n\n### Learnings\n- The service uses `EventEmitter` directly from Node's `events` module (not the project's internal `EventEmitter`) for simplicity.\n- `atomicWriteJson` from `@protolabsai/utils` with `{ createDirs: true }` handles safe writes.\n- The `reorderItems` method uses a safety-net pattern: items not in the provided `itemIds` array are appended at the end, ensuring no data loss.\n\n### Notes for Developer\n- The server-level build errors are pre-existing from other feature agents' untracked files. This feature's code does not cause or worsen them.\n\n### Verification Status\n- **Unit tests**: 26/26 passing (`vitest run tests/unit/services/todo-service.test.ts`)\n- **TypeScript**: Clean compile on `todo-service.ts` via `tsc --noEmit`\n- **Playwright**: Not applicable — this feature is a pure backend service layer with no UI surface or HTTP routes. Unit tests provide full behavioral coverage."
+}

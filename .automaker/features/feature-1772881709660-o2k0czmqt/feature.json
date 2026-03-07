@@ -1,0 +1,135 @@
+{
+  "category": "proto.config.yaml Schema & Loader",
+  "description": "**Milestone:** proto.config.yaml Schema & Loader\n\nCreate loadProtoConfig() in libs/platform/src/proto-config.ts. Reads proto.config.yaml from project root, merges with .automaker/settings.json overrides, then env var overrides. Returns null if no proto.config.yaml exists (single-instance mode). Includes writeProtoConfig() for setuplab to generate the initial file.\n\n**Files to Modify:**\n- libs/platform/src/proto-config.ts\n- libs/platform/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] loadProtoConfig(projectPath) reads and parses YAML\n- [ ] Layered merge: YAML -> settings.json -> env vars\n- [ ] Returns null when no proto.config.yaml exists\n- [ ] writeProtoConfig(projectPath, config) writes formatted YAML\n- [ ] Unit tests for merge logic and missing file handling\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Config loader with layered resolution",
+  "status": "done",
+  "isEpic": false,
+  "epicId": "feature-1772881709657-be8p79osk",
+  "branchName": "feature/protoconfigyaml-config-loader-with",
+  "isFoundation": false,
+  "projectSlug": "setuplab-published-onboarding-tool",
+  "milestoneSlug": "01-proto-config-yaml-schema-loader",
+  "phaseSlug": "config-loader-with-layered-resolution",
+  "id": "feature-1772881709660-o2k0czmqt",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** proto.config.yaml Schema & Loader\n\nCreate loadProtoConfig() in libs/platform/src/proto-config.ts. Reads proto.config.yaml from project root, merges with .automaker/settings.json overrides, then env var overrides. Returns null if no proto.config.yaml exists (single-instance mode). Includes writeProtoConfig() for setuplab to generate the initial file.\n\n**Files to Modify:**\n- libs/platform/src/proto-config.ts\n- libs/platform/src/index.ts\n\n**Acceptance Criteria:**\n- [ ] loadProtoConfig(projectPath) reads and parses YAML\n- [ ] Layered merge: YAML -> settings.json -> env vars\n- [ ] Returns null when no proto.config.yaml exists\n- [ ] writeProtoConfig(projectPath, config) writes formatted YAML\n- [ ] Unit tests for merge logic and missing file handling\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T11:08:29.661Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T11:08:29.661Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T11:08:29.661Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T12:15:46.296Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T12:16:53.006Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T12:16:55.910Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T12:17:00.479Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T12:18:20.838Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T12:18:23.616Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T12:18:25.896Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T12:18:32.497Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T12:20:03.869Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T12:23:18.765Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T12:26:13.494Z"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772881709659-k4bjs0l1u"
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T12:20:05.778Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "ba84b275-9078-4bfd-8ecf-2978738d25de",
+  "traceIds": [
+    "2215e642-cb3e-43a8-83d0-168cba27664b",
+    "e51088c3-aa61-4946-8308-64a64c929e87",
+    "ba84b275-9078-4bfd-8ecf-2978738d25de"
+  ],
+  "executionHistory": [
+    {
+      "id": "91aadee7-806d-4e2d-9630-86aa0a2e5562",
+      "startedAt": "2026-03-07T12:15:46.797Z",
+      "completedAt": "2026-03-07T12:16:53.579Z",
+      "durationMs": 66782,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "dc8f1a9a-dfa8-4d8f-96c9-2e80cd755c44",
+      "startedAt": "2026-03-07T12:18:21.248Z",
+      "completedAt": "2026-03-07T12:18:23.769Z",
+      "durationMs": 2521,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 0.654909,
+  "lastSessionId": "ad7d7358-68a4-4581-ba3c-c9e09660c5a2",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1931",
+  "prNumber": 1931,
+  "prCreatedAt": "2026-03-07T12:23:17.279Z",
+  "reviewStartedAt": "2026-03-07T12:23:18.765Z",
+  "prTrackedSince": "2026-03-07T12:23:18.769Z",
+  "prLastPolledAt": "2026-03-07T12:25:59.447Z",
+  "prMergedAt": "2026-03-07T12:26:03Z",
+  "completedAt": "2026-03-07T12:26:13.494Z"
+}

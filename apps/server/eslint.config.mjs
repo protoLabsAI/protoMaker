@@ -58,7 +58,7 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: '^_',
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
 
       // Downgrade pre-existing base rule violations to warnings.
       // These should be fixed over time but must not block CI.
@@ -85,7 +85,24 @@ const eslintConfig = defineConfig([
       },
     },
   },
-  globalIgnores(['dist/**', 'node_modules/**', 'tests/**']),
+  // Test-specific overrides: relax rules that are impractical to enforce in test files.
+  {
+    files: ['tests/**/*.ts'],
+    rules: {
+      // Allow `as any` in tests as a warning; typed factories are preferred but
+      // tests need escape hatches for complex mocks that can't be fully typed.
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // Tests legitimately use the generic `Function` type for mock callbacks.
+      '@typescript-eslint/no-unsafe-function-type': 'warn',
+      // Generator functions used as mock async iterators often lack yield.
+      'require-yield': 'warn',
+      // Regex literals with spaces are sometimes intentional in test fixtures.
+      'no-regex-spaces': 'warn',
+      // Tests use @/ path aliases which the n plugin cannot resolve to node_modules.
+      'n/no-extraneous-import': 'off',
+    },
+  },
+  globalIgnores(['dist/**', 'node_modules/**']),
 ]);
 
 export default eslintConfig;

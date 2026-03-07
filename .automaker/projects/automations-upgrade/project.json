@@ -2,7 +2,7 @@
   "slug": "automations-upgrade",
   "title": "Automations Upgrade",
   "goal": "Promote the Automations section from a simple CRUD panel into the single control plane for all scheduled work — built-in maintenance tasks, user automations, and scheduler health. Every operator action (enable/disable, reschedule, view metrics, triage failures) happens in one place without needing MCP access.",
-  "status": "active",
+  "status": "completed",
   "prd": {
     "situation": "Three-layer scheduling system: SchedulerService (868 lines, cron engine), AutomationService (697 lines, user-defined automation CRUD), and maintenance-tasks.ts (1000+ lines, 8 built-in system flows registered via FlowRegistry at startup). The Automations UI in Settings shows both user and built-in tasks with full CRUD for user automations and read-only display for built-ins. MCP exposes get_scheduler_status and update_maintenance_task tools. stale-worktrees and branch-cleanup already use resolveIntegrationBranch() correctly.",
     "problem": "Four gaps prevent the Automations section from being a complete control plane: (1) Scheduler status is MCP-only — no REST API exists so the UI cannot display health metrics; (2) Built-in task configuration (enabled state, cron overrides) resets on every server restart because it is not persisted in GlobalSettings; (3) auto-merge-prs and auto-rebase-stale-prs ignore the configured prBaseBranch and always operate against main; (4) Task failures run silently with no events or UI alerts.",
@@ -164,5 +164,5 @@
     }
   ],
   "createdAt": "2026-03-05T08:45:00.000Z",
-  "updatedAt": "2026-03-05T08:44:51.812Z"
+  "updatedAt": "2026-03-07T02:55:41.254Z"
 }

@@ -1,0 +1,184 @@
+I'll start by reading the relevant files to understand the existing patterns.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Write,Edit,Glob",
+  "max_results": 5
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/project-orchestration-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/completion-detector-service.ts"
+}
+Now let me look at existing integration tests and the feature-loader to understand the test patterns:
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/apps/server/tests/integration/services/ 2>/dev/null && ls /Users/kj/dev/automaker/apps/server/tests/integration/ 2>/dev/null",
+  "description": "List integration test directories"
+}
+
+🔧 Tool: Glob
+Input: {
+  "pattern": "apps/server/tests/integration/**/*.test.ts",
+  "path": "/Users/kj/dev/automaker"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/tests/integration/services/project-cascade.integration.test.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/tests/integration/services/lifecycle-cascade.integration.test.ts"
+}
+Let me check the current branch/worktree state and run the tests to see the current status:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git branch --show-current && git status --short | head -20",
+  "description": "Check current branch and status"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/apps/server/tests/integration/services/",
+  "description": "List integration test service files in main repo"
+}
+I'm in the worktree. Let me run the existing tests to see their current status:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git branch --show-current",
+  "description": "Check worktree branch"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat apps/server/tests/integration/services/project-cascade.integration.test.ts | head -5",
+  "description": "Quick check if project-cascade test exists in worktree"
+}
+The test file is already in the worktree. Let me check the orchestration service and run the tests:
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -n \"milestoneSlug\\|phaseSlug\" apps/server/src/services/project-orchestration-service.ts",
+  "description": "Check if milestoneSlug/phaseSlug are passed in feature creation"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "npx vitest run apps/server/tests/integration/services/project-cascade.integration.test.ts --reporter=verbose 2>&1 | tail -60",
+  "description": "Run the project-cascade integration test",
+  "timeout": 120000
+}
+All tests pass. Let me now run the build and the full integration test suite to verify everything is solid:
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run build:server 2>&1 | tail -20",
+  "description": "Build server to verify compilation",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "npx vitest run apps/server/tests/integration/services/ --reporter=verbose 2>&1 | tail -40",
+  "description": "Run all integration service tests",
+  "timeout": 180000
+}
+All 5 test files, 37 tests pass. Build succeeds. Let me verify the git diff to see what changes are in this worktree:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git diff --stat HEAD~1 HEAD 2>/dev/null || git diff --stat main 2>/dev/null | head -20",
+  "description": "Check what files changed vs main/previous commit"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git log --oneline -5",
+  "description": "Show recent commits"
+}
+The work has already been committed in this worktree. Let me verify the complete state by checking what's already committed:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git show --stat e818b3517 | head -20",
+  "description": "Show files changed in the most recent commit"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git log --oneline main..HEAD | head -10",
+  "description": "Show commits on this branch vs main"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git diff main..HEAD -- apps/server/src/services/project-orchestration-service.ts apps/server/src/services/completion-detector-service.ts apps/server/tests/integration/services/project-cascade.integration.test.ts | head -100",
+  "description": "Show diff of the specific feature files vs main"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git diff main..HEAD -- apps/server/src/services/project-orchestration-service.ts | head -60",
+  "description": "Show orchestration service diff vs main"
+}
+The implementation is already complete in the worktree. Let me do a final verification of the specific target files and run all tests once more:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git diff --stat 2>/dev/null && echo \"---\" && git status --short apps/server/src/services/project-orchestration-service.ts apps/server/src/services/completion-detector-service.ts apps/server/tests/integration/services/project-cascade.integration.test.ts",
+  "description": "Check git status of the target files"
+}
+All target files are clean (committed). The only uncommitted change is the `.automaker-lock` file. Let me do the final comprehensive build + test verification:
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run build:server 2>&1 | grep -E \"error|success|Tasks|Time|FULL TURBO\" | tail -10",
+  "description": "Verify server build passes cleanly",
+  "timeout": 120000
+}
+Build passes. All verification gates are green.
+
+<summary>
+## Summary: Milestone: Cascade Fix (TDD)
+
+### Changes Implemented
+The implementation was already present in this worktree across several prior commits. All changes are committed and passing. Key changes:
+
+1. **`project-orchestration-service.ts`** — Added `milestoneSlug: milestone.slug` to both the epic feature creation call AND the phase feature creation call (plus `phaseSlug: phase.name` for phases). This is the root fix: features created by `orchestrateProjectFeatures` now carry their `milestoneSlug`, enabling `CompletionDetectorService.onFeatureDone()` to invoke `checkMilestoneCompletion()`.
+
+2. **`completion-detector-service.ts`** — Refactored significantly: removed removed `SettingsService`/`LinearMCPClient` dependencies, added a JSONL ledger (`completion-emitted.jsonl`) for durable dedup across server restarts. The `checkMilestoneCompletion()` correctly groups features by `milestoneSlug` (primary path) with fallback to phase `featureId` links.
+
+3. **`project-cascade.integration.test.ts`** — New TDD integration test proving the full cascade: `feature:done → milestone:completed × 2 → project:completed` using the production `orchestrateProjectFeatures` code path with real (non-mocked) services. Also includes a negative test verifying partial completion doesn't fire early.
+
+### Files Modified
+- `apps/server/src/services/project-orchestration-service.ts` — milestoneSlug + phaseSlug on feature.create() calls
+- `apps/server/src/services/completion-detector-service.ts` — ledger persistence, removed dead deps
+- `apps/server/tests/integration/services/project-cascade.integration.test.ts` — new TDD integration test (created)
+
+### Risks/Blockers Encountered
+- None. All changes were already committed and tests were already green when the agent started.
+
+### Learnings
+- The TDD pattern used here: write the failing test first, commit it, then fix the implementation. The key bug was that `featureLoader.create()` calls in the orchestrator were missing `milestoneSlug`/`phaseSlug`, so `onFeatureDone()` silently returned without checking milestone completion.
+- The `checkMilestoneCompletion()` correctly uses a primary path (group by `milestoneSlug`) with a fallback to phase `featureId` links for backward compatibility.
+
+### Notes for Developer
+- Tests run with `npx vitest run apps/server/tests/integration/services/project-cascade.integration.test.ts`
+- All 37 integration service tests pass; build is clean.
+
+### Verification Status
+- Build: ✅ `npm run build:server` → exit 0, all 15 tasks successful
+- Tests: ✅ 37/37 integration service tests pass (2/2 project-cascade tests, 35/35 others)
+- Git diff: ✅ Only `.automaker-lock` has uncommitted changes (unrelated); all 3 feature files are clean
+- Playwright: This feature is backend-only (service cascade + integration tests) — no UI surface to verify with Playwright. Integration tests serve as the verification mechanism.
+</summary>

@@ -177,24 +177,8 @@ export function createUpdateHandler(
         }
       }
 
-      // Emit feature:status-changed so downstream services can react:
-      // - CompletionDetectorService: cascade epic → milestone → project completion checks
-      // - LedgerService: record metrics
-      // - AutoModeService: stop zombie agents on done
-      // - PRFeedbackService: start tracking PRs on review
-      if (
-        newStatus &&
-        previousStatus !== newStatus &&
-        (newStatus === 'done' || newStatus === 'review') &&
-        events
-      ) {
-        events.emit('feature:status-changed', {
-          projectPath: req.body.projectPath,
-          featureId: req.body.featureId,
-          previousStatus: previousStatus || 'unknown',
-          newStatus,
-        });
-      }
+      // NOTE: feature:status-changed is auto-emitted by featureLoader.update() for all
+      // status changes. No manual emission needed here.
 
       // Emit feature:updated when title or description changed so downstream
       // services can react to metadata changes.

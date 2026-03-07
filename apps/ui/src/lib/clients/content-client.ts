@@ -7,7 +7,7 @@
  *   - contentPipeline    (route text to content agents)
  *   - authorityPipeline  (route ideas to PM agent)
  */
-import type { NotesWorkspace, NoteTabPermissions } from '@protolabsai/types';
+import type { NotesWorkspace, NoteTabPermissions, TodoList, TodoItem } from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
@@ -116,5 +116,61 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
         description: string
       ): Promise<{ success: boolean; feature?: unknown; message?: string; error?: string }> =>
         this.post('/api/authority/inject-idea', { projectPath, title, description }),
+    };
+
+    // Todo API — per-project todo lists and items
+    todos = {
+      list: (projectPath: string): Promise<{ success: boolean; lists: TodoList[] }> =>
+        this.post('/api/todos/list', { projectPath }),
+
+      createList: (
+        projectPath: string,
+        name: string
+      ): Promise<{ success: boolean; list: TodoList }> =>
+        this.post('/api/todos/create-list', { projectPath, name }),
+
+      deleteList: (projectPath: string, listId: string): Promise<{ success: boolean }> =>
+        this.post('/api/todos/delete-list', { projectPath, listId }),
+
+      addItem: (
+        projectPath: string,
+        listId: string,
+        title: string,
+        priority?: 0 | 1 | 2 | 3 | 4,
+        dueDate?: string,
+        linkedFeatureId?: string
+      ): Promise<{ success: boolean; item: TodoItem }> =>
+        this.post('/api/todos/add-item', {
+          projectPath,
+          listId,
+          title,
+          priority,
+          dueDate,
+          linkedFeatureId,
+        }),
+
+      updateItem: (
+        projectPath: string,
+        listId: string,
+        itemId: string,
+        updates: Partial<
+          Pick<TodoItem, 'title' | 'completed' | 'completedAt' | 'dueDate' | 'priority'>
+        >
+      ): Promise<{ success: boolean; item: TodoItem }> =>
+        this.post('/api/todos/update-item', { projectPath, listId, itemId, updates }),
+
+      completeItem: (
+        projectPath: string,
+        listId: string,
+        itemId: string
+      ): Promise<{ success: boolean; item: TodoItem }> =>
+        this.post('/api/todos/complete-item', { projectPath, listId, itemId }),
+
+      deleteItem: (
+        projectPath: string,
+        listId: string,
+        itemId: string
+      ): Promise<{ success: boolean }> =>
+        this.post('/api/todos/delete-item', { projectPath, listId, itemId }),
     };
   };
