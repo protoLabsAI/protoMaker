@@ -11,7 +11,12 @@ import { ArchivalService } from '@/services/archival-service.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
 import type { LedgerService } from '@/services/ledger-service.js';
 import type { SettingsService } from '@/services/settings-service.js';
-import type { EventEmitter } from '@/lib/events.js';
+import {
+  createMockEventEmitter,
+  createMockSettingsService,
+  type MockEventEmitter,
+  type MockSettingsService,
+} from '../../helpers/mock-factories.js';
 
 describe('ArchivalService', () => {
   let archivalService: ArchivalService;
@@ -20,12 +25,8 @@ describe('ArchivalService', () => {
     archiveFeature: ReturnType<typeof vi.fn>;
   };
   let mockLedgerService: { recordFeatureCompletion: ReturnType<typeof vi.fn> };
-  let mockSettingsService: { getGlobalSettings: ReturnType<typeof vi.fn> };
-  let mockEvents: {
-    emit: ReturnType<typeof vi.fn>;
-    subscribe: ReturnType<typeof vi.fn>;
-    on: ReturnType<typeof vi.fn>;
-  };
+  let mockSettingsService: MockSettingsService;
+  let mockEvents: MockEventEmitter;
 
   const projectPath = '/test/project';
   const retentionHours = 2;
@@ -49,24 +50,20 @@ describe('ArchivalService', () => {
       recordFeatureCompletion: vi.fn().mockResolvedValue(undefined),
     };
 
-    mockSettingsService = {
+    mockSettingsService = createMockSettingsService({
       getGlobalSettings: vi.fn().mockResolvedValue({
         archival: { enabled: true, retentionHours },
         projects: [{ path: projectPath }],
       }),
-    };
+    });
 
-    mockEvents = {
-      emit: vi.fn(),
-      subscribe: vi.fn(),
-      on: vi.fn(),
-    };
+    mockEvents = createMockEventEmitter();
 
     archivalService = new ArchivalService(
       mockFeatureLoader as unknown as FeatureLoader,
       mockLedgerService as unknown as LedgerService,
       mockSettingsService as unknown as SettingsService,
-      mockEvents as unknown as EventEmitter
+      mockEvents
     );
   });
 
