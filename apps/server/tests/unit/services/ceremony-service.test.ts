@@ -21,6 +21,12 @@ import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { ProjectService } from '../../../src/services/project-service.js';
 import type { MetricsService } from '../../../src/services/metrics-service.js';
 import type { ProjectSettings } from '@protolabsai/types';
+import {
+  createMockSettingsService,
+  createMockFeatureLoader,
+  createMockProjectService,
+  createMockMetricsService,
+} from '../../helpers/mock-factories.js';
 
 // ---------------------------------------------------------------------------
 // Module mocks — prevent real LLM calls
@@ -37,21 +43,6 @@ vi.mock('@protolabsai/flows', () => ({
 }));
 
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
-
-// ---------------------------------------------------------------------------
-// Mock factories
-// ---------------------------------------------------------------------------
-
-const createMockSettingsService = (): SettingsService =>
-  ({ getProjectSettings: vi.fn() }) as unknown as SettingsService;
-
-const createMockFeatureLoader = (): FeatureLoader =>
-  ({ getAll: vi.fn() }) as unknown as FeatureLoader;
-
-const createMockProjectService = (): ProjectService =>
-  ({ getProject: vi.fn() }) as unknown as ProjectService;
-
-const createMockMetricsService = (): MetricsService => ({}) as unknown as MetricsService;
 
 /** Settings with ceremonies enabled and a Discord channel configured. */
 const enabledSettings = (
@@ -93,10 +84,10 @@ describe('CeremonyService', () => {
   beforeEach(() => {
     ceremonyService = new CeremonyService();
     emitter = createEventEmitter();
-    mockSettingsService = createMockSettingsService();
-    mockFeatureLoader = createMockFeatureLoader();
-    mockProjectService = createMockProjectService();
-    mockMetricsService = createMockMetricsService();
+    mockSettingsService = createMockSettingsService() as unknown as SettingsService;
+    mockFeatureLoader = createMockFeatureLoader() as unknown as FeatureLoader;
+    mockProjectService = createMockProjectService() as unknown as ProjectService;
+    mockMetricsService = createMockMetricsService() as unknown as MetricsService;
     vi.clearAllMocks();
   });
 
