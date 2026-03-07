@@ -1,0 +1,52 @@
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Write,Edit,Glob",
+  "max_results": 5
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/completion-detector-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/tests/unit/services/completion-detector-service.test.ts"
+}
+Now let me look at the EventLedgerService to understand the atomic append pattern:
+
+🔧 Tool: Glob
+Input: {
+  "pattern": "**/event-ledger*.ts",
+  "path": "/Users/kj/dev/automaker"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/event-ledger-service.ts",
+  "limit": 80
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/event-ledger-service.ts",
+  "offset": 79,
+  "limit": 80
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/event-ledger-service.ts",
+  "offset": 157,
+  "limit": 30
+}
+Now I have a clear picture of the patterns. Let me implement the feature:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/completion-detector-service.ts",
+  "old_string": "import { createLogger } from '@protolabsai/utils';\nimport type { EventEmitter } from '../lib/events.js';\nimport type { FeatureLoader } from './feature-loader.js';\nimport type { ProjectService } from './project-service.js';\nimport type { Feature, Milestone } from '@protolabsai/types';",
+  "new_string": "import fs from 'node:fs';\nimport path from 'node:path';\nimport readline from 'node:readline';\nimport { createLogger } from '@protolabsai/utils';\nimport type { EventEmitter } from '../lib/events.js';\nimport type { FeatureLoader } from './feature-loader.js';\nimport type { ProjectService } from './project-service.js';\nimport type { Feature, Milestone } from '@protolabsai/types';"
+}

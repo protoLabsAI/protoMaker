@@ -646,12 +646,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService,
     featureLoader,
     projectService,
-    metricsService
+    metricsService,
+    dataDir
   );
   ceremonyService.setAuditLog(ceremonyAuditLog);
 
   // Initialize Completion Detector Service
-  completionDetectorService.initialize(events, featureLoader, projectService);
+  completionDetectorService.initialize(events, featureLoader, projectService, dataDir);
 
   // Initialize Changelog Service for generating changelogs on milestone/project completion
   changelogService.initialize(events, settingsService, featureLoader, projectService);
