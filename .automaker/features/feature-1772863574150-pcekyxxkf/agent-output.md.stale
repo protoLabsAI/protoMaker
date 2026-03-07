@@ -1,0 +1,210 @@
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Edit,Write,Glob,Grep"
+}
+Let me read the relevant files in parallel to understand the existing patterns.
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/project-orchestration-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/completion-detector-service.ts"
+}
+
+🔧 Tool: Glob
+Input: {
+  "pattern": "apps/server/tests/integration/services/*.test.ts",
+  "path": "/Users/kj/dev/automaker"
+}
+I can see there's a worktree for this feature. Let me check what's there and read an existing integration test for patterns.
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/tests/integration/services/lifecycle-cascade.integration.test.ts"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git worktree list 2>/dev/null | head -20",
+  "description": "List git worktrees"
+}
+Let me check the FeatureLoader.create() signature and the Feature type to understand what fields are available.
+
+🔧 Tool: Bash
+Input: {
+  "command": "git status && git log --oneline -3",
+  "description": "Check worktree status and recent commits"
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "milestoneSlug|phaseSlug",
+  "path": "/Users/kj/dev/automaker/libs",
+  "type": "ts",
+  "output_mode": "content",
+  "head_limit": 30
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "milestoneSlug|phaseSlug",
+  "path": "/Users/kj/dev/automaker/libs/types/src",
+  "type": "ts",
+  "output_mode": "content"
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "create\\(.*projectPath|interface.*CreateFeature|CreateFeatureInput\",\n",
+  "path": "/Users/kj/dev/automaker/apps/server/src/services/feature-loader.ts",
+  "output_mode": "content",
+  "head_limit": 60
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "async create|milestoneSlug|phaseSlug",
+  "path": "/Users/kj/dev/automaker/apps/server/src/services/feature-loader.ts",
+  "output_mode": "content",
+  "head_limit": 60
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "phaseSlug|phaseName|phase.*Slug",
+  "path": "/Users/kj/dev/automaker/libs/types/src/feature.ts",
+  "output_mode": "content"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/libs/types/src/feature.ts",
+  "limit": 100,
+  "offset": 140
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "interface Phase|slug.*Phase|phase.*slug",
+  "path": "/Users/kj/dev/automaker/libs/types/src",
+  "output_mode": "content",
+  "type": "ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/libs/types/src/project.ts",
+  "offset": 90,
+  "limit": 30
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git rebase --abort 2>/dev/null || true && git status",
+  "description": "Abort any in-progress rebase and check status"
+}
+Now I have a clear picture. Let me create the integration test and fix the orchestration service.
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/tests/integration/services/lifecycle-cascade.integration.test.ts",
+  "limit": 30
+}
+Now I have all the information I need. Let me write the integration test and then fix the orchestration service:
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/tests/integration/services/project-cascade.integration.test.ts",
+  "content": "/**\n * Project Cascade Integration Test (TDD)\n *\n * Verifies that features created by orchestrateProjectFeatures carry the correct\n * milestoneSlug so the full cascade fires automatically:\n *\n *   feature:done → (epic:done →) milestone:completed → project:completed\n *\n * Scenario:\n *   - 1 project with 2 milestones, each with 2 phase features\n *   - orchestrateProjectFeatures is used to scaffold the features (no manual writes)\n *   - All features are marked done via feature:status-changed events\n *   - milestone:completed fires once per milestone\n *   - project:completed fires once when both milestones are done\n *\n * TDD notes:\n *   This test initially FAILS because orchestrateProjectFeatures does not set\n *   milestoneSlug on created features, so CompletionDetectorService never calls\n *   checkMilestoneCompletion (the guard `if (feature.milestoneSlug)` in onFeatureDone\n *   blocks it). The fix is to pass milestoneSlug in the featureLoader.create() call.\n */\n\nimport { describe, it, expect, beforeEach, afterEach } from 'vitest';\nimport * as fs from 'fs/promises';\nimport * as path from 'path';\nimport * as os from 'os';\n\nimport { CompletionDetectorService } from '@/services/completion-detector-service.js';\nimport { FeatureLoader } from '@/services/feature-loader.js';\nimport { ProjectService } from '@/services/project-service.js';\nimport { orchestrateProjectFeatures } from '@/services/project-orchestration-service.js';\nimport { createEventEmitter } from '@/lib/events.js';\nimport type { Project } from '@protolabsai/types';\n\n// ─── Test helpers ────────────────────────────────────────────────────────────\n\n/**\n * Wait for the next emission of an event type that passes an optional filter.\n * Timeout prevents tests from hanging on missed events.\n */\nfunction waitForEvent(\n  emitter: ReturnType<typeof createEventEmitter>,\n  eventType: string,\n  filter?: (payload: unknown) => boolean,\n  timeoutMs = 5000\n): Promise<unknown> {\n  return new Promise((resolve, reject) => {\n    const timer = setTimeout(() => {\n      reject(new Error(`Timed out waiting ${timeoutMs}ms for event \"${eventType}\"`));\n    }, timeoutMs);\n\n    const unsub = emitter.on(eventType as Parameters<typeof emitter.on>[0], (payload) => {\n      if (!filter || filter(payload)) {\n        clearTimeout(timer);\n        unsub();\n        resolve(payload);\n      }\n    });\n  });\n}\n\n/**\n * Yield to async handlers to allow fire-and-forget I/O to complete before\n * triggering the next status change. Prevents two concurrent handlers from\n * both seeing \"all done\" when only one should.\n */\nfunction yieldToHandlers(ms = 200): Promise<void> {\n  return new Promise((r) => setTimeout(r, ms));\n}\n\n/**\n * Build a minimal Project object for use with orchestrateProjectFeatures.\n * No epics — createEpics=false keeps the scaffold lean so the test focuses\n * on the milestoneSlug cascade path.\n */\nfunction buildTestProject(): Project {\n  return {\n    slug: 'cascade-test',\n    title: 'Cascade Test Project',\n    goal: 'Verify milestoneSlug cascade through orchestrateProjectFeatures',\n    status: 'active',\n    ongoing: false,\n    milestones: [\n      {\n        number: 1,\n        slug: 'ms1',\n        title: 'Milestone One',\n        description: 'First milestone',\n        status: 'active',\n        phases: [\n          {\n            number: 1,\n            name: 'phase-1',\n            title: 'MS1 Phase 1',\n            description: 'First phase of milestone one',\n          },\n          {\n            number: 2,\n            name: 'phase-2',\n            title: 'MS1 Phase 2',\n            description: 'Second phase of milestone one',\n          },\n        ],\n      },\n      {\n        number: 2,\n        slug: 'ms2',\n        title: 'Milestone Two',\n        description: 'Second milestone',\n        status: 'active',\n        phases: [\n          {\n            number: 1,\n            name: 'phase-1',\n            title: 'MS2 Phase 1',\n            description: 'First phase of milestone two',\n          },\n          {\n            number: 2,\n            name: 'phase-2',\n            title: 'MS2 Phase 2',\n            description: 'Second phase of milestone two',\n          },\n        ],\n      },\n    ],\n    createdAt: new Date().toISOString(),\n    updatedAt: new Date().toISOString(),\n  } as unknown as Project;\n}\n\n// ─── Tests ───────────────────────────────────────────────────────────────────\n\ndescribe('project-cascade (integration)', () => {\n  let projectPath: string;\n  let featureLoader: FeatureLoader;\n  let projectService: ProjectService;\n  let emitter: ReturnType<typeof createEventEmitter>;\n  let detector: CompletionDetectorService;\n\n  beforeEach(async () => {\n    // Isolated temp dir per test\n    projectPath = await fs.mkdtemp(path.join(os.tmpdir(), 'project-cascade-'));\n\n    // Real services, no mocks\n    featureLoader = new FeatureLoader();\n    projectService = new ProjectService(featureLoader);\n    emitter = createEventEmitter();\n    detector = new CompletionDetectorService();\n    detector.initialize(emitter, featureLoader, projectService);\n\n    // Create the project directory so orchestrateProjectFeatures can write project.json\n    const projectDir = path.join(projectPath, '.automaker', 'projects', 'cascade-test');\n    await fs.mkdir(projectDir, { recursive: true });\n  });\n\n  afterEach(async () => {\n    detector.destroy();\n    await fs.rm(projectPath, { recursive: true, force: true });\n  });\n\n  /**\n   * Mark a feature as done: update its on-disk status then fire the board event.\n   * CompletionDetectorService reads from disk, so the file must be updated first.\n   */\n  async function markFeatureDone(featureId: string): Promise<void> {\n    // Read the current feature.json, flip status to done, write back\n    const featureDir = path.join(projectPath, '.automaker', 'features', featureId);\n    const featurePath = path.join(featureDir, 'feature.json');\n    const raw = await fs.readFile(featurePath, 'utf-8');\n    const feature = JSON.parse(raw) as Record<string, unknown>;\n    feature.status = 'done';\n    await fs.writeFile(featurePath, JSON.stringify(feature, null, 2), 'utf-8');\n\n    emitter.emit('feature:status-changed', {\n      projectPath,\n      featureId,\n      previousStatus: 'backlog',\n      newStatus: 'done',\n    });\n  }\n\n  it('cascades feature:done → milestone:completed × 2 → project:completed via orchestrateProjectFeatures', async () => {\n    const project = buildTestProject();\n\n    // Scaffold all features via the production code path (no epics to keep test focused)\n    const scaffoldResult = await orchestrateProjectFeatures(\n      project,\n      {\n        projectPath,\n        projectSlug: 'cascade-test',\n        createEpics: false,\n        setupDependencies: false,\n        initialStatus: 'backlog',\n      },\n      featureLoader,\n      emitter\n    );\n\n    expect(scaffoldResult.errors).toHaveLength(0);\n    expect(scaffoldResult.featuresCreated).toBe(4); // 2 milestones × 2 phases\n\n    // Collect all feature IDs from the phaseFeatureMap\n    const featureIds = Object.values(scaffoldResult.phaseFeatureMap);\n    expect(featureIds).toHaveLength(4);\n\n    // Verify each created feature has milestoneSlug set (the fix being tested)\n    for (const featureId of featureIds) {\n      const feature = await featureLoader.get(projectPath, featureId);\n      expect(feature).not.toBeNull();\n      expect(feature!.milestoneSlug).toBeTruthy();\n    }\n\n    // ── Mark MS1 features done ────────────────────────────────────────────\n\n    const ms1DonePromise = waitForEvent(\n      emitter,\n      'milestone:completed',\n      (p) => (p as Record<string, unknown>).milestoneTitle === 'Milestone One'\n    );\n\n    const ms1P1Id = scaffoldResult.phaseFeatureMap['ms1:phase-1'];\n    const ms1P2Id = scaffoldResult.phaseFeatureMap['ms1:phase-2'];\n\n    expect(ms1P1Id).toBeTruthy();\n    expect(ms1P2Id).toBeTruthy();\n\n    await markFeatureDone(ms1P1Id);\n    await yieldToHandlers(); // let first handler settle before next status change\n    await markFeatureDone(ms1P2Id);\n\n    const ms1Payload = (await ms1DonePromise) as Record<string, unknown>;\n    expect(ms1Payload).toMatchObject({\n      projectSlug: 'cascade-test',\n      milestoneSlug: 'ms1',\n      milestoneTitle: 'Milestone One',\n      milestoneNumber: 1,\n    });\n\n    // ── Mark MS2 features done ────────────────────────────────────────────\n\n    const ms2DonePromise = waitForEvent(\n      emitter,\n      'milestone:completed',\n      (p) => (p as Record<string, unknown>).milestoneTitle === 'Milestone Two'\n    );\n    const projectDonePromise = waitForEvent(emitter, 'project:completed');\n\n    const ms2P1Id = scaffoldResult.phaseFeatureMap['ms2:phase-1'];\n    const ms2P2Id = scaffoldResult.phaseFeatureMap['ms2:phase-2'];\n\n    expect(ms2P1Id).toBeTruthy();\n    expect(ms2P2Id).toBeTruthy();\n\n    await markFeatureDone(ms2P1Id);\n    await yieldToHandlers();\n    await markFeatureDone(ms2P2Id);\n\n    const ms2Payload = (await ms2DonePromise) as Record<string, unknown>;\n    expect(ms2Payload).toMatchObject({\n      projectSlug: 'cascade-test',\n      milestoneSlug: 'ms2',\n      milestoneTitle: 'Milestone Two',\n      milestoneNumber: 2,\n    });\n\n    const projectPayload = (await projectDonePromise) as Record<string, unknown>;\n    expect(projectPayload).toMatchObject({\n      projectSlug: 'cascade-test',\n      totalMilestones: 2,\n    });\n\n    // ── Verify detector counts ────────────────────────────────────────────\n\n    const status = detector.getStatus();\n    expect(status.completionCounts.milestones).toBe(2);\n    expect(status.completionCounts.projects).toBe(1);\n    expect(status.emittedMilestones).toBe(2);\n    expect(status.emittedProjects).toBe(1);\n  }, 15000);\n\n  it('does not emit milestone:completed when only one of two MS1 features is done', async () => {\n    const project = buildTestProject();\n\n    const scaffoldResult = await orchestrateProjectFeatures(\n      project,\n      {\n        projectPath,\n        projectSlug: 'cascade-test',\n        createEpics: false,\n        setupDependencies: false,\n        initialStatus: 'backlog',\n      },\n      featureLoader,\n      emitter\n    );\n\n    const events: unknown[] = [];\n    emitter.on('milestone:completed', (p) => events.push(p));\n\n    const ms1P1Id = scaffoldResult.phaseFeatureMap['ms1:phase-1'];\n    await markFeatureDone(ms1P1Id);\n    await yieldToHandlers();\n\n    expect(events).toHaveLength(0);\n  });\n});\n"
+}
+Now let's run the test to confirm it fails (TDD red phase):
+
+🔧 Tool: Bash
+Input: {
+  "command": "npx vitest run apps/server/tests/integration/services/project-cascade.integration.test.ts --reporter=verbose 2>&1 | tail -60",
+  "description": "Run the new integration test to confirm it fails (TDD red phase)",
+  "timeout": 60000
+}
+The test fails as expected (TDD red) — `milestoneSlug` is `undefined` on created features. Now let me apply the fix to `project-orchestration-service.ts`:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/src/services/project-orchestration-service.ts",
+  "old_string": "        const epicFeature = await featureLoader.create(projectPath, {\n          title: `[Epic] ${milestone.title}`,\n          description: `# ${milestone.title}\\n\\n${milestone.description}\\n\\n## Phases\\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\\n')}`,\n          category: 'Epic',\n          status: initialStatus,\n          isEpic: true,\n          epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],\n          branchName: `epic/${slugify(milestone.title, 40)}`,\n          projectSlug,\n        });",
+  "new_string": "        const epicFeature = await featureLoader.create(projectPath, {\n          title: `[Epic] ${milestone.title}`,\n          description: `# ${milestone.title}\\n\\n${milestone.description}\\n\\n## Phases\\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\\n')}`,\n          category: 'Epic',\n          status: initialStatus,\n          isEpic: true,\n          epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],\n          branchName: `epic/${slugify(milestone.title, 40)}`,\n          projectSlug,\n          milestoneSlug: milestone.slug,\n        });"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/src/services/project-orchestration-service.ts",
+  "limit": 10
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/src/services/project-orchestration-service.ts",
+  "old_string": "        const epicFeature = await featureLoader.create(projectPath, {\n          title: `[Epic] ${milestone.title}`,\n          description: `# ${milestone.title}\\n\\n${milestone.description}\\n\\n## Phases\\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\\n')}`,\n          category: 'Epic',\n          status: initialStatus,\n          isEpic: true,\n          epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],\n          branchName: `epic/${slugify(milestone.title, 40)}`,\n          projectSlug,\n        });",
+  "new_string": "        const epicFeature = await featureLoader.create(projectPath, {\n          title: `[Epic] ${milestone.title}`,\n          description: `# ${milestone.title}\\n\\n${milestone.description}\\n\\n## Phases\\n${milestone.phases.map((p, i) => `${i + 1}. ${p.title}`).join('\\n')}`,\n          category: 'Epic',\n          status: initialStatus,\n          isEpic: true,\n          epicColor: EPIC_COLORS[mi % EPIC_COLORS.length],\n          branchName: `epic/${slugify(milestone.title, 40)}`,\n          projectSlug,\n          milestoneSlug: milestone.slug,\n        });"
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/src/services/project-orchestration-service.ts",
+  "old_string": "        const feature = await featureLoader.create(projectPath, {\n          title: phase.title,\n          description,\n          category: milestone.title,\n          status: initialStatus,\n          isEpic: false,\n          epicId,\n          branchName: `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`,\n          isFoundation: phase.number === 1,\n          projectSlug,\n        });",
+  "new_string": "        const feature = await featureLoader.create(projectPath, {\n          title: phase.title,\n          description,\n          category: milestone.title,\n          status: initialStatus,\n          isEpic: false,\n          epicId,\n          branchName: `feature/${slugify(milestone.title, 20)}-${slugify(phase.title, 20)}`,\n          isFoundation: phase.number === 1,\n          projectSlug,\n          milestoneSlug: milestone.slug,\n          phaseSlug: phase.name,\n        });"
+}
+Wait, I need to check if `phaseSlug` exists in the Feature type to avoid TypeScript errors:
+
+🔧 Tool: Bash
+Input: {
+  "command": "grep -n \"phaseSlug\\|\\[key.*string\\]\" /Users/kj/dev/automaker/libs/types/src/feature.ts | head -20",
+  "description": "Check if phaseSlug or index signature exists in Feature type"
+}
+The Feature type has `[key: string]: unknown` index signature, so `phaseSlug` is valid. Now let's run the tests to see if they go green:
+
+🔧 Tool: Bash
+Input: {
+  "command": "npx vitest run apps/server/tests/integration/services/project-cascade.integration.test.ts --reporter=verbose 2>&1 | tail -50",
+  "description": "Run the integration test after the fix (TDD green phase)",
+  "timeout": 60000
+}
+Both tests pass. Now let's run the full test suite for the modified files and run the server build:
+
+🔧 Tool: Bash
+Input: {
+  "command": "npx vitest run apps/server/tests/integration/services/ --reporter=verbose 2>&1 | tail -40",
+  "description": "Run all integration tests to verify no regressions",
+  "timeout": 120000
+}
+All 37 integration tests pass. Now let's run the server build:
+
+🔧 Tool: Bash
+Input: {
+  "command": "npm run build:server 2>&1 | tail -20",
+  "description": "Build the server to verify no TypeScript errors",
+  "timeout": 120000
+}
+There's a TypeScript error for `phaseSlug`. Let me remove it since it's not in the Feature type:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/.worktrees/feature-cascade-fix-tdd-integration-tests/apps/server/src/services/project-orchestration-service.ts",
+  "old_string": "          projectSlug,\n          milestoneSlug: milestone.slug,\n          phaseSlug: phase.name,\n        });",
+  "new_string": "          projectSlug,\n          milestoneSlug: milestone.slug,\n        });"
+}
+Now let me check if the other build errors (otel.ts, ceremony-service.ts) are pre-existing:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git stash && npm run build:server 2>&1 | grep \"error TS\" | head -10; git stash pop",
+  "description": "Check if otel and ceremony-service build errors are pre-existing on dev branch",
+  "timeout": 120000
+}
