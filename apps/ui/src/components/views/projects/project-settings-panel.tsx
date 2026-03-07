@@ -150,11 +150,21 @@ export function ProjectSettingsPanel({ project }: ProjectSettingsPanelProps) {
             disabled={testStatus === 'loading' || !webhookUrl}
             data-testid="test-webhook-button"
           >
-            {testStatus === 'loading' && <Send className="w-4 h-4 animate-pulse" />}
-            {testStatus === 'success' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
-            {testStatus === 'error' && <XCircle className="w-4 h-4 text-destructive" />}
-            {testStatus === 'idle' && <Send className="w-4 h-4" />}
-            <span className="ml-2">{testStatus === 'loading' ? 'Sending...' : 'Test webhook'}</span>
+            {testStatus === 'loading' && (
+              <Send className="w-4 h-4 animate-pulse" />
+            )}
+            {testStatus === 'success' && (
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+            )}
+            {testStatus === 'error' && (
+              <XCircle className="w-4 h-4 text-destructive" />
+            )}
+            {testStatus === 'idle' && (
+              <Send className="w-4 h-4" />
+            )}
+            <span className="ml-2">
+              {testStatus === 'loading' ? 'Sending...' : 'Test webhook'}
+            </span>
           </Button>
         </div>
         {urlError && (

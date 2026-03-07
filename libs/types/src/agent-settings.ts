@@ -300,6 +300,8 @@ export interface CeremonySettings {
   enableContentBriefs?: boolean;
   /** Discord channel ID for content briefs (separate from ceremony channel) */
   contentBriefChannelId?: string;
+  /** Discord webhook URL for posting ceremony announcements directly */
+  discordWebhookUrl?: string;
   /** Enable automated documentation updates after project completion (default: true) */
   enablePostProjectDocs?: boolean;
   /** Model configuration for generating retrospectives */
