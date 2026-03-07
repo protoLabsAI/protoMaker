@@ -7,7 +7,12 @@ import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { CRDTSyncService } from '../../../src/services/crdt-sync-service.js';
-import { CRDTStore, createProjectsDoc, serializeProject, deserializeProject } from '@protolabsai/crdt';
+import {
+  CRDTStore,
+  createProjectsDoc,
+  serializeProject,
+  deserializeProject,
+} from '@protolabsai/crdt';
 import type { Project } from '@protolabsai/types';
 
 function makeProject(slug: string): Project {
