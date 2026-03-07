@@ -1,9 +1,14 @@
 /**
- * ArchivalService - Automatic cleanup of completed features from the board.
+ * ArchivalService - Automatic archival of completed features from the board.
  *
  * Runs on a 10-minute interval. For each done feature older than
  * the retention period (default 2 hours), ensures a ledger record exists,
- * then deletes the feature directory.
+ * then moves the feature directory to .automaker/archive/{featureId}/.
+ *
+ * Preserved in archive: feature.json (full), agent-output.md, handoff-*.json.
+ * A minimal stub { id, archived, archivedAt, archivePath, status: "done", title }
+ * is left at the original feature path so FeatureLoader.get() returns an archived
+ * indicator rather than treating the feature as missing.
  *
  * Epic features are skipped if any child features are still active.
  */
@@ -143,20 +148,22 @@ export class ArchivalService {
       }
 
       try {
-        // Ensure ledger record exists (defensive write)
+        // Ensure ledger record exists (defensive write) before any destructive operation
         await this.ledgerService.recordFeatureCompletion(projectPath, feature);
 
-        // Delete the feature
-        await this.featureLoader.delete(projectPath, feature.id);
+        // Move feature to archive (preserves feature.json, agent-output.md, handoff-*.json)
+        // and leaves a stub with status: "done" and title at the original path.
+        const archivePath = await this.featureLoader.archiveFeature(projectPath, feature.id);
 
         this.events.emit('feature:archived', {
           projectPath,
           featureId: feature.id,
           featureTitle: feature.title,
+          archivePath,
         });
 
         archivedCount++;
-        logger.debug(`Archived feature "${feature.title || feature.id}"`);
+        logger.debug(`Archived feature "${feature.title || feature.id}" → ${archivePath}`);
       } catch (err) {
         logger.error(`Failed to archive feature ${feature.id}:`, err);
       }
