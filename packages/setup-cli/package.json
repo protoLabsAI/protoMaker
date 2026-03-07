@@ -1,0 +1,49 @@
+{
+  "name": "@protolabsai/setup",
+  "version": "0.1.0",
+  "description": "Scan any repo and generate proto.config.yaml, .automaker/ structure, and an HTML gap analysis report",
+  "type": "module",
+  "bin": {
+    "protolabs-setup": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "protolab",
+    "setup",
+    "cli",
+    "scaffold",
+    "automation"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1",
+    "create-protolab": "*",
+    "open": "^10.1.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.0"
+  }
+}
