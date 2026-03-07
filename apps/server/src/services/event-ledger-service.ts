@@ -229,6 +229,30 @@ export class EventLedgerService {
     return all.filter((e) => e.eventType === eventType);
   }
 
+  /**
+   * Return all events correlated to a specific project slug, sorted chronologically.
+   * Supports optional filtering by `since` (ISO 8601) and `type` (eventType).
+   */
+  async queryByProject(
+    projectSlug: string,
+    opts?: { since?: string; type?: string }
+  ): Promise<EventLedgerEntry[]> {
+    const all = await this._readAll();
+    const sinceMs = opts?.since ? new Date(opts.since).getTime() : undefined;
+
+    const filtered = all.filter((e) => {
+      if (e.correlationIds.projectSlug !== projectSlug) return false;
+      if (sinceMs !== undefined && new Date(e.timestamp).getTime() <= sinceMs) return false;
+      if (opts?.type && e.eventType !== opts.type) return false;
+      return true;
+    });
+
+    // Sort chronologically (oldest first)
+    filtered.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    return filtered;
+  }
+
   // ---------------------------------------------------------------------------
   // Lifecycle event subscription
   // ---------------------------------------------------------------------------
