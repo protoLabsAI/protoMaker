@@ -3,7 +3,7 @@
  */
 
 import { Router } from 'express';
-import { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { AuthorityService } from '../../services/authority-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -25,7 +25,7 @@ import type { RoleRegistryService } from '../../services/role-registry-service.j
 import type { TrustTierService } from '../../services/trust-tier-service.js';
 
 export function createFeaturesRoutes(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   trustTierService: TrustTierService,
   settingsService?: SettingsService,
   events?: EventEmitter,

@@ -16,7 +16,7 @@
 import { createLogger } from '@protolabsai/utils';
 import { classifyError } from '../lib/error-handler.js';
 import type { EventEmitter } from '../lib/events.js';
-import type { Feature } from '@protolabsai/types';
+import type { Feature, FeatureStore } from '@protolabsai/types';
 import type { Dirent } from 'fs';
 import { FeatureLoader } from './feature-loader.js';
 import * as secureFs from '../lib/secure-fs.js';
@@ -110,13 +110,13 @@ export interface HealthMonitorConfig {
  */
 export class HealthMonitorService {
   private events: EventEmitter | null = null;
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private intervalId: NodeJS.Timeout | null = null;
   private config: Required<HealthMonitorConfig>;
   private lastCheckResult: HealthCheckResult | null = null;
   private isRunning = false;
 
-  constructor(featureLoader?: FeatureLoader, config?: HealthMonitorConfig) {
+  constructor(featureLoader?: FeatureStore, config?: HealthMonitorConfig) {
     this.featureLoader = featureLoader ?? new FeatureLoader();
     this.config = {
       checkIntervalMs: config?.checkIntervalMs ?? DEFAULT_CHECK_INTERVAL_MS,
@@ -777,7 +777,7 @@ let healthMonitorServiceInstance: HealthMonitorService | null = null;
  * Get the singleton health monitor service instance
  */
 export function getHealthMonitorService(
-  featureLoader?: FeatureLoader,
+  featureLoader?: FeatureStore,
   config?: HealthMonitorConfig
 ): HealthMonitorService {
   if (!healthMonitorServiceInstance) {

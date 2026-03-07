@@ -47,10 +47,6 @@ export function register(container: ServiceContainer): void {
 
   // Data Integrity Watchdog wiring
   integrityWatchdogService.setEventEmitter(events);
-  featureLoader.setIntegrityWatchdog(integrityWatchdogService);
-
-  // FeatureLoader event emitter — enables auto-emission of feature:status-changed
-  featureLoader.setEventEmitter(events);
 
   // Event stream buffer subscription
   events.subscribe((type, payload) => {

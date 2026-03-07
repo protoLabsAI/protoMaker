@@ -18,7 +18,7 @@ import { exec, execSync } from 'child_process';
 import { createLogger } from '@protolabsai/utils';
 import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
 
 const logger = createLogger('WorktreeLifecycle');
@@ -54,7 +54,7 @@ export interface WorktreeHealth {
 
 export class WorktreeLifecycleService {
   private readonly events: EventEmitter;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private initialized = false;
   private driftCheckIntervalId: NodeJS.Timeout | null = null;
   private projectsToMonitor: Set<string> = new Set();
@@ -62,7 +62,7 @@ export class WorktreeLifecycleService {
 
   constructor(
     events: EventEmitter,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     getRunningFeatures?: () => Promise<Array<{ branchName?: string; projectPath: string }>>
   ) {
     this.events = events;

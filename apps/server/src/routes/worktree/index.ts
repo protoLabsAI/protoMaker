@@ -62,14 +62,13 @@ import { createStashDropHandler } from './routes/stash-drop.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { WorktreeLifecycleService } from '../../services/worktree-lifecycle-service.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 export function createWorktreeRoutes(
   events: EventEmitter,
   settingsService?: SettingsService,
   worktreeLifecycleService?: WorktreeLifecycleService,
   autoModeService?: AutoModeService,
-  featureLoader?: FeatureLoader
+  featureLoader?: FeatureStore
 ): Router {
   const router = Router();
 

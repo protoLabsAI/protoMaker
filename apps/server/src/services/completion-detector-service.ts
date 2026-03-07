@@ -14,7 +14,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { ProjectService } from './project-service.js';
 import type { Feature, Milestone } from '@protolabsai/types';
 
@@ -46,7 +46,7 @@ interface CompletionLedgerEntry {
 
 export class CompletionDetectorService {
   private emitter: EventEmitter | null = null;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
   private projectService: ProjectService | null = null;
   private unsubscribe: (() => void) | null = null;
   private dataDir: string | null = null;
@@ -132,7 +132,7 @@ export class CompletionDetectorService {
 
   initialize(
     emitter: EventEmitter,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     projectService: ProjectService,
     dataDir?: string
   ): void {

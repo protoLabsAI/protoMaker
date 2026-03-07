@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { Feature } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
@@ -19,7 +19,7 @@ interface BulkUpdateResult {
   error?: string;
 }
 
-export function createBulkUpdateHandler(featureLoader: FeatureLoader) {
+export function createBulkUpdateHandler(featureLoader: FeatureStore) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, featureIds, updates } = req.body as BulkUpdateRequest;

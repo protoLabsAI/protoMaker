@@ -27,7 +27,7 @@ import { createLogger, loadContextFiles } from '@protolabsai/utils';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
-import type { FeatureLoader } from '../feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AuditService } from '../audit-service.js';
 import type { SettingsService } from '../settings-service.js';
 import type { HITLFormService } from '../hitl-form-service.js';
@@ -99,7 +99,7 @@ interface PMReviewResult {
 export class PMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private readonly auditService: AuditService | null;
   private readonly settingsService: SettingsService | null;
   private readonly hitlFormService: HITLFormService | null;
@@ -113,7 +113,7 @@ export class PMAuthorityAgent {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     auditService?: AuditService,
     settingsService?: SettingsService,
     hitlFormService?: HITLFormService

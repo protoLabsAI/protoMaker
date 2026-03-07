@@ -51,7 +51,7 @@ import { compactToolResult } from './tool-compaction.js';
 import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
 import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventType } from '@protolabsai/types';
 
 export type { AvaConfig };
@@ -167,7 +167,7 @@ const CITATION_PATTERN = /\[\[(feature|doc):([^\]]+)\]\]/g;
 async function extractAndResolveCitations(
   text: string,
   projectPath: string,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureStore
 ): Promise<Citation[]> {
   const matches = [...text.matchAll(CITATION_PATTERN)];
   if (matches.length === 0) return [];

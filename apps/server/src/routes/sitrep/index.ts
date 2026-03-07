@@ -9,14 +9,14 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 
 const logger = createLogger('SitrepRoute');
 const execFileAsync = promisify(execFile);
 
 interface SitrepOptions {
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   autoModeService: AutoModeService;
   repoRoot: string;
 }

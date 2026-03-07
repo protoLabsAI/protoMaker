@@ -7,7 +7,7 @@
 
 import { Router } from 'express';
 import type { EventEmitter } from '../../lib/events.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from '../../services/authority-agents/projm-agent.js';
@@ -23,7 +23,7 @@ export interface AuthorityAgents {
 
 export function createCosRoutes(
   events: EventEmitter,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   agents: AuthorityAgents,
   settingsService?: SettingsService
 ): Router {

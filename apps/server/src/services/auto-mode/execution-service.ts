@@ -60,7 +60,7 @@ import {
   agentExecutionsTotal,
 } from '../../lib/prometheus.js';
 import { createAutoModeOptions, validateWorkingDirectory } from '../../lib/sdk-options.js';
-import { FeatureLoader } from '../feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from '../settings-service.js';
 import type { AuthorityService } from '../authority-service.js';
 import { pipelineService } from '../pipeline-service.js';
@@ -260,7 +260,7 @@ export class ExecutionService {
   constructor(
     private readonly events: EventEmitter,
     private readonly settingsService: SettingsService | null,
-    private readonly featureLoader: FeatureLoader,
+    private readonly featureLoader: FeatureStore,
     private readonly authorityService: AuthorityService | null,
     private readonly recoveryService: RecoveryService,
     private readonly knowledgeStoreService: KnowledgeStoreService | null,

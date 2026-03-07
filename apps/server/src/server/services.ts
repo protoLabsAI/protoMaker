@@ -8,6 +8,7 @@ import { createEventEmitter, type EventEmitter } from '../lib/events.js';
 
 import { AgentService } from '../services/agent-service.js';
 import { FeatureLoader } from '../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { UserIdentityService } from '../services/user-identity-service.js';
 import { AutoModeService } from '../services/auto-mode-service.js';
 import { getTerminalService } from '../services/terminal-service.js';
@@ -116,7 +117,7 @@ export interface ServiceContainer {
   userIdentityService: UserIdentityService;
 
   // Feature management
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   trustTierService: TrustTierService;
 
   // Agent infrastructure
@@ -397,6 +398,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Data Integrity Watchdog Service
   const integrityWatchdogService = getDataIntegrityWatchdogService(dataDir);
+
+  // Wire FeatureLoader concrete dependencies (done here where the concrete type is in scope)
+  featureLoader.setIntegrityWatchdog(integrityWatchdogService);
+  featureLoader.setEventEmitter(events);
 
   // Event History Service
   const eventHistoryService = getEventHistoryService();

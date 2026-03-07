@@ -44,7 +44,7 @@ import {
   ensureProjectDir,
   ensureMilestoneDir,
 } from '@protolabsai/platform';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { CalendarService } from './calendar-service.js';
 
 const logger = createLogger('ProjectService');
@@ -52,7 +52,7 @@ const logger = createLogger('ProjectService');
 export class ProjectService {
   private calendarService?: CalendarService;
 
-  constructor(private featureLoader: FeatureLoader) {}
+  constructor(private featureLoader: FeatureStore) {}
 
   setCalendarService(calendarService: CalendarService): void {
     this.calendarService = calendarService;

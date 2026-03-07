@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -29,7 +29,7 @@ import { createReconcileHandler } from './routes/reconcile.js';
 
 export function createAutoModeRoutes(
   autoModeService: AutoModeService,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   leadEngineerService: LeadEngineerService,
   settingsService: SettingsService,
   events?: EventEmitter

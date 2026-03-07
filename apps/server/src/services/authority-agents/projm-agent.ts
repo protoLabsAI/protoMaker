@@ -23,7 +23,7 @@ import type { AuthorityAgent } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
-import type { FeatureLoader } from '../feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { ProjectService } from '../project-service.js';
 import { simpleQuery } from '../../providers/simple-query-service.js';
 import { resolveModelString } from '@protolabsai/model-resolver';
@@ -50,7 +50,7 @@ interface ProjMCustomState {
 export class ProjMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private readonly projectService: ProjectService;
 
   /** Agent state (agents, initialization, processing tracking, poll timers) */
@@ -59,7 +59,7 @@ export class ProjMAuthorityAgent {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     projectService: ProjectService
   ) {
     this.events = events;

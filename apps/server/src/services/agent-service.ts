@@ -25,7 +25,7 @@ import { ProviderFactory } from '../providers/provider-factory.js';
 import { createChatOptions, validateWorkingDirectory } from '../lib/sdk-options.js';
 import type { SettingsService } from './settings-service.js';
 import type { RoleRegistryService } from './role-registry-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -97,7 +97,7 @@ export class AgentService {
   private events: EventEmitter;
   private settingsService: SettingsService | null = null;
   private roleRegistryService: RoleRegistryService | null = null;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
   private logger = createLogger('AgentService');
 
   constructor(
@@ -105,7 +105,7 @@ export class AgentService {
     events: EventEmitter,
     settingsService?: SettingsService,
     roleRegistryService?: RoleRegistryService,
-    featureLoader?: FeatureLoader
+    featureLoader?: FeatureStore
   ) {
     this.stateDir = path.join(dataDir, 'agent-sessions');
     this.metadataFile = path.join(dataDir, 'sessions-metadata.json');

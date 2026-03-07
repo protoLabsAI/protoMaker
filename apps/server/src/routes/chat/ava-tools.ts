@@ -23,7 +23,7 @@ import {
   getAutomakerDir,
   secureFs,
 } from '@protolabsai/platform';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { AgentService } from '../../services/agent-service.js';
@@ -65,7 +65,7 @@ export interface PlanData {
 // ---------------------------------------------------------------------------
 
 export interface AvaToolsServices {
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   autoModeService: AutoModeService;
   leadEngineerService: LeadEngineerService;
   agentService: AgentService;

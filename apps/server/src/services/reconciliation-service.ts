@@ -9,7 +9,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { ExecutionState } from '@protolabsai/types';
 import { getExecutionStatePath } from '@protolabsai/platform';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import * as secureFs from '../lib/secure-fs.js';
 
@@ -54,7 +54,7 @@ interface ReconciliationResult {
 export class ReconciliationService {
   constructor(
     private events: EventEmitter,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private autoModeService: AutoModeService
   ) {}
 

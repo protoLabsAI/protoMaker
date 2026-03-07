@@ -12,7 +12,7 @@
 import { createLogger } from '@protolabsai/utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { Drift } from './reconciliation-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type {
@@ -75,7 +75,7 @@ export class GitHubStateChecker {
   private prStateCache: Map<string, PRState> = new Map();
 
   constructor(
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private eventEmitter?: EventEmitter,
     private knownProjects: Map<string, string> = new Map()
   ) {}

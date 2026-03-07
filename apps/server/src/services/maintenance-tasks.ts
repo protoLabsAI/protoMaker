@@ -26,7 +26,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from './settings-service.js';
 import { mergeEligibilityService } from './merge-eligibility-service.js';
 import { githubMergeService } from './github-merge-service.js';
@@ -142,7 +142,7 @@ export function registerMaintenanceFlows(
     autoModeService: AutoModeService;
     featureHealthService?: FeatureHealthService;
     integrityWatchdogService?: DataIntegrityWatchdogService;
-    featureLoader?: FeatureLoader;
+    featureLoader?: FeatureStore;
     settingsService?: SettingsService;
   }
 ): void {
@@ -782,7 +782,7 @@ async function checkDataIntegrity(
  * Polls features every 5 minutes, checks merge eligibility, and auto-merges if all checks pass.
  */
 async function autoMergeEligiblePRs(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   settingsService: SettingsService,
   events: EventEmitter,
   projectPaths: string[]
@@ -1219,7 +1219,7 @@ async function tryAutoResolveConflicts(
  * for unresolvable conflicts.
  */
 async function autoRebaseStalePRs(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   settingsService: SettingsService,
   events: EventEmitter,
   projectPaths: string[]
@@ -1372,7 +1372,7 @@ async function autoRebaseStalePRs(
  */
 export async function scanWorktreesForCrashRecovery(
   projectPath: string,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   settingsService: SettingsService,
   events: EventEmitter
 ): Promise<void> {

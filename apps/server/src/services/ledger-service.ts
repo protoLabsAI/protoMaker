@@ -28,7 +28,7 @@ import type {
   TimeGroupBy,
   CycleTimeBucket,
 } from '@protolabsai/types';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('LedgerService');
@@ -48,11 +48,11 @@ function getLedgerPath(projectPath: string): string {
 }
 
 export class LedgerService {
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private events: EventEmitter;
   private unsubscribe?: () => void;
 
-  constructor(featureLoader: FeatureLoader, events: EventEmitter) {
+  constructor(featureLoader: FeatureStore, events: EventEmitter) {
     this.featureLoader = featureLoader;
     this.events = events;
   }

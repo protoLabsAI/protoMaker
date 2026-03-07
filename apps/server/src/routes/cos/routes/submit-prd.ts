@@ -8,7 +8,7 @@
 
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../../lib/events.js';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { AuthorityAgents } from '../index.js';
 import { createLogger } from '@protolabsai/utils';
@@ -30,7 +30,7 @@ interface SubmitPrdPayload {
 
 export function createSubmitPrdHandler(
   events: EventEmitter,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   agents: AuthorityAgents,
   settingsService?: SettingsService
 ) {

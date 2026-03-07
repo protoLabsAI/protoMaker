@@ -18,7 +18,7 @@ import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import type {
   GitHubComment,
@@ -89,7 +89,7 @@ const MISSING_CI_CHECK_THRESHOLD_MS = (() => {
 
 export class PRFeedbackService {
   private readonly events: EventEmitter;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private autoModeService: AutoModeService | null = null;
   private leadEngineerService: { isFeatureActive(featureId: string): boolean } | null = null;
 
@@ -113,7 +113,7 @@ export class PRFeedbackService {
   private readonly feedbackAggregator: FeedbackAggregator;
   private readonly threadResolver: ThreadResolver;
 
-  constructor(events: EventEmitter, featureLoader: FeatureLoader) {
+  constructor(events: EventEmitter, featureLoader: FeatureStore) {
     this.events = events;
     this.featureLoader = featureLoader;
     this.feedbackAggregator = new FeedbackAggregator(featureLoader);

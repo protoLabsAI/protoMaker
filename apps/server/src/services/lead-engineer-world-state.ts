@@ -17,7 +17,7 @@ import type {
   LeadPRSnapshot,
   LeadMilestoneSnapshot,
 } from '@protolabsai/types';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { ProjectService } from './project-service.js';
 import type { MetricsService } from './metrics-service.js';
@@ -27,7 +27,7 @@ const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
 
 export interface WorldStateBuilderDeps {
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   autoModeService: AutoModeService;
   projectService: ProjectService;
   metricsService: MetricsService;

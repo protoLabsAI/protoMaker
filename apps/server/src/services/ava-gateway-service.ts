@@ -12,7 +12,7 @@
 
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
-import { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { DiscordBotService } from './discord-bot-service.js';
 import { ClaudeProvider } from '../providers/claude-provider.js';
 import type { SettingsService } from './settings-service.js';
@@ -90,7 +90,7 @@ interface BoardSummary {
  * circuit breaker, timeout enforcement, and critical event routing.
  */
 export class AvaGatewayService {
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private discordBotService: DiscordBotService | null = null;
   private provider: ClaudeProvider | null = null;
   private events: EventEmitter | null = null;
@@ -119,7 +119,7 @@ export class AvaGatewayService {
   private readonly NOTIFICATION_RATE_LIMIT_MS = 5 * 60 * 1000; // 5 minutes
 
   constructor(
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     settingsService?: SettingsService,
     healthMonitor?: HealthMonitorService
   ) {
@@ -831,7 +831,7 @@ let avaGatewayServiceInstance: AvaGatewayService | null = null;
  * Get or create the singleton Ava Gateway service instance
  */
 export function getAvaGatewayService(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   settingsService?: SettingsService,
   healthMonitor?: HealthMonitorService
 ): AvaGatewayService {

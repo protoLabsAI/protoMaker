@@ -35,7 +35,7 @@ import {
 } from '@protolabsai/dependency-resolver';
 import { getFeaturesDir } from '@protolabsai/platform';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from './settings-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { LoopState } from './auto-mode/auto-loop-coordinator.js';
@@ -106,7 +106,7 @@ export interface FeatureHealthAuditor {
 // ── FeatureScheduler ───────────────────────────────────────────────────────
 
 export class FeatureScheduler {
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private settingsService: SettingsService | null;
   private events: EventEmitter;
   private runner: PipelineRunner;
@@ -114,7 +114,7 @@ export class FeatureScheduler {
   private featureHealthAuditor: FeatureHealthAuditor | null = null;
 
   constructor(deps: {
-    featureLoader: FeatureLoader;
+    featureLoader: FeatureStore;
     settingsService: SettingsService | null;
     events: EventEmitter;
     runner: PipelineRunner;

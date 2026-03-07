@@ -4,10 +4,10 @@
  */
 
 import type { Request, Response } from 'express';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
-export function createAgentOutputHandler(featureLoader: FeatureLoader) {
+export function createAgentOutputHandler(featureLoader: FeatureStore) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, featureId } = req.body as {
@@ -35,7 +35,7 @@ export function createAgentOutputHandler(featureLoader: FeatureLoader) {
 /**
  * Handler for getting raw JSONL output for debugging
  */
-export function createRawOutputHandler(featureLoader: FeatureLoader) {
+export function createRawOutputHandler(featureLoader: FeatureStore) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, featureId } = req.body as {

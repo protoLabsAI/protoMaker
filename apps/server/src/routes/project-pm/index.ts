@@ -28,7 +28,7 @@ import { resolveModelString } from '@protolabsai/model-resolver';
 import type { ProjectPMService } from '../../services/project-pm-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
 import type { EventType } from '@protolabsai/types';
 
@@ -95,7 +95,7 @@ export function createProjectPmRoutes(
   projectPmService: ProjectPMService,
   projectService: ProjectService,
   ceremonyService: CeremonyService,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   events: EventEmitter
 ): Router {
   const router = Router();

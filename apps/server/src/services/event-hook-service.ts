@@ -27,7 +27,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventHistoryService } from './event-history-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { DiscordBotService } from './discord-bot-service.js';
 import type {
   EventHook,
@@ -307,7 +307,7 @@ export class EventHookService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
   private eventHistoryService: EventHistoryService | null = null;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
   private discordBotService: DiscordBotService | null = null;
   private unsubscribe: (() => void) | null = null;
 
@@ -318,7 +318,7 @@ export class EventHookService {
     emitter: EventEmitter,
     settingsService: SettingsService,
     eventHistoryService?: EventHistoryService,
-    featureLoader?: FeatureLoader,
+    featureLoader?: FeatureStore,
     discordBotService?: DiscordBotService
   ): void {
     this.emitter = emitter;

@@ -17,7 +17,7 @@ import type {
 import { createLogger, slugify } from '@protolabsai/utils';
 import type { SettingsService } from './settings-service.js';
 import type { ProjectService } from './project-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import { orchestrateProjectFeatures, loadProject } from './project-orchestration-service.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -28,7 +28,7 @@ export class ProjectLifecycleService {
   constructor(
     private settingsService: SettingsService,
     private projectService: ProjectService,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private autoModeService: AutoModeService,
     private events: EventEmitter
   ) {}

@@ -24,7 +24,7 @@ import {
 import { createLogger } from '@protolabsai/utils';
 import type { PhaseProcessor } from './authority-agents/agent-utils.js';
 import type { ChannelRouter } from './channel-router.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from './settings-service.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 
@@ -117,7 +117,7 @@ export class PipelineOrchestrator {
 
   constructor(
     private events: EventBus,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private settingsService: SettingsService
   ) {
     this.setupEventListeners();

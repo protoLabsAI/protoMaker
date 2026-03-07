@@ -9,14 +9,14 @@
 import { createLogger } from '@protolabsai/utils';
 import type { LeadEngineerSession } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { WorldStateBuilder } from './lead-engineer-world-state.js';
 
 const logger = createLogger('LeadEngineerService');
 
 export interface CeremonyOrchestratorDeps {
   events: EventEmitter;
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   worldStateBuilder: WorldStateBuilder;
 }
 

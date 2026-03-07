@@ -8,7 +8,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { PRReviewInfo, ThreadFeedbackItem } from './pr-status-checker.js';
 
 const logger = createLogger('FeedbackAggregator');
@@ -17,7 +17,7 @@ const MAX_AGENT_OUTPUT_LENGTH = 50_000;
 const KEEP_AGENT_OUTPUT_LENGTH = 40_000;
 
 export class FeedbackAggregator {
-  constructor(private readonly featureLoader: FeatureLoader) {}
+  constructor(private readonly featureLoader: FeatureStore) {}
 
   /**
    * Build a simple continuation prompt from plain feedback text.

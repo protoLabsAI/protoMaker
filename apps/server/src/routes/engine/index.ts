@@ -19,7 +19,7 @@ import type { ContentFlowService } from '../../services/content-flow-service.js'
 import type { SignalIntakeService } from '../../services/signal-intake-service.js';
 import type { GitWorkflowService } from '../../services/git-workflow-service.js';
 import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
@@ -42,7 +42,7 @@ export function createEngineRoutes(
   eventStreamBuffer?: EventStreamBuffer,
   projectService?: ProjectService,
   contentFlowService?: ContentFlowService,
-  featureLoader?: FeatureLoader,
+  featureLoader?: FeatureStore,
   pipelineCheckpointService?: PipelineCheckpointService,
   events?: EventEmitter,
   gtmAgent?: GTMAuthorityAgent,

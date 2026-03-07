@@ -11,7 +11,7 @@
 
 import type { Feature } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
-import type { FeatureLoader } from '../feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import { getNotificationService } from '../notification-service.js';
 
@@ -20,13 +20,13 @@ const logger = createLogger('FeatureStateManager');
 export class FeatureStateManager {
   constructor(
     private events: EventEmitter,
-    private featureLoader: FeatureLoader
+    private featureLoader: FeatureStore
   ) {}
 
   /**
    * Update a feature's status on disk and emit status-change events.
    *
-   * ORDERING GUARANTEE: FeatureLoader.update() writes to disk before emitting
+   * ORDERING GUARANTEE: FeatureStore.update() writes to disk before emitting
    * feature:status-changed. This prevents clients from reading stale status data
    * on refresh after a server restart triggered by status-change events.
    */

@@ -18,7 +18,7 @@
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { ProjectIntegrations } from '@protolabsai/types';
 import type { Feature } from '@protolabsai/types';
 
@@ -59,7 +59,7 @@ interface FeatureEventPayload {
 export class IntegrationService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -68,7 +68,7 @@ export class IntegrationService {
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader
+    featureLoader: FeatureStore
   ): void {
     this.emitter = emitter;
     this.settingsService = settingsService;

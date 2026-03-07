@@ -11,6 +11,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { StagingPromotionService } from '../../../services/staging-promotion-service.js';
 
 const logger = createLogger('webhooks/github');
@@ -101,7 +102,7 @@ function verifySignature(secret: string, signature: string | undefined, body: st
  * Returns the project path on first match, or null if none match.
  */
 async function findProjectPathForFeature(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   projects: Array<{ path?: string }>,
   matcher: (path: string) => Promise<boolean>
 ): Promise<string | null> {
@@ -120,7 +121,7 @@ async function findProjectPathForFeature(
  * Find feature by branch name
  */
 async function findFeatureByBranch(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   projectPath: string,
   branchName: string
 ): Promise<{ featureId: string; title: string } | null> {

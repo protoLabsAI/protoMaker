@@ -25,7 +25,7 @@ import { resolveModelString } from '@protolabsai/model-resolver';
 import { randomUUID } from 'node:crypto';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
-import type { FeatureLoader } from '../feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AuditService } from '../audit-service.js';
 import type { SettingsService } from '../settings-service.js';
 import type { ContentFlowService } from '../content-flow-service.js';
@@ -73,7 +73,7 @@ export interface ContentDraft {
 export class GTMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private readonly auditService: AuditService | null;
   private readonly settingsService: SettingsService | null;
   private readonly contentFlowService: ContentFlowService | null;
@@ -85,7 +85,7 @@ export class GTMAuthorityAgent {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     auditService?: AuditService,
     settingsService?: SettingsService,
     contentFlowService?: ContentFlowService,

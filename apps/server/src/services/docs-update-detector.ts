@@ -9,8 +9,7 @@
 import { createLogger } from '@protolabsai/utils';
 import { execSync } from 'child_process';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 const logger = createLogger('DocsUpdateDetector');
 
 /** File patterns that indicate documentation should be updated */
@@ -31,7 +30,7 @@ export class DocsUpdateDetector {
 
   constructor(
     private events: EventEmitter,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private defaultProjectPath: string
   ) {}
 

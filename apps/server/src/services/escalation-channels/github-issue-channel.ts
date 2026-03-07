@@ -19,13 +19,12 @@ import {
   type EscalationChannel,
   type EscalationSignal,
 } from '@protolabsai/types';
-import type { FeatureLoader } from '../feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 const logger = createLogger('GitHubIssueChannel');
 
 export interface GitHubIssueChannelConfig {
   /** FeatureLoader for accessing feature data */
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   /** Project path for GitHub CLI operations */
   projectPath: string;
 }

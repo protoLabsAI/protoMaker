@@ -12,7 +12,7 @@ import type { Feature, FeatureFactoryResult, Milestone, Phase, Project } from '@
 import { getProjectJsonPath } from '@protolabsai/platform';
 import { secureFs } from '@protolabsai/platform';
 import { phaseToFeatureDescription, slugify } from '@protolabsai/utils';
-import { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import { getErrorMessage } from '../routes/projects/common.js';
 
@@ -100,7 +100,7 @@ function findDependencyId(
 export async function orchestrateProjectFeatures(
   project: Project,
   options: OrchestrateFeaturesOptions,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   events?: EventEmitter
 ): Promise<FeatureFactoryResult> {
   const {

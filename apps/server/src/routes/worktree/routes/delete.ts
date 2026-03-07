@@ -9,14 +9,13 @@ import { isGitRepo } from '@protolabsai/git-utils';
 import { getErrorMessage, logError, isValidBranchName, execGitCommand } from '../common.js';
 import { createLogger } from '@protolabsai/utils';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 const execAsync = promisify(exec);
 const logger = createLogger('Worktree');
 
 export function createDeleteHandler(
   autoModeService?: AutoModeService,
-  featureLoader?: FeatureLoader
+  featureLoader?: FeatureStore
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {

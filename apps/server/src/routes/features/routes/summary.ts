@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 export interface BoardSummary {
@@ -16,7 +16,7 @@ export interface BoardSummary {
   verified: number;
 }
 
-export function createSummaryHandler(featureLoader: FeatureLoader) {
+export function createSummaryHandler(featureLoader: FeatureStore) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath } = req.body as { projectPath: string };

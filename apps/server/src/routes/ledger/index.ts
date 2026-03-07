@@ -13,11 +13,10 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { LedgerService } from '../../services/ledger-service.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 export function createLedgerRoutes(
   ledgerService: LedgerService,
-  featureLoader: FeatureLoader
+  featureLoader: FeatureStore
 ): Router {
   const router = Router();
 

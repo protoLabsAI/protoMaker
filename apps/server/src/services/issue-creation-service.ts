@@ -14,7 +14,7 @@ import { execSync } from 'node:child_process';
 import { createLogger } from '@protolabsai/utils';
 import type { FailureCategory } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { TriageService, TriageInput, TriageResult } from './triage-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { Feature } from '@protolabsai/types';
@@ -81,7 +81,7 @@ interface CIFailurePayload {
 
 export class IssueCreationService {
   private events: EventEmitter;
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private triageService: TriageService;
   private settingsService: SettingsService;
   private unsubscribe: (() => void) | null = null;
@@ -94,7 +94,7 @@ export class IssueCreationService {
 
   constructor(
     events: EventEmitter,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     triageService: TriageService,
     settingsService: SettingsService
   ) {

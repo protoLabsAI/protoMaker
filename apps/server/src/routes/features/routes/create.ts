@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { Feature } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
@@ -37,7 +37,7 @@ function determineSource(req: Request): Feature['source'] {
 }
 
 export function createCreateHandler(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   trustTierService: TrustTierService,
   events?: EventEmitter
 ) {

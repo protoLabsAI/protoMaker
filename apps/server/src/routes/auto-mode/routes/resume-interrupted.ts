@@ -10,7 +10,7 @@
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { scanWorktreesForCrashRecovery } from '../../../services/maintenance-tasks.js';
@@ -23,7 +23,7 @@ interface ResumeInterruptedRequest {
 
 export function createResumeInterruptedHandler(
   autoModeService: AutoModeService,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   settingsService: SettingsService,
   events?: EventEmitter
 ) {

@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { LeadEngineerService } from '../../../services/lead-engineer-service.js';
 import {
   areDependenciesSatisfied,
@@ -17,7 +17,7 @@ const logger = createLogger('AutoMode');
 
 export function createRunFeatureHandler(
   autoModeService: AutoModeService,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   leadEngineerService: LeadEngineerService
 ) {
   return async (req: Request, res: Response): Promise<void> => {

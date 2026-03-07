@@ -14,7 +14,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { LedgerService } from './ledger-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventEmitter } from '../lib/events.js';
@@ -25,7 +25,7 @@ const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const DEFAULT_RETENTION_HOURS = 2;
 
 export class ArchivalService {
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private ledgerService: LedgerService;
   private settingsService: SettingsService;
   private events: EventEmitter;
@@ -33,7 +33,7 @@ export class ArchivalService {
   private aborted = false;
 
   constructor(
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     ledgerService: LedgerService,
     settingsService: SettingsService,
     events: EventEmitter

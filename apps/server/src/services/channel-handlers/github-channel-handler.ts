@@ -18,8 +18,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { HITLFormRequest } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
 import type { PipelineOrchestrator } from '../pipeline-orchestrator.js';
-import type { FeatureLoader } from '../feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 const logger = createLogger('GitHubChannelHandler');
 
 // ─── ChannelHandler interface ────────────────────────────────────────────────
@@ -86,7 +85,7 @@ export class GitHubChannelHandler implements ChannelHandler {
   constructor(
     private pipelineOrchestrator: PipelineOrchestrator,
     private events: EventEmitter,
-    private featureLoader: FeatureLoader
+    private featureLoader: FeatureStore
   ) {}
 
   /**

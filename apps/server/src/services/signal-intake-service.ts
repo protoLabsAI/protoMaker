@@ -12,7 +12,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { HITLFormRequestInput, SignalChannel } from '@protolabsai/types';
 import type { SignalIntent, RecentSignal } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('SignalIntake');
@@ -84,7 +84,7 @@ export class SignalIntakeService {
 
   constructor(
     private events: EventEmitter,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private defaultProjectPath: string,
     private settingsService?: SettingsService
   ) {

@@ -10,7 +10,7 @@ import path from 'path';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import { getAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type {
   Feature,
   CalendarEvent,
@@ -28,7 +28,7 @@ export type { CalendarEvent, CalendarEventType, CalendarQueryOptions };
  */
 export class CalendarService {
   private static instance: CalendarService;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
 
   private constructor() {}
 
@@ -42,7 +42,7 @@ export class CalendarService {
   /**
    * Set the FeatureLoader instance for aggregating feature due dates
    */
-  setFeatureLoader(featureLoader: FeatureLoader): void {
+  setFeatureLoader(featureLoader: FeatureStore): void {
     this.featureLoader = featureLoader;
   }
 

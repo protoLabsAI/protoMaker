@@ -6,12 +6,12 @@
  */
 
 import type { Request, Response } from 'express';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { RoleRegistryService } from '../../../services/role-registry-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 
 export function createAssignAgentHandler(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   roleRegistry?: RoleRegistryService,
   events?: EventEmitter
 ) {

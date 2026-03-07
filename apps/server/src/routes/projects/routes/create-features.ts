@@ -9,7 +9,7 @@
 
 import type { Request, Response } from 'express';
 import { projectPlanExists } from '@protolabsai/platform';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import {
   orchestrateProjectFeatures,
   loadProject,
@@ -25,7 +25,7 @@ interface CreateFeaturesRequest {
   initialStatus?: 'backlog' | 'in-progress';
 }
 
-export function createCreateFeaturesHandler(featureLoader: FeatureLoader, events: EventEmitter) {
+export function createCreateFeaturesHandler(featureLoader: FeatureStore, events: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const {

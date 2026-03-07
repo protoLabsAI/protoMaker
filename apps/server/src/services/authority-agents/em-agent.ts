@@ -18,7 +18,7 @@ import type { AuthorityAgent } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../../lib/events.js';
 import type { AuthorityService } from '../authority-service.js';
-import type { FeatureLoader } from '../feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from '../auto-mode-service.js';
 import { githubMergeService } from '../github-merge-service.js';
 import type { AuditService } from '../audit-service.js';
@@ -47,7 +47,7 @@ interface EMCustomState {
 export class EMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private readonly autoModeService: AutoModeService;
   private readonly auditService: AuditService;
   private readonly settingsService: SettingsService;
@@ -60,7 +60,7 @@ export class EMAuthorityAgent {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     autoModeService: AutoModeService,
     auditService: AuditService,
     settingsService: SettingsService,

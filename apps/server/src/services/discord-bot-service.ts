@@ -36,7 +36,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { ReactionAbility, ChannelWorkflow } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { AuthorityService } from './authority-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { PMAuthorityAgent } from './authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from './authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from './authority-agents/em-agent.js';
@@ -85,7 +85,7 @@ interface PendingIdea {
 export class DiscordBotService {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
-  private readonly featureLoader: FeatureLoader;
+  private readonly featureLoader: FeatureStore;
   private readonly settingsService: SettingsService;
   private readonly projectPath: string;
   private readonly agents?: AuthorityAgents;
@@ -139,7 +139,7 @@ export class DiscordBotService {
   constructor(
     events: EventEmitter,
     authorityService: AuthorityService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     settingsService: SettingsService,
     projectPath: string,
     agents?: AuthorityAgents

@@ -12,17 +12,16 @@ import type { Feature } from '@protolabsai/types';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { LangfuseClient } from '@protolabsai/observability';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 const logger = createLogger('AgentScoringService');
 
 export class AgentScoringService {
   private events: EventEmitter;
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   /** Cache featureId → projectPath for pipeline scoring */
   private featureProjectMap = new Map<string, string>();
 
-  constructor(events: EventEmitter, featureLoader: FeatureLoader) {
+  constructor(events: EventEmitter, featureLoader: FeatureStore) {
     this.events = events;
     this.featureLoader = featureLoader;
     this.registerListeners();

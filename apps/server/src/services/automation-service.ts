@@ -21,7 +21,7 @@ import type { EventEmitter } from '../lib/events.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { FeatureHealthService } from './feature-health-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from './settings-service.js';
 import { registerMaintenanceFlows } from './maintenance-tasks.js';
 
@@ -44,7 +44,7 @@ export interface SyncWithSchedulerDeps {
   autoModeService: AutoModeService;
   featureHealthService: FeatureHealthService;
   integrityWatchdogService: DataIntegrityWatchdogService;
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   settingsService: SettingsService;
 }
 

@@ -6,7 +6,7 @@
 
 import type { Feature, AgentRole } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { PRFeedbackService } from './pr-feedback-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
@@ -76,7 +76,7 @@ export interface IPlanReviewService {
  */
 export interface ProcessorServiceContext {
   events: EventEmitter;
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   autoModeService: AutoModeService;
   prFeedbackService?: PRFeedbackService;
   checkpointService?: PipelineCheckpointService;

@@ -7,7 +7,7 @@
 
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type {
   AgentInstance,
   AgentRole,
@@ -99,7 +99,7 @@ export class HeadsdownService {
   constructor(
     private events: EventEmitter,
     private settingsService: SettingsService,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     roleRegistry?: RoleRegistryService
   ) {
     this.roleRegistry = roleRegistry;
@@ -132,7 +132,7 @@ export class HeadsdownService {
   static getInstance(
     events: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     roleRegistry?: RoleRegistryService
   ): HeadsdownService {
     if (!HeadsdownService.instance) {

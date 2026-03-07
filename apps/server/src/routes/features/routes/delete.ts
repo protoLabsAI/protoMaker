@@ -3,11 +3,11 @@
  */
 
 import type { Request, Response } from 'express';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 
-export function createDeleteHandler(featureLoader: FeatureLoader, events?: EventEmitter) {
+export function createDeleteHandler(featureLoader: FeatureStore, events?: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, featureId } = req.body as {

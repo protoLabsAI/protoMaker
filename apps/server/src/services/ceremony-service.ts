@@ -20,7 +20,7 @@ import type { CeremonyState } from '@protolabsai/types';
 import { flowRegistry } from './automation-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { ProjectService } from './project-service.js';
 import type { MetricsService } from './metrics-service.js';
 import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
@@ -134,7 +134,7 @@ function createWebhookAdapter(webhookUrl: string) {
 export class CeremonyService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
   private projectService: ProjectService | null = null;
   private auditLog: CeremonyAuditLogService | null = null;
   private schedulerService: SchedulerService | null = null;
@@ -228,7 +228,7 @@ export class CeremonyService {
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     projectService: ProjectService,
     _metricsService: MetricsService,
     dataDir?: string

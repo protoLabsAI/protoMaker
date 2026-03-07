@@ -4,8 +4,7 @@
  */
 
 import type { Feature } from '@protolabsai/types';
-import { FeatureLoader } from './feature-loader.js';
-
+import type { FeatureStore } from '@protolabsai/types';
 /**
  * Normalize model identifiers to canonical short names (sonnet, opus, haiku).
  * Falls back to 'sonnet' since it's the default agent model.
@@ -78,9 +77,9 @@ export interface CapacityMetrics {
 }
 
 export class MetricsService {
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
 
-  constructor(featureLoader: FeatureLoader) {
+  constructor(featureLoader: FeatureStore) {
     this.featureLoader = featureLoader;
   }
 

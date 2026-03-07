@@ -3,10 +3,10 @@
  */
 
 import type { Request, Response } from 'express';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
-export function createGetHandler(featureLoader: FeatureLoader) {
+export function createGetHandler(featureLoader: FeatureStore) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, featureId } = req.body as {

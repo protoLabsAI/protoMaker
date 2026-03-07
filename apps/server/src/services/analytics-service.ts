@@ -8,7 +8,7 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { PipelinePhase } from '@protolabsai/types';
+import type { PipelinePhase, FeatureStore } from '@protolabsai/types';
 import { FeatureLoader } from './feature-loader.js';
 
 const logger = createLogger('AnalyticsService');
@@ -41,7 +41,7 @@ export interface AgentPerformanceAnalytics {
 }
 
 export class AnalyticsService {
-  private featureLoader: FeatureLoader;
+  private featureLoader: FeatureStore;
   private cache: {
     data?: AgentPerformanceAnalytics;
     timestamp?: number;

@@ -9,7 +9,7 @@ import path from 'node:path';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import { getAutomakerDir } from '@protolabsai/platform';
 import type { LeadEngineerSession } from '@protolabsai/types';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { SettingsService } from './settings-service.js';
 import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { PersistedSessionData } from './lead-engineer-types.js';
@@ -17,7 +17,7 @@ import type { PersistedSessionData } from './lead-engineer-types.js';
 const logger = createLogger('LeadEngineerService');
 
 export interface SessionStoreDeps {
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   settingsService: SettingsService;
 }
 

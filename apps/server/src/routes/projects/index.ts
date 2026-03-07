@@ -11,7 +11,7 @@
  */
 
 import { Router } from 'express';
-import { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
 import type { ProjectService } from '../../services/project-service.js';
 import { validatePathParams, validateSlugs } from '../../middleware/validate-paths.js';
@@ -29,7 +29,7 @@ import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 import type { EventLedgerService } from '../../services/event-ledger-service.js';
 
 export function createProjectsRoutes(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   events: EventEmitter,
   projectService: ProjectService,
   lifecycleService?: ProjectLifecycleService,

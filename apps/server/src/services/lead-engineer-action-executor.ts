@@ -17,7 +17,7 @@ import type {
   WorkflowSettings,
 } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
 
@@ -29,7 +29,7 @@ const SUPERVISOR_ABORT_COST_USD = 15;
 
 export interface ActionExecutorDeps {
   events: EventEmitter;
-  featureLoader: FeatureLoader;
+  featureLoader: FeatureStore;
   autoModeService: AutoModeService;
   codeRabbitResolver?: CodeRabbitResolverService;
   discordBotService?: { sendToChannel(channelId: string, content: string): Promise<boolean> };

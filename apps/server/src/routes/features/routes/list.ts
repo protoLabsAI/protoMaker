@@ -4,7 +4,7 @@
 
 import type { Request, Response } from 'express';
 import type { Feature, FeatureStatus } from '@protolabsai/types';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 import { debugLog } from '../../../lib/debug-log.js';
 
@@ -49,7 +49,7 @@ function toCompactFeature(feature: Feature): CompactFeature {
   };
 }
 
-export function createListHandler(featureLoader: FeatureLoader) {
+export function createListHandler(featureLoader: FeatureStore) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { projectPath, status, compact = false, projectSlug } = req.body as ListRequest;

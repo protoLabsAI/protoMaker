@@ -9,7 +9,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { Feature, FeatureStatus, ActionProposal, RiskLevel } from '@protolabsai/types';
 import type { AuthorityService } from '../../../services/authority-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
@@ -24,7 +24,7 @@ const logger = createLogger('features/update');
 const SYNC_TRIGGER_STATUSES: FeatureStatus[] = ['done'];
 
 export function createUpdateHandler(
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   settingsService?: SettingsService,
   authorityService?: AuthorityService,
   healthService?: FeatureHealthService,

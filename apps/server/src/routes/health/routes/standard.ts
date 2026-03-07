@@ -7,7 +7,7 @@
 import type { Request, Response } from 'express';
 import { getVersion } from '../../../lib/version.js';
 import type { AgentService } from '../../../services/agent-service.js';
-import type { FeatureLoader } from '../../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { RoleRegistryService } from '../../../services/role-registry-service.js';
 
@@ -35,7 +35,7 @@ interface StandardHealthResponse {
 
 export function createStandardHandler(
   agentService: AgentService,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   autoModeService: AutoModeService,
   roleRegistryService: RoleRegistryService,
   projectPath: string

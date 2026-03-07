@@ -18,7 +18,7 @@ import type {
 } from '@protolabsai/types';
 import { FeatureState } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { ProjectService } from './project-service.js';
 import type { ProjectLifecycleService } from './project-lifecycle-service.js';
@@ -85,7 +85,7 @@ export class LeadEngineerService {
 
   constructor(
     private events: EventEmitter,
-    private featureLoader: FeatureLoader,
+    private featureLoader: FeatureStore,
     private autoModeService: AutoModeService,
     private projectService: ProjectService,
     private projectLifecycleService: ProjectLifecycleService,

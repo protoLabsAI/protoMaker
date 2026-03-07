@@ -15,7 +15,7 @@ import { secureFs } from '@protolabsai/platform';
 import { getProjectDir } from '@protolabsai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { ProjectService } from './project-service.js';
 import type { ProjectArtifactService } from './project-artifact-service.js';
 import type { Feature } from '@protolabsai/types';
@@ -73,7 +73,7 @@ interface ChangelogGroup {
 export class ChangelogService {
   private emitter: EventEmitter | null = null;
   private settingsService: SettingsService | null = null;
-  private featureLoader: FeatureLoader | null = null;
+  private featureLoader: FeatureStore | null = null;
   private projectService: ProjectService | null = null;
   private projectArtifactService: ProjectArtifactService | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -84,7 +84,7 @@ export class ChangelogService {
   initialize(
     emitter: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader,
+    featureLoader: FeatureStore,
     projectService: ProjectService,
     projectArtifactService?: ProjectArtifactService
   ): void {

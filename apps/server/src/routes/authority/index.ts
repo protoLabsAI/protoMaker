@@ -12,7 +12,7 @@
 import { Router, Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { AuthorityService } from '../../services/authority-service.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { PMAuthorityAgent } from '../../services/authority-agents/pm-agent.js';
 import type { ProjMAuthorityAgent } from '../../services/authority-agents/projm-agent.js';
 import type { EMAuthorityAgent } from '../../services/authority-agents/em-agent.js';
@@ -30,7 +30,7 @@ interface AuthorityAgents {
 export function createAuthorityRoutes(
   authorityService: AuthorityService,
   events: EventEmitter,
-  featureLoader?: FeatureLoader,
+  featureLoader?: FeatureStore,
   agents?: AuthorityAgents,
   auditService?: AuditService
 ): Router {

@@ -12,7 +12,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { EventEmitter } from '../../lib/events.js';
-import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CeremonyAuditLogService } from '../../services/ceremony-audit-service.js';
@@ -32,7 +32,7 @@ interface TriggerBody {
 
 export function createCeremoniesRoutes(
   events: EventEmitter,
-  featureLoader: FeatureLoader,
+  featureLoader: FeatureStore,
   projectService: ProjectService,
   ceremonyService: CeremonyService,
   auditLog?: CeremonyAuditLogService

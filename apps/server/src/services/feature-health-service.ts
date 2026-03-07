@@ -18,7 +18,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { AutoModeService } from './auto-mode-service.js';
 
 const execFileAsync = promisify(execFile);
@@ -49,7 +49,7 @@ export interface HealthReport {
 
 export class FeatureHealthService {
   constructor(
-    private readonly featureLoader: FeatureLoader,
+    private readonly featureLoader: FeatureStore,
     private readonly autoModeService: AutoModeService
   ) {}
 

@@ -12,7 +12,7 @@ import { createLogger } from '@protolabsai/utils';
 import type { FeedbackThreadDecision, ReviewThreadFeedback } from '@protolabsai/types';
 import { EscalationSeverity, EscalationSource } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { FeatureLoader } from './feature-loader.js';
+import type { FeatureStore } from '@protolabsai/types';
 import type { TrackedPR, ThreadFeedbackItem } from './pr-status-checker.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 
@@ -21,7 +21,7 @@ const logger = createLogger('ThreadResolver');
 export class ThreadResolver {
   constructor(
     private readonly events: EventEmitter,
-    private readonly featureLoader: FeatureLoader
+    private readonly featureLoader: FeatureStore
   ) {}
 
   /**
