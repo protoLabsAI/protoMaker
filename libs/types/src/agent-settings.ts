@@ -280,6 +280,12 @@ export interface CeremonySettings {
   enabled: boolean;
   /** Discord channel ID for ceremony announcements (overrides project default) */
   discordChannelId?: string;
+  /**
+   * Discord webhook URL for ceremony announcements.
+   * When set, ceremony output is POSTed directly to this webhook URL instead of
+   * routing through the Discord bot channel. Takes precedence over discordChannelId.
+   */
+  discordWebhookUrl?: string;
   /** Enable epic kickoff announcements when created (default: true) */
   enableEpicKickoff?: boolean;
   /** Enable milestone standup announcements at start (default: true) */

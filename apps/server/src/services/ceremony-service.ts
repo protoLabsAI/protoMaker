@@ -107,6 +107,27 @@ function createDiscordAdapter(emitter: EventEmitter) {
 }
 
 // ---------------------------------------------------------------------------
+// HTTP webhook adapter
+// Posts ceremony output directly to a Discord webhook URL.
+// ---------------------------------------------------------------------------
+
+function createWebhookAdapter(webhookUrl: string) {
+  return {
+    sendMessage: async (_channelId: string, content: string): Promise<{ id: string }> => {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        throw new Error(`Webhook POST failed: ${response.status} ${response.statusText}`);
+      }
+      return { id: '' };
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // CeremonyService
 // ---------------------------------------------------------------------------
 
