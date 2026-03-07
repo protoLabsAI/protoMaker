@@ -1,0 +1,33 @@
+{
+  "category": "Per-Project Discord Webhook",
+  "description": "**Milestone:** Per-Project Discord Webhook\n\nTDD phase. The server logs show: Flow not registered: standup-flow when ceremony:standup is triggered. Find where flows are registered (likely apps/server/src/services or the LangGraph flow registry) and ensure createStandupFlow is registered under the key 'standup-flow'. Write a test that confirms the flow registry contains standup-flow, retro-flow, and project-retro-flow before any ceremony triggers. Fix the registration gap.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-flows.test.ts\n\n**Acceptance Criteria:**\n- [ ] standup-flow is registered and does not throw 'Flow not registered' error\n- [ ] Unit test verifies all 3 ceremony flows are registered on service init\n- [ ] Standup ceremony can be triggered via the ceremony route without errors\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Fix standup flow registration",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772863574157-znqqlnyfp",
+  "branchName": "feature/per-project-discord-fix-standup-flow",
+  "isFoundation": false,
+  "projectSlug": "project-lifecycle-hub",
+  "id": "feature-1772863574159-5yn86hnj8",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Per-Project Discord Webhook\n\nTDD phase. The server logs show: Flow not registered: standup-flow when ceremony:standup is triggered. Find where flows are registered (likely apps/server/src/services or the LangGraph flow registry) and ensure createStandupFlow is registered under the key 'standup-flow'. Write a test that confirms the flow registry contains standup-flow, retro-flow, and project-retro-flow before any ceremony triggers. Fix the registration gap.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-flows.test.ts\n\n**Acceptance Criteria:**\n- [ ] standup-flow is registered and does not throw 'Flow not registered' error\n- [ ] Unit test verifies all 3 ceremony flows are registered on service init\n- [ ] Standup ceremony can be triggered via the ceremony route without errors\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T06:06:14.159Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T06:06:14.159Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:06:14.159Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772863574155-y1w3b6382",
+    "feature-1772863574158-ygbtc3o0m"
+  ]
+}

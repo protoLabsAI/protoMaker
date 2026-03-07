@@ -1,0 +1,274 @@
+{
+  "slug": "project-lifecycle-hub",
+  "title": "Project Lifecycle Hub",
+  "goal": "Complete the project lifecycle end-to-end: fix the milestoneSlug cascade bug so milestone/project completion events fire correctly, persist all project artifacts (ceremony reports, changelogs, escalations) on the project, add per-project Discord webhook routing, build a timeline API, and surface everything on a unified project page hub. TDD throughout.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-cascade-fix-tdd",
+      "title": "Cascade Fix (TDD)",
+      "description": "Fix the P0 milestoneSlug bug so the full feature→epic→milestone→project completion cascade fires. TDD-first: write tests proving the cascade, then fix.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "integration-tests-for-full-cascade-fix-milestoneslug-on-createprojectfeatures",
+          "title": "Integration tests for full cascade + fix milestoneSlug on createProjectFeatures",
+          "description": "TDD phase. First write a failing integration test in apps/server/tests/integration/services/project-cascade.integration.test.ts that: (1) creates a project with 2 milestones and 2 features each, (2) marks all features done, (3) asserts milestone:completed fired for each milestone, (4) asserts project:completed fired once. The test will fail because createProjectFeatures does not set milestoneSlug on features. Then fix apps/server/src/services/project-orchestration-service.ts to pass milestoneSlug and phaseSlug when calling featureLoader.create(). Verify the test goes green. Also check that CompletionDetectorService.checkMilestoneCompletion() correctly groups features by milestoneSlug — fix if needed.",
+          "filesToModify": [
+            "apps/server/src/services/project-orchestration-service.ts",
+            "apps/server/src/services/completion-detector-service.ts",
+            "apps/server/tests/integration/services/project-cascade.integration.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Integration test proves full cascade: feature:done → epic:done → milestone:completed → project:completed",
+            "createProjectFeatures sets milestoneSlug and phaseSlug on all created features",
+            "CompletionDetectorService correctly groups by milestoneSlug for milestone completion check",
+            "All new and existing tests pass",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772863574150-pcekyxxkf"
+        },
+        {
+          "number": 2,
+          "name": "auto-update-project-status-on-project-completed-unit-tests",
+          "title": "Auto-update project status on project:completed + unit tests",
+          "description": "TDD phase. Write failing unit tests for a new ProjectStatusSyncService (or add to project-pm.module.ts) that subscribes to project:completed and updates the project.json status to 'completed' and sets a completedAt timestamp. The test should mock the event emitter and assert the project file is updated. Then implement the subscription. Also add a test asserting that project:lifecycle:launched sets status to 'active'. Wire into services.ts.",
+          "filesToModify": [
+            "apps/server/src/services/project-pm.module.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/tests/unit/services/project-pm.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "project:completed event auto-updates project.json status to 'completed' with completedAt timestamp",
+            "project:lifecycle:launched auto-updates project.json status to 'active'",
+            "Unit tests prove both transitions",
+            "All existing project service tests pass",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772863574152-ow2mxpm7i"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772863574147-mglorzdzu"
+    },
+    {
+      "number": 2,
+      "slug": "02-project-artifact-persistence",
+      "title": "Project Artifact Persistence",
+      "description": "Persist ceremony reports and changelogs as structured artifacts on the project. Maintain an artifact index. Everything stored in .automaker/projects/{slug}/artifacts/.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "artifact-storage-service-ceremony-report-persistence",
+          "title": "Artifact storage service + ceremony report persistence",
+          "description": "TDD phase. Create apps/server/src/services/project-artifact-service.ts. Write unit tests first: (1) saveArtifact(projectPath, slug, type, content) writes to .automaker/projects/{slug}/artifacts/{type}/{timestamp}.json and updates the index. (2) listArtifacts(projectPath, slug, type?) returns index entries. (3) getArtifact(projectPath, slug, artifactId) returns full content. Types: 'ceremony-report', 'changelog', 'escalation', 'standup'. Then implement. Wire into CeremonyService: on completion of retro/project-retro LangGraph flow, call saveArtifact with the ceremony output. Add artifact index type to libs/types.",
+          "filesToModify": [
+            "apps/server/src/services/project-artifact-service.ts",
+            "apps/server/src/services/ceremony-service.ts",
+            "libs/types/src/project.ts",
+            "apps/server/tests/unit/services/project-artifact-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "ProjectArtifactService saves artifacts to .automaker/projects/{slug}/artifacts/{type}/{timestamp}.json",
+            "Artifact index file (.automaker/projects/{slug}/artifacts/index.json) maintained on every save",
+            "CeremonyService persists retro and project-retro reports as ceremony-report artifacts",
+            "listArtifacts and getArtifact return correct data",
+            "Unit tests cover save, list, get, and index update",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772863574155-y1w3b6382"
+        },
+        {
+          "number": 2,
+          "name": "changelog-persistence-escalation-artifact-recording",
+          "title": "Changelog persistence + escalation artifact recording",
+          "description": "TDD phase. Write failing tests for: (1) ChangelogService persisting its generated changelog as a 'changelog' artifact via ProjectArtifactService. (2) On escalation:signal-received event, record an 'escalation' artifact containing the signal, reason, and feature context. Implement both. The changelog test should verify the artifact appears in the index after a milestone:completed event. The escalation test should verify artifacts are created for each escalation.",
+          "filesToModify": [
+            "apps/server/src/services/changelog-service.ts",
+            "apps/server/src/services/event-ledger-service.ts",
+            "apps/server/tests/unit/services/changelog-artifact.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "ChangelogService writes changelogs as project artifacts after milestone:completed and project:completed",
+            "Escalation events create escalation artifacts on the project",
+            "All artifacts appear in the project artifact index",
+            "Unit tests verify artifact creation for both cases",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772863574156-lfw9o8r99"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772863574154-os996fwfu"
+    },
+    {
+      "number": 3,
+      "slug": "03-per-project-discord-webhook",
+      "title": "Per-Project Discord Webhook",
+      "description": "Replace hardcoded global Discord channel IDs with per-project webhook config. Fix standup flow registration.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "per-project-discord-webhook-config-ceremony-routing",
+          "title": "Per-project Discord webhook config + ceremony routing",
+          "description": "TDD phase. Add discordWebhookUrl?: string to the project ceremonySettings in libs/types. Write tests for: (1) CeremonyService reads discordWebhookUrl from project settings and posts ceremony output via HTTP webhook instead of bot channel ID when set. (2) Falls back to global Discord config when webhookUrl is absent. Implement webhook HTTP posting (simple fetch POST to the webhook URL). Update settings schema. Write a unit test that mocks fetch and asserts the webhook receives the ceremony payload when configured.",
+          "filesToModify": [
+            "libs/types/src/global-settings.ts",
+            "apps/server/src/services/ceremony-service.ts",
+            "apps/server/tests/unit/services/ceremony-webhook.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "discordWebhookUrl field added to project ceremonySettings type",
+            "When discordWebhookUrl is set, ceremony output is POSTed to the webhook URL",
+            "When discordWebhookUrl is absent, falls back to global Discord bot channel",
+            "Unit tests verify both routing paths with mocked fetch",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772863574158-ygbtc3o0m"
+        },
+        {
+          "number": 2,
+          "name": "fix-standup-flow-registration",
+          "title": "Fix standup flow registration",
+          "description": "TDD phase. The server logs show: Flow not registered: standup-flow when ceremony:standup is triggered. Find where flows are registered (likely apps/server/src/services or the LangGraph flow registry) and ensure createStandupFlow is registered under the key 'standup-flow'. Write a test that confirms the flow registry contains standup-flow, retro-flow, and project-retro-flow before any ceremony triggers. Fix the registration gap.",
+          "filesToModify": [
+            "apps/server/src/services/ceremony-service.ts",
+            "apps/server/tests/unit/services/ceremony-flows.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "standup-flow is registered and does not throw 'Flow not registered' error",
+            "Unit test verifies all 3 ceremony flows are registered on service init",
+            "Standup ceremony can be triggered via the ceremony route without errors",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772863574159-5yn86hnj8"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772863574157-znqqlnyfp"
+    },
+    {
+      "number": 4,
+      "slug": "04-project-timeline-api",
+      "title": "Project Timeline API",
+      "description": "Add a project-scoped timeline endpoint combining EventLedger events and project artifacts into a unified, chronologically ordered feed.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "eventledger-project-scoped-query-api-projects-slug-timeline-route",
+          "title": "EventLedger project-scoped query + /api/projects/:slug/timeline route",
+          "description": "TDD phase. Write integration tests for a new route GET /api/projects/:slug/timeline that: (1) returns all EventLedger events with matching projectSlug, (2) supports ?since and ?type query params for filtering, (3) returns events in chronological order with type, timestamp, correlationIds, and payload. Implement by adding a queryByProject(projectSlug, opts) method to EventLedgerService and wiring the route in apps/server/src/routes/projects/. Test with seeded JSONL data.",
+          "filesToModify": [
+            "apps/server/src/services/event-ledger-service.ts",
+            "apps/server/src/routes/projects/index.ts",
+            "apps/server/tests/integration/routes/project-timeline.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET /api/projects/:slug/timeline returns chronological EventLedger events for the project",
+            "?since= and ?type= query params filter correctly",
+            "EventLedgerService.queryByProject() method implemented and tested",
+            "Integration tests use seeded JSONL data and verify ordering and filtering",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772863574161-niv0lxcp4"
+        },
+        {
+          "number": 2,
+          "name": "project-artifact-aggregation-endpoint-combined-project-summary",
+          "title": "Project artifact aggregation endpoint + combined project summary",
+          "description": "TDD phase. Write tests for GET /api/projects/:slug/summary that returns: { project metadata, featureCount by status, milestones with completion %, artifacts: { ceremonies, changelogs, escalations } (from artifact index), recentTimeline: last 20 events }. Implement using ProjectArtifactService and EventLedgerService. This is the single API the frontend project page will call. Test that all sections are present and correctly typed.",
+          "filesToModify": [
+            "apps/server/src/routes/projects/index.ts",
+            "apps/server/tests/integration/routes/project-summary.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET /api/projects/:slug/summary returns unified project data including features, artifacts, and recent timeline",
+            "Response is correctly typed with a ProjectSummary type in libs/types",
+            "Integration tests cover the full response shape with mocked dependencies",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772863574162-p23b25fl5"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772863574160-6h49ce6ke"
+    },
+    {
+      "number": 5,
+      "slug": "05-project-page-hub-frontend",
+      "title": "Project Page Hub (Frontend)",
+      "description": "Surface the unified project data on the project page: timeline/activity feed, artifact viewer for ceremonies and changelogs, and webhook settings UI.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "project-timeline-feed-component-artifact-viewer",
+          "title": "Project timeline feed component + artifact viewer",
+          "description": "TDD phase (Vitest component tests). Build a ProjectTimeline React component that fetches from /api/projects/:slug/timeline and renders a chronological activity feed. Events should be typed and rendered with icons: feature:done (check), milestone:completed (flag), ceremony:fired (celebration), escalation (warning), pr:merged (merge). Build a ProjectArtifactViewer component that renders ceremony reports and changelogs from the artifact list. Use existing atom/molecule components. Write Vitest unit tests for event rendering logic. Wire both into the existing project detail page route.",
+          "filesToModify": [
+            "apps/ui/src/components/views/projects/project-timeline.tsx",
+            "apps/ui/src/components/views/projects/project-artifact-viewer.tsx",
+            "apps/ui/src/routes/projects/$projectSlug.tsx",
+            "apps/ui/src/hooks/use-project-summary.ts",
+            "apps/ui/tests/unit/project-timeline.test.tsx"
+          ],
+          "acceptanceCriteria": [
+            "ProjectTimeline renders activity feed from /api/projects/:slug/timeline",
+            "Each event type has a distinct icon and label",
+            "ProjectArtifactViewer renders ceremony reports and changelogs from artifact list",
+            "useProjectSummary hook fetches /api/projects/:slug/summary",
+            "Vitest unit tests cover event rendering and empty states",
+            "Build passes"
+          ],
+          "complexity": "large",
+          "featureId": "feature-1772863574164-qk1lfiqas"
+        },
+        {
+          "number": 2,
+          "name": "per-project-discord-webhook-settings-ui",
+          "title": "Per-project Discord webhook settings UI",
+          "description": "Add a Discord webhook URL input field to the project settings panel. When saved, it persists to .automaker/settings.json under ceremonySettings.discordWebhookUrl via a PATCH to the existing project settings API. Include a 'Test webhook' button that posts a test message. Write a Vitest test for the webhook URL validation logic (must be a valid Discord webhook URL pattern: https://discord.com/api/webhooks/...).",
+          "filesToModify": [
+            "apps/ui/src/components/views/projects/project-settings-panel.tsx",
+            "apps/ui/tests/unit/webhook-settings.test.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Discord webhook URL input visible in project settings panel",
+            "URL validated against Discord webhook pattern before save",
+            "Test webhook button posts a test message and shows success/failure",
+            "Persists via existing project settings PATCH endpoint",
+            "Vitest test covers URL validation logic",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772863574165-dlq9o4kup"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772863574163-sol6jcrip"
+    }
+  ],
+  "prd": {
+    "situation": "The project lifecycle pipeline has full event infrastructure: CompletionDetectorService cascades feature→epic→milestone→project, CeremonyService runs retros via LangGraph flows, ChangelogService generates changelogs, EventLedgerService records all events. Ceremony results post to Discord. The project page shows board features but nothing else.",
+    "problem": "Four critical gaps block the pipeline from working end-to-end: (1) P0 bug — createProjectFeatures() does not set milestoneSlug/phaseSlug on features, so the CompletionDetectorService milestone cascade never fires — every project stops at epic completion. (2) Ceremony reports and changelogs are generated but discarded — not stored on the project. Discord is the only outlet, with hardcoded global channel IDs. (3) No per-project Discord webhook config — ceremonies can't be routed to project-specific channels. (4) No unified project page — there is no way to see ceremonies, escalations, changelogs, or a timeline from the project view. Each artifact is siloed.",
+    "approach": "Milestone 1: Fix cascade with TDD — write integration tests proving the full feature→epic→milestone→project cascade, then fix milestoneSlug/phaseSlug. Milestone 2: Persist artifacts — store ceremony reports and changelogs as project artifacts, maintain an artifact index. Milestone 3: Per-project Discord webhook — add webhookUrl to project settings, route ceremonies through it, fix standup flow registration. Milestone 4: Project timeline API — EventLedger project-scoped query and artifact aggregation endpoint. Milestone 5: Project page hub — timeline feed, artifact viewer, webhook settings UI.",
+    "results": "The full project lifecycle fires end-to-end without manual intervention. Every project artifact (ceremony reports, changelogs, escalations, feature summaries) is stored on the project and queryable. The project page shows a complete, cross-linked history from first feature to archive. Discord is an outlet, not the only record.",
+    "constraints": [
+      "TDD: every phase must write failing tests before implementation — tests prove the contract, implementation makes them pass",
+      "No breaking changes to existing EventLedger, LedgerService, or ceremony-service public interfaces",
+      "Discord remains supported as an outlet but must not be the only persistence mechanism",
+      "Per-project Discord webhook config stored in .automaker/settings.json under project gitWorkflow or ceremonySettings",
+      "Frontend components follow existing atoms/molecules/organisms pattern in @protolabsai/ui"
+    ]
+  },
+  "createdAt": "2026-03-07T06:04:18.706Z",
+  "updatedAt": "2026-03-07T06:06:14.187Z"
+}
