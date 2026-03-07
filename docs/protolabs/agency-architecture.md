@@ -137,34 +137,36 @@ Ava is the hub. All strategic decisions flow through her. Communication channels
 
 ## Component Inventory
 
-| Component                       | Location                                                    | Notes                                                   |
-| ------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------- |
-| **Idea processing flow**        | `libs/tools/src/domains/ideas/process-idea.ts`              | LangGraph flow with HITL checkpoints                    |
-| **Antagonistic review**         | `apps/server/src/services/antagonistic-review-service.ts`   | 3-stage: Ava ops → Jon market → consolidated resolution |
-| **Antagonistic review adapter** | `apps/server/src/services/antagonistic-review-adapter.ts`   | LangGraph flow wrapper with Langfuse tracing            |
-| **Lead Engineer service**       | `apps/server/src/services/lead-engineer-service.ts`         | Production orchestrator with fast-path rules            |
-| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)      |
-| **SharedTool system**           | `libs/tools/src/types.ts`, `define-tool.ts`                 | Zod-validated tool definitions for MCP/LangGraph/REST   |
-| **Feature domain tools**        | `libs/tools/src/domains/features/`                          | CRUD operations via SharedTool pattern                  |
-| **Project lifecycle**           | `apps/server/src/services/project-lifecycle-service.ts`     | 6 MCP tool steps from idea to launch                    |
-| **submit_prd MCP tool**         | `packages/mcp-server/src/index.ts`                          | Creates epic, ProjM decomposes                          |
-| **SPARC PRD skill**             | `plugins/automaker/commands/sparc-prd.md`                   | Interactive PRD creation                                |
-| **ProjM deep research**         | `apps/server/src/services/authority-agents/`                | Milestone/phase decomposition                           |
-| **Auto-mode execution**         | `apps/server/src/services/auto-mode-service.ts`             | Dependency-aware, model escalation                      |
-| **Agent factory + registry**    | `apps/server/src/services/agent-factory-service.ts`         | Template-based agent creation                           |
-| **Dynamic agent executor**      | `apps/server/src/services/dynamic-agent-executor.ts`        | Runs agents in worktrees via Claude Agent SDK           |
-| **Worktree isolation**          | `apps/server/src/services/agent-service.ts`                 | Per-feature branches                                    |
-| **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                     |
-| **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                          |
-| **CI/CD**                       | `.github/workflows/`                                        | Build, test, format, audit                              |
-| **Ceremony service**            | `apps/server/src/services/ceremony-service.ts`              | Standup, retro, project-retro                           |
-| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)      |
-| **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                  |
-| **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                      |
-| **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                |
-| **Discord MCP**                 | `packages/mcp-server/plugins/automaker/`                    | Send, read, channels, webhooks                          |
-| **Idea processing service**     | `apps/server/src/services/idea-processing-service.ts`       | Session management for LangGraph idea flow              |
-| **Content review pipeline**     | `libs/flows/src/content/subgraphs/antagonistic-reviewer.ts` | 8-dimension scoring for content quality                 |
+| Component                       | Location                                                    | Notes                                                                        |
+| ------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **Idea processing flow**        | `libs/tools/src/domains/ideas/process-idea.ts`              | LangGraph flow with HITL checkpoints                                         |
+| **Antagonistic review**         | `apps/server/src/services/antagonistic-review-service.ts`   | 3-stage: Ava ops → Jon market → consolidated resolution                      |
+| **Antagonistic review adapter** | `apps/server/src/services/antagonistic-review-adapter.ts`   | LangGraph flow wrapper with Langfuse tracing                                 |
+| **Lead Engineer service**       | `apps/server/src/services/lead-engineer-service.ts`         | Production orchestrator with fast-path rules                                 |
+| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)                           |
+| **SharedTool system**           | `libs/tools/src/types.ts`, `define-tool.ts`                 | Zod-validated tool definitions for MCP/LangGraph/REST                        |
+| **Feature domain tools**        | `libs/tools/src/domains/features/`                          | CRUD operations via SharedTool pattern                                       |
+| **Project lifecycle**           | `apps/server/src/services/project-lifecycle-service.ts`     | 6 MCP tool steps from idea to launch                                         |
+| **submit_prd MCP tool**         | `packages/mcp-server/src/index.ts`                          | Creates epic, ProjM decomposes                                               |
+| **SPARC PRD skill**             | `plugins/automaker/commands/sparc-prd.md`                   | Interactive PRD creation                                                     |
+| **ProjM deep research**         | `apps/server/src/services/authority-agents/`                | Milestone/phase decomposition                                                |
+| **Auto-mode execution**         | `apps/server/src/services/auto-mode-service.ts`             | Dependency-aware, model escalation; triggers work-steal when backlog empties |
+| **CRDT sync**                   | `apps/server/src/services/crdt-sync-service.ts`             | WebSocket-based multi-instance event propagation                             |
+| **Work-stealing**               | `apps/server/src/services/work-stealing-service.ts`         | Cross-instance load balancing via request/offer/accept                       |
+| **Agent factory + registry**    | `apps/server/src/services/agent-factory-service.ts`         | Template-based agent creation                                                |
+| **Dynamic agent executor**      | `apps/server/src/services/dynamic-agent-executor.ts`        | Runs agents in worktrees via Claude Agent SDK                                |
+| **Worktree isolation**          | `apps/server/src/services/agent-service.ts`                 | Per-feature branches                                                         |
+| **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                                          |
+| **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                                               |
+| **CI/CD**                       | `.github/workflows/`                                        | Build, test, format, audit                                                   |
+| **Ceremony service**            | `apps/server/src/services/ceremony-service.ts`              | Standup, retro, project-retro                                                |
+| **Lead Engineer rules**         | `apps/server/src/services/lead-engineer-rules.ts`           | 8 pure-function rules (no LLM, no service imports)                           |
+| **Escalation pipeline**         | `apps/server/src/services/escalation-router.ts`             | 5 channels, SLA engine                                                       |
+| **Signal accumulator**          | `apps/server/src/services/`                                 | Severity classification + briefing                                           |
+| **Agent memory**                | `.automaker/memory/*.md`                                    | Per-agent learning files                                                     |
+| **Discord MCP**                 | `packages/mcp-server/plugins/automaker/`                    | Send, read, channels, webhooks                                               |
+| **Idea processing service**     | `apps/server/src/services/idea-processing-service.ts`       | Session management for LangGraph idea flow                                   |
+| **Content review pipeline**     | `libs/flows/src/content/subgraphs/antagonistic-reviewer.ts` | 8-dimension scoring for content quality                                      |
 
 ## Quality Guardrails
 

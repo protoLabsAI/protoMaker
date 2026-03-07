@@ -135,20 +135,17 @@ After file creation, the project is also **added to global settings** (`settings
 - Prettier
 - Storybook
 - shadcn/ui
+- Tailwind CSS 4
 - Playwright E2E
 - ESLint 9 flat config
 - Pre-commit hooks (Husky + lint-staged)
-- VitePress docs site (`docs/` directory with auto-generated sidebar)
 - Discord channels
 - CodeRabbit (strict profile — never use chill)
 - Umami analytics (privacy-friendly traffic tracking)
-
-### Also Required (agent enhancement)
-
-- Payload CMS
-- MCP servers
-- Agent SDK
-- Python: Ruff, pytest
+- Payload CMS (conditional — only for projects with a database backend)
+- MCP servers (domain-specific tools in `packages/`)
+- Agent SDK (Claude Agent SDK or LangGraph)
+- Python: Ruff, pytest (conditional — only for repos with Python services)
 
 ## File Manifest
 

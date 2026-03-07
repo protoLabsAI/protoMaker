@@ -99,13 +99,76 @@ The fresh-state model is foundational for **hivemind** — protoLabs's multi-ins
 
 ### Hivemind Phases
 
-| Phase                        | What                                                       | State Implications                           |
-| ---------------------------- | ---------------------------------------------------------- | -------------------------------------------- |
-| **0. Interface Extraction**  | Extract FeatureStore + EventBus interfaces, add instanceId | Prepare types for multi-instance             |
-| **1. Instance Identity**     | Instance ID, peer discovery, heartbeat                     | Each instance announces itself               |
-| **2. Domain Routing**        | `hivemind.yaml` maps paths → instances                     | Features auto-route to owning instance       |
-| **3. Aggregated Visibility** | Unified dashboard across instances                         | Read-only aggregation, no shared write state |
-| **4. Auto-Discovery**        | mDNS/Bonjour LAN + WAN coordination                        | Instances find each other automatically      |
+| Phase                        | What                                                       | State Implications                           | Status  |
+| ---------------------------- | ---------------------------------------------------------- | -------------------------------------------- | ------- |
+| **0. Interface Extraction**  | Extract FeatureStore + EventBus interfaces, add instanceId | Prepare types for multi-instance             | ✅ Done |
+| **1. Instance Identity**     | Instance ID, peer discovery, heartbeat via CRDT sync       | Each instance announces itself               | ✅ Done |
+| **2. CRDT Sync**             | WebSocket sync server/client, feature event propagation    | Feature updates propagate to all peers       | ✅ Done |
+| **3. Work-Stealing**         | Cross-instance load balancing via request/offer/accept     | Idle instances pull work from busy peers     | ✅ Done |
+| **4. Aggregated Visibility** | Unified dashboard across instances                         | Read-only aggregation, no shared write state | Planned |
+| **5. Auto-Discovery**        | mDNS/Bonjour LAN + WAN coordination                        | Instances find each other automatically      | Planned |
+
+### CRDT Sync (Phase 2)
+
+The `CrdtSyncService` manages WebSocket-based synchronization between instances:
+
+- **Primary instance** starts a WebSocket sync server on the configured port (default: 4444)
+- **Worker instances** connect as clients and receive real-time event propagation
+- **Heartbeat protocol** — Each instance broadcasts capacity metrics every 30s; peers with expired TTL (120s) are removed
+- **Leader election** — If the primary becomes unreachable, workers elect a new leader automatically
+- **Event types synced** — Feature updates, work-stealing messages, and settings changes propagate to all peers
+
+Configuration via `proto.config.yaml`:
+
+```yaml
+hivemind:
+  role: primary # or worker
+  syncPort: 4444
+  peers:
+    - url: 'ws://192.168.1.10:4444'
+```
+
+### Work-Stealing Protocol (Phase 3)
+
+`WorkStealingService` enables cross-instance load balancing. When an instance's feature backlog empties, it broadcasts a work request to peers. Busy peers respond with offers of stealable features. The requesting instance accepts an offer by updating `feature.assignedInstance` via the CRDT event bus, making the reassignment visible to all peers.
+
+**Handshake lifecycle:**
+
+```
+idle instance  →  WORK_REQUEST  (broadcast via CRDT)
+busy peers     →  WORK_OFFER    (broadcast via CRDT, filtered by strategy)
+idle instance  →  WORK_ACCEPT   (broadcast via CRDT, clears offer)
+feature:updated propagates assignedInstance change to all instances
+```
+
+**Configuration** in `proto.config.yaml`:
+
+```yaml
+workStealing:
+  strategy: capacity # capacity | domain | manual
+  stealMax: 3 # max features per steal
+  offerTtlMs: 60000 # offer expiry (60s)
+```
+
+**Strategies:**
+
+| Strategy   | Behavior                                                      |
+| ---------- | ------------------------------------------------------------- |
+| `capacity` | Offer the highest-priority backlog features (default)         |
+| `domain`   | Only offer features matching the requesting instance's domain |
+| `manual`   | Disable work-stealing entirely (no requests or offers sent)   |
+
+**Features are stealable when:**
+
+- Status is `backlog`, `pending`, or `ready`
+- `feature.stealable !== false`
+- Not already assigned to another instance
+- Not claimed by an agent (`claimedBy` is null)
+
+**Persistence:** Requests, offers, and accepts are written to `.automaker/assignments.json` with TTL timestamps. On reconnect, pending requests are replayed so missed offers are sent to peers who requested while this instance was down.
+
+**Service:** `apps/server/src/services/work-stealing-service.ts`
+**Integration:** Auto-mode emits `auto_mode:no_work` when its feature backlog empties; `WorkStealingService.requestWork()` is called automatically via `setWorkStealingService()`.
 
 ### What Stays Shared
 
@@ -131,8 +194,9 @@ NEW INSTANCE
   ├─ OPERATING → board fills with features
   │              agents execute, PRs merge, knowledge updates pushed to git
   │
-  ├─ HIVEMIND JOIN → announces to mesh, receives domain assignment
-  │                  gets routed features from other instances
+  ├─ HIVEMIND JOIN → CrdtSyncService connects to primary (or becomes primary)
+  │                  WorkStealingService registers handlers, replays pending requests
+  │                  idle instances pull work from busy peers automatically
   │
   └─ SHUTDOWN → operational state discarded
                knowledge updates already in git
