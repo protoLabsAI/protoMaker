@@ -73,10 +73,13 @@ describe('ProjectArtifactService', () => {
       expect(files).toHaveLength(1);
       expect(files[0]).toBe(`${id}.json`);
 
-      const written = JSON.parse(
-        fs.readFileSync(path.join(typeDir, `${id}.json`), 'utf-8')
-      ) as typeof content;
-      expect(written).toEqual(content);
+      const written = JSON.parse(fs.readFileSync(path.join(typeDir, `${id}.json`), 'utf-8')) as {
+        id: string;
+        type: string;
+        timestamp: string;
+        content: typeof content;
+      };
+      expect(written.content).toEqual(content);
     });
 
     it('creates the index file on first save', async () => {
@@ -168,8 +171,8 @@ describe('ProjectArtifactService', () => {
       const [entry] = entries;
       expect(entry).toMatchObject({
         type: 'escalation',
-        filePath: expect.stringContaining('escalation'),
-        createdAt: expect.any(String),
+        filename: expect.stringContaining('.json'),
+        timestamp: expect.any(String),
         id: expect.any(String),
       });
     });
