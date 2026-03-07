@@ -1,0 +1,30 @@
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Edit",
+  "max_results": 3
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/archival-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/feature-loader.ts"
+}
+Now I have a clear picture of both files. Let me implement the three fixes:
+
+1. **`feature-loader.ts` `archiveFeature`**: Add `status: 'done'` and `title` to the stub
+2. **`feature-loader.ts` `normalizeFeature`**: Guard — if `archived: true`, force `status: 'done'`
+
+The stub creation is in `feature-loader.ts` (the `archivalService.ts` just orchestrates), so both fixes land in `feature-loader.ts`.
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/feature-loader.ts",
+  "old_string": "    // 7. Re-create the feature directory with a minimal archived stub\n    await secureFs.mkdir(featureDir, { recursive: true });\n    const stub = {\n      id: featureId,\n      archived: true,\n      archivedAt,\n      archivePath: archiveDir,\n    };",
+  "new_string": "    // 7. Re-create the feature directory with a minimal archived stub\n    await secureFs.mkdir(featureDir, { recursive: true });\n    const stub = {\n      id: featureId,\n      archived: true,\n      archivedAt,\n      archivePath: archiveDir,\n      // Always include status and title so consumers (e.g. LE state machine) can\n      // recognise this as a completed feature without treating it as an invalid stub.\n      status: 'done' as FeatureStatus,\n      title: featureForStatus?.title ?? '',\n    };"
+}

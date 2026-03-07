@@ -1,0 +1,32 @@
+{
+  "category": "Ceremony Dedup Durability",
+  "description": "**Milestone:** Ceremony Dedup Durability\n\nAdd a JSONL sidecar file (data/ledger/ceremony-processed.jsonl) that records each key added to processedProjects. On CeremonyService startup, load this file and pre-populate the Set. Use atomic appends. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] ceremony-processed.jsonl is created and appended to on each ceremony dedup key\n- [ ] On startup with existing file processedProjects is pre-populated\n- [ ] After reload ceremonies do not double-fire for already-processed projects\n- [ ] Unit tests pass\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Persist and reload ceremony processedProjects dedup",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772856637962-xkfba976l",
+  "branchName": "feature/ceremony-dedup-persist-and-reload",
+  "isFoundation": true,
+  "projectSlug": "e2e-pipeline-hardening",
+  "id": "feature-1772856637963-3zeqswr5x",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** Ceremony Dedup Durability\n\nAdd a JSONL sidecar file (data/ledger/ceremony-processed.jsonl) that records each key added to processedProjects. On CeremonyService startup, load this file and pre-populate the Set. Use atomic appends. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] ceremony-processed.jsonl is created and appended to on each ceremony dedup key\n- [ ] On startup with existing file processedProjects is pre-populated\n- [ ] After reload ceremonies do not double-fire for already-processed projects\n- [ ] Unit tests pass\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T04:10:37.963Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T04:10:37.963Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T04:10:37.963Z",
+      "reason": "Feature created"
+    }
+  ],
+  "featureType": "code",
+  "dependencies": [
+    "feature-1772856637958-j1b2je1mg"
+  ]
+}

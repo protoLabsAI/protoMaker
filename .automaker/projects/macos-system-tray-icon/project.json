@@ -2,7 +2,7 @@
   "slug": "macos-system-tray-icon",
   "title": "macOS System Tray Icon",
   "goal": "Add a persistent macOS system tray icon to the Electron app so Ava stays accessible in the menubar when the main window is closed, with a context menu for quick actions and a live status indicator showing running agent count.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -73,5 +73,5 @@
     ]
   },
   "createdAt": "2026-03-05T09:10:57.365Z",
-  "updatedAt": "2026-03-05T09:11:05.242Z"
+  "updatedAt": "2026-03-07T02:55:44.413Z"
 }

@@ -2,7 +2,7 @@
   "slug": "project-manager-ava",
   "title": "Project Manager Ava",
   "goal": "Promote the project lifecycle system from disconnected primitives into a unified PM experience: per-project PM agents that live for the lifetime of a project, accessible via chat, event-driven, managing ceremonies through a persistent state machine, and initiation via natural Ava conversation. Simultaneously overhaul the project detail UI for mobile usability by consolidating overlapping tabs and organizing features under epics.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -221,5 +221,5 @@
     ]
   },
   "createdAt": "2026-03-05T11:57:46.294Z",
-  "updatedAt": "2026-03-05T11:57:52.846Z"
+  "updatedAt": "2026-03-07T02:55:44.771Z"
 }

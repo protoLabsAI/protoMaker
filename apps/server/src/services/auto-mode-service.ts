@@ -625,6 +625,17 @@ export class AutoModeService {
       return; // No longer paused or doesn't exist
     }
 
+    // If the loop is already running (race condition where the previous cycle hasn't fully
+    // cleaned up before the cooldown timer fires), skip silently — this is an expected race,
+    // not an error. The running loop will continue naturally.
+    if (this.coordinator.isRunning(worktreeKey) || this.pendingLoopStarts.has(worktreeKey)) {
+      logger.debug(
+        `Auto loop already running for ${projectPath} after cooldown — skipping resume (expected race condition)`
+      );
+      projectState.cooldownTimer = null;
+      return;
+    }
+
     logger.info(`Auto-resuming auto loop for ${projectPath} after cooldown period`);
 
     // Reset failure tracking
@@ -646,10 +657,19 @@ export class AutoModeService {
         projectState.config.maxConcurrency
       );
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      // "Already running" is an expected race condition during cooldown — downgrade to warn
+      if (errorMessage.includes('already running')) {
+        logger.warn(
+          'Auto loop already running when cooldown resume fired (race condition):',
+          errorMessage
+        );
+        return;
+      }
       logger.error('Failed to auto-resume after cooldown:', error);
       this.emitAutoModeEvent('auto_mode_error', {
         message: 'Failed to auto-resume after cooldown',
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
         projectPath,
       });
     }
