@@ -299,6 +299,48 @@ CeremonyService
   Bridge listener -> DiscordBotService.sendToChannel() -> Discord API
 ```
 
+## Automatic standup scheduling
+
+When a project launches (`project:lifecycle:launched` event), `CeremonyService` registers a recurring cron task with `SchedulerService` to emit `milestone:started` events on the configured cadence (default: `0 9 * * 1` — every Monday at 9 AM).
+
+```
+project:lifecycle:launched
+  |
+  v
+CeremonyService.handleProjectLifecycleLaunched()
+  |-- Reads ceremony-state.json for standupCadence
+  |-- Registers "pm-standup-{slug}" task with SchedulerService
+  |     cadence: state.standupCadence (default: "0 9 * * 1")
+  |     handler: emit('milestone:started', ...)
+  v
+SchedulerService (cron engine) fires task on schedule
+  |
+  v
+CeremonyService.handleMilestoneStarted() → standup flow runs
+```
+
+When a project completes (`project:completed`), the standup task is automatically unregistered.
+
+## Ceremony state machine
+
+`CeremonyService` persists a `CeremonyState` file per project at:
+
+```text
+{projectPath}/.automaker/projects/{slug}/ceremony-state.json
+```
+
+The state machine transitions are applied by `ceremony-state-machine.ts`. States track the current ceremony phase and milestone progress:
+
+| Event                           | Typical Transition            |
+| ------------------------------- | ----------------------------- |
+| `project:lifecycle:launched`    | `awaiting_kickoff` → active   |
+| `milestone:completed`           | Updates `currentMilestone`    |
+| `ceremony:fired(retro)`         | Records milestone retro fired |
+| `ceremony:fired(project_retro)` | Records project retro fired   |
+| `project:completed`             | Final phase transition        |
+
+State is read/written via `getCeremonyState()` / `applyTransition()`.
+
 ## Service architecture
 
 **Location:** `apps/server/src/services/ceremony-service.ts`
@@ -309,7 +351,8 @@ CeremonyService
 - `SettingsService` -- reads ceremony config per project
 - `FeatureLoader` -- loads features for metrics
 - `ProjectService` -- loads project/milestone data
-- `CeremonyAuditLogService` -- records audit entries
+- `CeremonyAuditLogService` -- records audit entries (optional, set via `setAuditLog()`)
+- `SchedulerService` -- registers/unregisters scheduled standup tasks (optional, set via `setSchedulerService()`)
 
 **LangGraph flow factories** (from `@protolabsai/flows`):
 
