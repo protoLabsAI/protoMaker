@@ -174,16 +174,74 @@ export const normalizeSharedSettingsDocument: SchemaNormalizer<SharedSettingsDoc
 };
 
 // ---------------------------------------------------------------------------
+// Capacity domain
+// ---------------------------------------------------------------------------
+
+/**
+ * CapacityDocument stores per-instance capacity metrics in the shared CRDT
+ * assignments document. Each instance publishes its own capacity snapshot
+ * keyed by instanceId. Used by the work-stealing protocol to identify idle
+ * and busy peers.
+ *
+ * Use domain='capacity', document id=instanceId.
+ */
+export interface CapacityDocument extends CRDTDocumentRoot {
+  schemaVersion: 1;
+  /** Instance that owns this capacity record */
+  instanceId: string;
+  /** Number of agents currently running on this instance */
+  runningAgents: number;
+  /** Maximum agents this instance is configured to run concurrently */
+  maxAgents: number;
+  /** Number of features in backlog status across all active projects */
+  backlogCount: number;
+  /** System RAM usage as a percentage (0-100) */
+  ramUsagePercent: number;
+  /** CPU load as a percentage (0-100) */
+  cpuPercent: number;
+  /** ISO timestamp of last update */
+  updatedAt: string;
+}
+
+export const normalizeCapacityDocument: SchemaNormalizer<CapacityDocument> = (raw) => {
+  const doc = raw as Partial<CapacityDocument>;
+
+  const _meta = doc._meta ?? {
+    instanceId: 'unknown',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    schemaVersion: 1,
+    _meta,
+    instanceId: doc.instanceId ?? _meta.instanceId,
+    runningAgents: doc.runningAgents ?? 0,
+    maxAgents: doc.maxAgents ?? 0,
+    backlogCount: doc.backlogCount ?? 0,
+    ramUsagePercent: doc.ramUsagePercent ?? 0,
+    cpuPercent: doc.cpuPercent ?? 0,
+    updatedAt: doc.updatedAt ?? _meta.updatedAt,
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Normalizer registry
 // ---------------------------------------------------------------------------
 
-type AnyDocument = FeatureDocument | ProjectDocument | ConfigDocument | SharedSettingsDocument;
+type AnyDocument =
+  | FeatureDocument
+  | ProjectDocument
+  | ConfigDocument
+  | SharedSettingsDocument
+  | CapacityDocument;
 
 const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   features: normalizeFeatureDocument as SchemaNormalizer<AnyDocument>,
   projects: normalizeProjectDocument as SchemaNormalizer<AnyDocument>,
   config: normalizeConfigDocument as SchemaNormalizer<AnyDocument>,
   settings: normalizeSharedSettingsDocument as SchemaNormalizer<AnyDocument>,
+  capacity: normalizeCapacityDocument as SchemaNormalizer<AnyDocument>,
 };
 
 /**

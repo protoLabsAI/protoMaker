@@ -14,6 +14,7 @@ import { loadProtoConfig } from '@protolabsai/platform';
 import type {
   HivemindPeer,
   HivemindConfig,
+  InstanceCapacity,
   SyncRole,
   SyncServerStatus,
   CrdtFeatureEvent,
@@ -35,6 +36,8 @@ interface PeerMessage {
   url?: string;
   timestamp: string;
   priority?: number;
+  /** Capacity metrics published by the sender on every heartbeat */
+  capacity?: InstanceCapacity;
 }
 
 /**
@@ -74,6 +77,7 @@ export class CrdtSyncService {
   private promotionPending = false;
   private _eventBus: EventEmitter | null = null;
   private _settingsCallback: ((settings: Record<string, unknown>) => void) | null = null;
+  private _capacityProvider: (() => InstanceCapacity) | null = null;
 
   constructor() {
     this.instanceId = os.hostname();
@@ -86,6 +90,15 @@ export class CrdtSyncService {
    */
   onSettingsReceived(callback: (settings: Record<string, unknown>) => void): void {
     this._settingsCallback = callback;
+  }
+
+  /**
+   * Register a callback that returns this instance's current capacity metrics.
+   * Called on every heartbeat to include fresh metrics in the outgoing message.
+   * Must be called before `start()`.
+   */
+  setCapacityProvider(provider: () => InstanceCapacity): void {
+    this._capacityProvider = provider;
   }
 
   /**
@@ -280,11 +293,23 @@ export class CrdtSyncService {
 
   /**
    * Returns the current sync status for the /health endpoint.
+   * Includes peer capacity summaries so operators can see load across instances.
    */
   getSyncStatus(): SyncServerStatus {
     const onlinePeers = [...this.peers.values()]
       .filter((p) => p.identity.status === 'online')
       .map(({ ws: _ws, priority: _priority, ...peer }) => peer as HivemindPeer);
+
+    const peerCapacitySummary = [...this.peers.values()]
+      .filter((p) => p.identity.status === 'online')
+      .map((p) => ({
+        instanceId: p.identity.instanceId,
+        runningAgents: p.identity.capacity.runningAgents,
+        maxAgents: p.identity.capacity.maxAgents,
+        backlogCount: p.identity.capacity.backlogCount,
+        ramUsagePercent: p.identity.capacity.ramUsagePercent,
+        cpuPercent: p.identity.capacity.cpuPercent,
+      }));
 
     return {
       role: this.role,
@@ -296,6 +321,7 @@ export class CrdtSyncService {
       peerCount: this.peers.size,
       onlinePeers,
       isLeader: this.role === 'primary',
+      peerCapacitySummary,
     };
   }
 
@@ -584,6 +610,7 @@ export class CrdtSyncService {
         instanceId: this.instanceId,
         url: this.instanceUrl ?? undefined,
         timestamp: new Date().toISOString(),
+        capacity: this._capacityProvider ? this._capacityProvider() : undefined,
       };
       const msg = JSON.stringify(beat);
 
@@ -721,12 +748,21 @@ export class CrdtSyncService {
       existing.identity.lastHeartbeat = msg.timestamp;
       existing.identity.status = 'online';
       if (msg.url) existing.identity.url = msg.url;
+      if (msg.capacity) existing.identity.capacity = msg.capacity;
     } else {
       this.peers.set(msg.instanceId, {
         identity: {
           instanceId: msg.instanceId,
           url: msg.url,
-          capacity: { cores: 0, ramMb: 0, maxAgents: 0, runningAgents: 0 },
+          capacity: msg.capacity ?? {
+            cores: 0,
+            ramMb: 0,
+            maxAgents: 0,
+            runningAgents: 0,
+            backlogCount: 0,
+            ramUsagePercent: 0,
+            cpuPercent: 0,
+          },
           domains: [],
           lastHeartbeat: msg.timestamp,
           status: 'online',

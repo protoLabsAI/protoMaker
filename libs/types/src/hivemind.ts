@@ -8,6 +8,16 @@
 /** Role of an instance in the sync mesh */
 export type SyncRole = 'primary' | 'worker';
 
+/** Compact capacity summary for a single peer — used in /health responses */
+export interface PeerCapacitySummary {
+  instanceId: string;
+  runningAgents: number;
+  maxAgents: number;
+  backlogCount: number;
+  ramUsagePercent: number;
+  cpuPercent: number;
+}
+
 /** Health status of the CRDT sync service for the /health endpoint */
 export interface SyncServerStatus {
   /** This instance's current role */
@@ -22,6 +32,8 @@ export interface SyncServerStatus {
   onlinePeers: HivemindPeer[];
   /** Whether this instance is currently acting as the leader/primary */
   isLeader: boolean;
+  /** Compact capacity snapshot for each online peer */
+  peerCapacitySummary?: PeerCapacitySummary[];
 }
 
 /** Capacity metrics for an instance */
@@ -30,6 +42,12 @@ export interface InstanceCapacity {
   ramMb: number;
   maxAgents: number;
   runningAgents: number;
+  /** Number of features in backlog status across all active projects */
+  backlogCount: number;
+  /** System RAM usage as a percentage (0-100) */
+  ramUsagePercent: number;
+  /** CPU load as a percentage (0-100), derived from 1-minute load average */
+  cpuPercent: number;
 }
 
 /** A domain is a set of codebase paths owned by an instance */
