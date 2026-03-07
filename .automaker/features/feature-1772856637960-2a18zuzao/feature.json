@@ -1,0 +1,66 @@
+{
+  "category": "CompletionDetector Durability",
+  "description": "**Milestone:** CompletionDetector Durability\n\nAdd a JSONL sidecar file (data/ledger/completion-emitted.jsonl) that records each emitted key when added to the in-memory Sets. On startup, load this file to pre-populate the Sets before subscribing to events. Use atomic appends consistent with EventLedgerService pattern. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/completion-detector-service.ts\n- apps/server/tests/unit/services/completion-detector-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] completion-emitted.jsonl is created and appended to on each completion event\n- [ ] On startup with existing file emittedEpics/emittedMilestones/emittedProjects are pre-populated\n- [ ] After reload duplicate completion events are suppressed\n- [ ] Unit tests pass for cold start and warm restart scenarios\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+  "title": "Persist and reload CompletionDetector dedup state",
+  "status": "backlog",
+  "isEpic": false,
+  "epicId": "feature-1772856637958-j1b2je1mg",
+  "branchName": "feature/completiondetector-persist-and-reload",
+  "isFoundation": true,
+  "projectSlug": "e2e-pipeline-hardening",
+  "id": "feature-1772856637960-2a18zuzao",
+  "descriptionHistory": [
+    {
+      "description": "**Milestone:** CompletionDetector Durability\n\nAdd a JSONL sidecar file (data/ledger/completion-emitted.jsonl) that records each emitted key when added to the in-memory Sets. On startup, load this file to pre-populate the Sets before subscribing to events. Use atomic appends consistent with EventLedgerService pattern. Write unit tests covering cold start and warm restart scenarios.\n\n**Files to Modify:**\n- apps/server/src/services/completion-detector-service.ts\n- apps/server/tests/unit/services/completion-detector-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] completion-emitted.jsonl is created and appended to on each completion event\n- [ ] On startup with existing file emittedEpics/emittedMilestones/emittedProjects are pre-populated\n- [ ] After reload duplicate completion events are suppressed\n- [ ] Unit tests pass for cold start and warm restart scenarios\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
+      "timestamp": "2026-03-07T04:10:37.960Z",
+      "source": "initial"
+    }
+  ],
+  "createdAt": "2026-03-07T04:10:37.960Z",
+  "statusHistory": [
+    {
+      "from": null,
+      "to": "backlog",
+      "timestamp": "2026-03-07T04:10:37.960Z",
+      "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T04:33:28.584Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T04:33:58.307Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "backlog",
+      "timestamp": "2026-03-07T04:34:02.361Z"
+    }
+  ],
+  "featureType": "code",
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T04:33:31.457Z",
+  "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
+  "lastTraceId": "9e48b2cd-117e-4bcc-a32d-61a783f8265c",
+  "traceIds": [
+    "9e48b2cd-117e-4bcc-a32d-61a783f8265c"
+  ],
+  "executionHistory": [
+    {
+      "id": "36dc65cd-5c04-431c-bf05-fafaa453dfea",
+      "startedAt": "2026-03-07T04:33:29.013Z",
+      "completedAt": "2026-03-07T04:33:58.826Z",
+      "durationMs": 29813,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ]
+}
