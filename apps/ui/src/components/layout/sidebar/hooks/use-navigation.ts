@@ -120,7 +120,7 @@ export function useNavigation({
       },
       {
         id: 'notes',
-        label: 'Content',
+        label: 'Notes',
         icon: NotebookPen,
         shortcut: shortcuts.notes,
       },
