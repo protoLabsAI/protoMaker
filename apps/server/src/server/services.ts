@@ -465,7 +465,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     hitlFormService
   );
 
-  const projectService = new ProjectService(featureLoader);
+  const projectService = new ProjectService(featureLoader, events);
   projectService.setCalendarService(calendarService);
 
   // Project Lifecycle Service

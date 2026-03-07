@@ -6,6 +6,8 @@
  */
 
 import path from 'path';
+import { existsSync } from 'node:fs';
+import * as Automerge from '@automerge/automerge';
 import type {
   Project,
   Feature,
@@ -46,24 +48,87 @@ import {
 } from '@protolabsai/platform';
 import type { FeatureLoader } from './feature-loader.js';
 import type { CalendarService } from './calendar-service.js';
+import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ProjectService');
 
+/** Automerge document shape — one per projectPath, keyed by project slug */
+type ProjectsDoc = { projects: Record<string, Project> };
+
 export class ProjectService {
   private calendarService?: CalendarService;
+  private readonly _docs = new Map<string, Automerge.Doc<ProjectsDoc>>();
+  private readonly _initPromises = new Map<string, Promise<void>>();
+  private readonly _crdtEnabled = new Map<string, boolean>();
+  private readonly _crdtEvents: EventEmitter | null;
 
-  constructor(private featureLoader: FeatureLoader) {}
+  constructor(
+    private featureLoader: FeatureLoader,
+    events?: EventEmitter
+  ) {
+    this._crdtEvents = events ?? null;
+  }
 
   setCalendarService(calendarService: CalendarService): void {
     this.calendarService = calendarService;
   }
 
-  /**
-   * List all projects in a project path
-   */
-  async listProjects(projectPath: string): Promise<string[]> {
-    const projectsDir = getProjectsDir(projectPath);
+  // ─── CRDT helpers ──────────────────────────────────────────────────────────
 
+  private _isCrdtEnabled(projectPath: string): boolean {
+    const cached = this._crdtEnabled.get(projectPath);
+    if (cached !== undefined) return cached;
+    const enabled = existsSync(path.join(projectPath, 'proto.config.yaml'));
+    this._crdtEnabled.set(projectPath, enabled);
+    return enabled;
+  }
+
+  private _toAutomergeValue(project: Project): Record<string, unknown> {
+    return JSON.parse(JSON.stringify(project)) as Record<string, unknown>;
+  }
+
+  private async _ensureDoc(projectPath: string): Promise<Automerge.Doc<ProjectsDoc>> {
+    if (this._docs.has(projectPath)) return this._docs.get(projectPath)!;
+    if (!this._initPromises.has(projectPath)) {
+      this._initPromises.set(projectPath, this._initDoc(projectPath));
+    }
+    await this._initPromises.get(projectPath);
+    return this._docs.get(projectPath)!;
+  }
+
+  private async _initDoc(projectPath: string): Promise<void> {
+    const slugs = await this._listSlugsFromDisk(projectPath);
+    let doc = Automerge.from<ProjectsDoc>({ projects: {} });
+    const projects: Project[] = [];
+    for (const slug of slugs) {
+      const p = await this._readFromDisk(projectPath, slug);
+      if (p) projects.push(p);
+    }
+    doc = Automerge.change(doc, (d) => {
+      for (const p of projects) {
+        (d.projects as Record<string, unknown>)[p.slug] = this._toAutomergeValue(p);
+      }
+    });
+    this._docs.set(projectPath, doc);
+    logger.info(
+      `[CRDT] Initialized projects doc for ${projectPath} with ${projects.length} projects`
+    );
+  }
+
+  private async _readFromDisk(projectPath: string, projectSlug: string): Promise<Project | null> {
+    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+    try {
+      const rawContent = await secureFs.readFile(jsonPath, 'utf-8');
+      const content = typeof rawContent === 'string' ? rawContent : rawContent.toString('utf-8');
+      return JSON.parse(content) as Project;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+  }
+
+  private async _listSlugsFromDisk(projectPath: string): Promise<string[]> {
+    const projectsDir = getProjectsDir(projectPath);
     try {
       const entries = await secureFs.readdir(projectsDir, { withFileTypes: true });
       return entries
@@ -71,31 +136,75 @@ export class ProjectService {
         .map((entry) => entry.name)
         .sort();
     } catch (error) {
-      // Directory doesn't exist yet
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return [];
-      }
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
       throw error;
     }
+  }
+
+  /**
+   * Apply Automerge binary changes received from a remote peer.
+   * Merges the changes into the local doc and emits project events for any
+   * projects that changed. Called by the wiring layer on 'crdt:remote-changes'.
+   */
+  applyRemoteChanges(projectPath: string, changes: Uint8Array[]): void {
+    let doc = this._docs.get(projectPath);
+    const isNew = !doc;
+    if (!doc) {
+      doc = Automerge.init<ProjectsDoc>();
+      this._initPromises.set(projectPath, Promise.resolve());
+    }
+    const oldProjects = doc.projects || {};
+    const [newDoc] = Automerge.applyChanges<ProjectsDoc>(doc, changes);
+    this._docs.set(projectPath, newDoc);
+    const newProjects = newDoc.projects || {};
+    const allSlugs = new Set([...Object.keys(oldProjects), ...Object.keys(newProjects)]);
+    for (const slug of allSlugs) {
+      const oldProject = isNew ? undefined : oldProjects[slug];
+      const newProject = newProjects[slug];
+      const unchanged =
+        !isNew &&
+        oldProject !== undefined &&
+        newProject !== undefined &&
+        JSON.stringify(oldProject) === JSON.stringify(newProject);
+      if (!unchanged) {
+        if (newProject) {
+          const eventType = oldProject ? 'project:updated' : 'project:created';
+          this._crdtEvents?.emit(eventType, {
+            projectSlug: slug,
+            projectPath,
+            project: newProject,
+          });
+        } else {
+          this._crdtEvents?.emit('project:deleted', { projectSlug: slug, projectPath });
+        }
+      }
+    }
+    logger.debug(`[CRDT] Applied ${changes.length} remote change(s) for ${projectPath}`);
+  }
+
+  // ─── Public API ────────────────────────────────────────────────────────────
+
+  /**
+   * List all projects in a project path
+   */
+  async listProjects(projectPath: string): Promise<string[]> {
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      return Object.keys(doc.projects || {}).sort();
+    }
+    return this._listSlugsFromDisk(projectPath);
   }
 
   /**
    * Get a project by slug
    */
   async getProject(projectPath: string, projectSlug: string): Promise<Project | null> {
-    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
-
-    try {
-      const rawContent = await secureFs.readFile(jsonPath, 'utf-8');
-      // Ensure we have a string for JSON.parse (handle Buffer case)
-      const content = typeof rawContent === 'string' ? rawContent : rawContent.toString('utf-8');
-      return JSON.parse(content) as Project;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return null;
-      }
-      throw error;
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const raw = (doc.projects || {})[projectSlug];
+      return raw ? (raw as Project) : null;
     }
+    return this._readFromDisk(projectPath, projectSlug);
   }
 
   /**
@@ -148,6 +257,20 @@ export class ProjectService {
           });
         }
       }
+    }
+
+    // Update CRDT doc and emit event
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[project.slug] = this._toAutomergeValue(project);
+      });
+      this._docs.set(projectPath, newDoc);
+      this._crdtEvents?.emit('project:created', {
+        projectSlug: project.slug,
+        projectPath,
+        project,
+      });
     }
 
     logger.info(`Created project: ${project.slug}`);
@@ -292,6 +415,20 @@ export class ProjectService {
       }
     }
 
+    // Update CRDT doc and emit event
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
+      });
+      this._docs.set(projectPath, newDoc);
+      this._crdtEvents?.emit('project:updated', {
+        projectSlug,
+        projectPath,
+        project: updated,
+      });
+    }
+
     logger.info(`Updated project: ${projectSlug}`);
     return updated;
   }
@@ -360,6 +497,17 @@ export class ProjectService {
     try {
       await secureFs.rm(projectDir, { recursive: true, force: true });
       logger.info(`Deleted project: ${projectSlug} (stats preserved)`);
+
+      // Update CRDT doc and emit event
+      if (this._isCrdtEnabled(projectPath)) {
+        const doc = await this._ensureDoc(projectPath);
+        const newDoc = Automerge.change(doc, (d) => {
+          delete (d.projects as Record<string, Project | undefined>)[projectSlug];
+        });
+        this._docs.set(projectPath, newDoc);
+        this._crdtEvents?.emit('project:deleted', { projectSlug, projectPath });
+      }
+
       return true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {

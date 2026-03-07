@@ -72,6 +72,9 @@ export class CrdtSyncService {
    *
    * - Registers a remote broadcaster: when `broadcast()` is called locally for
    *   a synced event type, the event is published to all connected peers.
+   *   Synced event types include both feature events (feature:created, feature:updated,
+   *   feature:deleted, feature:status-changed) and project events (project:created,
+   *   project:updated, project:deleted).
    * - Incoming `feature_event` CRDT messages trigger a local `emit()` (NOT
    *   `broadcast()`) to prevent feedback loops.
    *

@@ -66,6 +66,10 @@ export interface ProjectDocument extends CRDTDocumentRoot {
   title: string;
   goal: string;
   status: string;
+  /** PRD markdown content — stored as a plain string for Automerge sync */
+  prd: string;
+  /** Number of milestones — denormalized for quick reads */
+  milestoneCount: number;
   createdAt: string;
 }
 
@@ -93,6 +97,8 @@ export const normalizeProjectDocument: SchemaNormalizer<ProjectDocument> = (raw)
     title: doc.title ?? '',
     goal: doc.goal ?? '',
     status,
+    prd: doc.prd ?? '',
+    milestoneCount: doc.milestoneCount ?? 0,
     createdAt: doc.createdAt ?? _meta.createdAt,
   };
 };

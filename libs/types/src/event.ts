@@ -108,6 +108,8 @@ export type EventType =
   | 'integration:unregistered'
   | 'integration:toggled'
   // Project orchestration events
+  | 'project:created'
+  | 'project:updated'
   | 'project:scaffolded'
   | 'project:deleted'
   | 'project:status-changed'
@@ -544,6 +546,9 @@ export interface EventPayloadMap {
 
   // Milestone/project lifecycle
   'milestone:completed': { milestone?: string; projectPath?: string };
+  'project:created': { projectSlug: string; projectPath: string; project?: unknown };
+  'project:updated': { projectSlug: string; projectPath: string; project?: unknown };
+  'project:deleted': { projectSlug: string; projectPath: string };
   'project:completed': { project?: string; projectPath?: string };
   'project:prd:changes-requested': {
     projectSlug: string;
