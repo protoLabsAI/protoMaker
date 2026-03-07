@@ -362,6 +362,14 @@ export const queryKeys = {
   },
 
   // ============================================
+  // Todo Lists
+  // ============================================
+  todoLists: {
+    /** All todo lists for a project */
+    all: (projectPath: string) => ['todoLists', projectPath] as const,
+  },
+
+  // ============================================
   // Activity Feed
   // ============================================
   activity: {
