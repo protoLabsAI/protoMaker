@@ -1,7 +1,7 @@
 {
   "slug": "distributed-crdt-sync",
   "title": "Distributed CRDT Sync",
-  "goal": "Enable multiple Automaker instances to share board state (features, projects, notes, settings) in real-time across distributed compute via CRDTs, with cross-instance feature assignment, offline-first operation, and conflict-free merges over Tailscale VPN.",
+  "goal": "Enable multiple Automaker instances to share board state (features, projects, notes, calendar, todos, settings) in real-time across distributed compute via CRDTs, with cross-instance feature assignment, offline-first operation, and conflict-free merges over Tailscale VPN.",
   "status": "approved",
   "milestones": [
     {
@@ -396,6 +396,86 @@
             "Human operator can send messages into the mesh (operator override)",
             "Conversation threads: related messages (request + response) visually grouped",
             "Empty state when hivemind not active: shows setup instructions"
+          ],
+          "complexity": "large"
+        }
+      ],
+      "status": "pending"
+    },
+    {
+      "number": 7,
+      "slug": "07-calendar-and-todo-sync",
+      "title": "Calendar and Todo Sync",
+      "description": "Add Calendar (events) and Todo (lists) as shared CRDT domains. Todos have a three-tier permission model: user lists (agent-readable), per-instance Ava lists (writable only by owning Ava + user, readable by all Avas), and shared lists. Calendar events sync across all instances. These complete the data model hierarchy: Parent Project > Projects/Calendar/Notes/Todo.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "calendar-crdt-sync",
+          "title": "Calendar CRDT Sync",
+          "description": "Create Automerge document (doc:calendar) storing calendar events. Events sync across all instances so deadlines, ceremonies, and milestones are visible everywhere. Integrates with existing CalendarService and MCP calendar tools (create_calendar_event, list_calendar_events, etc). Events have standard fields: title, start, end, type (deadline, ceremony, milestone, custom), linkedProjectSlug, linkedFeatureId. Calendar is a shared resource — any instance can create/edit/delete events.",
+          "filesToModify": [
+            "libs/crdt/src/documents.ts",
+            "libs/types/src/calendar.ts",
+            "apps/server/src/services/calendar-service.ts",
+            "apps/server/src/services/crdt-sync-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "doc:calendar CRDT document syncs across all instances",
+            "Events created on any instance appear on all peers",
+            "Existing MCP calendar tools work through CRDT layer when hivemind active",
+            "Ceremony events auto-created when CeremonySchedulerService fires",
+            "Milestone/project deadline events sync with project data",
+            "Backward compatible: works without CRDT (falls back to filesystem)"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 2,
+          "name": "todo-data-model-and-permissions",
+          "title": "Todo Data Model and Permission System",
+          "description": "Create Todo types and storage. A TodoList has an owner (user or instanceId), a permission tier (user-private, ava-instance, shared), and contains TodoItems. Permission tiers: (1) user lists — user read/write, all Avas read-only. (2) ava-instance lists — writable by owning instance's Ava + user, readable by all Avas on all instances. (3) shared lists — full read/write by anyone. Each Ava instance automatically gets an ava-instance list on first boot. Course correction between Avas happens via mesh chat, not by writing to each other's todo lists.",
+          "filesToModify": [
+            "libs/types/src/todo.ts",
+            "libs/types/src/index.ts",
+            "libs/crdt/src/documents.ts",
+            "apps/server/src/services/todo-service.ts",
+            "apps/server/src/services/crdt-sync-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "TodoList type with id, name, ownerType (user|ava-instance|shared), ownerInstanceId, items[]",
+            "TodoItem type with id, title, description, completed, dueDate, priority, linkedFeatureId",
+            "Permission enforcement: ava-instance lists reject writes from non-owning instances",
+            "doc:todos CRDT document syncs across all instances",
+            "Each instance's Ava auto-creates its own ava-instance list on first activation",
+            "User can create user-private and shared lists",
+            "All Avas can read all lists (for situational awareness)",
+            "Unit tests for permission enforcement across tiers"
+          ],
+          "complexity": "large"
+        },
+        {
+          "number": 3,
+          "name": "todo-mcp-tools-and-ui",
+          "title": "Todo MCP Tools and UI",
+          "description": "Expose todo operations via MCP tools and add a Todo view to the UI. MCP tools: create_todo_list, list_todo_lists, add_todo_item, update_todo_item, complete_todo_item, delete_todo_item. The UI shows all visible lists with permission badges, grouped by tier. Ava skill integration: Ava writes its planned work to its own todo list so the user and other Avas can see what it intends to do. Ava reads other instances' todo lists for awareness but coordinates via mesh chat.",
+          "filesToModify": [
+            "packages/mcp-server/src/tools/todo-tools.ts",
+            "packages/mcp-server/src/tools/index.ts",
+            "apps/server/src/routes/todo/index.ts",
+            "apps/server/src/server/routes.ts",
+            "apps/ui/src/components/views/todo-view/todo-view.tsx",
+            "apps/ui/src/components/views/todo-view/todo-list-card.tsx",
+            "apps/ui/src/routes/__root.tsx"
+          ],
+          "acceptanceCriteria": [
+            "MCP tools: create_todo_list, list_todo_lists, add_todo_item, update_todo_item, complete_todo_item",
+            "Permission enforcement in MCP tools (reject writes to non-owned ava-instance lists)",
+            "Todo view in sidebar showing all lists grouped by tier",
+            "Permission badges on lists (lock icon for read-only, instance badge for ava-instance)",
+            "Ava skill writes planned work items to its instance todo list on activation",
+            "Ava reads peer todo lists via list_todo_lists for cross-instance awareness",
+            "Real-time updates via CRDT sync (new items appear across instances)",
+            "Linked items: todo items can reference features, showing status inline"
           ],
           "complexity": "large"
         }
