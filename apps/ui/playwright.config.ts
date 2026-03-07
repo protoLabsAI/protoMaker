@@ -9,6 +9,7 @@ const mockAgent = true;
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: ['**/unit/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   // CI runners are shared and slower — retry flaky failures up to 2 times
