@@ -1,0 +1,69 @@
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts"
+}
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Grep"
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "cooldown|isRunning|already running|startAutoMode",
+  "path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts",
+  "output_mode": "content",
+  "-n": true
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts",
+  "offset": 600,
+  "limit": 80
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts",
+  "offset": 825,
+  "limit": 40
+}
+Now let me look at what happens in `startAutoLoopForProject` - specifically the function name it calls and the error logging:
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "auto_mode_error|critical|severity",
+  "path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts",
+  "output_mode": "content",
+  "-n": true,
+  "-C": 3
+}
+
+🔧 Tool: Grep
+Input: {
+  "pattern": "pendingLoopStarts|private coordinator",
+  "path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts",
+  "output_mode": "content",
+  "-n": true
+}
+Now I have a clear picture. The fix is straightforward: in `autoResumeAfterCooldown`, add a guard check before calling `startAutoLoopForProject` to silently skip if already running.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Edit"
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/auto-mode-service.ts",
+  "old_string": "    // Restart auto-mode with the same configuration\n    try {\n      await this.startAutoLoopForProject(\n        projectPath,\n        projectState.branchName ?? null,\n        projectState.config.maxConcurrency\n      );\n    } catch (error) {\n      logger.error('Failed to auto-resume after cooldown:', error);\n      this.emitAutoModeEvent('auto_mode_error', {\n        message: 'Failed to auto-resume after cooldown',\n        error: error instanceof Error ? error.message : String(error),\n        projectPath,\n      });\n    }",
+  "new_string": "    // Guard against race: the previous loop may still be cleaning up when the\n    // cooldown timer fires. If the loop is already running (or a start is\n    // pending), skip silently — the loop is healthy and doesn't need a nudge.\n    if (this.coordinator.isRunning(worktreeKey) || this.pendingLoopStarts.has(worktreeKey)) {\n      logger.debug(\n        `Auto-mode already running for ${projectPath} when cooldown timer fired; skipping resume`\n      );\n      return;\n    }\n\n    // Restart auto-mode with the same configuration\n    try {\n      await this.startAutoLoopForProject(\n        projectPath,\n        projectState.branchName ?? null,\n        projectState.config.maxConcurrency\n      );\n    } catch (error) {\n      logger.error('Failed to auto-resume after cooldown:', error);\n      this.emitAutoModeEvent('auto_mode_error', {\n        message: 'Failed to auto-resume after cooldown',\n        error: error instanceof Error ? error.message : String(error),\n        projectPath,\n      });\n    }"
+}
