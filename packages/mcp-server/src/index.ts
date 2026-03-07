@@ -851,8 +851,22 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'get_detailed_health':
       return apiCall('/health/detailed', {}, 'GET');
 
-    case 'get_settings':
-      return apiCall('/settings/global', {}, 'GET');
+    case 'get_settings': {
+      // Strip large/stale fields to keep MCP response small (~12k→~1k tokens)
+      const settingsResult = (await apiCall('/settings/global', {}, 'GET')) as {
+        success: boolean;
+        settings: Record<string, unknown>;
+      };
+      if (settingsResult?.settings) {
+        delete settingsResult.settings.autoModeByWorktree;
+        delete settingsResult.settings.trashedProjects;
+        delete settingsResult.settings.keyboardShortcuts;
+        delete settingsResult.settings.projectHistory;
+        delete settingsResult.settings.lastSelectedSessionByProject;
+        delete settingsResult.settings.recentFolders;
+      }
+      return settingsResult;
+    }
 
     case 'update_settings': {
       const settingsBody = (args.settings || {}) as Record<string, unknown>;
