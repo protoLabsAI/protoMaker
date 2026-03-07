@@ -44,6 +44,27 @@
       "from": "in_progress",
       "to": "backlog",
       "timestamp": "2026-03-07T04:47:38.303Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T06:14:11.130Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T06:14:34.130Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T06:14:35.793Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T06:14:41.523Z"
     }
   ],
   "featureType": "code",
@@ -52,11 +73,12 @@
   ],
   "complexity": "medium",
   "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T04:47:31.795Z",
+  "updatedAt": "2026-03-07T06:14:35.793Z",
   "statusChangeReason": "Interrupted from \"in_progress\": server shutdown",
-  "lastTraceId": "17158e30-d43a-437f-91a7-d2780d796978",
+  "lastTraceId": "c465c6e0-3065-4913-97e0-806cf33d59b6",
   "traceIds": [
-    "17158e30-d43a-437f-91a7-d2780d796978"
+    "17158e30-d43a-437f-91a7-d2780d796978",
+    "c465c6e0-3065-4913-97e0-806cf33d59b6"
   ],
   "executionHistory": [
     {
@@ -64,6 +86,17 @@
       "startedAt": "2026-03-07T04:46:09.151Z",
       "completedAt": "2026-03-07T04:47:30.685Z",
       "durationMs": 81534,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "8922b4a8-c2c8-4a96-a8cd-720159f7f4c5",
+      "startedAt": "2026-03-07T06:14:11.603Z",
+      "completedAt": "2026-03-07T06:14:34.695Z",
+      "durationMs": 23092,
       "costUsd": 0,
       "model": "claude-sonnet-4-6",
       "success": false,
