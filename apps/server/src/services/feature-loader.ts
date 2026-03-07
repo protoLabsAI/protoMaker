@@ -15,6 +15,7 @@ import type {
   StatusTransition,
 } from '@protolabsai/types';
 import { normalizeFeatureStatus } from '@protolabsai/types';
+import type { EventEmitter } from '../lib/events.js';
 import {
   createLogger,
   atomicWriteJson,
@@ -45,9 +46,14 @@ export type { Feature };
 
 export class FeatureLoader implements FeatureStore {
   private integrityWatchdog: DataIntegrityWatchdogService | null = null;
+  private events: EventEmitter | null = null;
 
   setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
     this.integrityWatchdog = watchdog;
+  }
+
+  setEventEmitter(events: EventEmitter): void {
+    this.events = events;
   }
   /**
    * Normalize feature status to canonical values
@@ -569,6 +575,7 @@ export class FeatureLoader implements FeatureStore {
    * @param descriptionHistorySource - Source of description change ('enhance' or 'edit')
    * @param enhancementMode - Enhancement mode if source is 'enhance'
    * @param preEnhancementDescription - Description before enhancement (for restoring original)
+   * @param options - Optional flags, e.g. skipEventEmission for batch operations
    */
   async update(
     projectPath: string,
@@ -576,7 +583,8 @@ export class FeatureLoader implements FeatureStore {
     updates: Partial<Feature>,
     descriptionHistorySource?: 'enhance' | 'edit',
     enhancementMode?: 'improve' | 'technical' | 'simplify' | 'acceptance' | 'ux-reviewer',
-    preEnhancementDescription?: string
+    preEnhancementDescription?: string,
+    options?: { skipEventEmission?: boolean }
   ): Promise<Feature> {
     const feature = await this.get(projectPath, featureId);
     if (!feature) {
@@ -682,6 +690,26 @@ export class FeatureLoader implements FeatureStore {
       backupCount: DEFAULT_BACKUP_COUNT,
       backupDir,
     });
+
+    // Auto-emit feature:status-changed when status changes (persist-before-emit ordering)
+    if (
+      updates.status !== undefined &&
+      updates.status !== feature.status &&
+      this.events &&
+      !options?.skipEventEmission
+    ) {
+      this.events.emit('feature:status-changed', {
+        featureId,
+        projectPath,
+        oldStatus: feature.status,
+        previousStatus: feature.status, // backward-compat alias
+        newStatus: updates.status,
+        reason:
+          typeof updates.statusChangeReason === 'string'
+            ? updates.statusChangeReason
+            : 'status updated',
+      });
+    }
 
     logger.info(`Updated feature ${featureId}`);
     return updatedFeature;
