@@ -18,6 +18,14 @@ import type { FeatureLoader } from '../../../src/services/feature-loader.js';
 import type { ProjectService } from '../../../src/services/project-service.js';
 import type { MetricsService } from '../../../src/services/metrics-service.js';
 
+// Helper to clear the global flowRegistry singleton before each test
+function clearFlowRegistry() {
+  const flowIds = ['standup-flow', 'retro-flow', 'project-retro-flow'];
+  for (const flowId of flowIds) {
+    flowRegistry.unregister(flowId);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Module mocks — prevent real LLM calls and filesystem access
 // ---------------------------------------------------------------------------
@@ -40,6 +48,8 @@ describe('CeremonyService — flow registry', () => {
   let service: CeremonyService;
 
   beforeEach(() => {
+    // Clear the global flowRegistry singleton to prevent state leakage between tests
+    clearFlowRegistry();
     service = new CeremonyService();
     vi.clearAllMocks();
   });
@@ -81,7 +91,8 @@ describe('CeremonyService — flow registry', () => {
 
     const factory = flowRegistry.get('standup-flow');
     expect(factory).toBeDefined();
-    await expect(factory!({})).resolves.not.toThrow();
+    // Verify the factory resolves without throwing
+    await expect(factory!({})).resolves.toBeUndefined();
   });
 
   it('retro-flow factory resolves without throwing', async () => {
@@ -101,7 +112,8 @@ describe('CeremonyService — flow registry', () => {
 
     const factory = flowRegistry.get('retro-flow');
     expect(factory).toBeDefined();
-    await expect(factory!({})).resolves.not.toThrow();
+    // Verify the factory resolves without throwing
+    await expect(factory!({})).resolves.toBeUndefined();
   });
 
   it('project-retro-flow factory resolves without throwing', async () => {
@@ -121,6 +133,7 @@ describe('CeremonyService — flow registry', () => {
 
     const factory = flowRegistry.get('project-retro-flow');
     expect(factory).toBeDefined();
-    await expect(factory!({})).resolves.not.toThrow();
+    // Verify the factory resolves without throwing
+    await expect(factory!({})).resolves.toBeUndefined();
   });
 });
