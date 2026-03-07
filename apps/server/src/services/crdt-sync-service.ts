@@ -394,7 +394,9 @@ export class CrdtSyncService {
           try {
             const msg = JSON.parse(data.toString()) as SyncMessage;
             this._handleMessage(msg, ws);
-          } catch {}
+          } catch {
+            /* ignore malformed messages */
+          }
         });
         ws.on('close', () => {
           if (this.wsClient === ws) {
