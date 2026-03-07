@@ -273,9 +273,7 @@ export class CRDTStore extends EventEmitter {
     }
     this.networkAdapters = [];
     // Flush pending storage writes with a timeout to prevent hanging
-    const documentIds = [...this.handles.values()].map(
-      (h) => parseAutomergeUrl(h.url).documentId
-    );
+    const documentIds = [...this.handles.values()].map((h) => parseAutomergeUrl(h.url).documentId);
     if (documentIds.length > 0) {
       await Promise.race([
         this.repo.flush(documentIds),

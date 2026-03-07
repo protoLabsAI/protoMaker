@@ -8,10 +8,7 @@
 
 export { CRDTStore } from './crdt-store.js';
 
-export {
-  createSyncClientAdapter,
-  WebSocketServerAdapter,
-} from './sync-adapter.js';
+export { createSyncClientAdapter, WebSocketServerAdapter } from './sync-adapter.js';
 
 export {
   normalizeDocument,
@@ -20,11 +17,7 @@ export {
   normalizeConfigDocument,
 } from './documents.js';
 
-export type {
-  FeatureDocument,
-  ProjectDocument,
-  ConfigDocument,
-} from './documents.js';
+export type { FeatureDocument, ProjectDocument, ConfigDocument } from './documents.js';
 
 export type {
   CRDTDocumentRoot,

@@ -72,7 +72,8 @@ export interface ProjectDocument extends CRDTDocumentRoot {
 export const normalizeProjectDocument: SchemaNormalizer<ProjectDocument> = (raw) => {
   const doc = raw as Partial<ProjectDocument>;
 
-  const schemaVersion = typeof doc.schemaVersion === 'number' && doc.schemaVersion >= 1 ? doc.schemaVersion : 1;
+  const schemaVersion =
+    typeof doc.schemaVersion === 'number' && doc.schemaVersion >= 1 ? doc.schemaVersion : 1;
 
   const _meta = doc._meta ?? {
     instanceId: 'unknown',
@@ -141,10 +142,7 @@ const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
  * Run the schema-on-read normalizer for a given domain.
  * Returns the raw doc unchanged if no normalizer is registered.
  */
-export function normalizeDocument<T extends CRDTDocumentRoot>(
-  domain: string,
-  raw: Partial<T>
-): T {
+export function normalizeDocument<T extends CRDTDocumentRoot>(domain: string, raw: Partial<T>): T {
   const normalizer = NORMALIZERS[domain] as unknown as SchemaNormalizer<T> | undefined;
   if (!normalizer) {
     return raw as T;
