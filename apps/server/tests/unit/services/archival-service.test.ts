@@ -1,9 +1,10 @@
 /**
- * ArchivalService tests — Baseline documentation of deletion behavior.
+ * ArchivalService tests — Verifies archive-on-completion behavior.
  *
- * These tests verify that ArchivalService deletes the entire feature directory
- * (including agent-output.md, handoffs, and feature.json) after the retention
- * window expires. This documents data loss as a known, intentional behavior.
+ * These tests verify that ArchivalService moves the feature directory to
+ * .automaker/archive/{featureId}/ after the retention window expires, and
+ * leaves a stub with status:"done" and title so consumers don't treat it
+ * as an active work item.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ArchivalService } from '@/services/archival-service.js';
@@ -16,7 +17,7 @@ describe('ArchivalService', () => {
   let archivalService: ArchivalService;
   let mockFeatureLoader: {
     getAll: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
+    archiveFeature: ReturnType<typeof vi.fn>;
   };
   let mockLedgerService: { recordFeatureCompletion: ReturnType<typeof vi.fn> };
   let mockSettingsService: { getGlobalSettings: ReturnType<typeof vi.fn> };
@@ -41,7 +42,7 @@ describe('ArchivalService', () => {
   beforeEach(() => {
     mockFeatureLoader = {
       getAll: vi.fn(),
-      delete: vi.fn().mockResolvedValue(true),
+      archiveFeature: vi.fn().mockResolvedValue('/test/project/.automaker/archive/feature-1'),
     };
 
     mockLedgerService = {
@@ -69,8 +70,8 @@ describe('ArchivalService', () => {
     );
   });
 
-  describe('runArchivalCycle — feature directory deletion after retention window', () => {
-    it('deletes the feature directory for a done feature that has exceeded the retention window', async () => {
+  describe('runArchivalCycle — feature directory archival after retention window', () => {
+    it('archives the feature directory for a done feature that has exceeded the retention window', async () => {
       const completedAt = makeExpiredCompletedAt();
       mockFeatureLoader.getAll.mockResolvedValue([
         { id: 'feature-1', title: 'Done Feature', status: 'done', completedAt },
@@ -78,13 +79,12 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      expect(mockFeatureLoader.delete).toHaveBeenCalledWith(projectPath, 'feature-1');
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-1');
     });
 
-    it('documents data loss: featureLoader.delete() removes entire directory (agent-output.md, handoffs, feature.json)', async () => {
-      // When ArchivalService calls featureLoader.delete(), the ENTIRE feature directory
-      // is removed recursively. This includes agent-output.md, any handoff files, and
-      // feature.json. All agent work artifacts are permanently lost after archival.
+    it('passes the per-project archivalPolicy to archiveFeature', async () => {
+      // ArchivalService calls featureLoader.archiveFeature() which moves the feature
+      // directory to .automaker/archive/{id}/ and leaves a stub with status:"done" + title.
       const completedAt = makeExpiredCompletedAt(5000);
       mockFeatureLoader.getAll.mockResolvedValue([
         { id: 'feature-abc', title: 'Feature with artifacts', status: 'done', completedAt },
@@ -92,10 +92,9 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      // delete() is called exactly once — this is the recursive directory deletion
-      // covering agent-output.md, handoffs/, and feature.json
-      expect(mockFeatureLoader.delete).toHaveBeenCalledTimes(1);
-      expect(mockFeatureLoader.delete).toHaveBeenCalledWith(projectPath, 'feature-abc');
+      // archiveFeature() is called exactly once
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledTimes(1);
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-abc');
     });
 
     it('skips features still within the retention window', async () => {
@@ -106,7 +105,7 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      expect(mockFeatureLoader.delete).not.toHaveBeenCalled();
+      expect(mockFeatureLoader.archiveFeature).not.toHaveBeenCalled();
     });
 
     it('skips non-done features even when they are old', async () => {
@@ -135,7 +134,7 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      expect(mockFeatureLoader.delete).not.toHaveBeenCalled();
+      expect(mockFeatureLoader.archiveFeature).not.toHaveBeenCalled();
     });
 
     it('falls back to statusHistory timestamp when completedAt is absent', async () => {
@@ -152,7 +151,7 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      expect(mockFeatureLoader.delete).toHaveBeenCalledWith(projectPath, 'feature-no-ts');
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-no-ts');
     });
 
     it('skips features with no completedAt and no done statusHistory entry', async () => {
@@ -169,7 +168,7 @@ describe('ArchivalService', () => {
       await archivalService.runArchivalCycle();
 
       // Cannot determine completedAt → skip
-      expect(mockFeatureLoader.delete).not.toHaveBeenCalled();
+      expect(mockFeatureLoader.archiveFeature).not.toHaveBeenCalled();
     });
 
     it('skips archival entirely when disabled in settings', async () => {
@@ -181,10 +180,10 @@ describe('ArchivalService', () => {
       await archivalService.runArchivalCycle();
 
       expect(mockFeatureLoader.getAll).not.toHaveBeenCalled();
-      expect(mockFeatureLoader.delete).not.toHaveBeenCalled();
+      expect(mockFeatureLoader.archiveFeature).not.toHaveBeenCalled();
     });
 
-    it('ensures ledger record is written before the directory is deleted', async () => {
+    it('ensures ledger record is written before the directory is archived', async () => {
       const completedAt = makeExpiredCompletedAt();
       const feature = { id: 'feature-1', title: 'Done', status: 'done', completedAt };
       mockFeatureLoader.getAll.mockResolvedValue([feature]);
@@ -193,22 +192,24 @@ describe('ArchivalService', () => {
       mockLedgerService.recordFeatureCompletion.mockImplementation(async () => {
         callOrder.push('ledger');
       });
-      mockFeatureLoader.delete.mockImplementation(async () => {
-        callOrder.push('delete');
-        return true;
+      mockFeatureLoader.archiveFeature.mockImplementation(async () => {
+        callOrder.push('archive');
+        return '/test/project/.automaker/archive/feature-1';
       });
 
       await archivalService.runArchivalCycle();
 
-      // Ledger is written BEFORE the directory is deleted — preserving the metric record
-      expect(callOrder).toEqual(['ledger', 'delete']);
+      // Ledger is written BEFORE the directory is archived — preserving the metric record
+      expect(callOrder).toEqual(['ledger', 'archive']);
     });
 
-    it('emits feature:archived event after successful deletion', async () => {
+    it('emits feature:archived event with archivePath after successful archival', async () => {
       const completedAt = makeExpiredCompletedAt();
+      const archivePath = '/test/project/.automaker/archive/feature-1';
       mockFeatureLoader.getAll.mockResolvedValue([
         { id: 'feature-1', title: 'Done Feature', status: 'done', completedAt },
       ]);
+      mockFeatureLoader.archiveFeature.mockResolvedValue(archivePath);
 
       await archivalService.runArchivalCycle();
 
@@ -216,7 +217,24 @@ describe('ArchivalService', () => {
         projectPath,
         featureId: 'feature-1',
         featureTitle: 'Done Feature',
+        archivePath,
       });
+    });
+
+    it('does NOT call featureLoader.delete — features are moved to archive, not removed', async () => {
+      const completedAt = makeExpiredCompletedAt();
+      mockFeatureLoader.getAll.mockResolvedValue([
+        { id: 'feature-1', title: 'Done A', status: 'done', completedAt },
+        { id: 'feature-2', title: 'Done B', status: 'done', completedAt },
+        { id: 'feature-3', title: 'Active', status: 'in_progress' },
+      ]);
+
+      await archivalService.runArchivalCycle();
+
+      // archiveFeature() used — not delete()
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledTimes(2);
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-1');
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-2');
     });
 
     it('archives multiple done features from the same project', async () => {
@@ -229,9 +247,9 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      expect(mockFeatureLoader.delete).toHaveBeenCalledTimes(2);
-      expect(mockFeatureLoader.delete).toHaveBeenCalledWith(projectPath, 'feature-1');
-      expect(mockFeatureLoader.delete).toHaveBeenCalledWith(projectPath, 'feature-2');
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledTimes(2);
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-1');
+      expect(mockFeatureLoader.archiveFeature).toHaveBeenCalledWith(projectPath, 'feature-2');
     });
 
     it('skips epic if any child features are still active', async () => {
@@ -254,7 +272,7 @@ describe('ArchivalService', () => {
 
       await archivalService.runArchivalCycle();
 
-      expect(mockFeatureLoader.delete).not.toHaveBeenCalled();
+      expect(mockFeatureLoader.archiveFeature).not.toHaveBeenCalled();
     });
   });
 });
