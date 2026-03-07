@@ -1028,10 +1028,195 @@ async function sendDiscordConflictAlert(
   }
 }
 
+// Known conflict files that can be auto-resolved during rebase
+const AUTO_RESOLVE_DELETE_FILES = ['.automaker-lock'];
+
+/**
+ * Perform a local rebase of a feature branch against its base branch,
+ * auto-resolving known conflicts (e.g. .automaker-lock) and force-pushing.
+ *
+ * Uses a temporary worktree to avoid disrupting the main repo checkout.
+ * Falls back gracefully if conflicts are unresolvable.
+ */
+async function localRebaseAndPush(
+  projectPath: string,
+  branchName: string,
+  baseBranch: string,
+  prNumber: number
+): Promise<{ success: boolean; hasUnresolvableConflicts?: boolean; error?: string }> {
+  const tmpWorktree = `${projectPath}/.worktrees/.rebase-tmp-${prNumber}`;
+
+  try {
+    // Fetch latest state
+    await execFileAsync('git', ['fetch', 'origin', branchName, baseBranch], {
+      cwd: projectPath,
+      encoding: 'utf-8',
+      timeout: 30_000,
+    });
+
+    // Create a temporary worktree for the rebase
+    try {
+      await execFileAsync(
+        'git',
+        ['worktree', 'add', tmpWorktree, `origin/${branchName}`, '--detach'],
+        { cwd: projectPath, encoding: 'utf-8', timeout: 10_000 }
+      );
+    } catch (addError) {
+      // Worktree might already exist from a failed previous run
+      try {
+        await execFileAsync('git', ['worktree', 'remove', tmpWorktree, '--force'], {
+          cwd: projectPath,
+          encoding: 'utf-8',
+          timeout: 10_000,
+        });
+        await execFileAsync(
+          'git',
+          ['worktree', 'add', tmpWorktree, `origin/${branchName}`, '--detach'],
+          { cwd: projectPath, encoding: 'utf-8', timeout: 10_000 }
+        );
+      } catch {
+        return { success: false, error: `Failed to create temp worktree: ${addError}` };
+      }
+    }
+
+    // Create a local branch tracking the remote
+    await execFileAsync('git', ['checkout', '-B', branchName, `origin/${branchName}`], {
+      cwd: tmpWorktree,
+      encoding: 'utf-8',
+      timeout: 10_000,
+    });
+
+    // Attempt rebase
+    try {
+      await execFileAsync('git', ['rebase', `origin/${baseBranch}`], {
+        cwd: tmpWorktree,
+        encoding: 'utf-8',
+        timeout: 120_000,
+      });
+    } catch {
+      // Rebase hit conflicts — try to auto-resolve known files
+      const resolved = await tryAutoResolveConflicts(tmpWorktree, baseBranch);
+      if (!resolved) {
+        // Abort the rebase and report failure
+        try {
+          await execFileAsync('git', ['rebase', '--abort'], {
+            cwd: tmpWorktree,
+            encoding: 'utf-8',
+            timeout: 10_000,
+          });
+        } catch {
+          // Abort might fail if rebase already completed
+        }
+        return {
+          success: false,
+          hasUnresolvableConflicts: true,
+          error: 'Conflicts could not be auto-resolved',
+        };
+      }
+    }
+
+    // Force-push the rebased branch
+    await execFileAsync(
+      'git',
+      ['push', 'origin', `${branchName}:${branchName}`, '--force-with-lease'],
+      { cwd: tmpWorktree, encoding: 'utf-8', timeout: 30_000 }
+    );
+
+    logger.info(`Local rebase + push succeeded for PR #${prNumber} (${branchName})`);
+    return { success: true };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: msg };
+  } finally {
+    // Always clean up the temporary worktree
+    try {
+      await execFileAsync('git', ['worktree', 'remove', tmpWorktree, '--force'], {
+        cwd: projectPath,
+        encoding: 'utf-8',
+        timeout: 10_000,
+      });
+    } catch {
+      logger.warn(`Failed to clean up temp worktree at ${tmpWorktree}`);
+    }
+  }
+}
+
+/**
+ * Try to auto-resolve rebase conflicts by handling known files.
+ * Iterates rebase steps, resolving `.automaker-lock` by deleting it.
+ * Returns true if all conflicts were resolved successfully.
+ */
+async function tryAutoResolveConflicts(
+  worktreePath: string,
+  _baseBranch: string
+): Promise<boolean> {
+  // Max iterations to prevent infinite loops
+  const MAX_ITERATIONS = 20;
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    // Check which files have conflicts
+    let conflictedFiles: string[];
+    try {
+      const { stdout } = await execFileAsync('git', ['diff', '--name-only', '--diff-filter=U'], {
+        cwd: worktreePath,
+        encoding: 'utf-8',
+        timeout: 5_000,
+      });
+      conflictedFiles = stdout.trim().split('\n').filter(Boolean);
+    } catch {
+      return false;
+    }
+
+    if (conflictedFiles.length === 0) {
+      // No more conflicts — rebase might be done
+      return true;
+    }
+
+    // Check if all conflicts are auto-resolvable
+    const unresolvable = conflictedFiles.filter((f) => !AUTO_RESOLVE_DELETE_FILES.includes(f));
+    if (unresolvable.length > 0) {
+      logger.warn(`Unresolvable conflicts in: ${unresolvable.join(', ')}`);
+      return false;
+    }
+
+    // Auto-resolve by deleting known conflict files
+    for (const file of conflictedFiles) {
+      try {
+        await execFileAsync('git', ['rm', '-f', file], {
+          cwd: worktreePath,
+          encoding: 'utf-8',
+          timeout: 5_000,
+        });
+      } catch {
+        return false;
+      }
+    }
+
+    // Continue the rebase
+    try {
+      await execFileAsync('git', ['rebase', '--continue'], {
+        cwd: worktreePath,
+        encoding: 'utf-8',
+        timeout: 60_000,
+        env: {
+          ...process.env,
+          GIT_EDITOR: 'true', // Skip commit message editing
+        },
+      });
+      // Rebase continued successfully — might be done or might hit another conflict
+    } catch {
+      // Another conflict — loop will check and resolve
+    }
+  }
+
+  logger.warn(`Auto-resolve exceeded ${MAX_ITERATIONS} iterations`);
+  return false;
+}
+
 /**
  * Auto-rebase stale PRs that are behind their base branch.
- * Uses gh pr rebase to update PRs.
- * If conflicts are detected, escalates to human via Discord notification.
+ * Uses local rebase with auto-conflict resolution, falling back to escalation
+ * for unresolvable conflicts.
  */
 async function autoRebaseStalePRs(
   featureLoader: FeatureLoader,
@@ -1102,62 +1287,49 @@ async function autoRebaseStalePRs(
           `PR #${feature.prNumber} (${feature.title}) is ${behindStatus.behindBy} commit(s) behind ${behindStatus.baseBranch}`
         );
 
-        // Get worktree path for the feature
-        const worktreePath = `${projectPath}/.worktrees/${feature.branchName}`;
-
         try {
-          logger.info(
-            `Attempting GitHub CLI rebase for PR #${feature.prNumber} (${feature.title})`
+          // Try local rebase first — more reliable than gh pr rebase and can
+          // auto-resolve known conflicts like .automaker-lock
+          const localResult = await localRebaseAndPush(
+            projectPath,
+            feature.branchName,
+            behindStatus.baseBranch,
+            feature.prNumber
           );
 
-          const { stdout: _stdout, stderr: _stderr } = await execFileAsync(
-            'gh',
-            ['pr', 'rebase', String(feature.prNumber)],
-            {
-              cwd: projectPath,
-              encoding: 'utf-8',
-              timeout: 60_000, // Longer timeout for rebase operations
-            }
-          );
-
-          totalRebased++;
-          rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
-          logger.info(
-            `Successfully rebased PR #${feature.prNumber} (${feature.title}) using GitHub CLI`
-          );
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          const lowerErrorMsg = errorMsg.toLowerCase();
-
-          // Check if error is due to conflicts
-          if (lowerErrorMsg.includes('conflict') || lowerErrorMsg.includes('merge conflict')) {
+          if (localResult.success) {
+            totalRebased++;
+            rebasedPRs.push(`#${feature.prNumber} (${feature.title})`);
+            logger.info(
+              `Successfully rebased PR #${feature.prNumber} (${feature.title}) via local rebase`
+            );
+          } else if (localResult.hasUnresolvableConflicts) {
             totalConflicts++;
             conflictPRs.push({
               pr: `#${feature.prNumber} (${feature.title})`,
-              reason: errorMsg,
+              reason: localResult.error || 'Unresolvable conflicts',
             });
-
-            // Send Discord notification about conflict
-            const prUrl = feature.prUrl || `https://github.com/???/pull/${feature.prNumber}`;
-            await sendDiscordConflictAlert(
-              feature.prNumber,
-              feature.branchName,
-              behindStatus.baseBranch,
-              prUrl,
-              errorMsg
-            );
-
             logger.warn(
-              `PR #${feature.prNumber} (${feature.title}) has conflicts - escalated to Discord`
+              `PR #${feature.prNumber} (${feature.title}) has unresolvable conflicts: ${localResult.error}`
             );
           } else {
             totalSkipped++;
             skippedPRs.push({
               pr: `#${feature.prNumber} (${feature.title})`,
-              reason: errorMsg,
+              reason: localResult.error || 'Unknown error',
             });
-            logger.warn(`Failed to rebase PR #${feature.prNumber} (${feature.title}): ${errorMsg}`);
+            logger.warn(
+              `Failed to rebase PR #${feature.prNumber} (${feature.title}): ${localResult.error}`
+            );
           }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          totalSkipped++;
+          skippedPRs.push({
+            pr: `#${feature.prNumber} (${feature.title})`,
+            reason: errorMsg,
+          });
+          logger.warn(`Failed to rebase PR #${feature.prNumber} (${feature.title}): ${errorMsg}`);
         }
       }
     }
