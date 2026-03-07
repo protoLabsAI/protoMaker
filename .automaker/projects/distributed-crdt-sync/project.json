@@ -1,7 +1,7 @@
 {
   "slug": "distributed-crdt-sync",
-  "title": "Distributed CRDT Sync",
-  "goal": "Enable multiple Automaker instances to share board state (features, projects, notes, calendar, todos, settings) in real-time across distributed compute via CRDTs, with cross-instance feature assignment, offline-first operation, and conflict-free merges over Tailscale VPN.",
+  "title": "Distributed Product Lifecycle Platform",
+  "goal": "Transform protoLabs from a single-instance task runner into a distributed product creation platform — from idea to production. CRDT-synced operational state (features, projects, notes, calendar, todos, settings) across multiple Automaker instances on Tailscale VPN, with an agentic Stage-Gate lifecycle (8 automated gates), cross-instance work-stealing, Ava Mesh orchestration, DORA metrics as auto-regulation control signals, and outcome-driven features (success metrics, kill conditions, hypotheses). The full lifecycle flywheel: signals → gates → execution → promotion → reflection → learning → better signals.",
   "status": "approved",
   "milestones": [
     {
@@ -509,5 +509,5 @@
     ]
   },
   "createdAt": "2026-03-07T06:25:41.695Z",
-  "updatedAt": "2026-03-07T06:25:41.695Z"
+  "updatedAt": "2026-03-07T10:02:46.913Z"
 }
