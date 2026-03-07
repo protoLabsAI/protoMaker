@@ -109,6 +109,11 @@ export const utilityTools: Tool[] = [
           description:
             'ISO timestamp to retrieve events since (optional). Overrides timeRange and cursor if provided.',
         },
+        compact: {
+          type: 'boolean',
+          description:
+            'Return compact briefing (default: true). Compact mode returns slim events for critical/high severity and aggregated trigger counts for medium/low, dramatically reducing token usage. Set to false for full event payloads.',
+        },
       },
       required: ['projectPath'],
     },

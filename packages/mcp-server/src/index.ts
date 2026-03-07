@@ -678,6 +678,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         timeRange: args.timeRange,
         since: args.since,
+        compact: args.compact,
       });
       // Auto-acknowledge to advance cursor after successful digest
       await apiCall('/briefing/ack', {

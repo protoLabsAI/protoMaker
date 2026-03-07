@@ -25,7 +25,7 @@
 import type { Request, Response } from 'express';
 import type { EventHistoryService } from '../../../services/event-history-service.js';
 import type { BriefingCursorService } from '../../../services/briefing-cursor-service.js';
-import type { StoredEvent, EventHookTrigger } from '@protolabsai/types';
+import type { StoredEvent, StoredEventSummary, EventHookTrigger } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
 /**
@@ -146,19 +146,19 @@ async function calculateSince(
 }
 
 /**
- * Group events by severity
+ * Group event summaries by severity
  */
-function groupEventsBySeverity(events: StoredEvent[]): {
-  critical: StoredEvent[];
-  high: StoredEvent[];
-  medium: StoredEvent[];
-  low: StoredEvent[];
+function groupSummariesBySeverity(events: StoredEventSummary[]): {
+  critical: StoredEventSummary[];
+  high: StoredEventSummary[];
+  medium: StoredEventSummary[];
+  low: StoredEventSummary[];
 } {
   const grouped = {
-    critical: [] as StoredEvent[],
-    high: [] as StoredEvent[],
-    medium: [] as StoredEvent[],
-    low: [] as StoredEvent[],
+    critical: [] as StoredEventSummary[],
+    high: [] as StoredEventSummary[],
+    medium: [] as StoredEventSummary[],
+    low: [] as StoredEventSummary[],
   };
 
   for (const event of events) {
@@ -169,23 +169,87 @@ function groupEventsBySeverity(events: StoredEvent[]): {
   return grouped;
 }
 
+/**
+ * Slim event shape for compact briefings (critical/high only)
+ */
+interface CompactEvent {
+  trigger: EventHookTrigger;
+  featureName?: string;
+  featureId?: string;
+  error?: string;
+  timestamp: string;
+}
+
+/**
+ * Build compact response: slim events for critical/high, aggregated counts for medium/low
+ */
+async function buildCompactSignals(
+  grouped: ReturnType<typeof groupSummariesBySeverity>,
+  eventHistoryService: EventHistoryService,
+  projectPath: string
+): Promise<{
+  critical: CompactEvent[];
+  high: CompactEvent[];
+  medium: Record<string, number>;
+  low: Record<string, number>;
+}> {
+  // For critical/high: load full events but only keep essential fields
+  const importantSummaries = [...grouped.critical, ...grouped.high];
+  const fullEvents = await Promise.all(
+    importantSummaries.map((s) => eventHistoryService.getEvent(projectPath, s.id))
+  );
+
+  const slimEvents = fullEvents
+    .filter((e): e is StoredEvent => e !== null)
+    .map(
+      (e): CompactEvent => ({
+        trigger: e.trigger,
+        featureName: e.featureName,
+        featureId: e.featureId,
+        error: e.error,
+        timestamp: e.timestamp,
+      })
+    );
+
+  const criticalCount = grouped.critical.length;
+
+  // For medium/low: aggregate by trigger type
+  const aggregateTriggers = (events: StoredEventSummary[]): Record<string, number> => {
+    const counts: Record<string, number> = {};
+    for (const e of events) {
+      counts[e.trigger] = (counts[e.trigger] || 0) + 1;
+    }
+    return counts;
+  };
+
+  return {
+    critical: slimEvents.slice(0, criticalCount),
+    high: slimEvents.slice(criticalCount),
+    medium: aggregateTriggers(grouped.medium),
+    low: aggregateTriggers(grouped.low),
+  };
+}
+
 export function createDigestHandler(
   eventHistoryService: EventHistoryService,
   briefingCursorService: BriefingCursorService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, timeRange, since, limit } = req.body as {
+      const { projectPath, timeRange, since, limit, compact } = req.body as {
         projectPath: string;
         timeRange?: '1h' | '6h' | '24h' | '7d';
         since?: string;
         limit?: number;
+        compact?: boolean;
       };
 
       if (!projectPath || typeof projectPath !== 'string') {
         res.status(400).json({ success: false, error: 'projectPath is required' });
         return;
       }
+
+      const useCompact = compact !== false; // default true
 
       // Calculate the since timestamp
       let sinceTimestamp: string;
@@ -196,7 +260,7 @@ export function createDigestHandler(
         return;
       }
 
-      // Get events since timestamp
+      // Get event summaries since timestamp
       const events = await eventHistoryService.getEvents(projectPath, {
         since: sinceTimestamp,
       });
@@ -206,16 +270,8 @@ export function createDigestHandler(
       const hasMore = events.length > maxEvents;
       const limitedEvents = events.slice(0, maxEvents);
 
-      // Load full event details for each summary
-      const fullEvents = await Promise.all(
-        limitedEvents.map((summary) => eventHistoryService.getEvent(projectPath, summary.id))
-      );
-
-      // Filter out nulls (shouldn't happen but type safety)
-      const validEvents = fullEvents.filter((e): e is StoredEvent => e !== null);
-
-      // Group by severity
-      const grouped = groupEventsBySeverity(validEvents);
+      // Group summaries by severity
+      const grouped = groupSummariesBySeverity(limitedEvents);
 
       // Calculate summary counts
       const summary = {
@@ -223,17 +279,46 @@ export function createDigestHandler(
         high: grouped.high.length,
         medium: grouped.medium.length,
         low: grouped.low.length,
-        total: validEvents.length,
+        total: limitedEvents.length,
       };
 
-      res.json({
-        success: true,
-        signals: grouped,
-        summary,
-        since: sinceTimestamp,
-        hasMore,
-        projectPath,
-      });
+      if (useCompact) {
+        // Compact mode: slim events for critical/high, aggregated counts for medium/low
+        const signals = await buildCompactSignals(grouped, eventHistoryService, projectPath);
+
+        res.json({
+          success: true,
+          signals,
+          summary,
+          since: sinceTimestamp,
+          hasMore,
+        });
+      } else {
+        // Full mode: load all event details (legacy behavior)
+        const fullEvents = await Promise.all(
+          limitedEvents.map((s) => eventHistoryService.getEvent(projectPath, s.id))
+        );
+        const validEvents = fullEvents.filter((e): e is StoredEvent => e !== null);
+        const fullGrouped = {
+          critical: [] as StoredEvent[],
+          high: [] as StoredEvent[],
+          medium: [] as StoredEvent[],
+          low: [] as StoredEvent[],
+        };
+        for (const event of validEvents) {
+          const severity = TRIGGER_SEVERITY_MAP[event.trigger] || 'low';
+          fullGrouped[severity].push(event);
+        }
+
+        res.json({
+          success: true,
+          signals: fullGrouped,
+          summary,
+          since: sinceTimestamp,
+          hasMore,
+          projectPath,
+        });
+      }
     } catch (error) {
       logError(error, 'Get briefing digest failed');
       res.status(500).json({ success: false, error: getErrorMessage(error) });

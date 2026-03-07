@@ -1325,23 +1325,45 @@ export function buildAvaTools(
         const since = await briefingCursorService.getCursor(projectPath);
         const sinceDate =
           since ?? new Date(Date.now() - getTimeRangeMs(timeRange ?? '24h')).toISOString();
-        const events = await eventHistoryService.getEventsSince(projectPath, sinceDate);
 
-        const grouped: Record<string, unknown[]> = {
-          critical: [],
-          error: [],
-          warning: [],
-          info: [],
+        // Use summaries to avoid loading all full events
+        const summaries = await eventHistoryService.getEvents(projectPath, { since: sinceDate });
+
+        // Group summaries by severity
+        const criticalHighIds: string[] = [];
+        const mediumLowCounts: Record<string, Record<string, number>> = {
+          medium: {},
+          low: {},
         };
-        for (const event of events) {
-          const severity = event.severity ?? 'info';
-          if (!grouped[severity]) grouped[severity] = [];
-          grouped[severity].push({
-            id: event.id,
-            trigger: event.trigger,
-            featureName: event.featureName,
-            error: event.error,
-            timestamp: event.timestamp,
+        const summaryBySeverity: Record<string, number> = {};
+
+        for (const s of summaries) {
+          const severity = s.severity ?? 'low';
+          summaryBySeverity[severity] = (summaryBySeverity[severity] ?? 0) + 1;
+          if (severity === 'critical' || severity === 'high') {
+            criticalHighIds.push(s.id);
+          } else {
+            const bucket = severity === 'medium' ? 'medium' : 'low';
+            mediumLowCounts[bucket][s.trigger] = (mediumLowCounts[bucket][s.trigger] ?? 0) + 1;
+          }
+        }
+
+        // Only load full events for critical/high (need error details)
+        const fullEvents = await Promise.all(
+          criticalHighIds.map((id) => eventHistoryService.getEvent(projectPath, id))
+        );
+
+        const importantSignals: Record<string, unknown[]> = { critical: [], high: [] };
+        for (const e of fullEvents) {
+          if (!e) continue;
+          const severity = e.severity ?? 'low';
+          if (!importantSignals[severity]) importantSignals[severity] = [];
+          importantSignals[severity].push({
+            trigger: e.trigger,
+            featureName: e.featureName,
+            featureId: e.featureId,
+            error: e.error,
+            timestamp: e.timestamp,
           });
         }
 
@@ -1350,11 +1372,12 @@ export function buildAvaTools(
 
         return {
           since: sinceDate,
-          totalEvents: events.length,
-          summary: Object.fromEntries(
-            Object.entries(grouped).map(([k, v]) => [k, (v as unknown[]).length])
-          ),
-          signals: grouped,
+          totalEvents: summaries.length,
+          summary: summaryBySeverity,
+          signals: {
+            ...importantSignals,
+            ...mediumLowCounts,
+          },
         };
       },
     });
