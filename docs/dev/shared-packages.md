@@ -35,11 +35,17 @@ libs/
 - `ErrorType`, `ErrorInfo` - Error handling types
 - `CLAUDE_MODEL_MAP` - Model alias to ID mapping
 - `DEFAULT_MODELS` - Default model configurations
+- `RepoResearchResult` - Everything detected about a repo by the setup pipeline scanner
+- `GapAnalysisReport`, `GapItem`, `AlignmentProposal` - Setup pipeline analysis types
+- `ProtoConfig`, `ProtoTechStack`, `ProtoCommands`, `ProtoGit` - `proto.config.yaml` schema types
+- `Project`, `Milestone`, `Phase` - Project orchestration types
+- `DiscordChannelMapping` - Discord channel ↔ project association
 
 **Example:**
 
 ```typescript
 import type { Feature, ExecuteOptions } from '@protolabsai/types';
+import type { RepoResearchResult, ProtoConfig } from '@protolabsai/types';
 ```
 
 **Never import from:** `services/feature-loader`, `providers/types`
@@ -103,7 +109,7 @@ if (isValidEnhancementMode('improve')) {
 
 ### @protolabsai/platform
 
-**Use when:** You need to work with AutoMaker's directory structure, spawn processes, or detect/launch code editors.
+**Use when:** You need to work with AutoMaker's directory structure, spawn processes, detect/launch code editors, or load/write project config files.
 
 **Import for:**
 
@@ -120,6 +126,8 @@ if (isValidEnhancementMode('improve')) {
 - `openInTerminal(path)` - Open a terminal in the specified directory
 - `clearEditorCache()` - Invalidate the editor detection cache
 - `commandExists(cmd)` - Check if a CLI command is in PATH
+- `loadProtoConfig(projectRoot)` - Load and parse `proto.config.yaml` from a project root (returns `ProtoConfig`)
+- `writeProtoConfig(projectRoot, config)` - Serialize and write `proto.config.yaml` to a project root
 
 **Supported editors** (in priority order): Cursor, VS Code, VS Code Insiders, Kiro, Zed, Sublime Text, Windsurf, Trae (ByteDance), Rider, WebStorm, Xcode, Android Studio, Antigravity. Falls back to Finder/Explorer/xdg-open.
 
@@ -528,13 +536,20 @@ import { Feature } from '../../../src/services/feature-loader';
 - Types → `@protolabsai/types`
 - Logging/Errors/Utils → `@protolabsai/utils`
 - AI Prompts → `@protolabsai/prompts`
-- Paths/Security → `@protolabsai/platform`
+- Paths/Security/Config I/O → `@protolabsai/platform`
 - Model Resolution → `@protolabsai/model-resolver`
 - Dependency Ordering → `@protolabsai/dependency-resolver`
 - Git Operations → `@protolabsai/git-utils`
 - LangGraph Flows → `@protolabsai/flows`
 - Tracing/Observability → `@protolabsai/observability`
 - Tool Definitions → `@protolabsai/tools`
+
+**Setup / ProtoLab onboarding:**
+
+- `RepoResearchResult`, `GapAnalysisReport`, `AlignmentProposal` → `@protolabsai/types`
+- `ProtoConfig` schema types → `@protolabsai/types`
+- `loadProtoConfig`, `writeProtoConfig` → `@protolabsai/platform`
+- Setup pipeline docs → `docs/protolabs/setup-pipeline.md`
 
 **Never import from:** `lib/*`, `services/feature-loader` (for types), `providers/types`, `routes/common`
 
