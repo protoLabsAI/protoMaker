@@ -34,9 +34,7 @@ export function createSummaryHandler(
       }
 
       if (!projectPath) {
-        res
-          .status(400)
-          .json({ success: false, error: 'projectPath query param is required' });
+        res.status(400).json({ success: false, error: 'projectPath query param is required' });
         return;
       }
 
