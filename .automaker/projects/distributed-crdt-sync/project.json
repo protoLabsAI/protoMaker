@@ -499,7 +499,13 @@
       "Star topology with automatic leader election for 2-10 nodes",
       "proto.config.yaml is git-tracked; instance-local overrides in .automaker/settings.json",
       "Cross-instance assignment via work-stealing protocol, not centralized scheduler",
-      "Notes rich-text CRDT (via @automerge/prosemirror) is deferred to Phase 5 — Phase 3 syncs notes at the workspace JSON level"
+      "Notes rich-text CRDT (via @automerge/prosemirror) is deferred to Phase 5 — Phase 3 syncs notes at the workspace JSON level",
+      "Ledger files (events.jsonl, completion-emitted.jsonl, ceremony-processed.jsonl) remain instance-local — append-only logs are not suitable for CRDT sync",
+      "PR tracking state (pr-tracking.json) remains instance-local — each instance owns its PRs",
+      "Calendar events (doc:calendar) and Todos (doc:todos) are future sync domains — add when those surfaces mature",
+      "M1 must include a bootstrap/migration phase: on first proto.config.yaml enable, hydrate CRDT documents from existing .automaker/ filesystem data",
+      "doc:assignments should be a separate CRDT document from doc:features — keeps work-stealing handshake messages and capacity data isolated",
+      "When a feature is reassigned via work-stealing, PR watermarks (ownership.instanceId) must be updated on the PR"
     ]
   },
   "createdAt": "2026-03-07T06:25:41.695Z",
