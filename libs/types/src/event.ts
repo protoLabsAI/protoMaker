@@ -317,7 +317,9 @@ export type EventType =
   | 'subagent:tool-approval-request'
   | 'subagent:tool-approval-response'
   // Server lifecycle events
-  | 'server:shutdown';
+  | 'server:shutdown'
+  // CRDT sync events (multi-instance feature store sync via Automerge)
+  | 'crdt:remote-changes';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -526,6 +528,8 @@ export interface EventPayloadMap {
     newTitle?: string;
     previousDescription?: string;
     newDescription?: string;
+    /** Full feature object — included when emitted by AutomergeFeatureStore after a CRDT write */
+    feature?: unknown;
   };
 
   // Auto-mode events
@@ -736,6 +740,14 @@ export interface EventPayloadMap {
     approvalId: string;
     approved: boolean;
     message?: string;
+  };
+
+  // CRDT sync events (multi-instance feature store sync via Automerge)
+  'crdt:remote-changes': {
+    /** Absolute path to the project whose CRDT doc received remote changes */
+    projectPath: string;
+    /** Automerge binary change payloads received from a peer */
+    changes: Uint8Array[];
   };
 }
 

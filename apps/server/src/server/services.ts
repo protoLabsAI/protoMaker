@@ -8,6 +8,7 @@ import { createEventEmitter, type EventEmitter } from '../lib/events.js';
 
 import { AgentService } from '../services/agent-service.js';
 import { FeatureLoader } from '../services/feature-loader.js';
+import { AutomergeFeatureStore } from '../services/automerge-feature-store.js';
 import { UserIdentityService } from '../services/user-identity-service.js';
 import { AutoModeService } from '../services/auto-mode-service.js';
 import { getTerminalService } from '../services/terminal-service.js';
@@ -269,7 +270,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Wire settingsService into the contentFlowService singleton for model resolution
   contentFlowService.setSettingsService(settingsService);
   const userIdentityService = new UserIdentityService(settingsService);
-  const featureLoader = new FeatureLoader();
+  // AutomergeFeatureStore extends FeatureLoader: uses CRDT when proto.config.yaml is present,
+  // falls back to plain filesystem reads/writes when it is absent (single-instance mode).
+  const featureLoader = new AutomergeFeatureStore(events);
 
   // Trust Tier Service for quarantine pipeline
   const trustTierService = new TrustTierService(dataDir);

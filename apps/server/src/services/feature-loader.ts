@@ -60,7 +60,7 @@ export class FeatureLoader implements FeatureStore {
    * Normalize feature status to canonical values
    * Defensive: ensures all features use the 6-status system
    */
-  private normalizeFeature(feature: Feature): Feature {
+  protected normalizeFeature(feature: Feature): Feature {
     let normalized = feature;
 
     // Guard: archived features are always treated as 'done' regardless of what
@@ -378,7 +378,7 @@ export class FeatureLoader implements FeatureStore {
   /**
    * Normalize a title for comparison (case-insensitive, trimmed)
    */
-  private normalizeTitle(title: string): string {
+  protected normalizeTitle(title: string): string {
     return title.toLowerCase().trim();
   }
 

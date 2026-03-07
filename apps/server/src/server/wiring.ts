@@ -2,6 +2,7 @@
 // New services only need to create/edit their own *.module.ts — never touch this file.
 
 import type { ServiceContainer } from './services.js';
+import { AutomergeFeatureStore } from '../services/automerge-feature-store.js';
 
 import { register as registerCore } from '../services/core.module.js';
 import { register as registerEscalationChannels } from '../services/escalation-channels/escalation-channels.module.js';
@@ -45,4 +46,20 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   // Start built-in sensors (websocket-clients + electron-idle) after all wiring is complete.
   // This ensures the sensor registry is fully initialised before polling begins.
   services.sensorRegistryService.startBuiltinSensors();
+
+  // Wire CRDT remote-change events to AutomergeFeatureStore.
+  // The sync adapter (delivered by @protolabsai/crdt) emits 'crdt:remote-changes' on the EventBus
+  // when it receives changes from a peer. AutomergeFeatureStore merges them and re-emits
+  // 'feature:updated' events for any features that changed.
+  if (services.featureLoader instanceof AutomergeFeatureStore) {
+    const store = services.featureLoader;
+    // Cast needed because 'crdt:remote-changes' is defined in the worktree branch but the
+    // workspace node_modules symlink resolves to the main branch's types (pre-merge).
+    const events = services.events as unknown as {
+      on(type: string, cb: (data: { projectPath: string; changes: Uint8Array[] }) => void): void;
+    };
+    events.on('crdt:remote-changes', (data) => {
+      store.applyRemoteChanges(data.projectPath, data.changes);
+    });
+  }
 }
