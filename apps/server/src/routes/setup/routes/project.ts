@@ -3,9 +3,9 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
-import { ensureAutomakerDir } from '@protolabsai/platform';
+import { ensureAutomakerDir, writeProtoConfig } from '@protolabsai/platform';
 import { SettingsService } from '../../../services/settings-service.js';
-import type { RepoResearchResult } from '@protolabsai/types';
+import type { RepoResearchResult, ProtoConfig } from '@protolabsai/types';
 
 const logger = createLogger('setup:project');
 
@@ -156,6 +156,18 @@ export function createSetupProjectHandler(
             filesCreated.push('.automaker/context/coding-rules.md');
           }
         }
+      }
+
+      // 3c. Generate proto.config.yaml from research results
+      const protoConfigPath = path.join(realPath, 'proto.config.yaml');
+      try {
+        await fs.access(protoConfigPath);
+        filesCreated.push('proto.config.yaml (already exists)');
+      } catch {
+        // File doesn't exist — generate from research
+        const protoConfig = buildProtoConfig(projectName, research);
+        await writeProtoConfig(realPath, protoConfig);
+        filesCreated.push('proto.config.yaml');
       }
 
       // 4. Add project to Automaker settings if not already present
@@ -393,4 +405,78 @@ function generateCodingRules(research: RepoResearchResult): string | null {
   }
 
   return sections.join('\n');
+}
+
+/**
+ * Build a ProtoConfig object from research results.
+ * Maps detected tech stack, package.json scripts, and git config into the schema.
+ */
+function buildProtoConfig(projectName: string, research?: RepoResearchResult): ProtoConfig {
+  const config: ProtoConfig = {
+    name: projectName,
+    version: '1.0.0',
+  };
+
+  if (!research) return config;
+
+  // Tech stack from detection
+  const techStack: ProtoConfig['techStack'] = {
+    packageManager: research.monorepo.packageManager,
+  };
+
+  if (research.codeQuality.hasTypeScript) {
+    techStack.language = 'typescript';
+  }
+
+  if (research.frontend.framework && research.frontend.framework !== 'none') {
+    techStack.framework = research.frontend.framework;
+  } else if (research.frontend.metaFramework && research.frontend.metaFramework !== 'none') {
+    techStack.framework = research.frontend.metaFramework;
+  } else if (research.backend.hasExpress) {
+    techStack.framework = 'express';
+  } else if (research.backend.hasFastAPI) {
+    techStack.framework = 'fastapi';
+  }
+
+  // Detect bundler
+  if (research.frontend.metaFramework === 'vite') {
+    techStack.bundler = 'vite';
+  } else if (research.frontend.metaFramework === 'nextjs') {
+    techStack.bundler = 'webpack';
+  }
+
+  // Detect test runner
+  if (research.testing.hasVitest) {
+    techStack.testRunner = 'vitest';
+  } else if (research.testing.hasJest) {
+    techStack.testRunner = 'jest';
+  } else if (research.testing.hasPytest) {
+    techStack.testRunner = 'pytest';
+  }
+
+  config.techStack = techStack;
+
+  // Commands from package.json scripts
+  const scripts = research.scripts ?? {};
+  const commands: ProtoConfig['commands'] = {};
+  if (scripts['build']) commands.build = scripts['build'];
+  if (scripts['test']) commands.test = scripts['test'];
+  if (scripts['dev']) commands.dev = scripts['dev'];
+  if (scripts['lint']) commands.lint = scripts['lint'];
+  if (scripts['format']) commands.format = scripts['format'];
+
+  if (Object.keys(commands).length > 0) {
+    config.commands = commands;
+  }
+
+  // Git section populated from detected branch strategy
+  if (research.git.isRepo) {
+    const git: ProtoConfig['git'] = {
+      baseBranch: research.git.defaultBranch ?? 'main',
+      strategy: 'squash',
+    };
+    config.git = git;
+  }
+
+  return config;
 }

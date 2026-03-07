@@ -163,7 +163,7 @@ export const setupTools: Tool[] = [
   {
     name: 'run_full_setup',
     description:
-      'Run the complete setup pipeline: clone (if git URL), research repo, analyze gaps, generate HTML report, initialize .automaker, and generate proposal. This is a convenience wrapper that chains clone_repo (if URL) → research_repo → analyze_gaps → generate_report → setup_lab → propose_alignment.',
+      'Run the complete setup pipeline: clone (if git URL), research repo, analyze gaps, generate HTML report, initialize .automaker, generate proto.config.yaml, and generate proposal. This is a convenience wrapper that chains clone_repo (if URL) → research_repo → analyze_gaps → generate_report → setup_lab → propose_alignment. setup_lab writes proto.config.yaml at the project root, populated from research results (name, techStack, commands, git).',
     inputSchema: {
       type: 'object',
       properties: {

@@ -260,3 +260,6 @@ export {
   findTerminalById,
   openInExternalTerminal,
 } from './terminal.js';
+
+// proto.config.yaml schema & loader
+export { loadProtoConfig, writeProtoConfig } from './proto-config.js';
