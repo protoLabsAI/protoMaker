@@ -5,8 +5,9 @@
 import type { Request, Response } from 'express';
 import { getAuthStatus } from '../../../lib/auth.js';
 import { getVersion } from '../../../lib/version.js';
+import type { CrdtSyncService } from '../../../services/crdt-sync-service.js';
 
-export function createDetailedHandler() {
+export function createDetailedHandler(crdtSyncService?: CrdtSyncService) {
   return (_req: Request, res: Response): void => {
     res.json({
       status: 'ok',
@@ -21,6 +22,7 @@ export function createDetailedHandler() {
         platform: process.platform,
         arch: process.arch,
       },
+      sync: crdtSyncService ? crdtSyncService.getSyncStatus() : null,
     });
   };
 }

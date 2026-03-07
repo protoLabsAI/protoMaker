@@ -32,6 +32,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     hitlFormService,
     actionableItemBridge,
     agentDiscordRouter,
+    crdtSyncService,
     dataDir,
   } = services;
 
@@ -67,6 +68,7 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   hitlFormService.shutdown();
   actionableItemBridge.shutdown();
   agentDiscordRouter.stop();
+  await crdtSyncService.shutdown();
   await shutdownLangfuse();
   await shutdownOtel();
 

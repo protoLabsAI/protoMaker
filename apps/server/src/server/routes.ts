@@ -156,6 +156,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     repoRoot,
     sensorRegistryService,
     projectPmService,
+    crdtSyncService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -220,7 +221,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api', authMiddleware);
 
   // --- PROTECTED HEALTH ENDPOINTS (detailed info requires auth) ---
-  app.get('/api/health/detailed', createDetailedHandler());
+  app.get('/api/health/detailed', createDetailedHandler(crdtSyncService));
   app.get('/api/health/quick', createQuickHandler());
   app.get(
     '/api/health/standard',

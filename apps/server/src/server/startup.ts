@@ -38,7 +38,9 @@ export async function runStartup(
     worktreeLifecycleService,
     agentService,
     knowledgeStoreService,
+    crdtSyncService,
     dataDir,
+    repoRoot,
   } = services;
 
   // Migrate settings from legacy Electron userData location if needed
@@ -72,6 +74,14 @@ export async function runStartup(
 
   await agentService.initialize();
   logger.info('Agent service initialized');
+
+  // Start CRDT sync service (multi-instance coordination)
+  try {
+    await crdtSyncService.start(repoRoot);
+    logger.info('[CRDT] Sync service started');
+  } catch (err) {
+    logger.warn('[CRDT] Sync service failed to start (single-instance mode):', err);
+  }
 
   // Initialize Knowledge Store Service for all known projects
   if (knowledgeStoreService) {

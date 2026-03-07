@@ -116,6 +116,8 @@ export type {
   InstanceIdentity,
   HivemindPeer,
   HivemindConfig,
+  SyncRole,
+  SyncServerStatus,
 } from './hivemind.js';
 
 // Project orchestration types

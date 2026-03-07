@@ -5,6 +5,25 @@
  * discovery for the hivemind distributed architecture.
  */
 
+/** Role of an instance in the sync mesh */
+export type SyncRole = 'primary' | 'worker';
+
+/** Health status of the CRDT sync service for the /health endpoint */
+export interface SyncServerStatus {
+  /** This instance's current role */
+  role: SyncRole;
+  /** Port the sync server is listening on (primary only) */
+  syncPort: number | null;
+  /** Whether connected to the sync mesh (server running or client connected) */
+  connected: boolean;
+  /** Number of known peers */
+  peerCount: number;
+  /** Currently online peers */
+  onlinePeers: HivemindPeer[];
+  /** Whether this instance is currently acting as the leader/primary */
+  isLeader: boolean;
+}
+
 /** Capacity metrics for an instance */
 export interface InstanceCapacity {
   cores: number;
@@ -53,11 +72,19 @@ export interface HivemindPeer {
 export interface HivemindConfig {
   /** Whether hivemind is enabled for this instance */
   enabled: boolean;
+  /** Role of this instance in the sync mesh (default: worker) */
+  role?: SyncRole;
+  /** Port to start the sync WebSocket server on (primary only) */
+  syncPort?: number;
+  /** Unique instance identifier (defaults to os.hostname()) */
+  instanceId?: string;
+  /** URL where this instance's sync server is reachable (e.g. ws://host:4444) */
+  instanceUrl?: string;
   /** Shared hive identifier — instances must match to join */
   hiveId?: string;
   /** Hashed passphrase for hive membership auth */
   secret?: string;
-  /** Peer URLs for manual join (before auto-discovery) */
+  /** Peer URLs in priority order — index 0 is preferred primary */
   peers?: string[];
   /** Domains owned by this instance */
   domains?: HivemindDomain[];

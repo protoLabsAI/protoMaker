@@ -15,6 +15,7 @@ import { register as registerCeremony } from '../services/ceremony.module.js';
 import { register as registerInfrastructure } from '../services/infrastructure.module.js';
 import { register as registerProjectPm } from '../services/project-pm.module.js';
 import { register as registerEventLedger } from '../services/event-ledger.module.js';
+import { register as registerCrdtSync } from '../services/crdt-sync.module.js';
 
 /**
  * Wire all cross-service dependencies by invoking each module's register() in order.
@@ -39,6 +40,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   await registerInfrastructure(services);
   await registerProjectPm(services);
   await registerEventLedger(services);
+  await registerCrdtSync(services);
 
   // Start built-in sensors (websocket-clients + electron-idle) after all wiring is complete.
   // This ensures the sensor registry is fully initialised before polling begins.

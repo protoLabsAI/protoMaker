@@ -97,6 +97,7 @@ import { ProjectPlanningService } from '../services/project-planning-service.js'
 import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
+import { CrdtSyncService } from '../services/crdt-sync-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -247,6 +248,9 @@ export interface ServiceContainer {
 
   // Content flow (singleton)
   contentFlowService: typeof contentFlowService;
+
+  // CRDT sync service (multi-instance coordination)
+  crdtSyncService: CrdtSyncService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -626,6 +630,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
+  // CRDT Sync Service — multi-instance coordination via WebSocket sync server
+  const crdtSyncService = new CrdtSyncService();
+
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
@@ -747,6 +754,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     contentFlowService,
     projectPlanningService,
     projectPmService,
+    crdtSyncService,
     driftCheckInterval: null,
   };
 }
