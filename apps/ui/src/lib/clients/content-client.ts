@@ -129,10 +129,7 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
       ): Promise<{ success: boolean; list: TodoList }> =>
         this.post('/api/todos/create-list', { projectPath, name }),
 
-      deleteList: (
-        projectPath: string,
-        listId: string
-      ): Promise<{ success: boolean }> =>
+      deleteList: (projectPath: string, listId: string): Promise<{ success: boolean }> =>
         this.post('/api/todos/delete-list', { projectPath, listId }),
 
       addItem: (
@@ -156,7 +153,9 @@ export const withContentClient = <TBase extends Constructor<BaseHttpClient>>(Bas
         projectPath: string,
         listId: string,
         itemId: string,
-        updates: Partial<Pick<TodoItem, 'title' | 'completed' | 'completedAt' | 'dueDate' | 'priority'>>
+        updates: Partial<
+          Pick<TodoItem, 'title' | 'completed' | 'completedAt' | 'dueDate' | 'priority'>
+        >
       ): Promise<{ success: boolean; item: TodoItem }> =>
         this.post('/api/todos/update-item', { projectPath, listId, itemId, updates }),
 

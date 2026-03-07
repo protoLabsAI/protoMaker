@@ -119,10 +119,7 @@ export function TodoListCard({
                     title={`Priority: ${PRIORITY_LABELS[item.priority]}`}
                   >
                     <span
-                      className={cn(
-                        'h-1.5 w-1.5 rounded-full',
-                        PRIORITY_COLORS[item.priority]
-                      )}
+                      className={cn('h-1.5 w-1.5 rounded-full', PRIORITY_COLORS[item.priority])}
                     />
                     {PRIORITY_LABELS[item.priority]}
                   </span>
@@ -161,10 +158,7 @@ export function TodoListCard({
           className="flex-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground"
         />
         {newItemTitle.trim() && (
-          <button
-            onClick={handleAddItem}
-            className="text-xs text-primary hover:underline"
-          >
+          <button onClick={handleAddItem} className="text-xs text-primary hover:underline">
             Add
           </button>
         )}

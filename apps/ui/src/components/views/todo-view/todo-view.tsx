@@ -86,9 +86,7 @@ export function TodoView() {
         </div>
 
         {/* Loading */}
-        {isLoading && (
-          <div className="text-sm text-muted-foreground">Loading...</div>
-        )}
+        {isLoading && <div className="text-sm text-muted-foreground">Loading...</div>}
 
         {/* Empty state */}
         {!isLoading && lists.length === 0 && (
