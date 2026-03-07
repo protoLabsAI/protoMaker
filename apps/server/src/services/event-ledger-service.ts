@@ -213,6 +213,32 @@ export class EventLedgerService {
   }
 
   /**
+   * Return events for a project slug with optional filtering by time and type.
+   *
+   * @param projectSlug  The project slug to filter by
+   * @param options.since  Only return events after this ISO 8601 timestamp (exclusive)
+   * @param options.type   Only return events of this eventType
+   */
+  async queryByProject(
+    projectSlug: string,
+    options: { since?: string; type?: string } = {}
+  ): Promise<EventLedgerEntry[]> {
+    const all = await this._readAll();
+    let results = all.filter((e) => e.correlationIds.projectSlug === projectSlug);
+
+    if (options.since) {
+      const sinceMs = new Date(options.since).getTime();
+      results = results.filter((e) => new Date(e.timestamp).getTime() > sinceMs);
+    }
+
+    if (options.type) {
+      results = results.filter((e) => e.eventType === options.type);
+    }
+
+    return results;
+  }
+
+  /**
    * Return all events whose timestamp falls within [startDate, endDate].
    * Both bounds are ISO 8601 strings and are inclusive.
    */

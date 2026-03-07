@@ -487,9 +487,6 @@ export interface UpdateProjectInput {
   /** Update status */
   status?: ProjectStatus;
 
-  /** ISO timestamp of when the project was completed */
-  completedAt?: string;
-
   /** Update PRD */
   prd?: SPARCPrd;
 
@@ -670,14 +667,17 @@ export interface ProjectArtifact {
 }
 
 /**
- * Slim milestone summary returned by the project summary endpoint
+ * Summary of a single milestone for the project summary API
  */
 export interface MilestoneSummary {
   slug: string;
   title: string;
-  status: MilestoneStatus;
+  status: string;
+  /** Percentage of phases whose linked feature is 'done' (0–100) */
   completionPct: number;
+  /** Total number of phases in this milestone */
   phaseCount: number;
+  /** Number of phases whose linked feature is 'done' */
   completedPhaseCount: number;
 }
 
@@ -685,10 +685,11 @@ export interface MilestoneSummary {
  * Unified project summary returned by GET /api/projects/:slug/summary
  */
 export interface ProjectSummary {
+  /** Core project metadata */
   project: {
     slug: string;
     title: string;
-    goal: string;
+    goal?: string;
     status: ProjectStatus;
     health?: ProjectHealth;
     priority?: ProjectPriority;
@@ -698,14 +699,18 @@ export interface ProjectSummary {
     createdAt: string;
     updatedAt: string;
   };
+  /** Feature counts keyed by feature status */
   featureCount: Record<string, number>;
+  /** Milestones with completion percentages */
   milestones: MilestoneSummary[];
+  /** Grouped artifact index entries */
   artifacts: {
     ceremonies: ArtifactIndexEntry[];
     changelogs: ArtifactIndexEntry[];
     escalations: ArtifactIndexEntry[];
   };
-  recentTimeline: unknown[];
+  /** Last 20 EventLedger events for the project */
+  recentTimeline: import('./event-ledger.js').EventLedgerEntry[];
 }
 
 /**
