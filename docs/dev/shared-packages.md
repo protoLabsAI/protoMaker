@@ -113,10 +113,10 @@ if (isValidEnhancementMode('improve')) {
 
 **Import for:**
 
-- `getprotoLabsDir(projectPath)` - Get .automaker directory
+- `getAutomakerDir(projectPath)` - Get .automaker directory
 - `getFeaturesDir(projectPath)` - Get features directory
 - `getFeatureDir(projectPath, featureId)` - Get specific feature directory
-- `ensureprotoLabsDir(projectPath)` - Create .automaker if needed
+- `ensureAutomakerDir(projectPath)` - Create .automaker if needed
 - `spawnJSONLProcess()` - Spawn process with JSONL output
 - `initAllowedPaths()` - Security path validation
 - `detectAllEditors()` - Detect all installed editors on the system (cached 5 min)
@@ -136,7 +136,7 @@ if (isValidEnhancementMode('improve')) {
 **Example:**
 
 ```typescript
-import { getFeatureDir, ensureprotoLabsDir } from '@protolabsai/platform';
+import { getFeatureDir, ensureAutomakerDir } from '@protolabsai/platform';
 import { detectAllEditors, openInEditor } from '@protolabsai/platform';
 
 // Detect all installed editors
@@ -423,7 +423,7 @@ import { createLogger, classifyError } from '@protolabsai/utils';
 import { getEnhancementPrompt, isValidEnhancementMode } from '@protolabsai/prompts';
 
 // Import platform utils from @protolabsai/platform
-import { getFeatureDir, ensureprotoLabsDir } from '@protolabsai/platform';
+import { getFeatureDir, ensureAutomakerDir } from '@protolabsai/platform';
 
 // Import model resolution from @protolabsai/model-resolver
 import { resolveModelString } from '@protolabsai/model-resolver';
