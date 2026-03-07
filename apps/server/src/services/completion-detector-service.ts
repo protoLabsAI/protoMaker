@@ -9,6 +9,9 @@
  * completion — no polling required.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import readline from 'node:readline';
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -34,11 +37,19 @@ interface FeatureStatusChangedPayload {
   newStatus: string;
 }
 
+/** Entry recorded in the completion-emitted.jsonl sidecar */
+interface CompletionLedgerEntry {
+  type: 'epic' | 'milestone' | 'project';
+  key: string;
+  timestamp: string;
+}
+
 export class CompletionDetectorService {
   private emitter: EventEmitter | null = null;
   private featureLoader: FeatureLoader | null = null;
   private projectService: ProjectService | null = null;
   private unsubscribe: (() => void) | null = null;
+  private dataDir: string | null = null;
 
   /** Dedup guard: track epics/milestones/projects we've already emitted completion for */
   private emittedEpics = new Set<string>();
@@ -48,14 +59,90 @@ export class CompletionDetectorService {
   /** Observability counters for engine status API */
   private completionCounts = { epics: 0, milestones: 0, projects: 0 };
 
+  private getLedgerPath(): string | null {
+    if (!this.dataDir) return null;
+    return path.join(this.dataDir, 'ledger', 'completion-emitted.jsonl');
+  }
+
+  /**
+   * Load existing completion keys from the JSONL sidecar file.
+   * Pre-populates the in-memory Sets so warm restarts suppress duplicate events.
+   */
+  private async loadLedger(): Promise<void> {
+    const ledgerPath = this.getLedgerPath();
+    if (!ledgerPath) return;
+
+    if (!fs.existsSync(ledgerPath)) {
+      logger.debug('CompletionDetector: no existing ledger file, starting fresh');
+      return;
+    }
+
+    try {
+      const rl = readline.createInterface({
+        input: fs.createReadStream(ledgerPath, 'utf-8'),
+        crlfDelay: Infinity,
+      });
+
+      let loaded = 0;
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const entry = JSON.parse(trimmed) as CompletionLedgerEntry;
+          if (entry.type === 'epic' && entry.key) {
+            this.emittedEpics.add(entry.key);
+            loaded++;
+          } else if (entry.type === 'milestone' && entry.key) {
+            this.emittedMilestones.add(entry.key);
+            loaded++;
+          } else if (entry.type === 'project' && entry.key) {
+            this.emittedProjects.add(entry.key);
+            loaded++;
+          }
+        } catch {
+          // skip malformed lines
+        }
+      }
+
+      logger.debug(`CompletionDetector: loaded ${loaded} completion keys from ledger`);
+    } catch (err) {
+      logger.warn('CompletionDetector: failed to load ledger:', err);
+    }
+  }
+
+  /**
+   * Append a completion key to the JSONL sidecar — fire-and-forget.
+   */
+  private appendLedgerEntry(type: 'epic' | 'milestone' | 'project', key: string): void {
+    const ledgerPath = this.getLedgerPath();
+    if (!ledgerPath) return;
+
+    const entry: CompletionLedgerEntry = { type, key, timestamp: new Date().toISOString() };
+    const line = JSON.stringify(entry) + '\n';
+
+    void (async () => {
+      try {
+        await fs.promises.mkdir(path.dirname(ledgerPath), { recursive: true });
+        await fs.promises.appendFile(ledgerPath, line, 'utf-8');
+      } catch (err) {
+        logger.error('CompletionDetector: failed to write ledger entry:', err);
+      }
+    })();
+  }
+
   initialize(
     emitter: EventEmitter,
     featureLoader: FeatureLoader,
-    projectService: ProjectService
+    projectService: ProjectService,
+    dataDir?: string
   ): void {
     this.emitter = emitter;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
+    this.dataDir = dataDir ?? null;
+
+    // Load ledger asynchronously to pre-populate dedup Sets from disk
+    void this.loadLedger();
 
     this.unsubscribe = emitter.subscribe((type, payload) => {
       // Auto-mode completion (agent finished successfully)
@@ -86,6 +173,7 @@ export class CompletionDetectorService {
     this.emitter = null;
     this.featureLoader = null;
     this.projectService = null;
+    this.dataDir = null;
     this.emittedEpics.clear();
     this.emittedMilestones.clear();
     this.emittedProjects.clear();
@@ -151,6 +239,7 @@ export class CompletionDetectorService {
     if (!epic || epic.status === 'done') return;
 
     this.emittedEpics.add(dedupeKey);
+    this.appendLedgerEntry('epic', dedupeKey);
     this.completionCounts.epics++;
     logger.info(`All children of epic "${epic.title}" are done — marking epic done`);
     await this.featureLoader!.update(projectPath, epicId, { status: 'done' });
@@ -212,6 +301,7 @@ export class CompletionDetectorService {
     // Mark milestone completed
     this.completionCounts.milestones++;
     this.emittedMilestones.add(dedupeKey);
+    this.appendLedgerEntry('milestone', dedupeKey);
     milestone.status = 'completed';
     await this.projectService!.updateProject(projectPath, projectSlug, {
       status: project.status,
@@ -263,6 +353,7 @@ export class CompletionDetectorService {
 
     this.completionCounts.projects++;
     this.emittedProjects.add(dedupeKey);
+    this.appendLedgerEntry('project', dedupeKey);
     await this.projectService!.updateProject(projectPath, projectSlug, {
       status: 'completed',
     });
