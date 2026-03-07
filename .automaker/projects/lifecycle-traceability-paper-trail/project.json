@@ -1,0 +1,461 @@
+{
+  "slug": "lifecycle-traceability-paper-trail",
+  "title": "Lifecycle Traceability & Paper Trail",
+  "goal": "Create a fully connected, auditable lifecycle system where every project, feature, ceremony, and agent execution produces a permanent, traceable paper trail. Fix the broken milestone cascade, introduce event persistence, prevent archival data loss, and establish TDD coverage for the entire lifecycle pipeline.",
+  "status": "completed",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-test-foundation",
+      "title": "Test Foundation",
+      "description": "Write comprehensive regression tests BEFORE changing any production code. Cover the exact seams that will be modified: CompletionDetectorService cascade, archival behavior, event emission patterns, ledger recording, and feature scaffolding. These tests define the contract — every subsequent milestone must pass them.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "completiondetectorservice-cascade-tests",
+          "title": "CompletionDetectorService cascade tests",
+          "description": "Write unit tests for CompletionDetectorService covering: (1) feature done → epic completion check (epicId-based, currently works), (2) epic done → milestone completion check (milestoneSlug-based, currently BROKEN — test should fail proving the bug), (3) milestone done → project completion check, (4) full cascade: feature→epic→milestone→project→ceremony events emitted. Mock FeatureLoader, ProjectService, and EventEmitter. Test both paths: with milestoneSlug set (should cascade) and without (should NOT cascade — documenting current broken behavior).",
+          "filesToModify": [
+            "apps/server/tests/unit/services/completion-detector-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Test exists proving milestone cascade fails when milestoneSlug is missing (documents bug)",
+            "Test exists proving milestone cascade succeeds when milestoneSlug is set (target behavior)",
+            "Test proves epic completion works via epicId (existing working behavior)",
+            "Test proves project:completed event emits when all milestones done",
+            "Test proves ceremony:milestone:completed event emits on milestone completion",
+            "All tests pass with npm run test:server"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526454-ntierr2ex"
+        },
+        {
+          "number": 2,
+          "name": "feature-scaffolding-tests",
+          "title": "Feature scaffolding tests",
+          "description": "Write unit tests for orchestrateProjectFeatures() and ProjectService.createFeaturesFromProject() verifying that features created from project phases receive: projectSlug, milestoneSlug, phaseSlug, epicId, dependencies, branchName, isFoundation. Test should currently FAIL for milestoneSlug and phaseSlug (documenting the bug). Mock FeatureLoader.create() and capture the arguments passed.",
+          "filesToModify": [
+            "apps/server/tests/unit/services/project-orchestration-service.test.ts",
+            "apps/server/tests/unit/services/project-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Test captures feature creation args and asserts milestoneSlug is set (should fail — documents bug)",
+            "Test captures feature creation args and asserts phaseSlug is set (should fail — documents bug)",
+            "Test verifies projectSlug, epicId, dependencies are set correctly (should pass)",
+            "Both creation paths (orchestration service and project service) are tested",
+            "All tests run with npm run test:server"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526455-nw8zjiefj"
+        },
+        {
+          "number": 3,
+          "name": "archival-and-ledger-behavior-tests",
+          "title": "Archival and ledger behavior tests",
+          "description": "Write tests for: (1) ArchivalService — verify it deletes feature directory contents (agent-output.md, handoffs, feature.json) after retention window, documenting data loss. (2) LedgerService — verify it only writes entries for done/verified features, proving failed features have no record. (3) FeatureLoader.update() — verify status changes ARE recorded in statusHistory[] but feature:status-changed event is NOT auto-emitted (documenting the gap). These tests establish the baseline before fixes.",
+          "filesToModify": [
+            "apps/server/tests/unit/services/archival-service.test.ts",
+            "apps/server/tests/unit/services/ledger-service.test.ts",
+            "apps/server/tests/unit/services/feature-loader-events.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Archival test proves feature directory is deleted after retention",
+            "Ledger test proves only done/verified features get entries (failed features skipped)",
+            "FeatureLoader test proves statusHistory is appended on status change",
+            "FeatureLoader test proves feature:status-changed is NOT emitted by update() (documents gap)",
+            "All tests pass with npm run test:server"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526457-34ft68l72"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526451-gdzs1kp03"
+    },
+    {
+      "number": 2,
+      "slug": "02-fix-milestone-cascade",
+      "title": "Fix Milestone Cascade",
+      "description": "Fix the P0 bug: set milestoneSlug and phaseSlug on features during project scaffolding, then verify the CompletionDetectorService cascade works end-to-end. This unblocks automatic milestone completion, project completion, and ceremony triggers.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "set-milestoneslug-and-phaseslug-during-feature-scaffolding",
+          "title": "Set milestoneSlug and phaseSlug during feature scaffolding",
+          "description": "Update orchestrateProjectFeatures() in project-orchestration-service.ts to pass milestoneSlug: milestone.slug and phaseSlug: phase.slug when calling featureLoader.create() for each phase feature. Also set milestoneSlug on epic features created for milestones. Do the same in ProjectService.createFeaturesFromProject() in project-service.ts. Add phaseSlug as an optional field to the Feature type in libs/types/src/feature.ts if not already present. Run the M1 scaffolding tests — they should now PASS.",
+          "filesToModify": [
+            "apps/server/src/services/project-orchestration-service.ts",
+            "apps/server/src/services/project-service.ts",
+            "libs/types/src/feature.ts"
+          ],
+          "acceptanceCriteria": [
+            "orchestrateProjectFeatures passes milestoneSlug to featureLoader.create for phase features",
+            "orchestrateProjectFeatures passes milestoneSlug to featureLoader.create for epic features",
+            "ProjectService.createFeaturesFromProject passes milestoneSlug for phase features",
+            "phaseSlug optional field added to Feature type",
+            "Both creation paths set phaseSlug from phase.slug",
+            "M1 scaffolding tests now pass",
+            "npm run typecheck passes",
+            "npm run build:packages passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772830526460-uyw4a8im1"
+        },
+        {
+          "number": 2,
+          "name": "fix-completiondetectorservice-milestone-cascade",
+          "title": "Fix CompletionDetectorService milestone cascade",
+          "description": "Review and fix CompletionDetectorService.checkMilestoneCompletion() to correctly use milestoneSlug from features. Verify that when all features with a given milestoneSlug reach done status, the milestone is marked completed in project.json and milestone:completed event is emitted. Verify the cascade continues: milestone:completed → checkProjectCompletion → project:completed → ceremony triggers. Run the full M1 cascade tests — they should now PASS.",
+          "filesToModify": [
+            "apps/server/src/services/completion-detector-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "checkMilestoneCompletion correctly queries features by milestoneSlug",
+            "Milestone marked completed in project.json when all its features are done",
+            "milestone:completed event emitted with correct milestoneSlug and projectSlug",
+            "Project completion cascades when all milestones are done",
+            "project:completed event emitted triggering ceremony flows",
+            "M1 cascade tests all pass",
+            "Backward compatible — features without milestoneSlug are ignored gracefully"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526462-20t7u7kn4"
+        },
+        {
+          "number": 3,
+          "name": "end-to-end-cascade-integration-test",
+          "title": "End-to-end cascade integration test",
+          "description": "Write an integration test that creates a mini project with 2 milestones, each with 2 phase features. Mark features as done one by one and verify: epic completion fires, milestone completion fires after all phase features done, project completion fires after all milestones done, ceremony state machine transitions from milestone_active → milestone_retro → milestone_active → project_retro. Use real (not mocked) CompletionDetectorService and CeremonyStateMachine.",
+          "filesToModify": [
+            "apps/server/tests/integration/services/lifecycle-cascade.integration.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Integration test creates project with 2 milestones x 2 phases",
+            "Marking all M1 features done triggers milestone:completed for M1",
+            "Marking all M2 features done triggers milestone:completed for M2 AND project:completed",
+            "Ceremony state transitions verified at each step",
+            "Test runs with npm run test:server",
+            "No flaky timing issues — uses event listeners not polling"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526463-r6mew8dzy"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526459-ui0ia1naj"
+    },
+    {
+      "number": 3,
+      "slug": "03-event-persistence-layer",
+      "title": "Event Persistence Layer",
+      "description": "Introduce an append-only event ledger that captures all lifecycle events with correlation IDs. This is the foundation for full traceability — every project, feature, ceremony, and pipeline event gets a permanent record.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "eventledgerservice-implementation",
+          "title": "EventLedgerService implementation",
+          "description": "Create EventLedgerService at apps/server/src/services/event-ledger-service.ts. Append-only JSONL file at .automaker/ledger/events.jsonl. Each entry: { id (uuid), timestamp (ISO), eventType (string), correlationIds: { projectSlug?, milestoneSlug?, featureId?, ceremonyId?, traceId? }, payload (object), source (string — which service emitted) }. Write is fire-and-forget (async, never blocks caller). Idempotent — skip duplicate event IDs. Add EventLedgerEntry type to libs/types/src/. Provide query methods: getByFeatureId(), getByProjectSlug(), getByTimeRange(), getByEventType(). Wire into services.ts and wiring.ts.",
+          "filesToModify": [
+            "apps/server/src/services/event-ledger-service.ts",
+            "libs/types/src/event-ledger.ts",
+            "libs/types/src/index.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/src/server/wiring.ts"
+          ],
+          "acceptanceCriteria": [
+            "EventLedgerService writes append-only JSONL to .automaker/ledger/events.jsonl",
+            "Each entry has unique ID, timestamp, eventType, correlationIds, payload, source",
+            "Write is async fire-and-forget — never blocks the event bus",
+            "Duplicate event IDs are skipped",
+            "getByFeatureId returns all events for a feature",
+            "getByProjectSlug returns all events for a project",
+            "EventLedgerEntry type exported from @protolabsai/types",
+            "npm run typecheck passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526466-my7lzs1yg"
+        },
+        {
+          "number": 2,
+          "name": "wire-event-ledger-into-lifecycle-event-emitters",
+          "title": "Wire event ledger into lifecycle event emitters",
+          "description": "Subscribe EventLedgerService to the event bus for all lifecycle events: feature:status-changed, feature:started, feature:completed, feature:error, feature:pr-merged, lead-engineer:feature-processed, pipeline:state-entered, milestone:completed, project:completed, project:lifecycle:launched, ceremony:fired, escalation:signal-received, auto-mode:event (feature types only). For each event, extract correlation IDs from the payload (featureId, projectSlug, milestoneSlug where available) and write to the ledger. Add unit tests verifying each event type produces a correct ledger entry.",
+          "filesToModify": [
+            "apps/server/src/services/event-ledger-service.ts",
+            "apps/server/src/server/wiring.ts",
+            "apps/server/tests/unit/services/event-ledger-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 13 lifecycle event types produce ledger entries",
+            "Correlation IDs correctly extracted from each event type's payload",
+            "feature:status-changed entries include from/to status and reason",
+            "pipeline:state-entered entries include fromState and toState",
+            "ceremony:fired entries include ceremonyType and projectSlug",
+            "Unit tests verify ledger entry shape for each event type",
+            "npm run test:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526468-mywyy7gsw"
+        },
+        {
+          "number": 3,
+          "name": "event-ledger-rest-api-and-timeline-query",
+          "title": "Event ledger REST API and timeline query",
+          "description": "Add REST endpoints for querying the event ledger: GET /api/ledger/events?featureId=X returns all events for a feature, GET /api/ledger/events?projectSlug=X returns project timeline, GET /api/ledger/events?since=ISO&until=ISO returns time-range query. Add GET /api/ledger/timeline/:featureId that returns a unified timeline merging event ledger entries with statusHistory from feature.json (or archive). Wire into routes.ts with API key auth.",
+          "filesToModify": [
+            "apps/server/src/routes/ledger/index.ts",
+            "apps/server/src/server/routes.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET /api/ledger/events?featureId=X returns filtered events",
+            "GET /api/ledger/events?projectSlug=X returns project events",
+            "GET /api/ledger/events?since=ISO&until=ISO returns time-range events",
+            "GET /api/ledger/timeline/:featureId returns merged timeline",
+            "Endpoints protected by API key auth",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772830526469-dg4xcneoj"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526465-48cuo1q4k"
+    },
+    {
+      "number": 4,
+      "slug": "04-archival-reform",
+      "title": "Archival Reform",
+      "description": "Replace destructive archival with preservation. Feature data moves to .automaker/archive/ instead of being deleted. The paper trail survives indefinitely with configurable retention.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "archive-on-completion-instead-of-delete",
+          "title": "Archive-on-completion instead of delete",
+          "description": "Update ArchivalService to move feature directories to .automaker/archive/{featureId}/ instead of deleting them. Preserve: feature.json (full statusHistory, executionHistory, remediationHistory), agent-output.md, handoff-*.json. Delete: backups/ directory (operational only), raw-output.jsonl (debug only, opt-in preserve via setting). Add archivalPolicy to WorkflowSettings: { retentionDays: number (default: 90), preserveAgentOutput: boolean (default: true), preserveHandoffs: boolean (default: true) }. After moving, create a minimal stub at the original location with { archived: true, archivedAt: ISO, archivePath: string } so FeatureLoader knows the feature was archived.",
+          "filesToModify": [
+            "apps/server/src/services/archival-service.ts",
+            "libs/types/src/project-settings.ts",
+            "apps/server/src/services/feature-loader.ts"
+          ],
+          "acceptanceCriteria": [
+            "Completed features are moved to .automaker/archive/{featureId}/ not deleted",
+            "feature.json preserved with full statusHistory and executionHistory",
+            "agent-output.md preserved in archive",
+            "handoff-*.json preserved in archive",
+            "Stub feature.json left at original path with archived: true",
+            "FeatureLoader.get() returns archived indicator for archived features",
+            "archivalPolicy added to WorkflowSettings with defaults",
+            "M1 archival tests updated to verify new behavior",
+            "npm run typecheck passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526472-ufobwq0w2"
+        },
+        {
+          "number": 2,
+          "name": "archive-query-service-and-retention-cleanup",
+          "title": "Archive query service and retention cleanup",
+          "description": "Create ArchiveQueryService at apps/server/src/services/archive-query-service.ts that can: list archived features (with date range filter), load archived feature.json, load archived agent-output.md, search archived features by projectSlug. Add a retention cleanup job that deletes archives older than retentionDays (configurable, default 90 days). Register as a maintenance task in maintenance-tasks.ts. Add REST endpoint GET /api/archive/features for listing and GET /api/archive/features/:id for loading archived feature data.",
+          "filesToModify": [
+            "apps/server/src/services/archive-query-service.ts",
+            "apps/server/src/services/maintenance-tasks.ts",
+            "apps/server/src/routes/archive/index.ts",
+            "apps/server/src/server/routes.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/src/server/wiring.ts"
+          ],
+          "acceptanceCriteria": [
+            "ArchiveQueryService can list all archived features with metadata",
+            "ArchiveQueryService can load full archived feature.json",
+            "ArchiveQueryService can load archived agent-output.md",
+            "ArchiveQueryService supports projectSlug filter",
+            "Retention cleanup maintenance task deletes archives older than retentionDays",
+            "REST endpoints for archive listing and detail",
+            "npm run typecheck passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526473-cvpp5d1x3"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526470-50ec2fo7p"
+    },
+    {
+      "number": 5,
+      "slug": "05-expanded-ledger-failure-persistence",
+      "title": "Expanded Ledger & Failure Persistence",
+      "description": "Extend the metrics ledger to record ALL terminal feature states (not just completed), persist failure classifications on features, and store all Langfuse trace IDs for full retry traceability.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "record-failed-and-escalated-features-in-ledger",
+          "title": "Record failed and escalated features in ledger",
+          "description": "Update LedgerService to also write entries when features reach terminal failure states: blocked (with failureCount >= maxRetries), or when manually moved to done after being stuck. Add a new ledger entry type field: 'completed' | 'escalated' | 'abandoned'. For escalated entries, include: failureCount, statusChangeReason, escalationReason, lastTraceId. Subscribe to escalation:signal-received events in addition to the existing completion events. Update the ledger entry type in libs/types/ to include the new fields.",
+          "filesToModify": [
+            "apps/server/src/services/ledger-service.ts",
+            "libs/types/src/ledger.ts",
+            "apps/server/src/server/wiring.ts"
+          ],
+          "acceptanceCriteria": [
+            "Ledger records entries for escalated features with type: 'escalated'",
+            "Escalated entries include failureCount, statusChangeReason, escalationReason",
+            "Ledger records entries for abandoned features with type: 'abandoned'",
+            "Completed features continue to work as before with type: 'completed'",
+            "M1 ledger tests updated to verify new entry types",
+            "npm run test:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772830526476-q9e61p4w1"
+        },
+        {
+          "number": 2,
+          "name": "persist-failure-classifications-and-trace-ids",
+          "title": "Persist failure classifications and trace IDs",
+          "description": "Update Feature type to add: failureClassification?: { category, confidence, recoveryStrategy, retryable, timestamp } and traceIds?: string[] (array of all Langfuse trace IDs, not just last). In lead-engineer-escalation.ts, persist the FailureClassifierService result to feature.failureClassification via featureLoader.update(). In execution-service.ts, append new trace IDs to feature.traceIds[] instead of overwriting lastTraceId. Keep lastTraceId for backward compat but populate traceIds[] as the canonical source.",
+          "filesToModify": [
+            "libs/types/src/feature.ts",
+            "apps/server/src/services/lead-engineer-escalation.ts",
+            "apps/server/src/services/auto-mode/execution-service.ts",
+            "apps/server/src/services/feature-loader.ts"
+          ],
+          "acceptanceCriteria": [
+            "Feature type has optional failureClassification field",
+            "Feature type has optional traceIds string array",
+            "EscalateProcessor persists failure classification to feature.json",
+            "Execution service appends trace IDs to traceIds[] array",
+            "lastTraceId still set for backward compatibility",
+            "npm run build:packages passes",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772830526477-8ewmbvfpm"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526475-bbeqhj89f"
+    },
+    {
+      "number": 6,
+      "slug": "06-automatic-status-events",
+      "title": "Automatic Status Events",
+      "description": "Make featureLoader.update() automatically emit feature:status-changed when status changes, eliminating inconsistent manual emission across callers. This ensures all downstream listeners (CompletionDetector, LedgerService, AgentScoringService, EventLedger) fire reliably.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "auto-emit-feature-status-changed-from-featureloader-update",
+          "title": "Auto-emit feature:status-changed from featureLoader.update()",
+          "description": "Update featureLoader.update() in feature-loader.ts to automatically emit feature:status-changed event when updates.status differs from feature.status. The event payload should include: featureId, projectPath, oldStatus, newStatus, reason (from updates.statusChangeReason or 'status updated'). Add a skipEventEmission option to update() for cases where the caller needs to suppress (e.g., batch operations). Inject EventEmitter into FeatureLoader via constructor or setter. Remove manual feature:status-changed emissions from: feature-state-manager.ts, feature-scheduler.ts, reconciliation-service.ts, and the feature update route. Add tests proving the event fires exactly once per status change.",
+          "filesToModify": [
+            "apps/server/src/services/feature-loader.ts",
+            "apps/server/src/services/feature-state-manager.ts",
+            "apps/server/src/services/feature-scheduler.ts",
+            "apps/server/src/services/reconciliation-service.ts",
+            "apps/server/src/routes/features/index.ts",
+            "apps/server/src/server/wiring.ts",
+            "apps/server/tests/unit/services/feature-loader-events.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "featureLoader.update() auto-emits feature:status-changed when status changes",
+            "Event includes featureId, projectPath, oldStatus, newStatus, reason",
+            "Event fires exactly once per status change (no double-fires)",
+            "skipEventEmission option suppresses emission when needed",
+            "Manual feature:status-changed emissions removed from callers",
+            "All downstream listeners (CompletionDetector, LedgerService, EventLedger) fire correctly",
+            "M1 event emission tests updated and pass",
+            "npm run test:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526479-3cti01nie"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526478-u8e87fses"
+    },
+    {
+      "number": 7,
+      "slug": "07-traceability-enrichment",
+      "title": "Traceability Enrichment",
+      "description": "Final enrichment: persist LE session rule logs, restore PR tracking state on restart, and ensure full bidirectional tracing from any artifact back to its source.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "persist-le-session-rulelog-snapshots",
+          "title": "Persist LE session ruleLog snapshots",
+          "description": "Update LeadEngineerService to periodically snapshot the session ruleLog (currently in-memory, capped at 200) to .automaker/lead-engineer-sessions.json. Write after each feature processing cycle completes (not on every rule evaluation — that would be too frequent). Each snapshot includes: featureId, timestamp, rules evaluated, actions taken, outcomes. Add a getRuleLog(featureId) method that returns the persisted log for a feature. This data feeds into the event ledger via a lead-engineer:rules-evaluated event type.",
+          "filesToModify": [
+            "apps/server/src/services/lead-engineer-service.ts",
+            "apps/server/src/services/lead-engineer-types.ts"
+          ],
+          "acceptanceCriteria": [
+            "Session ruleLog snapshot written after each feature processing cycle",
+            "Snapshot includes featureId, timestamp, rules evaluated, actions, outcomes",
+            "getRuleLog(featureId) returns persisted log",
+            "Snapshots are append-only (previous feature logs not overwritten)",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772830526482-969694ag7"
+        },
+        {
+          "number": 2,
+          "name": "restore-pr-tracking-state-on-server-restart",
+          "title": "Restore PR tracking state on server restart",
+          "description": "Update PRFeedbackService to persist its tracked PR state (this.trackedPRs Map) to disk. On startup, reload from .automaker/pr-tracking.json. Write on every PR state change (add, update status, remove). Include: featureId, prNumber, prUrl, lastCheckedAt, ciStatus, reviewStatus, remediationCount. This ensures PR polling resumes after server restart without manual re-triggering.",
+          "filesToModify": [
+            "apps/server/src/services/pr-feedback-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "PR tracking state persisted to .automaker/pr-tracking.json on every change",
+            "On startup, tracked PRs reloaded from disk",
+            "Polling resumes for all previously tracked PRs after restart",
+            "Stale entries (PR already merged) cleaned up on reload",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1772830526483-qefk3kxgz"
+        },
+        {
+          "number": 3,
+          "name": "bidirectional-traceability-verification-test",
+          "title": "Bidirectional traceability verification test",
+          "description": "Write an end-to-end integration test that verifies the full paper trail is traceable in both directions: (1) Forward: project → milestone → phase → feature → agent execution → PR → merge → done → archive. (2) Reverse: archived feature → event ledger → pipeline states → project phase → milestone → project. (3) Cross-reference: Langfuse traceIds on feature match event ledger entries. This test is the final validation that the entire lifecycle is connected.",
+          "filesToModify": [
+            "apps/server/tests/integration/services/lifecycle-traceability.integration.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Forward trace: project→feature→execution→PR→done→archive verified",
+            "Reverse trace: archive→events→pipeline→project verified",
+            "Event ledger contains entries for every state transition",
+            "Archived feature.json contains full statusHistory",
+            "Metrics ledger contains completion entry",
+            "Test passes with npm run test:server"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1772830526484-ivpbu7za3"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1772830526481-uv84j45ry"
+    }
+  ],
+  "prd": {
+    "situation": "protoLabs Studio has three lifecycle systems — Projects (milestones/phases), Features (LE pipeline INTAKE→DONE), and Ceremonies (state machine with standup/retro flows) — connected by an event-driven architecture. Eleven distinct recording mechanisms exist spanning disk persistence (metrics ledger, trajectories, ceremony audit log), external tracing (Langfuse), and in-memory events. The metrics ledger uses append-only JSONL for permanent records. Trajectories survive in a separate directory. The ceremony state machine is a pure transition function persisted to ceremony-state.json. Feature status changes are tracked in statusHistory[] on feature.json. The CompletionDetectorService cascades feature→epic→milestone→project completion via events.",
+    "problem": "Five critical gaps break the lifecycle chain: (1) milestoneSlug is NEVER set on features during scaffolding — both orchestrateProjectFeatures() and ProjectService.createFeaturesFromProject() omit it, breaking the entire CompletionDetectorService milestone→project cascade and all ceremonies that depend on milestone:completed and project:completed events. (2) The event system is entirely fire-and-forget — no event log, no audit trail, no replay capability. Critical lifecycle events vanish after delivery. (3) ArchivalService deletes the entire feature directory after 2 hours including statusHistory, executionHistory, remediationHistory, agent-output.md, and handoffs — destroying the paper trail. (4) The metrics ledger only records completed features — failed/escalated/abandoned features have zero permanent record. (5) Failure classifications from FailureClassifierService are ephemeral — the structured analysis (category, confidence, recovery strategy) is consumed and discarded, only the raw error string persists as statusChangeReason.",
+    "approach": "Seven milestones in strict dependency order, TDD-first throughout. M1: Test Foundation — write regression tests for CompletionDetectorService cascade, archival behavior, event emission patterns, and ledger recording BEFORE changing any production code. M2: Fix Milestone Cascade — set milestoneSlug and phaseSlug on features during scaffolding in both creation paths, fix CompletionDetectorService to cascade correctly, verify end-to-end with M1 tests. M3: Event Persistence Layer — append-only JSONL event ledger capturing all lifecycle events with correlation IDs (projectSlug, featureId, milestoneSlug, ceremonyId). M4: Archival Reform — archive feature data to .automaker/archive/{featureId}/ instead of deleting, preserve feature.json and agent-output.md permanently, add retention policy config. M5: Expanded Ledger — record all terminal states (done, escalated, abandoned) in metrics ledger, persist failure classifications on feature.json, store all Langfuse traceIds as array. M6: Automatic Status Events — featureLoader.update() auto-emits feature:status-changed when status changes, remove manual emission from callers, ensure all downstream listeners fire consistently. M7: Traceability Enrichment — persist LE session ruleLog snapshots, restore PR tracking state on restart from feature.json, add reverse lookup fields for full bidirectional tracing.",
+    "results": "Every lifecycle transition produces a permanent, queryable record. The milestone→project completion cascade works automatically, triggering ceremonies. Feature history survives archival in .automaker/archive/. Failed features appear in the ledger alongside successes. A unified event ledger captures all lifecycle events with correlation IDs for cross-system tracing. Any feature can be traced bidirectionally: feature→phase→milestone→project and project→milestone→phase→feature. The entire system has regression test coverage validating the paper trail at each seam.",
+    "constraints": [
+      "TDD-first: write tests for each fix BEFORE implementing the fix — M1 is entirely tests",
+      "Each milestone must be independently deployable — no big-bang rewrites",
+      "Use the existing append-only JSONL pattern (ledger-service.ts) for new persistence layers",
+      "Do not change the Feature type shape in breaking ways — new fields must be optional",
+      "Archive data must be queryable — not just a dump directory",
+      "Event persistence must be fire-and-forget (like trajectory writes) — never block the caller",
+      "Do not break existing CeremonyService event subscriptions or CeremonyAuditLogService",
+      "Preserve backward compatibility with features that lack milestoneSlug (existing data)",
+      "featureLoader.update() status event emission must be idempotent — no double-fires",
+      "All new services must follow the existing dependency injection pattern via wiring.ts"
+    ]
+  },
+  "createdAt": "2026-03-06T20:55:17.956Z",
+  "updatedAt": "2026-03-07T02:55:43.490Z"
+}

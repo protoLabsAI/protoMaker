@@ -2,7 +2,7 @@
   "slug": "automation-control-plane-consolidation",
   "title": "Automation Control Plane Consolidation",
   "goal": "Consolidate the duplicate Maintenance and Automations UIs into a single Automations control plane by achieving feature parity in AutomationsSection, deleting the MaintenanceSection, and removing the orphaned scheduler routes.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -141,5 +141,5 @@
     ]
   },
   "createdAt": "2026-03-02T15:35:04.244Z",
-  "updatedAt": "2026-03-05T07:02:05.947Z"
+  "updatedAt": "2026-03-07T02:55:40.836Z"
 }
