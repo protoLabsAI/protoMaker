@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
-import { ensureAutomakerDir } from '@protolabsai/platform';
+import { ensureAutomakerDir, writeProtoConfig } from '@protolabsai/platform';
 import { SettingsService } from '../../../services/settings-service.js';
 import type { RepoResearchResult } from '@protolabsai/types';
 
@@ -156,6 +156,18 @@ export function createSetupProjectHandler(
             filesCreated.push('.automaker/context/coding-rules.md');
           }
         }
+      }
+
+      // 3c. Generate proto.config.yaml from research results
+      const protoConfigPath = path.join(realPath, 'proto.config.yaml');
+      try {
+        await fs.access(protoConfigPath);
+        filesCreated.push('proto.config.yaml (already exists)');
+      } catch {
+        // File doesn't exist — generate from research
+        const protoConfig = buildProtoConfig(projectName, research);
+        await writeProtoConfig(realPath, protoConfig);
+        filesCreated.push('proto.config.yaml');
       }
 
       // 4. Add project to Automaker settings if not already present
