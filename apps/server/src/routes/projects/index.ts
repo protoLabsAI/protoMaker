@@ -22,15 +22,18 @@ import { createUpdateHandler } from './routes/update.js';
 import { createDeleteHandler } from './routes/delete.js';
 import { createCreateFeaturesHandler } from './routes/create-features.js';
 import { createArchiveHandler } from './routes/archive.js';
+import { createTimelineHandler } from './routes/timeline.js';
 import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
+import type { EventLedgerService } from '../../services/event-ledger-service.js';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,
   events: EventEmitter,
   projectService: ProjectService,
-  lifecycleService?: ProjectLifecycleService
+  lifecycleService?: ProjectLifecycleService,
+  eventLedgerService?: EventLedgerService
 ): Router {
   const router = Router();
 
@@ -74,6 +77,11 @@ export function createProjectsRoutes(
     validateSlugs('projectSlug'),
     createArchiveHandler(projectService)
   );
+
+  // Timeline route — GET /api/projects/:slug/timeline
+  if (eventLedgerService) {
+    router.get('/:slug/timeline', createTimelineHandler(eventLedgerService));
+  }
 
   // Mount lifecycle routes if service is available
   if (lifecycleService) {
