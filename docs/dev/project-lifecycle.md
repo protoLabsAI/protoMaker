@@ -108,6 +108,21 @@ All endpoints are under `POST /api/projects/lifecycle/`:
 | `/status`          | Get lifecycle phase             | `projectPath`, `projectSlug`   |
 | `/collect-related` | Add issues to project           | `projectPath`, `projectSlug`   |
 
+### Project timeline endpoint
+
+```
+GET /api/projects/:slug/timeline
+```
+
+Returns all `EventLedger` events for a project in chronological order. Supports optional filtering:
+
+| Query param | Description                                        |
+| ----------- | -------------------------------------------------- |
+| `since`     | ISO 8601 timestamp — return events after this time |
+| `type`      | Event type filter (e.g. `ceremony:fired`)          |
+
+See [Event Ledger](./event-ledger) for full query API and event types.
+
 ## Lead Engineer auto-start
 
 When `launch_project` is called, the server emits a `project:lifecycle:launched` event. The Lead Engineer service subscribes to this event and automatically starts a production session for the project.
@@ -148,6 +163,32 @@ This enables launching existing projects that were set up before the lifecycle f
 | Milestones | `.automaker/projects/{slug}/milestones/`               |
 | Phases     | `.automaker/projects/{slug}/milestones/{n}/phase-*.md` |
 
+## Project artifacts
+
+`ProjectArtifactService` persists structured artifacts alongside project files:
+
+```
+{projectPath}/.automaker/projects/{slug}/artifacts/
+├── index.json                      # Artifact index (id, type, timestamp)
+├── ceremony-report/
+│   └── {id}.json                   # Ceremony retro or standup report
+├── escalation/
+│   └── {id}.json                   # Escalation events with project context
+├── changelog/
+│   └── {id}.json                   # Project changelog entries
+└── standup/
+    └── {id}.json                   # Standup report artifacts
+```
+
+Artifacts are saved automatically by:
+
+- `CeremonyService` — saves `ceremony-report` artifacts after milestone and project retros
+- `EventLedgerService` — saves `escalation` artifacts when `escalation:signal-received` events have project context
+
+**Service:** `apps/server/src/services/project-artifact-service.ts`
+
+**Types:** `ArtifactType`, `ArtifactIndexEntry`, `ArtifactIndex`, `ProjectArtifact` from `@protolabsai/types`
+
 ## Project file structure
 
 After creation, project files are organized as:
@@ -174,9 +215,12 @@ After creation, project files are organized as:
 | `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle         |
 | `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator       |
 | `apps/server/src/services/lead-engineer-rules.ts`                | 14 fast-path rules (pure functions, no LLM) |
+| `apps/server/src/services/event-ledger-service.ts`               | Append-only JSONL event persistence         |
+| `apps/server/src/services/project-artifact-service.ts`           | Project artifact persistence                |
 | `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                              |
+| `apps/server/src/routes/projects/routes/timeline.ts`             | `GET /api/projects/:slug/timeline`          |
 | `packages/mcp-server/plugins/automaker/commands/plan-project.md` | Skill file                                  |
-| `libs/types/src/project.ts`                                      | `ProjectLifecyclePhase` type                |
+| `libs/types/src/project.ts`                                      | `ProjectLifecyclePhase`, artifact types     |
 | `libs/types/src/lead-engineer.ts`                                | `LeadWorldState`, session types             |
 
 ## Related documentation
@@ -184,4 +228,5 @@ After creation, project files are organized as:
 - [Idea to Production](./idea-to-production.md) — The 9-phase pipeline reference (feature level)
 - [Feature Status System](./feature-status-system.md) — The 6-status board lifecycle
 - [PR Remediation Loop](./pr-remediation-loop.md) — CI failure handling during REVIEW
+- [Event Ledger](./event-ledger.md) — Append-only lifecycle event persistence and timeline API
 - [Engine Architecture](../archived/engine-architecture.md) — ADR for the Lead Engineer design

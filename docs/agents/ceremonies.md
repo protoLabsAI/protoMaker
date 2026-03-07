@@ -132,6 +132,23 @@ project:completed  ---> CeremonyService.handleProjectCompleted()
                               -> Reflection loop (memory synthesis)
 ```
 
+## Ceremony artifacts
+
+After each implemented ceremony flow completes, `CeremonyService` persists a structured artifact via `ProjectArtifactService`:
+
+- **Milestone retro** (`milestone:completed`) — saves a `ceremony-report` artifact with `ceremonyType: 'milestone_retro'`
+- **Project retro** (`project:completed`) — saves a `ceremony-report` artifact with `ceremonyType: 'project_retro'`
+
+Artifacts are stored at:
+
+```
+{projectPath}/.automaker/projects/{slug}/artifacts/ceremony-report/{id}.json
+```
+
+Each artifact includes the ceremony type, milestone/project metadata, and a completion timestamp. Artifact persistence is non-blocking and non-fatal — a failure to save an artifact does not affect ceremony delivery.
+
+See [Project Artifacts](../dev/project-lifecycle#project-artifacts) for the full artifacts API.
+
 ## Audit log and observability
 
 ### Ceremony audit log

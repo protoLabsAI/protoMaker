@@ -19,6 +19,7 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 
 - **[Idea to Production](./idea-to-production)** — The canonical 9-phase pipeline reference
 - **[Project Lifecycle](./project-lifecycle)** — Board-driven project state machine
+- **[Event Ledger](./event-ledger)** — Append-only lifecycle event persistence and timeline API
 - **[PR Remediation Loop](./pr-remediation-loop)** — Autonomous PR review feedback handling
 - **[Issue Management](./issue-management)** — Automated failure-to-issue pipeline
 
