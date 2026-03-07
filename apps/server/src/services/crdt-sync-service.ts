@@ -18,6 +18,7 @@ import type {
   SyncRole,
   SyncServerStatus,
   CrdtFeatureEvent,
+  CompactionDiagnosticsSnapshot,
 } from '@protolabsai/types';
 import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
@@ -78,6 +79,11 @@ export class CrdtSyncService {
   private _eventBus: EventEmitter | null = null;
   private _settingsCallback: ((settings: Record<string, unknown>) => void) | null = null;
   private _capacityProvider: (() => InstanceCapacity) | null = null;
+  private _compactionDiagnosticsProvider: (() => CompactionDiagnosticsSnapshot) | null = null;
+  /** ISO timestamp when this instance last lost sync connectivity (network partition) */
+  private partitionSince: string | null = null;
+  /** Event messages queued for replay while disconnected from the sync mesh */
+  private outboundQueue: string[] = [];
 
   constructor() {
     this.instanceId = os.hostname();
@@ -99,6 +105,15 @@ export class CrdtSyncService {
    */
   setCapacityProvider(provider: () => InstanceCapacity): void {
     this._capacityProvider = provider;
+  }
+
+  /**
+   * Register a callback that provides compaction diagnostics for the health endpoint.
+   * The callback is invoked on each getSyncStatus() call.
+   * Must be called before or after start(); safe to call multiple times.
+   */
+  setCompactionDiagnosticsProvider(provider: () => CompactionDiagnosticsSnapshot): void {
+    this._compactionDiagnosticsProvider = provider;
   }
 
   /**
@@ -163,8 +178,12 @@ export class CrdtSyncService {
         try {
           this.wsClient.send(raw);
         } catch {
-          // Best effort
+          // Queue for replay on next reconnect
+          this.outboundQueue.push(raw);
         }
+      } else {
+        // Disconnected — queue for replay when partition heals
+        this.outboundQueue.push(raw);
       }
     });
   }
@@ -287,6 +306,8 @@ export class CrdtSyncService {
     }
 
     this.peers.clear();
+    this.outboundQueue = [];
+    this.partitionSince = null;
     this.started = false;
     logger.info('[CRDT] Shutdown complete');
   }
@@ -311,6 +332,10 @@ export class CrdtSyncService {
         cpuPercent: p.identity.capacity.cpuPercent,
       }));
 
+    const compactionDiagnostics = this._compactionDiagnosticsProvider
+      ? this._compactionDiagnosticsProvider()
+      : null;
+
     return {
       role: this.role,
       syncPort: this.role === 'primary' ? this.syncPort : null,
@@ -322,6 +347,9 @@ export class CrdtSyncService {
       onlinePeers,
       isLeader: this.role === 'primary',
       peerCapacitySummary,
+      partitionSince: this.partitionSince,
+      queuedChanges: this.outboundQueue.length,
+      compactionDiagnostics,
     };
   }
 
@@ -449,7 +477,12 @@ export class CrdtSyncService {
         }
         if (!this.started) return; // Shutting down
 
-        logger.warn('[CRDT] Lost connection to primary, will retry...');
+        if (!this.partitionSince) {
+          this.partitionSince = new Date().toISOString();
+          logger.warn(
+            `[CRDT] Lost connection to primary — partition detected at ${this.partitionSince}`
+          );
+        }
         this._startReconnectLoop(url);
       });
 
@@ -459,6 +492,10 @@ export class CrdtSyncService {
           this.wsClient = null;
         }
         if (!this.started) return;
+        if (!this.partitionSince) {
+          this.partitionSince = new Date().toISOString();
+          logger.warn(`[CRDT] Primary unreachable — partition detected at ${this.partitionSince}`);
+        }
         this._startReconnectLoop(url);
       });
     };
@@ -506,6 +543,35 @@ export class CrdtSyncService {
         clearInterval(this.reconnectTimer!);
         this.reconnectTimer = null;
 
+        // Recover from partition: replay queued changes then clear partition state
+        const partitionDuration = this.partitionSince
+          ? Date.now() - new Date(this.partitionSince).getTime()
+          : 0;
+        if (this.outboundQueue.length > 0) {
+          logger.info(
+            `[CRDT] Partition recovered after ${partitionDuration}ms — replaying ${this.outboundQueue.length} queued changes`
+          );
+          for (const queued of this.outboundQueue) {
+            try {
+              ws.send(queued);
+            } catch {
+              // Best effort replay; dropped messages will be reconciled via CRDT sync
+            }
+          }
+          this.outboundQueue = [];
+        }
+        if (this.partitionSince) {
+          logger.info(`[CRDT] Partition cleared — was disconnected since ${this.partitionSince}`);
+          this.partitionSince = null;
+          // Emit audit event so feature loader can reconcile dual-claimed features
+          if (this._eventBus) {
+            this._eventBus.emit('sync:partition-recovered', {
+              instanceId: this.instanceId,
+              partitionDurationMs: partitionDuration,
+            });
+          }
+        }
+
         const identity: SyncMessage = {
           type: 'identity',
           instanceId: this.instanceId,
@@ -529,6 +595,12 @@ export class CrdtSyncService {
             this.wsClient = null;
           }
           if (this.started) {
+            if (!this.partitionSince) {
+              this.partitionSince = new Date().toISOString();
+              logger.warn(
+                `[CRDT] Lost connection to primary — partition detected at ${this.partitionSince}`
+              );
+            }
             this._startReconnectLoop(url);
           }
         });
@@ -663,8 +735,17 @@ export class CrdtSyncService {
         if (peer.identity.status === 'offline') continue;
         const lastSeen = new Date(peer.lastSeen).getTime();
         if (now - lastSeen > ttl) {
-          logger.info(`[CRDT] Peer ${id} exceeded TTL (${ttl}ms), marking offline`);
+          logger.warn(
+            `[CRDT] ALERT: Peer ${id} unreachable for >${ttl}ms (last seen ${peer.lastSeen}) — marking offline`
+          );
           peer.identity.status = 'offline';
+          if (this._eventBus) {
+            this._eventBus.emit('sync:peer-unreachable', {
+              instanceId: id,
+              lastSeen: peer.lastSeen,
+              peerTtlMs: ttl,
+            });
+          }
         }
       }
     }, TTL_CHECK_INTERVAL_MS);

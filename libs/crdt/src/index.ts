@@ -39,3 +39,6 @@ export type {
   Unsubscribe,
   DocHandle,
 } from './types.js';
+
+export { MaintenanceTracker } from './maintenance.js';
+export type { CompactionRecord, CompactionAlert, CompactionDiagnostics } from './maintenance.js';

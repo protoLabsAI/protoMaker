@@ -18,6 +18,18 @@ export interface PeerCapacitySummary {
   cpuPercent: number;
 }
 
+/** Compact compaction diagnostics snapshot for the /health endpoint */
+export interface CompactionDiagnosticsSnapshot {
+  /** ISO timestamp of the last compaction run, or null if none has run */
+  lastCompactionAt: string | null;
+  /** Total document size from the most recent compaction pass, in bytes */
+  totalSizeBytes: number;
+  /** Number of documents tracked in the last compaction pass */
+  docCount: number;
+  /** Number of unacknowledged size-threshold alerts */
+  alertCount: number;
+}
+
 /** Health status of the CRDT sync service for the /health endpoint */
 export interface SyncServerStatus {
   /** This instance's current role */
@@ -34,6 +46,15 @@ export interface SyncServerStatus {
   isLeader: boolean;
   /** Compact capacity snapshot for each online peer */
   peerCapacitySummary?: PeerCapacitySummary[];
+  /**
+   * ISO timestamp when this instance last lost sync connectivity (network partition).
+   * null means the instance is currently connected (or was never disconnected).
+   */
+  partitionSince: string | null;
+  /** Number of local event changes queued while disconnected from the sync mesh */
+  queuedChanges: number;
+  /** CRDT document compaction diagnostics (populated if MaintenanceTracker is configured) */
+  compactionDiagnostics: CompactionDiagnosticsSnapshot | null;
 }
 
 /** Capacity metrics for an instance */
