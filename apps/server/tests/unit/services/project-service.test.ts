@@ -1,12 +1,7 @@
 /**
  * Tests for ProjectService.createFeaturesFromProject()
  *
- * These tests verify which fields are passed to featureLoader.create() when creating
- * features from project phases.
- *
- * Some tests are intentionally FAILING to document known bugs:
- * - milestoneSlug is not currently passed to featureLoader.create()
- * - phaseSlug is not currently passed to featureLoader.create()
+ * Verifies fields passed to featureLoader.create() when creating features from project phases.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ProjectService } from '@/services/project-service.js';
@@ -149,33 +144,21 @@ describe('project-service.ts', () => {
       expect(result.epicsCreated).toBe(1);
     });
 
-    // -------------------------------------------------------------------------
-    // Bug documentation tests — these currently FAIL
-    // Bug: featureLoader.create() does not receive milestoneSlug or phaseSlug
-    // when ProjectService.createFeaturesFromProject() creates phase features.
-    // -------------------------------------------------------------------------
-
-    it('FAILING (bug): milestoneSlug should be passed to featureLoader.create() for phase features', async () => {
+    it('passes milestoneSlug to featureLoader.create() for phase features', async () => {
       await projectService.createFeaturesFromProject(PROJECT_PATH, PROJECT_SLUG);
 
       const phaseCreateArgs = mockCreate.mock.calls[1][1];
 
-      // This assertion FAILS — milestoneSlug is not currently passed.
-      // Fix: add milestoneSlug to the featureLoader.create() call in
-      // project-service.ts ~line 373
       expect(phaseCreateArgs).toMatchObject({
         milestoneSlug: 'core-features',
       });
     });
 
-    it('FAILING (bug): phaseSlug should be passed to featureLoader.create() for phase features', async () => {
+    it('passes phaseSlug to featureLoader.create() for phase features', async () => {
       await projectService.createFeaturesFromProject(PROJECT_PATH, PROJECT_SLUG);
 
       const phaseCreateArgs = mockCreate.mock.calls[1][1];
 
-      // This assertion FAILS — phaseSlug is not currently passed.
-      // Fix: add phaseSlug to the featureLoader.create() call in
-      // project-service.ts ~line 373
       expect(phaseCreateArgs).toMatchObject({
         phaseSlug: 'phase-auth',
       });
