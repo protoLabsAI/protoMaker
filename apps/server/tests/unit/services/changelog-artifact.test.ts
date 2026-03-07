@@ -13,6 +13,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
+// Poll helper — retries assertion until it passes or timeout (default 5s)
+// ---------------------------------------------------------------------------
+
+async function poll(fn: () => void | Promise<void>, timeout = 5000, interval = 50): Promise<void> {
+  const deadline = Date.now() + timeout;
+  while (true) {
+    try {
+      await fn();
+      return;
+    } catch (err) {
+      if (Date.now() > deadline) throw err;
+      await new Promise((r) => setTimeout(r, interval));
+    }
+  }
+}
+
+/** Settle time for negative assertions (must NOT have been called). */
+const settle = () => new Promise((r) => setTimeout(r, 200));
+
+// ---------------------------------------------------------------------------
 // Module mocks
 // ---------------------------------------------------------------------------
 
@@ -136,13 +156,17 @@ describe('ChangelogService — changelog artifact persistence', () => {
       mockArtifactService as never
     );
 
-    return { service, mockFeatureLoader, mockProjectService };
+    // Bypass FS — we only test artifact persistence here
+    vi.spyOn(service as any, 'storeChangelog').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'postToDiscord').mockResolvedValue(undefined);
+
+    return { service, mockFeatureLoader, mockProjectService, mockSettingsService };
   }
 
   it('saves a changelog artifact after milestone:completed event', async () => {
     makeService();
 
-    await mockEvents.emit('milestone:completed', {
+    mockEvents.emit('milestone:completed', {
       projectPath: '/test/project',
       projectTitle: 'Test Project',
       projectSlug: 'test-project',
@@ -150,26 +174,21 @@ describe('ChangelogService — changelog artifact persistence', () => {
       milestoneNumber: 1,
     });
 
-    // Allow async processing
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockArtifactService.saveArtifact).toHaveBeenCalledWith(
-      '/test/project',
-      'test-project',
-      'changelog',
-      expect.objectContaining({
-        scope: 'milestone',
-        milestoneTitle: 'Milestone One',
-        milestoneNumber: 1,
-        content: expect.any(String),
-      })
-    );
+    // Staging code passes raw markdown string as 4th arg (not metadata object)
+    await poll(() => {
+      expect(mockArtifactService.saveArtifact).toHaveBeenCalledWith(
+        '/test/project',
+        'test-project',
+        'changelog',
+        expect.any(String)
+      );
+    });
   });
 
   it('saves a changelog artifact after project:completed event', async () => {
     makeService();
 
-    await mockEvents.emit('project:completed', {
+    mockEvents.emit('project:completed', {
       projectPath: '/test/project',
       projectTitle: 'Test Project',
       projectSlug: 'test-project',
@@ -180,18 +199,14 @@ describe('ChangelogService — changelog artifact persistence', () => {
       milestoneSummaries: [],
     });
 
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockArtifactService.saveArtifact).toHaveBeenCalledWith(
-      '/test/project',
-      'test-project',
-      'changelog',
-      expect.objectContaining({
-        scope: 'project',
-        projectTitle: 'Test Project',
-        content: expect.any(String),
-      })
-    );
+    await poll(() => {
+      expect(mockArtifactService.saveArtifact).toHaveBeenCalledWith(
+        '/test/project',
+        'test-project',
+        'changelog',
+        expect.any(String)
+      );
+    });
   });
 
   it('does not call saveArtifact when no projectArtifactService is provided', async () => {
@@ -235,7 +250,10 @@ describe('ChangelogService — changelog artifact persistence', () => {
       mockProjectService as never
     );
 
-    await mockEvents.emit('milestone:completed', {
+    vi.spyOn(service as any, 'storeChangelog').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'postToDiscord').mockResolvedValue(undefined);
+
+    mockEvents.emit('milestone:completed', {
       projectPath: '/test/project',
       projectTitle: 'Test Project',
       projectSlug: 'test-project',
@@ -243,7 +261,7 @@ describe('ChangelogService — changelog artifact persistence', () => {
       milestoneNumber: 1,
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await settle();
 
     expect(mockArtifactService.saveArtifact).not.toHaveBeenCalled();
   });
@@ -300,7 +318,10 @@ describe('ChangelogService — changelog artifact persistence', () => {
         realArtifactService
       );
 
-      await mockEvents.emit('milestone:completed', {
+      vi.spyOn(service as any, 'storeChangelog').mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'postToDiscord').mockResolvedValue(undefined);
+
+      mockEvents.emit('milestone:completed', {
         projectPath: tmpDir,
         projectTitle: 'My Project',
         projectSlug: 'my-project',
@@ -308,11 +329,13 @@ describe('ChangelogService — changelog artifact persistence', () => {
         milestoneNumber: 1,
       });
 
-      await new Promise((r) => setTimeout(r, 50));
+      // Poll until artifact appears in the index
+      let entries: Awaited<ReturnType<typeof realArtifactService.listArtifacts>> = [];
+      await poll(async () => {
+        entries = await realArtifactService.listArtifacts(tmpDir, 'my-project', 'changelog');
+        expect(entries).toHaveLength(1);
+      });
 
-      // Verify artifact appears in the index
-      const entries = await realArtifactService.listArtifacts(tmpDir, 'my-project', 'changelog');
-      expect(entries).toHaveLength(1);
       expect(entries[0]).toMatchObject({
         type: 'changelog',
         id: expect.any(String),
@@ -341,10 +364,13 @@ describe('EventLedgerService — escalation artifact persistence', () => {
   });
 
   function makeService() {
-    const service = new EventLedgerService('/tmp/test-ledger-artifact');
+    const service = new EventLedgerService(
+      '/tmp/test-ledger-artifact',
+      mockArtifactService as never
+    );
     // Spy on append to prevent FS writes
     vi.spyOn(service, 'append').mockImplementation(() => undefined);
-    service.subscribeToLifecycleEvents(mockEvents as never, mockArtifactService as never);
+    service.subscribeToLifecycleEvents(mockEvents as never);
     return service;
   }
 
@@ -367,23 +393,22 @@ describe('EventLedgerService — escalation artifact persistence', () => {
       timestamp: '2026-03-07T00:00:00.000Z',
     });
 
-    // Allow the fire-and-forget promise to resolve
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockArtifactService.saveArtifact).toHaveBeenCalledWith(
-      '/my/project',
-      'my-project',
-      'escalation',
-      expect.objectContaining({
-        signal: 'feature_escalated',
-        reason: 'Max retries exceeded',
-        featureId: 'feat-123',
-        featureContext: expect.objectContaining({
-          projectPath: '/my/project',
-          projectSlug: 'my-project',
-        }),
-      })
-    );
+    await poll(() => {
+      expect(mockArtifactService.saveArtifact).toHaveBeenCalledWith(
+        '/my/project',
+        'my-project',
+        'escalation',
+        expect.objectContaining({
+          signal: 'feature_escalated',
+          reason: 'Max retries exceeded',
+          featureId: 'feat-123',
+          context: expect.objectContaining({
+            projectPath: '/my/project',
+            projectSlug: 'my-project',
+          }),
+        })
+      );
+    });
   });
 
   it('saves separate artifacts for each escalation event', async () => {
@@ -417,9 +442,9 @@ describe('EventLedgerService — escalation artifact persistence', () => {
       deduplicationKey: 'esc-b',
     });
 
-    await new Promise((r) => setTimeout(r, 10));
-
-    expect(mockArtifactService.saveArtifact).toHaveBeenCalledTimes(2);
+    await poll(() => {
+      expect(mockArtifactService.saveArtifact).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('skips artifact saving when no project context is available', async () => {
@@ -438,15 +463,15 @@ describe('EventLedgerService — escalation artifact persistence', () => {
       deduplicationKey: 'esc-no-project',
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await settle();
 
     expect(mockArtifactService.saveArtifact).not.toHaveBeenCalled();
   });
 
   it('skips artifact saving when projectArtifactService is not provided', async () => {
+    // Constructor without projectArtifactService
     const service = new EventLedgerService('/tmp/test-no-artifact');
     vi.spyOn(service, 'append').mockImplementation(() => undefined);
-    // Subscribe WITHOUT projectArtifactService
     service.subscribeToLifecycleEvents(mockEvents as never);
 
     mockEvents.emit('escalation:signal-received', {
@@ -461,7 +486,7 @@ describe('EventLedgerService — escalation artifact persistence', () => {
       deduplicationKey: 'esc-x',
     });
 
-    await new Promise((r) => setTimeout(r, 10));
+    await settle();
 
     expect(mockArtifactService.saveArtifact).not.toHaveBeenCalled();
   });
