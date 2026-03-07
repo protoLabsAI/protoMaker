@@ -143,19 +143,16 @@ export function createSetupProjectHandler(
         filesCreated.push('.automaker/context/CLAUDE.md');
       }
 
-      // 3b. Create coding-rules.md if research detected linting/formatting tools
-      if (research) {
-        const codingRules = generateCodingRules(research);
-        if (codingRules) {
-          const rulesPath = path.join(automakerDir, 'context', 'coding-rules.md');
-          try {
-            await fs.access(rulesPath);
-            filesCreated.push('.automaker/context/coding-rules.md (already exists)');
-          } catch {
-            await fs.writeFile(rulesPath, codingRules, 'utf-8');
-            filesCreated.push('.automaker/context/coding-rules.md');
-          }
-        }
+      // 3b. Create coding-rules.md (always — useful even without research)
+      const detectedConfig = await detectProjectConfig(realPath, research);
+      const codingRules = generateCodingRules(research, detectedConfig);
+      const rulesPath = path.join(automakerDir, 'context', 'coding-rules.md');
+      try {
+        await fs.access(rulesPath);
+        filesCreated.push('.automaker/context/coding-rules.md (already exists)');
+      } catch {
+        await fs.writeFile(rulesPath, codingRules, 'utf-8');
+        filesCreated.push('.automaker/context/coding-rules.md');
       }
 
       // 3c. Generate proto.config.yaml from research results
@@ -339,68 +336,261 @@ ${projectName} is a project managed with Automaker ProtoLab.
 }
 
 /**
- * Generate coding-rules.md from detected code quality tools.
- * Returns null if no relevant tools are detected.
+ * Detected project configuration sourced from actual config files on disk.
  */
-function generateCodingRules(research: RepoResearchResult): string | null {
-  const { codeQuality, testing, python } = research;
+interface DetectedProjectConfig {
+  /** Parsed Prettier config object (from .prettierrc, .prettierrc.json, etc.) */
+  prettier?: Record<string, unknown>;
+  /** Detected ESLint configuration metadata */
+  eslint?: {
+    extendsConfigs?: string[];
+    plugins?: string[];
+    isV9FlatConfig?: boolean;
+  };
+  /** tsconfig compilerOptions.paths — used to derive import conventions */
+  tsconfigPaths?: Record<string, string[]>;
+  /** Exact test run command from package.json scripts */
+  testCommand?: string;
+  /** Exact format run command from package.json scripts */
+  formatCommand?: string;
+  /** Exact lint run command from package.json scripts */
+  lintCommand?: string;
+}
 
-  if (
-    !codeQuality.hasPrettier &&
-    !codeQuality.hasESLint &&
-    !codeQuality.hasTypeScript &&
-    !python.hasRuff
-  ) {
-    return null;
+/**
+ * Read actual config files from disk to enrich coding-rules.md with concrete values.
+ * Failures are silently swallowed — this is best-effort enrichment.
+ */
+async function detectProjectConfig(
+  projectPath: string,
+  research?: RepoResearchResult
+): Promise<DetectedProjectConfig> {
+  const config: DetectedProjectConfig = {};
+
+  // --- Prettier config ---
+  const prettierFiles = [
+    '.prettierrc',
+    '.prettierrc.json',
+    '.prettierrc.yaml',
+    '.prettierrc.yml',
+    'prettier.config.json',
+  ];
+  for (const file of prettierFiles) {
+    try {
+      const content = await fs.readFile(path.join(projectPath, file), 'utf-8');
+      config.prettier = JSON.parse(content) as Record<string, unknown>;
+      break;
+    } catch {
+      // try next candidate
+    }
   }
 
-  const sections: string[] = ['# Coding Rules\n'];
-  sections.push('Rules for AI agents working on this codebase.\n');
-
-  if (codeQuality.hasTypeScript) {
-    const lines = ['## TypeScript\n'];
-    if (codeQuality.tsStrict) {
-      lines.push('- Strict mode is enabled — no `any` types, handle all null cases');
+  // --- ESLint config ---
+  // Check for v9 flat config first
+  const eslintV9Files = ['eslint.config.js', 'eslint.config.mjs', 'eslint.config.ts'];
+  for (const file of eslintV9Files) {
+    try {
+      await fs.access(path.join(projectPath, file));
+      config.eslint = { isV9FlatConfig: true };
+      break;
+    } catch {
+      // try next
     }
+  }
+
+  // Fall back to legacy .eslintrc.*
+  if (!config.eslint) {
+    const eslintLegacyFiles = ['.eslintrc.json', '.eslintrc', '.eslintrc.yaml', '.eslintrc.yml'];
+    for (const file of eslintLegacyFiles) {
+      try {
+        const content = await fs.readFile(path.join(projectPath, file), 'utf-8');
+        const parsed = JSON.parse(content) as Record<string, unknown>;
+        const extendsRaw = parsed['extends'];
+        config.eslint = {
+          extendsConfigs: Array.isArray(extendsRaw)
+            ? (extendsRaw as string[])
+            : extendsRaw
+              ? [String(extendsRaw)]
+              : [],
+          plugins: Array.isArray(parsed['plugins']) ? (parsed['plugins'] as string[]) : [],
+          isV9FlatConfig: false,
+        };
+        break;
+      } catch {
+        // try next
+      }
+    }
+  }
+
+  // --- tsconfig paths ---
+  const tsconfigCandidates = ['tsconfig.json', 'tsconfig.base.json'];
+  for (const file of tsconfigCandidates) {
+    try {
+      const raw = await fs.readFile(path.join(projectPath, file), 'utf-8');
+      // Strip single-line and multi-line comments before parsing (tsconfig uses JSONC)
+      const stripped = raw.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+      const parsed = JSON.parse(stripped) as Record<string, unknown>;
+      const compilerOptions = parsed['compilerOptions'] as Record<string, unknown> | undefined;
+      if (compilerOptions?.['paths']) {
+        config.tsconfigPaths = compilerOptions['paths'] as Record<string, string[]>;
+        break;
+      }
+    } catch {
+      // try next
+    }
+  }
+
+  // --- Commands from research scripts ---
+  const scripts = research?.scripts ?? {};
+  if (scripts['test']) config.testCommand = scripts['test'];
+  if (scripts['format']) config.formatCommand = scripts['format'];
+  if (scripts['lint']) config.lintCommand = scripts['lint'];
+
+  return config;
+}
+
+/**
+ * Generate coding-rules.md from detected code quality tools and actual config files.
+ * Always returns a non-empty string — even minimal projects get a useful starter template.
+ */
+function generateCodingRules(
+  research: RepoResearchResult | undefined,
+  detectedConfig: DetectedProjectConfig
+): string {
+  const sections: string[] = ['# Coding Rules\n'];
+  sections.push(
+    'Rules and conventions for AI agents working on this codebase. Sourced from detected config files.\n'
+  );
+
+  const codeQuality = research?.codeQuality;
+  const testing = research?.testing;
+  const python = research?.python;
+  const pm = research?.monorepo?.packageManager ?? 'npm';
+  const runPrefix =
+    pm === 'pnpm' ? 'pnpm' : pm === 'bun' ? 'bun' : pm === 'yarn' ? 'yarn' : 'npm run';
+
+  // --- TypeScript ---
+  if (codeQuality?.hasTypeScript) {
+    const lines = ['## TypeScript\n'];
     lines.push('- All new code must be written in TypeScript');
+    if (codeQuality.tsStrict) {
+      lines.push('- Strict mode is enabled — no `any` types, handle all null/undefined cases');
+    }
+    if (codeQuality.tsVersion) {
+      lines.push(`- TypeScript version: ${codeQuality.tsVersion}`);
+    }
     if (codeQuality.hasCompositeConfig) {
       lines.push('- Uses composite project references — run `tsc --build` for incremental builds');
     }
+
+    // Import conventions from tsconfig paths
+    if (detectedConfig.tsconfigPaths && Object.keys(detectedConfig.tsconfigPaths).length > 0) {
+      lines.push('\n### Import Conventions\n');
+      lines.push('Use path aliases instead of deep relative imports:\n');
+      lines.push('```typescript');
+      for (const [alias, targets] of Object.entries(detectedConfig.tsconfigPaths).slice(0, 8)) {
+        const cleanAlias = alias.replace(/\/\*$/, '');
+        const cleanTarget = (targets[0] ?? '').replace(/\/\*$/, '');
+        lines.push(`import { ... } from '${cleanAlias}'; // → ${cleanTarget}`);
+      }
+      lines.push('```');
+    }
+
     sections.push(lines.join('\n') + '\n');
   }
 
-  if (codeQuality.hasPrettier) {
-    sections.push(
-      '## Formatting\n\n- Prettier is configured — run `npm run format` before committing\n- Do NOT manually format code; let Prettier handle it\n'
-    );
+  // --- Formatting ---
+  if (codeQuality?.hasPrettier) {
+    const lines = ['## Formatting\n'];
+    lines.push('- Prettier is configured — **always run the formatter before committing**');
+    lines.push('- Do NOT manually format code; let Prettier handle it');
+
+    if (detectedConfig.prettier && Object.keys(detectedConfig.prettier).length > 0) {
+      lines.push('\n**Prettier config:**\n');
+      lines.push('```json');
+      lines.push(JSON.stringify(detectedConfig.prettier, null, 2));
+      lines.push('```');
+    }
+
+    const formatCmd = detectedConfig.formatCommand ? `${runPrefix} format` : `${runPrefix} format`;
+    lines.push(`\nRun: \`${formatCmd}\``);
+    sections.push(lines.join('\n') + '\n');
   }
 
-  if (codeQuality.hasESLint) {
+  // --- Linting ---
+  if (codeQuality?.hasESLint) {
     const version = codeQuality.eslintVersion;
-    const isV9 = version && parseInt(version, 10) >= 9;
+    const isV9 =
+      detectedConfig.eslint?.isV9FlatConfig ?? (version ? parseInt(version, 10) >= 9 : false);
+    const lines = ['## Linting\n'];
+    lines.push(
+      `- ESLint ${isV9 ? 'v9+ (flat config — `eslint.config.*`)' : ''} is configured — fix all warnings before submitting code`.trim()
+    );
+
+    if (detectedConfig.eslint?.extendsConfigs?.length) {
+      lines.push(`- Extends: \`${detectedConfig.eslint.extendsConfigs.join('`, `')}\``);
+    }
+    if (detectedConfig.eslint?.plugins?.length) {
+      lines.push(`- Plugins: \`${detectedConfig.eslint.plugins.join('`, `')}\``);
+    }
+
+    const lintCmd = detectedConfig.lintCommand ? `${runPrefix} lint` : `${runPrefix} lint`;
+    lines.push(`\nRun: \`${lintCmd}\``);
+    sections.push(lines.join('\n') + '\n');
+  }
+
+  // --- Pre-commit hooks ---
+  if (codeQuality?.hasHusky || codeQuality?.hasLintStaged) {
     sections.push(
-      `## Linting\n\n- ESLint ${isV9 ? 'v9+ (flat config)' : ''} is configured — fix all lint warnings\n- Run \`npm run lint\` to check\n`
+      '## Pre-commit Hooks\n\n- Husky + lint-staged is configured — code is linted/formatted automatically on commit\n- Ensure your code passes lint and format checks before committing\n'
     );
   }
 
-  if (codeQuality.hasHusky || codeQuality.hasLintStaged) {
-    sections.push(
-      '## Pre-commit Hooks\n\n- Husky + lint-staged runs on commit — ensure code passes before committing\n'
-    );
-  }
-
-  if (testing.hasVitest || testing.hasJest || testing.hasPlaywright) {
+  // --- Testing ---
+  const hasTestFramework =
+    testing?.hasVitest || testing?.hasJest || testing?.hasPlaywright || testing?.hasPytest;
+  if (hasTestFramework) {
     const lines = ['## Testing\n'];
     lines.push('- Write tests for all new functionality');
-    if (testing.hasVitest) lines.push('- Use Vitest for unit and integration tests');
-    if (testing.hasJest) lines.push('- Use Jest for unit tests');
-    if (testing.hasPlaywright) lines.push('- Use Playwright for end-to-end tests');
+
+    if (testing?.hasVitest) {
+      lines.push('- **Framework**: Vitest (unit + integration)');
+      const cmd = detectedConfig.testCommand ?? `${runPrefix} test`;
+      lines.push(`- **Run**: \`${cmd}\``);
+      if (testing.vitestVersion) lines.push(`- **Version**: ${testing.vitestVersion}`);
+    }
+    if (testing?.hasJest) {
+      lines.push('- **Framework**: Jest (unit + integration)');
+      const cmd = detectedConfig.testCommand ?? `${runPrefix} test`;
+      lines.push(`- **Run**: \`${cmd}\``);
+    }
+    if (testing?.hasPlaywright) {
+      lines.push('- **E2E Framework**: Playwright');
+      lines.push('- **Run**: `npx playwright test`');
+      if (testing.playwrightVersion) lines.push(`- **Version**: ${testing.playwrightVersion}`);
+    }
+    if (testing?.hasPytest) {
+      lines.push('- **Python**: pytest');
+      lines.push('- **Run**: `pytest`');
+    }
+    if (testing?.testDirs && testing.testDirs.length > 0) {
+      lines.push(`- **Test locations**: \`${testing.testDirs.join('`, `')}\``);
+    }
+
     sections.push(lines.join('\n') + '\n');
   }
 
-  if (python.hasRuff) {
+  // --- Python ---
+  if (python?.hasRuff) {
     sections.push(
       '## Python\n\n- Ruff is configured for linting and formatting\n- Run `ruff check .` and `ruff format .` before committing Python code\n'
+    );
+  }
+
+  // Fallback for projects with no detected tooling
+  if (sections.length === 2) {
+    sections.push(
+      "## General Guidelines\n\n- Follow the existing code style of this project\n- Write tests for all new functionality\n- Keep functions small and focused\n- Document complex logic with comments\n- Run the project's lint and format commands before committing\n"
     );
   }
 
