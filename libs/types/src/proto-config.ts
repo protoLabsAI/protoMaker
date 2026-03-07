@@ -93,6 +93,49 @@ export const ProtoDefaultsSchema = z.object({
 export type ProtoDefaults = z.infer<typeof ProtoDefaultsSchema>;
 
 // ---------------------------------------------------------------------------
+// Hive identity — multi-instance mesh coordination
+// ---------------------------------------------------------------------------
+
+export const ProtoHiveSchema = z.object({
+  /** Shared identifier for the hive cluster (all instances share this) */
+  hiveId: z.string().optional(),
+  /** WebSocket port used for CRDT sync between instances */
+  syncPort: z.number().int().min(1024).max(65535).default(9800),
+  /** Whether multi-instance mesh sync is enabled */
+  meshEnabled: z.boolean().default(false),
+});
+
+export type ProtoHive = z.infer<typeof ProtoHiveSchema>;
+
+// ---------------------------------------------------------------------------
+// Instance registry — per-instance identity entries
+// ---------------------------------------------------------------------------
+
+export const ProtoInstanceSchema = z.object({
+  /** Stable unique ID for this instance (e.g. "dev-mac", "ci-runner-1") */
+  instanceId: z.string(),
+  /** Hostname this entry applies to (used for auto-detection) */
+  hostname: z.string().optional(),
+  /** Maximum number of concurrent features this instance can handle */
+  capacity: z.number().int().min(1).default(1),
+});
+
+export type ProtoInstance = z.infer<typeof ProtoInstanceSchema>;
+
+// ---------------------------------------------------------------------------
+// Assignment strategy — how work is distributed across instances
+// ---------------------------------------------------------------------------
+
+export const ProtoAssignmentSchema = z.object({
+  /** Work distribution algorithm */
+  strategy: z.enum(['round-robin', 'capacity-weighted', 'random']).default('round-robin'),
+  /** Whether features stay pinned to the instance that started them */
+  stickyFeatures: z.boolean().default(false),
+});
+
+export type ProtoAssignment = z.infer<typeof ProtoAssignmentSchema>;
+
+// ---------------------------------------------------------------------------
 // Root ProtoConfig
 // ---------------------------------------------------------------------------
 
@@ -111,6 +154,12 @@ export const ProtoConfigSchema = z.object({
   protolab: ProtoLabSchema.optional(),
   /** Project-level defaults for features and automation */
   defaults: ProtoDefaultsSchema.optional(),
+  /** Hive mesh identity and sync configuration */
+  hive: ProtoHiveSchema.optional(),
+  /** Registry of known instances in this hive */
+  instances: z.array(ProtoInstanceSchema).optional(),
+  /** Work assignment strategy across instances */
+  assignment: ProtoAssignmentSchema.optional(),
 });
 
 export type ProtoConfig = z.infer<typeof ProtoConfigSchema>;

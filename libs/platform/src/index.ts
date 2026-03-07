@@ -269,4 +269,5 @@ export {
   type ProtoConfigBrand,
   type ProtoConfigDiscord,
   type ProtoConfigServer,
+  type ProtoConfigHive,
 } from './proto-config.js';

@@ -15,6 +15,7 @@
 
 import path from 'path';
 import fs from 'node:fs';
+import os from 'node:os';
 
 // yaml is loaded lazily to avoid CJS/ESM compatibility issues
 // ("Dynamic require of process is not supported") when platform
@@ -50,6 +51,17 @@ export interface ProtoConfigServer {
   port?: number;
 }
 
+export interface ProtoConfigHive {
+  /** Shared identifier for the hive cluster */
+  hiveId?: string;
+  /** WebSocket port for CRDT sync between instances */
+  syncPort?: number;
+  /** Whether multi-instance mesh sync is enabled */
+  meshEnabled?: boolean;
+  /** Resolved identity for the current instance */
+  instanceId?: string;
+}
+
 /**
  * Top-level shape of proto.config.yaml.
  * Open-ended (`[key: string]: unknown`) so callers can store additional fields.
@@ -60,6 +72,7 @@ export interface ProtoConfig {
   brand?: ProtoConfigBrand;
   discord?: ProtoConfigDiscord;
   server?: ProtoConfigServer;
+  hive?: ProtoConfigHive;
   [key: string]: unknown;
 }
 
@@ -110,6 +123,7 @@ function deepMerge(
  *   PROTO_DISCORD_SERVER_ID   — config.discord.serverId
  *   PROTO_DISCORD_CHANNEL_ID  — config.discord.channelId
  *   PROTO_SERVER_PORT         — config.server.port (integer)
+ *   PROTO_HIVE_INSTANCE_ID    — config.hive.instanceId (overrides auto-detection)
  */
 function applyEnvOverrides(config: ProtoConfig): ProtoConfig {
   const result: ProtoConfig = { ...config };
@@ -138,7 +152,41 @@ function applyEnvOverrides(config: ProtoConfig): ProtoConfig {
     }
   }
 
+  if (process.env.PROTO_HIVE_INSTANCE_ID) {
+    result.hive = { ...result.hive, instanceId: process.env.PROTO_HIVE_INSTANCE_ID };
+  }
+
   return result;
+}
+
+/**
+ * Resolves the instanceId for this process.
+ *
+ * Priority:
+ *   1. Explicit instanceId already set in config (from YAML or settings.json)
+ *   2. Match by hostname against the `instances` registry in config
+ *   3. Fall back to os.hostname() directly
+ */
+function resolveInstanceIdentity(config: ProtoConfig): ProtoConfig {
+  if (config.hive?.instanceId) {
+    // Already explicitly set — nothing to do
+    return config;
+  }
+
+  const hostname = os.hostname();
+  const instances = config['instances'] as
+    | Array<{ instanceId: string; hostname?: string }>
+    | undefined;
+
+  // Find matching entry in instance registry by hostname
+  const match = instances?.find((inst) => inst.hostname && inst.hostname === hostname);
+
+  const instanceId = match?.instanceId ?? hostname;
+
+  return {
+    ...config,
+    hive: { ...config.hive, instanceId },
+  };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -190,7 +238,10 @@ export async function loadProtoConfig(projectPath: string): Promise<ProtoConfig 
   }
 
   // Layer 3: env var overrides
-  return applyEnvOverrides(merged as ProtoConfig);
+  const withEnv = applyEnvOverrides(merged as ProtoConfig);
+
+  // Layer 4: resolve instance identity from hostname or instance registry
+  return resolveInstanceIdentity(withEnv);
 }
 
 /**

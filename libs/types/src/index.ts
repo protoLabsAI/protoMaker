@@ -881,6 +881,9 @@ export {
   ProtoGitSchema,
   ProtoLabSchema,
   ProtoDefaultsSchema,
+  ProtoHiveSchema,
+  ProtoInstanceSchema,
+  ProtoAssignmentSchema,
 } from './proto-config.js';
 export type {
   ProtoConfig,
@@ -889,6 +892,9 @@ export type {
   ProtoGit,
   ProtoLab,
   ProtoDefaults,
+  ProtoHive,
+  ProtoInstance,
+  ProtoAssignment,
 } from './proto-config.js';
 
 // PenFile types (vector graphics format v2.8)
