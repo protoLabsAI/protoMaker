@@ -149,9 +149,7 @@ export class FrictionTrackerService {
         tags: ['system-improvement', 'friction-tracker'],
       } as Parameters<FeatureLoader['create']>[1]);
 
-      logger.info(
-        `Filed System Improvement feature ${feature.id} for pattern="${pattern}"`
-      );
+      logger.info(`Filed System Improvement feature ${feature.id} for pattern="${pattern}"`);
 
       // Broadcast to backchannel so peers can de-duplicate
       await this.broadcastFrictionReport(pattern, feature.id);
@@ -179,9 +177,7 @@ export class FrictionTrackerService {
           expectsResponse: false,
         }
       );
-      logger.info(
-        `Broadcast friction_report for pattern="${pattern}" featureId=${featureId}`
-      );
+      logger.info(`Broadcast friction_report for pattern="${pattern}" featureId=${featureId}`);
     } catch (err) {
       logger.error(`Failed to broadcast friction_report for pattern="${pattern}":`, err);
     }
