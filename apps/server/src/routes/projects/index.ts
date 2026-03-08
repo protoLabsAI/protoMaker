@@ -27,13 +27,16 @@ import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 import type { EventLedgerService } from '../../services/event-ledger-service.js';
+import { createFleetStatusHandler } from './fleet-status.js';
+import type { FleetSchedulerService } from '../../services/fleet-scheduler-service.js';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,
   events: EventEmitter,
   projectService: ProjectService,
   lifecycleService?: ProjectLifecycleService,
-  eventLedgerService?: EventLedgerService
+  eventLedgerService?: EventLedgerService,
+  fleetSchedulerService?: FleetSchedulerService
 ): Router {
   const router = Router();
 
@@ -81,6 +84,11 @@ export function createProjectsRoutes(
   // Timeline route — GET /api/projects/:slug/timeline
   if (eventLedgerService) {
     router.get('/:slug/timeline', createTimelineHandler(eventLedgerService));
+  }
+
+  // Fleet status route — GET /api/projects/:slug/fleet-status
+  if (fleetSchedulerService) {
+    router.get('/:slug/fleet-status', createFleetStatusHandler(fleetSchedulerService));
   }
 
   // Mount lifecycle routes if service is available

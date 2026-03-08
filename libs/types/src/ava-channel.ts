@@ -367,3 +367,30 @@ export interface ScheduleConflict {
   /** ISO 8601 timestamp of conflict detection */
   timestamp: string;
 }
+
+/**
+ * Broadcast by an instance when a phase assigned to it completes (or fails).
+ * The primary scheduler aggregates these to track overall project progress
+ * across all fleet instances.
+ */
+export interface ProjectProgress {
+  /** Project slug this progress event belongs to */
+  projectSlug: string;
+  /** Milestone slug containing the phase */
+  milestoneSlug: string;
+  /** Phase name that changed status */
+  phaseName: string;
+  /** Instance that executed the phase */
+  instanceId: string;
+  /**
+   * New status of the phase after the event.
+   * - 'in_progress' — phase execution started
+   * - 'done'        — phase completed successfully
+   * - 'failed'      — phase failed and will not be retried automatically
+   */
+  status: 'in_progress' | 'done' | 'failed';
+  /** ISO 8601 timestamp of this progress event */
+  timestamp: string;
+  /** Optional error message when status='failed' */
+  error?: string;
+}

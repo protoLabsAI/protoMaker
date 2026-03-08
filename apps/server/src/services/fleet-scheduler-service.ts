@@ -54,11 +54,26 @@ export interface ScheduleConflictMsg {
   timestamp: string;
 }
 
+/**
+ * Broadcast when a project phase changes status on any instance.
+ * Enables the primary scheduler to aggregate cross-instance project progress.
+ */
+export interface ProjectProgressMsg {
+  projectSlug: string;
+  milestoneSlug: string;
+  phaseName: string;
+  instanceId: string;
+  status: 'in_progress' | 'done' | 'failed';
+  timestamp: string;
+  error?: string;
+}
+
 // Internal aliases (used by this file)
 type WorkInventory = WorkInventoryMsg;
 type ScheduleAssignment = ScheduleAssignmentMsg;
 type SchedulerHeartbeat = SchedulerHeartbeatMsg;
 type ScheduleConflict = ScheduleConflictMsg;
+type ProjectProgress = ProjectProgressMsg;
 
 const logger = createLogger('FleetScheduler');
 
@@ -77,6 +92,14 @@ const PEER_INVENTORY_TTL_MS = 6 * 60 * 1000;
 // ---------------------------------------------------------------------------
 // Dependencies
 // ---------------------------------------------------------------------------
+
+/** A phase descriptor used for fleet phase distribution */
+export interface FleetPhaseDescriptor {
+  milestoneSlug: string;
+  phaseName: string;
+  /** Phase dependencies (phase names within the same milestone) */
+  dependencies?: string[];
+}
 
 export interface FleetSchedulerDependencies {
   avaChannelService: AvaChannelService;
@@ -150,6 +173,13 @@ export class FleetSchedulerService {
   /** Error count for status reporting */
   private errorCount = 0;
 
+  /**
+   * Cross-instance project progress tracking.
+   * Key: `${projectSlug}:${milestoneSlug}:${phaseName}`
+   * Value: latest ProjectProgress event for that phase
+   */
+  private readonly projectProgressByPhase = new Map<string, ProjectProgress>();
+
   constructor(deps: FleetSchedulerDependencies) {
     this.deps = deps;
     this.startTimeMs = deps.startTimeMs ?? Date.now();
@@ -186,6 +216,7 @@ export class FleetSchedulerService {
     this.peerInventories.clear();
     this.peerHeartbeats.clear();
     this.claimedFeatureIds.clear();
+    this.projectProgressByPhase.clear();
     this.isActiveScheduler = false;
     logger.info('FleetScheduler stopped');
   }
@@ -285,6 +316,207 @@ export class FleetSchedulerService {
         logger.error(`Failed to release conflicted feature ${conflict.featureId}:`, err);
       }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public: Project phase distribution (called on project creation)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Called by the project creation handler when a new project is created on any instance.
+   *
+   * If this instance is the active scheduler, it reads the project's milestones and phases,
+   * determines which phases are parallelizable (no dependency edges between them across
+   * different milestones), and issues a schedule_assignment distributing parallel phases
+   * across available instances.
+   *
+   * @param projectSlug  The newly created project's slug
+   * @param phases       Flat list of phase descriptors across all milestones
+   */
+  async onNewProject(projectSlug: string, phases: FleetPhaseDescriptor[]): Promise<void> {
+    if (!this.isActiveScheduler) {
+      logger.debug(
+        `onNewProject(${projectSlug}): not the active scheduler — skipping phase distribution`
+      );
+      return;
+    }
+
+    if (phases.length === 0) {
+      logger.debug(`onNewProject(${projectSlug}): no phases to distribute`);
+      return;
+    }
+
+    logger.info(
+      `onNewProject(${projectSlug}): distributing ${phases.length} phase(s) across fleet`
+    );
+
+    // Determine which phases are parallelizable (no inter-phase dependency edges)
+    const parallelGroups = this.groupParallelPhases(phases);
+
+    // Collect available instances (self + peers with live inventory)
+    const now = Date.now();
+    const availableInstanceIds: string[] = [this.deps.instanceId];
+    for (const [instanceId, entry] of this.peerInventories) {
+      if (now - entry.receivedAt <= PEER_INVENTORY_TTL_MS) {
+        availableInstanceIds.push(instanceId);
+      }
+    }
+
+    // Distribute parallel groups round-robin across available instances
+    const phaseAssignments: Record<
+      string,
+      Array<{ milestoneSlug: string; phaseName: string }>
+    > = {};
+    let instanceCursor = 0;
+
+    for (const group of parallelGroups) {
+      for (const phase of group) {
+        const targetInstanceId = availableInstanceIds[instanceCursor % availableInstanceIds.length];
+        if (!phaseAssignments[targetInstanceId]) {
+          phaseAssignments[targetInstanceId] = [];
+        }
+        phaseAssignments[targetInstanceId].push({
+          milestoneSlug: phase.milestoneSlug,
+          phaseName: phase.phaseName,
+        });
+        instanceCursor++;
+      }
+    }
+
+    // Broadcast schedule_assignment so peer instances know which phases they own
+    const scheduleMsg: ScheduleAssignment = {
+      schedulerInstanceId: this.deps.instanceId,
+      timestamp: new Date().toISOString(),
+      // Encode phase assignments as featureId-shaped strings for backward-compat
+      assignments: Object.fromEntries(
+        Object.entries(phaseAssignments).map(([instanceId, phases]) => [
+          instanceId,
+          phases.map((p) => `${projectSlug}/${p.milestoneSlug}/${p.phaseName}`),
+        ])
+      ),
+    };
+
+    try {
+      await this.deps.avaChannelService.postMessage(
+        `[schedule_assignment] ${JSON.stringify(scheduleMsg)}`,
+        'system',
+        { intent: 'coordination', expectsResponse: false }
+      );
+
+      logger.info(
+        `Broadcast project phase schedule_assignment for ${projectSlug}: ` +
+          Object.entries(phaseAssignments)
+            .map(([id, phases]) => `${id}←[${phases.map((p) => p.phaseName).join(',')}]`)
+            .join(' ')
+      );
+    } catch (err) {
+      this.errorCount++;
+      logger.error(
+        `Failed to broadcast project phase schedule_assignment for ${projectSlug}:`,
+        err
+      );
+    }
+  }
+
+  /**
+   * Called when a project_progress message is received from any instance (including self).
+   * Merges the event into the local progress map so fleet-status can aggregate it.
+   */
+  onProjectProgress(progress: ProjectProgress): void {
+    const key = `${progress.projectSlug}:${progress.milestoneSlug}:${progress.phaseName}`;
+
+    // Only update if this event is newer than what we have
+    const existing = this.projectProgressByPhase.get(key);
+    if (existing && existing.timestamp >= progress.timestamp) {
+      return;
+    }
+
+    this.projectProgressByPhase.set(key, progress);
+
+    logger.debug(
+      `Project progress: ${progress.projectSlug}/${progress.milestoneSlug}/${progress.phaseName} ` +
+        `status=${progress.status} instanceId=${progress.instanceId}`
+    );
+  }
+
+  /**
+   * Broadcast a project_progress event for a phase on this instance.
+   * Called by the project execution pipeline when a phase starts or completes.
+   */
+  async broadcastProjectProgress(
+    projectSlug: string,
+    milestoneSlug: string,
+    phaseName: string,
+    status: 'in_progress' | 'done' | 'failed',
+    error?: string
+  ): Promise<void> {
+    const progress: ProjectProgress = {
+      projectSlug,
+      milestoneSlug,
+      phaseName,
+      instanceId: this.deps.instanceId,
+      status,
+      timestamp: new Date().toISOString(),
+      error,
+    };
+
+    // Record locally
+    this.onProjectProgress(progress);
+
+    // Broadcast to peers
+    try {
+      await this.deps.avaChannelService.postMessage(
+        `[project_progress] ${JSON.stringify(progress)}`,
+        'system',
+        { intent: 'inform', expectsResponse: false }
+      );
+
+      logger.debug(
+        `Broadcast project_progress: ${projectSlug}/${milestoneSlug}/${phaseName} status=${status}`
+      );
+    } catch (err) {
+      this.errorCount++;
+      logger.error(`Failed to broadcast project_progress for ${projectSlug}/${phaseName}:`, err);
+    }
+  }
+
+  /**
+   * Returns aggregated fleet progress for a project.
+   * Used by GET /api/projects/:slug/fleet-status.
+   */
+  getProjectFleetStatus(projectSlug: string): {
+    projectSlug: string;
+    phases: Array<{
+      milestoneSlug: string;
+      phaseName: string;
+      instanceId: string;
+      status: 'in_progress' | 'done' | 'failed';
+      timestamp: string;
+      error?: string;
+    }>;
+  } {
+    const phases: Array<{
+      milestoneSlug: string;
+      phaseName: string;
+      instanceId: string;
+      status: 'in_progress' | 'done' | 'failed';
+      timestamp: string;
+      error?: string;
+    }> = [];
+
+    for (const [key, progress] of this.projectProgressByPhase) {
+      if (!key.startsWith(`${projectSlug}:`)) continue;
+      phases.push({
+        milestoneSlug: progress.milestoneSlug,
+        phaseName: progress.phaseName,
+        instanceId: progress.instanceId,
+        status: progress.status,
+        timestamp: progress.timestamp,
+        error: progress.error,
+      });
+    }
+
+    return { projectSlug, phases };
   }
 
   // ---------------------------------------------------------------------------
@@ -682,6 +914,82 @@ export class FleetSchedulerService {
   // ---------------------------------------------------------------------------
   // Internal: Utilities
   // ---------------------------------------------------------------------------
+
+  /**
+   * Group phases into parallel execution waves using a topological approach.
+   *
+   * Phases within the same wave have no dependency edges between them and can
+   * be executed in parallel on different instances. Each wave must complete
+   * before the next begins.
+   *
+   * Algorithm: Kahn's BFS — waves are levels in the dependency DAG.
+   */
+  private groupParallelPhases(phases: FleetPhaseDescriptor[]): FleetPhaseDescriptor[][] {
+    // Build adjacency: phaseName → set of phaseName dependents
+    const inDegree = new Map<string, number>();
+    const dependents = new Map<string, string[]>();
+
+    for (const phase of phases) {
+      const key = `${phase.milestoneSlug}/${phase.phaseName}`;
+      if (!inDegree.has(key)) inDegree.set(key, 0);
+      if (!dependents.has(key)) dependents.set(key, []);
+    }
+
+    for (const phase of phases) {
+      const phaseKey = `${phase.milestoneSlug}/${phase.phaseName}`;
+      for (const dep of phase.dependencies ?? []) {
+        // Dependencies are phase names within the same milestone
+        const depKey = `${phase.milestoneSlug}/${dep}`;
+        if (!inDegree.has(depKey)) {
+          // Dependency not in our phase list — treat as already satisfied
+          continue;
+        }
+        inDegree.set(phaseKey, (inDegree.get(phaseKey) ?? 0) + 1);
+        if (!dependents.has(depKey)) dependents.set(depKey, []);
+        dependents.get(depKey)!.push(phaseKey);
+      }
+    }
+
+    const phaseByKey = new Map<string, FleetPhaseDescriptor>(
+      phases.map((p) => [`${p.milestoneSlug}/${p.phaseName}`, p])
+    );
+
+    const waves: FleetPhaseDescriptor[][] = [];
+    let currentWave = [...inDegree.entries()]
+      .filter(([, deg]) => deg === 0)
+      .map(([key]) => phaseByKey.get(key)!)
+      .filter(Boolean);
+
+    const visited = new Set<string>();
+
+    while (currentWave.length > 0) {
+      waves.push(currentWave);
+      const nextWave: FleetPhaseDescriptor[] = [];
+
+      for (const phase of currentWave) {
+        const key = `${phase.milestoneSlug}/${phase.phaseName}`;
+        visited.add(key);
+        for (const depKey of dependents.get(key) ?? []) {
+          const newDeg = (inDegree.get(depKey) ?? 0) - 1;
+          inDegree.set(depKey, newDeg);
+          if (newDeg === 0 && !visited.has(depKey)) {
+            const dep = phaseByKey.get(depKey);
+            if (dep) nextWave.push(dep);
+          }
+        }
+      }
+
+      currentWave = nextWave;
+    }
+
+    // Any phases not reached (cycle or missing deps) go into a final wave
+    const unreached = phases.filter((p) => !visited.has(`${p.milestoneSlug}/${p.phaseName}`));
+    if (unreached.length > 0) {
+      waves.push(unreached);
+    }
+
+    return waves;
+  }
 
   private getUptimeMs(): number {
     return Date.now() - this.startTimeMs;
