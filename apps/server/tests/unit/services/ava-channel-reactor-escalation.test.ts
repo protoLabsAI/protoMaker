@@ -50,7 +50,12 @@ function makeDeps(overrides: Partial<ReactorDependencies> = {}): ReactorDependen
     } as unknown as ReactorDependencies['crdtStore'],
     settingsService: {
       getGlobalSettings: vi.fn().mockResolvedValue({
-        avaChannelReactor: { enabled: true, cooldownMs: 30_000, maxConversationDepth: 5, staleMessageThresholdMs: 300_000 },
+        avaChannelReactor: {
+          enabled: true,
+          cooldownMs: 30_000,
+          maxConversationDepth: 5,
+          staleMessageThresholdMs: 300_000,
+        },
       }),
     },
     autoModeService: {
@@ -63,9 +68,11 @@ function makeDeps(overrides: Partial<ReactorDependencies> = {}): ReactorDependen
       }),
     },
     featureLoader: {
-      getAll: vi.fn().mockResolvedValue([
-        { id: 'feat-1', title: 'Feature 1', status: 'blocked', complexity: 'medium' },
-      ]),
+      getAll: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'feat-1', title: 'Feature 1', status: 'blocked', complexity: 'medium' },
+        ]),
       create: vi.fn().mockResolvedValue({ id: 'new-feat-1' }),
     },
     projectPath: '/test/project',
@@ -190,7 +197,11 @@ describe('escalation_offer — peer responds to escalation_request', () => {
       messages: [escalationMsg],
     };
     // Access private method via casting
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof escalationMsg) => Promise<void> }).handleWorkStealProtocol(escalationMsg);
+    await (
+      reactor as unknown as {
+        handleWorkStealProtocol: (msg: typeof escalationMsg) => Promise<void>;
+      }
+    ).handleWorkStealProtocol(escalationMsg);
 
     expect(deps.avaChannelService.postMessage).toHaveBeenCalledWith(
       expect.stringContaining('[escalation_offer]'),
@@ -198,7 +209,8 @@ describe('escalation_offer — peer responds to escalation_request', () => {
       expect.objectContaining({ intent: 'response' })
     );
 
-    const callArg = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    const callArg = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as string;
     const payload = JSON.parse(callArg.replace('[escalation_offer]', '').trim());
     expect(payload.featureId).toBe('feat-1');
     expect(payload.originatingInstanceId).toBe('remote-instance');
@@ -236,7 +248,11 @@ describe('escalation_offer — peer responds to escalation_request', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof escalationMsg) => Promise<void> }).handleWorkStealProtocol(escalationMsg);
+    await (
+      reactor as unknown as {
+        handleWorkStealProtocol: (msg: typeof escalationMsg) => Promise<void>;
+      }
+    ).handleWorkStealProtocol(escalationMsg);
 
     expect(deps.avaChannelService.postMessage).not.toHaveBeenCalled();
   });
@@ -261,7 +277,9 @@ describe('escalation_offer — peer responds to escalation_request', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof selfMsg) => Promise<void> }).handleWorkStealProtocol(selfMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof selfMsg) => Promise<void> }
+    ).handleWorkStealProtocol(selfMsg);
 
     expect(deps.avaChannelService.postMessage).not.toHaveBeenCalled();
   });
@@ -289,7 +307,9 @@ describe('escalation_accept — originator accepts first escalation_offer', () =
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof offerMsg) => Promise<void> }).handleWorkStealProtocol(offerMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof offerMsg) => Promise<void> }
+    ).handleWorkStealProtocol(offerMsg);
 
     expect(deps.avaChannelService.postMessage).toHaveBeenCalledWith(
       expect.stringContaining('[escalation_accept]'),
@@ -297,7 +317,8 @@ describe('escalation_accept — originator accepts first escalation_offer', () =
       expect.objectContaining({ intent: 'coordination' })
     );
 
-    const callArg = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    const callArg = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as string;
     const payload = JSON.parse(callArg.replace('[escalation_accept]', '').trim());
     expect(payload.acceptingInstanceId).toBe('peer-instance');
     expect(payload.featureId).toBe('feat-1');
@@ -320,13 +341,21 @@ describe('escalation_accept — originator accepts first escalation_offer', () =
       timestamp: new Date().toISOString(),
     });
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: ReturnType<typeof makeOfferMsg>) => Promise<void> }).handleWorkStealProtocol(makeOfferMsg('peer-1'));
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: ReturnType<typeof makeOfferMsg>) => Promise<void> }).handleWorkStealProtocol(makeOfferMsg('peer-2'));
+    await (
+      reactor as unknown as {
+        handleWorkStealProtocol: (msg: ReturnType<typeof makeOfferMsg>) => Promise<void>;
+      }
+    ).handleWorkStealProtocol(makeOfferMsg('peer-1'));
+    await (
+      reactor as unknown as {
+        handleWorkStealProtocol: (msg: ReturnType<typeof makeOfferMsg>) => Promise<void>;
+      }
+    ).handleWorkStealProtocol(makeOfferMsg('peer-2'));
 
     // Only one accept should have been sent
-    const acceptCalls = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls.filter(
-      (c: unknown[]) => (c[0] as string).includes('[escalation_accept]')
-    );
+    const acceptCalls = (
+      deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>
+    ).mock.calls.filter((c: unknown[]) => (c[0] as string).includes('[escalation_accept]'));
     expect(acceptCalls).toHaveLength(1);
   });
 
@@ -347,7 +376,9 @@ describe('escalation_accept — originator accepts first escalation_offer', () =
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof offerMsg) => Promise<void> }).handleWorkStealProtocol(offerMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof offerMsg) => Promise<void> }
+    ).handleWorkStealProtocol(offerMsg);
 
     expect(deps.avaChannelService.postMessage).not.toHaveBeenCalled();
   });
@@ -381,7 +412,9 @@ describe('escalation_accept — accepting instance creates escalated feature', (
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof acceptMsg) => Promise<void> }).handleWorkStealProtocol(acceptMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof acceptMsg) => Promise<void> }
+    ).handleWorkStealProtocol(acceptMsg);
 
     expect(deps.featureLoader!.create).toHaveBeenCalledWith(
       '/test/project',
@@ -417,7 +450,9 @@ describe('escalation_accept — accepting instance creates escalated feature', (
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof acceptMsg) => Promise<void> }).handleWorkStealProtocol(acceptMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof acceptMsg) => Promise<void> }
+    ).handleWorkStealProtocol(acceptMsg);
 
     expect(deps.featureLoader!.create).toHaveBeenCalledWith(
       '/test/project',
@@ -443,7 +478,9 @@ describe('escalation_accept — accepting instance creates escalated feature', (
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof acceptMsg) => Promise<void> }).handleWorkStealProtocol(acceptMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof acceptMsg) => Promise<void> }
+    ).handleWorkStealProtocol(acceptMsg);
 
     expect(deps.featureLoader!.create).not.toHaveBeenCalled();
   });
@@ -477,7 +514,9 @@ describe('health_alert — broadcast and peer pause', () => {
     const reactor = new AvaChannelReactorService(deps);
 
     // Trigger the heartbeat broadcast directly
-    await (reactor as unknown as { broadcastCapacityHeartbeat: () => Promise<void> }).broadcastCapacityHeartbeat();
+    await (
+      reactor as unknown as { broadcastCapacityHeartbeat: () => Promise<void> }
+    ).broadcastCapacityHeartbeat();
 
     const calls = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls;
     const alertCall = calls.find((c: unknown[]) => (c[0] as string).includes('[health_alert]'));
@@ -502,7 +541,9 @@ describe('health_alert — broadcast and peer pause', () => {
     });
     const reactor = new AvaChannelReactorService(deps);
 
-    await (reactor as unknown as { broadcastCapacityHeartbeat: () => Promise<void> }).broadcastCapacityHeartbeat();
+    await (
+      reactor as unknown as { broadcastCapacityHeartbeat: () => Promise<void> }
+    ).broadcastCapacityHeartbeat();
 
     const calls = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls;
     const alertCall = calls.find((c: unknown[]) => (c[0] as string).includes('[health_alert]'));
@@ -526,7 +567,9 @@ describe('health_alert — broadcast and peer pause', () => {
     });
     const reactor = new AvaChannelReactorService(deps);
 
-    await (reactor as unknown as { broadcastCapacityHeartbeat: () => Promise<void> }).broadcastCapacityHeartbeat();
+    await (
+      reactor as unknown as { broadcastCapacityHeartbeat: () => Promise<void> }
+    ).broadcastCapacityHeartbeat();
 
     const calls = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls;
     const alertCall = calls.find((c: unknown[]) => (c[0] as string).includes('[health_alert]'));
@@ -551,7 +594,9 @@ describe('health_alert — broadcast and peer pause', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }).handleWorkStealProtocol(alertMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }
+    ).handleWorkStealProtocol(alertMsg);
 
     const status = reactor.getStatus();
     expect(status.degradedPeerCount).toBe(1);
@@ -586,7 +631,9 @@ describe('health_alert — broadcast and peer pause', () => {
       source: 'system' as const,
       timestamp: new Date().toISOString(),
     };
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }).handleWorkStealProtocol(alertMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }
+    ).handleWorkStealProtocol(alertMsg);
 
     // Clear postMessage calls from health_alert handler
     (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mockClear();
@@ -608,12 +655,14 @@ describe('health_alert — broadcast and peer pause', () => {
       source: 'system' as const,
       timestamp: new Date().toISOString(),
     };
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof heartbeatMsg) => Promise<void> }).handleWorkStealProtocol(heartbeatMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof heartbeatMsg) => Promise<void> }
+    ).handleWorkStealProtocol(heartbeatMsg);
 
     // work_request should NOT have been sent (peer is degraded)
-    const workRequestCalls = (deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>).mock.calls.filter(
-      (c: unknown[]) => (c[0] as string).includes('[work_request]')
-    );
+    const workRequestCalls = (
+      deps.avaChannelService.postMessage as ReturnType<typeof vi.fn>
+    ).mock.calls.filter((c: unknown[]) => (c[0] as string).includes('[work_request]'));
     expect(workRequestCalls).toHaveLength(0);
   });
 
@@ -635,7 +684,9 @@ describe('health_alert — broadcast and peer pause', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }).handleWorkStealProtocol(alertMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }
+    ).handleWorkStealProtocol(alertMsg);
 
     expect(reactor.getStatus().degradedPeers).toContain('expiring-peer');
 
@@ -664,7 +715,9 @@ describe('health_alert — broadcast and peer pause', () => {
       timestamp: new Date().toISOString(),
     };
 
-    await (reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }).handleWorkStealProtocol(alertMsg);
+    await (
+      reactor as unknown as { handleWorkStealProtocol: (msg: typeof alertMsg) => Promise<void> }
+    ).handleWorkStealProtocol(alertMsg);
 
     expect(reactor.getStatus().degradedPeerCount).toBe(0);
   });

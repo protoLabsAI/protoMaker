@@ -47,21 +47,40 @@ function makeReq(body: Record<string, unknown> = {}): Request {
   return { body } as unknown as Request;
 }
 
-function makeRes(): { json: ReturnType<typeof vi.fn>; status: ReturnType<typeof vi.fn>; _status: number } {
+function makeRes(): {
+  json: ReturnType<typeof vi.fn>;
+  status: ReturnType<typeof vi.fn>;
+  _status: number;
+} {
   const res = {
     _status: 200,
     json: vi.fn(),
     status: vi.fn(),
   };
   res.status.mockReturnValue(res);
-  return res as unknown as { json: ReturnType<typeof vi.fn>; status: ReturnType<typeof vi.fn>; _status: number };
+  return res as unknown as {
+    json: ReturnType<typeof vi.fn>;
+    status: ReturnType<typeof vi.fn>;
+    _status: number;
+  };
 }
 
 // Extract a route handler from the router by method and path
-function getHandler(router: ReturnType<typeof createEscalationRoutes>, method: string, path: string) {
-  const layer = (router as unknown as { stack: Array<{ route?: { path: string; stack: Array<{ method: string; handle: (req: Request, res: Response) => void }> } }> }).stack.find(
-    (l) => l.route?.path === path
-  );
+function getHandler(
+  router: ReturnType<typeof createEscalationRoutes>,
+  method: string,
+  path: string
+) {
+  const layer = (
+    router as unknown as {
+      stack: Array<{
+        route?: {
+          path: string;
+          stack: Array<{ method: string; handle: (req: Request, res: Response) => void }>;
+        };
+      }>;
+    }
+  ).stack.find((l) => l.route?.path === path);
   const handler = layer?.route?.stack.find((s) => s.method === method)?.handle;
   return handler;
 }
@@ -89,7 +108,9 @@ describe('createEscalationRoutes', () => {
       await handler!(req, res as unknown as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('featureId') }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.stringContaining('featureId') })
+      );
     });
 
     it('returns 400 when failureCount < 2', async () => {
@@ -99,11 +120,20 @@ describe('createEscalationRoutes', () => {
       await handler!(req, res as unknown as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('failureCount') }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ error: expect.stringContaining('failureCount') })
+      );
     });
 
     it('returns 503 when reactor is not active', async () => {
-      reactor.getStatus.mockReturnValue({ active: false, enabled: false, degradedPeerCount: 0, degradedPeers: [], pendingEscalationCount: 0, errorCount: 0 });
+      reactor.getStatus.mockReturnValue({
+        active: false,
+        enabled: false,
+        degradedPeerCount: 0,
+        degradedPeers: [],
+        pendingEscalationCount: 0,
+        errorCount: 0,
+      });
       const handler = getHandler(router, 'post', '/request');
       const req = makeReq({ featureId: 'feat-1', failureCount: 2 });
       const res = makeRes();
@@ -127,7 +157,9 @@ describe('createEscalationRoutes', () => {
       expect(reactor.postEscalationRequest).toHaveBeenCalledWith(
         expect.objectContaining({ featureId: 'feat-1', failureCount: 3 })
       );
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, featureId: 'feat-1' }));
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: true, featureId: 'feat-1' })
+      );
     });
   });
 
