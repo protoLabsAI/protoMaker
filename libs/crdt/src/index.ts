@@ -17,6 +17,7 @@ export {
   normalizeConfigDocument,
   normalizeSharedSettingsDocument,
   normalizeAvaChannelDocument,
+  normalizeCalendarDocument,
 } from './documents.js';
 
 export type {
@@ -25,6 +26,7 @@ export type {
   ConfigDocument,
   SharedSettingsDocument,
   AvaChannelDocument,
+  CalendarDocument,
 } from './documents.js';
 
 export type {

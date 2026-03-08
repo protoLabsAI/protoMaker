@@ -8,7 +8,7 @@
 /**
  * Type of calendar event
  */
-export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'job';
+export type CalendarEventType = 'feature' | 'milestone' | 'custom' | 'google' | 'job' | 'ceremony';
 
 /**
  * Job execution status
