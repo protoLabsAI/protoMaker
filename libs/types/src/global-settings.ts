@@ -225,6 +225,51 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 // Scheduler Settings
 // ============================================================================
 
+// ============================================================================
+// Ava Channel Reactor Settings
+// ============================================================================
+
+/**
+ * AvaChannelReactorSettings — Configuration for the Ava Channel reactor.
+ *
+ * The reactor listens for incoming messages on the Ava Channel and decides
+ * whether/how to respond. These settings live in WorkflowSettings so they
+ * can be toggled per-instance alongside other workflow automation flags.
+ */
+export interface AvaChannelReactorSettings {
+  /** Whether the Ava Channel reactor is enabled (default: false) */
+  enabled: boolean;
+  /**
+   * Maximum conversation depth before the reactor stops auto-responding.
+   * Prevents runaway conversation loops. (default: 5)
+   */
+  maxConversationDepth: number;
+  /**
+   * Minimum milliseconds between reactor responses to the same conversation.
+   * Prevents flooding the channel with rapid-fire replies. (default: 30000)
+   */
+  cooldownMs: number;
+  /**
+   * Model alias or ID to use for reactor response generation.
+   * Defaults to 'haiku' for cost efficiency on broadcast monitoring.
+   */
+  reactorModel: string;
+  /**
+   * Messages older than this many milliseconds are considered stale and
+   * will not trigger a reactor response. (default: 300000 = 5 minutes)
+   */
+  staleMessageThresholdMs: number;
+}
+
+/** Default Ava Channel reactor settings — disabled by default */
+export const DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS: AvaChannelReactorSettings = {
+  enabled: false,
+  maxConversationDepth: 5,
+  cooldownMs: 30_000,
+  reactorModel: 'haiku',
+  staleMessageThresholdMs: 300_000,
+};
+
 /**
  * Scheduler settings for persisting task state across server restarts.
  */
@@ -660,6 +705,14 @@ export interface GlobalSettings {
    * @see SchedulerSettings
    */
   schedulerSettings?: SchedulerSettings;
+
+  /**
+   * Ava Channel reactor settings.
+   * Controls whether this instance auto-responds to incoming Ava Channel messages
+   * and at what depth/cadence.
+   * @see AvaChannelReactorSettings
+   */
+  avaChannelReactor?: AvaChannelReactorSettings;
 }
 
 /** Default global settings used when no settings file exists */

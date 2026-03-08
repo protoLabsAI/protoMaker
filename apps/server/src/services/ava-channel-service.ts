@@ -109,6 +109,10 @@ export class AvaChannelService {
       source,
       timestamp: new Date().toISOString(),
       ...(options?.context ? { context: options.context } : {}),
+      ...(options?.intent !== undefined ? { intent: options.intent } : {}),
+      ...(options?.expectsResponse !== undefined
+        ? { expectsResponse: options.expectsResponse }
+        : {}),
     };
 
     if (this.store) {

@@ -10,6 +10,9 @@ export type {
   AvaChannelDocument,
   PostMessageOptions,
   GetMessagesOptions,
+  MessageIntent,
+  MessageClassifierRule,
+  ClassificationContext,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
@@ -357,6 +360,9 @@ export type {
   ClaudeApiProfileTemplate,
   // Workflow settings types
   WorkflowSettings,
+  // Ava Channel reactor settings
+  AvaChannelReactorSettings,
+  SchedulerSettings,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,
@@ -386,6 +392,9 @@ export {
   DEFAULT_TRUST_BOUNDARY_CONFIG,
   // Workflow settings defaults
   DEFAULT_WORKFLOW_SETTINGS,
+  // Ava Channel reactor settings defaults
+  DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS,
+  DEFAULT_SCHEDULER_SETTINGS,
   // Integration config defaults
   DEFAULT_DISCORD_INTEGRATION,
   // Claude-compatible provider templates (new)

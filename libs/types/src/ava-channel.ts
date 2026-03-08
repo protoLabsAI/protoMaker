@@ -6,6 +6,52 @@
  */
 
 /**
+ * Intent of a message in the Ava Channel.
+ * Used by the reactor classifier chain to route and prioritize messages.
+ *
+ * - 'request'      — Asking another instance to do something
+ * - 'inform'       — Status broadcast; no response expected (auto-posts use this)
+ * - 'response'     — Reply to a prior request
+ * - 'coordination' — Multi-instance coordination (locking, voting, handoffs)
+ * - 'escalation'   — Requesting human or supervisor intervention
+ * - 'system_alert' — Automated alert from infrastructure (errors, thresholds)
+ */
+export type MessageIntent =
+  | 'request'
+  | 'inform'
+  | 'response'
+  | 'coordination'
+  | 'escalation'
+  | 'system_alert';
+
+/**
+ * A single rule in the message classifier chain.
+ * Rules are evaluated in order; the first match determines the intent.
+ */
+export interface MessageClassifierRule {
+  /** Regex pattern matched against the message content (case-insensitive) */
+  pattern?: string;
+  /** Intent assigned when this rule matches */
+  intent: MessageIntent;
+  /** Optional human-readable description of the rule's purpose */
+  description?: string;
+  /** Source filter — only applies if the message source matches */
+  source?: 'ava' | 'operator' | 'system';
+}
+
+/**
+ * Context provided to the message classifier chain when classifying a message.
+ */
+export type ClassificationContext = {
+  /** The message being classified */
+  message: AvaChatMessage;
+  /** Recent messages in the same conversation thread (for context-aware classification) */
+  recentMessages?: AvaChatMessage[];
+  /** ID of the instance running the classification */
+  instanceId?: string;
+};
+
+/**
  * Optional structured context attached to an Ava Channel message.
  * Used for machine-readable context alongside free-form content.
  */
@@ -43,6 +89,14 @@ export interface AvaChatMessage {
   source: 'ava' | 'operator' | 'system';
   /** ISO 8601 timestamp */
   timestamp: string;
+  /** Intent classification — what kind of message this is */
+  intent?: MessageIntent;
+  /** ID of the message this is replying to (for threaded conversations) */
+  inReplyTo?: string;
+  /** Whether the sender expects a response to this message */
+  expectsResponse?: boolean;
+  /** Depth in a conversation thread (0 = root message) */
+  conversationDepth?: number;
 }
 
 /**
@@ -70,6 +124,10 @@ export interface PostMessageOptions {
   instanceName?: string;
   /** Optional structured context */
   context?: AvaChannelContext;
+  /** Intent of this message — for classifier chain routing */
+  intent?: MessageIntent;
+  /** Whether this message expects a response from other instances */
+  expectsResponse?: boolean;
 }
 
 /**
