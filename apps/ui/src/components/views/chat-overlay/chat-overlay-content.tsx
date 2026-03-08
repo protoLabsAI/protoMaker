@@ -412,7 +412,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
       )}
 
       {/* Tab bar */}
-      <div className="flex items-center border-b border-border px-2">
+      <div className="flex items-center border-b border-border px-2" role="tablist">
         <button
           type="button"
           role="tab"
