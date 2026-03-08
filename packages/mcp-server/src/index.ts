@@ -181,6 +181,7 @@ import { gitOpsTools } from './tools/git-ops-tools.js';
 import { worktreeGitTools } from './tools/worktree-git-tools.js';
 import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
+import { avaChannelTools } from './tools/ava-channel-tools.js';
 
 // Aggregate all tools
 const tools: Tool[] = [
@@ -205,6 +206,7 @@ const tools: Tool[] = [
   ...worktreeGitTools,
   ...promotionTools,
   ...leadEngineerTools,
+  ...avaChannelTools,
 ];
 
 // Tool implementations
@@ -678,7 +680,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectPath: args.projectPath,
         timeRange: args.timeRange,
         since: args.since,
-        compact: args.compact,
       });
       // Auto-acknowledge to advance cursor after successful digest
       await apiCall('/briefing/ack', {
@@ -1785,6 +1786,41 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
       return { success: true, handoff: latest };
     }
+
+    // Ava Channel (private coordination channel)
+    case 'send_channel_message':
+      return apiCall('/ava-channel/send', {
+        projectPath: args.projectPath,
+        message: args.message,
+        context: args.context,
+        instanceId: args.instanceId,
+      });
+
+    case 'read_channel_messages':
+      return apiCall(
+        '/ava-channel/messages',
+        {
+          projectPath: args.projectPath,
+          limit: args.limit,
+          since: args.since,
+          until: args.until,
+          instanceId: args.instanceId,
+        },
+        'GET'
+      );
+
+    case 'file_system_improvement':
+      return apiCall('/ava-channel/file-improvement', {
+        projectPath: args.projectPath,
+        title: args.title,
+        description: args.description,
+        frictionSummary: args.frictionSummary,
+        discussionContext: args.discussionContext,
+        complexity: args.complexity,
+        priority: args.priority,
+        instanceId: args.instanceId,
+        discussantCount: args.discussantCount,
+      });
 
     default:
       throw new Error(`Unknown tool: ${name}`);

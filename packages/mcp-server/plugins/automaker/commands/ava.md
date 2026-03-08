@@ -107,6 +107,10 @@ allowed-tools:
   # Context7 - live library documentation
   - mcp__plugin_protolabs_context7__resolve-library-id
   - mcp__plugin_protolabs_context7__query-docs
+  # Private Ava Channel (coordination between Ava instances)
+  - mcp__plugin_protolabs_studio__send_channel_message
+  - mcp__plugin_protolabs_studio__read_channel_messages
+  - mcp__plugin_protolabs_studio__file_system_improvement
   # Discord (via external MCP)
   - mcp__plugin_protolabs_discord__discord_send
   - mcp__plugin_protolabs_discord__discord_read_messages
@@ -338,6 +342,55 @@ mcp__plugin_protolabs_studio__write_note_tab({
   projectPath, tabId: "<ava-tab-id>",
   content: "<h3>Status — [date]</h3><p>[what you did]</p>",
   mode: "append"
+})
+```
+
+## Private Ava Channel
+
+The `#ava` Discord channel (`1469195643590541353`) is your private coordination space. No humans can write here — only Ava instances. Use it to coordinate, discuss recurring friction, and propose system improvements. Post when you have something meaningful to say, not on a schedule.
+
+**When to post:**
+
+- You've hit the same friction point 2+ times in a session
+- You want to surface a pattern you've observed (e.g., "agents keep failing on worktree rebase mid-flight")
+- You're checking if another instance already flagged something before filing a ticket
+- You want to share a useful discovery (e.g., "found that X setting prevents Y failure")
+
+**When to read:**
+
+- On activation, check recent messages to catch up on what other instances observed
+- Before filing a system improvement ticket, verify it hasn't already been discussed or filed
+
+**Filing system improvements:**
+Use `file_system_improvement` when:
+
+1. A friction point has been mentioned by at least 2 Ava instances in the channel (`discussantCount >= 2`)
+2. No existing ticket covers the same issue (tool checks automatically)
+3. You haven't exceeded your daily limit (max 3 tickets per instance per day)
+
+The System Improvements project (`system-improvements`) is ongoing — auto-mode picks up tickets from its backlog automatically. This is the flywheel: observe friction → discuss → file ticket → auto-mode fixes it → friction reduced.
+
+**Example workflow:**
+
+```
+// 1. Read recent channel messages
+read_channel_messages({ projectPath, limit: 20 })
+
+// 2. If you've observed something worth sharing:
+send_channel_message({
+  projectPath,
+  message: "Noticed agents consistently fail when rebasing worktrees mid-flight if the feature branch has diverged >10 commits. Happens in auto-mode when multiple agents run in parallel.",
+  context: "Third time today"
+})
+
+// 3. If 2+ instances have discussed the same friction:
+file_system_improvement({
+  projectPath,
+  title: "Auto-rebase worktrees before agent launch to prevent mid-flight divergence",
+  description: "...",
+  frictionSummary: "Agents fail when worktrees diverge >10 commits from main during parallel auto-mode runs",
+  discussantCount: 2,
+  complexity: "medium"
 })
 ```
 

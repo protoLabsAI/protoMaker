@@ -88,7 +88,7 @@ import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 import { createLedgerRoutes } from '../routes/ledger/index.js';
-import { createHivemindRoutes } from '../routes/hivemind/index.js';
+import { createAvaChannelRoutes } from '../routes/ava-channel/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -157,7 +157,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     repoRoot,
     sensorRegistryService,
     projectPmService,
-    crdtSyncService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -222,7 +221,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api', authMiddleware);
 
   // --- PROTECTED HEALTH ENDPOINTS (detailed info requires auth) ---
-  app.get('/api/health/detailed', createDetailedHandler(crdtSyncService));
+  app.get('/api/health/detailed', createDetailedHandler());
   app.get('/api/health/quick', createQuickHandler());
   app.get(
     '/api/health/standard',
@@ -424,9 +423,9 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/ledger', createLedgerRoutes(ledgerService, featureLoader));
   logger.info('Ledger routes mounted at /api/ledger');
 
-  // Hivemind routes (peer/instance status for unified dashboard)
-  app.use('/api/hivemind', createHivemindRoutes(crdtSyncService));
-  logger.info('Hivemind routes mounted at /api/hivemind');
+  // Ava Channel routes (private coordination channel for Ava instances)
+  app.use('/api/ava-channel', createAvaChannelRoutes(discordBotService, featureLoader));
+  logger.info('Ava channel routes mounted at /api/ava-channel');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
