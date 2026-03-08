@@ -32,7 +32,13 @@ function formatRelativeTime(timestamp: string): string {
   return new Date(timestamp).toLocaleDateString();
 }
 
-function InstanceBadge({ instanceName, source }: { instanceName: string; source: AvaChatMessage['source'] }) {
+function InstanceBadge({
+  instanceName,
+  source,
+}: {
+  instanceName: string;
+  source: AvaChatMessage['source'];
+}) {
   return (
     <span
       className={cn(
@@ -54,9 +60,13 @@ function ChannelMessage({ message }: { message: AvaChatMessage }) {
     <div className="flex flex-col gap-0.5 py-2 border-b border-border/50 last:border-0">
       <div className="flex items-center gap-2">
         <InstanceBadge instanceName={message.instanceName} source={message.source} />
-        <span className="text-[10px] text-muted-foreground">{formatRelativeTime(message.timestamp)}</span>
+        <span className="text-[10px] text-muted-foreground">
+          {formatRelativeTime(message.timestamp)}
+        </span>
       </div>
-      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>
+      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+        {message.content}
+      </p>
     </div>
   );
 }
@@ -129,14 +139,13 @@ export function AvaChannelTab() {
   );
 
   // Filter messages by query
-  const filteredMessages =
-    filterQuery.trim()
-      ? messages.filter(
-          (m) =>
-            m.content.toLowerCase().includes(filterQuery.toLowerCase()) ||
-            m.instanceName.toLowerCase().includes(filterQuery.toLowerCase())
-        )
-      : messages;
+  const filteredMessages = filterQuery.trim()
+    ? messages.filter(
+        (m) =>
+          m.content.toLowerCase().includes(filterQuery.toLowerCase()) ||
+          m.instanceName.toLowerCase().includes(filterQuery.toLowerCase())
+      )
+    : messages;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

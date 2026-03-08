@@ -99,11 +99,7 @@ export function AskAvaTab({
       {/* Queue panel — slide in from left */}
       {queueOpen && (
         <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 animate-in slide-in-from-left duration-200">
-          <QueueView
-            items={[]}
-            paused={queuePaused}
-            onTogglePause={onToggleQueuePause}
-          />
+          <QueueView items={[]} paused={queuePaused} onTogglePause={onToggleQueuePause} />
         </div>
       )}
 
