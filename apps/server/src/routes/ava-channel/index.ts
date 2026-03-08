@@ -8,14 +8,10 @@
 
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
-import type { DiscordBotService } from '../../services/discord-bot-service.js';
+import type { AvaChannelService } from '../../services/ava-channel-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 
 const logger = createLogger('AvaChannelRoutes');
-
-/** The private Ava Discord channel ID */
-const AVA_CHANNEL_ID = '1469195643590541353';
-const GUILD_ID = '1070606339363049492';
 
 /** Slug for the System Improvements project */
 const SYSTEM_IMPROVEMENTS_SLUG = 'system-improvements';
@@ -54,7 +50,7 @@ function incrementRateLimit(instanceId: string): void {
 }
 
 export function createAvaChannelRoutes(
-  discordBotService: DiscordBotService | undefined,
+  avaChannelService: AvaChannelService | undefined,
   featureLoader: FeatureLoader
 ): Router {
   const router = Router();
@@ -80,43 +76,30 @@ export function createAvaChannelRoutes(
         return;
       }
 
-      if (!discordBotService) {
+      if (!avaChannelService) {
         res.status(503).json({
           success: false,
           error: {
-            message: 'Discord bot service not available',
+            message: 'Ava channel service not available',
             type: 'service_unavailable',
           },
         });
         return;
       }
 
-      // Build the message content, optionally including context
       let content = message;
       if (context) {
-        content = `${message}\n\n_Context: ${context}_`;
-      }
-      if (instanceId) {
-        content = `[Instance: ${instanceId}]\n${content}`;
+        content = `${message}\n\nContext: ${context}`;
       }
 
-      const success = await discordBotService.sendToChannel(AVA_CHANNEL_ID, content);
-
-      if (!success) {
-        res.status(500).json({
-          success: false,
-          error: {
-            message: 'Failed to send message to Ava channel',
-            type: 'discord_error',
-          },
-        });
-        return;
-      }
+      const source = instanceId === 'operator' ? ('operator' as const) : ('ava' as const);
+      const posted = await avaChannelService.postMessage(content, source, {
+        instanceName: instanceId,
+      });
 
       res.json({
         success: true,
-        channelId: AVA_CHANNEL_ID,
-        guildId: GUILD_ID,
+        message: posted,
       });
     } catch (error) {
       logger.error('Failed to send Ava channel message:', error);
@@ -137,60 +120,43 @@ export function createAvaChannelRoutes(
    */
   router.get('/messages', async (req: Request, res: Response): Promise<void> => {
     try {
-      const {
-        limit: limitParam,
-        since,
-        until,
-        instanceId,
-      } = req.query as {
-        limit?: string;
+      const { since, until, instanceId } = req.query as {
         since?: string;
         until?: string;
         instanceId?: string;
       };
 
-      if (!discordBotService) {
+      if (!avaChannelService) {
         res.status(503).json({
           success: false,
           error: {
-            message: 'Discord bot service not available',
+            message: 'Ava channel service not available',
             type: 'service_unavailable',
           },
         });
         return;
       }
 
-      const limit = Math.min(parseInt(limitParam || '20', 10), 100);
+      const from = since ? new Date(since) : undefined;
+      const to = until ? new Date(until) : undefined;
 
-      const messages = await discordBotService.readMessages(AVA_CHANNEL_ID, limit);
+      const messages = await avaChannelService.getMessages({
+        from: from && !isNaN(from.getTime()) ? from : undefined,
+        to: to && !isNaN(to.getTime()) ? to : undefined,
+        instanceId,
+      });
 
-      // Apply optional time range filters
-      let filtered = messages;
-
-      if (since) {
-        const sinceDate = new Date(since);
-        if (!isNaN(sinceDate.getTime())) {
-          filtered = filtered.filter((m) => new Date(m.timestamp) > sinceDate);
-        }
-      }
-
-      if (until) {
-        const untilDate = new Date(until);
-        if (!isNaN(untilDate.getTime())) {
-          filtered = filtered.filter((m) => new Date(m.timestamp) < untilDate);
-        }
-      }
-
-      // Apply instance filter — messages from a specific Ava instance start with "[Instance: X]"
-      if (instanceId) {
-        filtered = filtered.filter((m) => m.content.startsWith(`[Instance: ${instanceId}]`));
-      }
+      const seen = new Set<string>();
+      const deduped = messages.filter((m) => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
 
       res.json({
         success: true,
-        messages: filtered,
-        total: filtered.length,
-        channelId: AVA_CHANNEL_ID,
+        messages: deduped,
+        total: deduped.length,
       });
     } catch (error) {
       logger.error('Failed to read Ava channel messages:', error);

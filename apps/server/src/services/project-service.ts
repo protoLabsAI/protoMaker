@@ -294,6 +294,20 @@ export class ProjectService {
     });
   }
 
+  async ensureSystemImprovementsProject(projectPath: string): Promise<Project> {
+    const existing = await this.getProject(projectPath, 'system-improvements');
+    if (existing) return existing;
+
+    return this.createProject(projectPath, {
+      slug: 'system-improvements',
+      title: 'System Improvements',
+      goal: 'Continuous system improvement tickets filed by Ava instances from observed friction patterns.',
+      ongoing: true,
+      priority: 'medium',
+      color: '#8b5cf6',
+    });
+  }
+
   /**
    * Save structured milestone data to a project.
    *

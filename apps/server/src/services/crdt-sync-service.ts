@@ -266,8 +266,12 @@ export class CrdtSyncService {
 
     // Build a HivemindConfig from proto config or defaults
     const hivemind = protoConfig?.['hivemind'] as HivemindConfig | undefined;
+    const meshEnabled =
+      hivemind?.enabled ??
+      (protoConfig?.['protolab'] as Record<string, unknown> | undefined)?.['enabled'] ??
+      false;
     this.config = {
-      enabled: true,
+      enabled: Boolean(meshEnabled),
       role: this.role,
       syncPort: this.syncPort,
       instanceId: this.instanceId,

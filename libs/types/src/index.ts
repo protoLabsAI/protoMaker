@@ -918,6 +918,9 @@ export type {
   SharedSettings,
 } from './proto-config.js';
 
+// DORA metrics types (lead time, deployment frequency, change failure rate, recovery time, rework rate)
+export type { DoraMetrics, MetricValue, DoraRegulationAlert } from './dora-metrics.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,

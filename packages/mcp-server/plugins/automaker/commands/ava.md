@@ -300,8 +300,12 @@ Every agent launch is a potential waste of API budget if the agent starts on sta
    - `get_briefing({ projectPath })` — events since last session
    - Read your Notes tab: `list_note_tabs` → `read_note_tab` for the "Ava" tab
    - Check auto-memory directory
-4. Run the monitoring checklist below (most data already in sitrep response)
-5. Lead with the single most important thing right now
+4. **Check the Ava Channel** (when hivemind has peers):
+   - `read_channel_messages({ projectPath, limit: 20 })` — catch up on recent peer activity
+   - If there are unaddressed help requests or coordination messages from other instances, respond to them
+   - Post a brief activation status: what you're picking up, current capacity
+5. Run the monitoring checklist below (most data already in sitrep response)
+6. Lead with the single most important thing right now
 
 ### Monitoring Checklist
 
@@ -316,6 +320,7 @@ Execute on every activation.
 - **Board state** — Merged-not-done, orphaned in-progress features, stale worktrees
 - **PR pipeline** — Auto-merge readiness, CodeRabbit threads, format fixes, branch updates
 - **Server health** — Memory, CPU, health monitor, worktree cleanup
+- **Ava Channel** — Check for peer escalations, help requests, or coordination messages. If this instance is idle and peers are overloaded (visible via channel capacity posts), offer to take work.
 
 **Report** — Post brief status to the project's Discord dev channel. Keep it under 5 lines.
 
@@ -351,10 +356,13 @@ The `#ava` Discord channel (`1469195643590541353`) is your private coordination 
 
 **When to post:**
 
+- A feature completes or fails — post a brief summary so other instances know what landed
+- An escalation occurs — post the diagnosis so peers can avoid the same issue
 - You've hit the same friction point 2+ times in a session
 - You want to surface a pattern you've observed (e.g., "agents keep failing on worktree rebase mid-flight")
 - You're checking if another instance already flagged something before filing a ticket
 - You want to share a useful discovery (e.g., "found that X setting prevents Y failure")
+- Auto-mode starts or stops — post capacity status so peers know this instance's availability
 
 **When to read:**
 

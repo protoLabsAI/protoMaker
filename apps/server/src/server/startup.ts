@@ -148,6 +148,14 @@ export async function runStartup(
       } catch (err) {
         logger.warn(`[STARTUP] Failed to ensure bugs project for ${projectPath}:`, err);
       }
+      try {
+        await services.projectService.ensureSystemImprovementsProject(projectPath);
+      } catch (err) {
+        logger.warn(
+          `[STARTUP] Failed to ensure system-improvements project for ${projectPath}:`,
+          err
+        );
+      }
     }
   } catch (err) {
     logger.warn('[STARTUP] Failed to ensure default projects:', err);

@@ -415,6 +415,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
       <div className="flex items-center border-b border-border px-2">
         <button
           type="button"
+          role="tab"
           className={cn(
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             activeTab === 'ask-ava'
@@ -428,6 +429,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
         </button>
         <button
           type="button"
+          role="tab"
           className={cn(
             'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
             activeTab === 'ava-channel'
