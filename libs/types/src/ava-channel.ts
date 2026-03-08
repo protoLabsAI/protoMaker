@@ -130,6 +130,59 @@ export interface PostMessageOptions {
   expectsResponse?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Work-stealing protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Capacity heartbeat broadcast by each reactor instance every 60 seconds.
+ * Carries enough information for peers to decide whether to request work.
+ */
+export interface CapacityHeartbeat {
+  /** Originating instance ID */
+  instanceId: string;
+  /** Human-readable role / instance name */
+  role: string;
+  /** Number of features currently in backlog on this instance */
+  backlogCount: number;
+  /** Number of features currently active (running agents) on this instance */
+  activeCount: number;
+  /** Maximum concurrent agents this instance supports */
+  maxConcurrency: number;
+  /** CPU load percentage (0-100) */
+  cpuLoad: number;
+  /** Memory used as a percentage of total (0-100) */
+  memoryUsed: number;
+}
+
+/**
+ * Sent by an idle instance to a peer that has backlog features.
+ * Requests up to `maxFeatures` features to steal.
+ */
+export interface WorkRequest {
+  /** Instance requesting work */
+  requestingInstanceId: string;
+  /** Instance being requested (must match the peer's instanceId) */
+  targetInstanceId: string;
+  /** Maximum features to steal in this cycle (capped at 2) */
+  maxFeatures: number;
+}
+
+/**
+ * Response from the peer after a work_request.
+ * Contains feature IDs and full feature descriptors that were transferred.
+ */
+export interface WorkOffer {
+  /** Instance that is offering work */
+  offeringInstanceId: string;
+  /** Instance that requested the work */
+  requestingInstanceId: string;
+  /** IDs of the features being offered */
+  featureIds: string[];
+  /** Full feature JSON for each offered feature */
+  features: Record<string, unknown>[];
+}
+
 /**
  * Options for AvaChannelService.getMessages()
  */

@@ -9,7 +9,13 @@
  */
 
 import type { CRDTStore, Unsubscribe, AvaChannelDocument } from '@protolabsai/crdt';
-import type { AvaChatMessage, AvaChannelReactorSettings } from '@protolabsai/types';
+import type {
+  AvaChatMessage,
+  AvaChannelReactorSettings,
+  CapacityHeartbeat,
+  WorkRequest,
+  WorkOffer,
+} from '@protolabsai/types';
 import { DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import {
@@ -27,6 +33,10 @@ const logger = createLogger('AvaChannelReactor');
 const RESUBSCRIBE_BASE_MS = 5_000;
 /** Maximum delay for exponential backoff */
 const RESUBSCRIBE_MAX_MS = 60_000;
+/** Capacity heartbeat broadcast interval */
+const HEARTBEAT_INTERVAL_MS = 60_000;
+/** Maximum features to steal per work-steal cycle */
+const MAX_STEAL_PER_CYCLE = 2;
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -41,8 +51,13 @@ export interface ReactorDependencies {
     getGlobalSettings(): Promise<{ avaChannelReactor?: AvaChannelReactorSettings }>;
   };
   autoModeService?: {
-    getCapacityMetrics(): { runningAgents: number; maxAgents: number; backlogCount: number };
+    getCapacityMetrics(): { runningAgents: number; maxAgents: number; backlogCount: number; cpuPercent: number; ramUsagePercent: number };
   };
+  featureLoader?: {
+    getAll(projectPath: string): Promise<Array<{ id: string; status: string; [key: string]: unknown }>>;
+    create(projectPath: string, data: Record<string, unknown>): Promise<{ id: string; [key: string]: unknown }>;
+  };
+  projectPath?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +86,9 @@ export class AvaChannelReactorService {
   private unsubscribe: Unsubscribe | null = null;
   private midnightTimer: ReturnType<typeof setTimeout> | null = null;
   private currentDateKey: string | null = null;
+
+  // Heartbeat timer
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   // Settings (populated on start)
   private settings: AvaChannelReactorSettings = { ...DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS };
@@ -128,6 +146,7 @@ export class AvaChannelReactorService {
     this.scheduleMidnightRotation();
 
     this.active = true;
+    this.startHeartbeat();
     logger.info(`Reactor started — instance=${this.deps.instanceName} shard=${dateKey}`);
   }
 
@@ -142,6 +161,11 @@ export class AvaChannelReactorService {
     if (this.resubscribeTimer) {
       clearTimeout(this.resubscribeTimer);
       this.resubscribeTimer = null;
+    }
+
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
     }
 
     for (const timer of this.cooldownTimers.values()) {
@@ -192,7 +216,7 @@ export class AvaChannelReactorService {
         dateKey,
         { messages: [] }
       );
-      const existing = handle.docSync();
+      const existing = handle.doc();
       if (existing?.messages) {
         for (const msg of existing.messages) {
           this.knownMessageIds.add(msg.id);
@@ -293,6 +317,13 @@ export class AvaChannelReactorService {
     for (const message of messages) {
       if (this.knownMessageIds.has(message.id)) continue;
       this.knownMessageIds.add(message.id);
+
+      // Work-steal protocol runs independently of the classifier chain (async, fire-and-forget).
+      this.handleWorkStealProtocol(message).catch((err) => {
+        this.errorCount++;
+        logger.error(`Work-steal protocol error for message ${message.id}:`, err);
+      });
+
       this.processMessage(message);
     }
   }
@@ -451,6 +482,244 @@ export class AvaChannelReactorService {
       return { runningAgents: metrics.runningAgents, maxAgents: metrics.maxAgents };
     }
     return { runningAgents: 0, maxAgents: 5 };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Capacity heartbeat broadcasting
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Start the 60-second capacity heartbeat broadcast interval.
+   * Each broadcast posts a capacity_heartbeat system message to the Ava Channel.
+   */
+  private startHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+    }
+
+    this.heartbeatTimer = setInterval(() => {
+      this.broadcastCapacityHeartbeat().catch((err) => {
+        this.errorCount++;
+        logger.error('Failed to broadcast capacity heartbeat:', err);
+      });
+    }, HEARTBEAT_INTERVAL_MS);
+
+    // Prevent heartbeat timer from keeping the process alive
+    if (this.heartbeatTimer.unref) {
+      this.heartbeatTimer.unref();
+    }
+
+    logger.debug(`Heartbeat timer started (interval=${HEARTBEAT_INTERVAL_MS}ms)`);
+  }
+
+  private async broadcastCapacityHeartbeat(): Promise<void> {
+    const metrics = this.deps.autoModeService?.getCapacityMetrics();
+
+    const heartbeat: CapacityHeartbeat = {
+      instanceId: this.deps.instanceId,
+      role: this.deps.instanceName,
+      backlogCount: metrics?.backlogCount ?? 0,
+      activeCount: metrics?.runningAgents ?? 0,
+      maxConcurrency: metrics?.maxAgents ?? 5,
+      cpuLoad: metrics?.cpuPercent ?? 0,
+      memoryUsed: metrics?.ramUsagePercent ?? 0,
+    };
+
+    await this.deps.avaChannelService.postMessage(
+      `[capacity_heartbeat] ${JSON.stringify(heartbeat)}`,
+      'system',
+      {
+        intent: 'inform',
+        expectsResponse: false,
+      }
+    );
+
+    logger.debug(
+      `Broadcast capacity_heartbeat: activeCount=${heartbeat.activeCount} backlogCount=${heartbeat.backlogCount}`
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Work-steal message handlers (work_request / work_offer)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Inspect a newly-seen message and trigger work-steal protocol if applicable.
+   * Called alongside the classifier chain in processMessage for system-level messages.
+   *
+   * - capacity_heartbeat from peer with backlog + local activeCount==0 → send work_request
+   * - work_request targeting this instance → send work_offer
+   * - work_offer targeting this instance → create stolen features locally
+   */
+  private async handleWorkStealProtocol(message: AvaChatMessage): Promise<void> {
+    if (message.source !== 'system') return;
+
+    // capacity_heartbeat handler
+    if (message.content.startsWith('[capacity_heartbeat]')) {
+      await this.onCapacityHeartbeat(message);
+      return;
+    }
+
+    // work_request handler
+    if (message.content.startsWith('[work_request]')) {
+      await this.onWorkRequest(message);
+      return;
+    }
+
+    // work_offer handler
+    if (message.content.startsWith('[work_offer]')) {
+      await this.onWorkOffer(message);
+      return;
+    }
+  }
+
+  private async onCapacityHeartbeat(message: AvaChatMessage): Promise<void> {
+    // Ignore self
+    if (message.instanceId === this.deps.instanceId) return;
+
+    let heartbeat: CapacityHeartbeat;
+    try {
+      const json = message.content.replace('[capacity_heartbeat]', '').trim();
+      heartbeat = JSON.parse(json) as CapacityHeartbeat;
+    } catch {
+      logger.warn('Received malformed capacity_heartbeat, ignoring');
+      return;
+    }
+
+    // Only steal if: peer has backlog AND we are idle (activeCount == 0)
+    const localMetrics = this.deps.autoModeService?.getCapacityMetrics();
+    const localActive = localMetrics?.runningAgents ?? 0;
+
+    if (heartbeat.backlogCount > 0 && localActive === 0) {
+      logger.info(
+        `Peer ${heartbeat.instanceId} has backlog=${heartbeat.backlogCount} and we are idle — sending work_request`
+      );
+      await this.sendWorkRequest(heartbeat.instanceId);
+    }
+  }
+
+  private async sendWorkRequest(targetInstanceId: string): Promise<void> {
+    const request: WorkRequest = {
+      requestingInstanceId: this.deps.instanceId,
+      targetInstanceId,
+      maxFeatures: MAX_STEAL_PER_CYCLE,
+    };
+
+    await this.deps.avaChannelService.postMessage(
+      `[work_request] ${JSON.stringify(request)}`,
+      'system',
+      {
+        intent: 'request',
+        expectsResponse: true,
+      }
+    );
+
+    logger.debug(`Sent work_request to ${targetInstanceId} (max=${MAX_STEAL_PER_CYCLE} features)`);
+  }
+
+  private async onWorkRequest(message: AvaChatMessage): Promise<void> {
+    // Ignore self
+    if (message.instanceId === this.deps.instanceId) return;
+
+    let request: WorkRequest;
+    try {
+      const json = message.content.replace('[work_request]', '').trim();
+      request = JSON.parse(json) as WorkRequest;
+    } catch {
+      logger.warn('Received malformed work_request, ignoring');
+      return;
+    }
+
+    // Only respond if we are the intended target
+    if (request.targetInstanceId !== this.deps.instanceId) return;
+
+    if (!this.deps.featureLoader || !this.deps.projectPath) {
+      logger.warn('work_request received but featureLoader/projectPath not configured — skipping');
+      return;
+    }
+
+    // Find unblocked backlog features
+    const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
+    const backlogFeatures = allFeatures
+      .filter(
+        (f) =>
+          f.status === 'backlog' &&
+          !(f as Record<string, unknown>).claimedBy
+      )
+      .slice(0, Math.min(request.maxFeatures, MAX_STEAL_PER_CYCLE));
+
+    if (backlogFeatures.length === 0) {
+      logger.debug(
+        `work_request from ${request.requestingInstanceId}: no available backlog features to offer`
+      );
+      return;
+    }
+
+    const offer: WorkOffer = {
+      offeringInstanceId: this.deps.instanceId,
+      requestingInstanceId: request.requestingInstanceId,
+      featureIds: backlogFeatures.map((f) => f.id as string),
+      features: backlogFeatures as Record<string, unknown>[],
+    };
+
+    await this.deps.avaChannelService.postMessage(
+      `[work_offer] ${JSON.stringify(offer)}`,
+      'system',
+      {
+        intent: 'response',
+        expectsResponse: false,
+      }
+    );
+
+    logger.info(
+      `Sent work_offer to ${request.requestingInstanceId} with ${offer.featureIds.length} features: ${offer.featureIds.join(', ')}`
+    );
+  }
+
+  private async onWorkOffer(message: AvaChatMessage): Promise<void> {
+    // Ignore self
+    if (message.instanceId === this.deps.instanceId) return;
+
+    let offer: WorkOffer;
+    try {
+      const json = message.content.replace('[work_offer]', '').trim();
+      offer = JSON.parse(json) as WorkOffer;
+    } catch {
+      logger.warn('Received malformed work_offer, ignoring');
+      return;
+    }
+
+    // Only process if we are the intended recipient
+    if (offer.requestingInstanceId !== this.deps.instanceId) return;
+
+    if (!this.deps.featureLoader || !this.deps.projectPath) {
+      logger.warn('work_offer received but featureLoader/projectPath not configured — skipping');
+      return;
+    }
+
+    // Cap at MAX_STEAL_PER_CYCLE to prevent thundering herd
+    const featuresToCreate = offer.features.slice(0, MAX_STEAL_PER_CYCLE);
+
+    logger.info(
+      `Received work_offer from ${offer.offeringInstanceId} — creating ${featuresToCreate.length} features locally`
+    );
+
+    for (const featureData of featuresToCreate) {
+      try {
+        // Strip the original ID so create() generates a new one for this instance
+        const { id: _originalId, ...rest } = featureData as { id: string; [key: string]: unknown };
+        const created = await this.deps.featureLoader.create(this.deps.projectPath, {
+          ...rest,
+          status: 'backlog',
+          stolenFromInstanceId: offer.offeringInstanceId,
+          stolenFromFeatureId: _originalId,
+        });
+        logger.info(`Stolen feature created locally: ${created.id} (original: ${_originalId})`);
+      } catch (err) {
+        this.errorCount++;
+        logger.error(`Failed to create stolen feature from offer:`, err);
+      }
+    }
   }
 }
 

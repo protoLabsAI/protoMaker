@@ -13,6 +13,9 @@ export type {
   MessageIntent,
   MessageClassifierRule,
   ClassificationContext,
+  CapacityHeartbeat,
+  WorkRequest,
+  WorkOffer,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
