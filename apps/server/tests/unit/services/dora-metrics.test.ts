@@ -125,10 +125,7 @@ import {
 } from '@/services/ava-channel-reactor-service.js';
 import type { AvaChatMessage } from '@protolabsai/types';
 
-function makeMessage(
-  content: string,
-  instanceId = 'remote-instance'
-): AvaChatMessage {
+function makeMessage(content: string, instanceId = 'remote-instance'): AvaChatMessage {
   return {
     id: `msg-${Date.now()}`,
     content,
@@ -187,7 +184,9 @@ describe('AvaChannelReactorService — pattern_resolved handler', () => {
     const message = makeMessage(`[pattern_resolved] ${payload}`, 'remote-instance');
 
     // Access private method via any cast for testing
-    await (reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }).handleWorkStealProtocol(message);
+    await (
+      reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }
+    ).handleWorkStealProtocol(message);
 
     expect(resolvePattern).toHaveBeenCalledWith('rate_limit');
   });
@@ -211,7 +210,9 @@ describe('AvaChannelReactorService — pattern_resolved handler', () => {
     // Send as self
     const message = makeMessage(`[pattern_resolved] ${payload}`, 'local-instance');
 
-    await (reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }).handleWorkStealProtocol(message);
+    await (
+      reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }
+    ).handleWorkStealProtocol(message);
 
     expect(resolvePattern).not.toHaveBeenCalled();
   });
@@ -230,7 +231,9 @@ describe('AvaChannelReactorService — pattern_resolved handler', () => {
 
     // Should not throw
     await expect(
-      (reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }).handleWorkStealProtocol(message)
+      (
+        reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }
+      ).handleWorkStealProtocol(message)
     ).resolves.not.toThrow();
   });
 });
@@ -265,13 +268,11 @@ describe('AvaChannelReactorService — dora_report handler', () => {
     };
     const message = makeMessage(`[dora_report] ${JSON.stringify(report)}`, 'remote-instance');
 
-    await (reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }).handleWorkStealProtocol(message);
+    await (
+      reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }
+    ).handleWorkStealProtocol(message);
 
-    expect(changeMock).toHaveBeenCalledWith(
-      'metrics',
-      'dora',
-      expect.any(Function)
-    );
+    expect(changeMock).toHaveBeenCalledWith('metrics', 'dora', expect.any(Function));
 
     // Verify the change function writes the correct data
     const [, , changeFn] = changeMock.mock.calls[0];
@@ -299,7 +300,9 @@ describe('AvaChannelReactorService — dora_report handler', () => {
     const message = makeMessage('[dora_report] {not valid json}', 'remote-instance');
 
     await expect(
-      (reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }).handleWorkStealProtocol(message)
+      (
+        reactor as unknown as { handleWorkStealProtocol(m: AvaChatMessage): Promise<void> }
+      ).handleWorkStealProtocol(message)
     ).resolves.not.toThrow();
 
     expect(changeMock).not.toHaveBeenCalled();
@@ -475,7 +478,10 @@ describe('AvaChannelReactorService — DORA aggregate (CRDTStore)', () => {
   });
 
   it('overwrites stale instance report with newer data', () => {
-    const doc: { instanceReports: Record<string, { deploymentsLast24h: number; computedAt: string }>; updatedAt: string } = {
+    const doc: {
+      instanceReports: Record<string, { deploymentsLast24h: number; computedAt: string }>;
+      updatedAt: string;
+    } = {
       instanceReports: {
         'test-instance': { deploymentsLast24h: 1, computedAt: '2026-03-08T10:00:00Z' },
       },
