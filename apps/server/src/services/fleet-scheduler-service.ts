@@ -716,13 +716,21 @@ export class FleetSchedulerService {
    * Uses a simple topological sort (Kahn's algorithm subset — only the ready set).
    */
   private sortByDependencyOrder(
-    backlogFeatures: Array<{ id: string; dependencies?: string[]; [key: string]: unknown }>,
-    allFeatures: Array<{ id: string; status: string; [key: string]: unknown }>
-  ): Array<{ id: string; dependencies?: string[]; [key: string]: unknown }> {
+    backlogFeatures: Array<{ id?: string; dependencies?: string[]; [key: string]: unknown }>,
+    allFeatures: Array<{ id?: string; status?: string; [key: string]: unknown }>
+  ): Array<{ id?: string; dependencies?: string[]; [key: string]: unknown }> {
     const doneStatuses = new Set(['done', 'review']);
-    const doneIds = new Set(allFeatures.filter((f) => doneStatuses.has(f.status)).map((f) => f.id));
+    const doneIds = new Set(
+      allFeatures
+        .filter((f) => typeof f.status === 'string' && doneStatuses.has(f.status))
+        .map((f) => f.id)
+        .filter((id): id is string => typeof id === 'string')
+    );
     const inProgressIds = new Set(
-      allFeatures.filter((f) => f.status === 'in_progress').map((f) => f.id)
+      allFeatures
+        .filter((f) => f.status === 'in_progress')
+        .map((f) => f.id)
+        .filter((id): id is string => typeof id === 'string')
     );
 
     // Features whose dependencies are all done or in_progress (unblocked)

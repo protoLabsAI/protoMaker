@@ -29,11 +29,13 @@ import type {
   PatternResolved,
 } from '@protolabsai/types';
 
-// Fleet scheduler message types (defined locally to avoid npm hoisting issues in worktrees)
-type WorkInventory = import('./fleet-scheduler-service.js').WorkInventoryMsg;
-type ScheduleAssignment = import('./fleet-scheduler-service.js').ScheduleAssignmentMsg;
-type SchedulerHeartbeat = import('./fleet-scheduler-service.js').SchedulerHeartbeatMsg;
-type ScheduleConflict = import('./fleet-scheduler-service.js').ScheduleConflictMsg;
+// Fleet scheduler message types (mirrored locally to avoid npm hoisting issues in worktrees)
+import type {
+  WorkInventoryMsg as WorkInventory,
+  ScheduleAssignmentMsg as ScheduleAssignment,
+  SchedulerHeartbeatMsg as SchedulerHeartbeat,
+  ScheduleConflictMsg as ScheduleConflict,
+} from './fleet-scheduler-service.js';
 import { DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FrictionTrackerService } from './friction-tracker-service.js';
