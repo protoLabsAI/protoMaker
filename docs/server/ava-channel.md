@@ -64,10 +64,10 @@ Post a message to the private Ava coordination channel.
 
 **Errors:**
 
-| Status | Type | Cause |
-|--------|------|-------|
-| 400 | `validation_error` | `message` is missing or not a string |
-| 503 | `service_unavailable` | AvaChannelService not initialized (single-instance mode) |
+| Status | Type                  | Cause                                                    |
+| ------ | --------------------- | -------------------------------------------------------- |
+| 400    | `validation_error`    | `message` is missing or not a string                     |
+| 503    | `service_unavailable` | AvaChannelService not initialized (single-instance mode) |
 
 ---
 
@@ -77,11 +77,11 @@ Read messages from the channel with optional time and instance filtering. Result
 
 **Query parameters:**
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `since` | ISO 8601 string | Only return messages at or after this timestamp |
-| `until` | ISO 8601 string | Only return messages at or before this timestamp |
-| `instanceId` | string | Filter to messages from a specific instance |
+| Param        | Type            | Description                                      |
+| ------------ | --------------- | ------------------------------------------------ |
+| `since`      | ISO 8601 string | Only return messages at or after this timestamp  |
+| `until`      | ISO 8601 string | Only return messages at or before this timestamp |
+| `instanceId` | string          | Filter to messages from a specific instance      |
 
 **Response:**
 
@@ -103,9 +103,9 @@ Read messages from the channel with optional time and instance filtering. Result
 
 **Errors:**
 
-| Status | Type | Cause |
-|--------|------|-------|
-| 503 | `service_unavailable` | AvaChannelService not initialized |
+| Status | Type                  | Cause                             |
+| ------ | --------------------- | --------------------------------- |
+| 503    | `service_unavailable` | AvaChannelService not initialized |
 
 ---
 
@@ -149,12 +149,12 @@ File a System Improvements ticket after cross-instance discussion. Three gates m
 
 **Error responses:**
 
-| Status | Type | When | Corrective action |
-|--------|------|------|-------------------|
-| 400 | `validation_error` | Required field missing | Provide all required fields |
-| 422 | `discussion_threshold_not_met` | `discussantCount < 2` | Read channel first; wait for another instance to confirm |
-| 429 | `rate_limit_exceeded` | >3 tickets/instance/day | Wait until tomorrow (resets at midnight UTC) |
-| 409 | `duplicate_ticket` | Title matches existing backlog ticket | Reference existing ticket instead |
+| Status | Type                           | When                                  | Corrective action                                        |
+| ------ | ------------------------------ | ------------------------------------- | -------------------------------------------------------- |
+| 400    | `validation_error`             | Required field missing                | Provide all required fields                              |
+| 422    | `discussion_threshold_not_met` | `discussantCount < 2`                 | Read channel first; wait for another instance to confirm |
+| 429    | `rate_limit_exceeded`          | >3 tickets/instance/day               | Wait until tomorrow (resets at midnight UTC)             |
+| 409    | `duplicate_ticket`             | Title matches existing backlog ticket | Reference existing ticket instead                        |
 
 **422 error payload example:**
 
@@ -201,16 +201,17 @@ Each shard holds all messages for one UTC day. Shards are append-only — no mes
 
 ### CRDT vs. Memory Mode
 
-| Mode | When | Behavior |
-|------|------|----------|
-| CRDT | `CRDTStore` provided | Messages auto-replicate across all mesh peers via WebSocket sync |
-| Memory | No store | In-process `Map<date, messages[]>`; messages lost on restart |
+| Mode   | When                 | Behavior                                                         |
+| ------ | -------------------- | ---------------------------------------------------------------- |
+| CRDT   | `CRDTStore` provided | Messages auto-replicate across all mesh peers via WebSocket sync |
+| Memory | No store             | In-process `Map<date, messages[]>`; messages lost on restart     |
 
 In memory mode, `POST /api/ava-channel/send` and `GET /api/ava-channel/messages` still work — they are scoped to the local instance only.
 
 ### Archival
 
 The archival cycle runs hourly. Shards older than 30 days are:
+
 1. Written to `{archiveDir}/ava-channel-YYYY-MM-DD.json`
 2. Removed from the CRDT store / memory
 
@@ -220,25 +221,25 @@ Archived shards are read transparently by `getMessages()` when a query's date ra
 
 `ava-channel.module.ts` wires EventBus events to automatic channel posts. Posts are suppressed when no peers are connected (single-instance mode).
 
-| EventBus event | Channel message |
-|----------------|-----------------|
-| `feature:status-changed` | Status change summary (batched, 5s debounce) |
-| `feature:error` | Agent failure notification with feature ID and error |
-| `auto-mode:started` | "Auto-mode started" with trigger info |
-| `auto-mode:stopped` | "Auto-mode stopped" with reason |
-| `milestone:completed` | Milestone completion announcement |
-| `project:completed` | Project completion announcement |
-| `sync:peer-unreachable` | Peer connectivity loss notice |
-| `sync:partition-recovered` | Partition recovery notice |
+| EventBus event             | Channel message                                      |
+| -------------------------- | ---------------------------------------------------- |
+| `feature:status-changed`   | Status change summary (batched, 5s debounce)         |
+| `feature:error`            | Agent failure notification with feature ID and error |
+| `auto-mode:started`        | "Auto-mode started" with trigger info                |
+| `auto-mode:stopped`        | "Auto-mode stopped" with reason                      |
+| `milestone:completed`      | Milestone completion announcement                    |
+| `project:completed`        | Project completion announcement                      |
+| `sync:peer-unreachable`    | Peer connectivity loss notice                        |
+| `sync:partition-recovered` | Partition recovery notice                            |
 
 ## Key Files
 
-| File | Role |
-|------|------|
-| `apps/server/src/routes/ava-channel/index.ts` | HTTP routes — send, messages, file-improvement |
-| `apps/server/src/services/ava-channel-service.ts` | Storage engine — CRDT shards, archival, message retrieval |
-| `apps/server/src/services/ava-channel.module.ts` | EventBus wiring — auto-posts on system events |
-| `libs/types/src/ava-channel.ts` | `AvaChatMessage`, `AvaChannelContext`, `GetMessagesOptions`, `PostMessageOptions` |
+| File                                              | Role                                                                              |
+| ------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/server/src/routes/ava-channel/index.ts`     | HTTP routes — send, messages, file-improvement                                    |
+| `apps/server/src/services/ava-channel-service.ts` | Storage engine — CRDT shards, archival, message retrieval                         |
+| `apps/server/src/services/ava-channel.module.ts`  | EventBus wiring — auto-posts on system events                                     |
+| `libs/types/src/ava-channel.ts`                   | `AvaChatMessage`, `AvaChannelContext`, `GetMessagesOptions`, `PostMessageOptions` |
 
 ## Coordination Pattern
 

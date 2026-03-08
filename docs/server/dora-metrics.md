@@ -6,13 +6,13 @@ Team health monitoring via feature-based proxy metrics for lead time, deployment
 
 The DORA metrics endpoint computes the four key DORA metrics (plus rework rate) from feature status history — no CI/CD pipeline integration required. Feature state transitions serve as proxies:
 
-| DORA Metric | Proxy source |
-|-------------|-------------|
-| Lead time | `completedAt - createdAt` for `done` features |
-| Deployment frequency | `done` features per day over the time window |
-| Change failure rate | Features that transitioned `done → blocked` (rollbacks) |
-| Recovery time | Time spent in `blocked` status per feature |
-| Rework rate | Features with `failureCount > 0` |
+| DORA Metric          | Proxy source                                            |
+| -------------------- | ------------------------------------------------------- |
+| Lead time            | `completedAt - createdAt` for `done` features           |
+| Deployment frequency | `done` features per day over the time window            |
+| Change failure rate  | Features that transitioned `done → blocked` (rollbacks) |
+| Recovery time        | Time spent in `blocked` status per feature              |
+| Rework rate          | Features with `failureCount > 0`                        |
 
 ## API Reference
 
@@ -22,10 +22,10 @@ Compute DORA metrics for a project over a configurable time window.
 
 **Query parameters:**
 
-| Param | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `projectPath` | string | ✓ | — | Absolute path to the project root |
-| `timeWindowDays` | integer | ✗ | `30` | Number of days to look back (must be ≥ 1) |
+| Param            | Type    | Required | Default | Description                               |
+| ---------------- | ------- | -------- | ------- | ----------------------------------------- |
+| `projectPath`    | string  | ✓        | —       | Absolute path to the project root         |
+| `timeWindowDays` | integer | ✗        | `30`    | Number of days to look back (must be ≥ 1) |
 
 **Example request:**
 
@@ -81,10 +81,10 @@ GET /api/dora/metrics?projectPath=/home/user/myproject&timeWindowDays=14
 
 **Errors:**
 
-| Status | Cause |
-|--------|-------|
-| 400 | `projectPath` missing, or `timeWindowDays` is not a positive integer |
-| 500 | Feature loader error |
+| Status | Cause                                                                |
+| ------ | -------------------------------------------------------------------- |
+| 400    | `projectPath` missing, or `timeWindowDays` is not a positive integer |
+| 500    | Feature loader error                                                 |
 
 ## Metrics Reference
 
@@ -139,7 +139,7 @@ Fraction of features with `failureCount > 0` (agent re-runs or manual correction
 interface DoraRegulationAlert {
   metric: 'leadTime' | 'deploymentFrequency' | 'changeFailureRate' | 'recoveryTime' | 'reworkRate';
   severity: 'warning' | 'critical';
-  message: string;        // human-readable description with current and threshold values
+  message: string; // human-readable description with current and threshold values
   currentValue: number;
   thresholdValue: number; // the threshold that was breached
 }
@@ -149,23 +149,23 @@ interface DoraRegulationAlert {
 
 ## Default Thresholds
 
-| Metric | Warning | Critical | Direction |
-|--------|---------|----------|-----------|
-| `changeFailureRate` | 0.2 | 0.4 | higher is bad |
-| `reworkRate` | 0.3 | 0.5 | higher is bad |
-| `recoveryTime` | 1h | 4h | higher is bad |
-| `leadTime` | 48h | 96h | higher is bad |
-| `deploymentFrequency` | ≤0.5/day | ≤0.1/day | lower is bad |
+| Metric                | Warning  | Critical | Direction     |
+| --------------------- | -------- | -------- | ------------- |
+| `changeFailureRate`   | 0.2      | 0.4      | higher is bad |
+| `reworkRate`          | 0.3      | 0.5      | higher is bad |
+| `recoveryTime`        | 1h       | 4h       | higher is bad |
+| `leadTime`            | 48h      | 96h      | higher is bad |
+| `deploymentFrequency` | ≤0.5/day | ≤0.1/day | lower is bad  |
 
 Thresholds are configurable at service construction time via `DoraMetricsService(featureLoader, thresholds?)`.
 
 ## Key Files
 
-| File | Role |
-|------|------|
-| `apps/server/src/routes/dora/index.ts` | HTTP route — GET /api/dora/metrics |
+| File                                               | Role                                        |
+| -------------------------------------------------- | ------------------------------------------- |
+| `apps/server/src/routes/dora/index.ts`             | HTTP route — GET /api/dora/metrics          |
 | `apps/server/src/services/dora-metrics-service.ts` | Metric computation and threshold evaluation |
-| `libs/types/src/dora-metrics.ts` | `DoraMetrics`, `DoraRegulationAlert` types |
+| `libs/types/src/dora-metrics.ts`                   | `DoraMetrics`, `DoraRegulationAlert` types  |
 
 ## Limitations
 
