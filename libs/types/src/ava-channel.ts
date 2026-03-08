@@ -183,6 +183,69 @@ export interface WorkOffer {
   features: Record<string, unknown>[];
 }
 
+// ---------------------------------------------------------------------------
+// Escalation protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Sent when a feature hits blocked status with failureCount >= 2.
+ * Broadcasts to peers requesting one of them to take ownership.
+ */
+export interface EscalationRequest {
+  /** Feature ID that is blocked and needs a new owner */
+  featureId: string;
+  /** Number of consecutive failures on the originating instance */
+  failureCount: number;
+  /** Last error message from the failing feature */
+  lastError: string;
+  /** Snapshot of the worktree state at time of escalation */
+  worktreeState: string;
+  /** Instance that is escalating the feature */
+  originatingInstanceId: string;
+}
+
+/**
+ * Sent by a peer instance with idle capacity in response to an escalation_request.
+ */
+export interface EscalationOffer {
+  /** Instance offering to take ownership */
+  offeringInstanceId: string;
+  /** Instance that originally escalated */
+  originatingInstanceId: string;
+  /** Feature ID being offered for */
+  featureId: string;
+}
+
+/**
+ * Sent by the originating instance to accept a specific escalation_offer.
+ * Delegates feature ownership to the accepting instance.
+ */
+export interface EscalationAccept {
+  /** Instance accepting the escalation offer */
+  acceptingInstanceId: string;
+  /** Instance that originally escalated */
+  originatingInstanceId: string;
+  /** Feature ID being delegated */
+  featureId: string;
+  /** Original feature data for cloning on the accepting instance */
+  featureData: Record<string, unknown>;
+}
+
+/**
+ * Broadcast when an instance's memory or CPU exceeds safe thresholds.
+ * Peers should pause work-stealing from this instance for 5 minutes.
+ */
+export interface HealthAlert {
+  /** Instance sending the health alert */
+  instanceId: string;
+  /** Memory used as a percentage of total (0-100) */
+  memoryUsed: number;
+  /** CPU load percentage (0-100) */
+  cpuLoad: number;
+  /** ISO 8601 timestamp of the alert */
+  alertTimestamp: string;
+}
+
 /**
  * Options for AvaChannelService.getMessages()
  */

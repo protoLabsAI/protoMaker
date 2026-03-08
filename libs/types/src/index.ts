@@ -16,6 +16,10 @@ export type {
   CapacityHeartbeat,
   WorkRequest,
   WorkOffer,
+  EscalationRequest,
+  EscalationOffer,
+  EscalationAccept,
+  HealthAlert,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
