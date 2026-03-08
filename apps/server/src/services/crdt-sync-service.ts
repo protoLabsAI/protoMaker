@@ -22,6 +22,7 @@ import type {
 } from '@protolabsai/types';
 import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import type { AvaChannelService } from './ava-channel-service.js';
 
 const logger = createLogger('CrdtSyncService');
 
@@ -83,6 +84,7 @@ export class CrdtSyncService {
     | null = null;
   private _capacityProvider: (() => InstanceCapacity) | null = null;
   private _compactionDiagnosticsProvider: (() => CompactionDiagnosticsSnapshot) | null = null;
+  private _avaChannelService: AvaChannelService | null = null;
   /** ISO timestamp when this instance last lost sync connectivity (network partition) */
   private partitionSince: string | null = null;
   /** Event messages queued for replay while disconnected from the sync mesh */
@@ -128,6 +130,16 @@ export class CrdtSyncService {
    */
   setCompactionDiagnosticsProvider(provider: () => CompactionDiagnosticsSnapshot): void {
     this._compactionDiagnosticsProvider = provider;
+  }
+
+  /**
+   * Register an AvaChannelService to auto-post bug reports as system messages.
+   * When a 'bug:reported' event is emitted on the EventBus, a system message
+   * is appended to today's Ava Channel shard with the bug report details.
+   * Must be called after attachEventBus() to ensure the bus is registered.
+   */
+  setAvaChannelService(service: AvaChannelService): void {
+    this._avaChannelService = service;
   }
 
   /**
@@ -198,6 +210,22 @@ export class CrdtSyncService {
       } else {
         // Disconnected — queue for replay when partition heals
         this.outboundQueue.push(raw);
+      }
+    });
+
+    // Auto-post bug reports from Discord #bug-reports as system messages
+    bus.on('bug:reported', (payload) => {
+      if (!this._avaChannelService) return;
+      try {
+        this._avaChannelService.postMessage(
+          `Bug report from ${payload.reportedBy}: ${payload.content}`,
+          'system',
+          this.instanceId,
+          this.instanceId,
+          payload.featureId ? { featureId: payload.featureId } : undefined
+        );
+      } catch (err) {
+        logger.error('[CRDT] Failed to post bug report to Ava Channel:', err);
       }
     });
   }

@@ -7,6 +7,7 @@
  */
 
 import type { CRDTDocumentRoot, SchemaNormalizer } from './types.js';
+import type { AvaChatMessage } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Feature domain
@@ -226,6 +227,40 @@ export const normalizeCapacityDocument: SchemaNormalizer<CapacityDocument> = (ra
 };
 
 // ---------------------------------------------------------------------------
+// Ava Channel domain — daily-sharded append-only message log
+// ---------------------------------------------------------------------------
+
+/**
+ * AvaChannelDocument stores an append-only list of AvaChatMessages for a
+ * single calendar day. Document key format: ava-channel/YYYY-MM-DD.
+ * Messages are never edited or deleted (grow-only list CRDT).
+ */
+export interface AvaChannelDocument extends CRDTDocumentRoot {
+  schemaVersion: 1;
+  /** Append-only list of messages for this day */
+  messages: AvaChatMessage[];
+  /** Date shard key (YYYY-MM-DD) */
+  date: string;
+}
+
+export const normalizeAvaChannelDocument: SchemaNormalizer<AvaChannelDocument> = (raw) => {
+  const doc = raw as Partial<AvaChannelDocument>;
+
+  const _meta = doc._meta ?? {
+    instanceId: 'unknown',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    schemaVersion: 1,
+    _meta,
+    messages: Array.isArray(doc.messages) ? doc.messages : [],
+    date: doc.date ?? '',
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Normalizer registry
 // ---------------------------------------------------------------------------
 
@@ -234,7 +269,8 @@ type AnyDocument =
   | ProjectDocument
   | ConfigDocument
   | SharedSettingsDocument
-  | CapacityDocument;
+  | CapacityDocument
+  | AvaChannelDocument;
 
 const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   features: normalizeFeatureDocument as SchemaNormalizer<AnyDocument>,
@@ -242,6 +278,7 @@ const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   config: normalizeConfigDocument as SchemaNormalizer<AnyDocument>,
   settings: normalizeSharedSettingsDocument as SchemaNormalizer<AnyDocument>,
   capacity: normalizeCapacityDocument as SchemaNormalizer<AnyDocument>,
+  'ava-channel': normalizeAvaChannelDocument as SchemaNormalizer<AnyDocument>,
 };
 
 /**

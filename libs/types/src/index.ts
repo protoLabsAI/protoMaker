@@ -3,6 +3,17 @@
  * Shared type definitions for AutoMaker
  */
 
+// Ava Channel types — private multi-instance communication channel
+export type {
+  AvaChannelContext,
+  AvaChatMessage,
+  AvaChatRole,
+  AvaChannelDocument,
+  PostMessageOptions,
+  GetMessagesOptions,
+  AvaChannelQueryOptions,
+} from './ava-channel.js';
+
 // Event Ledger types — append-only JSONL event persistence layer
 export type { EventLedgerCorrelationIds, EventLedgerEntry } from './event-ledger.js';
 

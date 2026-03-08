@@ -33,6 +33,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
+    "@protolabsai/types": "^0.41.0",
     "@automerge/automerge": "^3.2.4",
     "@automerge/automerge-repo": "^2.5.3",
     "@automerge/automerge-repo-network-websocket": "^2.5.3",

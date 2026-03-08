@@ -16,6 +16,7 @@ export {
   normalizeProjectDocument,
   normalizeConfigDocument,
   normalizeSharedSettingsDocument,
+  normalizeAvaChannelDocument,
 } from './documents.js';
 
 export type {
@@ -23,6 +24,7 @@ export type {
   ProjectDocument,
   ConfigDocument,
   SharedSettingsDocument,
+  AvaChannelDocument,
 } from './documents.js';
 
 export type {
