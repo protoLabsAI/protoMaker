@@ -51,11 +51,22 @@ export interface ReactorDependencies {
     getGlobalSettings(): Promise<{ avaChannelReactor?: AvaChannelReactorSettings }>;
   };
   autoModeService?: {
-    getCapacityMetrics(): { runningAgents: number; maxAgents: number; backlogCount: number; cpuPercent: number; ramUsagePercent: number };
+    getCapacityMetrics(): {
+      runningAgents: number;
+      maxAgents: number;
+      backlogCount: number;
+      cpuPercent: number;
+      ramUsagePercent: number;
+    };
   };
   featureLoader?: {
-    getAll(projectPath: string): Promise<Array<{ id: string; status: string; [key: string]: unknown }>>;
-    create(projectPath: string, data: Record<string, unknown>): Promise<{ id: string; [key: string]: unknown }>;
+    getAll(
+      projectPath: string
+    ): Promise<Array<{ id: string; status: string; [key: string]: unknown }>>;
+    create(
+      projectPath: string,
+      data: Record<string, unknown>
+    ): Promise<{ id: string; [key: string]: unknown }>;
   };
   projectPath?: string;
 }
@@ -641,11 +652,7 @@ export class AvaChannelReactorService {
     // Find unblocked backlog features
     const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
     const backlogFeatures = allFeatures
-      .filter(
-        (f) =>
-          f.status === 'backlog' &&
-          !(f as Record<string, unknown>).claimedBy
-      )
+      .filter((f) => f.status === 'backlog' && !(f as Record<string, unknown>).claimedBy)
       .slice(0, Math.min(request.maxFeatures, MAX_STEAL_PER_CYCLE));
 
     if (backlogFeatures.length === 0) {
