@@ -36,6 +36,7 @@ const EVENT_TYPE_COLORS: Record<CalendarEventType, string> = {
   custom: 'bg-chart-3',
   google: 'bg-chart-4',
   job: 'bg-amber-500',
+  ceremony: 'bg-violet-500',
 };
 
 /** Status badge colors for job events */

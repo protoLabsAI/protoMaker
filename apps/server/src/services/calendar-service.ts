@@ -4,6 +4,10 @@
  * Stores custom calendar events in .automaker/calendar.json and aggregates:
  * - Custom events from calendar.json
  * - Features with dueDate from FeatureLoader
+ *
+ * When a CRDTStore is registered via setCrdtStore(), all create/update/delete
+ * operations are routed through the CRDT layer so events sync across all
+ * hivemind instances. Falls back to filesystem when CRDT is not active.
  */
 
 import path from 'path';
@@ -17,11 +21,15 @@ import type {
   CalendarEventType,
   CalendarQueryOptions,
 } from '@protolabsai/types';
+import type { CRDTStore, CalendarDocument } from '@protolabsai/crdt';
 
 const logger = createLogger('CalendarService');
 
 // Re-export shared types for consumers that import from this module
 export type { CalendarEvent, CalendarEventType, CalendarQueryOptions };
+
+/** Document id used for the shared global calendar in the CRDT store */
+const CALENDAR_DOC_ID = 'shared';
 
 /**
  * Singleton service for managing calendar events
@@ -29,6 +37,7 @@ export type { CalendarEvent, CalendarEventType, CalendarQueryOptions };
 export class CalendarService {
   private static instance: CalendarService;
   private featureLoader: FeatureLoader | null = null;
+  private crdtStore: CRDTStore | null = null;
 
   private constructor() {}
 
@@ -44,6 +53,68 @@ export class CalendarService {
    */
   setFeatureLoader(featureLoader: FeatureLoader): void {
     this.featureLoader = featureLoader;
+  }
+
+  /**
+   * Register a CRDTStore instance for syncing calendar events across instances.
+   * When set, all create/update/delete operations go through the CRDT layer.
+   * Falls back to filesystem when not set.
+   */
+  setCrdtStore(store: CRDTStore): void {
+    this.crdtStore = store;
+    logger.info(
+      '[CalendarService] CRDT store registered — calendar events will sync across instances'
+    );
+  }
+
+  /**
+   * Read all custom events — from CRDT if available, otherwise from filesystem.
+   */
+  private async readCustomEvents(projectPath: string): Promise<CalendarEvent[]> {
+    if (this.crdtStore) {
+      try {
+        const handle = await this.crdtStore.getOrCreate<CalendarDocument>(
+          'calendar',
+          CALENDAR_DOC_ID,
+          { events: {}, updatedAt: new Date().toISOString() }
+        );
+        const doc = handle.docSync();
+        if (doc?.events) {
+          return Object.values(doc.events);
+        }
+        return [];
+      } catch (err) {
+        logger.warn('[CalendarService] CRDT read failed, falling back to filesystem:', err);
+      }
+    }
+    return this.readCalendarFile(projectPath);
+  }
+
+  /**
+   * Write a single event — to CRDT if available, otherwise rebuild filesystem.
+   */
+  private async upsertEventToCrdt(event: CalendarEvent): Promise<void> {
+    if (!this.crdtStore) return;
+    await this.crdtStore.change<CalendarDocument>('calendar', CALENDAR_DOC_ID, (doc) => {
+      if (!doc.events) {
+        (doc as CalendarDocument).events = {};
+      }
+      doc.events[event.id] = event;
+      doc.updatedAt = new Date().toISOString();
+    });
+  }
+
+  /**
+   * Delete a single event from CRDT by id.
+   */
+  private async deleteEventFromCrdt(id: string): Promise<void> {
+    if (!this.crdtStore) return;
+    await this.crdtStore.change<CalendarDocument>('calendar', CALENDAR_DOC_ID, (doc) => {
+      if (doc.events) {
+        delete doc.events[id];
+      }
+      doc.updatedAt = new Date().toISOString();
+    });
   }
 
   /**
@@ -138,8 +209,8 @@ export class CalendarService {
     const { startDate, endDate, types } = opts;
     const allEvents: CalendarEvent[] = [];
 
-    // 1. Read custom events from calendar.json
-    const customEvents = await this.readCalendarFile(projectPath);
+    // 1. Read custom events — from CRDT when hivemind active, filesystem otherwise
+    const customEvents = await this.readCustomEvents(projectPath);
     allEvents.push(...customEvents);
 
     // 2. Aggregate from FeatureLoader (features with dueDate)
@@ -200,14 +271,15 @@ export class CalendarService {
       updatedAt: now,
     };
 
-    // Read existing events
-    const events = await this.readCalendarFile(projectPath);
-
-    // Add new event
-    events.push(event);
-
-    // Write back to file
-    await this.writeCalendarFile(projectPath, events);
+    if (this.crdtStore) {
+      // Write through CRDT layer — syncs to all peers
+      await this.upsertEventToCrdt(event);
+    } else {
+      // Filesystem fallback
+      const events = await this.readCalendarFile(projectPath);
+      events.push(event);
+      await this.writeCalendarFile(projectPath, events);
+    }
 
     logger.info(`Created calendar event ${id}`);
     return event;
@@ -221,7 +293,28 @@ export class CalendarService {
     id: string,
     data: Partial<CalendarEvent>
   ): Promise<CalendarEvent> {
-    // Read existing events
+    if (this.crdtStore) {
+      // Read from CRDT to find the existing event
+      const existing = await this.readCustomEvents(projectPath);
+      const existingEvent = existing.find((e) => e.id === id);
+      if (!existingEvent) {
+        throw new Error(`Calendar event ${id} not found`);
+      }
+
+      const updatedEvent: CalendarEvent = {
+        ...existingEvent,
+        ...data,
+        id, // Ensure ID doesn't change
+        createdAt: existingEvent.createdAt, // Preserve creation time
+        updatedAt: new Date().toISOString(),
+      };
+
+      await this.upsertEventToCrdt(updatedEvent);
+      logger.info(`Updated calendar event ${id}`);
+      return updatedEvent;
+    }
+
+    // Filesystem fallback
     const events = await this.readCalendarFile(projectPath);
 
     // Find the event to update
@@ -252,7 +345,20 @@ export class CalendarService {
    * Delete a calendar event
    */
   async deleteEvent(projectPath: string, id: string): Promise<void> {
-    // Read existing events
+    if (this.crdtStore) {
+      // Verify the event exists before deleting
+      const existing = await this.readCustomEvents(projectPath);
+      const exists = existing.some((e) => e.id === id);
+      if (!exists) {
+        throw new Error(`Calendar event ${id} not found`);
+      }
+
+      await this.deleteEventFromCrdt(id);
+      logger.info(`Deleted calendar event ${id}`);
+      return;
+    }
+
+    // Filesystem fallback
     const events = await this.readCalendarFile(projectPath);
 
     // Find the event to delete
@@ -279,9 +385,43 @@ export class CalendarService {
     sourceId: string,
     data: Omit<CalendarEvent, 'id' | 'projectPath' | 'createdAt' | 'updatedAt'>
   ): Promise<{ event: CalendarEvent; created: boolean }> {
+    const now = new Date().toISOString();
+
+    if (this.crdtStore) {
+      const existing = await this.readCustomEvents(projectPath);
+      const existingIndex = existing.findIndex((e) => e.sourceId === sourceId);
+
+      if (existingIndex !== -1) {
+        const existingEvent = existing[existingIndex];
+        const updated: CalendarEvent = {
+          ...existingEvent,
+          ...data,
+          id: existingEvent.id,
+          sourceId,
+          createdAt: existingEvent.createdAt,
+          updatedAt: now,
+        };
+        await this.upsertEventToCrdt(updated);
+        return { event: updated, created: false };
+      }
+
+      const id = `event-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      const newEvent: CalendarEvent = {
+        ...data,
+        id,
+        projectPath,
+        sourceId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await this.upsertEventToCrdt(newEvent);
+      logger.info(`Created synced calendar event ${id} (sourceId: ${sourceId})`);
+      return { event: newEvent, created: true };
+    }
+
+    // Filesystem fallback
     const events = await this.readCalendarFile(projectPath);
     const existingIndex = events.findIndex((e) => e.sourceId === sourceId);
-    const now = new Date().toISOString();
 
     if (existingIndex !== -1) {
       // Update existing event
@@ -320,7 +460,7 @@ export class CalendarService {
    * Returns job events where date + time <= now and jobStatus is 'pending'.
    */
   async getDueJobs(projectPath: string, now: Date): Promise<CalendarEvent[]> {
-    const events = await this.readCalendarFile(projectPath);
+    const events = await this.readCustomEvents(projectPath);
     const nowMs = now.getTime();
 
     return events.filter((event) => {
