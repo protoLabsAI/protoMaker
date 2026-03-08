@@ -91,12 +91,11 @@ describe('AvaChannelService', () => {
   beforeEach(() => {
     store = makeMockStore();
     archiveDir = makeTempDir();
-    service = new AvaChannelService(
-      store as unknown as import('@protolabsai/crdt').CRDTStore,
-      archiveDir,
-      'test-instance',
-      'Test Instance'
-    );
+    service = new AvaChannelService(archiveDir, {
+      store: store as unknown as import('@protolabsai/crdt').CRDTStore,
+      instanceId: 'test-instance',
+      instanceName: 'Test Instance',
+    });
   });
 
   afterEach(() => {
@@ -284,12 +283,11 @@ describe('AvaChannelService', () => {
   describe('runArchiveCycle()', () => {
     it('creates archive directory if missing', async () => {
       const newArchiveDir = path.join(archiveDir, 'subdir');
-      const archiveService = new AvaChannelService(
-        store as unknown as import('@protolabsai/crdt').CRDTStore,
-        newArchiveDir,
-        'test-instance',
-        'Test Instance'
-      );
+      const archiveService = new AvaChannelService(newArchiveDir, {
+        store: store as unknown as import('@protolabsai/crdt').CRDTStore,
+        instanceId: 'test-instance',
+        instanceName: 'Test Instance',
+      });
 
       await archiveService.runArchiveCycle();
 
