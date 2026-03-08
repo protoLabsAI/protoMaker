@@ -246,6 +246,44 @@ export interface HealthAlert {
   alertTimestamp: string;
 }
 
+// ---------------------------------------------------------------------------
+// DORA metrics protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Broadcast by each reactor instance every hour carrying local DORA metrics.
+ * Peers merge these into the aggregate CRDTStore entry under domain='metrics', id='dora'.
+ */
+export interface DoraReport {
+  /** Originating instance ID */
+  instanceId: string;
+  /** ISO timestamp when the report was computed */
+  computedAt: string;
+  /** Number of features moved to done in the last 24 hours (deployment frequency proxy) */
+  deploymentsLast24h: number;
+  /** Average lead time in milliseconds (backlog→done) for features completed in the window */
+  avgLeadTimeMs: number;
+  /** Number of features that became blocked during the window */
+  blockedCount: number;
+  /** Number of features that moved to done during the window */
+  doneCount: number;
+}
+
+/**
+ * Broadcast when a System Improvement feature moves to done.
+ * All peers should clear their friction counters for the resolved pattern.
+ */
+export interface PatternResolved {
+  /** The failure pattern that was resolved */
+  pattern: string;
+  /** Feature ID of the System Improvement feature that moved to done */
+  featureId: string;
+  /** Instance that originated the resolution broadcast */
+  instanceId: string;
+  /** ISO timestamp of resolution */
+  resolvedAt: string;
+}
+
 /**
  * Options for AvaChannelService.getMessages()
  */

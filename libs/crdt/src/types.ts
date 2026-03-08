@@ -38,7 +38,8 @@ export type DomainName =
   | 'capacity'
   | 'ava-channel'
   | 'calendar'
-  | 'todos';
+  | 'todos'
+  | 'metrics';
 
 /**
  * Configuration for a WebSocket sync peer (typically a Tailscale peer).

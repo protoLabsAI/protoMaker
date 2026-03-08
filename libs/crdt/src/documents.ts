@@ -370,6 +370,50 @@ export const normalizeTodosDocument: SchemaNormalizer<TodosDocument> = (raw) => 
 };
 
 // ---------------------------------------------------------------------------
+// Metrics domain — aggregate DORA metrics and instance reports
+// ---------------------------------------------------------------------------
+
+/**
+ * MetricsDocument stores aggregated DORA metrics across all instances.
+ *
+ * Use domain='metrics', document id='dora' for the aggregate DORA store.
+ * Each instance contributes its DoraReport via the reactor's dora_report handler.
+ */
+export interface MetricsDocument extends CRDTDocumentRoot {
+  schemaVersion: 1;
+  /** Per-instance DORA report snapshots, keyed by instanceId */
+  instanceReports: Record<
+    string,
+    {
+      computedAt: string;
+      deploymentsLast24h: number;
+      avgLeadTimeMs: number;
+      blockedCount: number;
+      doneCount: number;
+    }
+  >;
+  /** ISO timestamp of last aggregate update */
+  updatedAt: string;
+}
+
+export const normalizeMetricsDocument: SchemaNormalizer<MetricsDocument> = (raw) => {
+  const doc = raw as Partial<MetricsDocument>;
+
+  const _meta = doc._meta ?? {
+    instanceId: 'unknown',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    schemaVersion: 1,
+    _meta,
+    instanceReports: doc.instanceReports ?? {},
+    updatedAt: doc.updatedAt ?? _meta.updatedAt,
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Normalizer registry
 // ---------------------------------------------------------------------------
 
@@ -381,7 +425,8 @@ type AnyDocument =
   | CapacityDocument
   | AvaChannelDocument
   | CalendarDocument
-  | TodosDocument;
+  | TodosDocument
+  | MetricsDocument;
 
 const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   features: normalizeFeatureDocument as SchemaNormalizer<AnyDocument>,
@@ -392,6 +437,7 @@ const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   'ava-channel': normalizeAvaChannelDocument as SchemaNormalizer<AnyDocument>,
   calendar: normalizeCalendarDocument as SchemaNormalizer<AnyDocument>,
   todos: normalizeTodosDocument as SchemaNormalizer<AnyDocument>,
+  metrics: normalizeMetricsDocument as SchemaNormalizer<AnyDocument>,
 };
 
 /**

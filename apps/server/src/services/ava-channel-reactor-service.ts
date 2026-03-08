@@ -8,7 +8,12 @@
  * Self-healing: on subscription failure, retries with exponential backoff (5s base, 60s cap).
  */
 
-import type { CRDTStore, Unsubscribe, AvaChannelDocument } from '@protolabsai/crdt';
+import type {
+  CRDTStore,
+  Unsubscribe,
+  AvaChannelDocument,
+  MetricsDocument,
+} from '@protolabsai/crdt';
 import type {
   AvaChatMessage,
   AvaChannelReactorSettings,
@@ -20,10 +25,14 @@ import type {
   EscalationAccept,
   HealthAlert,
   FrictionReport,
+  DoraReport,
+  PatternResolved,
 } from '@protolabsai/types';
 import { DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FrictionTrackerService } from './friction-tracker-service.js';
+import type { DoraMetricsService } from './dora-metrics-service.js';
+import type { EventEmitter } from '../lib/events.js';
 import {
   createClassifierChain,
   runClassifierChain,
@@ -41,6 +50,8 @@ const RESUBSCRIBE_BASE_MS = 5_000;
 const RESUBSCRIBE_MAX_MS = 60_000;
 /** Capacity heartbeat broadcast interval */
 const HEARTBEAT_INTERVAL_MS = 60_000;
+/** DORA report broadcast interval (1 hour) */
+const DORA_REPORT_INTERVAL_MS = 60 * 60 * 1000;
 /** Maximum features to steal per work-steal cycle */
 const MAX_STEAL_PER_CYCLE = 2;
 /** Memory threshold (%) above which a health_alert is broadcast */
@@ -83,6 +94,10 @@ export interface ReactorDependencies {
   projectPath?: string;
   /** Optional: enables friction-tracking self-improvement loop (peer de-duplication) */
   frictionTrackerService?: FrictionTrackerService;
+  /** Optional: enables DORA metric computation and broadcast */
+  doraMetricsService?: DoraMetricsService;
+  /** Optional: EventEmitter for feature lifecycle event subscriptions */
+  events?: EventEmitter;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,6 +135,9 @@ export class AvaChannelReactorService {
 
   // Heartbeat timer
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+  // DORA report timer (hourly)
+  private doraReportTimer: ReturnType<typeof setInterval> | null = null;
 
   // Settings (populated on start)
   private settings: AvaChannelReactorSettings = { ...DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS };
@@ -185,6 +203,8 @@ export class AvaChannelReactorService {
 
     this.active = true;
     this.startHeartbeat();
+    this.startDoraReportTimer();
+    this.subscribeToFeatureEvents();
     logger.info(`Reactor started — instance=${this.deps.instanceName} shard=${dateKey}`);
   }
 
@@ -204,6 +224,11 @@ export class AvaChannelReactorService {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
+    }
+
+    if (this.doraReportTimer) {
+      clearInterval(this.doraReportTimer);
+      this.doraReportTimer = null;
     }
 
     for (const timer of this.cooldownTimers.values()) {
@@ -654,6 +679,18 @@ export class AvaChannelReactorService {
     // friction_report handler (peer de-duplication)
     if (message.content.startsWith('[friction_report]')) {
       this.onFrictionReport(message);
+      return;
+    }
+
+    // pattern_resolved handler — clear counters for the resolved pattern
+    if (message.content.startsWith('[pattern_resolved]')) {
+      this.onPatternResolved(message);
+      return;
+    }
+
+    // dora_report handler — merge peer metrics into CRDTStore aggregate
+    if (message.content.startsWith('[dora_report]')) {
+      await this.onDoraReport(message);
       return;
     }
   }
@@ -1107,6 +1144,219 @@ export class AvaChannelReactorService {
     logger.debug(
       `Processed peer friction_report: pattern="${report.pattern}" from instance=${report.instanceId}`
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pattern resolved handler
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handle an incoming pattern_resolved message from a peer.
+   * Clears the friction counter and dedup entry for the resolved pattern.
+   */
+  private onPatternResolved(message: AvaChatMessage): void {
+    // Ignore self (we already resolved it locally)
+    if (message.instanceId === this.deps.instanceId) return;
+
+    if (!this.deps.frictionTrackerService) return;
+
+    let payload: PatternResolved;
+    try {
+      const json = message.content.replace('[pattern_resolved]', '').trim();
+      payload = JSON.parse(json) as PatternResolved;
+    } catch {
+      logger.warn('Received malformed pattern_resolved, ignoring');
+      return;
+    }
+
+    this.deps.frictionTrackerService.resolvePattern(payload.pattern);
+    logger.debug(
+      `Processed peer pattern_resolved: pattern="${payload.pattern}" from instance=${payload.instanceId}`
+    );
+  }
+
+  /**
+   * Broadcast a pattern_resolved message to the backchannel.
+   * Called when a System Improvement feature moves to done on this instance.
+   */
+  private async broadcastPatternResolved(pattern: string, featureId: string): Promise<void> {
+    const payload: PatternResolved = {
+      pattern,
+      featureId,
+      instanceId: this.deps.instanceId,
+      resolvedAt: new Date().toISOString(),
+    };
+
+    try {
+      await this.deps.avaChannelService.postMessage(
+        `[pattern_resolved] ${JSON.stringify(payload)}`,
+        'system',
+        {
+          intent: 'inform',
+          expectsResponse: false,
+        }
+      );
+      logger.info(`Broadcast pattern_resolved for pattern="${pattern}" featureId=${featureId}`);
+    } catch (err) {
+      logger.error(`Failed to broadcast pattern_resolved for pattern="${pattern}":`, err);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Feature event subscription (System Improvement → done)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Subscribe to feature:status-changed events.
+   * When a System Improvement feature moves to done, resolve its pattern
+   * in FrictionTrackerService and broadcast pattern_resolved to peers.
+   */
+  private subscribeToFeatureEvents(): void {
+    if (!this.deps.events) return;
+
+    this.deps.events.on('feature:status-changed', (payload) => {
+      const { newStatus, feature } = payload as {
+        newStatus?: string;
+        feature?: {
+          id?: string;
+          systemImprovement?: boolean;
+          title?: string;
+          tags?: string[];
+        };
+      };
+
+      if (newStatus !== 'done') return;
+      if (!feature?.systemImprovement) return;
+
+      // Extract pattern from the feature title
+      // Title format: "System Improvement: recurring <pattern> failures"
+      const title = feature.title ?? '';
+      const match = title.match(/recurring (.+?) failures/);
+      const pattern = match?.[1] ?? '';
+
+      if (!pattern) return;
+
+      // Clear local friction counter
+      if (this.deps.frictionTrackerService) {
+        this.deps.frictionTrackerService.resolvePattern(pattern);
+      }
+
+      // Broadcast to peers
+      this.broadcastPatternResolved(pattern, feature.id ?? '').catch((err) => {
+        this.errorCount++;
+        logger.error(`Failed to broadcast pattern_resolved for pattern="${pattern}":`, err);
+      });
+    });
+
+    logger.debug('Subscribed to feature:status-changed for System Improvement resolution');
+  }
+
+  // ---------------------------------------------------------------------------
+  // DORA report broadcast (hourly)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Start the hourly DORA report broadcast timer.
+   */
+  private startDoraReportTimer(): void {
+    if (!this.deps.doraMetricsService || !this.deps.projectPath) return;
+
+    if (this.doraReportTimer) {
+      clearInterval(this.doraReportTimer);
+    }
+
+    this.doraReportTimer = setInterval(() => {
+      this.broadcastDoraReport().catch((err) => {
+        this.errorCount++;
+        logger.error('Failed to broadcast dora_report:', err);
+      });
+    }, DORA_REPORT_INTERVAL_MS);
+
+    if (this.doraReportTimer.unref) {
+      this.doraReportTimer.unref();
+    }
+
+    logger.debug(`DORA report timer started (interval=${DORA_REPORT_INTERVAL_MS}ms)`);
+  }
+
+  private async broadcastDoraReport(): Promise<void> {
+    if (!this.deps.doraMetricsService || !this.deps.projectPath) return;
+
+    const metrics = await this.deps.doraMetricsService.getMetrics(this.deps.projectPath, 1);
+
+    const report: DoraReport = {
+      instanceId: this.deps.instanceId,
+      computedAt: new Date().toISOString(),
+      deploymentsLast24h: metrics.deploymentFrequency.value,
+      avgLeadTimeMs: metrics.leadTime.value * 60 * 60 * 1000, // convert hours → ms
+      blockedCount: 0, // computed as blocked ratio * done count
+      doneCount: Math.round(metrics.deploymentFrequency.value * 1),
+    };
+
+    await this.deps.avaChannelService.postMessage(
+      `[dora_report] ${JSON.stringify(report)}`,
+      'system',
+      {
+        intent: 'inform',
+        expectsResponse: false,
+      }
+    );
+
+    // Also store locally in CRDTStore
+    await this.storeDoraCrdtEntry(report);
+
+    logger.debug(
+      `Broadcast dora_report: deploymentsLast24h=${report.deploymentsLast24h} avgLeadTimeMs=${report.avgLeadTimeMs}`
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // DORA report peer message handler
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Handle an incoming dora_report from a peer instance.
+   * Merge the peer's metrics into the aggregate CRDTStore entry.
+   */
+  private async onDoraReport(message: AvaChatMessage): Promise<void> {
+    // Process reports from all instances (including self for local storage)
+    let report: DoraReport;
+    try {
+      const json = message.content.replace('[dora_report]', '').trim();
+      report = JSON.parse(json) as DoraReport;
+    } catch {
+      logger.warn('Received malformed dora_report, ignoring');
+      return;
+    }
+
+    await this.storeDoraCrdtEntry(report);
+    logger.debug(`Merged dora_report from instance=${report.instanceId} into CRDTStore aggregate`);
+  }
+
+  /**
+   * Upsert a single instance's DORA report into the CRDTStore aggregate document
+   * at domain='metrics', id='dora'.
+   */
+  private async storeDoraCrdtEntry(report: DoraReport): Promise<void> {
+    try {
+      await this.deps.crdtStore.change<MetricsDocument>('metrics', 'dora', (doc) => {
+        if (!doc.instanceReports) {
+          (
+            doc as unknown as { instanceReports: MetricsDocument['instanceReports'] }
+          ).instanceReports = {};
+        }
+        doc.instanceReports[report.instanceId] = {
+          computedAt: report.computedAt,
+          deploymentsLast24h: report.deploymentsLast24h,
+          avgLeadTimeMs: report.avgLeadTimeMs,
+          blockedCount: report.blockedCount,
+          doneCount: report.doneCount,
+        };
+        doc.updatedAt = new Date().toISOString();
+      });
+    } catch (err) {
+      logger.error(`Failed to store dora_report in CRDTStore:`, err);
+    }
   }
 }
 

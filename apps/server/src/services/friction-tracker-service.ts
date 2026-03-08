@@ -107,6 +107,18 @@ export class FrictionTrackerService {
   }
 
   /**
+   * Remove a resolved pattern from both the counter and dedup maps.
+   * Called when a System Improvement feature for this pattern moves to done,
+   * either locally or via a pattern_resolved broadcast from a peer.
+   */
+  resolvePattern(pattern: string): void {
+    if (!pattern) return;
+    this.counters.delete(pattern);
+    this.recentFilings.delete(pattern);
+    logger.info(`Pattern resolved and counters cleared: pattern="${pattern}"`);
+  }
+
+  /**
    * Check whether a peer recently filed for this pattern (within the dedup window).
    */
   isPeerRecentlyFiled(pattern: string): boolean {

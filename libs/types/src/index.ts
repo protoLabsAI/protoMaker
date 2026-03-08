@@ -20,6 +20,8 @@ export type {
   EscalationOffer,
   EscalationAccept,
   HealthAlert,
+  DoraReport,
+  PatternResolved,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
