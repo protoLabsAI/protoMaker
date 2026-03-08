@@ -930,6 +930,19 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         limit: args.limit || 10,
       });
 
+    // Discord Channel Messages
+    case 'send_discord_channel_message':
+      return apiCall('/discord/send-channel-message', {
+        channelId: args.channelId,
+        content: args.content,
+      });
+
+    case 'read_discord_channel_messages':
+      return apiCall('/discord/read-channel-messages', {
+        channelId: args.channelId,
+        limit: args.limit || 10,
+      });
+
     // Agent Management
     case 'list_agent_templates':
       return apiCall('/agents/templates/list', {

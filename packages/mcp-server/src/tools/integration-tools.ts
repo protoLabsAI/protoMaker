@@ -45,6 +45,45 @@ export const integrationTools: Tool[] = [
   },
 
   {
+    name: 'send_discord_channel_message',
+    description:
+      'Send a message to a Discord channel by channel ID. Uses the Automaker Discord bot to post the message.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channelId: {
+          type: 'string',
+          description: 'Discord channel ID to send the message to',
+        },
+        content: {
+          type: 'string',
+          description: 'Message content to send',
+        },
+      },
+      required: ['channelId', 'content'],
+    },
+  },
+  {
+    name: 'read_discord_channel_messages',
+    description:
+      'Read recent messages from a Discord channel by channel ID. Returns messages with author, content, and timestamp.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channelId: {
+          type: 'string',
+          description: 'Discord channel ID to read messages from',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of messages to return (default: 10, max: 100)',
+        },
+      },
+      required: ['channelId'],
+    },
+  },
+
+  {
     name: 'twitch_list_suggestions',
     description:
       'View Twitch chat suggestion queue with filtering. Use filter="unprocessed" to see only new suggestions, "approved" for processed ones, or "all" for everything.',
