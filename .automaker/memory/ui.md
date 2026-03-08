@@ -516,3 +516,20 @@ usageStats:
 - **Problem solved:** Regex pattern: /^https:\/\/(discord\.com|canary\.discord\.com|ptb\.discord\.com)\/api\/webhooks.../
 - **Why this works:** Discord has canary (testing branch) and PTB (Public Test Build) environments with their own webhook endpoints; supporting these enables dev/staging workflows without hardcoding to production
 - **Trade-offs:** Easier: dev teams test against canary/ptb in isolation. Harder: validation regex more complex, more test cases needed
+
+#### [Pattern] Tab state (`lastActiveTab`) persisted in Zustand store, not just UI component state (2026-03-08)
+- **Problem solved:** Keyboard shortcuts (e.g., Ctrl+K) need to restore the last active tab when overlay is reopened
+- **Why this works:** Component state is lost on unmount; store-based persistence survives component lifecycle and enables keyboard shortcuts to have memory. Alternative (localStorage) requires sync logic between storage and component
+- **Trade-offs:** Store adds slight overhead, but eliminates need for localStorage hydration logic and keeps all state mutations in one place
+
+### Operator override is amber-toned and collapsed by default, shown only when expanded (2026-03-08)
+- **Context:** Operator override is an escape hatch that bypasses normal message routing; should not be the primary UX path
+- **Why:** Amber signals caution/override state (standard UX convention). Collapsed-by-default reduces cognitive load; expanded state is visible to users who need it but doesn't clutter normal flow
+- **Rejected:** Always-open override input (clutters UI); no visual distinction (users forget it's an override); hidden completely (discoverability issues)
+- **Trade-offs:** One extra click to use, but prevents accidental misuse and keeps UI clean for the 99% of users who won't need it
+- **Breaking if changed:** Removing the collapse/expand would make the override prominent in every interaction; changing color would lose the 'caution' signal
+
+#### [Gotcha] Instance badges are essential for disambiguation in multi-source message stream; easy to miss without them (2026-03-08)
+- **Situation:** In hivemind mode, messages come from multiple instances. Without badges, users can't tell which instance said what
+- **Root cause:** Multi-instance streams are ambiguous without source information. Badges provide instant visual context without reading metadata
+- **How to avoid:** Takes screen space, but prevents user confusion and is expected UX pattern in distributed systems

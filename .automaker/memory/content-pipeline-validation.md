@@ -5,9 +5,9 @@ relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 94
-  referenced: 4
-  successfulFeatures: 4
+  loaded: 96
+  referenced: 5
+  successfulFeatures: 5
 ---
 # Content Pipeline Validation Report
 

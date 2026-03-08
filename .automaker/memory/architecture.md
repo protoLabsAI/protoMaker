@@ -3855,3 +3855,15 @@ usageStats:
 - **Rejected:** Writing to temp directory, project root, or separate reports folder would disconnect analysis from project metadata
 - **Trade-offs:** Adds files to .automaker/ but ensures analysis results are versionable and discoverable within project structure
 - **Breaking if changed:** If moved elsewhere, users lose easy access to analysis history and gap audit trail with their proto-lab config
+
+### Created separate `ava-channel-store.ts` (append-only) instead of extending existing `chat-store` (bidirectional) (2026-03-08)
+- **Context:** Ava channel is fundamentally different: messages from multiple instances, broadcast stream, no two-way conversation pattern
+- **Why:** Append-only and bidirectional chat have conflicting update semantics. Separate stores prevent conditional logic pollution and enable independent scaling/caching strategies
+- **Rejected:** Extend chat-store with mode flags and conditional append logic; would couple incompatible interaction patterns and complicate both stores
+- **Trade-offs:** More files to maintain, but each store is simpler and has clearer responsibility boundaries
+- **Breaking if changed:** Merging stores back would require rewriting all update logic to handle both patterns simultaneously; keyboard shortcuts and state persistence would break
+
+#### [Pattern] Component extraction (`ask-ava-tab.tsx`) before tab composition; each tab is an independent component (2026-03-08)
+- **Problem solved:** Two-tab layout could be implemented with complex conditionals in parent, or with clean component abstraction
+- **Why this works:** Independent components enable isolated testing, clear responsibility (each tab owns its own header controls), and easier future feature additions per tab
+- **Trade-offs:** Slightly more files, but chat-overlay-content.tsx is now a clean composition layer (6 lines per tab) instead of 200+ line conditionals

@@ -22,10 +22,10 @@ git:
 
 protolab:
   enabled: true
-  role: primary
-  syncPort: 4444
-  instanceId: mac-dev
-  instanceUrl: ws://100.119.239.8:4444
+  role: worker
+  syncPort: 9800
+  instanceId: staging-server
+  instanceUrl: ws://100.101.189.45:9800
 
 hive:
   hiveId: protolabs-hive
@@ -35,7 +35,7 @@ hive:
 hivemind:
   peers:
     - ws://100.119.239.8:4444
-    - ws://100.101.189.45:4444
+    - ws://100.101.189.45:9800
 
 instances:
   - instanceId: staging-server

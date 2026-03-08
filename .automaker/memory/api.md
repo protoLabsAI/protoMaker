@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 371
-  referenced: 83
-  successfulFeatures: 83
+  loaded: 373
+  referenced: 84
+  successfulFeatures: 84
 ---
 # api
 
@@ -728,3 +728,8 @@ usageStats:
 - **Problem solved:** Core analysis functions (researchRepo, analyzeGaps, init) live in create-protolab but CLI needs to expose them
 - **Why this works:** Allows single distribution (@protolabsai/setup) to serve both CLI users (via bin entry point) and programmatic consumers (via re-exports), avoiding import path confusion
 - **Trade-offs:** Adds indirection layer but keeps package responsibilities clear and provides consistent API surface
+
+#### [Pattern] WebSocket events call store actions (`appendMessage`) rather than directly mutating state (2026-03-08)
+- **Problem solved:** Real-time message updates from hivemind instances arrive via WebSocket handlers
+- **Why this works:** Action layer enables validation, transformation, and logging before state mutation. Separates network concerns from state concerns
+- **Trade-offs:** Extra indirection, but provides hook points for message validation, deduplication, and analytics
