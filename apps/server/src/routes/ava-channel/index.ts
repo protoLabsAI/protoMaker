@@ -92,7 +92,7 @@ export function createAvaChannelRoutes(
         content = `${message}\n\nContext: ${context}`;
       }
 
-      const source = instanceId === 'operator' ? 'operator' as const : 'ava' as const;
+      const source = instanceId === 'operator' ? ('operator' as const) : ('ava' as const);
       const posted = await avaChannelService.postMessage(content, source, {
         instanceName: instanceId,
       });
@@ -120,11 +120,7 @@ export function createAvaChannelRoutes(
    */
   router.get('/messages', async (req: Request, res: Response): Promise<void> => {
     try {
-      const {
-        since,
-        until,
-        instanceId,
-      } = req.query as {
+      const { since, until, instanceId } = req.query as {
         since?: string;
         until?: string;
         instanceId?: string;
