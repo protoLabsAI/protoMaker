@@ -1,0 +1,58 @@
+name: protoMaker
+version: '1.0.0'
+
+techStack:
+  language: typescript
+  framework: express
+  packageManager: npm
+  testRunner: vitest
+  bundler: vite
+
+commands:
+  build: npm run build
+  test: npm run test:all
+  lint: npm run lint
+  dev: npm run dev:full
+  format: npm run format
+
+git:
+  baseBranch: main
+  strategy: squash
+  prBaseBranch: dev
+
+protolab:
+  enabled: true
+  role: primary
+  syncPort: 4444
+  instanceId: mac-dev
+  instanceUrl: ws://100.119.239.8:4444
+
+hive:
+  hiveId: protolabs-hive
+  syncPort: 9800
+  meshEnabled: true
+
+hivemind:
+  peers:
+    - ws://100.119.239.8:4444
+    - ws://100.101.189.45:4444
+
+instances:
+  - instanceId: staging-server
+    hostname: ava
+    capacity: 8
+  - instanceId: mac-dev
+    hostname: Joshs-MacBook-Pro.local
+    capacity: 2
+
+workStealing:
+  strategy: capacity
+  stealMax: 3
+  offerTtlMs: 60000
+
+sharedSettings:
+  maxConcurrentAgents: 2
+  workflow:
+    maxRetries: 3
+    enableAutoCommit: true
+    enableAutoPR: true

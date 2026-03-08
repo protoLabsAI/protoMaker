@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Cascade Fix (TDD)\n\nFix the P0 milestoneSlug bug so the full feature→epic→milestone→project completion cascade fires. TDD-first: write tests proving the cascade, then fix.\n\n## Phases\n1. Integration tests for full cascade + fix milestoneSlug on createProjectFeatures\n2. Auto-update project status on project:completed + unit tests",
   "title": "[Epic] Cascade Fix (TDD)",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#4F46E5",
   "branchName": "epic/cascade-fix-tdd",
@@ -22,6 +22,13 @@
       "to": "backlog",
       "timestamp": "2026-03-07T06:06:14.148Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T22:07:00.390Z"
     }
-  ]
+  ],
+  "featureType": "code",
+  "completedAt": "2026-03-07T22:07:00.390Z"
 }

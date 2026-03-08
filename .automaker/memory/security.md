@@ -469,3 +469,22 @@ usageStats:
 - **Situation:** detectOrphanedFeatures() iterates features and runs `git rev-parse` for each. If git process hangs (network issue, repo corruption, FUSE filesystem), health check blocks indefinitely and may starve event loop
 - **Root cause:** Pattern mirrors existing health-monitor-service.ts usage of exec, but exec() was chosen for simplicity over execFile(). No timeout wrapper was added
 - **How to avoid:** Simpler code vs. robustness. Current approach safe in known-good repos but unsafe in edge cases (hung git, slow NFS, corrupted index)
+
+### Discord webhook URL validation enforces HTTPS protocol; rejects HTTP even if URL structure is otherwise valid (2026-03-07)
+- **Context:** Webhook URLs containing sensitive tokens being stored per-project and tested via HTTP POST
+- **Why:** HTTP exposes credentials in plaintext over network; HTTPS is non-negotiable for any credential-bearing URL
+- **Rejected:** Permitting HTTP with warning; this would leave the door open to misconfiguration
+- **Trade-offs:** Easier: cleaner regex, fewer valid cases to handle. Harder: users on internal test Discord instances must use HTTPS
+- **Breaking if changed:** Removing HTTPS enforcement opens credential exposure vector; users could accidentally store unencrypted webhook tokens
+
+#### [Pattern] Non-overwrite guard using try { await fs.access() } catch { /* write */ } pattern prevents accidental spec.md deletion (2026-03-07)
+- **Problem solved:** Setup route needs to write spec.md but user may have hand-edited it after auto-generation
+- **Why this works:** Safe-by-default: assumes user edits are valuable and shouldn't be destroyed by re-running setup
+- **Trade-offs:** Users cannot easily regenerate spec.md if they want to reset; requires manual file deletion
+
+### spec.md written to project root (visible, user-editable) rather than .automaker/ (hidden config). Includes auto-generated header note indicating manual fill-in needed. (2026-03-07)
+- **Context:** spec.md is hybrid artifact: auto-generated skeleton + user-written content (goals, workflows, constraints). Needs to be discovered and edited.
+- **Why:** Spec documents are typically public, root-level project artifacts. Visibility encourages adoption. User discovers and edits spec.md naturally alongside code. Header note clarifies what's machine vs. human content.
+- **Rejected:** Hiding in .automaker/ would protect from accidental edits but reduce discoverability and obscure project intent docs
+- **Trade-offs:** High visibility and accessibility, but creates maintenance question: if research re-runs and user edited spec.md, changes are NOT reflected (non-overwrite guard prevents it). Users must manually merge.
+- **Breaking if changed:** If moved to .automaker/, spec.md becomes harder to find and edit; requires explicit CI/CD step to surface it. If overwrite behavior changes, user edits silently lost.

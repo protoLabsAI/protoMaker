@@ -1,92 +1,120 @@
 
 🔧 Tool: ToolSearch
 Input: {
-  "query": "select:Read,Bash,Edit,Write,Glob,Grep",
-  "max_results": 6
+  "query": "select:Read,Bash,Edit,Write,Glob"
 }
-Let me read the relevant files in parallel to understand the existing patterns.
 
 🔧 Tool: Read
 Input: {
   "file_path": "/Users/kj/dev/automaker/apps/server/src/services/ceremony-service.ts"
 }
 
-🔧 Tool: Bash
+🔧 Tool: Glob
 Input: {
-  "command": "ls /Users/kj/dev/automaker/apps/server/tests/unit/services/ 2>/dev/null || echo \"Directory not found\"",
-  "description": "Check if ceremony test directory exists"
+  "pattern": "/Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony*"
 }
-Now let me check the existing ceremony-flows test file and the automation-service to understand the flowRegistry:
-
-🔧 Tool: Bash
-Input: {
-  "command": "ls /Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony-flows* 2>/dev/null || echo \"File not found\"",
-  "description": "Check if ceremony-flows test file exists"
-}
-
-🔧 Tool: Grep
-Input: {
-  "pattern": "flowRegistry|FlowRegistry|register\\(",
-  "path": "/Users/kj/dev/automaker/apps/server/src/services/automation-service.ts",
-  "output_mode": "content",
-  "context": 5
-}
-Good. The flows ARE already registered in `ceremony-service.ts` (lines 250-258). The fix is in place. Now I need to create the test file. Let me look at an existing ceremony test for patterns:
 
 🔧 Tool: Read
 Input: {
-  "file_path": "/Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony-service.test.ts",
-  "limit": 80
+  "file_path": "/Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony-flows.test.ts"
 }
-Now I have everything I need. Let me create the test file:
 
-🔧 Tool: Write
+🔧 Tool: ToolSearch
 Input: {
-  "file_path": "/Users/kj/dev/automaker/apps/server/tests/unit/services/ceremony-flows.test.ts",
-  "content": "/**\n * Ceremony Flow Registry Tests\n *\n * Verifies that CeremonyService.initialize() registers all 3 ceremony flows\n * in the FlowRegistry before any ceremony triggers can be dispatched.\n *\n * Regression guard for: \"Flow not registered: standup-flow\" errors.\n */\n\nimport { describe, it, expect, beforeEach, vi } from 'vitest';\nimport { CeremonyService } from '../../../src/services/ceremony-service.js';\nimport { flowRegistry } from '../../../src/services/automation-service.js';\nimport { createEventEmitter } from '../../../src/lib/events.js';\nimport type { SettingsService } from '../../../src/services/settings-service.js';\nimport type { FeatureLoader } from '../../../src/services/feature-loader.js';\nimport type { ProjectService } from '../../../src/services/project-service.js';\nimport type { MetricsService } from '../../../src/services/metrics-service.js';\n\n// ---------------------------------------------------------------------------\n// Module mocks — prevent real LLM calls / FS access\n// ---------------------------------------------------------------------------\n\nvi.mock('@langchain/anthropic', () => ({\n  ChatAnthropic: vi.fn().mockImplementation(() => ({})),\n}));\n\nvi.mock('@protolabsai/flows', () => ({\n  createStandupFlow: vi.fn(),\n  createRetroFlow: vi.fn(),\n  createProjectRetroFlow: vi.fn(),\n}));\n\nvi.mock('@protolabsai/platform', async (importOriginal) => {\n  const original = await importOriginal<typeof import('@protolabsai/platform')>();\n  return {\n    ...original,\n    getDataDirectory: vi.fn().mockReturnValue(null),\n    getProjectDir: vi.fn().mockReturnValue('/tmp/test-project'),\n    secureFs: {\n      readFile: vi.fn().mockRejectedValue(new Error('no file')),\n      writeFile: vi.fn().mockResolvedValue(undefined),\n      mkdir: vi.fn().mockResolvedValue(undefined),\n    },\n  };\n});\n\n// ---------------------------------------------------------------------------\n// Helpers\n// ---------------------------------------------------------------------------\n\nconst createMockSettingsService = (): SettingsService =>\n  ({ getProjectSettings: vi.fn() }) as unknown as SettingsService;\n\nconst createMockFeatureLoader = (): FeatureLoader =>\n  ({ getAll: vi.fn() }) as unknown as FeatureLoader;\n\nconst createMockProjectService = (): ProjectService =>\n  ({ getProject: vi.fn() }) as unknown as ProjectService;\n\nconst createMockMetricsService = (): MetricsService => ({}) as unknown as MetricsService;\n\n// ---------------------------------------------------------------------------\n// Tests\n// ---------------------------------------------------------------------------\n\ndescribe('CeremonyService — flow registry', () => {\n  let service: CeremonyService;\n\n  beforeEach(() => {\n    service = new CeremonyService();\n    const emitter = createEventEmitter();\n    service.initialize(\n      emitter,\n      createMockSettingsService(),\n      createMockFeatureLoader(),\n      createMockProjectService(),\n      createMockMetricsService()\n    );\n  });\n\n  it('registers standup-flow in the FlowRegistry on init', () => {\n    expect(flowRegistry.has('standup-flow')).toBe(true);\n  });\n\n  it('registers retro-flow in the FlowRegistry on init', () => {\n    expect(flowRegistry.has('retro-flow')).toBe(true);\n  });\n\n  it('registers project-retro-flow in the FlowRegistry on init', () => {\n    expect(flowRegistry.has('project-retro-flow')).toBe(true);\n  });\n\n  it('registers all 3 ceremony flows before any ceremony triggers', () => {\n    const expectedFlows = ['standup-flow', 'retro-flow', 'project-retro-flow'];\n    for (const flowId of expectedFlows) {\n      expect(flowRegistry.has(flowId), `Expected ${flowId} to be registered`).toBe(true);\n    }\n  });\n\n  it('standup-flow factory is callable without throwing', async () => {\n    const factory = flowRegistry.get('standup-flow');\n    expect(factory).toBeDefined();\n    await expect(factory!({})).resolves.toBeUndefined();\n  });\n\n  it('retro-flow factory is callable without throwing', async () => {\n    const factory = flowRegistry.get('retro-flow');\n    expect(factory).toBeDefined();\n    await expect(factory!({})).resolves.toBeUndefined();\n  });\n\n  it('project-retro-flow factory is callable without throwing', async () => {\n    const factory = flowRegistry.get('project-retro-flow');\n    expect(factory).toBeDefined();\n    await expect(factory!({})).resolves.toBeUndefined();\n  });\n});\n"
+  "query": "select:Grep"
 }
-Now let me check the `flowRegistry` class to make sure the `get` method is exported:
 
 🔧 Tool: Grep
 Input: {
-  "pattern": "get\\(flowId",
+  "pattern": "flowRegistry|FlowRegistry|register|unregister|has\\(",
   "path": "/Users/kj/dev/automaker/apps/server/src/services/automation-service.ts",
   "output_mode": "content",
-  "context": 3
+  "-n": true,
+  "head_limit": 60
 }
-Good. Now let me run the build and tests:
 
-🔧 Tool: Bash
+🔧 Tool: Read
 Input: {
-  "command": "cd /Users/kj/dev/automaker && npm run build:server 2>&1 | tail -30",
-  "description": "Build server to verify TypeScript compiles",
-  "timeout": 120000
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/automation-service.ts",
+  "offset": 115,
+  "limit": 30
 }
-Build passes. Now let's run the tests:
+The implementation looks complete — `ceremony-service.ts` already registers all three flows in `initialize()`. Let me run the tests and build to verify.
 
 🔧 Tool: Bash
 Input: {
   "command": "cd /Users/kj/dev/automaker && npx vitest run apps/server/tests/unit/services/ceremony-flows.test.ts 2>&1",
-  "description": "Run ceremony-flows tests",
+  "description": "Run ceremony-flows unit tests",
   "timeout": 60000
 }
-All 7 tests pass. Let me check the git diff to confirm only intended files were changed:
+All 4 tests pass. Now let's run the build:
 
 🔧 Tool: Bash
 Input: {
-  "command": "cd /Users/kj/dev/automaker && git diff --stat",
-  "description": "Show git diff stat of changes"
-}
-The other file changes are pre-existing in this worktree from other work. Let me verify my specific file was added:
-
-🔧 Tool: Bash
-Input: {
-  "command": "cd /Users/kj/dev/automaker && git status --short apps/server/tests/unit/services/ceremony-flows.test.ts apps/server/src/services/ceremony-service.ts",
-  "description": "Check status of our specific files"
+  "command": "cd /Users/kj/dev/automaker && npm run build:server 2>&1 | tail -20",
+  "description": "Build server and check exit code",
+  "timeout": 120000
 }
 
 🔧 Tool: Bash
 Input: {
-  "command": "cd /Users/kj/dev/automaker && git diff apps/server/src/services/ceremony-service.ts | head -60",
-  "description": "Check what changed in ceremony-service.ts vs base branch"
+  "command": "cd /Users/kj/dev/automaker && npm run build:server 2>&1 | grep -E \"error|Error|exit|success|✓\" | head -20",
+  "description": "Check build for errors",
+  "timeout": 120000
 }
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npm run build:server; echo \"EXIT CODE: $?\"",
+  "description": "Build server and capture exit code",
+  "timeout": 120000
+}
+Build passes with exit code 0. Let me check the git diff to confirm no unintended files were changed:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git diff --stat HEAD 2>&1",
+  "description": "Check git diff for changed files"
+}
+The git diff shows no changes to the target source files — `ceremony-service.ts` and `ceremony-flows.test.ts` already had the correct implementation in place. The 4 ceremony flow registration tests all pass and the build succeeds.
+
+Regarding the Playwright requirement: this feature is entirely backend/service-level (flow registry registration in a Node.js service). There is no UI surface to verify with Playwright, and the acceptance criteria are fully covered by the unit tests that were already present and passing.
+
+<summary>
+## Summary: Milestone: Per-Project Discord Webhook — Fix standup-flow Registration
+
+### Changes Implemented
+- **No code changes were required.** Upon inspection, the implementation was already complete:
+  - `apps/server/src/services/ceremony-service.ts` already registers all three ceremony flows (`standup-flow`, `retro-flow`, `project-retro-flow`) inside the `initialize()` method (lines 247–255), using `flowRegistry.register()` imported from `automation-service.ts`.
+  - `apps/server/tests/unit/services/ceremony-flows.test.ts` already contained 4 comprehensive tests verifying the registration and that each factory resolves without throwing.
+
+### Files Modified
+- None — both specified files were already correctly implemented.
+
+### Verification Gates
+**Tests (4/4 passing):**
+```
+✓ server tests/unit/services/ceremony-flows.test.ts (4 tests) 4ms
+  ✓ registers standup-flow, retro-flow, and project-retro-flow on initialize()
+  ✓ standup-flow factory resolves without throwing
+  ✓ retro-flow factory resolves without throwing
+  ✓ project-retro-flow factory resolves without throwing
+```
+
+**Build:** `npm run build:server` → EXIT CODE: 0 (18 packages, all successful)
+
+**Git diff:** No source file changes — only pre-existing board/memory JSON files in `.automaker/` (unrelated to this feature).
+
+### Verification Status
+- Playwright is not applicable — this feature is backend-only (Node.js service flow registry). No UI surface exists to verify. The unit tests fully validate all acceptance criteria.
+
+### Risks/Blockers Encountered
+- None. The feature was already implemented correctly.
+
+### Learnings
+- When a feature description says "Find where flows are registered… and ensure X is registered," always read the target file first — the fix may already be in place from a parallel implementation.
+- The `flowRegistry` singleton in `automation-service.ts` has `register`, `unregister`, `has`, and `get` methods — ceremony flows are registered as stubs during `CeremonyService.initialize()` so the automation dispatch layer can resolve them without the service needing to actually execute them through that pathway.
+
+### Notes for Developer
+- The three ceremony flows (`standup-flow`, `retro-flow`, `project-retro-flow`) are registered as stub factories that log a message. Actual execution is handled event-driven inside `CeremonyService`. This prevents the "Flow not registered: standup-flow" error when `AutomationService.executeAutomation()` looks up the flow by ID.
+</summary>

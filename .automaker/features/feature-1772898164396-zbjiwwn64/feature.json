@@ -1,68 +1,8 @@
 {
-  "category": "Cross-Instance Assignment",
-  "description": "**Milestone:** Cross-Instance Assignment\n\nEach instance periodically updates its InstanceCapacity in the CRDT assignments document: running agents, max agents, RAM usage, CPU load, backlog depth. This data is used by the work-stealing protocol to identify idle instances and busy peers.\n\n**Files to Modify:**\n- apps/server/src/services/crdt-sync-service.ts\n- libs/crdt/src/documents.ts\n- libs/types/src/hivemind.ts\n- apps/server/src/services/auto-mode-service.ts\n\n**Acceptance Criteria:**\n- [ ] Each instance publishes capacity metrics to shared CRDT document\n- [ ] Capacity updates every heartbeat interval\n- [ ] Includes: runningAgents, maxAgents, backlogCount, ramUsagePercent, cpuPercent\n- [ ] All instances can read all peers' capacity in real-time\n- [ ] Health endpoint shows peer capacity summary\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
-  "title": "Instance Capacity Advertising",
-  "status": "done",
-  "isEpic": false,
-  "epicId": "feature-1772898164395-qmv4z1g8t",
-  "branchName": "feature/cross-instance-instance-capacity",
-  "isFoundation": true,
-  "projectSlug": "distributed-crdt-sync",
-  "milestoneSlug": "04-cross-instance-assignment",
-  "phaseSlug": "instance-capacity-advertising",
   "id": "feature-1772898164396-zbjiwwn64",
-  "descriptionHistory": [
-    {
-      "description": "**Milestone:** Cross-Instance Assignment\n\nEach instance periodically updates its InstanceCapacity in the CRDT assignments document: running agents, max agents, RAM usage, CPU load, backlog depth. This data is used by the work-stealing protocol to identify idle instances and busy peers.\n\n**Files to Modify:**\n- apps/server/src/services/crdt-sync-service.ts\n- libs/crdt/src/documents.ts\n- libs/types/src/hivemind.ts\n- apps/server/src/services/auto-mode-service.ts\n\n**Acceptance Criteria:**\n- [ ] Each instance publishes capacity metrics to shared CRDT document\n- [ ] Capacity updates every heartbeat interval\n- [ ] Includes: runningAgents, maxAgents, backlogCount, ramUsagePercent, cpuPercent\n- [ ] All instances can read all peers' capacity in real-time\n- [ ] Health endpoint shows peer capacity summary\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
-      "timestamp": "2026-03-07T15:42:44.396Z",
-      "source": "initial"
-    }
-  ],
-  "createdAt": "2026-03-07T15:42:44.396Z",
-  "statusHistory": [
-    {
-      "from": null,
-      "to": "backlog",
-      "timestamp": "2026-03-07T15:42:44.396Z",
-      "reason": "Feature created"
-    },
-    {
-      "from": "backlog",
-      "to": "in_progress",
-      "timestamp": "2026-03-07T18:37:16.432Z"
-    },
-    {
-      "from": "in_progress",
-      "to": "review",
-      "timestamp": "2026-03-07T18:47:42.636Z"
-    },
-    {
-      "from": "review",
-      "to": "done",
-      "timestamp": "2026-03-07T19:54:42.863Z"
-    }
-  ],
-  "featureType": "code",
-  "dependencies": [
-    "feature-1772898164391-9v1okhazn",
-    "feature-1772898164391-6jgo2lrs8",
-    "feature-1772898164394-gbqv5bnnm",
-    "feature-1772898164395-2x6bahyy6"
-  ],
-  "complexity": "medium",
-  "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T18:37:19.475Z",
-  "costUsd": 4.751735750000001,
-  "lastSessionId": "342c9bbe-145e-46ed-8efa-2d4ea55d82af",
-  "lastTraceId": "e3b76e86-def6-4bbf-a6f0-4fce586d4de5",
-  "traceIds": [
-    "e3b76e86-def6-4bbf-a6f0-4fce586d4de5"
-  ],
-  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1974",
-  "prNumber": 1974,
-  "prCreatedAt": "2026-03-07T18:47:41.333Z",
-  "reviewStartedAt": "2026-03-07T18:47:42.636Z",
-  "prTrackedSince": "2026-03-07T18:47:42.638Z",
-  "prLastPolledAt": "2026-03-07T18:47:42.638Z",
-  "completedAt": "2026-03-07T19:54:42.863Z"
+  "archived": true,
+  "archivedAt": "2026-03-07T23:13:51.215Z",
+  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772898164396-zbjiwwn64",
+  "status": "done",
+  "title": "Instance Capacity Advertising"
 }

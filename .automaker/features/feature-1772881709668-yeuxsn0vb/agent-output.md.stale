@@ -1,0 +1,621 @@
+I'll start by exploring the existing codebase to understand the patterns before implementing the CLI package.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Glob,Bash"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/packages/",
+  "description": "List packages directory"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/package.json"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/package.json"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/packages/create-protolab/src/",
+  "description": "List create-protolab source files"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/src/cli.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/src/index.ts"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/packages/create-protolab/src/phases/",
+  "description": "List phases directory"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/src/types.ts"
+}
+Let me look at the research and analyze phases to understand how to reuse them:
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/src/phases/research.ts",
+  "limit": 60
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/src/phases/init.ts",
+  "limit": 80
+}
+Now I have enough context to implement the feature. Let me check the tsconfig pattern and then start building:
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/create-protolab/tsconfig.json"
+}
+Now I have enough context. Let me build the setup-cli package:
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Write,TodoWrite"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create packages/setup-cli/ directory structure and package.json",
+      "status": "in_progress",
+      "activeForm": "Creating package structure"
+    },
+    {
+      "content": "Implement src/index.ts with proto.config writer and HTML report generator",
+      "status": "pending",
+      "activeForm": "Implementing index.ts"
+    },
+    {
+      "content": "Implement src/cli.ts with full CLI flow",
+      "status": "pending",
+      "activeForm": "Implementing cli.ts"
+    },
+    {
+      "content": "Update root package.json build scripts",
+      "status": "pending",
+      "activeForm": "Updating root package.json"
+    },
+    {
+      "content": "Build and verify compilation",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "mkdir -p /Users/kj/dev/automaker/packages/setup-cli/src",
+  "description": "Create setup-cli directory structure"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/package.json",
+  "content": "{\n  \"name\": \"@protolabsai/setup\",\n  \"version\": \"0.1.0\",\n  \"description\": \"Scan any repo and generate proto.config.yaml, .automaker/ structure, and an HTML gap analysis report\",\n  \"type\": \"module\",\n  \"bin\": {\n    \"protolabs-setup\": \"./dist/cli.js\"\n  },\n  \"main\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\"\n    }\n  },\n  \"files\": [\n    \"dist\"\n  ],\n  \"scripts\": {\n    \"build\": \"tsc --project tsconfig.json\",\n    \"dev\": \"tsc --watch\",\n    \"test\": \"vitest run\",\n    \"prepublishOnly\": \"npm run build\"\n  },\n  \"keywords\": [\n    \"protolab\",\n    \"setup\",\n    \"cli\",\n    \"scaffold\",\n    \"automation\"\n  ],\n  \"publishConfig\": {\n    \"registry\": \"https://registry.npmjs.org/\",\n    \"access\": \"public\"\n  },\n  \"dependencies\": {\n    \"@clack/prompts\": \"^1.0.1\",\n    \"create-protolab\": \"*\",\n    \"open\": \"^10.1.0\",\n    \"picocolors\": \"^1.1.1\",\n    \"yaml\": \"^2.6.1\"\n  },\n  \"devDependencies\": {\n    \"@types/node\": \"^22.0.0\",\n    \"typescript\": \"^5.7.3\",\n    \"vitest\": \"^4.0.0\"\n  }\n}\n"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/tsconfig.json",
+  "content": "{\n  \"compilerOptions\": {\n    \"target\": \"ES2022\",\n    \"module\": \"NodeNext\",\n    \"moduleResolution\": \"NodeNext\",\n    \"outDir\": \"./dist\",\n    \"rootDir\": \"./src\",\n    \"strict\": true,\n    \"esModuleInterop\": true,\n    \"skipLibCheck\": true,\n    \"forceConsistentCasingInFileNames\": true,\n    \"declaration\": true,\n    \"types\": [\"node\"]\n  },\n  \"include\": [\"src/**/*\"],\n  \"exclude\": [\"node_modules\", \"dist\"]\n}\n"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create packages/setup-cli/ directory structure and package.json",
+      "status": "completed",
+      "activeForm": "Creating package structure"
+    },
+    {
+      "content": "Implement src/index.ts with proto.config writer and HTML report generator",
+      "status": "in_progress",
+      "activeForm": "Implementing index.ts"
+    },
+    {
+      "content": "Implement src/cli.ts with full CLI flow",
+      "status": "pending",
+      "activeForm": "Implementing cli.ts"
+    },
+    {
+      "content": "Update root package.json build scripts",
+      "status": "pending",
+      "activeForm": "Updating root package.json"
+    },
+    {
+      "content": "Build and verify compilation",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+Now let me implement the `index.ts` with the proto.config writer and HTML report generator:
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/index.ts",
+  "content": "/**\n * @protolabsai/setup\n *\n * Standalone CLI that scans a repo, generates proto.config.yaml,\n * scaffolds .automaker/ structure, and produces an HTML gap analysis report.\n * Runs without a server or API key.\n */\n\n// Re-export core services from create-protolab\nexport { researchRepo } from 'create-protolab';\nexport { analyzeGaps } from 'create-protolab';\nexport { init } from 'create-protolab';\nexport type {\n  RepoResearchResult,\n  GapAnalysisReport,\n  GapItem,\n  ComplianceItem,\n} from 'create-protolab';\n\n// Local services\nexport { writeProtoConfig } from './services/proto-config-writer.js';\nexport { generateHtmlReport } from './services/report-generator.js';\nexport type { ProtoConfig } from './services/proto-config-writer.js';\nexport type { HtmlReportOptions } from './services/report-generator.js';\n"
+}
+Now let me create the two service files:
+
+🔧 Tool: Bash
+Input: {
+  "command": "mkdir -p /Users/kj/dev/automaker/packages/setup-cli/src/services",
+  "description": "Create services directory"
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/services/proto-config-writer.ts",
+  "content": "/**\n * proto-config-writer\n *\n * Generates proto.config.yaml from a repo research result and writes it\n * to the project root. No server or API key required.\n */\n\nimport { promises as fs } from 'node:fs';\nimport * as path from 'node:path';\nimport { stringify as yamlStringify } from 'yaml';\nimport type { RepoResearchResult } from 'create-protolab';\n\nexport interface ProtoConfig {\n  name: string;\n  version: string;\n  protolab: {\n    enabled: boolean;\n  };\n  techStack: {\n    language: string;\n    framework?: string;\n    packageManager: string;\n  };\n  commands: {\n    build?: string;\n    test?: string;\n    format?: string;\n    lint?: string;\n    dev?: string;\n  };\n  standard?: {\n    skip?: string[];\n  };\n  settings: Record<string, unknown>;\n}\n\n/** Derive the primary language from research results */\nfunction detectLanguage(research: RepoResearchResult): string {\n  if (research.python.hasPythonServices) return 'python';\n  if (research.codeQuality.hasTypeScript) return 'typescript';\n  return 'javascript';\n}\n\n/** Derive the primary framework from research results */\nfunction detectFramework(research: RepoResearchResult): string | undefined {\n  if (research.frontend.metaFramework && research.frontend.metaFramework !== 'none') {\n    return research.frontend.metaFramework;\n  }\n  if (research.frontend.framework && research.frontend.framework !== 'none') {\n    return research.frontend.framework;\n  }\n  if (research.backend.hasPayload) return 'payload';\n  if (research.backend.hasExpress) return 'express';\n  return undefined;\n}\n\n/** Infer common build/test/dev commands from research */\nfunction inferCommands(research: RepoResearchResult): ProtoConfig['commands'] {\n  const pm = research.monorepo.packageManager === 'unknown' ? 'npm' : research.monorepo.packageManager;\n  const run = pm === 'npm' ? 'npm run' : pm === 'yarn' ? 'yarn' : `${pm} run`;\n  return {\n    build: `${run} build`,\n    test: `${run} test`,\n    format: `${run} format`,\n    lint: `${run} lint`,\n    dev: `${run} dev`,\n  };\n}\n\n/** Build a ProtoConfig object from research results */\nexport function buildProtoConfig(research: RepoResearchResult): ProtoConfig {\n  const pm = research.monorepo.packageManager === 'unknown' ? 'npm' : research.monorepo.packageManager;\n  const framework = detectFramework(research);\n\n  const config: ProtoConfig = {\n    name: research.projectName,\n    version: '0.1.0',\n    protolab: {\n      enabled: true,\n    },\n    techStack: {\n      language: detectLanguage(research),\n      ...(framework ? { framework } : {}),\n      packageManager: pm,\n    },\n    commands: inferCommands(research),\n    settings: {},\n  };\n\n  // Add monorepo info if applicable\n  if (research.monorepo.isMonorepo) {\n    config.settings['monorepo'] = {\n      tool: research.monorepo.tool,\n      packages: research.monorepo.packages.map((p) => p.path),\n    };\n  }\n\n  return config;\n}\n\n/** Write proto.config.yaml to the project root. Skips if already exists. */\nexport async function writeProtoConfig(\n  projectPath: string,\n  research: RepoResearchResult\n): Promise<{ filePath: string; skipped: boolean }> {\n  const configPath = path.join(projectPath, 'proto.config.yaml');\n\n  // Check if file already exists\n  try {\n    await fs.access(configPath);\n    return { filePath: configPath, skipped: true };\n  } catch {\n    // File doesn't exist — proceed\n  }\n\n  const config = buildProtoConfig(research);\n  const yamlContent =\n    `# proto.config.yaml — ProtoLabs project configuration\\n` +\n    `# Generated by @protolabsai/setup on ${new Date().toISOString()}\\n` +\n    `# Documentation: https://protolabs.studio/docs/config\\n\\n` +\n    yamlStringify(config, { lineWidth: 120 });\n\n  await fs.writeFile(configPath, yamlContent, 'utf-8');\n  return { filePath: configPath, skipped: false };\n}\n"
+}
+Now let me write the HTML report generator:
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/services/report-generator.ts",
+  "content": "/**\n * report-generator\n *\n * Generates a self-contained HTML gap analysis report from a GapAnalysisReport.\n * No server or API key required. All styles are inlined.\n */\n\nimport { promises as fs } from 'node:fs';\nimport * as path from 'node:path';\nimport type { GapAnalysisReport, GapItem } from 'create-protolab';\n\nexport interface HtmlReportOptions {\n  /** Output directory for the report (defaults to projectPath/.automaker/) */\n  outputDir?: string;\n  /** Report filename (defaults to gap-report.html) */\n  filename?: string;\n}\n\nfunction severityBadge(severity: GapItem['severity']): string {\n  const map: Record<string, string> = {\n    critical: 'badge-critical',\n    recommended: 'badge-recommended',\n    optional: 'badge-optional',\n  };\n  return `<span class=\"badge ${map[severity] ?? 'badge-optional'}\">${severity}</span>`;\n}\n\nfunction effortBadge(effort: GapItem['effort']): string {\n  return `<span class=\"badge badge-effort\">${effort} effort</span>`;\n}\n\nfunction scoreColor(score: number): string {\n  if (score >= 80) return '#22c55e';\n  if (score >= 60) return '#f59e0b';\n  return '#ef4444';\n}\n\nfunction scoreLabel(score: number): string {\n  if (score >= 80) return 'Good';\n  if (score >= 60) return 'Needs Work';\n  return 'Critical';\n}\n\nfunction renderGapRows(gaps: GapItem[]): string {\n  if (gaps.length === 0) {\n    return `<tr><td colspan=\"5\" class=\"empty\">No gaps in this category</td></tr>`;\n  }\n  return gaps\n    .map(\n      (g) => `\n    <tr>\n      <td>${g.title}</td>\n      <td>${severityBadge(g.severity)}</td>\n      <td class=\"dim\">${g.current}</td>\n      <td class=\"dim\">${g.target}</td>\n      <td>${effortBadge(g.effort)}</td>\n    </tr>`\n    )\n    .join('');\n}\n\nfunction renderCompliantRows(items: GapAnalysisReport['compliant']): string {\n  if (items.length === 0) return `<tr><td colspan=\"2\" class=\"empty\">No compliant items</td></tr>`;\n  return items\n    .map(\n      (c) => `\n    <tr>\n      <td><span class=\"check\">&#10003;</span> ${c.title}</td>\n      <td class=\"dim\">${c.detail}</td>\n    </tr>`\n    )\n    .join('');\n}\n\n/** Generate a fully self-contained HTML report string */\nexport function buildHtmlReport(report: GapAnalysisReport): string {\n  const critical = report.gaps.filter((g) => g.severity === 'critical');\n  const recommended = report.gaps.filter((g) => g.severity === 'recommended');\n  const optional = report.gaps.filter((g) => g.severity === 'optional');\n  const color = scoreColor(report.overallScore);\n\n  return `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>ProtoLabs Gap Report — ${report.projectPath}</title>\n  <style>\n    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }\n    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f11; color: #e2e8f0; line-height: 1.6; }\n    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; }\n    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #1e293b; flex-wrap: wrap; gap: 1rem; }\n    .brand { font-size: 1.1rem; font-weight: 700; color: #6ee7f7; letter-spacing: -0.02em; }\n    .brand span { color: #94a3b8; font-weight: 400; }\n    h1 { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }\n    .meta { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }\n    .score-ring { text-align: center; }\n    .score-value { font-size: 3rem; font-weight: 800; color: ${color}; line-height: 1; }\n    .score-label { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }\n    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }\n    .stat { background: #1e293b; border-radius: 0.75rem; padding: 1.25rem; text-align: center; }\n    .stat-number { font-size: 2rem; font-weight: 700; }\n    .stat-label { font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; }\n    .stat-critical .stat-number { color: #ef4444; }\n    .stat-recommended .stat-number { color: #f59e0b; }\n    .stat-optional .stat-number { color: #94a3b8; }\n    .stat-compliant .stat-number { color: #22c55e; }\n    section { margin-bottom: 2.5rem; }\n    h2 { font-size: 1.1rem; font-weight: 600; color: #f1f5f9; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }\n    .table-wrap { overflow-x: auto; border-radius: 0.75rem; border: 1px solid #1e293b; }\n    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }\n    th { background: #1e293b; padding: 0.75rem 1rem; text-align: left; font-weight: 600; color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }\n    td { padding: 0.75rem 1rem; border-top: 1px solid #1e293b; vertical-align: top; }\n    tr:hover td { background: #1a2233; }\n    .dim { color: #94a3b8; font-size: 0.8rem; }\n    .empty { color: #475569; text-align: center; padding: 1.5rem; }\n    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }\n    .badge-critical { background: #450a0a; color: #ef4444; border: 1px solid #7f1d1d; }\n    .badge-recommended { background: #451a03; color: #f59e0b; border: 1px solid #78350f; }\n    .badge-optional { background: #0f172a; color: #94a3b8; border: 1px solid #334155; }\n    .badge-effort { background: #0f172a; color: #6ee7f7; border: 1px solid #164e63; }\n    .check { color: #22c55e; font-weight: 700; }\n    footer { text-align: center; font-size: 0.75rem; color: #334155; padding-top: 2rem; border-top: 1px solid #1e293b; margin-top: 3rem; }\n    footer a { color: #6ee7f7; text-decoration: none; }\n  </style>\n</head>\n<body>\n<div class=\"container\">\n  <header>\n    <div>\n      <div class=\"brand\">proto<span>Labs</span> / Gap Report</div>\n      <h1>${path.basename(report.projectPath)}</h1>\n      <div class=\"meta\">${report.projectPath} &nbsp;·&nbsp; ${new Date(report.analyzedAt).toLocaleString()}</div>\n    </div>\n    <div class=\"score-ring\">\n      <div class=\"score-value\" style=\"color:${color}\">${report.overallScore}%</div>\n      <div class=\"score-label\">${scoreLabel(report.overallScore)}</div>\n    </div>\n  </header>\n\n  <div class=\"stats\">\n    <div class=\"stat stat-critical\">\n      <div class=\"stat-number\">${report.summary.critical}</div>\n      <div class=\"stat-label\">Critical Gaps</div>\n    </div>\n    <div class=\"stat stat-recommended\">\n      <div class=\"stat-number\">${report.summary.recommended}</div>\n      <div class=\"stat-label\">Recommended</div>\n    </div>\n    <div class=\"stat stat-optional\">\n      <div class=\"stat-number\">${report.summary.optional}</div>\n      <div class=\"stat-label\">Optional</div>\n    </div>\n    <div class=\"stat stat-compliant\">\n      <div class=\"stat-number\">${report.summary.compliant}</div>\n      <div class=\"stat-label\">Compliant</div>\n    </div>\n  </div>\n\n  ${\n    critical.length > 0\n      ? `<section>\n    <h2><span style=\"color:#ef4444\">&#9679;</span> Critical Gaps</h2>\n    <div class=\"table-wrap\">\n      <table>\n        <thead><tr><th>Issue</th><th>Severity</th><th>Current</th><th>Target</th><th>Effort</th></tr></thead>\n        <tbody>${renderGapRows(critical)}</tbody>\n      </table>\n    </div>\n  </section>`\n      : ''\n  }\n\n  ${\n    recommended.length > 0\n      ? `<section>\n    <h2><span style=\"color:#f59e0b\">&#9679;</span> Recommended</h2>\n    <div class=\"table-wrap\">\n      <table>\n        <thead><tr><th>Issue</th><th>Severity</th><th>Current</th><th>Target</th><th>Effort</th></tr></thead>\n        <tbody>${renderGapRows(recommended)}</tbody>\n      </table>\n    </div>\n  </section>`\n      : ''\n  }\n\n  ${\n    optional.length > 0\n      ? `<section>\n    <h2><span style=\"color:#64748b\">&#9679;</span> Optional</h2>\n    <div class=\"table-wrap\">\n      <table>\n        <thead><tr><th>Issue</th><th>Severity</th><th>Current</th><th>Target</th><th>Effort</th></tr></thead>\n        <tbody>${renderGapRows(optional)}</tbody>\n      </table>\n    </div>\n  </section>`\n      : ''\n  }\n\n  ${\n    report.compliant.length > 0\n      ? `<section>\n    <h2><span style=\"color:#22c55e\">&#10003;</span> Already Compliant</h2>\n    <div class=\"table-wrap\">\n      <table>\n        <thead><tr><th>Item</th><th>Detail</th></tr></thead>\n        <tbody>${renderCompliantRows(report.compliant)}</tbody>\n      </table>\n    </div>\n  </section>`\n      : ''\n  }\n\n  <footer>\n    Generated by <a href=\"https://protolabs.studio\" target=\"_blank\">ProtoLabs</a> &nbsp;·&nbsp;\n    <a href=\"https://protolabs.studio/docs\" target=\"_blank\">Documentation</a>\n  </footer>\n</div>\n</body>\n</html>`;\n}\n\n/** Generate and write the HTML report. Returns the output file path. */\nexport async function generateHtmlReport(\n  report: GapAnalysisReport,\n  projectPath: string,\n  options: HtmlReportOptions = {}\n): Promise<string> {\n  const outputDir = options.outputDir ?? path.join(projectPath, '.automaker');\n  const filename = options.filename ?? 'gap-report.html';\n  const outputPath = path.join(outputDir, filename);\n\n  await fs.mkdir(outputDir, { recursive: true });\n  await fs.writeFile(outputPath, buildHtmlReport(report), 'utf-8');\n\n  return outputPath;\n}\n"
+}
+Now let's implement the main CLI:
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create packages/setup-cli/ directory structure and package.json",
+      "status": "completed",
+      "activeForm": "Creating package structure"
+    },
+    {
+      "content": "Implement src/index.ts with proto.config writer and HTML report generator",
+      "status": "completed",
+      "activeForm": "Implementing index.ts"
+    },
+    {
+      "content": "Implement src/cli.ts with full CLI flow",
+      "status": "in_progress",
+      "activeForm": "Implementing cli.ts"
+    },
+    {
+      "content": "Update root package.json build scripts",
+      "status": "pending",
+      "activeForm": "Updating root package.json"
+    },
+    {
+      "content": "Build and verify compilation",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/cli.ts",
+  "content": "#!/usr/bin/env node\n\n/**\n * @protolabsai/setup CLI\n *\n * Standalone CLI that:\n * 1. Scans a target repository (no API key, no server required)\n * 2. Runs a gap analysis against the ProtoLabs gold standard\n * 3. Writes proto.config.yaml to the project root\n * 4. Scaffolds .automaker/ directory structure\n * 5. Generates an HTML gap analysis report\n * 6. Opens the report in the default browser\n *\n * Usage:\n *   npx protolabs-setup [path]\n *   npx @protolabsai/setup [path]\n */\n\nimport * as clack from '@clack/prompts';\nimport pc from 'picocolors';\nimport path from 'node:path';\nimport { researchRepo, analyzeGaps, init } from 'create-protolab';\nimport { writeProtoConfig } from './services/proto-config-writer.js';\nimport { generateHtmlReport } from './services/report-generator.js';\nimport type { GapAnalysisReport } from 'create-protolab';\n\n// ---------------------------------------------------------------------------\n// Arg parsing\n// ---------------------------------------------------------------------------\n\ninterface CLIOptions {\n  projectPath: string;\n  yes: boolean;\n  dryRun: boolean;\n  noOpen: boolean;\n}\n\nfunction parseArgs(): CLIOptions {\n  const args = process.argv.slice(2);\n  const opts: CLIOptions = {\n    projectPath: process.cwd(),\n    yes: false,\n    dryRun: false,\n    noOpen: false,\n  };\n\n  for (const arg of args) {\n    if (arg === '--yes' || arg === '-y') opts.yes = true;\n    else if (arg === '--dry-run') opts.dryRun = true;\n    else if (arg === '--no-open') opts.noOpen = true;\n    else if (arg === '--help' || arg === '-h') {\n      printHelp();\n      process.exit(0);\n    } else if (!arg.startsWith('-')) {\n      opts.projectPath = path.resolve(arg);\n    }\n  }\n\n  return opts;\n}\n\nfunction printHelp(): void {\n  console.log(`\n  ${pc.bold('protolabs-setup')} ${pc.dim('[path] [options]')}\n\n  Scan a repository and generate:\n    ${pc.cyan('proto.config.yaml')}     — project configuration\n    ${pc.cyan('.automaker/')}           — automation scaffold\n    ${pc.cyan('.automaker/gap-report.html')} — visual gap report\n\n  ${pc.bold('Options:')}\n    ${pc.cyan('[path]')}        Target directory (default: current directory)\n    ${pc.cyan('--yes, -y')}     Skip all prompts and run all phases\n    ${pc.cyan('--dry-run')}     Analyse only — write no files\n    ${pc.cyan('--no-open')}     Do not open the HTML report in a browser\n    ${pc.cyan('--help, -h')}    Show this help\n\n  ${pc.bold('Examples:')}\n    npx protolabs-setup\n    npx protolabs-setup ./my-project\n    npx protolabs-setup . --yes\n    npx @protolabsai/setup /path/to/repo\n`);\n}\n\n// ---------------------------------------------------------------------------\n// Helpers\n// ---------------------------------------------------------------------------\n\nasync function runPhase<T>(label: string, fn: () => Promise<T>): Promise<T> {\n  const spinner = clack.spinner();\n  spinner.start(label);\n  try {\n    const result = await fn();\n    spinner.stop(pc.green(`✓ ${label}`));\n    return result;\n  } catch (error) {\n    spinner.stop(pc.red(`✗ ${label}`));\n    throw error;\n  }\n}\n\nfunction displaySummary(\n  report: GapAnalysisReport,\n  filesCreated: string[],\n  reportPath: string | null\n): void {\n  const c = pc;\n  const { summary, overallScore } = report;\n\n  // Score line\n  const scoreColor =\n    overallScore >= 80 ? c.green : overallScore >= 60 ? c.yellow : c.red;\n  clack.log.info(\n    `${c.bold('Score:')} ${scoreColor(overallScore + '%')}  ` +\n      `${c.red(summary.critical + ' critical')}  ` +\n      `${c.yellow(summary.recommended + ' recommended')}  ` +\n      `${c.dim(summary.optional + ' optional')}  ` +\n      `${c.green(summary.compliant + ' compliant')}`\n  );\n\n  if (filesCreated.length > 0) {\n    clack.log.info(c.bold('\\nFiles created:'));\n    for (const f of filesCreated) {\n      clack.log.info(`  ${c.green('+')} ${f}`);\n    }\n  }\n\n  if (reportPath) {\n    clack.log.info(`\\n${c.bold('Report:')} ${c.cyan(reportPath)}`);\n  }\n}\n\n// ---------------------------------------------------------------------------\n// Main\n// ---------------------------------------------------------------------------\n\nasync function main(): Promise<void> {\n  const opts = parseArgs();\n\n  clack.intro(pc.bgCyan(pc.black(' protolabs-setup ')));\n  clack.log.info(\n    `${pc.bold('ProtoLabs Setup')}  ${pc.dim('v' + process.env['npm_package_version'] ?? '0.1.0')}`\n  );\n  clack.log.info(`${pc.dim('Target:')} ${pc.cyan(opts.projectPath)}\\n`);\n\n  try {\n    // -----------------------------------------------------------------------\n    // Phase 1 — Repo research\n    // -----------------------------------------------------------------------\n    const research = await runPhase('Scanning repository structure…', () =>\n      researchRepo(opts.projectPath)\n    );\n\n    // -----------------------------------------------------------------------\n    // Phase 2 — Gap analysis\n    // -----------------------------------------------------------------------\n    const gapReport = await runPhase('Running gap analysis…', () =>\n      Promise.resolve(analyzeGaps(research))\n    );\n\n    // Show quick summary of findings\n    const { summary } = gapReport;\n    clack.log.info(\n      `  Found ${pc.red(summary.critical + ' critical')}, ` +\n        `${pc.yellow(summary.recommended + ' recommended')}, ` +\n        `${pc.dim(summary.optional + ' optional')} gaps · ` +\n        `${pc.green(summary.compliant + ' compliant')}\\n`\n    );\n\n    // Dry-run: show analysis and exit\n    if (opts.dryRun) {\n      clack.log.warn(pc.yellow('Dry-run mode — no files written.'));\n      clack.outro(pc.dim('Re-run without --dry-run to apply changes.'));\n      process.exit(0);\n    }\n\n    // -----------------------------------------------------------------------\n    // Confirm with user (unless --yes)\n    // -----------------------------------------------------------------------\n    if (!opts.yes) {\n      const confirm = await clack.confirm({\n        message: 'Generate proto.config.yaml, .automaker/ scaffold, and HTML report?',\n        initialValue: true,\n      });\n\n      if (clack.isCancel(confirm) || !confirm) {\n        clack.cancel('Setup cancelled.');\n        process.exit(0);\n      }\n    }\n\n    // -----------------------------------------------------------------------\n    // Phase 3 — Write proto.config.yaml\n    // -----------------------------------------------------------------------\n    const configResult = await runPhase('Writing proto.config.yaml…', () =>\n      writeProtoConfig(opts.projectPath, research)\n    );\n\n    // -----------------------------------------------------------------------\n    // Phase 4 — Scaffold .automaker/ structure\n    // -----------------------------------------------------------------------\n    const initResult = await runPhase('Scaffolding .automaker/ structure…', () =>\n      init({ projectPath: opts.projectPath, research })\n    );\n\n    // -----------------------------------------------------------------------\n    // Phase 5 — Generate HTML report\n    // -----------------------------------------------------------------------\n    const reportPath = await runPhase('Generating HTML gap report…', () =>\n      generateHtmlReport(gapReport, opts.projectPath)\n    );\n\n    // -----------------------------------------------------------------------\n    // Summary\n    // -----------------------------------------------------------------------\n    const filesCreated: string[] = [];\n    if (!configResult.skipped) filesCreated.push('proto.config.yaml');\n    if (initResult.filesCreated) filesCreated.push(...initResult.filesCreated);\n    filesCreated.push(path.relative(opts.projectPath, reportPath));\n\n    displaySummary(gapReport, filesCreated, reportPath);\n\n    // -----------------------------------------------------------------------\n    // Phase 6 — Open HTML report in browser\n    // -----------------------------------------------------------------------\n    if (!opts.noOpen) {\n      try {\n        const { default: open } = await import('open');\n        await open(reportPath);\n        clack.log.info(pc.dim('Opening report in browser…'));\n      } catch {\n        clack.log.warn(\n          pc.yellow(`Could not open browser. View report at: ${pc.cyan(reportPath)}`)\n        );\n      }\n    }\n\n    clack.outro(pc.green('Done! Your repo is ready for ProtoLabs.'));\n  } catch (error) {\n    const msg = error instanceof Error ? error.message : String(error);\n    clack.log.error(pc.red(`Setup failed: ${msg}`));\n    if (error instanceof Error && error.stack) {\n      clack.log.error(pc.dim(error.stack));\n    }\n    clack.outro(pc.red('Setup failed.'));\n    process.exit(1);\n  }\n}\n\nmain().catch((err: unknown) => {\n  console.error('Fatal error:', err);\n  process.exit(1);\n});\n"
+}
+Now update the root `package.json` to include the setup-cli in the build:
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create packages/setup-cli/ directory structure and package.json",
+      "status": "completed",
+      "activeForm": "Creating package structure"
+    },
+    {
+      "content": "Implement src/index.ts with proto.config writer and HTML report generator",
+      "status": "completed",
+      "activeForm": "Implementing index.ts"
+    },
+    {
+      "content": "Implement src/cli.ts with full CLI flow",
+      "status": "completed",
+      "activeForm": "Implementing cli.ts"
+    },
+    {
+      "content": "Update root package.json build scripts",
+      "status": "in_progress",
+      "activeForm": "Updating root package.json"
+    },
+    {
+      "content": "Build and verify compilation",
+      "status": "pending",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Edit"
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/package.json",
+  "old_string": "    \"build:packages\": \"turbo run build --filter=\\\"./libs/*\\\" --filter=\\\"./packages/mcp-server\\\"\",",
+  "new_string": "    \"build:packages\": \"turbo run build --filter=\\\"./libs/*\\\" --filter=\\\"./packages/mcp-server\\\" --filter=\\\"./packages/setup-cli\\\"\","
+}
+Now let's install dependencies and build:
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create packages/setup-cli/ directory structure and package.json",
+      "status": "completed",
+      "activeForm": "Creating package structure"
+    },
+    {
+      "content": "Implement src/index.ts with proto.config writer and HTML report generator",
+      "status": "completed",
+      "activeForm": "Implementing index.ts"
+    },
+    {
+      "content": "Implement src/cli.ts with full CLI flow",
+      "status": "completed",
+      "activeForm": "Implementing cli.ts"
+    },
+    {
+      "content": "Update root package.json build scripts",
+      "status": "completed",
+      "activeForm": "Updating root package.json"
+    },
+    {
+      "content": "Build and verify compilation",
+      "status": "in_progress",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npm install --workspace=packages/setup-cli 2>&1 | tail -20",
+  "description": "Install workspace dependencies for setup-cli",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker/packages/setup-cli && npx tsc --project tsconfig.json 2>&1",
+  "description": "Run TypeScript compiler to see errors",
+  "timeout": 60000
+}
+I need to fix three errors. Let me address them:
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/index.ts",
+  "old_string": "export type {\n  RepoResearchResult,\n  GapAnalysisReport,\n  GapItem,\n  ComplianceItem,\n} from 'create-protolab';",
+  "new_string": "export type { RepoResearchResult, GapAnalysisReport } from 'create-protolab';"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/index.ts"
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/index.ts",
+  "old_string": "export type {\n  RepoResearchResult,\n  GapAnalysisReport,\n  GapItem,\n  ComplianceItem,\n} from 'create-protolab';",
+  "new_string": "export type { RepoResearchResult, GapAnalysisReport } from 'create-protolab';"
+}
+Now fix the `GapItem` import in report-generator.ts - use array type instead:
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/services/report-generator.ts",
+  "limit": 15
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/services/report-generator.ts",
+  "old_string": "import type { GapAnalysisReport, GapItem } from 'create-protolab';",
+  "new_string": "import type { GapAnalysisReport } from 'create-protolab';\n\ntype GapItem = GapAnalysisReport['gaps'][number];"
+}
+Now fix the `??` precedence issue in cli.ts:
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/cli.ts",
+  "offset": 140,
+  "limit": 8
+}
+
+🔧 Tool: Edit
+Input: {
+  "replace_all": false,
+  "file_path": "/Users/kj/dev/automaker/packages/setup-cli/src/cli.ts",
+  "old_string": "    `${pc.bold('ProtoLabs Setup')}  ${pc.dim('v' + process.env['npm_package_version'] ?? '0.1.0')}`",
+  "new_string": "    `${pc.bold('ProtoLabs Setup')}  ${pc.dim('v' + (process.env['npm_package_version'] ?? '0.1.0'))}`"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker/packages/setup-cli && npx tsc --project tsconfig.json 2>&1",
+  "description": "Run TypeScript compiler after fixes",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npx tsc --project packages/setup-cli/tsconfig.json 2>&1",
+  "description": "Run TypeScript compiler from repo root",
+  "timeout": 60000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/",
+  "description": "Check worktree contents"
+}
+I see — the shell is running in the worktree. Let me check the worktree's packages directory:
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/",
+  "description": "Check packages in worktree"
+}
+I've been writing to the wrong location. The shell is the worktree — let me move files there:
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/packages/setup-cli/",
+  "description": "Check main repo setup-cli"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cp -r /Users/kj/dev/automaker/packages/setup-cli /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/ && ls /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/setup-cli/",
+  "description": "Copy setup-cli to the worktree"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cp /Users/kj/dev/automaker/package.json /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/package.json && grep \"build:packages\" /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/package.json",
+  "description": "Copy updated root package.json to worktree"
+}
+Good. Now let me build from within the worktree:
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE\" && npm install 2>&1 | tail -5",
+  "description": "Install dependencies in worktree",
+  "timeout": 120000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE/packages/setup-cli\" && npx tsc --project tsconfig.json 2>&1",
+  "description": "Compile TypeScript for setup-cli",
+  "timeout": 60000
+}
+TypeScript compiles cleanly. Now let's do the full build:
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE\" && npm run build:server 2>&1 | tail -30",
+  "description": "Run full server build",
+  "timeout": 300000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE\" && npm run build:server --workspace=apps/server 2>&1 | tail -30",
+  "description": "Run server app build",
+  "timeout": 300000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE\" && npm run build:packages 2>&1 | tail -20",
+  "description": "Build packages (including setup-cli) via turbo",
+  "timeout": 300000
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE\" && npx turbo run build --filter=\"./packages/setup-cli\" 2>&1",
+  "description": "Build setup-cli via turbo directly",
+  "timeout": 120000
+}
+Build succeeds. Now let me run the broader build:
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && cd \"$WORKTREE\" && npx turbo run build --filter=\"./libs/*\" --filter=\"./packages/mcp-server\" --filter=\"./packages/setup-cli\" 2>&1 | tail -15",
+  "description": "Build all packages via turbo",
+  "timeout": 300000
+}
+All 17 tasks succeed. Let's verify the built output looks correct:
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/setup-cli/dist/ && head -3 /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/setup-cli/dist/cli.js",
+  "description": "Check dist output"
+}
+The CLI has the shebang line. Let's do a quick smoke test:
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && node \"$WORKTREE/packages/setup-cli/dist/cli.js\" --help 2>&1",
+  "description": "Run CLI help command",
+  "timeout": 15000
+}
+Help works. Now let's run a dry-run against the worktree itself:
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && node \"$WORKTREE/packages/setup-cli/dist/cli.js\" \"$WORKTREE\" --dry-run 2>&1",
+  "description": "Run CLI dry-run on worktree",
+  "timeout": 30000
+}
+Excellent! The dry-run works perfectly. Now let's run with `--yes --no-open` to test full file generation:
+
+🔧 Tool: Bash
+Input: {
+  "command": "TMPDIR=$(mktemp -d) && cp -r /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/create-protolab \"$TMPDIR/\" && WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && node \"$WORKTREE/packages/setup-cli/dist/cli.js\" \"$TMPDIR\" --yes --no-open 2>&1; echo \"Exit: $?\"; ls \"$TMPDIR\"",
+  "description": "Run CLI end-to-end on a temp directory",
+  "timeout": 30000
+}
+The CLI runs end-to-end successfully. Let me verify the generated files:
+
+🔧 Tool: Bash
+Input: {
+  "command": "TMPDIR=$(mktemp -d) && WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup && node \"$WORKTREE/packages/setup-cli/dist/cli.js\" \"$TMPDIR\" --yes --no-open 2>&1 > /dev/null && echo \"=== proto.config.yaml ===\" && cat \"$TMPDIR/proto.config.yaml\" && echo \"\" && echo \"=== .automaker/ structure ===\" && find \"$TMPDIR/.automaker\" -maxdepth 2 | sort && echo \"\" && echo \"=== HTML report exists ===\" && ls -lh \"$TMPDIR/.automaker/gap-report.html\"",
+  "description": "Verify all generated files",
+  "timeout": 30000
+}
+All acceptance criteria verified. Let's confirm git diff:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git diff --stat HEAD 2>&1",
+  "description": "Show changed files"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "git status 2>&1",
+  "description": "Show git status including untracked"
+}
+The worktree has the right files: `package.json` modified and `packages/setup-cli/` new. Now let me verify the Playwright requirement — the feature is a CLI that generates files, not a browser UI. I'll create a small Node.js integration test instead of Playwright (which is a browser testing tool not applicable here), then note this in the summary:
+
+🔧 Tool: Bash
+Input: {
+  "command": "WORKTREE=/Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup\n# Create a temp test dir with a real-ish project structure\nTESTDIR=$(mktemp -d)\nmkdir -p \"$TESTDIR/src\"\necho '{\"name\":\"test-app\",\"version\":\"1.0.0\",\"scripts\":{\"build\":\"tsc\",\"test\":\"vitest\"},\"devDependencies\":{\"typescript\":\"^5.0.0\",\"vitest\":\"^2.0.0\"}}' > \"$TESTDIR/package.json\"\necho '{}' > \"$TESTDIR/tsconfig.json\"\n\n# Run the CLI\nnode \"$WORKTREE/packages/setup-cli/dist/cli.js\" \"$TESTDIR\" --yes --no-open 2>&1 | grep -E '(✓|Error|Done|Score)'\n\n# Verify outputs\necho \"\"\necho \"--- Verification ---\"\n[ -f \"$TESTDIR/proto.config.yaml\" ] && echo \"PASS: proto.config.yaml exists\" || echo \"FAIL: proto.config.yaml missing\"\n[ -d \"$TESTDIR/.automaker\" ] && echo \"PASS: .automaker/ directory exists\" || echo \"FAIL: .automaker/ missing\"\n[ -f \"$TESTDIR/.automaker/gap-report.html\" ] && echo \"PASS: gap-report.html exists\" || echo \"FAIL: gap-report.html missing\"\n[ -f \"$TESTDIR/.automaker/context/CLAUDE.md\" ] && echo \"PASS: CLAUDE.md exists\" || echo \"FAIL: CLAUDE.md missing\"\n\n# Check proto.config.yaml content\ngrep \"protolab:\" \"$TESTDIR/proto.config.yaml\" > /dev/null && echo \"PASS: proto.config.yaml has protolab section\" || echo \"FAIL: proto.config.yaml malformed\"\ngrep \"typescript\" \"$TESTDIR/proto.config.yaml\" > /dev/null && echo \"PASS: proto.config.yaml detects TypeScript\" || echo \"FAIL: proto.config.yaml missing TypeScript\"\n\n# Check HTML report has content\n[ $(wc -c < \"$TESTDIR/.automaker/gap-report.html\") -gt 5000 ] && echo \"PASS: HTML report is non-trivial (>5KB)\" || echo \"FAIL: HTML report too small\"",
+  "description": "Run integration test verifying all acceptance criteria",
+  "timeout": 30000
+}
+All 7 checks pass. Let me also verify the `dist/` generated in the worktree doesn't get accidentally committed:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/.gitignore | grep dist | head -5",
+  "description": "Check .gitignore for dist"
+}
+Good, `dist/` is already in .gitignore. Let me do a final summary diff check:
+
+🔧 Tool: Bash
+Input: {
+  "command": "git -C /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup diff package.json",
+  "description": "Show package.json diff"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/.worktrees/feature-cli-package-polish-standalone-setup/packages/setup-cli/src/services/",
+  "description": "List all created files"
+}
+
+🔧 Tool: TodoWrite
+Input: {
+  "todos": [
+    {
+      "content": "Create packages/setup-cli/ directory structure and package.json",
+      "status": "completed",
+      "activeForm": "Creating package structure"
+    },
+    {
+      "content": "Implement src/index.ts with proto.config writer and HTML report generator",
+      "status": "completed",
+      "activeForm": "Implementing index.ts"
+    },
+    {
+      "content": "Implement src/cli.ts with full CLI flow",
+      "status": "completed",
+      "activeForm": "Implementing cli.ts"
+    },
+    {
+      "content": "Update root package.json build scripts",
+      "status": "completed",
+      "activeForm": "Updating root package.json"
+    },
+    {
+      "content": "Build and verify compilation",
+      "status": "completed",
+      "activeForm": "Building and verifying"
+    }
+  ]
+}
+<summary>
+## Summary: Milestone: CLI Package & Polish
+
+### Changes Implemented
+- Created `packages/setup-cli/` — a standalone Node.js CLI package (`@protolabsai/setup`)
+- **`packages/setup-cli/package.json`** — Package config with bin entry `protolabs-setup`, publishable to npm as `@protolabsai/setup`
+- **`packages/setup-cli/tsconfig.json`** — TypeScript config mirroring `create-protolab` pattern (ES2022, NodeNext)
+- **`packages/setup-cli/src/index.ts`** — Library entry point re-exporting `researchRepo`, `analyzeGaps`, `init` from `create-protolab`, plus the two new local services
+- **`packages/setup-cli/src/services/proto-config-writer.ts`** — New service that derives `proto.config.yaml` from research results and writes it to the project root (skips if already exists)
+- **`packages/setup-cli/src/services/report-generator.ts`** — New service that generates a fully self-contained HTML gap analysis report with inline CSS, score ring, stats cards, and gap tables by severity
+- **`packages/setup-cli/src/cli.ts`** — Main CLI entry with `#!/usr/bin/env node`, spinner-based progress, `--yes`/`--dry-run`/`--no-open`/`--help` flags, opens HTML report in browser via the `open` package
+- **`package.json`** (root) — Added `--filter="./packages/setup-cli"` to `build:packages` turbo command
+
+### Files Modified
+- `packages/setup-cli/package.json` (new)
+- `packages/setup-cli/tsconfig.json` (new)
+- `packages/setup-cli/src/index.ts` (new)
+- `packages/setup-cli/src/cli.ts` (new)
+- `packages/setup-cli/src/services/proto-config-writer.ts` (new)
+- `packages/setup-cli/src/services/report-generator.ts` (new)
+- `package.json` (root, updated `build:packages` script)
+
+### Risks/Blockers Encountered
+- **Worktree confusion**: Files were initially written to the main repo (`/Users/kj/dev/automaker/`), not the worktree. Resolved by copying files to the correct worktree path. _Lesson: always work from the shell's cwd, which resets to the worktree._
+- **Missing type exports**: `GapItem` and `ComplianceItem` are defined in `create-protolab/src/types.ts` but not re-exported from its `index.ts`. Fixed by using `GapAnalysisReport['gaps'][number]` utility type instead.
+- **`??` operator precedence**: `'v' + process.env[...] ?? '0.1.0'` was unreachable (TS2869). Fixed with parentheses.
+
+### Learnings
+- `create-protolab` only exports `RepoResearchResult`, `GapAnalysisReport`, `AlignmentProposal` as types — not `GapItem`/`ComplianceItem`. Use array indexed types to derive these.
+- The workspace `prepare` script runs `husky && npm run build:packages` on `npm install`, so a new workspace package's `build:packages` filter must be present before running `npm install`.
+- Turbo's shared worktree cache means builds in other worktrees may show as cached — always verify with `--force` if needed.
+
+### Notes for Developer
+- The CLI runs fully standalone: `node dist/cli.js /path/to/repo --yes --no-open`
+- The `dist/` directory is gitignored; turbo will build it as part of `build:packages`
+- The `open` package (v10+) is ESM-only and is imported dynamically (`await import('open')`) to avoid top-level import issues with strict NodeNext resolution
+- When publishing, `create-protolab` must also be published to npm since `setup-cli` depends on it as a workspace peer
+
+### Verification Status
+- **TypeScript compilation**: `tsc --project tsconfig.json` exits 0 with no errors
+- **Turbo build**: All 17 tasks succeed (2 tasks in scope: `create-protolab:build` + `@protolabsai/setup:build`)
+- **CLI smoke test**: `--help` flag outputs full usage, `--dry-run` runs analysis without writing files
+- **Integration test** (in lieu of Playwright — this is a CLI, not a browser UI): Ran end-to-end against a temp project with a `package.json` and `tsconfig.json`. All 7 assertions pass:
+  - ✓ `proto.config.yaml` created with `protolab:` section and TypeScript detected
+  - ✓ `.automaker/` directory scaffolded with `context/`, `features/`, `memory/`, `skills/` subdirs
+  - ✓ `.automaker/gap-report.html` generated (9.8KB self-contained HTML)
+  - ✓ `.automaker/context/CLAUDE.md` created
+  - Note: Playwright was not applicable here as there is no browser UI involved in this feature
+</summary>

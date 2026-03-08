@@ -5,7 +5,7 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 64
+  loaded: 65
   referenced: 25
   successfulFeatures: 25
 ---
@@ -1148,3 +1148,18 @@ usageStats:
 - **Problem solved:** Test needed to verify adapter correctly routes models through the factory without testing the factory's own logic
 - **Why this works:** Spying preserves factory behavior (catches real routing issues) while tracking if it was called correctly. Tests the adapter-factory contract, not factory implementation.
 - **Trade-offs:** More realistic integration testing (catches real bugs) but test becomes fragile to factory implementation. Spy approach is better than mock for contract testing.
+
+#### [Pattern] Temporary Playwright test created, executed to verify feature logic, then deleted after passing; distinguishes between verification and integration (2026-03-07)
+- **Problem solved:** Component not yet routed, but validation logic and app stability need verification before committing
+- **Why this works:** Allows testing component behavior without permanent test file or full route integration; catch regressions early without blocking on route plumbing
+- **Trade-offs:** Easier: quick verification without route work. Harder: temporary files add clutter; tests are not persistent/automated
+
+#### [Gotcha] Test suite uses flowRegistry.unregister() in beforeEach to prevent state leakage between tests; without this cleanup, one test's registered flows persist and interfere with subsequent tests (2026-03-07)
+- **Situation:** FlowRegistry is a singleton; test isolation requires explicit cleanup
+- **Root cause:** Singleton state is shared across test runs. Previous test's registrations remain in memory unless explicitly cleared. beforeEach cleanup ensures each test starts with clean state.
+- **How to avoid:** Requires discipline (easy to forget unregister() call). Prevents silent test interdependencies and ensures reliable test results.
+
+#### [Gotcha] CLI tools require direct functional execution testing (node cli.js), not browser automation frameworks (2026-03-07)
+- **Situation:** Implementation uses Playwright testing patterns from web UI components but this is a Node.js CLI tool
+- **Root cause:** Playwright tests browser rendering, not actual CLI execution. Direct node execution (node /path/to/cli.js args) tests the real consumer experience and is faster.
+- **How to avoid:** Direct CLI testing is simpler and faster but only covers CLI execution; programmatic import patterns need separate tests

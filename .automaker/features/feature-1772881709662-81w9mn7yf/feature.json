@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Tutorial Content & Getting Started\n\nCreate the guided onboarding experience. Tutorial content for each product domain, notes tab template, spec.md skeleton, and refined coding-rules.md generation.\n\n## Phases\n1. Getting Started notes tab template\n2. Spec.md skeleton from research\n3. Refined coding-rules.md generation",
   "title": "[Epic] Tutorial Content & Getting Started",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#7C3AED",
   "branchName": "epic/tutorial-content-getting-started",
@@ -23,10 +23,16 @@
       "to": "backlog",
       "timestamp": "2026-03-07T11:08:29.663Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T22:58:48.059Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772881709657-be8p79osk"
-  ]
+  ],
+  "completedAt": "2026-03-07T22:58:48.059Z"
 }

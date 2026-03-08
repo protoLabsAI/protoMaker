@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Project Artifact Persistence\n\nPersist ceremony reports and changelogs as structured artifacts on the project. Maintain an artifact index. Everything stored in .automaker/projects/{slug}/artifacts/.\n\n## Phases\n1. Artifact storage service + ceremony report persistence\n2. Changelog persistence + escalation artifact recording",
   "title": "[Epic] Project Artifact Persistence",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#7C3AED",
   "branchName": "epic/project-artifact-persistence",
@@ -22,10 +22,16 @@
       "to": "backlog",
       "timestamp": "2026-03-07T06:06:14.154Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T22:15:36.790Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772863574147-mglorzdzu"
-  ]
+  ],
+  "completedAt": "2026-03-07T22:15:36.790Z"
 }

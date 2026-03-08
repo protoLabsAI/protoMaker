@@ -2,7 +2,7 @@
   "category": "CLI Package & Polish",
   "description": "**Milestone:** CLI Package & Polish\n\nCreate packages/setup-cli/ — a lightweight Node.js CLI that bundles repo-research-service, gap-analysis-service, report-generator-service, and the new proto.config writer. Runs without a server or API key. Entry point: npx @protolabsai/setup (or npx protolabs-setup). Accepts a path argument (defaults to cwd). Outputs proto.config.yaml, .automaker/ structure, and HTML report. Does NOT create notes tabs or board features (those require the server).\n\n**Files to Modify:**\n- packages/setup-cli/package.json\n- packages/setup-cli/src/index.ts\n- packages/setup-cli/src/cli.ts\n- package.json\n\n**Acceptance Criteria:**\n- [ ] CLI runs standalone with no server dependency\n- [ ] npx protolabs-setup . works end-to-end\n- [ ] Generates proto.config.yaml, .automaker/ structure, HTML report\n- [ ] Opens HTML report in default browser\n- [ ] Clean terminal output with progress indicators\n- [ ] No API key required\n- [ ] Package publishable to npm\n\n**Complexity:** large\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Standalone setup CLI package",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772881709667-5ufnhxhs1",
   "branchName": "feature/cli-package-polish-standalone-setup",
@@ -25,10 +25,23 @@
       "to": "backlog",
       "timestamp": "2026-03-07T11:08:29.668Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:59:04.038Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "done",
+      "timestamp": "2026-03-07T23:04:16.811Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772881709662-81w9mn7yf"
-  ]
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "completedAt": "2026-03-07T23:04:16.811Z"
 }

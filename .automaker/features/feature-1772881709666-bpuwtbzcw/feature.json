@@ -2,7 +2,7 @@
   "category": "Tutorial Content & Getting Started",
   "description": "**Milestone:** Tutorial Content & Getting Started\n\nImprove the existing coding-rules.md template to be more useful out of the box. Include detected linting config (ESLint rules, Prettier config), import conventions (from tsconfig paths), testing patterns (framework, test file location, run command), and formatting requirements. Make it immediately useful as agent context.\n\n**Files to Modify:**\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] coding-rules.md includes detected lint/format config\n- [ ] Import conventions derived from tsconfig paths\n- [ ] Testing section includes framework and run commands\n- [ ] File is immediately useful as agent context without editing\n- [ ] Does not overwrite existing coding-rules.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Refined coding-rules.md generation",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772881709662-81w9mn7yf",
   "branchName": "feature/tutorial-content-refined-coding",
@@ -25,6 +25,33 @@
       "to": "backlog",
       "timestamp": "2026-03-07T11:08:29.666Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T22:02:42.062Z",
+      "reason": "Interrupted from \"backlog\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:02:44.906Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T22:02:48.365Z"
+    },
+    {
+      "from": "backlog",
+      "to": "blocked",
+      "timestamp": "2026-03-07T22:39:35.044Z",
+      "reason": "Unmet dependencies: feature-1772881709665-vfqo1fqq3"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T22:39:38.044Z"
     }
   ],
   "featureType": "code",
@@ -32,5 +59,39 @@
     "feature-1772881709661-yvcbc1mtp",
     "feature-1772881709664-bdnjxdbxm",
     "feature-1772881709665-vfqo1fqq3"
-  ]
+  ],
+  "statusChangeReason": "Unmet dependencies: feature-1772881709665-vfqo1fqq3",
+  "lastTraceId": "3ac446a3-5f9e-4be0-ae46-e54632b59559",
+  "traceIds": [
+    "3ac446a3-5f9e-4be0-ae46-e54632b59559"
+  ],
+  "executionHistory": [
+    {
+      "id": "b11dc582-489b-404c-bd9f-2a4b09e881d4",
+      "startedAt": "2026-03-07T22:01:54.375Z",
+      "completedAt": "2026-03-07T22:02:42.664Z",
+      "durationMs": 48289,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "updatedAt": "2026-03-07T22:02:44.906Z",
+  "model": "claude-sonnet-4-6",
+  "failureCount": 1,
+  "failureClassification": {
+    "category": "unknown",
+    "confidence": 0.5,
+    "recoveryStrategy": {
+      "type": "escalate_to_user",
+      "reason": "Unclassified failure - needs investigation: Unmet dependencies: feature-1772881709665-vfqo1fqq3"
+    },
+    "retryable": false,
+    "timestamp": "2026-03-07T22:39:35.057Z"
+  },
+  "prNumber": 1942,
+  "prMergedAt": "2026-03-07T13:33:50Z",
+  "completedAt": "2026-03-07T22:39:38.044Z"
 }

@@ -2,7 +2,7 @@
   "category": "Documentation",
   "description": "7 doc-relevant files changed recently.\n\nChanged files requiring docs review:\n- apps/server/src/routes/setup/routes/project.ts\n- apps/server/src/services/feature-scheduler.ts\n- apps/server/src/services/repo-research-service.ts\n- libs/platform/src/index.ts\n- libs/types/src/index.ts\n- libs/types/src/project.ts\n- libs/types/src/setup.ts\n",
   "title": "Update docs after: SetupLab: Published Onboarding Tool",
-  "status": "backlog",
+  "status": "done",
   "complexity": "small",
   "id": "feature-1772888486380-vnegcvoq7",
   "branchName": "feature/update-docs-after-setuplab-published",
@@ -30,9 +30,69 @@
       "from": "in_progress",
       "to": "backlog",
       "timestamp": "2026-03-07T15:44:39.548Z"
+    },
+    {
+      "from": "backlog",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T22:02:42.062Z",
+      "reason": "Interrupted from \"backlog\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:02:44.631Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T22:02:48.369Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:03:32.415Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "review",
+      "timestamp": "2026-03-07T22:09:17.184Z"
+    },
+    {
+      "from": "review",
+      "to": "done",
+      "timestamp": "2026-03-07T22:09:19.287Z"
     }
   ],
   "featureType": "code",
   "model": "claude-sonnet-4-6",
-  "updatedAt": "2026-03-07T13:03:14.164Z"
+  "updatedAt": "2026-03-07T22:03:34.348Z",
+  "statusChangeReason": "Interrupted from \"backlog\": server shutdown",
+  "lastTraceId": "eed22bb3-3836-43b3-8f8d-1c13bca672f9",
+  "traceIds": [
+    "e440ac12-693d-4b4e-97c5-bb22df003b87",
+    "eed22bb3-3836-43b3-8f8d-1c13bca672f9"
+  ],
+  "executionHistory": [
+    {
+      "id": "5636f8c0-a19f-4f0a-bd4a-508a1b7449ac",
+      "startedAt": "2026-03-07T22:02:38.280Z",
+      "completedAt": "2026-03-07T22:02:42.107Z",
+      "durationMs": 3827,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
+  "costUsd": 2.48162925,
+  "lastSessionId": "279016ad-e562-4c54-b14b-0b7328c0a080",
+  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1978",
+  "prNumber": 1938,
+  "prCreatedAt": "2026-03-07T22:09:16.127Z",
+  "reviewStartedAt": "2026-03-07T22:09:17.184Z",
+  "prTrackedSince": "2026-03-07T22:09:17.189Z",
+  "prLastPolledAt": "2026-03-07T22:35:48.419Z",
+  "prMergedAt": "2026-03-07T13:16:12Z",
+  "completedAt": "2026-03-07T22:09:19.287Z"
 }

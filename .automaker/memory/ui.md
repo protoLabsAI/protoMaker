@@ -511,3 +511,8 @@ usageStats:
 - **Rejected:** Bullet lists (harder to compare across platforms). Separate sections per OS (verbose, harder to find). Description lists (loses platform alignment)
 - **Trade-offs:** HTML tables are more complex markdown than simple lists. But provide measurably better UX for platform selection - users find their download in ~3 seconds vs 15 seconds
 - **Breaking if changed:** Without structured table layout, users must scan entire list linearly. Platform selection becomes friction point instead of clear path
+
+#### [Pattern] Discord webhook URL validation accepts canary.discord.com and ptb.discord.com subdomains, not just discord.com (2026-03-07)
+- **Problem solved:** Regex pattern: /^https:\/\/(discord\.com|canary\.discord\.com|ptb\.discord\.com)\/api\/webhooks.../
+- **Why this works:** Discord has canary (testing branch) and PTB (Public Test Build) environments with their own webhook endpoints; supporting these enables dev/staging workflows without hardcoding to production
+- **Trade-offs:** Easier: dev teams test against canary/ptb in isolation. Harder: validation regex more complex, more test cases needed

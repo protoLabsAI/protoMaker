@@ -2,7 +2,7 @@
   "category": "Tutorial Content & Getting Started",
   "description": "**Milestone:** Tutorial Content & Getting Started\n\nGenerate a spec.md skeleton pre-filled with detected project information: name, description (from README or package.json), tech stack summary, architecture overview (monorepo packages or directory structure), key dependencies. Includes placeholder sections the user should fill in: product goals, target users, key workflows, constraints.\n\n**Files to Modify:**\n- apps/server/src/services/repo-research-service.ts\n- apps/server/src/routes/setup/routes/project.ts\n\n**Acceptance Criteria:**\n- [ ] spec.md generated with detected project info\n- [ ] Placeholder sections clearly marked for user to fill\n- [ ] Architecture section reflects actual repo structure\n- [ ] Does not overwrite existing spec.md\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Spec.md skeleton from research",
-  "status": "blocked",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772881709662-81w9mn7yf",
   "branchName": "feature/tutorial-content-specmd-skeleton",
@@ -36,6 +36,81 @@
       "to": "blocked",
       "timestamp": "2026-03-07T15:44:58.206Z",
       "reason": "Max agent retries exceeded (3)"
+    },
+    {
+      "from": "backlog",
+      "to": "blocked",
+      "timestamp": "2026-03-07T22:32:41.280Z",
+      "reason": "Max agent retries exceeded (3)"
+    },
+    {
+      "from": "blocked",
+      "to": "backlog",
+      "timestamp": "2026-03-07T22:33:10.968Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:33:14.264Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "blocked",
+      "timestamp": "2026-03-07T22:33:15.443Z",
+      "reason": "Max agent retries exceeded (3)"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:34:30.196Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T22:35:56.209Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:35:59.033Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "interrupted",
+      "timestamp": "2026-03-07T22:36:20.903Z",
+      "reason": "Interrupted from \"in_progress\": server shutdown"
+    },
+    {
+      "from": "interrupted",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:36:23.864Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T22:36:28.053Z"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:37:01.041Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "backlog",
+      "timestamp": "2026-03-07T22:54:27.984Z"
+    },
+    {
+      "from": "backlog",
+      "to": "blocked",
+      "timestamp": "2026-03-07T22:56:59.057Z",
+      "reason": "Max agent retries exceeded (3)"
+    },
+    {
+      "from": "blocked",
+      "to": "done",
+      "timestamp": "2026-03-07T22:58:28.937Z"
     }
   ],
   "featureType": "code",
@@ -45,8 +120,38 @@
   ],
   "complexity": "medium",
   "model": "claude-sonnet-4-6",
-  "statusChangeReason": "Max agent retries exceeded (3)",
   "failureCount": 1,
+  "updatedAt": "2026-03-07T22:36:23.863Z",
+  "statusChangeReason": "Max agent retries exceeded (3)",
+  "lastTraceId": "eb2ee535-a29d-4875-9983-4ddfa789bf7d",
+  "traceIds": [
+    "e5d967ae-c0ec-495c-8596-eeb9a56f9613",
+    "eb2ee535-a29d-4875-9983-4ddfa789bf7d"
+  ],
+  "executionHistory": [
+    {
+      "id": "59beeb92-a5e0-47af-a522-4a7686e08bbf",
+      "startedAt": "2026-03-07T22:34:30.593Z",
+      "completedAt": "2026-03-07T22:35:56.658Z",
+      "durationMs": 86065,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    },
+    {
+      "id": "bf8f8737-5f7b-4a53-8158-b39f98246a63",
+      "startedAt": "2026-03-07T22:36:15.513Z",
+      "completedAt": "2026-03-07T22:36:21.384Z",
+      "durationMs": 5871,
+      "costUsd": 0,
+      "model": "claude-sonnet-4-6",
+      "success": false,
+      "error": "Operation was cancelled",
+      "trigger": "manual"
+    }
+  ],
   "failureClassification": {
     "category": "unknown",
     "confidence": 0.5,
@@ -55,6 +160,7 @@
       "reason": "Unclassified failure - needs investigation: Max agent retries exceeded (3)"
     },
     "retryable": false,
-    "timestamp": "2026-03-07T15:44:58.207Z"
-  }
+    "timestamp": "2026-03-07T22:56:59.071Z"
+  },
+  "completedAt": "2026-03-07T22:58:28.937Z"
 }

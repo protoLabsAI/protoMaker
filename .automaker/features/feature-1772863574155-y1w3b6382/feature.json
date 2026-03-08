@@ -2,7 +2,7 @@
   "category": "Project Artifact Persistence",
   "description": "**Milestone:** Project Artifact Persistence\n\nTDD phase. Create apps/server/src/services/project-artifact-service.ts. Write unit tests first: (1) saveArtifact(projectPath, slug, type, content) writes to .automaker/projects/{slug}/artifacts/{type}/{timestamp}.json and updates the index. (2) listArtifacts(projectPath, slug, type?) returns index entries. (3) getArtifact(projectPath, slug, artifactId) returns full content. Types: 'ceremony-report', 'changelog', 'escalation', 'standup'. Then implement. Wire into CeremonyService: on completion of retro/project-retro LangGraph flow, call saveArtifact with the ceremony output. Add artifact index type to libs/types.\n\n**Files to Modify:**\n- apps/server/src/services/project-artifact-service.ts\n- apps/server/src/services/ceremony-service.ts\n- libs/types/src/project.ts\n- apps/server/tests/unit/services/project-artifact-service.test.ts\n\n**Acceptance Criteria:**\n- [ ] ProjectArtifactService saves artifacts to .automaker/projects/{slug}/artifacts/{type}/{timestamp}.json\n- [ ] Artifact index file (.automaker/projects/{slug}/artifacts/index.json) maintained on every save\n- [ ] CeremonyService persists retro and project-retro reports as ceremony-report artifacts\n- [ ] listArtifacts and getArtifact return correct data\n- [ ] Unit tests cover save, list, get, and index update\n- [ ] Build passes\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Artifact storage service + ceremony report persistence",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772863574154-os996fwfu",
   "branchName": "feature/project-artifact-artifact-storage",
@@ -23,10 +23,43 @@
       "to": "backlog",
       "timestamp": "2026-03-07T06:06:14.155Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:07:36.316Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T22:08:58.752Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772863574147-mglorzdzu"
-  ]
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T22:08:58.751Z",
+  "costUsd": 0.5982755,
+  "lastSessionId": "6be97ab1-84dc-4c96-90b4-4a1898cd1b9f",
+  "lastTraceId": "897a3acf-3d51-4aea-b76c-a143862e088a",
+  "traceIds": [
+    "897a3acf-3d51-4aea-b76c-a143862e088a"
+  ],
+  "completedAt": "2026-03-07T22:08:58.752Z",
+  "executionHistory": [
+    {
+      "id": "2da37ea6-ac02-4df8-ac91-c842f8c5a0ba",
+      "startedAt": "2026-03-07T22:07:36.769Z",
+      "completedAt": "2026-03-07T22:08:58.777Z",
+      "durationMs": 82008,
+      "costUsd": 0.5982755,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "summary": "## Summary: Milestone: Project Artifact Persistence\n\n### Changes Implemented\nNo new code changes were needed — all four target files were already fully implemented in prior commits on this branch:\n\n1. **`apps/server/src/services/project-artifact-service.ts`** — Already implements `ProjectArtifactService` with `saveArtifact`, `listArtifacts`, and `getArtifact`. Artifacts written to `.automaker/projects/{slug}/artifacts/{type}/{id}.json`. Index maintained at `.automaker/projects/{slug}/artifacts/index.json`.\n\n2. **`apps/server/src/services/ceremony-service.ts`** — Already imports `projectArtifactService` and calls `saveArtifact` for both `milestone_retro` (in `handleMilestoneCompleted`) and `project_retro` (in `handleProjectCompleted`).\n\n3. **`libs/types/src/project.ts`** — Already exports `ArtifactType`, `ArtifactIndexEntry`, `ArtifactIndex`, and `ProjectArtifact` types.\n\n4. **`apps/server/tests/unit/services/project-artifact-service.test.ts`** — Already exists with 11 comprehensive tests covering `saveArtifact`, `listArtifacts`, `getArtifact`, and index management.\n\n### Files Modified\n- None (all work was completed in prior commits: \"Artifact storage service + ceremony report persistence\" #1923)\n\n### Risks/Blockers Encountered\n- None\n\n### Learnings\n- This worktree branch (`feature/project-artifact-artifact-storage`) was 52 commits ahead of origin, meaning the implementation was completed in an earlier session. The feature is fully realized.\n\n### Notes for Developer\n- All acceptance criteria are met as verified by tests and build.\n- The ceremony integration uses a fire-and-forget pattern (`void ...catch(...)`) so artifact save failures don't block ceremony delivery.\n\n### Verification Status\n- **Unit tests**: 11/11 passing (`ProjectArtifactService` — save, list, get, index update)\n- **Build**: 18/18 packages successful (`npm run build:server` exit 0)\n- **Git diff**: Working tree clean, no unintended changes\n- **Playwright**: Not applicable — `ProjectArtifactService` is a pure server-side filesystem service with no UI surface to verify via browser automation."
 }

@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 71
-  referenced: 26
-  successfulFeatures: 26
+  loaded: 77
+  referenced: 28
+  successfulFeatures: 28
 ---
 # architecture
 
@@ -3754,3 +3754,104 @@ usageStats:
 - **Problem solved:** Service runs in multiple contexts: production (needs durability), tests (don't care about durability), ephemeral deployments (no persistent storage).
 - **Why this works:** Avoids conditional logic throughout codebase and error handling burden. Ledger is optimization (prevents duplicate work) not correctness requirement.
 - **Trade-offs:** Simpler deployment story (dataDir optional) vs. subtle bugs if caller expects durability but doesn't provide dataDir. Silent failure is convenient but less explicit.
+
+#### [Pattern] Milestone components can be fully implemented and tested without route integration, enabling parallel feature development and composition later (2026-03-07)
+- **Problem solved:** ProjectSettingsPanel component built and tested but not yet wired into any route; will be composed by Project Page Hub feature later
+- **Why this works:** Decouples component development from integration work; allows team to work on reusable pieces independently while larger feature set coordinates composition
+- **Trade-offs:** Easier: component testing, parallel development. Harder: tracking unmounted components, avoiding duplication of similar components (separate ProjectSettingsView exists with ProjectWebhooksSection)
+
+#### [Pattern] Fire-and-forget persistence in ceremony integration: artifact saves use `void ...catch(...)` so failures don't block ceremony delivery (2026-03-07)
+- **Problem solved:** CeremonyService calls saveArtifact for milestone_retro and project_retro reports, but these operations must not block ceremony completion
+- **Why this works:** Prioritizes ceremony workflow availability over artifact persistence guarantees. Ceremonies are critical path, artifacts are best-effort.
+- **Trade-offs:** Gain: ceremonies complete even if artifact service fails. Lose: potential data loss if artifact writes fail silently. Risk: inconsistency between ceremony completion and persistence.
+
+### Artifact storage in `.automaker/projects/` filesystem hierarchy instead of relational database (2026-03-07)
+- **Context:** Ceremony reports and project artifacts need durable storage with project-scoped isolation
+- **Why:** Filesystem storage is Git-friendly (can be committed, diffed), requires no schema migration, and aligns with project-local artifact model. Lower coupling to database layer.
+- **Rejected:** SQL database (adds migration burden, not version-controllable), S3/cloud storage (adds external dependency, latency), in-memory cache (not durable)
+- **Trade-offs:** Gain: version control integration, no DB schema, local development friendly. Lose: querying more complex, file limits at scale, no ACID transactions across artifacts.
+- **Breaking if changed:** Moving to database requires migration strategy for existing artifacts, changes backup/restore procedures, adds runtime dependency. Changing path structure breaks artifact discovery.
+
+#### [Pattern] Type-based artifact organization: artifacts stored in subdirectories by `ArtifactType` (e.g., `artifacts/milestone_retro/`, `artifacts/project_retro/`) (2026-03-07)
+- **Problem solved:** Multiple ceremony types produce different artifact structures; need to distinguish and query by artifact category
+- **Why this works:** Enables future filtering by type in listArtifacts, allows type-specific validation logic, keeps artifacts grouped for human inspection
+- **Trade-offs:** Gain: type-specific querying, organized directory structure, room for type-specific handlers. Lose: deeper path traversal, more directories to manage.
+
+#### [Pattern] Dual-layer flow system: ceremonies use a FlowRegistry (singleton) with stub factories for registration + dispatch, while actual execution is event-driven inside CeremonyService (2026-03-07)
+- **Problem solved:** Automation service needs to find and dispatch flows, but ceremony flows have complex event-driven behavior
+- **Why this works:** Decouples automation dispatch layer from ceremony execution logic. Registry provides a stable contract for automation to find flows by ID without knowing ceremony implementation details. Stub factories prevent coupling between dispatch and actual ceremony event handling.
+- **Trade-offs:** Easier: Multiple ceremony types without modifying dispatch logic. Harder: Two-layer indirection adds conceptual complexity; developers must understand both registration and execution paths
+
+### Ceremony flows registered as stub factories in FlowRegistry during CeremonyService.initialize(), not at module load time or lazy-loaded on-demand (2026-03-07)
+- **Context:** Flows must be discoverable by automation dispatch layer but CeremonyService orchestrates their actual execution
+- **Why:** Initialization timing ensures registry is populated before any dispatch attempts. Early registration (vs lazy) prevents 'Flow not registered' errors at runtime. Stub factories (vs actual handlers) keep the registry lightweight and prevent double-execution.
+- **Rejected:** Module-level registration would pollute global scope. Lazy registration would risk not-found errors during dispatch. Full handler registration would execute flows twice (once via registry, once via service).
+- **Trade-offs:** Requires explicit initialize() call (easy to miss). Prevents accidental invocation. Clear initialization order makes lifecycle explicit.
+- **Breaking if changed:** If flows aren't registered before dispatch, automation layer throws 'Flow not registered' error. If registered with real handlers instead of stubs, ceremonies execute twice (once via registry dispatch, once via event handler)
+
+### Description sourced independently from package.json/README rather than reusing RepoResearchResult data (2026-03-07)
+- **Context:** generateSpecMd() needs both project name (from research) and description (also could come from research)
+- **Why:** Ensures fresh description data at generation time rather than relying on potentially stale research snapshot
+- **Rejected:** Reusing description from RepoResearchResult object would be simpler and require fewer file reads
+- **Trade-offs:** Extra I/O overhead (fs.readFile package.json, README parsing) vs guarantees description accuracy and recency
+- **Breaking if changed:** If description is later added to RepoResearchResult and this function switches to using it, spec.md descriptions will become stale when research is cached
+
+### Key dependencies listed from root package.json only, not aggregated from workspace packages (2026-03-07)
+- **Context:** Monorepo setup with multiple packages, but spec.md should show 'key' dependencies
+- **Why:** Keeps spec.md summary focused and readable; root deps typically represent main project direction
+- **Rejected:** Aggregating all workspace deps would be more comprehensive but produce unwieldy list
+- **Trade-offs:** Simplified output but loses visibility into package-specific critical dependencies; spec.md becomes incomplete reference for monorepo
+- **Breaking if changed:** If spec.md is later used as dependency manifest or CI source-of-truth, workspace-only critical deps will be invisible
+
+### Tech stack detection via dependency presence (e.g., checking package.json for 'react', 'postgres') rather than user input or heuristics (2026-03-07)
+- **Context:** spec.md must show tech stack without manual configuration or asking user
+- **Why:** Dependencies are source-of-truth; if it's installed, it's part of the stack
+- **Rejected:** File/config analysis heuristics (detecting .ts files → TypeScript) would be fragile; user input adds friction
+- **Trade-offs:** Dependency-based is reliable but requires standard package names (react vs preact, pg vs mysql); misses unlisted critical tools
+- **Breaking if changed:** If project uses non-standard package naming or pre-installed tools (global Node, system postgres), stack detection fails silently
+
+#### [Pattern] Architecture section auto-switches between monorepo package listing and single-package directory structure based on research data (2026-03-07)
+- **Problem solved:** Same spec.md function must handle both monorepo and single-package projects with appropriate structure
+- **Why this works:** Avoids separate code paths or manual template selection; single function adapts output
+- **Trade-offs:** More complex conditional logic but unified API and no user configuration needed; harder to customize per project type
+
+#### [Pattern] Used fs.access() with try/catch (error-as-signal) instead of fs.existsSync() to check if spec.md already exists before writing (2026-03-07)
+- **Problem solved:** Non-overwrite guard prevents clobbering user-edited spec.md files during project setup
+- **Why this works:** fs.access() avoids a separate syscall and integrates naturally with permission checks; treat missing file as expected exception case rather than explicit query
+- **Trade-offs:** More performant (single syscall vs dedicated existence check), but less obvious intent; race condition possible between check and write if concurrent calls occur
+
+### Architecture section generates different content based on monorepo detection: lists workspace packages with path+type for monorepos, but lists top-level directories for single-package repos (2026-03-07)
+- **Context:** RepoResearchResult already distinguishes monorepo structure, but presentation must match project topology to be useful
+- **Why:** Context-aware visualization helps users understand their actual project shape. Monorepo users need package inventory; single-package users need directory structure. Same research data, different views.
+- **Rejected:** Uniform architecture section (always show packages or always show directories) would be simpler but confusing for one topology type
+- **Trade-offs:** More complex code path (conditional logic), but significantly better UX and spec.md clarity. Requires testing both paths.
+- **Breaking if changed:** If both paths are forced to single format, single-package repos would show empty/useless package list; monorepos would lose package boundary clarity.
+
+#### [Pattern] TODO placeholders marked as HTML comments (<!-- TODO: Product Goals -->...) rather than markdown admonitions, markdown footnotes, or code comments (2026-03-07)
+- **Problem solved:** Need to clearly separate auto-generated boilerplate from sections requiring user input, while keeping spec.md valid markdown
+- **Why this works:** HTML comments are valid in markdown, invisible in rendered output, but searchable and preservable in raw files. Allows spec.md to be shared/published even before TODOs filled. Users can visually scan rendered spec.md and know it's incomplete.
+- **Trade-offs:** Very clean in rendered output, but requires raw file view to see TODOs and fill them. Could benefit from IDE plugin/tooling to highlight.
+
+### Key dependencies truncated to first 15 from root package.json, excluding devDependencies, sorted by inclusion order (2026-03-07)
+- **Context:** spec.md should highlight essential runtime dependencies, not entire manifest. Too many details defeats purpose of summary.
+- **Why:** 15 entries is pragmatic limit for readability in spec.md. Runtime deps more relevant to architecture than dev tooling (which is listed separately in Tech Stack). Preserves mention order (hint of importance).
+- **Rejected:** All deps would clutter spec; devDeps would confuse readers about actual runtime. Alphabetical sort would lose priority signal.
+- **Trade-offs:** Very clean summary, but 'key' judgment made automatically without semantic understanding. Project with 20 important prod deps has 5 cut off; project with 5 padded to 15.
+- **Breaking if changed:** If limit removed or raised significantly, spec.md becomes unwieldy. If devDependencies included, spec pollution increases (e.g. 'prettier', 'eslint' listed as key deps).
+
+#### [Pattern] Thin orchestration CLI layer delegates heavy lifting to create-protolab package via re-exports (2026-03-07)
+- **Problem solved:** Need to provide both programmatic and CLI interfaces for repo scanning and gap analysis
+- **Why this works:** Separating concerns enables reuse across multiple consumption patterns (CLI, web UI, CI/CD) and prevents duplicating complex analysis logic. CLI stays focused on interaction patterns (arg parsing, spinners, output formatting).
+- **Trade-offs:** Requires maintaining two packages but enables flexible reuse; setup-cli becomes thinner and more maintainable
+
+#### [Pattern] Dry-run mode executes full analysis pipeline without persisting any files to disk (2026-03-07)
+- **Problem solved:** Users need to preview setup results before committing changes to their repository
+- **Why this works:** Safe preview mode reduces friction for first-time users and enables non-interactive validation workflows. Lets users understand repo gaps before generating scaffolding.
+- **Trade-offs:** Adds pipeline complexity (threading dry-run flag through services) but dramatically improves safety and user confidence
+
+### Generated gap report placed in .automaker/gap-report.html (inside scaffolded project structure, not temp/ephemeral location) (2026-03-07)
+- **Context:** CLI generates HTML gap analysis report alongside proto.config.yaml and other setup artifacts
+- **Why:** Placing report inside .automaker/ (version-controlled with the proto-lab) makes it discoverable, persistent, and part of the project's audit trail. Creates single source of truth for setup analysis.
+- **Rejected:** Writing to temp directory, project root, or separate reports folder would disconnect analysis from project metadata
+- **Trade-offs:** Adds files to .automaker/ but ensures analysis results are versionable and discoverable within project structure
+- **Breaking if changed:** If moved elsewhere, users lose easy access to analysis history and gap audit trail with their proto-lab config

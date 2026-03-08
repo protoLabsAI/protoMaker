@@ -5,7 +5,7 @@ relevantTo: [patterns]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 50
+  loaded: 51
   referenced: 18
   successfulFeatures: 18
 ---
@@ -20,3 +20,8 @@ usageStats:
 - **Problem solved:** Plugins need hooks that behave differently depending on session state, tool type, or MCP method invoked. Matcher field enables context-aware routing without hardcoding in hook scripts.
 - **Why this works:** Reduces code duplication and provides declarative routing. Different session contexts (compact, startup, resume) can trigger different initialization sequences without needing conditional logic in bash scripts.
 - **Trade-offs:** Declarative matchers are easier to understand and modify (+) but add complexity to hook schema and require matcher implementation in Claude Code runtime (-)
+
+#### [Pattern] Skeleton-first approach: auto-generates structure with explicit TODO markers, not complete specification (2026-03-07)
+- **Problem solved:** generateSpecMd must produce useful output without access to product/business context
+- **Why this works:** Acknowledges that product goals, target users, workflows cannot be reliably auto-generated without hallucination risk
+- **Trade-offs:** More friction for user (must fill TODOs) but prevents confidence in incorrect auto-generated product specification

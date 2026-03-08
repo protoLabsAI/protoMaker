@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# Staging Branch Protection\n\nAdd a GitHub Actions workflow enforcing that PRs targeting staging must originate from dev or a promote/* branch.\n\n## Phases\n1. Add promotion-check-staging.yml CI workflow",
   "title": "[Epic] Staging Branch Protection",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#EC4899",
   "branchName": "epic/staging-branch-protection",
@@ -22,10 +22,16 @@
       "to": "backlog",
       "timestamp": "2026-03-07T04:10:37.965Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T22:07:00.383Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772856637962-xkfba976l"
-  ]
+  ],
+  "completedAt": "2026-03-07T22:07:00.383Z"
 }

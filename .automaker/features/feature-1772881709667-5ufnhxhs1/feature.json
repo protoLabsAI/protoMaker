@@ -2,7 +2,7 @@
   "category": "Epic",
   "description": "# CLI Package & Polish\n\nCreate a standalone CLI that runs the setup pipeline without requiring a running server. Polish the HTML report and end-to-end flow.\n\n## Phases\n1. Standalone setup CLI package\n2. HTML report refinements\n3. Update /setuplab skill and docs",
   "title": "[Epic] CLI Package & Polish",
-  "status": "backlog",
+  "status": "done",
   "isEpic": true,
   "epicColor": "#EC4899",
   "branchName": "epic/cli-package-polish",
@@ -23,10 +23,16 @@
       "to": "backlog",
       "timestamp": "2026-03-07T11:08:29.667Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "done",
+      "timestamp": "2026-03-07T23:04:35.782Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772881709662-81w9mn7yf"
-  ]
+  ],
+  "completedAt": "2026-03-07T23:04:35.782Z"
 }

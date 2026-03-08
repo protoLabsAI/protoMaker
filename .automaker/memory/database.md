@@ -157,3 +157,8 @@ usageStats:
 - **Problem solved:** DEFAULT_AVA_CONFIG already had concrete defaults for model, temperature, systemPrompt, etc. New mcpServers field needed to follow same pattern.
 - **Why this works:** Concrete empty array allows downstream code to call `.filter()` and `.map()` without null checks. Optional type in interface allows ava-config.json to omit the field entirely (schema evolution). Both design goals met simultaneously.
 - **Trade-offs:** More memory for empty array vs undefined, but eliminates defensive checks throughout the codebase. Clearer code at cost of one extra object allocation per load.
+
+#### [Pattern] Dual-layer artifact storage: separate index.json alongside individual artifact files at `.automaker/projects/{slug}/artifacts/{type}/{id}.json` (2026-03-07)
+- **Problem solved:** Need both fast artifact querying (listArtifacts) and durable individual artifact storage
+- **Why this works:** Index enables O(1) listing without filesystem scans. Individual files enable easy backup, version control, and atomic writes per artifact.
+- **Trade-offs:** Gain: fast queries, atomic per-artifact writes, human-readable on-disk format. Lose: index-file consistency requires careful synchronization, dual-write problem.

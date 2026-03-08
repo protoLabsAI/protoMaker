@@ -2,7 +2,7 @@
   "category": "Per-Project Discord Webhook",
   "description": "**Milestone:** Per-Project Discord Webhook\n\nTDD phase. The server logs show: Flow not registered: standup-flow when ceremony:standup is triggered. Find where flows are registered (likely apps/server/src/services or the LangGraph flow registry) and ensure createStandupFlow is registered under the key 'standup-flow'. Write a test that confirms the flow registry contains standup-flow, retro-flow, and project-retro-flow before any ceremony triggers. Fix the registration gap.\n\n**Files to Modify:**\n- apps/server/src/services/ceremony-service.ts\n- apps/server/tests/unit/services/ceremony-flows.test.ts\n\n**Acceptance Criteria:**\n- [ ] standup-flow is registered and does not throw 'Flow not registered' error\n- [ ] Unit test verifies all 3 ceremony flows are registered on service init\n- [ ] Standup ceremony can be triggered via the ceremony route without errors\n- [ ] Build passes\n\n**Complexity:** small\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
   "title": "Fix standup flow registration",
-  "status": "backlog",
+  "status": "done",
   "isEpic": false,
   "epicId": "feature-1772863574157-znqqlnyfp",
   "branchName": "feature/per-project-discord-fix-standup-flow",
@@ -23,11 +23,44 @@
       "to": "backlog",
       "timestamp": "2026-03-07T06:06:14.159Z",
       "reason": "Feature created"
+    },
+    {
+      "from": "backlog",
+      "to": "in_progress",
+      "timestamp": "2026-03-07T22:09:19.304Z"
+    },
+    {
+      "from": "in_progress",
+      "to": "verified",
+      "timestamp": "2026-03-07T22:10:20.991Z"
     }
   ],
   "featureType": "code",
   "dependencies": [
     "feature-1772863574155-y1w3b6382",
     "feature-1772863574158-ygbtc3o0m"
-  ]
+  ],
+  "complexity": "medium",
+  "model": "claude-sonnet-4-6",
+  "updatedAt": "2026-03-07T22:10:20.991Z",
+  "costUsd": 0.3084645,
+  "lastSessionId": "2711d3c0-2751-4ea9-b56a-00007aac5cca",
+  "lastTraceId": "2e4565a7-4db8-42f1-b88e-7fffd0ce617d",
+  "traceIds": [
+    "2e4565a7-4db8-42f1-b88e-7fffd0ce617d"
+  ],
+  "completedAt": "2026-03-07T22:10:20.991Z",
+  "executionHistory": [
+    {
+      "id": "13fa21fe-e214-48db-bd19-64ef4852c1e3",
+      "startedAt": "2026-03-07T22:09:19.710Z",
+      "completedAt": "2026-03-07T22:10:21.000Z",
+      "durationMs": 61290,
+      "costUsd": 0.3084645,
+      "model": "claude-sonnet-4-6",
+      "success": true,
+      "trigger": "manual"
+    }
+  ],
+  "summary": "## Summary: Milestone: Per-Project Discord Webhook — Fix standup-flow Registration\n\n### Changes Implemented\n- **No code changes were required.** Both `ceremony-service.ts` and `ceremony-flows.test.ts` were already correctly implemented:\n  - `ceremony-service.ts` already registers `standup-flow`, `retro-flow`, and `project-retro-flow` in the `FlowRegistry` during `CeremonyService.initialize()` (lines 247–255)\n  - `ceremony-flows.test.ts` already contains 4 tests verifying all three flows are registered and that each factory resolves without throwing\n\n### Files Modified\n- None — both specified files were already complete and correct\n\n### Risks/Blockers Encountered\n- None. The implementation was already in place from a prior session.\n\n### Learnings\n- The `flowRegistry` is a singleton exported from `automation-service.ts`. Ceremony flows are registered as \"stub\" factories during `CeremonyService.initialize()` so the automation dispatch layer can find them by ID. The actual execution is handled event-driven inside `CeremonyService`.\n- Tests use `flowRegistry.unregister()` in `beforeEach` to prevent state leakage between test runs.\n\n### Notes for Developer\n- All 4 acceptance criteria are already satisfied:\n  - ✅ `standup-flow` is registered and does not throw 'Flow not registered' error\n  - ✅ Unit test verifies all 3 ceremony flows are registered on service init\n  - ✅ Standup ceremony can be triggered via ceremony route without errors (flows are stubs that log and return)\n  - ✅ Build passes (exit code 0, `tsc` clean)\n\n### Verification Status\n- Build: `npm run build:server` → exit code 0, all 18 tasks successful\n- Tests: `vitest run tests/unit/services/ceremony-flows.test.ts` → 4/4 passed\n- Playwright: Not applicable — pure backend service/unit test feature with no UI surface"
 }

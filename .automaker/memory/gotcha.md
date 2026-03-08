@@ -50,3 +50,8 @@ usageStats:
 - **Situation:** Could verify types package builds and types export correctly, but couldn't verify full app build or runtime behavior
 - **Root cause:** Monorepo with multiple interdependent packages. One package's build failure cascades. Implementation is likely correct but unverifiable in broken build state.
 - **How to avoid:** Could implement feature but couldn't prove it works end-to-end. Partial verification still valuable (types correct, no compilation errors in changed files)
+
+#### [Gotcha] ProjectSettingsPanel and ProjectSettingsView are separate components on different routes, risking duplication of webhook settings UI logic (2026-03-07)
+- **Situation:** /project-settings uses ProjectSettingsView with ProjectWebhooksSection; new ProjectSettingsPanel is milestone component with same webhook validation
+- **Root cause:** Feature built incrementally; ProjectSettingsPanel is new milestone piece for future Project Page Hub; old route unchanged
+- **How to avoid:** Easier: ship incrementally without touching stable routes. Harder: two components with similar webhook logic; maintenance burden if validation changes

@@ -1,81 +1,8 @@
 {
-  "category": "Projects and Settings Sync",
-  "description": "**Milestone:** Projects and Settings Sync\n\nCreate a shared-settings Automerge document for configuration that should propagate across instances (shared model preferences, workflow tuning, etc). Instance-local settings remain in .automaker/settings.json. Effective config = proto.config defaults MERGED with shared CRDT settings MERGED with local overrides.\n\n**Files to Modify:**\n- apps/server/src/services/settings-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n- libs/crdt/src/documents.ts\n- libs/types/src/proto-config.ts\n\n**Acceptance Criteria:**\n- [ ] Shared settings document syncs across instances\n- [ ] Settings changed on any instance propagate to all peers\n- [ ] Instance-local overrides take precedence over shared settings\n- [ ] proto.config defaults < shared CRDT settings < local overrides resolution order\n- [ ] Credentials and API keys are NEVER included in shared settings\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
-  "title": "Shared Settings Sync",
-  "status": "done",
-  "isEpic": false,
-  "epicId": "feature-1772898164394-n290dlwzl",
-  "branchName": "feature/projects-and-shared-settings-sync",
-  "isFoundation": false,
-  "projectSlug": "distributed-crdt-sync",
-  "milestoneSlug": "03-projects-and-settings-sync",
-  "phaseSlug": "shared-settings-sync",
   "id": "feature-1772898164395-2x6bahyy6",
-  "descriptionHistory": [
-    {
-      "description": "**Milestone:** Projects and Settings Sync\n\nCreate a shared-settings Automerge document for configuration that should propagate across instances (shared model preferences, workflow tuning, etc). Instance-local settings remain in .automaker/settings.json. Effective config = proto.config defaults MERGED with shared CRDT settings MERGED with local overrides.\n\n**Files to Modify:**\n- apps/server/src/services/settings-service.ts\n- apps/server/src/services/crdt-sync-service.ts\n- libs/crdt/src/documents.ts\n- libs/types/src/proto-config.ts\n\n**Acceptance Criteria:**\n- [ ] Shared settings document syncs across instances\n- [ ] Settings changed on any instance propagate to all peers\n- [ ] Instance-local overrides take precedence over shared settings\n- [ ] proto.config defaults < shared CRDT settings < local overrides resolution order\n- [ ] Credentials and API keys are NEVER included in shared settings\n\n**Complexity:** medium\n\n**Guardrails:** If this phase involves new or changed behavior, include tests that verify correctness. If this phase adds, removes, or changes a user-facing feature, API endpoint, configuration option, or service, update the relevant documentation in `docs/` to reflect those changes.",
-      "timestamp": "2026-03-07T15:42:44.395Z",
-      "source": "initial"
-    }
-  ],
-  "createdAt": "2026-03-07T15:42:44.395Z",
-  "statusHistory": [
-    {
-      "from": null,
-      "to": "backlog",
-      "timestamp": "2026-03-07T15:42:44.395Z",
-      "reason": "Feature created"
-    },
-    {
-      "from": "backlog",
-      "to": "in_progress",
-      "timestamp": "2026-03-07T18:17:07.205Z"
-    },
-    {
-      "from": "in_progress",
-      "to": "review",
-      "timestamp": "2026-03-07T18:32:33.281Z"
-    },
-    {
-      "from": "review",
-      "to": "done",
-      "timestamp": "2026-03-07T19:54:42.336Z"
-    }
-  ],
-  "featureType": "code",
-  "dependencies": [
-    "feature-1772898164390-3riuelgoa",
-    "feature-1772898164391-9v1okhazn",
-    "feature-1772898164391-6jgo2lrs8",
-    "feature-1772898164394-gbqv5bnnm"
-  ],
-  "updatedAt": "2026-03-07T18:28:28.153Z",
-  "model": "claude-sonnet-4-6",
-  "lastTraceId": "e27dbcb0-95d2-47d2-b4b6-d435e65152dd",
-  "traceIds": [
-    "b74f4220-a16c-45c3-beb5-edcba280fdcd",
-    "e27dbcb0-95d2-47d2-b4b6-d435e65152dd"
-  ],
-  "executionHistory": [
-    {
-      "id": "2f724daf-ac8c-4f06-bfc9-bc42289febb1",
-      "startedAt": "2026-03-07T18:17:06.064Z",
-      "completedAt": "2026-03-07T18:28:26.663Z",
-      "durationMs": 680599,
-      "costUsd": 0,
-      "model": "claude-sonnet-4-6",
-      "success": false,
-      "error": "Operation was cancelled",
-      "trigger": "manual"
-    }
-  ],
-  "costUsd": 0.61923975,
-  "lastSessionId": "aefc4319-93ee-4f0f-ac0b-eda43a3613d8",
-  "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/1970",
-  "prNumber": 1970,
-  "prCreatedAt": "2026-03-07T18:32:31.502Z",
-  "reviewStartedAt": "2026-03-07T18:32:33.281Z",
-  "prTrackedSince": "2026-03-07T18:32:33.427Z",
-  "prLastPolledAt": "2026-03-07T18:36:04.287Z",
-  "completedAt": "2026-03-07T19:54:42.336Z"
+  "archived": true,
+  "archivedAt": "2026-03-07T23:13:51.190Z",
+  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772898164395-2x6bahyy6",
+  "status": "done",
+  "title": "Shared Settings Sync"
 }

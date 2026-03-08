@@ -5,9 +5,9 @@ relevantTo: [persistence]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 20
-  referenced: 4
-  successfulFeatures: 4
+  loaded: 21
+  referenced: 5
+  successfulFeatures: 5
 ---
 # persistence
 

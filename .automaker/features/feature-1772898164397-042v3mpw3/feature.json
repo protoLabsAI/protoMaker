@@ -1,38 +1,8 @@
 {
-  "category": "Epic",
-  "description": "# Operational Hardening\n\nProduction readiness for the CRDT sync layer: document compaction, sync diagnostics, reconnection resilience, monitoring, alerting, and multi-instance deployment documentation.\n\n## Phases\n1. Compaction, Diagnostics, and Reconnection",
-  "title": "[Epic] Operational Hardening",
-  "status": "done",
-  "isEpic": true,
-  "epicColor": "#EAB308",
-  "branchName": "epic/operational-hardening",
-  "projectSlug": "distributed-crdt-sync",
-  "milestoneSlug": "05-operational-hardening",
   "id": "feature-1772898164397-042v3mpw3",
-  "descriptionHistory": [
-    {
-      "description": "# Operational Hardening\n\nProduction readiness for the CRDT sync layer: document compaction, sync diagnostics, reconnection resilience, monitoring, alerting, and multi-instance deployment documentation.\n\n## Phases\n1. Compaction, Diagnostics, and Reconnection",
-      "timestamp": "2026-03-07T15:42:44.397Z",
-      "source": "initial"
-    }
-  ],
-  "createdAt": "2026-03-07T15:42:44.397Z",
-  "statusHistory": [
-    {
-      "from": null,
-      "to": "backlog",
-      "timestamp": "2026-03-07T15:42:44.397Z",
-      "reason": "Feature created"
-    },
-    {
-      "from": "backlog",
-      "to": "done",
-      "timestamp": "2026-03-07T20:01:34.507Z"
-    }
-  ],
-  "featureType": "code",
-  "dependencies": [
-    "feature-1772898164395-qmv4z1g8t"
-  ],
-  "completedAt": "2026-03-07T20:01:34.507Z"
+  "archived": true,
+  "archivedAt": "2026-03-07T23:13:51.226Z",
+  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772898164397-042v3mpw3",
+  "status": "done",
+  "title": "[Epic] Operational Hardening"
 }

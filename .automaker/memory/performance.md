@@ -251,3 +251,8 @@ usageStats:
 - **Problem solved:** Ledger file could grow large over time (weeks/months of events). Cold start must restore all state without OOM on memory-constrained systems.
 - **Why this works:** Streaming parser processes one JSONL line at a time, constant memory regardless of file size. readline handles line boundaries and backpressure automatically.
 - **Trade-offs:** Slightly more complex code (readline interface vs string split) but guaranteed constant memory footprint.
+
+#### [Pattern] Route handler accepts optional `research` parameter; if not provided, calls `researchRepo()` again before generating spec.md (2026-03-07)
+- **Problem solved:** Project setup can chain multiple operations; research is expensive (filesystem traversal + git inspection)
+- **Why this works:** Allows flexibility: research can be done once and reused, or each step can stand alone without tight coupling. Caller decides whether to cache.
+- **Trade-offs:** More flexible API, but potential for stale data if function called multiple times in session without recomputing research. Caller responsible for managing research freshness.

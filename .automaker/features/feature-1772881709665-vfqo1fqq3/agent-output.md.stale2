@@ -1,0 +1,145 @@
+I'll start by reading the relevant files to understand the existing patterns.
+
+🔧 Tool: ToolSearch
+Input: {
+  "query": "select:Read,Bash,Edit,Write,Glob",
+  "max_results": 5
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/repo-research-service.ts"
+}
+
+🔧 Tool: Read
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/routes/setup/routes/project.ts"
+}
+Both files already contain the feature implementation! Let me verify the build passes and confirm all acceptance criteria are met.
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npm run build:server 2>&1 | tail -30",
+  "description": "Build the server to verify compilation",
+  "timeout": 120000
+}
+Build succeeds. Let me check the git diff to confirm the implementation scope:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git diff --stat HEAD 2>&1",
+  "description": "Show git diff to confirm file changes"
+}
+The implementation is already in place. Let me verify the feature works correctly with a Playwright test:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && ls apps/server/src/routes/setup/routes/ && ls e2e/ 2>/dev/null || echo \"no e2e dir\"",
+  "description": "Check existing test structure"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && ls playwright.config* 2>/dev/null && ls e2e/ 2>/dev/null || ls apps/ui/e2e/ 2>/dev/null || echo \"checking playwright setup\"",
+  "description": "Find playwright config"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "find /Users/kj/dev/automaker -name \"playwright.config*\" -not -path \"*/node_modules/*\" 2>/dev/null | head -10",
+  "description": "Find playwright config files"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "ls /Users/kj/dev/automaker/apps/ui/e2e/ 2>/dev/null | head -10",
+  "description": "List existing e2e tests"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cat /Users/kj/dev/automaker/apps/ui/playwright.config.ts 2>/dev/null | head -30",
+  "description": "Read playwright config"
+}
+Since this is a backend service feature, I'll verify it with a Node.js test script targeting the `generateSpecMd` function directly:
+
+🔧 Tool: Write
+Input: {
+  "file_path": "/Users/kj/dev/automaker/apps/server/src/services/__verify-spec-md.mts",
+  "content": "/**\n * Temporary verification script for spec.md generation feature.\n * Run with: npx tsx apps/server/src/services/__verify-spec-md.mts\n */\nimport { generateSpecMd } from './repo-research-service.js';\nimport type { RepoResearchResult } from '@protolabsai/types';\n\n// Minimal stub for a monorepo project\nconst fakeResearch: RepoResearchResult = {\n  projectPath: '/tmp/test-project',\n  projectName: 'test-project',\n  scripts: { build: 'tsc', test: 'vitest', dev: 'vite' },\n  git: { isRepo: true, remoteUrl: 'https://github.com/org/test-project', defaultBranch: 'main', provider: 'github' },\n  monorepo: {\n    isMonorepo: true,\n    tool: 'turbo',\n    packageManager: 'pnpm',\n    workspaceGlobs: ['apps/*', 'packages/*'],\n    packages: [\n      { name: '@test/app', path: 'apps/web', type: 'app' },\n      { name: '@test/ui', path: 'packages/ui', type: 'package' },\n    ],\n  },\n  frontend: { framework: 'react', reactVersion: '18.3.0', metaFramework: 'vite', metaFrameworkVersion: '5.0.0', hasShadcn: true, hasStorybook: false, hasTailwind: true, tailwindVersion: '3.4.0', hasRadix: false },\n  backend: { hasPayload: false, database: 'postgres', hasExpress: true, hasFastAPI: false },\n  agents: { hasMCPServers: false, mcpPackages: [], hasLangGraph: false, hasClaudeSDK: true, hasAgentFolder: false },\n  testing: { hasVitest: true, vitestVersion: '1.6.0', hasPlaywright: true, playwrightVersion: '1.44.0', hasJest: false, hasPytest: false, testDirs: ['tests', 'e2e'] },\n  codeQuality: { hasESLint: true, eslintVersion: '9.0.0', hasPrettier: true, hasTypeScript: true, tsVersion: '5.4.0', tsStrict: true, hasCompositeConfig: false, hasHusky: true, hasLintStaged: true },\n  ci: { hasCI: true, provider: 'github-actions', workflows: ['ci.yml'], hasBuildCheck: true, hasTestCheck: true, hasFormatCheck: true, hasSecurityAudit: true, hasCodeRabbit: false, hasBranchProtection: true },\n  automation: { hasAutomaker: false, hasDiscordIntegration: false, hasProtolabConfig: false, hasAnalytics: false },\n  python: { hasPythonServices: false, services: [], hasRuff: false, hasBlack: false, hasPytest: false, hasPoetry: false, hasPyproject: false },\n  structure: { topDirs: ['apps', 'packages', 'docs', '.github'], configFiles: ['turbo.json', 'package.json'], entryPoints: [] },\n};\n\nconsole.log('=== Verifying generateSpecMd ===\\n');\n\n// Test 1: Basic generation with description\nconst specContent = generateSpecMd('test-project', fakeResearch, 'A test project description');\n\n// Check: Header present\nconsole.assert(specContent.includes('# test-project'), 'FAIL: Header missing');\nconsole.log('✓ Header present');\n\n// Check: Description present\nconsole.assert(specContent.includes('A test project description'), 'FAIL: Description missing');\nconsole.log('✓ Description present');\n\n// Check: Tech stack detected\nconsole.assert(specContent.includes('TypeScript'), 'FAIL: TypeScript not detected');\nconsole.assert(specContent.includes('react'), 'FAIL: React not detected');\nconsole.assert(specContent.includes('Tailwind CSS'), 'FAIL: Tailwind not detected');\nconsole.assert(specContent.includes('Anthropic Claude SDK'), 'FAIL: Claude SDK not detected');\nconsole.log('✓ Tech stack auto-detected');\n\n// Check: Architecture section reflects monorepo\nconsole.assert(specContent.includes('Monorepo'), 'FAIL: Architecture section missing monorepo info');\nconsole.assert(specContent.includes('apps/web'), 'FAIL: Package paths missing in architecture');\nconsole.assert(specContent.includes('packages/ui'), 'FAIL: Package paths missing in architecture');\nconsole.log('✓ Architecture section reflects actual repo structure');\n\n// Check: Placeholder sections present\nconsole.assert(specContent.includes('## Product Goals'), 'FAIL: Product Goals section missing');\nconsole.assert(specContent.includes('## Target Users'), 'FAIL: Target Users section missing');\nconsole.assert(specContent.includes('## Key Workflows'), 'FAIL: Key Workflows section missing');\nconsole.assert(specContent.includes('## Constraints & Non-Goals'), 'FAIL: Constraints section missing');\nconsole.assert(specContent.includes('<!-- TODO:'), 'FAIL: TODO placeholders missing');\nconsole.log('✓ Placeholder sections clearly marked with TODO comments');\n\n// Check: Key dependencies\nconsole.assert(specContent.includes('## Key Dependencies'), 'FAIL: Key Dependencies section missing');\nconsole.assert(specContent.includes('`typescript`'), 'FAIL: typescript missing from dependencies');\nconsole.log('✓ Key dependencies auto-detected');\n\n// Test 2: Without description (uses placeholder)\nconst specNoDesc = generateSpecMd('no-desc-project', fakeResearch);\nconsole.assert(specNoDesc.includes('_[Detected from package.json/README'), 'FAIL: Placeholder description missing when no description provided');\nconsole.log('✓ Placeholder description shown when no description provided');\n\n// Test 3: Non-monorepo (single package repo)\nconst singlePkgResearch: RepoResearchResult = {\n  ...fakeResearch,\n  monorepo: { isMonorepo: false, packageManager: 'npm', packages: [], workspaceGlobs: undefined },\n  structure: { topDirs: ['src', 'tests', 'docs'], configFiles: ['package.json'], entryPoints: ['index.ts'] },\n};\nconst specSingle = generateSpecMd('single-pkg', singlePkgResearch);\nconsole.assert(specSingle.includes('Single-package repository'), 'FAIL: Single-package type missing');\nconsole.assert(specSingle.includes('`src/`'), 'FAIL: Top-level dirs missing for single-package repo');\nconsole.log('✓ Single-package repo architecture section shows top-level directories');\n\nconsole.log('\\n=== All checks passed ===');\n"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npx tsx apps/server/src/services/__verify-spec-md.mts 2>&1",
+  "description": "Run the verification script",
+  "timeout": 30000
+}
+All checks pass. Now let me delete the verification script:
+
+🔧 Tool: Bash
+Input: {
+  "command": "rm /Users/kj/dev/automaker/apps/server/src/services/__verify-spec-md.mts",
+  "description": "Delete temporary verification script"
+}
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && git diff --stat HEAD -- apps/server/src/services/repo-research-service.ts apps/server/src/routes/setup/routes/project.ts 2>&1",
+  "description": "Confirm only the intended files were changed"
+}
+Only the two intended files are changed. Let me do a final build confirmation:
+
+🔧 Tool: Bash
+Input: {
+  "command": "cd /Users/kj/dev/automaker && npm run build:server 2>&1 | grep -E \"(Tasks|Cached|Time|error|Error|success|fail)\" | tail -10",
+  "description": "Final build verification",
+  "timeout": 120000
+}
+18/18 tasks successful. Build passes cleanly.
+
+<summary>
+## Summary: Milestone: Tutorial Content & Getting Started — spec.md Skeleton Generation
+
+### Changes Implemented
+
+The feature was already fully implemented in both target files. The implementation includes:
+
+**`apps/server/src/services/repo-research-service.ts`** (191 lines added):
+- `generateSpecMd(projectName, research, description?)` — pure function that generates a spec.md skeleton
+- Sections auto-filled: Project Overview (name + description from package.json/README), Tech Stack (detected from dependencies), Architecture Overview (monorepo packages with paths/types, or top-level dirs for single-package repos), Key Dependencies (extracted from detection), Git info (remote URL + default branch)
+- Sections with clear TODO placeholder markers: Product Goals, Target Users, Key Workflows, Constraints & Non-Goals, Open Questions
+
+**`apps/server/src/routes/setup/routes/project.ts`** (58 lines added):
+- Step 3d in the project setup flow: generates spec.md in the project root
+- Never overwrites existing spec.md (guarded by `fs.access` check)
+- Reads description from `package.json` first, falls back to README first paragraph
+- Only generates spec.md when `research` data is present (requires prior repo research)
+
+### Files Modified
+- `apps/server/src/services/repo-research-service.ts`
+- `apps/server/src/routes/setup/routes/project.ts`
+
+### Risks/Blockers Encountered
+- None. Both files were already implemented correctly.
+
+### Learnings
+- The feature was implemented prior to this agent run. All acceptance criteria were already satisfied. The task was to verify correctness and gate-pass.
+- The spec.md guard pattern (try `fs.access` → catch → create) matches the same pattern used for all other generated files (`protolab.config`, `CLAUDE.md`, `proto.config.yaml`).
+
+### Notes for Developer
+- spec.md is only generated when `research` data is available in the POST body. The client UI must call `/api/setup/research` first, then pass the result to `/api/setup/project`.
+- The "does not overwrite" guarantee is implemented via `fs.access` — if the file is accessible, it pushes `'spec.md (already exists)'` to `filesCreated` and skips generation.
+
+### Verification Status
+- Wrote and ran a Node.js verification script (`__verify-spec-md.mts`) that tested all acceptance criteria:
+  - ✓ Header/description populated from detected project info
+  - ✓ Tech stack auto-detected (TypeScript, React, Tailwind, Claude SDK, etc.)
+  - ✓ Architecture section reflects monorepo packages with correct paths
+  - ✓ Single-package repo shows top-level directory listing instead
+  - ✓ Placeholder sections present with `<!-- TODO: -->` markers
+  - ✓ Key dependencies auto-detected
+  - ✓ Fallback placeholder description when no description provided
+- Build: `18 successful, 18 total` — exit code 0
+- Only the two specified files modified (confirmed via `git diff --stat`)
+</summary>

@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 350
-  referenced: 77
-  successfulFeatures: 77
+  loaded: 361
+  referenced: 83
+  successfulFeatures: 83
 ---
 # api
 
@@ -718,3 +718,13 @@ usageStats:
 - **Problem solved:** FeatureScheduler.run() either returns {featureId, success: true} or throws; caller's .catch() distinguishes outcomes
 - **Why this works:** Enables clean circuit-breaker logic in AutoModeService: success path is happy path (return), failure path has explicit handler that can apply circuit-break policy. Avoids nested conditionals for outcome checking.
 - **Trade-offs:** Gained: Natural control flow for circuit-breaker (exception = halt loop, return = continue). Lost: Explicit error channel (exceptions can be implicit if not carefully documented).
+
+#### [Gotcha] useUpdateProjectSettings hook supports two calling patterns: pre-bound projectPath (legacy) OR pass-through { projectPath, settings } (current), creating ambiguity about which to use (2026-03-07)
+- **Situation:** Hook found in component but no single canonical pattern documented; team must infer from usage sites
+- **Root cause:** Hook evolved to support both patterns for backward compatibility, but calling code must choose correctly or pass wrong arguments
+- **How to avoid:** Easier: gradual migration without rewrite. Harder: two APIs increase cognitive load, risk of passing wrong args at call site
+
+#### [Pattern] Package facade pattern: setup-cli re-exports core functions from create-protolab for dual access (2026-03-07)
+- **Problem solved:** Core analysis functions (researchRepo, analyzeGaps, init) live in create-protolab but CLI needs to expose them
+- **Why this works:** Allows single distribution (@protolabsai/setup) to serve both CLI users (via bin entry point) and programmatic consumers (via re-exports), avoiding import path confusion
+- **Trade-offs:** Adds indirection layer but keeps package responsibilities clear and provides consistent API surface
