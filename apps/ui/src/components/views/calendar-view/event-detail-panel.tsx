@@ -36,6 +36,7 @@ const EVENT_TYPE_LABELS: Record<CalendarEventType, string> = {
   custom: 'Custom',
   google: 'Google Calendar',
   job: 'Scheduled Job',
+  ceremony: 'Ceremony',
 };
 
 /** Job status badge styles */
