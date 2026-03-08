@@ -233,7 +233,6 @@ export class AvaChannelService {
         try {
           const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
             messages: [],
-            date,
           });
           const doc = handle.docSync();
           const messages: AvaChatMessage[] = doc ? [...(doc.messages ?? [])] : [];
@@ -288,7 +287,6 @@ export class AvaChannelService {
       try {
         const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
           messages: [],
-          date,
         });
         const doc = handle.docSync();
         if (!doc) return [];
