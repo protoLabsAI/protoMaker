@@ -50,11 +50,13 @@ const mockLoadProtoConfig = vi.mocked(loadProtoConfig);
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createMockContainer(overrides: {
-  reactorEnabled?: boolean;
-  hasCrdtStore?: boolean;
-  settingsThrows?: boolean;
-} = {}) {
+function createMockContainer(
+  overrides: {
+    reactorEnabled?: boolean;
+    hasCrdtStore?: boolean;
+    settingsThrows?: boolean;
+  } = {}
+) {
   const { reactorEnabled = true, hasCrdtStore = true, settingsThrows = false } = overrides;
 
   const container: Record<string, unknown> = {
@@ -141,9 +143,7 @@ describe('ava-channel-reactor.module', () => {
     });
 
     it('returns null when hivemind key is absent in proto.config.yaml', async () => {
-      mockLoadProtoConfig.mockResolvedValue(
-        {} as Awaited<ReturnType<typeof loadProtoConfig>>
-      );
+      mockLoadProtoConfig.mockResolvedValue({} as Awaited<ReturnType<typeof loadProtoConfig>>);
       const container = createMockContainer({ reactorEnabled: true });
 
       const result = await register(container);

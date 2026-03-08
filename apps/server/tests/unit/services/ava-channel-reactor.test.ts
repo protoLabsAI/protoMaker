@@ -20,10 +20,7 @@ vi.mock('@protolabsai/utils', () => ({
   })),
 }));
 
-import {
-  createClassifierChain,
-  runClassifierChain,
-} from '@/services/ava-channel-classifiers.js';
+import { createClassifierChain, runClassifierChain } from '@/services/ava-channel-classifiers.js';
 import type { AvaChatMessage } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
@@ -44,12 +41,14 @@ function makeMessage(overrides: Partial<AvaChatMessage> = {}): AvaChatMessage {
   } as AvaChatMessage;
 }
 
-function makeChain(overrides: {
-  maxConversationDepth?: number;
-  staleThresholdMs?: number;
-  runningAgents?: number;
-  maxAgents?: number;
-} = {}) {
+function makeChain(
+  overrides: {
+    maxConversationDepth?: number;
+    staleThresholdMs?: number;
+    runningAgents?: number;
+    maxAgents?: number;
+  } = {}
+) {
   return createClassifierChain('local-instance', {
     maxConversationDepth: 5,
     staleThresholdMs: 5 * 60 * 1000,
@@ -76,7 +75,11 @@ describe('SelfMessageRule', () => {
 
   it('should not reject messages from a different instance', () => {
     const { rules, context } = makeChain();
-    const message = makeMessage({ instanceId: 'remote-instance', intent: 'request', expectsResponse: true });
+    const message = makeMessage({
+      instanceId: 'remote-instance',
+      intent: 'request',
+      expectsResponse: true,
+    });
 
     const result = runClassifierChain(message, context, rules);
 
@@ -183,7 +186,11 @@ describe('Classifier chain — all 9 rules', () => {
   describe('TerminalMessageRule (priority 90)', () => {
     it('fires when expectsResponse is false', () => {
       const { rules, context } = makeChain();
-      const result = runClassifierChain(makeMessage({ expectsResponse: false, conversationDepth: 0 }), context, rules);
+      const result = runClassifierChain(
+        makeMessage({ expectsResponse: false, conversationDepth: 0 }),
+        context,
+        rules
+      );
       expect(result.shouldRespond).toBe(false);
       expect(result.reason).toContain('expectsResponse:false');
     });
@@ -192,7 +199,11 @@ describe('Classifier chain — all 9 rules', () => {
   describe('SelfMessageRule (priority 80)', () => {
     it('fires when instanceId matches localInstanceId', () => {
       const { rules, context } = makeChain();
-      const result = runClassifierChain(makeMessage({ instanceId: 'local-instance', conversationDepth: 0 }), context, rules);
+      const result = runClassifierChain(
+        makeMessage({ instanceId: 'local-instance', conversationDepth: 0 }),
+        context,
+        rules
+      );
       expect(result.shouldRespond).toBe(false);
       expect(result.reason).toContain('originated from this instance');
     });
@@ -203,7 +214,12 @@ describe('Classifier chain — all 9 rules', () => {
       const { rules, context } = makeChain({ staleThresholdMs: 1000 });
       const staleTimestamp = new Date(Date.now() - 5000).toISOString();
       const result = runClassifierChain(
-        makeMessage({ timestamp: staleTimestamp, instanceId: 'remote', conversationDepth: 0, expectsResponse: true }),
+        makeMessage({
+          timestamp: staleTimestamp,
+          instanceId: 'remote',
+          conversationDepth: 0,
+          expectsResponse: true,
+        }),
         context,
         rules
       );
@@ -215,7 +231,13 @@ describe('Classifier chain — all 9 rules', () => {
       const { rules, context } = makeChain({ staleThresholdMs: 60_000 });
       const freshTimestamp = new Date().toISOString();
       const result = runClassifierChain(
-        makeMessage({ timestamp: freshTimestamp, instanceId: 'remote', conversationDepth: 0, intent: 'request', expectsResponse: true }),
+        makeMessage({
+          timestamp: freshTimestamp,
+          instanceId: 'remote',
+          conversationDepth: 0,
+          intent: 'request',
+          expectsResponse: true,
+        }),
         context,
         rules
       );
@@ -227,7 +249,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires for system source without action prefix — not shouldRespond', () => {
       const { rules, context } = makeChain();
       const result = runClassifierChain(
-        makeMessage({ source: 'system', content: 'just some info', instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          source: 'system',
+          content: 'just some info',
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
@@ -238,7 +265,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires as escalation for [BugReport] system messages', () => {
       const { rules, context } = makeChain();
       const result = runClassifierChain(
-        makeMessage({ source: 'system', content: '[BugReport] something broke', instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          source: 'system',
+          content: '[BugReport] something broke',
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
@@ -249,7 +281,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires as escalation for [SystemAlert] system messages', () => {
       const { rules, context } = makeChain();
       const result = runClassifierChain(
-        makeMessage({ source: 'system', content: '[SystemAlert] disk full', instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          source: 'system',
+          content: '[SystemAlert] disk full',
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
@@ -262,7 +299,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires when intent:request and expectsResponse:true', () => {
       const { rules, context } = makeChain();
       const result = runClassifierChain(
-        makeMessage({ intent: 'request', expectsResponse: true, instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          intent: 'request',
+          expectsResponse: true,
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
@@ -275,7 +317,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires and responds when instance has capacity', () => {
       const { rules, context } = makeChain({ runningAgents: 2, maxAgents: 5 });
       const result = runClassifierChain(
-        makeMessage({ intent: 'coordination', expectsResponse: true, instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          intent: 'coordination',
+          expectsResponse: true,
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
@@ -286,7 +333,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires and does not respond when instance is at capacity', () => {
       const { rules, context } = makeChain({ runningAgents: 5, maxAgents: 5 });
       const result = runClassifierChain(
-        makeMessage({ intent: 'coordination', expectsResponse: true, instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          intent: 'coordination',
+          expectsResponse: true,
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
@@ -299,7 +351,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires and responds for escalation within depth cap', () => {
       const { rules, context } = makeChain();
       const result = runClassifierChain(
-        makeMessage({ intent: 'escalation', expectsResponse: true, instanceId: 'remote', conversationDepth: 2 }),
+        makeMessage({
+          intent: 'escalation',
+          expectsResponse: true,
+          instanceId: 'remote',
+          conversationDepth: 2,
+        }),
         context,
         rules
       );
@@ -310,7 +367,12 @@ describe('Classifier chain — all 9 rules', () => {
     it('fires and does not respond when escalation depth cap (3) is hit', () => {
       const { rules, context } = makeChain();
       const result = runClassifierChain(
-        makeMessage({ intent: 'escalation', expectsResponse: true, instanceId: 'remote', conversationDepth: 3 }),
+        makeMessage({
+          intent: 'escalation',
+          expectsResponse: true,
+          instanceId: 'remote',
+          conversationDepth: 3,
+        }),
         context,
         rules
       );
@@ -325,7 +387,12 @@ describe('Classifier chain — all 9 rules', () => {
       // An inform message from a remote instance with expectsResponse:true but no special intent
       // will not match Request/Coordination/Escalation, so DefaultRule fires
       const result = runClassifierChain(
-        makeMessage({ intent: 'inform', expectsResponse: true, instanceId: 'remote', conversationDepth: 0 }),
+        makeMessage({
+          intent: 'inform',
+          expectsResponse: true,
+          instanceId: 'remote',
+          conversationDepth: 0,
+        }),
         context,
         rules
       );
