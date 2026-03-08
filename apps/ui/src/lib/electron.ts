@@ -383,6 +383,7 @@ export interface FeaturesAPI {
     description: string,
     projectPath?: string
   ) => Promise<{ success: boolean; title?: string; error?: string }>;
+  onFeatureEvent: (callback: (event: { type: string; payload: unknown }) => void) => () => void;
 }
 
 export interface AutoModeAPI {

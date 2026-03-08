@@ -40,7 +40,11 @@ export type EventType =
   | 'actionable-item:created'
   | 'actionable-item:status-changed'
   | 'chat:tool-progress'
-  | 'scheduler:task-failed';
+  | 'scheduler:task-failed'
+  | 'feature:created'
+  | 'feature:updated'
+  | 'feature:deleted'
+  | 'feature:status-changed';
 
 export type EventCallback = (payload: unknown) => void;
 
