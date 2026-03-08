@@ -94,7 +94,8 @@ export async function register(
     instanceId,
     isPrimary,
     autoModeService: autoModeService as FleetSchedulerDependencies['autoModeService'],
-    featureLoader: container.featureLoader as FleetSchedulerDependencies['featureLoader'],
+    featureLoader:
+      container.featureLoader as unknown as FleetSchedulerDependencies['featureLoader'],
     projectPath: repoRoot,
   });
 
