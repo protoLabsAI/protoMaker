@@ -2,7 +2,6 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import os from 'node:os';
 
 import { createLogger } from '@protolabsai/utils';
 import { createEventEmitter, type EventEmitter } from '../lib/events.js';
@@ -101,7 +100,6 @@ import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
 import { AvaChannelService } from '../services/ava-channel-service.js';
-import { CRDTStore } from '@protolabsai/crdt';
 import type { WorkStealingService } from '../services/work-stealing-service.js';
 
 const logger = createLogger('Server:Services');
@@ -648,19 +646,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Ava Channel Service — private multi-instance Ava communication channel
   const avaChannelService = new AvaChannelService(join(dataDir, 'ava-channel-archive'));
-
-  // CRDT Store — Automerge-backed document store for cross-instance sync (calendar, etc.)
-  // Initialized here so CalendarService can sync doc:calendar across all hivemind instances.
-  const crdtStore = new CRDTStore({
-    storageDir: join(dataDir, 'crdt'),
-    instanceId: process.env['INSTANCE_ID'] ?? os.hostname(),
-  });
-  crdtStore.init().catch((err: unknown) => {
-    logger.warn('[CRDT] Store initialization error (non-fatal):', err);
-  });
-
-  // Wire CalendarService to CRDT store via CrdtSyncService — enables doc:calendar sync
-  crdtSyncService.setCalendarService(calendarService, crdtStore);
 
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
