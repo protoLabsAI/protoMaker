@@ -328,7 +328,8 @@ export type EventType =
   // Work-stealing handshake events (cross-instance feature assignment)
   | 'work_stealing:request'
   | 'work_stealing:offer'
-  | 'work_stealing:accept';
+  | 'work_stealing:accept'
+  | 'ava-channel:message';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -760,6 +761,11 @@ export interface EventPayloadMap {
     projectPath: string;
     /** Automerge binary change payloads received from a peer */
     changes: Uint8Array[];
+  };
+
+  // Ava Channel events (private multi-instance coordination channel)
+  'ava-channel:message': {
+    message: import('./ava-channel.js').AvaChatMessage;
   };
 }
 

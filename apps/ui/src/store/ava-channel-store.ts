@@ -9,9 +9,11 @@
  * in real-time via the appendMessage action (called by WebSocket event handlers).
  */
 
+import { useEffect } from 'react';
 import { create } from 'zustand';
 import type { AvaChatMessage } from '@protolabsai/types';
 import { apiFetch } from '@/lib/api-fetch';
+import { getHttpApiClient } from '@/lib/http-api-client';
 
 // ============================================================================
 // Types
@@ -113,3 +115,19 @@ export const useAvaChannelStore = create<AvaChannelState & AvaChannelActions>()(
   setFilterQuery: (query) => set({ filterQuery: query }),
   clearMessages: () => set({ messages: [], error: null }),
 }));
+
+export function useAvaChannelLiveUpdates(): void {
+  const appendMessage = useAvaChannelStore((s) => s.appendMessage);
+
+  useEffect(() => {
+    const api = getHttpApiClient();
+    const unsubscribe = api.subscribeToEvents((type, payload) => {
+      if ((type as string) !== 'ava-channel:message') return;
+      const data = payload as { message?: AvaChatMessage } | null;
+      if (data?.message) {
+        appendMessage(data.message);
+      }
+    });
+    return unsubscribe;
+  }, [appendMessage]);
+}

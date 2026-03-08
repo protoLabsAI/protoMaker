@@ -159,6 +159,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     sensorRegistryService,
     projectPmService,
     crdtSyncService,
+    avaChannelService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -426,7 +427,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   logger.info('Ledger routes mounted at /api/ledger');
 
   // Ava Channel routes (private coordination channel for Ava instances)
-  app.use('/api/ava-channel', createAvaChannelRoutes(discordBotService, featureLoader));
+  app.use('/api/ava-channel', createAvaChannelRoutes(avaChannelService, featureLoader));
   logger.info('Ava channel routes mounted at /api/ava-channel');
 
   // Hivemind routes (peer discovery and instance status for the unified dashboard)

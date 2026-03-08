@@ -42,6 +42,7 @@ export class AvaChannelService {
   private archiveTimer: ReturnType<typeof setInterval> | null = null;
   /** In-memory storage when no CRDT store is available */
   private readonly memoryShards = new Map<string, AvaChatMessage[]>();
+  private _emitEvent: ((type: string, payload: unknown) => void) | null = null;
 
   constructor(
     archiveDir: string,
@@ -51,6 +52,10 @@ export class AvaChannelService {
     this.store = options?.store ?? null;
     this.instanceId = options?.instanceId ?? os.hostname();
     this.instanceName = options?.instanceName ?? os.hostname();
+  }
+
+  setEventEmitter(emit: (type: string, payload: unknown) => void): void {
+    this._emitEvent = emit;
   }
 
   /**
@@ -120,6 +125,11 @@ export class AvaChannelService {
     }
 
     logger.debug(`[AvaChannel] Posted message ${message.id} to shard ${date}`);
+
+    if (this._emitEvent) {
+      this._emitEvent('ava-channel:message', { message });
+    }
+
     return message;
   }
 

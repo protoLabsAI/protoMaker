@@ -11,7 +11,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, ChevronDown, ChevronUp, Send, RefreshCw } from 'lucide-react';
 import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { useAvaChannelStore } from '@/store/ava-channel-store';
+import { useAvaChannelStore, useAvaChannelLiveUpdates } from '@/store/ava-channel-store';
 import type { AvaChatMessage } from '@protolabsai/types';
 
 // ============================================================================
@@ -101,6 +101,8 @@ export function AvaChannelTab() {
   const fetchMessages = useAvaChannelStore((s) => s.fetchMessages);
   const sendOperatorMessage = useAvaChannelStore((s) => s.sendOperatorMessage);
   const setFilterQuery = useAvaChannelStore((s) => s.setFilterQuery);
+
+  useAvaChannelLiveUpdates();
 
   const [operatorOpen, setOperatorOpen] = useState(false);
   const [operatorInput, setOperatorInput] = useState('');
