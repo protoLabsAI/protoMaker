@@ -7,7 +7,7 @@
  */
 
 import type { CRDTDocumentRoot, SchemaNormalizer } from './types.js';
-import type { CalendarEvent } from '@protolabsai/types';
+import type { CalendarEvent, TodoList, TodoWorkspace } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Feature domain
@@ -317,6 +317,62 @@ export const normalizeCalendarDocument: SchemaNormalizer<CalendarDocument> = (ra
 };
 
 // ---------------------------------------------------------------------------
+// Todos domain — multi-tier permission workspace
+// ---------------------------------------------------------------------------
+
+/**
+ * TodosDocument stores the shared todo workspace in a single CRDT document.
+ *
+ * Permission tiers (enforced at the service layer, not CRDT layer):
+ *   (1) user lists (ownerType='user') — user read/write, all Avas read-only
+ *   (2) ava-instance lists (ownerType='ava-instance') — writable by owning
+ *       instance's Ava + user; readable by all Avas on all instances
+ *   (3) shared lists (ownerType='shared') — full read/write by anyone
+ *
+ * Use domain='todos', document id='workspace' for the single shared workspace.
+ * Full document key: doc:todos/workspace
+ */
+export interface TodosDocument extends CRDTDocumentRoot {
+  schemaVersion: 1;
+  /** All todo lists keyed by list ID */
+  lists: Record<string, TodoList>;
+  /** Ordered array of list IDs */
+  listOrder: string[];
+  /** ISO timestamp of last update to this document */
+  updatedAt: string;
+}
+
+export const normalizeTodosDocument: SchemaNormalizer<TodosDocument> = (raw) => {
+  const doc = raw as Partial<TodosDocument>;
+
+  const _meta = doc._meta ?? {
+    instanceId: 'unknown',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Normalize lists — ensure each list has valid ownerType
+  const rawLists = doc.lists ?? {};
+  const lists: Record<string, TodoList> = {};
+  for (const [id, list] of Object.entries(rawLists)) {
+    if (!list) continue;
+    lists[id] = {
+      ...list,
+      ownerType: list.ownerType ?? 'shared',
+      items: Array.isArray(list.items) ? list.items : [],
+    };
+  }
+
+  return {
+    schemaVersion: 1,
+    _meta,
+    lists,
+    listOrder: Array.isArray(doc.listOrder) ? doc.listOrder : Object.keys(lists),
+    updatedAt: doc.updatedAt ?? _meta.updatedAt,
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Normalizer registry
 // ---------------------------------------------------------------------------
 
@@ -327,7 +383,8 @@ type AnyDocument =
   | SharedSettingsDocument
   | CapacityDocument
   | AvaChannelDocument
-  | CalendarDocument;
+  | CalendarDocument
+  | TodosDocument;
 
 const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   features: normalizeFeatureDocument as SchemaNormalizer<AnyDocument>,
@@ -337,6 +394,7 @@ const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   capacity: normalizeCapacityDocument as SchemaNormalizer<AnyDocument>,
   'ava-channel': normalizeAvaChannelDocument as SchemaNormalizer<AnyDocument>,
   calendar: normalizeCalendarDocument as SchemaNormalizer<AnyDocument>,
+  todos: normalizeTodosDocument as SchemaNormalizer<AnyDocument>,
 };
 
 /**

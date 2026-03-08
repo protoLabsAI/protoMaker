@@ -4,6 +4,16 @@
  * Storage: single JSON file at {projectPath}/.automaker/todos/workspace.json
  * Follows the same pattern as the Notes workspace service.
  *
+ * When a CRDTStore is registered via setCrdtStore(), all read/write operations
+ * are routed through the CRDT layer so todos sync across all hivemind instances.
+ * Falls back to filesystem when CRDT is not active.
+ *
+ * Permission tiers (enforced by this service):
+ *   (1) user lists (ownerType='user') — user read/write, all Avas read-only
+ *   (2) ava-instance lists (ownerType='ava-instance') — writable by the owning
+ *       instance's Ava + user; readable by all Avas on all instances
+ *   (3) shared lists (ownerType='shared') — full read/write by anyone
+ *
  * Emits events via EventEmitter:
  *  - todo:list-created
  *  - todo:item-added
@@ -15,9 +25,24 @@ import { EventEmitter } from 'events';
 import { createLogger, atomicWriteJson, readJsonFile } from '@protolabsai/utils';
 import { getTodoWorkspacePath, ensureTodoDir } from '@protolabsai/platform';
 import type { TodoItem, TodoList, TodoWorkspace } from '@protolabsai/types';
+import type { CRDTStore, TodosDocument } from '@protolabsai/crdt';
 import { randomUUID } from 'crypto';
 
 const logger = createLogger('TodoService');
+
+/** Document id used for the shared todos workspace in the CRDT store */
+const TODOS_DOC_ID = 'workspace';
+
+/**
+ * Caller identity passed to write operations for permission enforcement.
+ * When undefined, the operation is treated as a user-originated write.
+ */
+export interface TodoWriterIdentity {
+  /** Whether the caller is an Ava instance (vs. the user) */
+  isAva: boolean;
+  /** instanceId of the calling Ava instance (required when isAva=true) */
+  instanceId?: string;
+}
 
 /** Subset of TodoItem fields allowed when adding a new item */
 export type NewTodoItem = Pick<TodoItem, 'title'> &
@@ -41,12 +66,90 @@ export type UpdateTodoItem = Partial<
 >;
 
 export class TodoService extends EventEmitter {
+  private crdtStore: CRDTStore | null = null;
+
+  /**
+   * Register a CRDTStore instance for syncing todos across instances.
+   * When set, all read/write operations go through the CRDT layer.
+   * Falls back to filesystem when not set.
+   */
+  setCrdtStore(store: CRDTStore): void {
+    this.crdtStore = store;
+    logger.info('[TodoService] CRDT store registered — todos will sync across instances');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Permission enforcement
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Check whether the given writer identity is allowed to mutate a list.
+   *
+   * Rules:
+   *  - shared lists: anyone can write
+   *  - user lists: only user (isAva=false) can write; Avas are read-only
+   *  - ava-instance lists: owning instance's Ava + user can write; other Ava
+   *    instances cannot write
+   *
+   * Throws an Error if the write is not permitted.
+   */
+  private assertWritePermission(list: TodoList, writer: TodoWriterIdentity | undefined): void {
+    if (list.ownerType === 'shared') {
+      // Everyone can write to shared lists
+      return;
+    }
+
+    if (list.ownerType === 'user') {
+      // Only the user (not Ava) can write to user-private lists
+      if (writer?.isAva) {
+        throw new Error(
+          `Permission denied: Ava instances cannot write to user-private list "${list.name}" (${list.id})`
+        );
+      }
+      return;
+    }
+
+    if (list.ownerType === 'ava-instance') {
+      if (!writer?.isAva) {
+        // User can always write to any ava-instance list
+        return;
+      }
+      // Ava can only write to its own list
+      if (writer.instanceId !== list.ownerInstanceId) {
+        throw new Error(
+          `Permission denied: Ava instance "${writer.instanceId}" cannot write to list owned by instance "${list.ownerInstanceId}" (list "${list.name}", id=${list.id})`
+        );
+      }
+      return;
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Workspace I/O
   // ---------------------------------------------------------------------------
 
-  /** Load the workspace from disk, creating and persisting a default one on first access. */
+  /** Load the workspace — from CRDT if available, otherwise from disk. */
   private async loadWorkspace(projectPath: string): Promise<TodoWorkspace> {
+    if (this.crdtStore) {
+      try {
+        const handle = await this.crdtStore.getOrCreate<TodosDocument>('todos', TODOS_DOC_ID, {
+          lists: {},
+          listOrder: [],
+          updatedAt: new Date().toISOString(),
+        });
+        const doc = handle.docSync();
+        if (doc) {
+          return {
+            version: 1,
+            lists: doc.lists ?? {},
+            listOrder: doc.listOrder ?? [],
+          };
+        }
+      } catch (err) {
+        logger.warn('[TodoService] CRDT read failed, falling back to filesystem:', err);
+      }
+    }
+
     const filePath = getTodoWorkspacePath(projectPath);
     const existing = await readJsonFile<TodoWorkspace | null>(filePath, null);
 
@@ -61,8 +164,21 @@ export class TodoService extends EventEmitter {
     return workspace;
   }
 
-  /** Persist the workspace to disk atomically. */
+  /** Persist the workspace — to CRDT if available, otherwise to disk. */
   private async saveWorkspace(projectPath: string, workspace: TodoWorkspace): Promise<void> {
+    if (this.crdtStore) {
+      try {
+        await this.crdtStore.change<TodosDocument>('todos', TODOS_DOC_ID, (doc) => {
+          doc.lists = workspace.lists as TodosDocument['lists'];
+          doc.listOrder = workspace.listOrder;
+          doc.updatedAt = new Date().toISOString();
+        });
+        return;
+      } catch (err) {
+        logger.warn('[TodoService] CRDT write failed, falling back to filesystem:', err);
+      }
+    }
+
     await ensureTodoDir(projectPath);
     const filePath = getTodoWorkspacePath(projectPath);
     await atomicWriteJson(filePath, workspace, { indent: 2, createDirs: true });
@@ -86,6 +202,36 @@ export class TodoService extends EventEmitter {
       lists: { [listId]: defaultList },
       listOrder: [listId],
     };
+  }
+
+  /**
+   * Ensure an ava-instance list exists for the given instance, creating it
+   * if it doesn't exist yet. Called automatically on first activation of each
+   * Ava instance.
+   *
+   * The list is named after the instanceId and is only writable by that
+   * instance's Ava (or the user).
+   */
+  async ensureAvaInstanceList(projectPath: string, instanceId: string): Promise<TodoList> {
+    const workspace = await this.loadWorkspace(projectPath);
+
+    // Check if a list for this instance already exists
+    const existing = Object.values(workspace.lists).find(
+      (list) => list.ownerType === 'ava-instance' && list.ownerInstanceId === instanceId
+    );
+    if (existing) {
+      return existing;
+    }
+
+    // Create the ava-instance list
+    const list = await this.createList(
+      projectPath,
+      `Ava (${instanceId})`,
+      'ava-instance',
+      instanceId
+    );
+    logger.info(`[TodoService] Auto-created ava-instance list for ${instanceId}`);
+    return list;
   }
 
   // ---------------------------------------------------------------------------
@@ -158,13 +304,20 @@ export class TodoService extends EventEmitter {
   // ---------------------------------------------------------------------------
 
   /** Add a new item to a list. */
-  async addItem(projectPath: string, listId: string, item: NewTodoItem): Promise<TodoItem> {
+  async addItem(
+    projectPath: string,
+    listId: string,
+    item: NewTodoItem,
+    writer?: TodoWriterIdentity
+  ): Promise<TodoItem> {
     const workspace = await this.loadWorkspace(projectPath);
     const list = workspace.lists[listId];
 
     if (!list) {
       throw new Error(`Todo list not found: ${listId}`);
     }
+
+    this.assertWritePermission(list, writer);
 
     const now = new Date().toISOString();
     const newItem: TodoItem = {
@@ -198,7 +351,8 @@ export class TodoService extends EventEmitter {
     projectPath: string,
     listId: string,
     itemId: string,
-    updates: UpdateTodoItem
+    updates: UpdateTodoItem,
+    writer?: TodoWriterIdentity
   ): Promise<TodoItem> {
     const workspace = await this.loadWorkspace(projectPath);
     const list = workspace.lists[listId];
@@ -206,6 +360,8 @@ export class TodoService extends EventEmitter {
     if (!list) {
       throw new Error(`Todo list not found: ${listId}`);
     }
+
+    this.assertWritePermission(list, writer);
 
     const itemIndex = list.items.findIndex((i) => i.id === itemId);
     if (itemIndex === -1) {
@@ -231,13 +387,20 @@ export class TodoService extends EventEmitter {
   }
 
   /** Delete an item from a list. */
-  async deleteItem(projectPath: string, listId: string, itemId: string): Promise<void> {
+  async deleteItem(
+    projectPath: string,
+    listId: string,
+    itemId: string,
+    writer?: TodoWriterIdentity
+  ): Promise<void> {
     const workspace = await this.loadWorkspace(projectPath);
     const list = workspace.lists[listId];
 
     if (!list) {
       throw new Error(`Todo list not found: ${listId}`);
     }
+
+    this.assertWritePermission(list, writer);
 
     const before = list.items.length;
     list.items = list.items.filter((i) => i.id !== itemId);
@@ -253,12 +416,23 @@ export class TodoService extends EventEmitter {
   }
 
   /** Mark an item as completed and set completedAt timestamp. */
-  async completeItem(projectPath: string, listId: string, itemId: string): Promise<TodoItem> {
+  async completeItem(
+    projectPath: string,
+    listId: string,
+    itemId: string,
+    writer?: TodoWriterIdentity
+  ): Promise<TodoItem> {
     const now = new Date().toISOString();
-    const updated = await this.updateItem(projectPath, listId, itemId, {
-      completed: true,
-      completedAt: now,
-    });
+    const updated = await this.updateItem(
+      projectPath,
+      listId,
+      itemId,
+      {
+        completed: true,
+        completedAt: now,
+      },
+      writer
+    );
 
     logger.info(`Completed todo item ${itemId} in list ${listId}`);
     this.emit('todo:item-completed', { projectPath, listId, item: updated });
@@ -270,13 +444,20 @@ export class TodoService extends EventEmitter {
    * Reorder items in a list.
    * @param itemIds - Full ordered list of item IDs (must contain all existing item IDs)
    */
-  async reorderItems(projectPath: string, listId: string, itemIds: string[]): Promise<TodoList> {
+  async reorderItems(
+    projectPath: string,
+    listId: string,
+    itemIds: string[],
+    writer?: TodoWriterIdentity
+  ): Promise<TodoList> {
     const workspace = await this.loadWorkspace(projectPath);
     const list = workspace.lists[listId];
 
     if (!list) {
       throw new Error(`Todo list not found: ${listId}`);
     }
+
+    this.assertWritePermission(list, writer);
 
     // Build a map for O(1) lookup
     const itemMap = new Map(list.items.map((item) => [item.id, item]));
