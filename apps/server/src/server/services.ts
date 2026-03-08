@@ -83,6 +83,7 @@ import { LeadHandoffService } from '../services/lead-handoff-service.js';
 import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
 import { JobExecutorService } from '../services/job-executor-service.js';
+import { DoraMetricsService } from '../services/dora-metrics-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -261,6 +262,9 @@ export interface ServiceContainer {
   // Work-stealing (cross-instance feature redistribution)
   workStealingService?: WorkStealingService;
 
+  // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
+  doraMetricsService: DoraMetricsService;
+
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
 }
@@ -286,6 +290,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const trustTierService = new TrustTierService(dataDir);
   const agentService = new AgentService(dataDir, events, settingsService, undefined, featureLoader);
   const metricsService = new MetricsService(featureLoader);
+  const doraMetricsService = new DoraMetricsService(featureLoader);
 
   // Metrics Ledger & Archival
   const ledgerService = new LedgerService(featureLoader, events);
@@ -770,6 +775,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectPmService,
     crdtSyncService,
     avaChannelService,
+    doraMetricsService,
     driftCheckInterval: null,
   };
 }
