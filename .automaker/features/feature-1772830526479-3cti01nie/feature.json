@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772830526479-3cti01nie",
-  "archived": true,
-  "archivedAt": "2026-03-07T02:09:38.474Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772830526479-3cti01nie",
-  "status": "done",
-  "title": "Auto-emit feature:status-changed from featureLoader.update()"
-}

@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772880066337-kxqsicxff",
-  "archived": true,
-  "archivedAt": "2026-03-07T22:12:47.335Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772880066337-kxqsicxff",
-  "status": "done",
-  "title": "Test infrastructure: lint coverage + typed mock factories"
-}

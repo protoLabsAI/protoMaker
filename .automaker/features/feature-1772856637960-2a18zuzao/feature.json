@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772856637960-2a18zuzao",
-  "archived": true,
-  "archivedAt": "2026-03-07T17:57:27.950Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772856637960-2a18zuzao",
-  "status": "done",
-  "title": "Persist and reload CompletionDetector dedup state"
-}

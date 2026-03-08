@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772745104661-py3thfpj1",
-  "archived": true,
-  "archivedAt": "2026-03-07T17:57:27.923Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772745104661-py3thfpj1",
-  "status": "done",
-  "title": "Bug: Project creation pipeline missing milestone persistence step"
-}

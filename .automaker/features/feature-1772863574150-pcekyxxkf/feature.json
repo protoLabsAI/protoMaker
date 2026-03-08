@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772863574150-pcekyxxkf",
-  "archived": true,
-  "archivedAt": "2026-03-07T22:12:47.276Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772863574150-pcekyxxkf",
-  "status": "done",
-  "title": "Integration tests for full cascade + fix milestoneSlug on createProjectFeatures"
-}

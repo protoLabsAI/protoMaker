@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772830526483-qefk3kxgz",
-  "archived": true,
-  "archivedAt": "2026-03-07T03:52:34.367Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772830526483-qefk3kxgz",
-  "status": "done",
-  "title": "Restore PR tracking state on server restart"
-}

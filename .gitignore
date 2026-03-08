@@ -34,8 +34,9 @@ docs/.vitepress/cache/
 .automaker/worktree-init.sh
 .automaker/prd-output.json
 
-# Feature board state — shared across instances (runtime artifacts excluded above)
-!.automaker/features/
+# Feature board state — per-instance, synced via CRDT mesh (not git)
+.automaker/features/
+.automaker/archive/
 
 # Runtime data — never git-track
 .automaker/trajectory/

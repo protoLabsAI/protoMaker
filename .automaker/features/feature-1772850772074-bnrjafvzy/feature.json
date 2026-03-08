@@ -1,8 +1,0 @@
-{
-  "id": "feature-1772850772074-bnrjafvzy",
-  "archived": true,
-  "archivedAt": "2026-03-07T17:57:27.937Z",
-  "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772850772074-bnrjafvzy",
-  "status": "done",
-  "title": "Bug: Auto-mode cooldown resume race condition causes spurious \"already running\" errors"
-}
