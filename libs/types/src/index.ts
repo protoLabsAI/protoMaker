@@ -7,11 +7,9 @@
 export type {
   AvaChannelContext,
   AvaChatMessage,
-  AvaChatRole,
   AvaChannelDocument,
   PostMessageOptions,
   GetMessagesOptions,
-  AvaChannelQueryOptions,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
@@ -919,15 +917,6 @@ export type {
   ProtoWorkStealing,
   SharedSettings,
 } from './proto-config.js';
-
-// Ava Channel types (private multi-instance CRDT communication channel)
-export type {
-  AvaChannelContext,
-  AvaChatMessage,
-  AvaChannelDocument,
-  PostMessageOptions,
-  GetMessagesOptions,
-} from './ava-channel.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {
