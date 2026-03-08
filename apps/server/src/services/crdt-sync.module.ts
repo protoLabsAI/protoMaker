@@ -24,8 +24,10 @@ export async function register(container: ServiceContainer): Promise<void> {
   // This handler runs BEFORE the event is re-emitted on the local bus, so downstream
   // subscribers (UI WebSocket, IntegrationService, etc.) see already-persisted data.
   container.crdtSyncService.onRemoteFeatureEvent((eventType, payload) => {
-    const projectPath = payload.projectPath as string | undefined;
-    if (!projectPath) return;
+    // Remap remote projectPath to local — each instance has its own filesystem path
+    // (e.g. Mac sends /Users/kj/dev/automaker, staging expects /home/josh/dev/ava)
+    const projectPath = container.repoRoot;
+    if (!payload.projectPath) return;
 
     const featureLoader = container.featureLoader;
 
@@ -52,11 +54,16 @@ export async function register(container: ServiceContainer): Promise<void> {
         }
         logger.info(`[CRDT] Persisting remote ${eventType} ${featureId}`);
         // Write the full feature state to disk, skipping event emission to prevent loops.
+        // Fall back to create if the feature doesn't exist locally yet.
         featureLoader
           .update(projectPath, featureId, feature, undefined, undefined, undefined, {
             skipEventEmission: true,
           })
           .catch((err) => {
+            if (String(err).includes('not found')) {
+              logger.info(`[CRDT] Feature ${featureId} not found locally, creating from remote`);
+              return featureLoader.create(projectPath, { ...feature, id: featureId });
+            }
             logger.error(`[CRDT] Failed to persist remote ${eventType} ${featureId}: ${err}`);
           });
         break;
