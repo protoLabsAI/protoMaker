@@ -7,7 +7,6 @@
  */
 
 import type { CRDTDocumentRoot, SchemaNormalizer } from './types.js';
-import type { AvaChatMessage } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Feature domain
@@ -227,20 +226,37 @@ export const normalizeCapacityDocument: SchemaNormalizer<CapacityDocument> = (ra
 };
 
 // ---------------------------------------------------------------------------
-// Ava Channel domain — daily-sharded append-only message log
+// Ava Channel domain
 // ---------------------------------------------------------------------------
 
 /**
- * AvaChannelDocument stores an append-only list of AvaChatMessages for a
- * single calendar day. Document key format: ava-channel/YYYY-MM-DD.
- * Messages are never edited or deleted (grow-only list CRDT).
+ * AvaChannelDocument stores a single daily shard of Ava Channel messages.
+ *
+ * The messages array is an append-only grow-only list CRDT. No edits or
+ * deletes are permitted — content is the protocol.
+ *
+ * Use domain='ava-channel', document id=YYYY-MM-DD date string.
+ * Full document key: doc:ava-channel/YYYY-MM-DD
  */
 export interface AvaChannelDocument extends CRDTDocumentRoot {
   schemaVersion: 1;
-  /** Append-only list of messages for this day */
-  messages: AvaChatMessage[];
-  /** Date shard key (YYYY-MM-DD) */
-  date: string;
+  messages: Array<{
+    id: string;
+    instanceId: string;
+    instanceName: string;
+    content: string;
+    context?: {
+      featureId?: string;
+      boardSummary?: string;
+      capacity?: {
+        runningAgents: number;
+        maxAgents: number;
+        backlogCount: number;
+      };
+    };
+    source: 'ava' | 'operator' | 'system';
+    timestamp: string;
+  }>;
 }
 
 export const normalizeAvaChannelDocument: SchemaNormalizer<AvaChannelDocument> = (raw) => {
@@ -255,8 +271,7 @@ export const normalizeAvaChannelDocument: SchemaNormalizer<AvaChannelDocument> =
   return {
     schemaVersion: 1,
     _meta,
-    messages: Array.isArray(doc.messages) ? doc.messages : [],
-    date: doc.date ?? '',
+    messages: doc.messages ?? [],
   };
 };
 

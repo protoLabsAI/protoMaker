@@ -1,73 +1,87 @@
 /**
  * Ava Channel types — private multi-instance communication channel.
  *
- * The Ava Channel is an append-only, daily-sharded message log shared across
- * all mesh instances via CRDT sync. Messages are never edited or deleted.
+ * Messages are stored as append-only Automerge list CRDTs, sharded by day
+ * (doc:ava-channel/YYYY-MM-DD). No messageType enum — the content IS the protocol.
  */
 
-/** Role of the message sender */
-export type AvaChatRole = 'system' | 'user' | 'assistant' | 'agent';
-
-/** A single message in the Ava Channel */
-export interface AvaChatMessage {
-  /** Unique message ID (UUID v4) */
-  id: string;
-  /** Message content (plain text or markdown) */
-  content: string;
-  /** Role of the sender */
-  role: AvaChatRole;
-  /** Instance that originated this message */
-  instanceId: string;
-  /** Human-readable sender name (instance ID, agent name, or user name) */
-  sender: string;
-  /** ISO 8601 timestamp */
-  timestamp: string;
-  /** Optional structured metadata */
-  metadata?: Record<string, unknown>;
+/**
+ * Optional structured context attached to an Ava Channel message.
+ * Used for machine-readable context alongside free-form content.
+ */
+export interface AvaChannelContext {
+  /** Feature ID this message relates to */
+  featureId?: string;
+  /** Human-readable board summary at time of message */
+  boardSummary?: string;
+  /** Instance capacity snapshot at time of message */
+  capacity?: {
+    runningAgents: number;
+    maxAgents: number;
+    backlogCount: number;
+  };
 }
 
-/** Non-CRDT view of an Ava Channel document (used outside libs/crdt) */
+/**
+ * A single message in the Ava Channel.
+ *
+ * Messages are append-only — never edited or deleted.
+ * The content field is free-form natural language; no messageType enum.
+ */
+export interface AvaChatMessage {
+  /** Unique message ID (UUID or timestamp-based) */
+  id: string;
+  /** Instance ID of the originating node */
+  instanceId: string;
+  /** Human-readable instance name */
+  instanceName: string;
+  /** Free-form natural language content — this IS the protocol */
+  content: string;
+  /** Optional structured context for machine-readable metadata */
+  context?: AvaChannelContext;
+  /** Message source: 'ava' = AI, 'operator' = human, 'system' = automated */
+  source: 'ava' | 'operator' | 'system';
+  /** ISO 8601 timestamp */
+  timestamp: string;
+}
+
+/**
+ * CRDT document shape for a single daily Ava Channel shard.
+ * Document key: doc:ava-channel/YYYY-MM-DD
+ */
 export interface AvaChannelDocument {
   schemaVersion: 1;
+  _meta: {
+    instanceId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  /** Append-only list of messages for this day */
   messages: AvaChatMessage[];
+  /** Date shard key (YYYY-MM-DD) */
   date: string;
 }
 
-/** Context passed to AvaChannelService for message attribution */
-export interface AvaChannelContext {
-  instanceId: string;
-  sender: string;
-  role: AvaChatRole;
-}
-
-/** Options for posting a message */
+/**
+ * Options for AvaChannelService.postMessage()
+ */
 export interface PostMessageOptions {
-  /** Override the date shard (defaults to today) */
-  date?: string;
-  /** Structured metadata to attach to the message */
-  metadata?: Record<string, unknown>;
+  /** Override the instance name (defaults to hostname) */
+  instanceName?: string;
+  /** Optional structured context */
+  context?: AvaChannelContext;
 }
 
-/** Options for retrieving messages */
+/**
+ * Options for AvaChannelService.getMessages()
+ */
 export interface GetMessagesOptions {
-  /** Date shard to query (YYYY-MM-DD, defaults to today) */
-  date?: string;
-  /** Maximum number of messages to return (most recent first) */
-  limit?: number;
-  /** Only return messages after this ISO timestamp */
-  after?: string;
-}
-
-/** Query options for multi-day channel history */
-export interface AvaChannelQueryOptions {
-  /** Start date (inclusive, YYYY-MM-DD) */
-  from?: string;
-  /** End date (inclusive, YYYY-MM-DD, defaults to today) */
-  to?: string;
-  /** Filter by role */
-  role?: AvaChatRole;
-  /** Filter by instance ID */
+  /** Start of time range (inclusive) */
+  from?: Date;
+  /** End of time range (inclusive) */
+  to?: Date;
+  /** Filter to messages from a specific instance */
   instanceId?: string;
-  /** Maximum total messages to return */
-  limit?: number;
+  /** Filter to messages from a specific source */
+  source?: 'ava' | 'operator' | 'system';
 }
