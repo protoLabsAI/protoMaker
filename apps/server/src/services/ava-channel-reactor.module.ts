@@ -15,7 +15,10 @@
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createLogger } from '@protolabsai/utils';
 import { AvaChannelReactorService } from './ava-channel-reactor-service.js';
-import { FleetSchedulerService, type FleetSchedulerDependencies } from './fleet-scheduler-service.js';
+import {
+  FleetSchedulerService,
+  type FleetSchedulerDependencies,
+} from './fleet-scheduler-service.js';
 import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('AvaChannelReactorModule');
