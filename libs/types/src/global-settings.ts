@@ -209,6 +209,12 @@ export interface FeatureFlags {
    * Reports readings to POST /api/sensors/report. Off by default.
    */
   userPresenceDetection: boolean;
+  /**
+   * Ava Channel Reactor — enables the reactive orchestrator that monitors the
+   * CRDT-backed Ava Channel and auto-responds to incoming messages.
+   * Requires hivemind to be enabled in proto.config.yaml. Off by default.
+   */
+  reactorEnabled: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -219,6 +225,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   specEditor: false,
   systemView: false,
   userPresenceDetection: false,
+  reactorEnabled: false,
 };
 
 // ============================================================================

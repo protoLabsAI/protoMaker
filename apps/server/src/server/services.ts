@@ -103,6 +103,7 @@ import { CrdtSyncService } from '../services/crdt-sync-service.js';
 import { AvaChannelService } from '../services/ava-channel-service.js';
 import { TodoService } from '../services/todo-service.js';
 import type { WorkStealingService } from '../services/work-stealing-service.js';
+import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -269,8 +270,17 @@ export interface ServiceContainer {
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
 
+  // CRDT document store (set by crdt-store.module, used by dependent modules)
+  _crdtStore?: import('@protolabsai/crdt').CRDTStore;
+
   // CRDT document store cleanup (set by crdt-store.module, called on shutdown)
   _crdtStoreCleanup?: () => Promise<void>;
+
+  // Ava Channel Reactor (set by ava-channel-reactor.module, called on shutdown)
+  avaChannelReactorService?: AvaChannelReactorService;
+
+  // Ava Channel Reactor stop function (set by ava-channel-reactor.module, called on shutdown)
+  _avaChannelReactorStop?: () => void;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
