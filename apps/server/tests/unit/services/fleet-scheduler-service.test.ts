@@ -10,7 +10,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FleetSchedulerService } from '@/services/fleet-scheduler-service.js';
-import type { WorkInventoryMsg, ScheduleAssignmentMsg, SchedulerHeartbeatMsg, ScheduleConflictMsg } from '@/services/fleet-scheduler-service.js';
+import type {
+  WorkInventoryMsg,
+  ScheduleAssignmentMsg,
+  SchedulerHeartbeatMsg,
+  ScheduleConflictMsg,
+} from '@/services/fleet-scheduler-service.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,7 +27,9 @@ function makeAvaChannelService() {
   };
 }
 
-function makeFeatureLoader(features: Array<{ id: string; status: string; dependencies?: string[] }> = []) {
+function makeFeatureLoader(
+  features: Array<{ id: string; status: string; dependencies?: string[] }> = []
+) {
   return {
     getAll: vi.fn().mockResolvedValue(features),
     update: vi.fn().mockResolvedValue({}),
@@ -91,9 +98,7 @@ describe('FleetSchedulerService - assignment algorithm', () => {
     service.start();
 
     // Feed a peer inventory
-    service.onWorkInventory(
-      makeInventory('instance-b', ['f-003', 'f-004'], [], 2, 0)
-    );
+    service.onWorkInventory(makeInventory('instance-b', ['f-003', 'f-004'], [], 2, 0));
 
     // Wait for initial schedule cycle (runs after 5s setTimeout — mock timer)
     // Instead, call broadcastWorkInventory directly as a proxy for the cycle
@@ -241,9 +246,13 @@ describe('FleetSchedulerService - conflict resolution', () => {
     await service.onScheduleConflict(conflict);
 
     // Should have called update to reset status back to backlog
-    expect(featureLoader.update).toHaveBeenCalledWith('/project', 'f-conflict', expect.objectContaining({
-      status: 'backlog',
-    }));
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/project',
+      'f-conflict',
+      expect.objectContaining({
+        status: 'backlog',
+      })
+    );
   });
 
   it('lower instanceId instance does NOT release claim on conflict', async () => {
@@ -450,14 +459,22 @@ describe('FleetSchedulerService - applying schedule_assignment', () => {
 
     await service.onScheduleAssignment(assignment);
 
-    expect(featureLoader.update).toHaveBeenCalledWith('/project', 'f-001', expect.objectContaining({
-      status: 'in_progress',
-      scheduledBy: 'worker-a',
-    }));
-    expect(featureLoader.update).toHaveBeenCalledWith('/project', 'f-002', expect.objectContaining({
-      status: 'in_progress',
-      scheduledBy: 'worker-a',
-    }));
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/project',
+      'f-001',
+      expect.objectContaining({
+        status: 'in_progress',
+        scheduledBy: 'worker-a',
+      })
+    );
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/project',
+      'f-002',
+      expect.objectContaining({
+        status: 'in_progress',
+        scheduledBy: 'worker-a',
+      })
+    );
   });
 
   it('ignores assignments not targeting this instance', async () => {
@@ -542,10 +559,7 @@ describe('FleetSchedulerService - dependency ordering', () => {
       { id: 'f-002', status: 'backlog', dependencies: ['f-dep'] },
       { id: 'f-001', status: 'backlog', dependencies: [] },
     ];
-    const allFeatures = [
-      { id: 'f-dep', status: 'done' },
-      ...backlog,
-    ];
+    const allFeatures = [{ id: 'f-dep', status: 'done' }, ...backlog];
 
     const sorted = privateService.sortByDependencyOrder(backlog, allFeatures);
 
