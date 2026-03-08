@@ -80,6 +80,20 @@ export const withFeaturesClient = <TBase extends Constructor<BaseHttpClient>>(Ba
         this.post('/api/features/bulk-update', { projectPath, featureIds, updates }),
       bulkDelete: (projectPath: string, featureIds: string[]) =>
         this.post('/api/features/bulk-delete', { projectPath, featureIds }),
+      onFeatureEvent: (callback: (event: { type: string; payload: unknown }) => void) => {
+        const featureEvents = [
+          'feature:created',
+          'feature:updated',
+          'feature:deleted',
+          'feature:status-changed',
+        ] as const;
+        const unsubs = featureEvents.map((eventType) =>
+          this.subscribeToEvent(eventType, ((payload: unknown) => {
+            callback({ type: eventType, payload });
+          }) as EventCallback)
+        );
+        return () => unsubs.forEach((unsub) => unsub());
+      },
     };
 
     // Auto Mode API

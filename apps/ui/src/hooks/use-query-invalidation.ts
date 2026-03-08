@@ -229,11 +229,45 @@ export function useSessionQueryInvalidation(sessionId: string | undefined) {
  * }
  * ```
  */
+/**
+ * Invalidate feature queries when remote CRDT sync events arrive.
+ *
+ * The CRDT mesh emits feature:created, feature:updated, feature:deleted,
+ * and feature:status-changed when a remote instance changes a feature.
+ * Without this hook the board only updates on manual refresh.
+ */
+export function useFeatureEventQueryInvalidation(projectPath: string | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!projectPath) return;
+
+    const api = getElectronAPI();
+    if (!api?.features?.onFeatureEvent) return;
+
+    const unsubscribe = api.features.onFeatureEvent((event) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.features.all(projectPath),
+      });
+
+      // Also invalidate running agents — status changes may affect agent state
+      if (event.type === 'feature:status-changed') {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.runningAgents.all(),
+        });
+      }
+    });
+
+    return unsubscribe;
+  }, [projectPath, queryClient]);
+}
+
 export function useQueryInvalidation(
   projectPath: string | undefined,
   sessionId?: string | undefined
 ) {
   useAutoModeQueryInvalidation(projectPath);
+  useFeatureEventQueryInvalidation(projectPath);
   useSpecRegenerationQueryInvalidation(projectPath);
   useGitHubValidationQueryInvalidation(projectPath);
   useSessionQueryInvalidation(sessionId);
