@@ -48,6 +48,9 @@ jobs:
       - name: Lint Server (import safety)
         run: npm run lint:server
 
+      - name: Build shared packages
+        run: npm run build:packages
+
       - name: Typecheck
         run: npm run typecheck
 
