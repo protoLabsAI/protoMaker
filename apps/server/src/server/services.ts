@@ -106,6 +106,7 @@ import { AvaChannelService } from '../services/ava-channel-service.js';
 import { TodoService } from '../services/todo-service.js';
 import type { WorkStealingService } from '../services/work-stealing-service.js';
 import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
+import type { FleetSchedulerService } from '../services/fleet-scheduler-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -286,6 +287,9 @@ export interface ServiceContainer {
 
   // Ava Channel Reactor stop function (set by ava-channel-reactor.module, called on shutdown)
   _avaChannelReactorStop?: () => void;
+
+  // Fleet Scheduler (set by ava-channel-reactor.module when hivemind is enabled)
+  fleetSchedulerService?: FleetSchedulerService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;

@@ -22,6 +22,10 @@ export type {
   HealthAlert,
   DoraReport,
   PatternResolved,
+  WorkInventory,
+  ScheduleAssignment,
+  SchedulerHeartbeat,
+  ScheduleConflict,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer

@@ -15,6 +15,7 @@
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createLogger } from '@protolabsai/utils';
 import { AvaChannelReactorService } from './ava-channel-reactor-service.js';
+import { FleetSchedulerService } from './fleet-scheduler-service.js';
 import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('AvaChannelReactorModule');
@@ -76,7 +77,30 @@ export async function register(
   const instanceId = crdtSyncService.getInstanceId();
   const instanceName = instanceId;
 
-  logger.info(`Initializing AvaChannelReactorService: instanceId=${instanceId}`);
+  // Determine if this instance is the primary scheduler
+  const protolab = protoConfig['protolab'] as { role?: string } | undefined;
+  const isPrimary = protolab?.role === 'primary';
+
+  logger.info(
+    `Initializing AvaChannelReactorService: instanceId=${instanceId} isPrimary=${isPrimary}`
+  );
+
+  // Instantiate and start FleetSchedulerService
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fleetSchedulerService = new FleetSchedulerService({
+    avaChannelService,
+    instanceId,
+    isPrimary,
+    autoModeService: autoModeService as any,
+    featureLoader: container.featureLoader as any,
+    projectPath: repoRoot,
+  });
+
+  fleetSchedulerService.start();
+  logger.info('FleetSchedulerService started');
+
+  // Attach to container so other modules can reference it
+  container.fleetSchedulerService = fleetSchedulerService;
 
   const service = new AvaChannelReactorService({
     avaChannelService,
@@ -85,14 +109,20 @@ export async function register(
     instanceName,
     settingsService,
     autoModeService,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    featureLoader: container.featureLoader as any,
+    projectPath: repoRoot,
+    frictionTrackerService: container.frictionTrackerService,
+    fleetSchedulerService,
   });
 
   await service.start();
   logger.info('AvaChannelReactorService started');
 
   const stop = () => {
+    fleetSchedulerService.stop();
     service.stop();
-    logger.info('AvaChannelReactorService stopped');
+    logger.info('AvaChannelReactorService and FleetSchedulerService stopped');
   };
 
   return { service, stop };
