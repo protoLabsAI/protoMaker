@@ -439,7 +439,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           onClick={() => handleTabChange('ava-channel')}
           aria-selected={activeTab === 'ava-channel'}
         >
-          Ava Channel
+          #backchannel
         </button>
       </div>
 
