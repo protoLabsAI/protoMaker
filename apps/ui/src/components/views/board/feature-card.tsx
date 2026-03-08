@@ -91,9 +91,7 @@ export const FeatureCard = memo(function FeatureCard({
   className,
   children,
 }: FeatureCardProps) {
-  const isRemote =
-    !!feature.assignedInstance &&
-    feature.assignedInstance !== localInstanceId;
+  const isRemote = !!feature.assignedInstance && feature.assignedInstance !== localInstanceId;
 
   return (
     <div className={cn('relative', className)} data-testid={`feature-card-${feature.id}`}>
