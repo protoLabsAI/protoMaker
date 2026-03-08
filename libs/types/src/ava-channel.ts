@@ -130,6 +130,160 @@ export interface PostMessageOptions {
   expectsResponse?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Work-stealing protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Capacity heartbeat broadcast by each reactor instance every 60 seconds.
+ * Carries enough information for peers to decide whether to request work.
+ */
+export interface CapacityHeartbeat {
+  /** Originating instance ID */
+  instanceId: string;
+  /** Human-readable role / instance name */
+  role: string;
+  /** Number of features currently in backlog on this instance */
+  backlogCount: number;
+  /** Number of features currently active (running agents) on this instance */
+  activeCount: number;
+  /** Maximum concurrent agents this instance supports */
+  maxConcurrency: number;
+  /** CPU load percentage (0-100) */
+  cpuLoad: number;
+  /** Memory used as a percentage of total (0-100) */
+  memoryUsed: number;
+}
+
+/**
+ * Sent by an idle instance to a peer that has backlog features.
+ * Requests up to `maxFeatures` features to steal.
+ */
+export interface WorkRequest {
+  /** Instance requesting work */
+  requestingInstanceId: string;
+  /** Instance being requested (must match the peer's instanceId) */
+  targetInstanceId: string;
+  /** Maximum features to steal in this cycle (capped at 2) */
+  maxFeatures: number;
+}
+
+/**
+ * Response from the peer after a work_request.
+ * Contains feature IDs and full feature descriptors that were transferred.
+ */
+export interface WorkOffer {
+  /** Instance that is offering work */
+  offeringInstanceId: string;
+  /** Instance that requested the work */
+  requestingInstanceId: string;
+  /** IDs of the features being offered */
+  featureIds: string[];
+  /** Full feature JSON for each offered feature */
+  features: Record<string, unknown>[];
+}
+
+// ---------------------------------------------------------------------------
+// Escalation protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Sent when a feature hits blocked status with failureCount >= 2.
+ * Broadcasts to peers requesting one of them to take ownership.
+ */
+export interface EscalationRequest {
+  /** Feature ID that is blocked and needs a new owner */
+  featureId: string;
+  /** Number of consecutive failures on the originating instance */
+  failureCount: number;
+  /** Last error message from the failing feature */
+  lastError: string;
+  /** Snapshot of the worktree state at time of escalation */
+  worktreeState: string;
+  /** Instance that is escalating the feature */
+  originatingInstanceId: string;
+}
+
+/**
+ * Sent by a peer instance with idle capacity in response to an escalation_request.
+ */
+export interface EscalationOffer {
+  /** Instance offering to take ownership */
+  offeringInstanceId: string;
+  /** Instance that originally escalated */
+  originatingInstanceId: string;
+  /** Feature ID being offered for */
+  featureId: string;
+}
+
+/**
+ * Sent by the originating instance to accept a specific escalation_offer.
+ * Delegates feature ownership to the accepting instance.
+ */
+export interface EscalationAccept {
+  /** Instance accepting the escalation offer */
+  acceptingInstanceId: string;
+  /** Instance that originally escalated */
+  originatingInstanceId: string;
+  /** Feature ID being delegated */
+  featureId: string;
+  /** Original feature data for cloning on the accepting instance */
+  featureData: Record<string, unknown>;
+}
+
+/**
+ * Broadcast when an instance's memory or CPU exceeds safe thresholds.
+ * Peers should pause work-stealing from this instance for 5 minutes.
+ */
+export interface HealthAlert {
+  /** Instance sending the health alert */
+  instanceId: string;
+  /** Memory used as a percentage of total (0-100) */
+  memoryUsed: number;
+  /** CPU load percentage (0-100) */
+  cpuLoad: number;
+  /** ISO 8601 timestamp of the alert */
+  alertTimestamp: string;
+}
+
+// ---------------------------------------------------------------------------
+// DORA metrics protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Broadcast by each reactor instance every hour carrying local DORA metrics.
+ * Peers merge these into the aggregate CRDTStore entry under domain='metrics', id='dora'.
+ */
+export interface DoraReport {
+  /** Originating instance ID */
+  instanceId: string;
+  /** ISO timestamp when the report was computed */
+  computedAt: string;
+  /** Number of features moved to done in the last 24 hours (deployment frequency proxy) */
+  deploymentsLast24h: number;
+  /** Average lead time in milliseconds (backlog→done) for features completed in the window */
+  avgLeadTimeMs: number;
+  /** Number of features that became blocked during the window */
+  blockedCount: number;
+  /** Number of features that moved to done during the window */
+  doneCount: number;
+}
+
+/**
+ * Broadcast when a System Improvement feature moves to done.
+ * All peers should clear their friction counters for the resolved pattern.
+ */
+export interface PatternResolved {
+  /** The failure pattern that was resolved */
+  pattern: string;
+  /** Feature ID of the System Improvement feature that moved to done */
+  featureId: string;
+  /** Instance that originated the resolution broadcast */
+  instanceId: string;
+  /** ISO timestamp of resolution */
+  resolvedAt: string;
+}
+
 /**
  * Options for AvaChannelService.getMessages()
  */
@@ -142,4 +296,101 @@ export interface GetMessagesOptions {
   instanceId?: string;
   /** Filter to messages from a specific source */
   source?: 'ava' | 'operator' | 'system';
+}
+
+// ---------------------------------------------------------------------------
+// Fleet scheduler protocol message types
+// ---------------------------------------------------------------------------
+
+/**
+ * Broadcast by each instance so the primary scheduler can read their
+ * backlog execution order and dependency chains.
+ */
+export interface WorkInventory {
+  /** Instance that owns this inventory */
+  instanceId: string;
+  /** ISO 8601 timestamp of this snapshot */
+  timestamp: string;
+  /** Ordered list of backlog feature IDs (dependency order, highest priority first) */
+  backlogFeatureIds: string[];
+  /** Features currently in progress on this instance */
+  activeFeatureIds: string[];
+  /** Max concurrent agents this instance supports */
+  maxConcurrency: number;
+  /** Number of agents currently running */
+  activeCount: number;
+}
+
+/**
+ * Broadcast by the primary scheduler every 5 minutes.
+ * Assigns specific feature IDs from the global backlog to specific instances.
+ */
+export interface ScheduleAssignment {
+  /** Scheduler instance that produced this assignment */
+  schedulerInstanceId: string;
+  /** ISO 8601 timestamp of this schedule */
+  timestamp: string;
+  /**
+   * Map from instanceId → list of feature IDs assigned to that instance.
+   * Instances not in this map receive no new assignments.
+   */
+  assignments: Record<string, string[]>;
+}
+
+/**
+ * Broadcast by the active scheduler every minute on #backchannel.
+ * Last-writer-wins: the instance with the most recent heartbeat is the scheduler.
+ * Used for failover detection: if primary is absent >10min, longest-running worker takes over.
+ */
+export interface SchedulerHeartbeat {
+  /** Instance acting as the scheduler */
+  schedulerInstanceId: string;
+  /** ISO 8601 timestamp */
+  timestamp: string;
+  /** How long this instance has been running (ms) — used for last-writer-wins tiebreaker */
+  uptimeMs: number;
+  /** Whether this instance has role=primary in proto.config.yaml */
+  isPrimary: boolean;
+}
+
+/**
+ * Broadcast when an instance detects that it and a peer both claimed the same feature.
+ * The instance with the higher instanceId (lexicographic) releases the claim.
+ */
+export interface ScheduleConflict {
+  /** Feature ID that has been double-claimed */
+  featureId: string;
+  /** Instance that detected the conflict */
+  detectingInstanceId: string;
+  /** Instance that also claimed the feature */
+  competingInstanceId: string;
+  /** ISO 8601 timestamp of conflict detection */
+  timestamp: string;
+}
+
+/**
+ * Broadcast by an instance when a phase assigned to it completes (or fails).
+ * The primary scheduler aggregates these to track overall project progress
+ * across all fleet instances.
+ */
+export interface ProjectProgress {
+  /** Project slug this progress event belongs to */
+  projectSlug: string;
+  /** Milestone slug containing the phase */
+  milestoneSlug: string;
+  /** Phase name that changed status */
+  phaseName: string;
+  /** Instance that executed the phase */
+  instanceId: string;
+  /**
+   * New status of the phase after the event.
+   * - 'in_progress' — phase execution started
+   * - 'done'        — phase completed successfully
+   * - 'failed'      — phase failed and will not be retried automatically
+   */
+  status: 'in_progress' | 'done' | 'failed';
+  /** ISO 8601 timestamp of this progress event */
+  timestamp: string;
+  /** Optional error message when status='failed' */
+  error?: string;
 }

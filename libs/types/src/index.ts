@@ -13,6 +13,19 @@ export type {
   MessageIntent,
   MessageClassifierRule,
   ClassificationContext,
+  CapacityHeartbeat,
+  WorkRequest,
+  WorkOffer,
+  EscalationRequest,
+  EscalationOffer,
+  EscalationAccept,
+  HealthAlert,
+  DoraReport,
+  PatternResolved,
+  WorkInventory,
+  ScheduleAssignment,
+  SchedulerHeartbeat,
+  ScheduleConflict,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
@@ -929,6 +942,9 @@ export type {
 
 // DORA metrics types (lead time, deployment frequency, change failure rate, recovery time, rework rate)
 export type { DoraMetrics, MetricValue, DoraRegulationAlert } from './dora-metrics.js';
+
+// Friction tracker types (self-improvement loop — recurring failure pattern detection)
+export type { FrictionReport } from './friction-report.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {

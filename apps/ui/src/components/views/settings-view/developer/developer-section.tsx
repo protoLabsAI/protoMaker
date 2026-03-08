@@ -40,6 +40,11 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     description:
       'Enable sensor-driven user presence awareness. Requires compatible sensor hardware or agent.',
   },
+  reactorEnabled: {
+    label: 'Ava Channel Reactor',
+    description:
+      'Enable the reactive orchestrator that monitors the Ava Channel and auto-responds to incoming messages. Requires hivemind mode.',
+  },
 };
 
 export function DeveloperSection() {

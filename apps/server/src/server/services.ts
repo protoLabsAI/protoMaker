@@ -84,6 +84,8 @@ import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
 import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
+import { FrictionTrackerService } from '../services/friction-tracker-service.js';
+import { FailureClassifierService } from '../services/failure-classifier-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -103,6 +105,8 @@ import { CrdtSyncService } from '../services/crdt-sync-service.js';
 import { AvaChannelService } from '../services/ava-channel-service.js';
 import { TodoService } from '../services/todo-service.js';
 import type { WorkStealingService } from '../services/work-stealing-service.js';
+import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
+import type { FleetSchedulerService } from '../services/fleet-scheduler-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -269,8 +273,23 @@ export interface ServiceContainer {
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
 
+  // Friction tracker (self-improvement loop — recurring failure pattern detection)
+  frictionTrackerService: FrictionTrackerService;
+
+  // CRDT document store (set by crdt-store.module, used by dependent modules)
+  _crdtStore?: import('@protolabsai/crdt').CRDTStore;
+
   // CRDT document store cleanup (set by crdt-store.module, called on shutdown)
   _crdtStoreCleanup?: () => Promise<void>;
+
+  // Ava Channel Reactor (set by ava-channel-reactor.module, called on shutdown)
+  avaChannelReactorService?: AvaChannelReactorService;
+
+  // Ava Channel Reactor stop function (set by ava-channel-reactor.module, called on shutdown)
+  _avaChannelReactorStop?: () => void;
+
+  // Fleet Scheduler (set by ava-channel-reactor.module when hivemind is enabled)
+  fleetSchedulerService?: FleetSchedulerService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -667,6 +686,28 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     events.emit(type as import('@protolabsai/types').EventType, payload)
   );
 
+  // Friction Tracker Service — self-improvement loop (requires featureLoader + avaChannelService)
+  const frictionTrackerService = new FrictionTrackerService({
+    featureLoader,
+    avaChannelService,
+    projectPath: repoRoot,
+    instanceId: crdtSyncService.getInstanceId(),
+  });
+
+  // Wire friction tracker into the feature-status-change event pipeline.
+  // On every blocked status change, classify the reason and record the pattern.
+  const failureClassifierService = new FailureClassifierService();
+  events.subscribe((type, payload) => {
+    if (type !== 'feature:status-changed') return;
+    const p = payload as { newStatus?: string; reason?: string; statusChangeReason?: string };
+    if (p.newStatus !== 'blocked') return;
+
+    const reason = p.reason ?? p.statusChangeReason ?? '';
+    const classification = failureClassifierService.classify(reason);
+
+    void frictionTrackerService.recordFailure(classification.category);
+  });
+
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
@@ -792,6 +833,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     todoService,
     avaChannelService,
     doraMetricsService,
+    frictionTrackerService,
     driftCheckInterval: null,
   };
 }

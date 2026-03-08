@@ -19,6 +19,7 @@ export {
   normalizeAvaChannelDocument,
   normalizeCalendarDocument,
   normalizeTodosDocument,
+  normalizeMetricsDocument,
 } from './documents.js';
 
 export type {
@@ -29,6 +30,7 @@ export type {
   AvaChannelDocument,
   CalendarDocument,
   TodosDocument,
+  MetricsDocument,
 } from './documents.js';
 
 export type {
