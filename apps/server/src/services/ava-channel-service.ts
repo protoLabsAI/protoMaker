@@ -14,7 +14,12 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
 import type { CRDTStore, AvaChannelDocument } from '@protolabsai/crdt';
-import type { AvaChatMessage, AvaChannelContext, GetMessagesOptions, PostMessageOptions } from '@protolabsai/types';
+import type {
+  AvaChatMessage,
+  AvaChannelContext,
+  GetMessagesOptions,
+  PostMessageOptions,
+} from '@protolabsai/types';
 
 const logger = createLogger('AvaChannelService');
 
