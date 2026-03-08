@@ -90,6 +90,7 @@ import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 import { createLedgerRoutes } from '../routes/ledger/index.js';
 import { createAvaChannelRoutes } from '../routes/ava-channel/index.js';
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
+import { createDoraRoutes } from '../routes/dora/index.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -432,6 +433,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Hivemind routes (peer discovery and instance status for the unified dashboard)
   app.use('/api/hivemind', createHivemindRoutes(crdtSyncService));
   logger.info('Hivemind routes mounted at /api/hivemind');
+
+  // DORA metrics routes (lead time, deployment frequency, change failure rate, recovery, rework)
+  app.use('/api/dora', createDoraRoutes(services.doraMetricsService));
+  logger.info('DORA metrics routes mounted at /api/dora');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
