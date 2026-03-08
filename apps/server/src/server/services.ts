@@ -99,6 +99,7 @@ import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
+import { AvaChannelService } from '../services/ava-channel-service.js';
 import type { WorkStealingService } from '../services/work-stealing-service.js';
 
 const logger = createLogger('Server:Services');
@@ -253,6 +254,9 @@ export interface ServiceContainer {
 
   // CRDT sync service (multi-instance coordination)
   crdtSyncService: CrdtSyncService;
+
+  // Ava Channel (private multi-instance Ava communication)
+  avaChannelService: AvaChannelService;
 
   // Work-stealing (cross-instance feature redistribution)
   workStealingService?: WorkStealingService;
@@ -640,6 +644,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // CRDT Sync Service — multi-instance coordination via WebSocket sync server
   const crdtSyncService = new CrdtSyncService();
 
+  // Ava Channel Service — private multi-instance Ava communication channel
+  const avaChannelService = new AvaChannelService();
+
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
@@ -762,6 +769,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectPlanningService,
     projectPmService,
     crdtSyncService,
+    avaChannelService,
     driftCheckInterval: null,
   };
 }
