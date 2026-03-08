@@ -8,13 +8,11 @@
 import { Router, type Request, type Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import { validatePath } from '@protolabsai/platform';
-import { TodoService } from '../../services/todo-service.js';
-import type { EventEmitter } from '../../lib/events.js';
+import type { TodoService } from '../../services/todo-service.js';
 
 const logger = createLogger('TodoRoutes');
-const todoService = new TodoService();
 
-export function createTodoRoutes(_events?: EventEmitter): Router {
+export function createTodoRoutes(todoService: TodoService): Router {
   const router = Router();
 
   /**

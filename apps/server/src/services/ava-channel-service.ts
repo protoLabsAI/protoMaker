@@ -34,7 +34,7 @@ const ARCHIVE_AFTER_DAYS = 30;
 const ARCHIVE_CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 export class AvaChannelService {
-  private readonly store: CRDTStore | null;
+  private store: CRDTStore | null;
   private readonly instanceId: string;
   private readonly instanceName: string;
   /** Directory where archived shards are written as JSON files */
@@ -56,6 +56,15 @@ export class AvaChannelService {
 
   setEventEmitter(emit: (type: string, payload: unknown) => void): void {
     this._emitEvent = emit;
+  }
+
+  /**
+   * Register a CRDTStore for syncing channel messages across instances.
+   * When set, messages are stored in CRDT documents instead of in-memory.
+   */
+  setCrdtStore(store: CRDTStore): void {
+    this.store = store;
+    logger.info('[AvaChannel] CRDT store registered — messages will sync across instances');
   }
 
   /**

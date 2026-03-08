@@ -160,6 +160,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     sensorRegistryService,
     projectPmService,
     crdtSyncService,
+    todoService,
     avaChannelService,
   } = services;
 
@@ -396,7 +397,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
-  app.use('/api/todos', createTodoRoutes(events));
+  app.use('/api/todos', createTodoRoutes(todoService));
   app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
   // Knowledge store routes (chunked retrieval)
   if (knowledgeStoreService) {

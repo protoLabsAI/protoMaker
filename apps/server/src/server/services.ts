@@ -101,6 +101,7 @@ import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
 import { AvaChannelService } from '../services/ava-channel-service.js';
+import { TodoService } from '../services/todo-service.js';
 import type { WorkStealingService } from '../services/work-stealing-service.js';
 
 const logger = createLogger('Server:Services');
@@ -262,8 +263,14 @@ export interface ServiceContainer {
   // Work-stealing (cross-instance feature redistribution)
   workStealingService?: WorkStealingService;
 
+  // Todo workspace (per-project todo lists synced via CRDT)
+  todoService: TodoService;
+
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
+
+  // CRDT document store cleanup (set by crdt-store.module, called on shutdown)
+  _crdtStoreCleanup?: () => Promise<void>;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -646,6 +653,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
+  // Todo Service — per-project workspace, CRDT-synced when hivemind active
+  const todoService = new TodoService();
+
   // CRDT Sync Service — multi-instance coordination via WebSocket sync server
   const crdtSyncService = new CrdtSyncService();
 
@@ -779,6 +789,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectPlanningService,
     projectPmService,
     crdtSyncService,
+    todoService,
     avaChannelService,
     doraMetricsService,
     driftCheckInterval: null,

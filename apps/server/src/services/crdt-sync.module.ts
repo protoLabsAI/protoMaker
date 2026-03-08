@@ -1,7 +1,7 @@
 // CRDT sync module — wires EventBus to CrdtSyncService for cross-instance event propagation.
 // Startup handles the actual start() call after repoRoot is resolved.
 
-import type { Feature } from '@protolabsai/types';
+import type { Feature, Project } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { ServiceContainer } from '../server/services.js';
 
@@ -20,7 +20,7 @@ export async function register(container: ServiceContainer): Promise<void> {
     container.autoModeService.getCapacityMetrics()
   );
 
-  // Persist remote feature events locally so the board stays in sync across instances.
+  // Persist remote events locally so the board + projects stay in sync across instances.
   // This handler runs BEFORE the event is re-emitted on the local bus, so downstream
   // subscribers (UI WebSocket, IntegrationService, etc.) see already-persisted data.
   container.crdtSyncService.onRemoteFeatureEvent((eventType, payload) => {
@@ -32,6 +32,7 @@ export async function register(container: ServiceContainer): Promise<void> {
     const featureLoader = container.featureLoader;
 
     switch (eventType) {
+      // ── Feature events ──────────────────────────────────────────────────
       case 'feature:created': {
         const feature = payload.feature as Feature | undefined;
         if (!feature?.id) {
@@ -84,6 +85,34 @@ export async function register(container: ServiceContainer): Promise<void> {
         logger.info(`[CRDT] Persisting remote feature:deleted ${featureId}`);
         featureLoader.delete(projectPath, featureId).catch((err) => {
           logger.error(`[CRDT] Failed to persist remote feature:deleted ${featureId}: ${err}`);
+        });
+        break;
+      }
+
+      // ── Project events ──────────────────────────────────────────────────
+      case 'project:created':
+      case 'project:updated': {
+        const project = payload.project as Project | undefined;
+        const slug = (payload.projectSlug as string) || project?.slug;
+        if (!slug || !project) {
+          logger.warn(`[CRDT] Received ${eventType} without project data, skipping`);
+          break;
+        }
+        logger.info(`[CRDT] Persisting remote ${eventType} ${slug}`);
+        container.projectService.persistRemoteProject(projectPath, project).catch((err) => {
+          logger.error(`[CRDT] Failed to persist remote ${eventType} ${slug}: ${err}`);
+        });
+        break;
+      }
+      case 'project:deleted': {
+        const projectSlug = payload.projectSlug as string | undefined;
+        if (!projectSlug) {
+          logger.warn('[CRDT] Received project:deleted without projectSlug, skipping');
+          break;
+        }
+        logger.info(`[CRDT] Persisting remote project:deleted ${projectSlug}`);
+        container.projectService.persistRemoteDelete(projectPath, projectSlug).catch((err) => {
+          logger.error(`[CRDT] Failed to persist remote project:deleted ${projectSlug}: ${err}`);
         });
         break;
       }

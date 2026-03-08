@@ -182,6 +182,63 @@ export class ProjectService {
     logger.debug(`[CRDT] Applied ${changes.length} remote change(s) for ${projectPath}`);
   }
 
+  // ─── Remote sync (called by crdt-sync.module.ts) ─────────────────────────
+
+  /**
+   * Persist a project received from a remote instance.
+   * Writes to disk + updates local Automerge doc WITHOUT emitting events
+   * (the caller re-emits via the local EventBus to prevent loops).
+   */
+  async persistRemoteProject(projectPath: string, project: Project): Promise<void> {
+    const slug = project.slug;
+    if (!slug) {
+      logger.warn('[CRDT] Received remote project without slug, skipping');
+      return;
+    }
+
+    // Ensure directory exists
+    await ensureProjectDir(projectPath, slug);
+
+    // Write project.json
+    const jsonPath = getProjectJsonPath(projectPath, slug);
+    await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
+
+    // Update local Automerge doc (no event emission)
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[slug] = this._toAutomergeValue(project);
+      });
+      this._docs.set(projectPath, newDoc);
+    }
+
+    logger.info(`[CRDT] Persisted remote project: ${slug}`);
+  }
+
+  /**
+   * Delete a project received from a remote instance.
+   * Removes from disk + local Automerge doc WITHOUT emitting events.
+   */
+  async persistRemoteDelete(projectPath: string, projectSlug: string): Promise<void> {
+    const projectDir = getProjectDir(projectPath, projectSlug);
+    try {
+      await secureFs.rm(projectDir, { recursive: true, force: true });
+    } catch {
+      // Directory may not exist locally — that's fine
+    }
+
+    // Update local Automerge doc (no event emission)
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        delete (d.projects as Record<string, Project | undefined>)[projectSlug];
+      });
+      this._docs.set(projectPath, newDoc);
+    }
+
+    logger.info(`[CRDT] Persisted remote project delete: ${projectSlug}`);
+  }
+
   // ─── Public API ────────────────────────────────────────────────────────────
 
   /**

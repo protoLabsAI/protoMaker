@@ -83,6 +83,19 @@ export async function runStartup(
     logger.warn('[CRDT] Sync service failed to start (single-instance mode):', err);
   }
 
+  // Initialize CRDT document store and inject into services
+  // Must run after CrdtSyncService.start() so proto.config.yaml is loaded
+  try {
+    const { register: registerCrdtStore } = await import('../services/crdt-store.module.js');
+    const result = await registerCrdtStore(services);
+    if (result) {
+      services._crdtStoreCleanup = result.close;
+      logger.info('[CRDT] Document store initialized and injected into services');
+    }
+  } catch (err) {
+    logger.warn('[CRDT] Document store failed to initialize (filesystem fallback):', err);
+  }
+
   // Initialize Knowledge Store Service for all known projects
   if (knowledgeStoreService) {
     try {
