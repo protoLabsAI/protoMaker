@@ -15,7 +15,7 @@
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createLogger } from '@protolabsai/utils';
 import { AvaChannelReactorService } from './ava-channel-reactor-service.js';
-import { FleetSchedulerService } from './fleet-scheduler-service.js';
+import { FleetSchedulerService, type FleetSchedulerDependencies } from './fleet-scheduler-service.js';
 import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('AvaChannelReactorModule');
@@ -86,13 +86,12 @@ export async function register(
   );
 
   // Instantiate and start FleetSchedulerService
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fleetSchedulerService = new FleetSchedulerService({
     avaChannelService,
     instanceId,
     isPrimary,
-    autoModeService: autoModeService as any,
-    featureLoader: container.featureLoader as any,
+    autoModeService: autoModeService as FleetSchedulerDependencies['autoModeService'],
+    featureLoader: container.featureLoader as FleetSchedulerDependencies['featureLoader'],
     projectPath: repoRoot,
   });
 
