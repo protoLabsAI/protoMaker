@@ -24,10 +24,10 @@ export async function register(container: ServiceContainer): Promise<void> {
   // This handler runs BEFORE the event is re-emitted on the local bus, so downstream
   // subscribers (UI WebSocket, IntegrationService, etc.) see already-persisted data.
   container.crdtSyncService.onRemoteFeatureEvent((eventType, payload) => {
-    // Remap projectPath to this instance's repoRoot — the sender's path won't match
-    // (e.g. /Users/kj/dev/automaker on Mac vs /root/dev/automaker on staging).
+    // Remap remote projectPath to local repoRoot — each instance has its own filesystem
+    // path (e.g. /Users/kj/dev/automaker on Mac vs /root/dev/automaker on staging).
+    if (!payload.projectPath) return;
     const projectPath = container.repoRoot;
-    if (!projectPath) return;
 
     const featureLoader = container.featureLoader;
 
@@ -54,7 +54,7 @@ export async function register(container: ServiceContainer): Promise<void> {
         }
         logger.info(`[CRDT] Persisting remote ${eventType} ${featureId}`);
         // Write the full feature state to disk, skipping event emission to prevent loops.
-        // Fallback: if the feature doesn't exist locally yet, create it instead of erroring.
+        // Fall back to create if the feature doesn't exist locally yet.
         featureLoader
           .update(projectPath, featureId, feature, undefined, undefined, undefined, {
             skipEventEmission: true,
@@ -64,9 +64,11 @@ export async function register(container: ServiceContainer): Promise<void> {
               logger.info(
                 `[CRDT] Feature ${featureId} not found locally, creating from remote state`
               );
-              await featureLoader.create(projectPath, feature).catch((createErr) => {
-                logger.error(`[CRDT] Fallback create also failed for ${featureId}: ${createErr}`);
-              });
+              await featureLoader
+                .create(projectPath, { ...feature, id: featureId })
+                .catch((createErr) => {
+                  logger.error(`[CRDT] Fallback create also failed for ${featureId}: ${createErr}`);
+                });
             } else {
               logger.error(`[CRDT] Failed to persist remote ${eventType} ${featureId}: ${err}`);
             }
