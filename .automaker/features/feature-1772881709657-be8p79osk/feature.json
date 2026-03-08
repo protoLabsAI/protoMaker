@@ -1,13 +1,8 @@
 {
   "id": "feature-1772881709657-be8p79osk",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:28.254Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772881709657-be8p79osk",
-=======
   "archivedAt": "2026-03-07T22:12:47.341Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772881709657-be8p79osk",
->>>>>>> origin/staging
   "status": "done",
   "title": "[Epic] proto.config.yaml Schema & Loader"
 }

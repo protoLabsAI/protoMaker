@@ -1,13 +1,8 @@
 {
   "id": "feature-1772856637963-3zeqswr5x",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:23.768Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772856637963-3zeqswr5x",
-=======
   "archivedAt": "2026-03-07T22:12:47.260Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772856637963-3zeqswr5x",
->>>>>>> origin/staging
   "status": "done",
   "title": "Persist and reload ceremony processedProjects dedup"
 }

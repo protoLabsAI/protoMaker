@@ -1,13 +1,8 @@
 {
   "id": "feature-1772863574161-niv0lxcp4",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:26.802Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772863574161-niv0lxcp4",
-=======
   "archivedAt": "2026-03-07T22:12:47.315Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772863574161-niv0lxcp4",
->>>>>>> origin/staging
   "status": "done",
   "title": "EventLedger project-scoped query + /api/projects/:slug/timeline route"
 }

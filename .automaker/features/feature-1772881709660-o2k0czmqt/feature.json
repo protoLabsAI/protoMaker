@@ -1,13 +1,8 @@
 {
   "id": "feature-1772881709660-o2k0czmqt",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:28.269Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772881709660-o2k0czmqt",
-=======
   "archivedAt": "2026-03-07T22:12:47.353Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772881709660-o2k0czmqt",
->>>>>>> origin/staging
   "status": "done",
   "title": "Config loader with layered resolution"
 }

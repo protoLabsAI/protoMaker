@@ -1,13 +1,8 @@
 {
   "id": "feature-1772856637962-xkfba976l",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:23.760Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772856637962-xkfba976l",
-=======
   "archivedAt": "2026-03-07T22:12:47.248Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772856637962-xkfba976l",
->>>>>>> origin/staging
   "status": "done",
   "title": "[Epic] Ceremony Dedup Durability"
 }

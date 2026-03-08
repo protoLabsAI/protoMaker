@@ -1,13 +1,8 @@
 {
   "id": "feature-1772856637966-vl4u7ydsr",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:24.487Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772856637966-vl4u7ydsr",
-=======
   "archivedAt": "2026-03-07T22:12:47.268Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772856637966-vl4u7ydsr",
->>>>>>> origin/staging
   "status": "done",
   "title": "Add promotion-check-staging.yml CI workflow"
 }

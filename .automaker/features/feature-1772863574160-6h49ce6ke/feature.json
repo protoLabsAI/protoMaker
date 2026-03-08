@@ -1,13 +1,8 @@
 {
   "id": "feature-1772863574160-6h49ce6ke",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:26.130Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772863574160-6h49ce6ke",
-=======
   "archivedAt": "2026-03-07T22:12:47.307Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772863574160-6h49ce6ke",
->>>>>>> origin/staging
   "status": "done",
   "title": "[Epic] Project Timeline API"
 }

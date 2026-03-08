@@ -1,13 +1,8 @@
 {
   "id": "feature-1772863574164-qk1lfiqas",
   "archived": true,
-<<<<<<< HEAD
-  "archivedAt": "2026-03-07T19:17:27.614Z",
-  "archivePath": "/home/josh/dev/ava/.automaker/archive/feature-1772863574164-qk1lfiqas",
-=======
   "archivedAt": "2026-03-07T22:12:47.329Z",
   "archivePath": "/Users/kj/dev/automaker/.automaker/archive/feature-1772863574164-qk1lfiqas",
->>>>>>> origin/staging
   "status": "done",
   "title": "Project timeline feed component + artifact viewer"
 }
