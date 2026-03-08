@@ -614,6 +614,27 @@ export function EditFeatureDialog({
                 </div>
               </div>
             )}
+
+            {/* Cross-instance assignment info (read-only) */}
+            {(editingFeature.assignedInstance || editingFeature.claimedBy) && (
+              <div className="pt-2 space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Instance Assignment</Label>
+                <div className="flex flex-col gap-1 rounded-md border border-border/40 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  {editingFeature.assignedInstance && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-foreground font-medium">Assigned to:</span>
+                      <span className="font-mono">{editingFeature.assignedInstance}</span>
+                    </div>
+                  )}
+                  {editingFeature.claimedBy && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-foreground font-medium">Claimed by:</span>
+                      <span className="font-mono">{editingFeature.claimedBy}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

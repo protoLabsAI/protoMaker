@@ -11,6 +11,7 @@ import {
   XCircle,
   AlertTriangle,
   RefreshCw,
+  Server,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Feature } from '@/store/types';
@@ -227,6 +228,17 @@ export const FeatureDetail = memo(function FeatureDetail({ feature }: FeatureDet
               <div>
                 <span className="text-sm font-medium text-muted-foreground">Assignee: </span>
                 <span className="text-sm">{feature.assignee}</span>
+              </div>
+            )}
+            {feature.assignedInstance && (
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">
+                  Assigned Instance:{' '}
+                </span>
+                <span className="inline-flex items-center gap-1 text-sm text-violet-400">
+                  <Server className="w-3.5 h-3.5" />
+                  {feature.assignedInstance}
+                </span>
               </div>
             )}
           </div>

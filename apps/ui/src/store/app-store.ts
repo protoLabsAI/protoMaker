@@ -12,6 +12,7 @@ import type {
   ServerLogLevel,
   EventHook,
   FeatureFlags,
+  HivemindPeer,
 } from '@protolabsai/types';
 import { DEFAULT_FEATURE_FLAGS } from '@protolabsai/types';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from './types';
@@ -153,6 +154,11 @@ export interface AppState {
 
   // User Identity (for board assignment)
   userIdentity: string | null;
+
+  // Hivemind / Cross-instance dashboard
+  peers: HivemindPeer[];
+  instanceFilter: 'all' | 'mine'; // 'all' = show features from all instances, 'mine' = local only
+  selfInstanceId: string | null; // The instanceId of this Automaker instance
 }
 
 export interface AppActions {
@@ -310,6 +316,13 @@ export interface AppActions {
   // User Identity actions
   setUserIdentity: (identity: string | null) => void;
 
+  // Hivemind / Cross-instance dashboard actions
+  setPeers: (peers: HivemindPeer[]) => void;
+  setInstanceFilter: (filter: 'all' | 'mine') => void;
+  fetchPeers: () => Promise<void>;
+  setSelfInstanceId: (id: string | null) => void;
+  fetchSelfInstanceId: () => Promise<void>;
+
   // Reset
   reset: () => void;
 }
@@ -384,6 +397,10 @@ const initialState: AppState = {
   lastProjectDir: '',
   recentFolders: [],
   userIdentity: null,
+  // Hivemind / Cross-instance dashboard
+  peers: [],
+  instanceFilter: 'all',
+  selfInstanceId: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1237,6 +1254,29 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
   // User Identity actions
   setUserIdentity: (identity) => set({ userIdentity: identity }),
+
+  // Hivemind / Cross-instance dashboard actions
+  setPeers: (peers) => set({ peers }),
+  setInstanceFilter: (instanceFilter) => set({ instanceFilter }),
+  fetchPeers: async () => {
+    try {
+      const api = getHttpApiClient();
+      const data = await api.hivemind.getPeers();
+      set({ peers: data.peers });
+    } catch (err) {
+      logger.warn('[AppStore] Failed to fetch hivemind peers:', err);
+    }
+  },
+  setSelfInstanceId: (selfInstanceId) => set({ selfInstanceId }),
+  fetchSelfInstanceId: async () => {
+    try {
+      const api = getHttpApiClient();
+      const data = await api.hivemind.getSelf();
+      set({ selfInstanceId: data.instanceId });
+    } catch (err) {
+      logger.warn('[AppStore] Failed to fetch self instanceId:', err);
+    }
+  },
 
   // Reset
   reset: () => set(initialState),

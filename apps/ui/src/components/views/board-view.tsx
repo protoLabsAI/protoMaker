@@ -71,6 +71,7 @@ import { CreateBranchDialog } from './board-view/dialogs/create-branch-dialog';
 import { PRDReviewModal } from './prd-review-modal';
 import { WorktreePanel } from './board-view/worktree-panel';
 import type { PRInfo, WorktreeInfo, MergeConflictInfo } from './board-view/worktree-panel/types';
+import { PeersPanel } from './peers-panel';
 import { COLUMNS, getColumnsWithPipeline, type ColumnId } from './board-view/constants';
 import {
   useBoardFeatures,
@@ -124,6 +125,8 @@ export function BoardView() {
     updateFeature,
     planUseSelectedWorktreeBranch,
     addFeatureUseSelectedWorktreeBranch,
+    instanceFilter,
+    selfInstanceId,
   } = useAppStore(
     useShallow((state) => ({
       currentProject: state.currentProject,
@@ -135,6 +138,8 @@ export function BoardView() {
       updateFeature: state.updateFeature,
       planUseSelectedWorktreeBranch: state.planUseSelectedWorktreeBranch,
       addFeatureUseSelectedWorktreeBranch: state.addFeatureUseSelectedWorktreeBranch,
+      instanceFilter: state.instanceFilter,
+      selfInstanceId: state.selfInstanceId,
     }))
   );
 
@@ -1162,9 +1167,16 @@ export function BoardView() {
     ]
   );
 
+  // Apply cross-instance filter: 'mine' shows only features assigned to this instance
+  // (or unassigned), 'all' shows features from every instance.
+  const instanceFilteredFeatures = useMemo(() => {
+    if (instanceFilter === 'all' || !selfInstanceId) return hookFeatures;
+    return hookFeatures.filter((f) => !f.assignedInstance || f.assignedInstance === selfInstanceId);
+  }, [hookFeatures, instanceFilter, selfInstanceId]);
+
   // Use column features hook
   const { getColumnFeatures, completedFeatures } = useBoardColumnFeatures({
-    features: hookFeatures,
+    features: instanceFilteredFeatures,
     runningAutoTasks,
     searchQuery,
     currentWorktreePath,
@@ -1465,6 +1477,9 @@ export function BoardView() {
             }))}
           />
         )}
+
+        {/* Peers Panel — cross-instance mesh status and instance filter */}
+        <PeersPanel className="border-b border-border/30 px-3 py-2" />
 
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">

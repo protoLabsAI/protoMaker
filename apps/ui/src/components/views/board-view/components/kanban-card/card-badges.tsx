@@ -22,6 +22,7 @@ import {
   Loader2,
   FileText,
   XCircle,
+  Server,
 } from 'lucide-react';
 import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 import { useShallow } from 'zustand/react/shallow';
@@ -167,8 +168,17 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
   const hasCost = costUsd != null && costUsd > 0;
   const isNeedsAction =
     feature.status === 'blocked' && isHumanInterventionRequired(feature.statusChangeReason ?? '');
+  const hasAssignedInstance = !!feature.assignedInstance;
 
-  if (!hasError && !hasEpic && !hasDueDate && !hasCost && !hasWorkItemState && !isNeedsAction) {
+  if (
+    !hasError &&
+    !hasEpic &&
+    !hasDueDate &&
+    !hasCost &&
+    !hasWorkItemState &&
+    !isNeedsAction &&
+    !hasAssignedInstance
+  ) {
     return null;
   }
 
@@ -184,6 +194,26 @@ export const CardBadges = memo(function CardBadges({ feature, onPRDClick }: Card
     <div className="flex flex-wrap items-center gap-1.5 px-3 pt-1.5 min-h-[24px]">
       {/* Epic badge - shows parent epic for child features */}
       {hasEpic && <EpicBadge feature={feature} />}
+
+      {/* Instance badge - shows which instance owns this feature (cross-instance dashboard) */}
+      {hasAssignedInstance && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-medium bg-violet-500/15 text-violet-400 border border-violet-500/30"
+                data-testid={`instance-badge-${feature.id}`}
+              >
+                <Server className="w-2.5 h-2.5" />
+                {feature.assignedInstance}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              <p>Assigned to instance: {feature.assignedInstance}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       {/* Work Item State badge - authority system lifecycle */}
       {hasWorkItemState && workItemStateBadge && (

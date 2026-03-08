@@ -368,6 +368,13 @@ export class CrdtSyncService {
   }
 
   /**
+   * Returns the instanceId of this instance.
+   */
+  getInstanceId(): string {
+    return this.instanceId;
+  }
+
+  /**
    * Returns all known peers (including offline).
    */
   getPeers(): HivemindPeer[] {

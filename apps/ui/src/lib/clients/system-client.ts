@@ -21,7 +21,13 @@ import type {
   IntegrationStatusResponse,
   SystemHealthResponse,
 } from './api-types';
-import type { DiscordChannelSignalConfig, Project, ProjectHealth } from '@protolabsai/types';
+import type {
+  DiscordChannelSignalConfig,
+  Project,
+  ProjectHealth,
+  HivemindPeer,
+  SyncServerStatus,
+} from '@protolabsai/types';
 import { BaseHttpClient, type Constructor } from './base-http-client';
 
 export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base: TBase) =>
@@ -357,5 +363,17 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         this.post('/api/projects/tools/project_delete_doc', { projectPath, projectSlug, docId }),
       getProjectFeatures: (projectPath: string, projectSlug: string) =>
         this.post('/api/projects/tools/project_list_features', { projectPath, projectSlug }),
+    };
+
+    // Hivemind API — cross-instance mesh peer status
+    hivemind = {
+      /** Returns all known peers (online and offline) with identity, status, and capacity. */
+      getPeers: (): Promise<{ peers: HivemindPeer[] }> => this.get('/api/hivemind/peers'),
+
+      /** Returns the full sync status for this instance (role, connected, peer count, etc.). */
+      getStatus: (): Promise<SyncServerStatus> => this.get('/api/hivemind/status'),
+
+      /** Returns the instanceId of this Automaker instance. */
+      getSelf: (): Promise<{ instanceId: string }> => this.get('/api/hivemind/self'),
     };
   };
