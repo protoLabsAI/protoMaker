@@ -401,6 +401,10 @@ export class CrdtSyncService {
   /**
    * Returns all known peers (including offline).
    */
+  getInstanceId(): string {
+    return this.instanceId;
+  }
+
   getPeers(): HivemindPeer[] {
     return [...this.peers.values()].map(
       ({ ws: _ws, priority: _priority, ...peer }) => peer as HivemindPeer

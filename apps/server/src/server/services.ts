@@ -645,7 +645,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const crdtSyncService = new CrdtSyncService();
 
   // Ava Channel Service — private multi-instance Ava communication channel
-  const avaChannelService = new AvaChannelService();
+  const avaChannelService = new AvaChannelService(join(dataDir, 'ava-channel-archive'));
 
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);

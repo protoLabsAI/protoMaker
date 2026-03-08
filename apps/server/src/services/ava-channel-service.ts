@@ -1,11 +1,15 @@
 /**
- * AvaChannelService — daily-sharded CRDT message channel for multi-instance Ava coordination.
+ * AvaChannelService — daily-sharded message channel for multi-instance Ava coordination.
  *
- * Messages are append-only (grow-only list CRDT). Daily sharding provides natural compaction —
+ * Messages are append-only (grow-only list). Daily sharding provides natural compaction —
  * older shards receive no writes and compact efficiently.
  *
+ * When a CRDTStore is provided, messages are stored in CRDT documents and sync
+ * across instances automatically. Without a store, messages are held in-memory
+ * (single-instance mode) with optional disk archival.
+ *
  * Document key format: doc:ava-channel/YYYY-MM-DD
- * Shards older than 30 days are archived to disk and unloaded from CRDT memory.
+ * Shards older than 30 days are archived to disk and unloaded from memory.
  */
 
 import fs from 'node:fs';
@@ -30,18 +34,23 @@ const ARCHIVE_AFTER_DAYS = 30;
 const ARCHIVE_CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 export class AvaChannelService {
-  private readonly store: CRDTStore;
+  private readonly store: CRDTStore | null;
   private readonly instanceId: string;
   private readonly instanceName: string;
   /** Directory where archived shards are written as JSON files */
   private readonly archiveDir: string;
   private archiveTimer: ReturnType<typeof setInterval> | null = null;
+  /** In-memory storage when no CRDT store is available */
+  private readonly memoryShards = new Map<string, AvaChatMessage[]>();
 
-  constructor(store: CRDTStore, archiveDir: string, instanceId?: string, instanceName?: string) {
-    this.store = store;
+  constructor(
+    archiveDir: string,
+    options?: { store?: CRDTStore; instanceId?: string; instanceName?: string }
+  ) {
     this.archiveDir = archiveDir;
-    this.instanceId = instanceId ?? os.hostname();
-    this.instanceName = instanceName ?? os.hostname();
+    this.store = options?.store ?? null;
+    this.instanceId = options?.instanceId ?? os.hostname();
+    this.instanceName = options?.instanceName ?? os.hostname();
   }
 
   /**
@@ -73,7 +82,7 @@ export class AvaChannelService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Append a message to today's Ava Channel CRDT shard.
+   * Append a message to today's Ava Channel shard.
    * The id and timestamp are auto-assigned.
    *
    * @param content  Free-form natural language — this IS the protocol.
@@ -97,12 +106,18 @@ export class AvaChannelService {
       ...(options?.context ? { context: options.context } : {}),
     };
 
-    await this.store.change<AvaChannelDocument>('ava-channel', date, (doc) => {
-      if (!doc.messages) {
-        (doc as unknown as { messages: AvaChatMessage[] }).messages = [];
-      }
-      doc.messages.push(message);
-    });
+    if (this.store) {
+      await this.store.change<AvaChannelDocument>('ava-channel', date, (doc) => {
+        if (!doc.messages) {
+          (doc as unknown as { messages: AvaChatMessage[] }).messages = [];
+        }
+        doc.messages.push(message);
+      });
+    } else {
+      const shard = this.memoryShards.get(date) ?? [];
+      shard.push(message);
+      this.memoryShards.set(date, shard);
+    }
 
     logger.debug(`[AvaChannel] Posted message ${message.id} to shard ${date}`);
     return message;
@@ -186,7 +201,7 @@ export class AvaChannelService {
 
   /**
    * Run a single archival pass: find shards older than ARCHIVE_AFTER_DAYS days,
-   * write them to disk as JSON, and drop their handles from CRDT memory (best-effort).
+   * write them to disk as JSON, and drop their handles from memory (best-effort).
    */
   async runArchiveCycle(): Promise<void> {
     const cutoff = new Date();
@@ -210,21 +225,36 @@ export class AvaChannelService {
       const archivePath = path.join(this.archiveDir, `${date}.json`);
       if (fs.existsSync(archivePath)) continue; // Already archived
 
-      // Only archive if a CRDT shard exists for this date
-      const url = this.store.getDocumentUrl('ava-channel', date);
-      if (!url) continue;
+      if (this.store) {
+        // CRDT mode: check if a shard exists in the store
+        const url = this.store.getDocumentUrl('ava-channel', date);
+        if (!url) continue;
 
-      try {
-        const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
-          messages: [],
-        });
-        const doc = handle.docSync();
-        const messages: AvaChatMessage[] = doc ? [...(doc.messages ?? [])] : [];
-        fs.writeFileSync(archivePath, JSON.stringify(messages, null, 2), 'utf-8');
-        archived++;
-        logger.info(`[AvaChannel] Archived shard ${date} (${messages.length} messages)`);
-      } catch (err) {
-        logger.error(`[AvaChannel] Failed to archive shard ${date}:`, err);
+        try {
+          const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
+            messages: [],
+          });
+          const doc = handle.docSync();
+          const messages: AvaChatMessage[] = doc ? [...(doc.messages ?? [])] : [];
+          fs.writeFileSync(archivePath, JSON.stringify(messages, null, 2), 'utf-8');
+          archived++;
+          logger.info(`[AvaChannel] Archived shard ${date} (${messages.length} messages)`);
+        } catch (err) {
+          logger.error(`[AvaChannel] Failed to archive shard ${date}:`, err);
+        }
+      } else {
+        // In-memory mode: archive from memoryShards
+        const shard = this.memoryShards.get(date);
+        if (!shard || shard.length === 0) continue;
+
+        try {
+          fs.writeFileSync(archivePath, JSON.stringify(shard, null, 2), 'utf-8');
+          this.memoryShards.delete(date);
+          archived++;
+          logger.info(`[AvaChannel] Archived shard ${date} (${shard.length} messages)`);
+        } catch (err) {
+          logger.error(`[AvaChannel] Failed to archive shard ${date}:`, err);
+        }
       }
     }
 
@@ -239,7 +269,7 @@ export class AvaChannelService {
 
   /**
    * Read all messages from a single daily shard.
-   * Falls back to the disk archive if available, then the CRDT store.
+   * Falls back to the disk archive if available, then the store or in-memory map.
    */
   private async _readShard(date: string): Promise<AvaChatMessage[]> {
     // Check disk archive first (older shards)
@@ -249,21 +279,26 @@ export class AvaChannelService {
         const raw = fs.readFileSync(archivePath, 'utf-8');
         return JSON.parse(raw) as AvaChatMessage[];
       } catch {
-        // Fall through to CRDT store
+        // Fall through to store / in-memory
       }
     }
 
-    try {
-      const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
-        messages: [],
-      });
-      const doc = handle.docSync();
-      if (!doc) return [];
-      return [...(doc.messages ?? [])];
-    } catch (err) {
-      logger.warn(`[AvaChannel] Could not read shard ${date}:`, err);
-      return [];
+    if (this.store) {
+      try {
+        const handle = await this.store.getOrCreate<AvaChannelDocument>('ava-channel', date, {
+          messages: [],
+        });
+        const doc = handle.docSync();
+        if (!doc) return [];
+        return [...(doc.messages ?? [])];
+      } catch (err) {
+        logger.warn(`[AvaChannel] Could not read shard ${date}:`, err);
+        return [];
+      }
     }
+
+    // In-memory fallback
+    return [...(this.memoryShards.get(date) ?? [])];
   }
 }
 
