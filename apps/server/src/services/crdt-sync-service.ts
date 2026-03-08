@@ -22,9 +22,6 @@ import type {
 } from '@protolabsai/types';
 import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { CRDTStore } from '@protolabsai/crdt';
-import type { CalendarService } from './calendar-service.js';
-import type { TodoService } from './todo-service.js';
 
 const logger = createLogger('CrdtSyncService');
 
@@ -97,9 +94,6 @@ export class CrdtSyncService {
   private _avaChannelBugReportCallback:
     | ((content: string, featureId?: string) => Promise<void>)
     | null = null;
-  private _crdtStore: CRDTStore | null = null;
-  private _calendarService: CalendarService | null = null;
-  private _todoService: TodoService | null = null;
 
   constructor() {
     this.instanceId = os.hostname();
@@ -154,34 +148,6 @@ export class CrdtSyncService {
     callback: (content: string, featureId?: string) => Promise<void>
   ): void {
     this._avaChannelBugReportCallback = callback;
-  }
-
-  /**
-   * Register a CalendarService and CRDTStore for doc:calendar sync.
-   * When set, CalendarService will route all read/write operations through
-   * the CRDT layer so events propagate to all connected peers automatically.
-   * Safe to call before or after start().
-   */
-  setCalendarService(service: CalendarService, store: CRDTStore): void {
-    this._calendarService = service;
-    this._crdtStore = store;
-    service.setCrdtStore(store);
-    logger.info('[CRDT] CalendarService wired to CRDT store — doc:calendar sync enabled');
-  }
-
-  /**
-   * Register a TodoService and CRDTStore for doc:todos sync.
-   * When set, TodoService will route all read/write operations through
-   * the CRDT layer so todo lists and items propagate to all connected peers
-   * automatically. Permission enforcement (user/ava-instance/shared tiers)
-   * remains at the service layer.
-   * Safe to call before or after start().
-   */
-  setTodoService(service: TodoService, store: CRDTStore): void {
-    this._todoService = service;
-    this._crdtStore = store;
-    service.setCrdtStore(store);
-    logger.info('[CRDT] TodoService wired to CRDT store — doc:todos sync enabled');
   }
 
   /**

@@ -7,7 +7,7 @@
  */
 
 import type { CRDTDocumentRoot, SchemaNormalizer } from './types.js';
-import type { CalendarEvent, TodoList, TodoWorkspace } from '@protolabsai/types';
+import type { CalendarEvent, TodoList } from '@protolabsai/types';
 
 // ---------------------------------------------------------------------------
 // Feature domain
@@ -258,8 +258,6 @@ export interface AvaChannelDocument extends CRDTDocumentRoot {
     source: 'ava' | 'operator' | 'system';
     timestamp: string;
   }>;
-  /** Date shard key (YYYY-MM-DD) */
-  date: string;
 }
 
 export const normalizeAvaChannelDocument: SchemaNormalizer<AvaChannelDocument> = (raw) => {
@@ -274,8 +272,7 @@ export const normalizeAvaChannelDocument: SchemaNormalizer<AvaChannelDocument> =
   return {
     schemaVersion: 1,
     _meta,
-    messages: Array.isArray(doc.messages) ? doc.messages : [],
-    date: doc.date ?? '',
+    messages: doc.messages ?? [],
   };
 };
 

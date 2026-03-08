@@ -1,7 +1,10 @@
 /**
  * ChatOverlayContent — Shared chat content for overlay and modal.
  *
- * Contains the header, message list, input, and conversation history.
+ * Contains the header, tab bar, and tab content areas.
+ * Tab 1: Ask Ava — human<>Ava chat (unchanged behavior)
+ * Tab 2: Ava Channel — private Ava-to-Ava coordination message stream
+ *
  * Used by both the Electron overlay view and the web fallback modal.
  *
  * Reads currentProject from useAppStore and passes projectId/projectPath
@@ -14,26 +17,21 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { UIMessage } from 'ai';
 import { History, X, Settings, ChevronUp, ChevronDown, SquarePen, ListOrdered } from 'lucide-react';
-import {
-  ChatMessageList,
-  ChatInput,
-  SuggestionList,
-  PromptInputProvider,
-  QueueView,
-  type QueueItem,
-  type BranchInfo,
-} from '@protolabsai/ui/ai';
+import { type BranchInfo } from '@protolabsai/ui/ai';
 import { Button } from '@protolabsai/ui/atoms';
 import { cn } from '@/lib/utils';
-import { ChatModelSelect } from '@/components/views/chat/components/chat-model-select';
-import { ConversationList } from './conversation-list';
-import { AvaSettingsPanel } from './ava-settings-panel';
 import { useChatSession } from '@/hooks/use-chat-session';
 import { useAppStore } from '@/store/app-store';
 import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
 import { useToolProgress } from '@/hooks/use-tool-progress';
 import { ChatStatusBar } from './chat-status-bar';
 import { getOverlayAPI } from '@/lib/electron';
+import { AskAvaTab } from './ask-ava-tab';
+import { AvaChannelTab } from './ava-channel-tab';
+import {
+  useAvaChannelStore,
+  type AvaChannelTab as AvaChannelTabType,
+} from '@/store/ava-channel-store';
 
 const OVERLAY_HEIGHT_DEFAULT = 600;
 const OVERLAY_HEIGHT_EXPANDED = 900;
@@ -77,6 +75,19 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const [expanded, setExpanded] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const [queuePaused, setQueuePaused] = useState(false);
+
+  // Tab state — persisted in ava-channel-store so keyboard shortcut restores last active tab
+  const lastActiveTab = useAvaChannelStore((s) => s.lastActiveTab);
+  const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
+  const [activeTab, setActiveTab] = useState<AvaChannelTabType>(lastActiveTab);
+
+  const handleTabChange = useCallback(
+    (tab: AvaChannelTabType) => {
+      setActiveTab(tab);
+      setLastActiveTab(tab);
+    },
+    [setLastActiveTab]
+  );
 
   // Branch state — tracks multiple response variants per assistant message.
   // branchMap key: the ID of the first (original) assistant message variant.
@@ -314,37 +325,41 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           <span className="text-sm font-medium text-foreground">Ava</span>
         </div>
         <div className={cn('flex items-center gap-1', !isModal && 'pointer-events-auto')}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={toggleHistory}
-            title="Conversation history"
-            aria-label="Toggle conversation history"
-          >
-            <History className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={() => setQueueOpen((v) => !v)}
-            title="Feature queue"
-            aria-label="Toggle feature queue"
-            data-testid="queue-panel-toggle"
-          >
-            <ListOrdered className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={handleNewChat}
-            title="New chat"
-            aria-label="New chat"
-          >
-            <SquarePen className="size-3.5" />
-          </Button>
+          {activeTab === 'ask-ava' && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={toggleHistory}
+                title="Conversation history"
+                aria-label="Toggle conversation history"
+              >
+                <History className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={() => setQueueOpen((v) => !v)}
+                title="Feature queue"
+                aria-label="Toggle feature queue"
+                data-testid="queue-panel-toggle"
+              >
+                <ListOrdered className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={handleNewChat}
+                title="New chat"
+                aria-label="New chat"
+              >
+                <SquarePen className="size-3.5" />
+              </Button>
+            </>
+          )}
           {!isModal && (
             <Button
               variant="ghost"
@@ -380,124 +395,90 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
         </div>
       </div>
 
-      {/* Error banner */}
-      {error && (
+      {/* Error banner — shown for Ask Ava tab errors */}
+      {activeTab === 'ask-ava' && error && (
         <div className="border-b border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
           {error.message || 'An error occurred'}
         </div>
       )}
 
       {/* Status bar — tool progress + project event tickers */}
-      <ChatStatusBar
-        toolProgressLabel={activeToolLabel}
-        isStreaming={isStreaming}
-        stepCount={stepCount}
-      />
+      {activeTab === 'ask-ava' && (
+        <ChatStatusBar
+          toolProgressLabel={activeToolLabel}
+          isStreaming={isStreaming}
+          stepCount={stepCount}
+        />
+      )}
 
-      {/* Main content area */}
-      <div className="flex min-h-0 flex-1">
-        {/* Queue panel — slide in from left */}
-        {queueOpen && (
-          <div className="w-56 shrink-0 border-r border-border overflow-y-auto p-2 animate-in slide-in-from-left duration-200">
-            <QueueView
-              items={[]}
-              paused={queuePaused}
-              onTogglePause={() => setQueuePaused((v) => !v)}
-            />
-          </div>
-        )}
-
-        {/* Conversation list panel — slide in from left */}
-        {historyOpen && (
-          <ConversationList
-            sessions={sessions}
-            currentSessionId={currentSessionId}
-            onSelect={(id) => {
-              handleSwitchSession(id);
-              setHistoryOpen(false);
-            }}
-            onNew={() => {
-              handleNewChat();
-              setHistoryOpen(false);
-            }}
-            onDelete={handleDeleteSession}
-            onClose={() => setHistoryOpen(false)}
-            className="animate-in slide-in-from-left duration-200"
-          />
-        )}
-
-        {/* Settings panel — slides in from right, replaces chat area */}
-        {settingsOpen && (
-          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto animate-in slide-in-from-right duration-200">
-            <AvaSettingsPanel projectPath={currentProject?.path} />
-          </div>
-        )}
-
-        {/* Chat area — hidden when settings is open */}
-        <div className={cn('flex min-w-0 flex-1 flex-col', settingsOpen && 'hidden')}>
-          <ChatMessageList
-            messages={displayedMessages}
-            emptyMessage="Ask Ava anything..."
-            isStreaming={isStreaming}
-            onRegenerate={handleRegenerate}
-            onThumbsUp={handleThumbsUp}
-            onThumbsDown={handleThumbsDown}
-            onToolApprove={approveToolAction}
-            onToolReject={rejectToolAction}
-            branchInfoMap={branchInfoMap}
-            onPreviousBranch={handlePreviousBranch}
-            onNextBranch={handleNextBranch}
-            getToolProgressLabel={getProgressLabel}
-          />
-
-          {/* Contextual suggestions — shown only when no messages in current session */}
-          {displayedMessages.length === 0 && (
-            <SuggestionList suggestions={suggestions} onSelect={handleSuggestionSelect} />
+      {/* Tab bar */}
+      <div className="flex items-center border-b border-border px-2">
+        <button
+          type="button"
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
+            activeTab === 'ask-ava'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
-
-          {/* PromptInputProvider scopes input state to this chat area */}
-          <PromptInputProvider>
-            <ChatInput
-              onSubmit={handleSubmit}
-              onStop={stop}
-              isStreaming={isStreaming}
-              placeholder="Ask Ava..."
-              autoFocus
-              actions={
-                <>
-                  <ChatModelSelect value={modelAlias} onValueChange={handleModelChange} />
-                  {tokenUsage.total > 0 && (
-                    <span
-                      className={cn(
-                        'text-xs tabular-nums',
-                        tokenUsage.total > 100_000
-                          ? 'text-destructive font-medium'
-                          : tokenUsage.total > 50_000
-                            ? 'text-yellow-500'
-                            : 'text-muted-foreground'
-                      )}
-                      title={
-                        tokenUsage.estimated
-                          ? `~${tokenUsage.total.toLocaleString()} estimated context size`
-                          : `Context: ${tokenUsage.input.toLocaleString()} tokens (last response: ${tokenUsage.output.toLocaleString()} output)`
-                      }
-                    >
-                      {tokenUsage.estimated && '~'}
-                      {tokenUsage.total >= 1000
-                        ? `${(tokenUsage.total / 1000).toFixed(1)}k`
-                        : tokenUsage.total}{' '}
-                      tokens
-                    </span>
-                  )}
-                  <span className="text-xs text-muted-foreground">
-                    {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
-                  </span>
-                </>
-              }
-            />
-          </PromptInputProvider>
-        </div>
+          onClick={() => handleTabChange('ask-ava')}
+          aria-selected={activeTab === 'ask-ava'}
+        >
+          Ask Ava
+        </button>
+        <button
+          type="button"
+          className={cn(
+            'px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px',
+            activeTab === 'ava-channel'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+          onClick={() => handleTabChange('ava-channel')}
+          aria-selected={activeTab === 'ava-channel'}
+        >
+          Ava Channel
+        </button>
       </div>
+
+      {/* Tab content */}
+      {activeTab === 'ask-ava' ? (
+        <AskAvaTab
+          displayedMessages={displayedMessages}
+          isStreaming={isStreaming}
+          suggestions={suggestions}
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          modelAlias={modelAlias}
+          tokenUsage={tokenUsage}
+          branchInfoMap={branchInfoMap}
+          settingsOpen={settingsOpen}
+          historyOpen={historyOpen}
+          queueOpen={queueOpen}
+          queuePaused={queuePaused}
+          projectPath={currentProject?.path}
+          shortcutHint={shortcutHint}
+          onSubmit={handleSubmit}
+          onStop={stop}
+          onSuggestionSelect={handleSuggestionSelect}
+          onRegenerate={handleRegenerate}
+          onThumbsUp={handleThumbsUp}
+          onThumbsDown={handleThumbsDown}
+          onToolApprove={approveToolAction}
+          onToolReject={rejectToolAction}
+          onPreviousBranch={handlePreviousBranch}
+          onNextBranch={handleNextBranch}
+          onSelectSession={handleSwitchSession}
+          onNewChat={handleNewChat}
+          onDeleteSession={handleDeleteSession}
+          onCloseHistory={() => setHistoryOpen(false)}
+          onToggleQueuePause={() => setQueuePaused((v) => !v)}
+          onModelChange={handleModelChange}
+          getToolProgressLabel={getProgressLabel}
+        />
+      ) : (
+        <AvaChannelTab />
+      )}
     </div>
   );
 }

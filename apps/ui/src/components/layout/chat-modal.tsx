@@ -8,14 +8,12 @@
 
 import { useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@protolabsai/ui/atoms';
-import { useChatSession } from '@/hooks/use-chat-session';
 import { useChatStore } from '@/store/chat-store';
 import { ChatOverlayContent } from '@/components/views/chat-overlay/chat-overlay-content';
 
 export function ChatModal() {
   const chatModalOpen = useChatStore((s) => s.chatModalOpen);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
-  const chatSession = useChatSession({ defaultModel: 'sonnet' });
 
   const handleClose = useCallback(() => {
     setChatModalOpen(false);
@@ -32,7 +30,7 @@ export function ChatModal() {
         }}
       >
         <DialogTitle className="sr-only">Ava Chat</DialogTitle>
-        <ChatOverlayContent {...chatSession} onHide={handleClose} isModal />
+        <ChatOverlayContent onHide={handleClose} isModal />
       </DialogContent>
     </Dialog>
   );
