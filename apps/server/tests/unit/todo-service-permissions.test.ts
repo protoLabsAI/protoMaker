@@ -140,9 +140,7 @@ describe('TodoService — permission tiers', () => {
     it('allows user to delete items', async () => {
       const list = await service.createList('/project', 'My Todos', 'user');
       const item = await service.addItem('/project', list.id, { title: 'private' }, USER);
-      await expect(
-        service.deleteItem('/project', list.id, item.id, USER)
-      ).resolves.toBeUndefined();
+      await expect(service.deleteItem('/project', list.id, item.id, USER)).resolves.toBeUndefined();
     });
 
     it('rejects Ava writes to user-private list', async () => {
@@ -163,9 +161,9 @@ describe('TodoService — permission tiers', () => {
     it('rejects Ava deletes on user-private list', async () => {
       const list = await service.createList('/project', 'My Todos', 'user');
       const item = await service.addItem('/project', list.id, { title: 'user task' }, USER);
-      await expect(
-        service.deleteItem('/project', list.id, item.id, AVA_A)
-      ).rejects.toThrow('Permission denied');
+      await expect(service.deleteItem('/project', list.id, item.id, AVA_A)).rejects.toThrow(
+        'Permission denied'
+      );
     });
   });
 
@@ -232,9 +230,9 @@ describe('TodoService — permission tiers', () => {
         'instance-a'
       );
       const item = await service.addItem('/project', list.id, { title: 'task' }, AVA_A);
-      await expect(
-        service.deleteItem('/project', list.id, item.id, AVA_B)
-      ).rejects.toThrow('Permission denied');
+      await expect(service.deleteItem('/project', list.id, item.id, AVA_B)).rejects.toThrow(
+        'Permission denied'
+      );
     });
 
     it('allows the owning Ava to complete items', async () => {
@@ -257,9 +255,9 @@ describe('TodoService — permission tiers', () => {
         'instance-a'
       );
       const item = await service.addItem('/project', list.id, { title: 'task' }, AVA_A);
-      await expect(
-        service.completeItem('/project', list.id, item.id, AVA_B)
-      ).rejects.toThrow('Permission denied');
+      await expect(service.completeItem('/project', list.id, item.id, AVA_B)).rejects.toThrow(
+        'Permission denied'
+      );
     });
   });
 
