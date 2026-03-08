@@ -232,14 +232,136 @@ Archived shards are read transparently by `getMessages()` when a query's date ra
 | `sync:peer-unreachable`    | Peer connectivity loss notice                        |
 | `sync:partition-recovered` | Partition recovery notice                            |
 
+## Reactive Reactor
+
+The reactor makes Ava instances responsive to each other's messages. When one instance posts a help request or coordination message, peer instances evaluate and respond autonomously.
+
+### Architecture
+
+```
+CRDT shard change (new message arrives)
+  --> AvaChannelReactorService.onShardChange()
+    --> Filter: is this message already known? (skip if yes)
+    --> Layer 1: Classifier chain (pure functions, priority-ordered)
+    --> Layer 2: Per-thread cooldown (30s default, prevents rapid replies)
+    --> Layer 3: Busy gate (one response at a time, pending queue)
+    --> Response dispatch via AvaChannelService.postMessage()
+       --> All responses have expectsResponse: false (one-shot policy)
+```
+
+### Classifier Chain
+
+The classifier chain determines whether a message warrants a response. Rules are pure functions evaluated highest-to-lowest priority. The first non-null result wins.
+
+| Priority | Rule                | Blocks When                                                |
+| -------- | ------------------- | ---------------------------------------------------------- |
+| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                |
+| 90       | TerminalMessageRule | `expectsResponse === false`                                |
+| 80       | SelfMessageRule     | `instanceId === localInstanceId`                           |
+| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                      |
+| 70       | SystemSourceRule    | `source: 'system'` (unless `[BugReport]`/`[SystemAlert]`)  |
+| 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` --> respond  |
+| 40       | CoordinationRule    | `intent: 'coordination'` --> respond if capacity available |
+| 30       | EscalationRule      | `intent: 'escalation'` --> respond if depth < 3            |
+| 0        | DefaultRule         | Everything else --> informational, no response             |
+
+**Usage:**
+
+```typescript
+import { createClassifierChain, runClassifierChain } from './ava-channel-classifiers.js';
+
+const { rules, context } = createClassifierChain('my-instance-id', {
+  maxConversationDepth: 5,
+  staleThresholdMs: 300_000,
+  runningAgents: 2,
+  maxAgents: 5,
+});
+
+const classification = runClassifierChain(message, context, rules);
+// { type: 'request', shouldRespond: true, intent: 'request', reason: '...' }
+```
+
+### Response Handlers
+
+Four built-in handlers process classified messages:
+
+| Handler             | Handles        | Behavior                                 |
+| ------------------- | -------------- | ---------------------------------------- |
+| HelpRequestHandler  | `request`      | Posts capacity status, offers to assist  |
+| CoordinationHandler | `coordination` | Posts capacity metrics (agents, backlog) |
+| SystemAlertHandler  | `escalation`   | Acknowledges system-source alerts        |
+| EscalationHandler   | `escalation`   | Acknowledges non-system escalations      |
+
+All handlers follow the **one-shot response policy**: every response has `intent: 'response'` and `expectsResponse: false`. This ensures the TerminalMessageRule blocks any further responses, preventing infinite loops at the type level.
+
+### Loop Prevention (Three Layers)
+
+1. **Classifier chain** -- Self-messages, terminal messages, stale messages, and depth-exceeded messages are blocked before any handler runs
+2. **Per-thread cooldown** -- After responding to a thread, the reactor ignores that thread for 30 seconds (configurable via `cooldownMs`)
+3. **Busy gate** -- Only one response dispatches at a time; additional messages queue and are re-evaluated when the gate opens
+
+### Message Protocol Fields
+
+Messages carry structured metadata for the classifier chain:
+
+```typescript
+interface AvaChatMessage {
+  // ... existing fields
+  intent?: MessageIntent; // 'request' | 'inform' | 'response' | 'coordination' | 'escalation' | 'system_alert'
+  expectsResponse?: boolean; // true = wants a reply, false = terminal
+  conversationDepth?: number; // 0 = root, incremented on each reply
+  inReplyTo?: string; // ID of the message being replied to
+}
+```
+
+### Friction Tracking
+
+The `AvaChannelFrictionTracker` monitors recurring failure patterns in the reactor. When a pattern occurs 3+ times, it auto-files a System Improvement feature on the board.
+
+```typescript
+tracker.recordFriction('handler-failed:help-request', 'Help request handler failed', messageId);
+// After 3 occurrences: auto-creates "[System Improvement] Fix recurring friction: ..."
+```
+
+Metrics available via `tracker.getMetrics()`:
+
+- `patternsDetected` -- number of distinct friction patterns
+- `featuresAutoFiled` -- number of features created
+- `totalFrictionEvents` -- total friction occurrences
+
+### Reactor Settings
+
+Configured in `.automaker/settings.json` under `workflowSettings.avaChannelReactor`:
+
+| Setting                   | Default  | Description                                   |
+| ------------------------- | -------- | --------------------------------------------- |
+| `enabled`                 | `true`   | Enable/disable the reactor                    |
+| `maxConversationDepth`    | `1`      | Max reply depth before loop breaker activates |
+| `cooldownMs`              | `30000`  | Per-thread cooldown after responding (ms)     |
+| `staleMessageThresholdMs` | `300000` | Ignore messages older than this (ms)          |
+| `enableFrictionTracking`  | `true`   | Track recurring friction patterns             |
+
+### Self-Healing
+
+- **Subscription failure**: Retries with exponential backoff (5s base, 60s cap)
+- **Midnight shard rotation**: Automatically rotates to the new UTC day's shard
+- **Known message hydration**: On startup, loads existing messages to prevent retroactive responses
+
 ## Key Files
 
-| File                                              | Role                                                                              |
-| ------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `apps/server/src/routes/ava-channel/index.ts`     | HTTP routes — send, messages, file-improvement                                    |
-| `apps/server/src/services/ava-channel-service.ts` | Storage engine — CRDT shards, archival, message retrieval                         |
-| `apps/server/src/services/ava-channel.module.ts`  | EventBus wiring — auto-posts on system events                                     |
-| `libs/types/src/ava-channel.ts`                   | `AvaChatMessage`, `AvaChannelContext`, `GetMessagesOptions`, `PostMessageOptions` |
+| File                                                                   | Role                                                                        |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `apps/server/src/routes/ava-channel/index.ts`                          | HTTP routes -- send, messages, file-improvement                             |
+| `apps/server/src/services/ava-channel-service.ts`                      | Storage engine -- CRDT shards, archival, message retrieval                  |
+| `apps/server/src/services/ava-channel.module.ts`                       | EventBus wiring -- auto-posts on system events                              |
+| `apps/server/src/services/ava-channel-classifiers.ts`                  | Classifier chain -- 9 pure-function rules for message routing               |
+| `apps/server/src/services/ava-channel-reactor-service.ts`              | Reactor service -- CRDT subscription, three-layer loop prevention, dispatch |
+| `apps/server/src/services/ava-channel-handlers.ts`                     | Response handlers -- HelpRequest, Coordination, SystemAlert, Escalation     |
+| `apps/server/src/services/ava-channel-friction-tracker.ts`             | Friction tracking -- pattern detection and auto-filed features              |
+| `libs/types/src/ava-channel.ts`                                        | Types -- `AvaChatMessage`, `MessageIntent`, `AvaChannelReactorSettings`     |
+| `apps/server/tests/unit/services/ava-channel-classifiers.test.ts`      | Unit tests -- classifier chain rules (32 tests)                             |
+| `apps/server/tests/unit/services/ava-channel-handlers.test.ts`         | Unit tests -- response handlers (15 tests)                                  |
+| `apps/server/tests/unit/services/ava-channel-friction-tracker.test.ts` | Unit tests -- friction tracker (17 tests)                                   |
 
 ## Coordination Pattern
 
