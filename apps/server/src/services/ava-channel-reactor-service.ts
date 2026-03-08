@@ -19,9 +19,11 @@ import type {
   EscalationOffer,
   EscalationAccept,
   HealthAlert,
+  FrictionReport,
 } from '@protolabsai/types';
 import { DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
+import type { FrictionTrackerService } from './friction-tracker-service.js';
 import {
   createClassifierChain,
   runClassifierChain,
@@ -79,6 +81,8 @@ export interface ReactorDependencies {
     ): Promise<{ id: string; [key: string]: unknown }>;
   };
   projectPath?: string;
+  /** Optional: enables friction-tracking self-improvement loop (peer de-duplication) */
+  frictionTrackerService?: FrictionTrackerService;
 }
 
 // ---------------------------------------------------------------------------
@@ -646,6 +650,12 @@ export class AvaChannelReactorService {
       await this.onHealthAlert(message);
       return;
     }
+
+    // friction_report handler (peer de-duplication)
+    if (message.content.startsWith('[friction_report]')) {
+      this.onFrictionReport(message);
+      return;
+    }
   }
 
   private async onCapacityHeartbeat(message: AvaChatMessage): Promise<void> {
@@ -1071,6 +1081,31 @@ export class AvaChannelReactorService {
     logger.warn(
       `Pausing work-steal from ${alert.instanceId} for ${HEALTH_ALERT_PAUSE_MS / 1000}s ` +
         `(memoryUsed=${alert.memoryUsed}% cpuLoad=${alert.cpuLoad}%)`
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Friction report handlers
+  // ---------------------------------------------------------------------------
+
+  private onFrictionReport(message: AvaChatMessage): void {
+    // Ignore self
+    if (message.instanceId === this.deps.instanceId) return;
+
+    if (!this.deps.frictionTrackerService) return;
+
+    let report: FrictionReport;
+    try {
+      const json = message.content.replace('[friction_report]', '').trim();
+      report = JSON.parse(json) as FrictionReport;
+    } catch {
+      logger.warn('Received malformed friction_report, ignoring');
+      return;
+    }
+
+    this.deps.frictionTrackerService.handlePeerReport(report);
+    logger.debug(
+      `Processed peer friction_report: pattern="${report.pattern}" from instance=${report.instanceId}`
     );
   }
 }
