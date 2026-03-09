@@ -157,6 +157,19 @@ interface AvaConfig {
     autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
     projectMgmt: boolean; // get_project_spec, update_project_spec
     orchestration: boolean; // get_execution_order, set_feature_dependencies
+    agentDelegation: boolean; // execute_dynamic_agent tool
+    notes: boolean; // notes read/write tools
+    metrics: boolean; // metrics and DORA tools
+    prWorkflow: boolean; // PR workflow tools
+    promotion: boolean; // release/promotion tools
+    contextFiles: boolean; // context file management tools
+    projects: boolean; // project management tools
+    briefing: boolean; // get_briefing tool
+    avaChannel: boolean; // Ava Channel read/write tools
+    discord: boolean; // Discord message tools
+    calendar: boolean; // calendar event tools
+    health: boolean; // health status tools
+    settings: boolean; // settings read/write tools
   };
 
   // Context injection
@@ -166,13 +179,16 @@ interface AvaConfig {
   // Custom prompt
   systemPromptExtension: string; // Appended after all other prompt layers
 
+  // Tool approval
+  autoApproveTools: boolean; // When true, destructive tools skip HITL confirmation
+
   // Agent delegation
-  mcpServers?: Record<string, MCPServerConfig>; // Custom MCP servers for inner agents
-  subagentTrust?: 'high' | 'standard' | 'restricted'; // Max trust granted to delegated agents
+  mcpServers?: MCPServerConfig[]; // Custom MCP servers for inner agents
+  subagentTrust: 'full' | 'gated'; // 'full' = bypassPermissions; 'gated' = approval flow
 }
 ```
 
-All fields default to enabled. `mcpServers` and `subagentTrust` are optional — omitting them uses the system defaults (standard trust, no extra MCP servers). See `apps/server/src/routes/chat/ava-config.ts`.
+All fields default to enabled. `subagentTrust` defaults to `'full'`. `mcpServers` defaults to `[]`. See `apps/server/src/routes/chat/ava-config.ts`.
 
 ## Server API
 
@@ -204,49 +220,31 @@ Read/write per-project AvaConfig.
 
 ### AvaConfig
 
-Stored at `{projectPath}/.automaker/ava-config.json`:
-
-```typescript
-interface AvaConfig {
-  model: 'haiku' | 'sonnet' | 'opus';
-  toolGroups: {
-    boardRead: boolean; // get_board_summary, list_features, get_feature
-    boardWrite: boolean; // create_feature, update_feature, move_feature, delete_feature
-    agentControl: boolean; // list_running_agents, start_agent, stop_agent, get_agent_output
-    autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
-    projectMgmt: boolean; // get_project_spec, update_project_spec
-    orchestration: boolean; // get_execution_order, set_feature_dependencies
-  };
-  sitrepInjection: boolean; // Inject live board state into system prompt
-  contextInjection: boolean; // Inject .automaker/context/ files into prompt
-  systemPromptExtension: string; // Custom text appended to base prompt
-}
-```
-
-All fields default to enabled. See `apps/server/src/routes/chat/ava-config.ts`.
+Stored at `{projectPath}/.automaker/ava-config.json`. See the [AvaConfig Reference](#avaconfig-reference) section above for the full interface definition. All fields default to enabled. See `apps/server/src/routes/chat/ava-config.ts`.
 
 ## Tool Groups
 
-| Group         | Tools                      | Custom Card                                                 |
-| ------------- | -------------------------- | ----------------------------------------------------------- |
-| boardRead     | `get_board_summary`        | `BoardSummaryCard` -- status count badges                   |
-|               | `list_features`            | `FeatureListCard` -- paginated cards with status/complexity |
-|               | `get_feature`              | `FeatureDetailCard` -- full detail view                     |
-| boardWrite    | `create_feature`           | `FeatureCreatedCard` -- success with ID                     |
-|               | `update_feature`           | `FeatureUpdatedCard` -- before/after diff                   |
-|               | `move_feature`             | `MoveFeatureCard` -- status transition arrow                |
-|               | `delete_feature`           | HITL confirmation required                                  |
-| agentControl  | `start_agent`              | `AgentStatusCard`                                           |
-|               | `stop_agent`               | `AgentStatusCard` + HITL confirmation                       |
-|               | `list_running_agents`      | `AgentStatusCard`                                           |
-|               | `get_agent_output`         | `AgentOutputCard` -- formatted log, cost, steps             |
-| autoMode      | `get_auto_mode_status`     | `AutoModeStatusCard` -- running/stopped pill                |
-|               | `start_auto_mode`          | (JSON fallback)                                             |
-|               | `stop_auto_mode`           | (JSON fallback)                                             |
-| projectMgmt   | `get_project_spec`         | (JSON fallback)                                             |
-|               | `update_project_spec`      | HITL confirmation required                                  |
-| orchestration | `get_execution_order`      | `ExecutionOrderCard` -- dependency DAG                      |
-|               | `set_feature_dependencies` | (JSON fallback)                                             |
+| Group           | Representative Tools                                                   | Custom Card                                                |
+| --------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| boardRead       | `get_board_summary`, `list_features`, `get_feature`                    | `BoardSummaryCard`, `FeatureListCard`, `FeatureDetailCard` |
+| boardWrite      | `create_feature`, `update_feature`, `move_feature`, `delete_feature`   | `FeatureCreatedCard`, `FeatureUpdatedCard`, HITL           |
+| agentControl    | `start_agent`, `stop_agent`, `list_running_agents`, `get_agent_output` | `AgentStatusCard`, `AgentOutputCard`                       |
+| autoMode        | `get_auto_mode_status`, `start_auto_mode`, `stop_auto_mode`            | `AutoModeStatusCard`                                       |
+| projectMgmt     | `get_project_spec`, `update_project_spec`                              | HITL for write ops                                         |
+| orchestration   | `get_execution_order`, `set_feature_dependencies`                      | `ExecutionOrderCard`                                       |
+| agentDelegation | `execute_dynamic_agent`                                                | `AgentOutputCard`                                          |
+| notes           | notes read/write tools                                                 | (JSON fallback)                                            |
+| metrics         | metrics and DORA tools                                                 | (JSON fallback)                                            |
+| prWorkflow      | PR workflow tools                                                      | (JSON fallback)                                            |
+| promotion       | release/promotion tools                                                | (JSON fallback)                                            |
+| contextFiles    | context file management tools                                          | (JSON fallback)                                            |
+| projects        | project management tools                                               | (JSON fallback)                                            |
+| briefing        | `get_briefing`                                                         | (JSON fallback)                                            |
+| avaChannel      | Ava Channel read/write tools                                           | (JSON fallback)                                            |
+| discord         | Discord message tools                                                  | (JSON fallback)                                            |
+| calendar        | calendar event tools                                                   | (JSON fallback)                                            |
+| health          | health status tools                                                    | (JSON fallback)                                            |
+| settings        | settings read/write tools                                              | (JSON fallback)                                            |
 
 ## HITL Confirmation Flow
 
