@@ -173,10 +173,7 @@ export function StageBreakdownChart({ projectPath }: StageBreakdownChartProps) {
                 <Tooltip
                   contentStyle={tooltipStyle}
                   formatter={(value: number | undefined, name: string | undefined) =>
-                    [`${value ?? 0}h`, stageLabels[name ?? ''] ?? (name ?? '')] as [
-                      string,
-                      string,
-                    ]
+                    [`${value ?? 0}h`, stageLabels[name ?? ''] ?? name ?? ''] as [string, string]
                   }
                 />
                 <Legend
@@ -195,12 +192,7 @@ export function StageBreakdownChart({ projectPath }: StageBreakdownChartProps) {
                   fill={stageColors['in_progress']}
                   name="in_progress"
                 />
-                <Bar
-                  dataKey="review"
-                  stackId="stages"
-                  fill={stageColors['review']}
-                  name="review"
-                />
+                <Bar dataKey="review" stackId="stages" fill={stageColors['review']} name="review" />
                 <Bar
                   dataKey="blocked"
                   stackId="stages"

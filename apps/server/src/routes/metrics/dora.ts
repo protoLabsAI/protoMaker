@@ -120,7 +120,7 @@ export function createStageDurationsRoute(featureLoader: FeatureLoader): Router 
           }
         }
 
-        const totalMs = (stages.backlog + stages.in_progress + stages.review + stages.blocked);
+        const totalMs = stages.backlog + stages.in_progress + stages.review + stages.blocked;
         const flowEfficiency = totalMs > 0 ? stages.in_progress / totalMs : 0;
 
         featureResults.push({
@@ -147,7 +147,8 @@ export function createStageDurationsRoute(featureLoader: FeatureLoader): Router 
 
       const percentages = {
         backlog: grandTotal > 0 ? Number(((aggStages.backlog / grandTotal) * 100).toFixed(1)) : 0,
-        in_progress: grandTotal > 0 ? Number(((aggStages.in_progress / grandTotal) * 100).toFixed(1)) : 0,
+        in_progress:
+          grandTotal > 0 ? Number(((aggStages.in_progress / grandTotal) * 100).toFixed(1)) : 0,
         review: grandTotal > 0 ? Number(((aggStages.review / grandTotal) * 100).toFixed(1)) : 0,
         blocked: grandTotal > 0 ? Number(((aggStages.blocked / grandTotal) * 100).toFixed(1)) : 0,
       };
