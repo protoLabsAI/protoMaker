@@ -67,13 +67,7 @@ function isProtocolMessage(message: AvaChatMessage): boolean {
   return message.content.startsWith('[');
 }
 
-function ChannelMessage({
-  message,
-  isProtocol,
-}: {
-  message: AvaChatMessage;
-  isProtocol: boolean;
-}) {
+function ChannelMessage({ message, isProtocol }: { message: AvaChatMessage; isProtocol: boolean }) {
   const isError = isErrorMessage(message);
   return (
     <div

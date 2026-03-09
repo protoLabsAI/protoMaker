@@ -34,7 +34,11 @@ interface AvaChannelState {
 }
 
 interface AvaChannelActions {
-  fetchMessages: (options?: { limit?: number; since?: string; includeProtocol?: boolean }) => Promise<void>;
+  fetchMessages: (options?: {
+    limit?: number;
+    since?: string;
+    includeProtocol?: boolean;
+  }) => Promise<void>;
   appendMessage: (message: AvaChatMessage) => void;
   sendOperatorMessage: (content: string) => Promise<void>;
   setHivemindActive: (active: boolean) => void;
