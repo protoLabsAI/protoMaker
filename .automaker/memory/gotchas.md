@@ -5,10 +5,11 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 873
-  referenced: 259
-  successfulFeatures: 259
+  loaded: 864
+  referenced: 254
+  successfulFeatures: 254
 ---
+
 # gotchas
 
 #### [Gotcha] .gitignore negative patterns require parent directory to be unignored first, or the negative rule is ineffective (2026-02-10)
@@ -595,23 +596,14 @@ usageStats:
 - **Root cause:** Without checking Set membership before cleanup, timeout firing after legitimate completion could corrupt state machine (double removal, or re-lock an already-running feature). The check prevents this.
 - **How to avoid:** Gained: Safety from race conditions, self-healing on hangs. Lost: Slight complexity in cleanup logic (must check Set membership).
 
-
 #### [Gotcha] Silent guards with no diagnostic context are worse than incomplete pattern matching. A failure dropped silently is harder to debug than a failure marked as 'unknown' with the raw reason visible. (2026-03-09)
+
 - **Situation:** The friction-tracker service silently returned on 'unknown' patterns without logging. Combined with debug-level logging in the classifier, unclassified failures were invisible end-to-end.
 - **Root cause:** When a failure is silently dropped, nobody knows it happened. When it's logged at warn level with context ('unclassified: needs human input'), operators and monitoring can detect the gap and request pattern expansion.
 - **How to avoid:** Easier to spot failure gaps now, but requires disciplined log analysis. Trade-off is worth it because it unblocks system improvement.
 
-#### [Gotcha] Auto-generated feature descriptions reference completed projects that no longer exist in .automaker/projects/ (e.g., automation-control-plane-consolidation, automations-upgrade, ava-chat-context-window-management). (2026-03-09)
-- **Situation:** Documentation review feature was generated from git history but included stale project file references that have since been removed.
-- **Root cause:** Completed projects are cleaned up from the projects directory to keep active work list current. Feature metadata was generated at a point-in-time before cleanup.
-- **How to avoid:** Clean project directory (-historical audit trail) vs. historical reference preservation (+storage, +navigation complexity)
+#### [Gotcha] Prism.js syntax highlighting in CodeBlock re-runs on every streaming token, causing severe render thrashing and UI jank during AI response streaming. (2026-03-09)
 
-#### [Gotcha] Pre-existing git merge conflict in tool-invocation-part.tsx (containing git stash markers: <<<<<<< Updated upstream / >>>>>>> Stashed changes) was blocking the entire build, even though the conflict was unrelated to the feature being implemented. (2026-03-09)
-- **Situation:** Parallel development created stashed changes that weren't properly merged during rebase/merge operations.
-- **Root cause:** Git stash markers are not valid TypeScript syntax and prevent tsc from parsing the file, killing the entire monorepo build.
-- **How to avoid:** Spending 5 mins to resolve merge conflict (keep both import/registration sets) vs. hours of blocked CI/CD. The additive merge is safe because both sitrep-card and health-check-card files exist and their tool IDs don't collide.
-
-#### [Gotcha] useEffect dependencies on incrementally-updated streaming content (e.g., `code` prop) re-fire on every token, not just on initial mount. Expensive operations like Prism.js highlight thrashing occur at every token delivery. (2026-03-09)
-- **Situation:** Code block receives streaming tokens character-by-character; the `code` dependency genuinely changes on each token, triggering effects.
-- **Root cause:** Root cause: useEffect correctly identifies `code` as a dependency that changed. The gotcha is that streaming creates high-frequency changes, not low-frequency initialization.
-- **How to avoid:** Understanding: recognize that streaming is high-frequency state change, not initialization. Solution complexity: requires `isStreaming` flag to distinguish initialization from streaming completion.
+- **Situation:** CodeBlock called Prism.highlight() inside a useEffect with `code` as a dependency. During streaming, `code` changes on every token, firing the async highlight effect hundreds of times per response.
+- **Root cause:** Syntax highlighting is an expensive async operation that should only run once on a stable, completed string — not during incremental token delivery. The useEffect dependency on `code` was correct for static display but wrong for streaming contexts.
+- **How to avoid:** Gate the highlight effect behind an `isStreaming` prop: skip Prism when `isStreaming=true`, render plain text during streaming, apply highlighting on completion when `isStreaming` becomes false. Cost: one prop to thread through the component tree. Gain: eliminates highlighter thrashing entirely and removes render-blocking during streaming.
