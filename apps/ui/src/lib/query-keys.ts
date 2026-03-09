@@ -259,6 +259,15 @@ export const queryKeys = {
       ['git', 'diffs', projectPath, filePath] as const,
   },
   // ============================================
+  // DORA Metrics
+  // ============================================
+  dora: {
+    /** DORA metrics (lead time, deploy freq, change failure rate, recovery time) */
+    metrics: (projectPath: string, timeWindowDays?: number) =>
+      ['dora', 'metrics', projectPath, timeWindowDays] as const,
+  },
+
+  // ============================================
   // Metrics
   // ============================================
   metrics: {

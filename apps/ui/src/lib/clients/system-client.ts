@@ -164,6 +164,14 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         this.post('/api/pipeline/steps/reorder', { projectPath, stepIds }),
     };
 
+    // DORA Metrics API
+    dora = {
+      metrics: (projectPath: string, timeWindowDays?: number) =>
+        this.get(
+          `/api/dora/metrics?projectPath=${encodeURIComponent(projectPath)}${timeWindowDays ? `&timeWindowDays=${timeWindowDays}` : ''}`
+        ),
+    };
+
     // Metrics API
     metrics = {
       summary: (projectPath: string) => this.post('/api/metrics/summary', { projectPath }),
