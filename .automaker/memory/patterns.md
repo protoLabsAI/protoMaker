@@ -30,3 +30,8 @@ usageStats:
 - **Problem solved:** The new 'agent escalation' pattern covers common escalation phrases that are linguistically broader than specific failure modes. Using high confidence would create false positives misclassifying other failures.
 - **Why this works:** False positives (classifying a retry-able failure as non-retryable escalation) cause more damage than false negatives (some escalations slip through to unknown). Lower confidence + high recall on unclassified logging allows gradual pattern tightening.
 - **Trade-offs:** Some real agent escalations may still be classified as unknown initially, but they'll surface in the warn logs for pattern refinement. Avoids breaking the retry system with false escalations.
+
+#### [Pattern] Gate expensive render-time operations (syntax highlighting, heavy transforms) behind an `isStreaming` prop to prevent thrashing during token delivery. Apply the operation only on completion. (2026-03-09)
+- **Problem solved:** Streaming AI responses deliver tokens incrementally. Any useEffect that depends on `code`/`content` will re-fire on every token, making expensive operations (Prism.js, markdown parsing, diff computation) thrash the renderer.
+- **Why this works:** The rendered output during streaming doesn't need to be perfect — users are watching text appear. Deferred enhancement (apply Prism once streaming completes) keeps the UI responsive during delivery and produces the same final result.
+- **Trade-offs:** Easier: eliminates render thrashing, smooth streaming UX. Harder: requires threading `isStreaming` prop down to leaf display components. Pattern: add `isStreaming?: boolean` to component props, skip expensive effect when true, re-run effect when `isStreaming` transitions to `false`.

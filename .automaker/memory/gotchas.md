@@ -600,3 +600,8 @@ usageStats:
 - **Situation:** The friction-tracker service silently returned on 'unknown' patterns without logging. Combined with debug-level logging in the classifier, unclassified failures were invisible end-to-end.
 - **Root cause:** When a failure is silently dropped, nobody knows it happened. When it's logged at warn level with context ('unclassified: needs human input'), operators and monitoring can detect the gap and request pattern expansion.
 - **How to avoid:** Easier to spot failure gaps now, but requires disciplined log analysis. Trade-off is worth it because it unblocks system improvement.
+
+#### [Gotcha] Prism.js syntax highlighting in CodeBlock re-runs on every streaming token, causing severe render thrashing and UI jank during AI response streaming. (2026-03-09)
+- **Situation:** CodeBlock called Prism.highlight() inside a useEffect with `code` as a dependency. During streaming, `code` changes on every token, firing the async highlight effect hundreds of times per response.
+- **Root cause:** Syntax highlighting is an expensive async operation that should only run once on a stable, completed string — not during incremental token delivery. The useEffect dependency on `code` was correct for static display but wrong for streaming contexts.
+- **How to avoid:** Gate the highlight effect behind an `isStreaming` prop: skip Prism when `isStreaming=true`, render plain text during streaming, apply highlighting on completion when `isStreaming` becomes false. Cost: one prop to thread through the component tree. Gain: eliminates highlighter thrashing entirely and removes render-blocking during streaming.
