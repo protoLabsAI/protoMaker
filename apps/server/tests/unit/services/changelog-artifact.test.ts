@@ -158,7 +158,7 @@ describe('ChangelogService — changelog artifact persistence', () => {
 
     // Bypass FS — we only test artifact persistence here
     vi.spyOn(service as any, 'storeChangelog').mockResolvedValue(undefined);
-    vi.spyOn(service as any, 'postToDiscord').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'postChangelogEmbed').mockResolvedValue(undefined);
 
     return { service, mockFeatureLoader, mockProjectService, mockSettingsService };
   }
@@ -250,7 +250,7 @@ describe('ChangelogService — changelog artifact persistence', () => {
     );
 
     vi.spyOn(service as any, 'storeChangelog').mockResolvedValue(undefined);
-    vi.spyOn(service as any, 'postToDiscord').mockResolvedValue(undefined);
+    vi.spyOn(service as any, 'postChangelogEmbed').mockResolvedValue(undefined);
 
     mockEvents.emit('milestone:completed', {
       projectPath: '/test/project',
@@ -318,7 +318,7 @@ describe('ChangelogService — changelog artifact persistence', () => {
       );
 
       vi.spyOn(service as any, 'storeChangelog').mockResolvedValue(undefined);
-      vi.spyOn(service as any, 'postToDiscord').mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'postChangelogEmbed').mockResolvedValue(undefined);
 
       mockEvents.emit('milestone:completed', {
         projectPath: tmpDir,

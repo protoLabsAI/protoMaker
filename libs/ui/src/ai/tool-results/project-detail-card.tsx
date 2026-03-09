@@ -145,9 +145,7 @@ function MilestoneRow({ milestone, index }: { milestone: Milestone; index: numbe
       )}
 
       {/* Milestone status */}
-      <span className={cn('shrink-0 text-[10px]', msCfg.color)}>
-        {milestone.status ?? 'stub'}
-      </span>
+      <span className={cn('shrink-0 text-[10px]', msCfg.color)}>{milestone.status ?? 'stub'}</span>
     </div>
   );
 }
