@@ -16,11 +16,13 @@ Create ProjectListCard for list_projects — renders projects as compact rows wi
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/ui/src/ai/tool-results/project-list-card.tsx`
 - [ ] `libs/ui/src/ai/tool-results/project-detail-card.tsx`
 - [ ] `libs/ui/src/ai/tool-invocation-part.tsx`
 
 ### Verification
+
 - [ ] ProjectListCard renders project rows with title, status, milestone progress
 - [ ] ProjectDetailCard renders full project with milestone breakdown
 - [ ] Both handle empty/missing data

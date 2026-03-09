@@ -9,6 +9,7 @@ usageStats:
   referenced: 46
   successfulFeatures: 46
 ---
+
 # documentation
 
 #### [Pattern] API reference uses method signatures with actual TypeScript types rather than prose descriptions (2026-02-13)

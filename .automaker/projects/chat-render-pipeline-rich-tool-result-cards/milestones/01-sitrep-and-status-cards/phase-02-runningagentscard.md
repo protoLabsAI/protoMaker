@@ -16,10 +16,12 @@ Create RunningAgentsCard for list_running_agents. Shows each running agent as a 
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/ui/src/ai/tool-results/running-agents-card.tsx`
 - [ ] `libs/ui/src/ai/tool-invocation-part.tsx`
 
 ### Verification
+
 - [ ] Card shows each running agent with feature title, model, elapsed time
 - [ ] Empty state shown when no agents running
 - [ ] Registered in tool-invocation-part.tsx

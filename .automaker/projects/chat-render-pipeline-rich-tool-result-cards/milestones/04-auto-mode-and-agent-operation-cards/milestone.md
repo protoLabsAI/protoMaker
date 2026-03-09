@@ -14,9 +14,9 @@ Cards for auto-mode controls and agent operations that currently render as JSON.
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-automodecontrolcard-and-agentmessagecard.md](./phase-01-automodecontrolcard-and-agentmessagecard.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                           | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-automodecontrolcard-and-agentmessagecard.md](./phase-01-automodecontrolcard-and-agentmessagecard.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

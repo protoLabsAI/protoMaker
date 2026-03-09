@@ -14,10 +14,10 @@ Cards for the most-asked status questions: system sitrep, running agents, and he
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-sitrepcard-and-healthcheckcard.md](./phase-01-sitrepcard-and-healthcheckcard.md) | 1 week | None | TBD |
-| 2 | [phase-02-runningagentscard.md](./phase-02-runningagentscard.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                       | Duration  | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------------ | --------- | ------------ | ----- |
+| 1     | [phase-01-sitrepcard-and-healthcheckcard.md](./phase-01-sitrepcard-and-healthcheckcard.md) | 1 week    | None         | TBD   |
+| 2     | [phase-02-runningagentscard.md](./phase-02-runningagentscard.md)                           | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -35,6 +35,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

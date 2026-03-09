@@ -14,9 +14,9 @@ Audit whether ReactiveSpawnerService is fully wired into the service container a
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-wire-reactivespawnerservice-into-service-container.md](./phase-01-wire-reactivespawnerservice-into-service-container.md) | 1 week | None | TBD |
+| Phase | File                                                                                                                               | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-wire-reactivespawnerservice-into-service-container.md](./phase-01-wire-reactivespawnerservice-into-service-container.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M4 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

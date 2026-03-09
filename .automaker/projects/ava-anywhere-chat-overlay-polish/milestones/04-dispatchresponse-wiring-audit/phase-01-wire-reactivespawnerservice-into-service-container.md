@@ -16,11 +16,13 @@ Audit apps/server/src/server/services.ts: check if ReactiveSpawnerService is ins
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/server/src/server/services.ts`
 - [ ] `apps/server/src/services/ava-channel-reactor-service.ts`
 - [ ] `apps/server/src/services/reactive-spawner-service.ts`
 
 ### Verification
+
 - [ ] ReactiveSpawnerService is instantiated in services.ts
 - [ ] ReactiveSpawnerService is passed to AvaChannelReactorService
 - [ ] dispatchResponse logs a message when it spawns a session for a request-type message

@@ -14,9 +14,9 @@ Add regenerate button and branch navigation to chat messages. Branch tracking lo
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-regenerate-button-and-branch-navigator.md](./phase-01-regenerate-button-and-branch-navigator.md) | 1 week | None | TBD |
+| Phase | File                                                                                                       | Duration | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-regenerate-button-and-branch-navigator.md](./phase-01-regenerate-button-and-branch-navigator.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M1 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

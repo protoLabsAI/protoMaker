@@ -16,10 +16,12 @@ Add a regenerate icon button below each assistant message in the Ask Ava tab. Wh
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx`
 - [ ] `apps/ui/src/components/views/chat-overlay/chat-overlay-content.tsx`
 
 ### Verification
+
 - [ ] Regenerate button appears below the last assistant message
 - [ ] Clicking regenerate calls onRegenerate and shows a loading state
 - [ ] When branchCount > 1, prev/next arrows and '1 of N' counter appear

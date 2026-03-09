@@ -16,9 +16,11 @@ In ava-channel-tab.tsx, replace or augment the binary protocol toggle with categ
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx`
 
 ### Verification
+
 - [ ] Five category chips appear when showProtocol is enabled: Heartbeat, Work Steal, Escalation, Metrics, Scheduler
 - [ ] Toggling a chip hides/shows messages of that category
 - [ ] 'Show All Protocol' enables all chips at once
