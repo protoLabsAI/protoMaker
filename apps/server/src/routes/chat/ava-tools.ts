@@ -13,6 +13,7 @@
 
 import type { Tool } from 'ai';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import type { EventEmitter, EventType } from '../../lib/events.js';
@@ -1948,6 +1949,78 @@ export function buildAvaTools(
       execute: async ({ updates }) => {
         const settings = await settingsSvc.updateProjectSettings(projectPath, updates);
         return { success: true, settings };
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // HITL – request structured input from the user via an inline form
+  // -----------------------------------------------------------------------
+  if (services.events) {
+    const eventsEmitter = services.events;
+
+    tools['request_user_input'] = makeTool({
+      description:
+        'Request structured input from the user via an inline form rendered in the chat UI. ' +
+        'Provide a title and one or more form steps, each with a JSON Schema (draft-07) defining the fields. ' +
+        'The tool pauses execution and waits until the user submits the form. ' +
+        'Use this to collect config values, choices, credentials, or any structured data from the user.',
+      inputSchema: z.object({
+        title: z.string().describe('Form dialog title shown to the user'),
+        description: z.string().optional().describe('Optional description shown below the title'),
+        steps: z
+          .array(
+            z.object({
+              schema: z
+                .record(z.string(), z.unknown())
+                .describe('JSON Schema (draft-07) defining the form fields'),
+              uiSchema: z
+                .record(z.string(), z.unknown())
+                .optional()
+                .describe('@rjsf layout hints (field ordering, widgets)'),
+              title: z.string().optional().describe('Step title shown in wizard header'),
+              description: z
+                .string()
+                .optional()
+                .describe('Step description shown below step title'),
+            })
+          )
+          .min(1)
+          .describe('One or more form steps. Multiple steps render as a wizard.'),
+      }),
+      execute: async ({ title, description, steps }) => {
+        const formId = `chat-form-${randomUUID().slice(0, 8)}`;
+        const timestamp = new Date().toISOString();
+
+        // Emit the user_input_request event so the UI renders an inline form
+        eventsEmitter.emit('chat:user-input-request' as EventType, {
+          formId,
+          title,
+          description,
+          steps,
+          timestamp,
+        });
+
+        // Pause and await the user's form submission
+        return new Promise<unknown>((resolve) => {
+          const unsub = eventsEmitter.on(
+            'hitl:form-responded' as EventType,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (payload: any) => {
+              if (payload?.formId !== formId) return;
+              unsub();
+              if (payload.cancelled) {
+                resolve({ cancelled: true, message: 'The user cancelled the form.' });
+              } else {
+                resolve({
+                  cancelled: false,
+                  formId,
+                  response: payload.response ?? [],
+                });
+              }
+            }
+          );
+        });
       },
     });
   }

@@ -318,6 +318,8 @@ export type EventType =
   | 'job:failed'
   // Chat tool progress events (real-time sideband for Ava tool execution)
   | 'chat:tool-progress'
+  // Chat user input request events (inline form rendered in the chat UI)
+  | 'chat:user-input-request'
   // Subagent tool approval events (gated trust model)
   | 'subagent:tool-approval-request'
   | 'subagent:tool-approval-response'
@@ -734,6 +736,25 @@ export interface EventPayloadMap {
     toolCallId: string;
     label: string;
     toolName?: string;
+    timestamp: string;
+  };
+
+  // Chat user input request events (inline form rendered in the chat UI)
+  'chat:user-input-request': {
+    /** Unique form ID used to correlate the response */
+    formId: string;
+    /** Form dialog title */
+    title: string;
+    /** Optional description shown below the title */
+    description?: string;
+    /** One or more form steps (multi-step renders as a wizard) */
+    steps: Array<{
+      schema: Record<string, unknown>;
+      uiSchema?: Record<string, unknown>;
+      title?: string;
+      description?: string;
+    }>;
+    /** ISO timestamp */
     timestamp: string;
   };
 
