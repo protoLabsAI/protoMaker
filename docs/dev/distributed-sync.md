@@ -305,15 +305,15 @@ While the CRDT sync mesh handles state replication, **fleet coordination** (whic
 
 `ActionableItemBridgeService` converts distributed events into entries in the operator's unified inbox. It listens to the event bus and auto-creates actionable items for each signal type:
 
-| Source event                         | Creates item type            | Priority                                                          |
-| ------------------------------------ | ---------------------------- | ----------------------------------------------------------------- |
-| `hitl:form-requested`                | `hitl_form`                  | high                                                              |
-| `notification:created`               | `notification` or `approval` | low; `feature_waiting_approval` → medium                          |
-| `escalation:ui-notification`         | `escalation`                 | maps severity: critical→urgent, high→high, medium→medium, low→low |
-| `pipeline:gate-waiting`              | `gate`                       | high                                                              |
-| `authority:awaiting-approval`        | `approval`                   | high or urgent (based on risk level)                              |
-| `feature:status-changed` (unblocked) | (dismisses items)            | auto-dismisses pending items for the feature                      |
-| `hitl:form-responded` (authority)    | (resolves approval)          | resolves via `AuthorityService.resolveApproval()`                 |
+| Source event                         | Creates item type            | Priority                                                           |
+| ------------------------------------ | ---------------------------- | ------------------------------------------------------------------ |
+| `hitl:form-requested`                | `hitl_form`                  | high                                                               |
+| `notification:created`               | `notification` or `approval` | low; `feature_waiting_approval` → medium                           |
+| `escalation:ui-notification`         | `escalation`                 | maps severity: critical→urgent, high→high, medium→medium, low→low  |
+| `pipeline:gate-waiting`              | `gate`                       | high                                                               |
+| `authority:awaiting-approval`        | `approval`                   | critical/high risk → urgent; medium risk → high; low risk → medium |
+| `feature:status-changed` (unblocked) | (dismisses items)            | auto-dismisses pending items for the feature                       |
+| `hitl:form-responded` (authority)    | (resolves approval)          | resolves via `AuthorityService.resolveApproval()`                  |
 
 The bridge holds no state. It wires `AuthorityService` via `setAuthorityService()` to avoid circular dependency at construction.
 

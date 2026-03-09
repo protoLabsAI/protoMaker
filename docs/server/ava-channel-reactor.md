@@ -138,21 +138,22 @@ While a peer is marked degraded (has sent a recent `health_alert`), work-stealin
 
 ### DORA Reports
 
-Every hour, if a `DoraMetricsService` is wired in, the reactor broadcasts:
+Every hour, if a `DoraMetricsService` is wired in, the reactor broadcasts a `DoraReport` using a 1-day sliding window:
 
 ```typescript
-{
-  type: 'dora_report';
-  instanceId: string;
-  deploymentFrequency: number; // deployments per day
-  leadTimeHours: number;
-  changeFailureRate: number; // 0–1
-  windowDays: number; // reporting window
-  timestamp: string; // ISO-8601
+interface DoraReport {
+  instanceId: string; // Originating instance ID
+  computedAt: string; // ISO-8601 timestamp when the report was computed
+  deploymentsLast24h: number; // Features moved to done in the last 24 hours
+  avgLeadTimeMs: number; // Average lead time (backlog→done) in milliseconds
+  blockedCount: number; // Features that became blocked during the window
+  doneCount: number; // Features that moved to done during the window
 }
 ```
 
-Peers store incoming DORA reports in `CRDTStore` under `domain='metrics', id='dora'` for aggregate queries.
+The reactor reads `metrics.deploymentFrequency.value` (deployments/day) and `metrics.leadTime.value` (hours, converted to ms) from `DoraMetricsService.getMetrics()`.
+
+Peers store incoming DORA reports in `CRDTStore` under `domain='metrics', id='dora'` (a `MetricsDocument`) for aggregate queries via `GET /api/metrics/dora`.
 
 ## Friction Tracking Integration
 
