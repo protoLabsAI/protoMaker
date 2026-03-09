@@ -86,6 +86,10 @@ import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
 import { FrictionTrackerService } from '../services/friction-tracker-service.js';
 import { FailureClassifierService } from '../services/failure-classifier-service.js';
+import {
+  getReactiveSpawnerService,
+  ReactiveSpawnerService,
+} from '../services/reactive-spawner-service.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -275,6 +279,9 @@ export interface ServiceContainer {
 
   // Friction tracker (self-improvement loop — recurring failure pattern detection)
   frictionTrackerService: FrictionTrackerService;
+
+  // Reactive spawner (trigger-based agent spawning with rate limiting and circuit breaking)
+  reactiveSpawnerService: ReactiveSpawnerService;
 
   // CRDT document store (set by crdt-store.module, used by dependent modules)
   _crdtStore?: import('@protolabsai/crdt').CRDTStore;
@@ -708,6 +715,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     void frictionTrackerService.recordFailure(classification.category);
   });
 
+  // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking
+  const reactiveSpawnerService = getReactiveSpawnerService(
+    agentFactoryService,
+    dynamicAgentExecutor,
+    repoRoot
+  );
+
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
@@ -834,6 +848,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     avaChannelService,
     doraMetricsService,
     frictionTrackerService,
+    reactiveSpawnerService,
     driftCheckInterval: null,
   };
 }
