@@ -36,11 +36,15 @@ jobs:
       - name: Run security audit
         id: audit
         run: |
-          # Run audit and capture JSON output for annotation reporting
+          # Run production audit (fails on high/critical) — dev-only tooling
+          # vulns don't affect shipped code and are tracked separately.
           set +e
-          npm audit --audit-level=high --json > audit-output.json 2>&1
+          npm audit --audit-level=high --omit=dev --json > audit-output.json 2>&1
           AUDIT_EXIT=$?
           set -e
+
+          # Also run full audit for visibility (warnings only, never fails)
+          npm audit --audit-level=critical --json > audit-full.json 2>&1 || true
 
           # Parse and emit GitHub annotations for high/critical vulnerabilities
           if [ -f audit-output.json ]; then
