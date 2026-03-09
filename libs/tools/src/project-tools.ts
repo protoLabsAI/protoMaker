@@ -116,8 +116,8 @@ const DocListOutputSchema = z.object({
 });
 
 const FeaturesOutputSchema = z.object({
-  features: z.array(z.record(z.string(), z.unknown())),
-  epics: z.array(z.record(z.string(), z.unknown())),
+  features: z.array(z.any()),
+  epics: z.array(z.any()),
   totalCount: z.number(),
 });
 
@@ -516,11 +516,15 @@ export function createProjectTools(deps: ProjectDeps): SharedTool[] {
           input.projectPath,
           input.projectSlug
         );
+        // JSON-roundtrip to strip Symbol keys (e.g. Automerge proxies)
+        // that cause z.record(z.string(), z.unknown()) output validation to fail
+        const plainFeatures = JSON.parse(JSON.stringify(features));
+        const plainEpics = JSON.parse(JSON.stringify(epics));
         return {
           success: true,
           data: {
-            features: features as never[],
-            epics: epics as never[],
+            features: plainFeatures as never[],
+            epics: plainEpics as never[],
             totalCount: features.length + epics.length,
           },
         };
