@@ -390,10 +390,7 @@ export class ActionableItemBridgeService {
         `Resolved authority approval request ${data.formId} via HITL form: ${resolution} by ${respondedBy}`
       );
     } catch (error) {
-      logger.error(
-        `Failed to resolve authority approval via HITL form ${data.formId}:`,
-        error
-      );
+      logger.error(`Failed to resolve authority approval via HITL form ${data.formId}:`, error);
     }
   }
 
