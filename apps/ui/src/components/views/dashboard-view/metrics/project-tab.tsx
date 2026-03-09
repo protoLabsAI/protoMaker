@@ -14,6 +14,7 @@ import {
   useCycleTimeDistribution,
   useDora,
 } from '@/hooks/queries/use-metrics';
+import { StageBreakdownChart } from './stage-breakdown-chart';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import { TimeRangeSelector, useTimeRangeDates, type TimeRange } from './time-range';
 import { KpiCards } from './kpi-cards';
@@ -118,6 +119,11 @@ export function ProjectMetricsTab({
       {/* Row 5: Success rate */}
       <div className="grid grid-cols-1 gap-3">
         <SuccessChart data={successSeries.data} isLoading={successSeries.isLoading} />
+      </div>
+
+      {/* Row 6: Stage cycle time breakdown */}
+      <div className="grid grid-cols-1 gap-3">
+        <StageBreakdownChart projectPath={projectPath} />
       </div>
     </div>
   );

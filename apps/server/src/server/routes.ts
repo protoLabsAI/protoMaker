@@ -331,7 +331,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/pipeline', createPipelineRoutes(pipelineService));
   app.use(
     '/api/metrics',
-    createMetricsRoutes(metricsService, ledgerService, services.doraMetricsService)
+    createMetricsRoutes(metricsService, ledgerService, services.doraMetricsService, featureLoader)
   );
   app.use('/api/notifications', createNotificationsRoutes(notificationService));
   app.use('/api/hitl-forms', createHITLFormRoutes(hitlFormService));

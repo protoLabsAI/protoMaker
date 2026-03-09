@@ -198,6 +198,52 @@ export function useDoraHistory(
   });
 }
 
+const STAGE_DURATIONS_STALE_TIME = 60 * 1000; // 1 minute
+
+/** Per-feature stage duration entry from GET /api/metrics/stage-durations */
+export interface FeatureStageDuration {
+  featureId: string;
+  title: string;
+  totalMs: number;
+  stages: { backlog: number; in_progress: number; review: number; blocked: number };
+  flowEfficiency: number;
+}
+
+/** Aggregate stage duration summary */
+export interface StageDurationsAggregate {
+  totalMs: number;
+  stages: { backlog: number; in_progress: number; review: number; blocked: number };
+  percentages: { backlog: number; in_progress: number; review: number; blocked: number };
+  flowEfficiency: number;
+}
+
+/** Full response from GET /api/metrics/stage-durations */
+export interface StageDurationsResponse {
+  success: boolean;
+  features: FeatureStageDuration[];
+  aggregate: StageDurationsAggregate;
+  featureCount: number;
+}
+
+/**
+ * Fetch per-feature stage durations and aggregate flow efficiency.
+ * Uses GET /api/metrics/stage-durations.
+ */
+export function useStageDurations(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.metrics.stageDurations(projectPath ?? ''),
+    queryFn: async (): Promise<StageDurationsResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.stageDurations(projectPath) as Promise<StageDurationsResponse>;
+    },
+    enabled: !!projectPath,
+    staleTime: STAGE_DURATIONS_STALE_TIME,
+    refetchInterval: STAGE_DURATIONS_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
 const ENGINE_STATUS_STALE_TIME = 10 * 1000; // 10 seconds
 const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
 
