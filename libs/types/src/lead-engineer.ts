@@ -125,7 +125,8 @@ export type LeadRuleAction =
         failureCount?: number;
         awaitingGatePhase?: null;
       };
-    };
+    }
+  | { type: 'rollback_feature'; featureId: string; projectPath: string; reason: string };
 
 // ────────────────────────── Fast-Path Rules ──────────────────────────
 
