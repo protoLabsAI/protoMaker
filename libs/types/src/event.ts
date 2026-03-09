@@ -208,8 +208,11 @@ export type EventType =
   | 'ceremony:post-project-docs'
   | 'ceremony:post-project-docs:complete'
   | 'ceremony:post-project-docs:failed'
+  | 'ceremony:retro-completed'
   // Retro improvement events (reflection loop: REFLECT → REPEAT)
   | 'retro:improvements:created'
+  // Gate tuning signals (from retro unresolved challenges → Lead Engineer rules)
+  | 'gate:tuning-signal'
   // Bug triage workflow events (channel workflow → investigation → board feature)
   | 'bug:reported'
   | 'bug:reaction-triggered'
