@@ -96,7 +96,10 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
   const [currentBranchIndex, setCurrentBranchIndex] = useState<Map<string, number>>(new Map());
   // Set to the origId when a regeneration is in-flight, cleared when the new
   // assistant message arrives and is added to the branch list.
+  // pendingBranchFor ref is used for non-reactive logic in effects.
+  // pendingBranchOrigId state mirrors it so the UI can show a Regenerating shimmer.
   const pendingBranchFor = useRef<string | null>(null);
+  const [pendingBranchOrigId, setPendingBranchOrigId] = useState<string | null>(null);
 
   const suggestions = useContextualSuggestions(features ?? []);
   const { getProgressLabel, activeLabel: activeToolLabel } = useToolProgress();
@@ -183,8 +186,10 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
       return next;
     });
 
-    // Mark that the next completed assistant message should be added to this branch
+    // Mark that the next completed assistant message should be added to this branch.
+    // Both the ref (for effect logic) and state (for UI shimmer) are updated.
     pendingBranchFor.current = origId;
+    setPendingBranchOrigId(origId);
 
     // Re-send the last user message
     const text = (lastUserMsg.parts ?? [])
@@ -219,6 +224,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
       return next;
     });
     pendingBranchFor.current = null;
+    setPendingBranchOrigId(null);
   }, [messages, isStreaming, branchMap]);
 
   // Clear branch state when starting a new chat session
@@ -226,6 +232,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     setBranchMap(new Map());
     setCurrentBranchIndex(new Map());
     pendingBranchFor.current = null;
+    setPendingBranchOrigId(null);
   }, [currentSessionId]);
 
   // Navigate to the previous branch variant for a given message
@@ -454,6 +461,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           modelAlias={modelAlias}
           tokenUsage={tokenUsage}
           branchInfoMap={branchInfoMap}
+          pendingBranchOrigId={pendingBranchOrigId}
           settingsOpen={settingsOpen}
           historyOpen={historyOpen}
           queueOpen={queueOpen}

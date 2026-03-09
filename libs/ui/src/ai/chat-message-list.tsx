@@ -43,6 +43,7 @@ export function ChatMessageList({
   onToolApprove,
   onToolReject,
   branchInfoMap,
+  pendingBranchOrigId,
   onPreviousBranch,
   onNextBranch,
   getToolProgressLabel,
@@ -67,6 +68,9 @@ export function ChatMessageList({
   onToolReject?: (approvalId: string) => void;
   /** Branch info keyed by message ID — provided by the parent managing branch state. */
   branchInfoMap?: Map<string, BranchInfo>;
+  /** The origId of the message currently being regenerated. When set, a shimmer
+   *  is rendered below that message to indicate a new variant is being generated. */
+  pendingBranchOrigId?: string | null;
   /** Called with the origId when the user navigates to the previous branch. */
   onPreviousBranch?: (origId: string) => void;
   /** Called with the origId when the user navigates to the next branch. */
@@ -220,24 +224,36 @@ export function ChatMessageList({
             messages.map((message, idx) => {
               const branchInfo = branchInfoMap?.get(message.id);
               const isLastMessage = idx === messages.length - 1;
+              // Show a 'Regenerating...' shimmer below this message when a new
+              // variant is being generated for it.
+              const isRegenerating =
+                !!pendingBranchOrigId &&
+                (branchInfo?.origId === pendingBranchOrigId || message.id === pendingBranchOrigId);
               return (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  isStreaming={isStreaming && isLastMessage}
-                  onRegenerate={onRegenerate}
-                  onThumbsUp={onThumbsUp}
-                  onThumbsDown={onThumbsDown}
-                  onToolApprove={onToolApprove}
-                  onToolReject={onToolReject}
-                  branchIndex={branchInfo?.branchIndex}
-                  branchCount={branchInfo?.branchCount}
-                  onPreviousBranch={
-                    branchInfo ? () => onPreviousBranch?.(branchInfo.origId) : undefined
-                  }
-                  onNextBranch={branchInfo ? () => onNextBranch?.(branchInfo.origId) : undefined}
-                  getToolProgressLabel={getToolProgressLabel}
-                />
+                <div key={message.id}>
+                  <ChatMessage
+                    message={message}
+                    isStreaming={isStreaming && isLastMessage}
+                    onRegenerate={onRegenerate}
+                    onThumbsUp={onThumbsUp}
+                    onThumbsDown={onThumbsDown}
+                    onToolApprove={onToolApprove}
+                    onToolReject={onToolReject}
+                    branchIndex={branchInfo?.branchIndex}
+                    branchCount={branchInfo?.branchCount}
+                    onPreviousBranch={
+                      branchInfo ? () => onPreviousBranch?.(branchInfo.origId) : undefined
+                    }
+                    onNextBranch={branchInfo ? () => onNextBranch?.(branchInfo.origId) : undefined}
+                    getToolProgressLabel={getToolProgressLabel}
+                  />
+                  {isRegenerating && (
+                    <div>
+                      <p className="px-4 pb-1 text-xs text-muted-foreground">Regenerating...</p>
+                      <ShimmerLoader />
+                    </div>
+                  )}
+                </div>
               );
             })
           )}

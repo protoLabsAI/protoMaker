@@ -35,6 +35,8 @@ export interface AskAvaTabProps {
     estimated: boolean;
   };
   branchInfoMap: Map<string, BranchInfo>;
+  /** The origId of the message currently being regenerated, or null if none. */
+  pendingBranchOrigId?: string | null;
   settingsOpen: boolean;
   historyOpen: boolean;
   queueOpen: boolean;
@@ -70,6 +72,7 @@ export function AskAvaTab({
   modelAlias,
   tokenUsage,
   branchInfoMap,
+  pendingBranchOrigId,
   settingsOpen,
   historyOpen,
   queueOpen,
@@ -141,6 +144,7 @@ export function AskAvaTab({
           onToolApprove={onToolApprove}
           onToolReject={onToolReject}
           branchInfoMap={branchInfoMap}
+          pendingBranchOrigId={pendingBranchOrigId}
           onPreviousBranch={onPreviousBranch}
           onNextBranch={onNextBranch}
           getToolProgressLabel={getToolProgressLabel}
