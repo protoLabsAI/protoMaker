@@ -35,6 +35,9 @@ import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
+import type { DiscordBotService } from '../../services/discord-bot-service.js';
+import type { CalendarService } from '../../services/calendar-service.js';
+import type { HealthMonitorService } from '../../services/health-monitor-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { buildProgressHooks } from '../../lib/agent-hooks.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
@@ -102,6 +105,14 @@ export interface AvaToolsServices {
    * Undefined means full trust (bypassPermissions).
    */
   canUseTool?: CanUseTool;
+  /** Ava channel service — optional, used for avaChannel tool group */
+  avaChannelService?: unknown;
+  /** Discord bot service — optional, used for discord tool group */
+  discordBotService?: DiscordBotService;
+  /** Calendar service — optional, used for calendar tool group */
+  calendarService?: CalendarService;
+  /** Health monitor service — optional, used for health tool group */
+  healthMonitorService?: HealthMonitorService;
 }
 
 export interface AvaToolsConfig {
@@ -140,6 +151,16 @@ export interface AvaToolsConfig {
   userPresenceDetection?: boolean;
   /** When true, all destructive tools skip HITL confirmation (needsApproval: false) */
   autoApproveTools?: boolean;
+  /** Enable Ava channel tools (send to Ava Discord channel) */
+  avaChannel?: boolean;
+  /** Enable Discord tools (discord messaging) */
+  discord?: boolean;
+  /** Enable calendar tools (calendar events) */
+  calendar?: boolean;
+  /** Enable health tools (health monitoring) */
+  health?: boolean;
+  /** Enable settings tools (global settings access) */
+  settings?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -499,6 +520,31 @@ export function buildAvaTools(
       execute: async ({ featureId }) => {
         const output = await services.featureLoader.getAgentOutput(projectPath, featureId);
         return { featureId, output };
+      },
+    });
+
+    tools['send_message_to_agent'] = makeTool({
+      description:
+        'Send a follow-up message or instruction to the agent working on a feature. The agent will process the message in the context of its current worktree.',
+      inputSchema: z.object({
+        featureId: z.string().describe('The feature ID of the agent to message'),
+        message: z.string().describe('The message or instruction to send to the agent'),
+      }),
+      execute: async ({ featureId, message }) => {
+        try {
+          await services.autoModeService.followUpFeature(
+            projectPath,
+            featureId,
+            message,
+            undefined,
+            true
+          );
+          return { success: true, featureId, message: 'Message sent to agent.' };
+        } catch (err) {
+          return {
+            error: `Failed to send message: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
       },
     });
   }
@@ -876,6 +922,105 @@ export function buildAvaTools(
         return { success: true, tabId: tabId ?? workspace.tabOrder[workspace.tabOrder.length - 1] };
       },
     });
+
+    tools['create_note_tab'] = makeTool({
+      description: 'Create a new empty note tab in the project notes workspace.',
+      inputSchema: z.object({
+        name: z.string().describe('Name for the new note tab'),
+      }),
+      execute: async ({ name }) => {
+        await ensureNotesDir(projectPath);
+        const wsPath = getNotesWorkspacePath(projectPath);
+        let workspace: NotesWorkspace;
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          workspace = JSON.parse(raw as string) as NotesWorkspace;
+        } catch {
+          const defaultId = crypto.randomUUID();
+          workspace = {
+            version: 1,
+            workspaceVersion: 0,
+            activeTabId: defaultId,
+            tabOrder: [defaultId],
+            tabs: {
+              [defaultId]: {
+                id: defaultId,
+                name: 'Notes',
+                content: '',
+                permissions: { agentRead: true, agentWrite: true },
+                metadata: { createdAt: Date.now(), updatedAt: Date.now() },
+              },
+            },
+          };
+        }
+        const newId = crypto.randomUUID();
+        const now = Date.now();
+        workspace.tabs[newId] = {
+          id: newId,
+          name,
+          content: '',
+          permissions: { agentRead: true, agentWrite: true },
+          metadata: { createdAt: now, updatedAt: now },
+        };
+        workspace.tabOrder.push(newId);
+        workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+        await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+        return { success: true, tabId: newId, name };
+      },
+    });
+
+    tools['delete_note_tab'] = makeTool({
+      description: 'Delete a note tab from the project notes workspace by its ID.',
+      inputSchema: z.object({
+        tabId: z.string().describe('ID of the tab to delete'),
+      }),
+      needsApproval: destructiveNeedsApproval,
+      execute: async ({ tabId }) => {
+        const wsPath = getNotesWorkspacePath(projectPath);
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          const workspace = JSON.parse(raw as string) as NotesWorkspace;
+          if (!workspace.tabs[tabId]) {
+            return { error: `Tab '${tabId}' not found` };
+          }
+          delete workspace.tabs[tabId];
+          workspace.tabOrder = workspace.tabOrder.filter((id) => id !== tabId);
+          if (workspace.activeTabId === tabId) {
+            workspace.activeTabId = workspace.tabOrder[0] ?? null;
+          }
+          workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+          await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+          return { success: true, tabId };
+        } catch {
+          return { error: 'Notes workspace not found' };
+        }
+      },
+    });
+
+    tools['rename_note_tab'] = makeTool({
+      description: 'Rename a note tab in the project notes workspace.',
+      inputSchema: z.object({
+        tabId: z.string().describe('ID of the tab to rename'),
+        name: z.string().describe('New name for the tab'),
+      }),
+      execute: async ({ tabId, name }) => {
+        const wsPath = getNotesWorkspacePath(projectPath);
+        try {
+          const raw = await secureFs.readFile(wsPath, 'utf-8');
+          const workspace = JSON.parse(raw as string) as NotesWorkspace;
+          if (!workspace.tabs[tabId]) {
+            return { error: `Tab '${tabId}' not found` };
+          }
+          workspace.tabs[tabId].name = name;
+          workspace.tabs[tabId].metadata.updatedAt = Date.now();
+          workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
+          await secureFs.writeFile(wsPath, JSON.stringify(workspace, null, 2), 'utf-8');
+          return { success: true, tabId, name };
+        } catch {
+          return { error: 'Notes workspace not found' };
+        }
+      },
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -1010,6 +1155,36 @@ export function buildAvaTools(
         } catch (err) {
           return {
             error: `Failed to fetch PR feedback: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      },
+    });
+
+    tools['resolve_pr_threads'] = makeTool({
+      description:
+        'Resolve all unresolved CodeRabbit review threads for a PR. Optionally filter by minimum severity to only resolve threads at or above a given severity level.',
+      inputSchema: z.object({
+        prNumber: z.number().int().describe('PR number whose review threads should be resolved'),
+        minSeverity: z
+          .enum(['low', 'medium', 'high'])
+          .optional()
+          .describe(
+            "Minimum severity threshold — only resolve threads at or above this level (default: 'low')"
+          ),
+      }),
+      execute: async ({ prNumber, minSeverity }) => {
+        try {
+          const port = parseInt(process.env.PORT || '3008', 10);
+          const response = await fetch(`http://localhost:${port}/api/github/resolve-pr-threads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectPath, prNumber, minSeverity: minSeverity ?? 'low' }),
+          });
+          const data = (await response.json()) as Record<string, unknown>;
+          return data;
+        } catch (err) {
+          return {
+            error: `Failed to resolve PR threads: ${err instanceof Error ? err.message : String(err)}`,
           };
         }
       },

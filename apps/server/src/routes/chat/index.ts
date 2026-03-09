@@ -396,6 +396,10 @@ export function createChatRoutes(services: ServiceContainer): Router {
                 ? services.sensorRegistryService
                 : undefined,
               canUseTool,
+              avaChannelService: undefined,
+              discordBotService: services.discordBotService,
+              calendarService: services.calendarService,
+              healthMonitorService: services.healthMonitorService,
             },
             {
               ...avaConfig.toolGroups,
