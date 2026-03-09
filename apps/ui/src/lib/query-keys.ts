@@ -317,6 +317,8 @@ export const queryKeys = {
     /** Failure classification breakdown (operational intelligence) */
     failureBreakdown: (projectPath: string) =>
       ['metrics', 'failure-breakdown', projectPath] as const,
+    /** Blocked timeline data (Gantt-style per-feature blocked periods) */
+    blockedTimeline: (projectPath: string) => ['metrics', 'blocked-timeline', projectPath] as const,
   },
 
   // ============================================

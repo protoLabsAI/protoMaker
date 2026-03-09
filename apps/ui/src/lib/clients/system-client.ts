@@ -260,6 +260,23 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
       friction: (): Promise<FrictionResponse> => this.get('/api/metrics/friction'),
       failureBreakdown: (projectPath: string): Promise<FailureBreakdownResponse> =>
         this.get(`/api/metrics/failure-breakdown?projectPath=${encodeURIComponent(projectPath)}`),
+      blockedTimeline: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          features: Array<{
+            featureId: string;
+            title: string;
+            blockedPeriods: Array<{
+              startDate: string;
+              endDate: string;
+              durationMs: number;
+              reason: string;
+              category: 'dependency' | 'review' | 'unclear' | 'other';
+            }>;
+            totalBlockedMs: number;
+          }>;
+          featureCount: number;
+        }>(`/api/metrics/blocked-timeline?projectPath=${encodeURIComponent(projectPath)}`),
     };
 
     // Integrations API

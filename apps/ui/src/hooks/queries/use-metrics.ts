@@ -321,6 +321,51 @@ export function useFailureBreakdown(projectPath: string | undefined) {
   });
 }
 
+const BLOCKED_TIMELINE_STALE_TIME = 60 * 1000; // 1 minute
+
+/** A single blocked period for a feature. */
+export interface BlockedPeriod {
+  startDate: string;
+  endDate: string;
+  durationMs: number;
+  reason: string;
+  category: 'dependency' | 'review' | 'unclear' | 'other';
+}
+
+/** Per-feature entry returned by GET /api/metrics/blocked-timeline */
+export interface BlockedTimelineEntry {
+  featureId: string;
+  title: string;
+  blockedPeriods: BlockedPeriod[];
+  totalBlockedMs: number;
+}
+
+/** Full response from GET /api/metrics/blocked-timeline */
+export interface BlockedTimelineResponse {
+  success: boolean;
+  features: BlockedTimelineEntry[];
+  featureCount: number;
+}
+
+/**
+ * Fetch blocked period timeline data for the Value Stream visualization.
+ * Uses GET /api/metrics/blocked-timeline.
+ */
+export function useBlockedTimeline(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.metrics.blockedTimeline(projectPath ?? ''),
+    queryFn: async (): Promise<BlockedTimelineResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.blockedTimeline(projectPath) as Promise<BlockedTimelineResponse>;
+    },
+    enabled: !!projectPath,
+    staleTime: BLOCKED_TIMELINE_STALE_TIME,
+    refetchInterval: BLOCKED_TIMELINE_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
 const ENGINE_STATUS_STALE_TIME = 10 * 1000; // 10 seconds
 const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
 

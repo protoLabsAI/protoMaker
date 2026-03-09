@@ -4,22 +4,44 @@ How protoLabs synchronizes state across multiple instances using Automerge CRDTs
 
 ## Architecture Overview
 
-protoLabs uses two parallel WebSocket layers for distributed sync:
+protoLabs uses a two-layer WebSocket sync mesh when hivemind mode is enabled:
 
-1. **Peer mesh** (`CrdtSyncService`, port 4444) — heartbeats, peer TTL, leader election, feature/project/settings event broadcast, and registry sync.
-2. **Automerge binary sync** (`CRDTStore`, port 4445) — low-level Automerge document replication for the Ava Channel, calendar events, and todos.
+| Layer                | Service                         | Port                 | Purpose                                          |
+| -------------------- | ------------------------------- | -------------------- | ------------------------------------------------ |
+| **Sync mesh**        | `CrdtSyncService`               | `:4444` (default)    | Peer heartbeat, leader election, event broadcast |
+| **CRDT binary sync** | `CRDTStore` (crdt-store.module) | `:4445` (syncPort+1) | Automerge binary protocol for document state     |
 
-One instance acts as **primary** and others connect as **workers** on both ports. The ports are derived from `protolab.syncPort` in `proto.config.yaml`; the CRDT store always uses `syncPort + 1`.
+One instance acts as **primary** and others connect as **workers**. All instances exchange CRDT changes (feature events, project events, settings) in real time.
 
 ```
 Worker A ──────┐
                ▼
-Worker B ────▶ Primary (peer mesh :4444, CRDT store :4445)
+Worker B ────▶ Primary (:4444 CrdtSyncService / :4445 CRDTStore)
                ▲
 Worker C ──────┘
 ```
 
 Fleet coordination (work assignment, capacity advertising, escalations, scheduling) is layered on top via the Ava Channel — a daily-sharded CRDT document that all instances write to and the `AvaChannelReactorService` subscribes to.
+
+### Layered Services
+
+The distributed system is composed of interconnected services, each building on the layer below:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AvaChannelReactorService                          │  ← Reactive orchestrator
+│                    (classifier chain, loop prevention, DORA)         │
+├─────────────────────────────────────────────────────────────────────┤
+│                    FleetSchedulerService                             │  ← Feature + phase scheduling
+│            (schedule_assignment, failover, conflict resolution)      │
+├─────────────────────────────────────────────────────────────────────┤
+│  AvaChannelService  CalendarService  TodoService                     │  ← Document services (CRDT-injected)
+├─────────────────────────────────────────────────────────────────────┤
+│               CRDTStore (crdt-store.module)                         │  ← Automerge document persistence
+├─────────────────────────────────────────────────────────────────────┤
+│               CrdtSyncService (:4444)                               │  ← Peer mesh + leader election
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 Instance roles are set in `proto.config.yaml`:
 
@@ -51,23 +73,88 @@ Features and projects do **not** use the CRDT store directly; they rely on Event
 
 ## Registry Sync (Split-Brain Prevention)
 
-The CRDT store uses a **registry** to track which document IDs are known to the fleet. Without this, instances that miss document creation events can end up with orphaned or diverged documents.
+When a worker reconnects to the primary, the primary immediately sends a `registry_sync` message containing its entire CRDTStore document registry (a map of `"domain:id"` → storage URL). The worker merges this registry into its local `CRDTStore` via `adoptRemoteRegistry()`, resolving cases where both instances independently created Automerge documents for the same `domain:id` with different URLs.
 
-`CrdtSyncService` exposes two hooks:
+This is wired in `crdt-store.module.ts`:
 
-```typescript
-// Primary: provide a snapshot of all known documents (key → URL map)
-crdtSyncService.setRegistryProvider(() => store.getRegistry());
+- **Primary**: calls `crdtSyncService.setRegistryProvider(() => store.getRegistry())`.
+- **Worker**: calls `crdtSyncService.onRegistryReceived((remoteRegistry) => store.adoptRemoteRegistry(remoteRegistry))`.
 
-// Worker: adopt incoming registry snapshots from the primary
-crdtSyncService.onRegistryReceived((remoteRegistry) => {
-  const { adopted, conflicts } = store.adoptRemoteRegistry(remoteRegistry);
-  // adopted: count of newly accepted entries
-  // conflicts: count of URL conflicts resolved in favour of the primary
-});
+The `adoptRemoteRegistry()` call returns `{ adopted, conflicts }` counts that are logged. No manual wiring is needed beyond the module bootstrap order — `crdt-store.module` must register before `ava-channel-reactor.module`.
+
+## Ava Channel Reactor
+
+`AvaChannelReactorService` is the reactive orchestrator for multi-instance coordination. It subscribes to the CRDT-backed daily-sharded Ava Channel (`doc:ava-channel/YYYY-MM-DD`), detects new messages, and dispatches responses with three-layer loop prevention:
+
+1. **Classifier chain** — configurable `MessageClassifierRule[]` rules (regex + source filter) determine `MessageIntent`. Messages with intent `inform` or `system_alert` from other instances are typically suppressed.
+2. **Per-thread cooldown** — configurable `threadCooldownMs` prevents responding twice to the same thread within the window.
+3. **Busy gate** — a `processingMessage` flag serializes responses to prevent overlapping work on a single instance.
+
+Self-healing: on subscription failure, the reactor retries with exponential backoff (5 s base, 60 s cap).
+
+### Enabling the Reactor
+
+The reactor requires **both** conditions:
+
+1. `hivemind.enabled: true` in `proto.config.yaml`
+2. `featureFlags.reactorEnabled: true` in global settings (checked via `SettingsService.getGlobalSettings()`)
+
+The reactor is started by `ava-channel-reactor.module.ts`, which must run after `crdt-store.module` so `container._crdtStore` is available.
+
+### Bug Report Forwarding
+
+`CrdtSyncService.attachAvaChannelBugReporter(callback)` registers a callback that is invoked whenever a `bug:reported` event fires on the attached `EventBus`. The callback receives `(content: string, featureId?: string)` and posts the report to the Ava Channel as a system message. This wires the internal event bus to the CRDT-backed channel without additional module coupling.
+
+## Fleet Scheduler
+
+`FleetSchedulerService` handles fleet-level feature distribution and project phase scheduling. It runs inside `ava-channel-reactor.module` alongside the reactor.
+
+### Role
+
+- **Primary** (`role: primary` in `proto.config.yaml`): starts as the active scheduler immediately.
+- **Worker**: waits for failover. If the primary's `scheduler_heartbeat` is absent for >10 minutes, the longest-running worker (by uptime) takes over scheduling. Tiebreaker: lower `instanceId` (lexicographic) wins.
+
+### Schedule Cycle
+
+Every 5 minutes the active scheduler:
+
+1. Collects live `work_inventory` snapshots from all peers (TTL = 6 minutes).
+2. Computes an assignment: unassigned backlog features (dependency order) are distributed to instances with spare capacity (`maxConcurrency - activeCount`).
+3. Broadcasts a `schedule_assignment` message; each instance applies its own slice.
+
+### Conflict Resolution
+
+When two instances both claim the same feature, the detecting instance broadcasts a `schedule_conflict`. The instance with the **higher** `instanceId` (lexicographic) releases the claim and sets the feature back to `backlog`.
+
+### Project Phase Distribution
+
+When a new project is created, the active scheduler distributes its milestone phases across fleet instances:
+
+1. Phases are grouped into parallel waves using Kahn's BFS (topological sort on the dependency DAG).
+2. Parallel waves are distributed round-robin across available instances.
+3. A `schedule_assignment` is broadcast encoding phase identifiers as `projectSlug/milestoneSlug/phaseName` strings.
+
+### Project Fleet Status API
+
+`GET /api/projects/:slug/fleet-status` returns the aggregated phase progress for a project:
+
+```json
+{
+  "success": true,
+  "projectSlug": "my-project",
+  "phases": [
+    {
+      "milestoneSlug": "m1",
+      "phaseName": "implementation",
+      "instanceId": "prod-01",
+      "status": "done",
+      "timestamp": "2026-03-09T10:00:00.000Z"
+    }
+  ]
+}
 ```
 
-When a worker connects (or reconnects after a partition), the primary sends its full registry snapshot. The worker adopts any missing documents by calling `store.adoptRemoteRegistry()`, which resolves URL conflicts in favour of the primary's copy. This prevents split-brain where two instances believe they hold the authoritative version of the same logical document.
+Phases are broadcast via `project_progress` messages and aggregated in-memory on every instance. The last-writer-wins (by `timestamp`) for each `projectSlug:milestoneSlug:phaseName` key.
 
 ## Sync Health Metrics
 
@@ -386,9 +473,204 @@ These signals are visible in the Ava Channel for fleet-wide visibility and can b
 
 ## Sync Events
 
+### EventBus events (internal)
+
 | Event                      | Payload                               | Description                                                      |
 | -------------------------- | ------------------------------------- | ---------------------------------------------------------------- |
 | `sync:partition-recovered` | `{ instanceId, partitionDurationMs }` | Emitted after a network partition heals and changes are replayed |
 | `sync:peer-unreachable`    | `{ instanceId, lastSeen, peerTtlMs }` | Emitted when a peer exceeds its TTL                              |
+| `bug:reported`             | `{ content, featureId? }`             | Triggers Ava Channel bug report forwarding (if wired)            |
 
 These events are emitted on the internal `EventEmitter` passed to `crdtSyncService.attachEventBus()`.
+
+### Ava Channel coordination messages (wire protocol)
+
+Messages are posted as free-form strings with a `[type]` prefix so the reactor classifier can route them without a message-type enum.
+
+| Message prefix          | Type                 | Description                                                |
+| ----------------------- | -------------------- | ---------------------------------------------------------- |
+| `[work_inventory]`      | `WorkInventory`      | Per-instance backlog + active feature snapshot             |
+| `[schedule_assignment]` | `ScheduleAssignment` | Primary → all workers: feature or phase assignments        |
+| `[scheduler_heartbeat]` | `SchedulerHeartbeat` | Active scheduler liveness (every 60 s, failover detection) |
+| `[schedule_conflict]`   | `ScheduleConflict`   | Conflict broadcast: two instances claimed the same feature |
+| `[project_progress]`    | `ProjectProgress`    | Phase status update (`in_progress` / `done` / `failed`)    |
+| `[capacity_heartbeat]`  | `CapacityHeartbeat`  | Per-instance CPU/memory/agent capacity broadcast (60 s)    |
+| `[work_request]`        | `WorkRequest`        | Idle instance requests features from a peer with backlog   |
+| `[work_offer]`          | `WorkOffer`          | Peer offers features in response to a work_request         |
+| `[escalation_request]`  | `EscalationRequest`  | Feature blocked (failCount ≥ 2) — requesting new owner     |
+| `[escalation_offer]`    | `EscalationOffer`    | Peer offers to take ownership of escalated feature         |
+| `[escalation_accept]`   | `EscalationAccept`   | Originator accepts offer; delegates ownership              |
+| `[health_alert]`        | `HealthAlert`        | Memory/CPU threshold exceeded — peers pause work-stealing  |
+| `[dora_report]`         | `DoraReport`         | Hourly DORA metrics broadcast                              |
+| `[pattern_resolved]`    | `PatternResolved`    | System Improvement done — peers clear friction counters    |
+
+All message types are defined in `libs/types/src/ava-channel.ts`.
+
+## CRDTStore Module
+
+`crdt-store.module.ts` is the second initialization layer, starting after `CrdtSyncService`. It provides Automerge document persistence and injects the store into higher-level services.
+
+### Initialization Flow
+
+1. Reads `proto.config.yaml` for role and port configuration.
+2. Checks `hivemind.enabled` — returns `null` in single-instance mode.
+3. Instantiates `CRDTStore` with storage at `{projectRoot}/.automaker/crdt`.
+4. If `role: primary`, starts a WebSocket server on port `syncPort + 1` (default **:4445**) for Automerge binary sync.
+5. **Registry sync**: primary broadcasts its full document registry to workers on connect, preventing split-brain from independent document creation.
+6. Injects store into `AvaChannelService`, `CalendarService`, and `TodoService`.
+
+### Document Key Format
+
+CRDT documents follow the pattern `{domain}:{id}`:
+
+| Domain            | Example Key                  | Service           |
+| ----------------- | ---------------------------- | ----------------- |
+| `doc:ava-channel` | `doc:ava-channel/2026-03-09` | AvaChannelService |
+| `todos`           | `todos:workspace`            | TodoService       |
+| `calendar`        | varies per workspace         | CalendarService   |
+
+## CRDT-Injected Document Services
+
+Three services support dual-mode operation: CRDT-backed when a store is available, filesystem fallback otherwise.
+
+### AvaChannelService
+
+Daily-sharded append-only message store for multi-instance Ava coordination.
+
+- **Document key**: `doc:ava-channel/YYYY-MM-DD` (new shard each day)
+- **CRDT mode**: messages appended via `store.change<AvaChannelDocument>()`
+- **Fallback**: in-memory `Map<date, AvaChatMessage[]>`
+- **Archive**: shards older than 30 days are written to `{archiveDir}/{YYYY-MM-DD}.json` and removed from CRDT storage
+- **Injection**: `AvaChannelService.setCrdtStore(store)` called by crdt-store.module
+
+**Message fields** (`AvaChatMessage`):
+
+| Field               | Description                                                                   |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `instanceId`        | Originating instance                                                          |
+| `intent`            | `request \| inform \| response \| coordination \| escalation \| system_alert` |
+| `inReplyTo`         | Parent message id for threading                                               |
+| `conversationDepth` | Recursion guard (capped to prevent runaway loops)                             |
+| `expectsResponse`   | Whether a reply is expected                                                   |
+
+### CalendarService
+
+Manages calendar events with optional CRDT sync for cross-instance visibility.
+
+- **Dual-mode**: CRDT when store injected, else `{projectPath}/.automaker/calendar.json`
+- **Injection**: `CalendarService.getInstance().setCrdtStore(store)`
+- **Feature aggregation**: feature `dueDate` fields surfaced as read-only calendar entries (aggregated on demand, not cached)
+- **Job scheduling**: events with `type: 'job'` and `jobStatus: 'pending'` are queryable via `getDueJobs()`
+
+### TodoService
+
+Per-project todo lists with tiered write permissions.
+
+- **Dual-mode**: CRDT via `todos:workspace` document, else `{projectPath}/.automaker/todos/workspace.json`
+- **Injection**: `TodoService.getInstance().setCrdtStore(store)`
+- **Permission tiers**:
+  - `user` — user writes; Ava reads only
+  - `ava-instance` — owning instance + user write; other Ava instances cannot
+  - `shared` — any caller reads/writes
+- **Auto-provisioning**: `ensureAvaInstanceList()` creates a per-instance list on first Ava activation
+
+## AvaChannelReactorService
+
+Reactive orchestrator that subscribes to the Ava Channel and dispatches responses.
+
+### Message Classification Chain
+
+Each incoming message is evaluated by a classifier chain (rules evaluated in order, first match wins):
+
+1. **Self-loop guard** — drops messages from this instance
+2. **Thread cooldown** — per-thread 30s cooldown prevents rapid reply loops
+3. **Busy gate** — drops new requests while already processing
+4. **Intent classifiers** — routes `request`, `inform`, `coordination`, `escalation`, `system_alert` intents
+
+### Loop Prevention
+
+Three independent guards prevent runaway message loops:
+
+| Guard           | Mechanism                                              |
+| --------------- | ------------------------------------------------------ |
+| Self-loop       | `message.instanceId === this.instanceId` → skip        |
+| Thread cooldown | `replyTimestamps[threadId]` checked against 30s window |
+| Busy gate       | `processing` flag set during response generation       |
+| Depth cap       | `conversationDepth` incremented and capped per message |
+
+### Self-Healing
+
+On subscription failure the reactor implements exponential backoff:
+
+- Base delay: 5 seconds
+- Max delay: 60 seconds
+- Retries indefinitely until `stop()` is called
+
+### Fleet Integration
+
+The reactor delegates fleet-level operations to `FleetSchedulerService`:
+
+- Work-steal requests → `WorkRequest` / `WorkOffer` protocol
+- Escalation → `EscalationRequest` / `EscalationAccept` protocol
+- Project progress → `ProjectProgress` broadcast
+
+### Module Initialization (`ava-channel-reactor.module.ts`)
+
+The reactor only starts when all three conditions are met:
+
+1. `proto.config.yaml` exists
+2. `hivemind.enabled: true`
+3. `reactorEnabled` feature flag is active
+
+Depends on `crdt-store.module` completing first — the `CRDTStore` must already be in the container.
+
+## FleetSchedulerService
+
+Primary-elected scheduler that distributes features across fleet instances.
+
+### Scheduling Cycle (every 5 minutes)
+
+1. Each instance broadcasts `WorkInventory` (backlog count, active features, capacity snapshot).
+2. Primary collects inventories (6-minute TTL) and computes an optimal assignment.
+3. Primary broadcasts `ScheduleAssignment` to all peers.
+4. Each instance applies assignments addressed to its `instanceId`.
+
+### Failover
+
+If no `SchedulerHeartbeat` is received for 10 minutes, the longest-running worker self-elects as the new scheduler primary.
+
+### Conflict Resolution
+
+When two instances claim the same feature simultaneously:
+
+1. Both broadcast `ScheduleConflict`.
+2. The instance with the **lexicographically lower `instanceId`** retains the claim.
+3. The other instance releases the feature back to `backlog`.
+
+### Project Progress Tracking
+
+Each instance emits `ProjectProgress` on phase status changes. The scheduler aggregates these in `projectProgressByPhase` (keyed by `{milestoneSlug}:{instanceId}`) and exposes them via `getProjectProgress()`.
+
+### Fleet Status Endpoint
+
+```
+GET /api/projects/:slug/fleet-status
+```
+
+Returns aggregated phase statuses across all instances:
+
+```json
+{
+  "success": true,
+  "projectSlug": "my-project",
+  "phases": [
+    {
+      "milestoneSlug": "v1-auth",
+      "phaseName": "implementation",
+      "instanceId": "prod-01",
+      "status": "in_progress",
+      "timestamp": "2026-03-09T10:00:00.000Z"
+    }
+  ]
+}
+```

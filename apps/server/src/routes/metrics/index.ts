@@ -17,6 +17,7 @@ import {
   createFlowRoute,
   createFrictionRoute,
   createFailureBreakdownRoute,
+  createBlockedTimelineRoute,
 } from './dora.js';
 
 export function createMetricsRoutes(
@@ -55,6 +56,11 @@ export function createMetricsRoutes(
 
   if (featureLoader) {
     router.use('/', createFailureBreakdownRoute(featureLoader));
+  }
+
+  // Mount blocked timeline route at /api/metrics/blocked-timeline
+  if (featureLoader) {
+    router.use('/', createBlockedTimelineRoute(featureLoader));
   }
 
   /**

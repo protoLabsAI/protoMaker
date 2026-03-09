@@ -548,6 +548,126 @@ export function createFailureBreakdownRoute(featureLoader: FeatureLoader): Route
   return router;
 }
 
+// ---------------------------------------------------------------------------
+// Blocked Timeline routes
+// ---------------------------------------------------------------------------
+
+/** Reason category for a blocked period. */
+export type BlockedReasonCategory = 'dependency' | 'review' | 'unclear' | 'other';
+
+/** A single blocked period for a feature. */
+export interface BlockedPeriod {
+  startDate: string;
+  endDate: string;
+  durationMs: number;
+  reason: string;
+  category: BlockedReasonCategory;
+}
+
+/** Per-feature blocked timeline entry. */
+export interface BlockedTimelineEntry {
+  featureId: string;
+  title: string;
+  blockedPeriods: BlockedPeriod[];
+  totalBlockedMs: number;
+}
+
+/** Response shape for GET /api/metrics/blocked-timeline. */
+export interface BlockedTimelineResponse {
+  success: true;
+  features: BlockedTimelineEntry[];
+  featureCount: number;
+}
+
+/** Categorise a blocked reason string into one of four buckets. */
+function categoriseReason(reason: string | undefined): BlockedReasonCategory {
+  if (!reason) return 'unclear';
+  const lower = reason.toLowerCase();
+  if (lower.includes('depend') || lower.includes('wait') || lower.includes('block')) {
+    return 'dependency';
+  }
+  if (lower.includes('review') || lower.includes('approve') || lower.includes('pr')) {
+    return 'review';
+  }
+  if (lower.includes('unclear') || lower.includes('unknown') || lower.includes('pending')) {
+    return 'unclear';
+  }
+  return 'other';
+}
+
+/**
+ * createBlockedTimelineRoute — mounts GET /blocked-timeline.
+ * Expected mount: router.use('/', createBlockedTimelineRoute(featureLoader))
+ */
+export function createBlockedTimelineRoute(featureLoader: FeatureLoader): Router {
+  const router = Router();
+
+  router.get('/blocked-timeline', async (req: Request, res: Response) => {
+    try {
+      const projectPath = req.query.projectPath as string | undefined;
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
+        return;
+      }
+
+      const features = await featureLoader.getAll(projectPath);
+      const now = Date.now();
+      const result: BlockedTimelineEntry[] = [];
+
+      for (const feature of features) {
+        const history = feature.statusHistory ?? [];
+        const blockedPeriods: BlockedPeriod[] = [];
+
+        for (let i = 0; i < history.length; i++) {
+          const entry = history[i];
+          if (entry.to !== 'blocked') continue;
+
+          const startMs = new Date(entry.timestamp).getTime();
+          const nextEntry = history[i + 1];
+          const endMs = nextEntry ? new Date(nextEntry.timestamp).getTime() : now;
+          const durationMs = Math.max(0, endMs - startMs);
+
+          const reason = (entry as { to: string; timestamp: string; reason?: string }).reason ?? '';
+          const category = categoriseReason(reason);
+
+          blockedPeriods.push({
+            startDate: new Date(startMs).toISOString(),
+            endDate: new Date(endMs).toISOString(),
+            durationMs,
+            reason: reason || 'No reason provided',
+            category,
+          });
+        }
+
+        if (blockedPeriods.length === 0) continue;
+
+        const totalBlockedMs = blockedPeriods.reduce((sum, p) => sum + p.durationMs, 0);
+
+        result.push({
+          featureId: feature.id,
+          title: feature.title ?? feature.id,
+          blockedPeriods,
+          totalBlockedMs,
+        });
+      }
+
+      result.sort((a, b) => b.totalBlockedMs - a.totalBlockedMs);
+
+      const response: BlockedTimelineResponse = {
+        success: true,
+        features: result,
+        featureCount: result.length,
+      };
+
+      res.json(response);
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  return router;
+}
+
 export function createDoraMetricsRoute(deps: DoraRouteDependencies): Router {
   const router = Router();
 
