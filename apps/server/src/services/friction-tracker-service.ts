@@ -66,7 +66,10 @@ export class FrictionTrackerService {
    * and a friction_report is broadcast to the backchannel.
    */
   async recordFailure(pattern: string): Promise<void> {
-    if (!pattern) return;
+    // 'unknown' is a catch-all fallback category, not a meaningful recurring pattern.
+    // Skipping it prevents unrelated unclassified failures from accumulating into a
+    // spurious System Improvement ticket.
+    if (!pattern || pattern === 'unknown') return;
 
     const current = (this.counters.get(pattern) ?? 0) + 1;
     this.counters.set(pattern, current);

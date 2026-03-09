@@ -286,6 +286,33 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     confidence: 0.8,
   },
 
+  // Git hook / pre-commit / lint failures
+  {
+    patterns: [
+      /git.*hook.*fail/i,
+      /pre-commit.*fail/i,
+      /commit.*hook.*fail/i,
+      /lint-staged.*fail/i,
+      /prettier.*fail/i,
+      /eslint.*fail/i,
+      /hook.*exit.*code/i,
+      /husky.*fail/i,
+      /commit.*attempt/i,
+    ],
+    category: 'tool_error',
+    isRetryable: true,
+    suggestedDelay: 2000,
+    maxRetries: 2,
+    createRecoveryStrategy: () => ({
+      type: 'retry_with_context',
+      context: 'Git hook or linting failure - review hook output and fix formatting/lint errors',
+      delay: 2000,
+    }),
+    contextToPreserve: ['hookOutput', 'lastChanges', 'affectedFiles'],
+    explanation: 'Git hook or pre-commit check failed - fix linting/formatting issues',
+    confidence: 0.9,
+  },
+
   // Network/transient errors (catch-all for network issues)
   {
     patterns: [

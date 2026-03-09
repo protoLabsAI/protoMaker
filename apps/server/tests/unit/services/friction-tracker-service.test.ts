@@ -73,6 +73,14 @@ describe('FrictionTrackerService', () => {
       expect(service.getCount('')).toBe(0);
       expect(deps.featureLoader.create).not.toHaveBeenCalled();
     });
+
+    it('ignores "unknown" pattern — catch-all should not trigger System Improvement', async () => {
+      for (let i = 0; i < 5; i++) {
+        await service.recordFailure('unknown');
+      }
+      expect(service.getCount('unknown')).toBe(0);
+      expect(deps.featureLoader.create).not.toHaveBeenCalled();
+    });
   });
 
   // -------------------------------------------------------------------------
