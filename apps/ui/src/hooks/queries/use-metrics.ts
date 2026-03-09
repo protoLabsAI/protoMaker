@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { TimeSeriesMetric, TimeGroupBy } from '@protolabsai/types';
+import type { FrictionResponse, FailureBreakdownResponse } from '@/lib/http-api-client';
 
 const DORA_STALE_TIME = 60 * 1000; // 1 minute
 const METRICS_STALE_TIME = 30 * 1000; // 30 seconds
@@ -278,6 +279,44 @@ export function useFlowMetrics(projectPath: string | undefined, days?: number, w
     enabled: !!projectPath,
     staleTime: FLOW_METRICS_STALE_TIME,
     refetchInterval: FLOW_METRICS_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+const OPS_INTELLIGENCE_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch friction tracker patterns (operational intelligence).
+ * Returns all active patterns sorted descending by occurrence count.
+ */
+export function useFrictionPatterns() {
+  return useQuery({
+    queryKey: queryKeys.metrics.friction(),
+    queryFn: async (): Promise<FrictionResponse> => {
+      const api = getHttpApiClient();
+      return api.metrics.friction();
+    },
+    staleTime: OPS_INTELLIGENCE_STALE_TIME,
+    refetchInterval: OPS_INTELLIGENCE_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Fetch failure classification breakdown (operational intelligence).
+ * Aggregates failureClassification.category across all features in the project.
+ */
+export function useFailureBreakdown(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.metrics.failureBreakdown(projectPath ?? ''),
+    queryFn: async (): Promise<FailureBreakdownResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.failureBreakdown(projectPath);
+    },
+    enabled: !!projectPath,
+    staleTime: OPS_INTELLIGENCE_STALE_TIME,
+    refetchInterval: OPS_INTELLIGENCE_STALE_TIME,
     refetchOnWindowFocus: false,
   });
 }

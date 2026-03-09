@@ -8,15 +8,23 @@ import type { MetricsService } from '../../services/metrics-service.js';
 import type { LedgerService } from '../../services/ledger-service.js';
 import type { DoraMetricsService } from '../../services/dora-metrics-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FrictionTrackerService } from '../../services/friction-tracker-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createLedgerRoutes } from './ledger.js';
-import { createDoraHistoryRoute, createStageDurationsRoute, createFlowRoute } from './dora.js';
+import {
+  createDoraHistoryRoute,
+  createStageDurationsRoute,
+  createFlowRoute,
+  createFrictionRoute,
+  createFailureBreakdownRoute,
+} from './dora.js';
 
 export function createMetricsRoutes(
   metricsService: MetricsService,
   ledgerService?: LedgerService,
   doraMetricsService?: DoraMetricsService,
-  featureLoader?: FeatureLoader
+  featureLoader?: FeatureLoader,
+  frictionTrackerService?: FrictionTrackerService
 ): Router {
   const router = Router();
 
@@ -38,6 +46,15 @@ export function createMetricsRoutes(
   // Mount flow (CFD) route at /api/metrics/flow
   if (featureLoader) {
     router.use('/', createFlowRoute(featureLoader));
+  }
+
+  // Mount operational intelligence routes
+  if (frictionTrackerService) {
+    router.use('/', createFrictionRoute(frictionTrackerService));
+  }
+
+  if (featureLoader) {
+    router.use('/', createFailureBreakdownRoute(featureLoader));
   }
 
   /**

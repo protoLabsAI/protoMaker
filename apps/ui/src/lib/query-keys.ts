@@ -312,6 +312,11 @@ export const queryKeys = {
       ['metrics', 'ledger', 'cycleTimeDistribution', projectPath, startDate, endDate] as const,
     /** Value stream flow data (CFD) */
     flow: (projectPath: string, days?: number) => ['metrics', 'flow', projectPath, days] as const,
+    /** Friction tracker patterns (operational intelligence) */
+    friction: () => ['metrics', 'friction'] as const,
+    /** Failure classification breakdown (operational intelligence) */
+    failureBreakdown: (projectPath: string) =>
+      ['metrics', 'failure-breakdown', projectPath] as const,
   },
 
   // ============================================

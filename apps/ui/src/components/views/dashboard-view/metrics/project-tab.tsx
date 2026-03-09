@@ -26,6 +26,7 @@ import { ModelPieChart } from './model-pie';
 import { CycleTimeChart } from './cycle-time-chart';
 import { SuccessChart } from './success-chart';
 import { FlowCharts } from './flow-charts';
+import { FrictionPatternList, FailureDonutChart } from './ops-intelligence';
 
 interface ProjectMetricsTabProps {
   projectPath: string;
@@ -129,6 +130,17 @@ export function ProjectMetricsTab({
 
       {/* Row 7: Value Stream (CFD + WIP trend) */}
       <FlowCharts projectPath={projectPath} />
+
+      {/* Operational Intelligence */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+          Operational Intelligence
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <FrictionPatternList projectPath={projectPath} />
+          <FailureDonutChart projectPath={projectPath} />
+        </div>
+      </div>
     </div>
   );
 }

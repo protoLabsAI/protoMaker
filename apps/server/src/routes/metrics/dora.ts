@@ -17,6 +17,7 @@ import type { DoraMetricsService } from '../../services/dora-metrics-service.js'
 import type { CRDTStore } from '@protolabsai/crdt';
 import type { MetricsDocument } from '@protolabsai/crdt';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FrictionTrackerService } from '../../services/friction-tracker-service.js';
 import type { FeatureStatus } from '@protolabsai/types';
 
 export interface DoraRouteDependencies {
@@ -416,6 +417,129 @@ export function createDoraHistoryRoute(doraMetricsService: DoraMetricsService): 
       }
 
       res.json({ success: true, buckets, window });
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  return router;
+}
+
+// ---------------------------------------------------------------------------
+// Operational Intelligence routes
+// ---------------------------------------------------------------------------
+
+/** Single friction pattern entry returned by GET /api/metrics/friction. */
+export interface FrictionPatternEntry {
+  pattern: string;
+  count: number;
+  lastSeen: string; // ISO 8601
+}
+
+/** Response shape for GET /api/metrics/friction. */
+export interface FrictionResponse {
+  success: true;
+  patterns: FrictionPatternEntry[];
+  total: number;
+}
+
+/**
+ * createFrictionRoute — mounts GET /friction.
+ * Returns the top recurring failure patterns tracked by FrictionTrackerService,
+ * sorted descending by occurrence count.
+ */
+export function createFrictionRoute(frictionTrackerService: FrictionTrackerService): Router {
+  const router = Router();
+
+  /**
+   * GET /friction
+   *
+   * Query params: none (data is in-memory, project-agnostic per instance)
+   *
+   * Returns:
+   *   - patterns: sorted list of { pattern, count, lastSeen }
+   *   - total: number of active patterns
+   */
+  router.get('/friction', (_req: Request, res: Response) => {
+    try {
+      const raw = frictionTrackerService.getPatterns();
+      const patterns: FrictionPatternEntry[] = raw.map((p) => ({
+        pattern: p.pattern,
+        count: p.count,
+        lastSeen: new Date(p.lastSeenMs).toISOString(),
+      }));
+      const response: FrictionResponse = { success: true, patterns, total: patterns.length };
+      res.json(response);
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  return router;
+}
+
+/** Single failure category entry returned by GET /api/metrics/failure-breakdown. */
+export interface FailureCategoryEntry {
+  category: string;
+  count: number;
+}
+
+/** Response shape for GET /api/metrics/failure-breakdown. */
+export interface FailureBreakdownResponse {
+  success: true;
+  categories: FailureCategoryEntry[];
+  total: number;
+}
+
+/**
+ * createFailureBreakdownRoute — mounts GET /failure-breakdown.
+ * Aggregates failureClassification.category across all features in the project.
+ */
+export function createFailureBreakdownRoute(featureLoader: FeatureLoader): Router {
+  const router = Router();
+
+  /**
+   * GET /failure-breakdown
+   *
+   * Query params:
+   *   - projectPath (required): path to the project
+   *
+   * Returns:
+   *   - categories: list of { category, count } sorted descending by count
+   *   - total: total number of classified features
+   */
+  router.get('/failure-breakdown', async (req: Request, res: Response) => {
+    try {
+      const projectPath = req.query.projectPath as string | undefined;
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
+        return;
+      }
+
+      const features = await featureLoader.getAll(projectPath);
+
+      // Aggregate failureClassification.category across all features
+      const categoryCounts = new Map<string, number>();
+      let total = 0;
+
+      for (const feature of features) {
+        const classification = feature.failureClassification as
+          | { category?: string }
+          | null
+          | undefined;
+        if (classification?.category) {
+          const cat = classification.category;
+          categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+          total++;
+        }
+      }
+
+      const categories: FailureCategoryEntry[] = Array.from(categoryCounts.entries())
+        .map(([category, count]) => ({ category, count }))
+        .sort((a, b) => b.count - a.count);
+
+      const response: FailureBreakdownResponse = { success: true, categories, total };
+      res.json(response);
     } catch (err) {
       res.status(500).json({ success: false, error: (err as Error).message });
     }

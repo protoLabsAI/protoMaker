@@ -159,6 +159,23 @@ export class FrictionTrackerService {
   }
 
   /**
+   * Return all active (non-expired) friction patterns with their occurrence counts
+   * and the timestamp when the current window started (used as "last-seen" proxy).
+   */
+  getPatterns(): Array<{ pattern: string; count: number; lastSeenMs: number }> {
+    const now = Date.now();
+    const results: Array<{ pattern: string; count: number; lastSeenMs: number }> = [];
+    for (const [pattern, entry] of this.counters) {
+      if (now - entry.windowStart <= COUNTER_WINDOW_MS) {
+        results.push({ pattern, count: entry.count, lastSeenMs: entry.windowStart });
+      }
+    }
+    // Sort descending by count
+    results.sort((a, b) => b.count - a.count);
+    return results;
+  }
+
+  /**
    * Remove a resolved pattern from both the counter and dedup maps.
    * Called when a System Improvement feature for this pattern moves to done,
    * either locally or via a pattern_resolved broadcast from a peer.
