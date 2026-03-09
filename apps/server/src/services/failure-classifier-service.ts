@@ -161,7 +161,8 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     maxRetries: 2,
     createRecoveryStrategy: () => ({
       type: 'retry_with_context',
-      context: 'Build failed - review compiler output and fix errors',
+      context:
+        'Build failed - run `npm run build:packages` first (shared types), then `npm run build:server`. Read the FULL compiler output and fix ALL errors before retrying. Use `npm run typecheck` to find all type errors at once.',
       delay: 1000,
     }),
     contextToPreserve: ['buildOutput', 'errorFiles', 'lastChanges'],
@@ -187,7 +188,8 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     maxRetries: 2,
     createRecoveryStrategy: () => ({
       type: 'retry_with_context',
-      context: 'Type error detected - review and fix type definitions',
+      context:
+        'TypeScript type error - run `npm run typecheck` to see ALL errors at once. Fix each one: update type definitions, correct interface shapes, and update all consumers. Never use `as any` or `// @ts-ignore`.',
       delay: 1000,
     }),
     contextToPreserve: ['typeErrors', 'affectedFiles'],
@@ -305,7 +307,8 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     maxRetries: 2,
     createRecoveryStrategy: () => ({
       type: 'retry_with_context',
-      context: 'Git hook or linting failure - review hook output and fix formatting/lint errors',
+      context:
+        'Git hook / lint failure - run `npm run format` to auto-fix Prettier, then `npm run lint` for ESLint errors. Stage the formatted files and retry the commit. If hooks are missing, run `npm install` in the worktree first.',
       delay: 2000,
     }),
     contextToPreserve: ['hookOutput', 'lastChanges', 'affectedFiles'],

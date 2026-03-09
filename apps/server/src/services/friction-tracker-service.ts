@@ -3,9 +3,14 @@
  *
  * Maintains an in-memory map of pattern → occurrenceCount. Each time a feature
  * hits blocked status, the FailureClassifierService classification is logged here.
- * When a pattern reaches 3 occurrences, the service files a System Improvement
- * feature via FeatureLoader.create() and broadcasts a friction_report message to
- * #backchannel (AvaChannel) so peer instances can de-duplicate.
+ * When a pattern reaches 3 occurrences **within a rolling time window**, the
+ * service files a System Improvement feature via FeatureLoader.create() and
+ * broadcasts a friction_report message to #backchannel (AvaChannel) so peer
+ * instances can de-duplicate.
+ *
+ * Sliding-window counters: failures older than COUNTER_WINDOW_MS reset the
+ * counter for that pattern, preventing unrelated failures spread across weeks
+ * from triggering spurious System Improvement tickets.
  *
  * Peer de-duplication: skips filing if a peer already filed the same pattern
  * in the last 24 hours.
@@ -23,6 +28,27 @@ const OCCURRENCE_THRESHOLD = 3;
 
 /** How long (ms) to consider a peer-filed report as "recent" for de-duplication */
 const PEER_DEDUP_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Sliding window for failure counters (7 days).
+ *
+ * If the first occurrence of a pattern is older than this window, the counter
+ * resets before counting the new failure. This prevents unrelated failures
+ * spread across weeks/months from accumulating into a spurious self-improvement
+ * ticket — only genuinely recurring failures within a short period trigger filing.
+ */
+const COUNTER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// ---------------------------------------------------------------------------
+// Internal types
+// ---------------------------------------------------------------------------
+
+/** Tracks the occurrence count and when the current window started */
+interface CounterEntry {
+  count: number;
+  /** Timestamp of the first failure in the current window */
+  windowStart: number;
+}
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -44,8 +70,8 @@ export interface FrictionTrackerDependencies {
 export class FrictionTrackerService {
   private readonly deps: FrictionTrackerDependencies;
 
-  /** Pattern → occurrence count */
-  private readonly counters = new Map<string, number>();
+  /** Pattern → sliding-window counter entry */
+  private readonly counters = new Map<string, CounterEntry>();
 
   /** Pattern → timestamp of the most-recent filing (local or peer) */
   private readonly recentFilings = new Map<string, number>();
@@ -61,9 +87,15 @@ export class FrictionTrackerService {
   /**
    * Record a failure occurrence for the given pattern.
    *
-   * If the counter reaches OCCURRENCE_THRESHOLD and no peer has filed the same
-   * pattern within the last 24 hours, a System Improvement feature is created
-   * and a friction_report is broadcast to the backchannel.
+   * If the counter reaches OCCURRENCE_THRESHOLD **within the sliding window**
+   * and no peer has filed the same pattern within the last 24 hours, a System
+   * Improvement feature is created and a friction_report is broadcast to the
+   * backchannel.
+   *
+   * Sliding-window semantics: if the first occurrence of this pattern is older
+   * than COUNTER_WINDOW_MS, the counter resets to 1 (starting a fresh window).
+   * This prevents failures spread across weeks from accumulating into a spurious
+   * self-improvement ticket.
    */
   async recordFailure(pattern: string): Promise<void> {
     // 'unknown' is a catch-all fallback category, not a meaningful recurring pattern.
@@ -71,12 +103,24 @@ export class FrictionTrackerService {
     // spurious System Improvement ticket.
     if (!pattern || pattern === 'unknown') return;
 
-    const current = (this.counters.get(pattern) ?? 0) + 1;
-    this.counters.set(pattern, current);
+    const now = Date.now();
+    const existing = this.counters.get(pattern);
 
-    logger.debug(`Friction counter updated: pattern="${pattern}" count=${current}`);
+    let entry: CounterEntry;
+    if (!existing || now - existing.windowStart > COUNTER_WINDOW_MS) {
+      // No prior entry, or the window has expired — start a fresh window
+      entry = { count: 1, windowStart: now };
+    } else {
+      entry = { count: existing.count + 1, windowStart: existing.windowStart };
+    }
 
-    if (current >= OCCURRENCE_THRESHOLD) {
+    this.counters.set(pattern, entry);
+
+    logger.debug(
+      `Friction counter updated: pattern="${pattern}" count=${entry.count} windowStart=${new Date(entry.windowStart).toISOString()}`
+    );
+
+    if (entry.count >= OCCURRENCE_THRESHOLD) {
       await this.maybeFileImprovement(pattern);
     }
   }
@@ -104,9 +148,14 @@ export class FrictionTrackerService {
 
   /**
    * Return the current occurrence count for a pattern (for testing / observability).
+   * Returns 0 if the pattern has no entry or its window has expired.
    */
   getCount(pattern: string): number {
-    return this.counters.get(pattern) ?? 0;
+    const entry = this.counters.get(pattern);
+    if (!entry) return 0;
+    // If the window has expired, the counter would reset on the next recordFailure call
+    if (Date.now() - entry.windowStart > COUNTER_WINDOW_MS) return 0;
+    return entry.count;
   }
 
   /**
@@ -143,11 +192,33 @@ export class FrictionTrackerService {
       return;
     }
 
+    // Durable dedup: check the feature store for an existing open System Improvement
+    // feature with the same title. In-memory dedup resets on server restart (a known
+    // P1 issue), which previously caused the same pattern to be re-filed after each
+    // crash. Using the feature store as the source of truth makes dedup survive restarts.
+    const title = `System Improvement: recurring ${pattern} failures`;
+    try {
+      const existing = await this.deps.featureLoader.findByTitle(this.deps.projectPath, title);
+      if (existing && existing.status !== 'done' && existing.status !== 'interrupted') {
+        // Re-populate local dedup guard so subsequent recordFailure calls also skip
+        this.recentFilings.set(pattern, Date.now());
+        logger.info(
+          `Skipping System Improvement filing for pattern="${pattern}" — open feature ${existing.id} already exists (status=${existing.status})`
+        );
+        return;
+      }
+    } catch (err) {
+      // If the feature store check fails, proceed with filing — better a duplicate
+      // than a missed self-improvement ticket.
+      logger.warn(
+        `Failed to check for existing feature for pattern="${pattern}", proceeding with filing: ${err}`
+      );
+    }
+
     // Mark as locally filed immediately to prevent concurrent duplicate filings
     this.recentFilings.set(pattern, Date.now());
 
     try {
-      const title = `System Improvement: recurring ${pattern} failures`;
       const description =
         `This feature was automatically filed by the self-improvement loop.\n\n` +
         `Pattern "${pattern}" has failed ${OCCURRENCE_THRESHOLD} or more times, ` +
