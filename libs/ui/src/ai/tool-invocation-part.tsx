@@ -33,6 +33,8 @@ import { BriefingCard } from './tool-results/briefing-card.js';
 import { PromotionCandidatesCard } from './tool-results/promotion-candidates-card.js';
 import { PRStatusCard } from './tool-results/pr-status-card.js';
 import { RunningAgentsCard } from './tool-results/running-agents-card.js';
+import { ProjectListCard } from './tool-results/project-list-card.js';
+import { ProjectDetailCard } from './tool-results/project-detail-card.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
@@ -82,6 +84,10 @@ toolResultRegistry.register('get_pr_feedback', PRStatusCard);
 
 // Register custom renderers for the agentControl tool group (running agents list)
 toolResultRegistry.register('list_running_agents', RunningAgentsCard);
+
+// Register custom renderers for the projects tool group
+toolResultRegistry.register('list_projects', ProjectListCard);
+toolResultRegistry.register('get_project', ProjectDetailCard);
 
 type ToolState =
   | 'input-streaming'
