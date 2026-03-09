@@ -17,24 +17,24 @@ In ava-channel-tab.tsx, replace or augment the binary protocol toggle with categ
 
 ### Files to Create/Modify
 
-- [ ] `apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx`
+- [x] `apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx`
 
 ### Verification
 
-- [ ] Five category chips appear when showProtocol is enabled: Heartbeat, Work Steal, Escalation, Metrics, Scheduler
-- [ ] Toggling a chip hides/shows messages of that category
-- [ ] 'Show All Protocol' enables all chips at once
-- [ ] Text search still works alongside category filtering
-- [ ] Human messages (non-protocol) are never hidden by category filters
-- [ ] Build passes with no TypeScript errors
+- [x] Five category chips appear when showProtocol is enabled: Heartbeat, Work Steal, Escalation, Metrics, Scheduler
+- [x] Toggling a chip hides/shows messages of that category
+- [x] 'Show All Protocol' enables all chips at once
+- [x] Text search still works alongside category filtering
+- [x] Human messages (non-protocol) are never hidden by category filters
+- [x] Build passes with no TypeScript errors
 
 ---
 
 ## Deliverables
 
-- [ ] Code implemented and working
-- [ ] Tests passing
-- [ ] Documentation updated
+- [x] Code implemented and working
+- [x] Tests passing
+- [x] Documentation updated
 
 ---
 
@@ -42,10 +42,10 @@ In ava-channel-tab.tsx, replace or augment the binary protocol toggle with categ
 
 Before marking Phase 1 complete:
 
-- [ ] All tasks complete
-- [ ] Tests passing
-- [ ] Code reviewed
-- [ ] PR merged to main
-- [ ] Team notified
+- [x] All tasks complete
+- [x] Tests passing
+- [x] Code reviewed
+- [x] PR merged to main — [PR#2045](https://github.com/protoLabsAI/protoMaker/pull/2045)
+- [x] Team notified
 
 **Next**: Phase 2

@@ -1,6 +1,6 @@
 # M3: Protocol Filtering UX
 
-**Status**: 🔴 Not started
+**Status**: ✅ Completed
 **Duration**: 1-2 weeks (estimated)
 **Dependencies**: None
 
@@ -24,10 +24,10 @@ Improve the Ava Channel (#backchannel) filter bar with category-based filter chi
 
 M3 is **complete** when:
 
-- [ ] All phases complete
-- [ ] Tests passing
-- [ ] Documentation updated
-- [ ] Team reviewed and approved
+- [x] All phases complete
+- [x] Tests passing
+- [x] Documentation updated
+- [x] Team reviewed and approved
 
 ---
 
