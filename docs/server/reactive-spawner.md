@@ -120,11 +120,11 @@ Three built-in Ava cron tasks call `spawnForCron()` via `registerAvaCronTasks()`
 **File:** `apps/server/src/services/ava-cron-tasks.ts`
 **Registered in:** `apps/server/src/server/services.ts` after `ReactiveSpawnerService` is initialized.
 
-| Task ID                    | Schedule        | Purpose                                                                            |
-| -------------------------- | --------------- | ---------------------------------------------------------------------------------- |
-| `ava-daily-board-health`   | `0 9 * * *`     | Check for stale features (>24h no activity), blocked agents, open PRs with failing CI — file tickets for anything needing attention |
-| `ava-pr-triage`            | `0 */4 * * *`   | Scan open PRs for CodeRabbit threads, CI failures, merge conflicts — act or file tickets |
-| `ava-staging-ping`         | `*/30 * * * *`  | Post a capacity_heartbeat to the Ava Channel; alert if staging has been quiet >2h |
+| Task ID                  | Schedule       | Purpose                                                                                                                             |
+| ------------------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `ava-daily-board-health` | `0 9 * * *`    | Check for stale features (>24h no activity), blocked agents, open PRs with failing CI — file tickets for anything needing attention |
+| `ava-pr-triage`          | `0 */4 * * *`  | Scan open PRs for CodeRabbit threads, CI failures, merge conflicts — act or file tickets                                            |
+| `ava-staging-ping`       | `*/30 * * * *` | Post a capacity_heartbeat to the Ava Channel; alert if staging has been quiet >2h                                                   |
 
 ### Calendar Reminder Integration
 
