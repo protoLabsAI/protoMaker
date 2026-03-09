@@ -39,17 +39,17 @@ CRDT shard change (new message arrives)
 
 Pure functions evaluated highest-to-lowest priority. The first non-null result wins.
 
-| Priority | Rule                | Blocks When                                                |
-| -------- | ------------------- | ---------------------------------------------------------- |
-| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                |
-| 90       | TerminalMessageRule | `expectsResponse === false`                                |
-| 80       | SelfMessageRule     | `instanceId === localInstanceId`                           |
-| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                      |
+| Priority | Rule                | Blocks When                                               |
+| -------- | ------------------- | --------------------------------------------------------- |
+| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`               |
+| 90       | TerminalMessageRule | `expectsResponse === false`                               |
+| 80       | SelfMessageRule     | `instanceId === localInstanceId`                          |
+| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                     |
 | 70       | SystemSourceRule    | `source: 'system'` (unless `[BugReport]`/`[SystemAlert]`) |
 | 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` → respond   |
 | 40       | CoordinationRule    | `intent: 'coordination'` → respond if capacity available  |
 | 30       | EscalationRule      | `intent: 'escalation'` → respond if depth < 3             |
-| 0        | DefaultRule         | Everything else → informational, no response               |
+| 0        | DefaultRule         | Everything else → informational, no response              |
 
 ## Loop Prevention (Three Layers)
 
@@ -72,8 +72,8 @@ Every 60 seconds (default), the reactor broadcasts a `capacity_heartbeat` messag
   runningAgents: number;
   maxAgents: number;
   backlogSize: number;
-  memoryUsagePct: number;   // 0–100
-  cpuUsagePct: number;      // 0–100
+  memoryUsagePct: number; // 0–100
+  cpuUsagePct: number; // 0–100
 }
 ```
 
@@ -95,9 +95,9 @@ The reactor sends its own `work_request` when local backlog is low and peers hav
 
 **Limits:**
 
-| Constant              | Default | Description                               |
-| --------------------- | ------- | ----------------------------------------- |
-| `MAX_STEAL_PER_CYCLE` | `2`     | Maximum features acquired per work-steal  |
+| Constant              | Default | Description                              |
+| --------------------- | ------- | ---------------------------------------- |
+| `MAX_STEAL_PER_CYCLE` | `2`     | Maximum features acquired per work-steal |
 
 ### Escalation Protocol
 
@@ -129,10 +129,10 @@ When a peer's heartbeat shows degraded resources, the reactor emits a `health_al
 
 **Thresholds:**
 
-| Resource  | Warning | Critical |
-| --------- | ------- | -------- |
-| Memory    | > 85%   | > 95%    |
-| CPU       | > 90%   | > 98%    |
+| Resource | Warning | Critical |
+| -------- | ------- | -------- |
+| Memory   | > 85%   | > 95%    |
+| CPU      | > 90%   | > 98%    |
 
 While a peer is marked degraded, work-stealing from that peer is paused. Degraded status clears automatically when the next heartbeat shows recovery.
 
@@ -144,11 +144,11 @@ Every hour, if a `DoraMetricsService` is wired in, the reactor broadcasts:
 {
   type: 'dora_report';
   instanceId: string;
-  deploymentFrequency: number;   // deployments per day
+  deploymentFrequency: number; // deployments per day
   leadTimeHours: number;
-  changeFailureRate: number;     // 0–1
-  windowDays: number;            // reporting window
-  timestamp: string;             // ISO-8601
+  changeFailureRate: number; // 0–1
+  windowDays: number; // reporting window
+  timestamp: string; // ISO-8601
 }
 ```
 
@@ -170,14 +170,14 @@ The `getStatus()` method returns current operational metrics:
 
 ```typescript
 interface ReactorStatus {
-  active: boolean;                  // subscription is live
-  enabled: boolean;                 // from settings
-  peersCount: number;               // peers with recent heartbeat
-  responsesSent: number;            // responses dispatched (lifetime)
-  errorCount: number;               // dispatch failures (lifetime)
-  cooldownThreads: number;          // threads currently in cooldown
-  degradedPeerCount: number;        // peers above health thresholds
-  pendingEscalationCount: number;   // escalations awaiting offer
+  active: boolean; // subscription is live
+  enabled: boolean; // from settings
+  peersCount: number; // peers with recent heartbeat
+  responsesSent: number; // responses dispatched (lifetime)
+  errorCount: number; // dispatch failures (lifetime)
+  cooldownThreads: number; // threads currently in cooldown
+  degradedPeerCount: number; // peers above health thresholds
+  pendingEscalationCount: number; // escalations awaiting offer
 }
 ```
 
@@ -192,30 +192,30 @@ interface ReactorStatus {
 
 Configured in `.automaker/settings.json` under `workflowSettings.avaChannelReactor`:
 
-| Setting                   | Default  | Description                                              |
-| ------------------------- | -------- | -------------------------------------------------------- |
-| `enabled`                 | `true`   | Enable/disable the reactor                               |
-| `maxConversationDepth`    | `1`      | Max reply depth before loop breaker activates            |
-| `cooldownMs`              | `30000`  | Per-thread cooldown after responding (ms)                |
-| `staleMessageThresholdMs` | `300000` | Ignore messages older than this (ms)                     |
-| `enableFrictionTracking`  | `true`   | Track recurring friction patterns                        |
-| `heartbeatIntervalMs`     | `60000`  | Interval between capacity heartbeat broadcasts (ms)      |
-| `doraReportIntervalMs`    | `3600000`| Interval between DORA metric broadcasts (ms)             |
-| `peerTtlMs`               | `120000` | Time before absent peer is evicted from capacity map (ms)|
+| Setting                   | Default   | Description                                               |
+| ------------------------- | --------- | --------------------------------------------------------- |
+| `enabled`                 | `true`    | Enable/disable the reactor                                |
+| `maxConversationDepth`    | `1`       | Max reply depth before loop breaker activates             |
+| `cooldownMs`              | `30000`   | Per-thread cooldown after responding (ms)                 |
+| `staleMessageThresholdMs` | `300000`  | Ignore messages older than this (ms)                      |
+| `enableFrictionTracking`  | `true`    | Track recurring friction patterns                         |
+| `heartbeatIntervalMs`     | `60000`   | Interval between capacity heartbeat broadcasts (ms)       |
+| `doraReportIntervalMs`    | `3600000` | Interval between DORA metric broadcasts (ms)              |
+| `peerTtlMs`               | `120000`  | Time before absent peer is evicted from capacity map (ms) |
 
 ## Key Files
 
-| File                                                                | Role                                                            |
-| ------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `apps/server/src/services/ava-channel-reactor-service.ts`           | Core reactor — subscription, classification, fleet coordination |
-| `apps/server/src/services/ava-channel-reactor.module.ts`            | Wiring — injects dependencies and starts the reactor on boot   |
-| `apps/server/src/services/ava-channel-classifiers.ts`               | Classifier chain — 9 pure-function rules for message routing    |
-| `apps/server/src/services/ava-channel-handlers.ts`                  | Response handlers — HelpRequest, Coordination, SystemAlert      |
-| `apps/server/src/services/ava-channel-friction-tracker.ts`          | Channel-level friction tracker (distinct from service-level)    |
-| `apps/server/src/services/ava-channel-service.ts`                   | Storage engine — provides message I/O to the reactor            |
-| `apps/server/src/services/fleet-scheduler-service.ts`               | Fleet scheduler — work assignment and reassignment              |
-| `apps/server/src/services/friction-tracker-service.ts`              | Service-level friction tracker — files System Improvements      |
-| `apps/server/src/services/dora-metrics-service.ts`                  | DORA computation — supplies metrics for hourly DORA reports     |
+| File                                                       | Role                                                            |
+| ---------------------------------------------------------- | --------------------------------------------------------------- |
+| `apps/server/src/services/ava-channel-reactor-service.ts`  | Core reactor — subscription, classification, fleet coordination |
+| `apps/server/src/services/ava-channel-reactor.module.ts`   | Wiring — injects dependencies and starts the reactor on boot    |
+| `apps/server/src/services/ava-channel-classifiers.ts`      | Classifier chain — 9 pure-function rules for message routing    |
+| `apps/server/src/services/ava-channel-handlers.ts`         | Response handlers — HelpRequest, Coordination, SystemAlert      |
+| `apps/server/src/services/ava-channel-friction-tracker.ts` | Channel-level friction tracker (distinct from service-level)    |
+| `apps/server/src/services/ava-channel-service.ts`          | Storage engine — provides message I/O to the reactor            |
+| `apps/server/src/services/fleet-scheduler-service.ts`      | Fleet scheduler — work assignment and reassignment              |
+| `apps/server/src/services/friction-tracker-service.ts`     | Service-level friction tracker — files System Improvements      |
+| `apps/server/src/services/dora-metrics-service.ts`         | DORA computation — supplies metrics for hourly DORA reports     |
 
 ## See Also
 
