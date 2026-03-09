@@ -78,7 +78,6 @@ import { createAlertsRoutes } from '../routes/alerts/index.js';
 import { createEngineRoutes } from '../routes/engine/index.js';
 import { createLangfuseRoutes } from '../routes/langfuse/index.js';
 import { createChatRoutes } from '../routes/chat/index.js';
-import { createCodexRoutes } from '../routes/codex/index.js';
 import { createAIRoutes } from '../routes/ai/index.js';
 import { createNotesRoutes } from '../routes/notes/index.js';
 import { createTodoRoutes } from '../routes/todo/index.js';
@@ -405,7 +404,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createFlowsRoutes(antagonisticReviewService, projectPlanningService ?? undefined)
   );
   app.use('/api/chat', createChatRoutes(services));
-  app.use('/api/codex', createCodexRoutes());
   app.use('/api/ai', createAIRoutes());
   app.use('/api/notes', createNotesRoutes(events));
   app.use('/api/todos', createTodoRoutes(todoService));
