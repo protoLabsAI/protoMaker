@@ -800,10 +800,15 @@ export class AvaChannelReactorService {
       return;
     }
 
-    // Find unblocked backlog features
+    // Find unblocked backlog features — exclude epics (container-only, not implementable)
     const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
     const backlogFeatures = allFeatures
-      .filter((f) => f.status === 'backlog' && !(f as Record<string, unknown>).claimedBy)
+      .filter(
+        (f) =>
+          f.status === 'backlog' &&
+          !(f as Record<string, unknown>).claimedBy &&
+          !(f as Record<string, unknown>).isEpic
+      )
       .slice(0, Math.min(request.maxFeatures, MAX_STEAL_PER_CYCLE));
 
     if (backlogFeatures.length === 0) {
@@ -858,11 +863,37 @@ export class AvaChannelReactorService {
     // Cap at MAX_STEAL_PER_CYCLE to prevent thundering herd
     const featuresToCreate = offer.features.slice(0, MAX_STEAL_PER_CYCLE);
 
-    logger.info(
-      `Received work_offer from ${offer.offeringInstanceId} — creating ${featuresToCreate.length} features locally`
+    // Dedup: check which features already exist locally (by branchName or stolenFromFeatureId)
+    const existingFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
+    const existingBranches = new Set(
+      existingFeatures.map((f) => (f as Record<string, unknown>).branchName).filter(Boolean)
+    );
+    const existingStolenIds = new Set(
+      existingFeatures
+        .map((f) => (f as Record<string, unknown>).stolenFromFeatureId)
+        .filter(Boolean)
     );
 
-    for (const featureData of featuresToCreate) {
+    const newFeatures = featuresToCreate.filter((fd) => {
+      const data = fd as Record<string, unknown>;
+      if (data.branchName && existingBranches.has(data.branchName)) return false;
+      if (data.id && existingStolenIds.has(data.id)) return false;
+      if (data.isEpic) return false;
+      return true;
+    });
+
+    if (newFeatures.length === 0) {
+      logger.debug(
+        `work_offer from ${offer.offeringInstanceId}: all ${featuresToCreate.length} features already exist locally — skipping`
+      );
+      return;
+    }
+
+    logger.info(
+      `Received work_offer from ${offer.offeringInstanceId} — creating ${newFeatures.length} features locally (${featuresToCreate.length - newFeatures.length} skipped as duplicates)`
+    );
+
+    for (const featureData of newFeatures) {
       try {
         // Strip the original ID so create() generates a new one for this instance
         const { id: _originalId, ...rest } = featureData as { id: string; [key: string]: unknown };

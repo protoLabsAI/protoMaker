@@ -528,7 +528,10 @@ export class FleetSchedulerService {
 
     try {
       const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
-      const backlogFeatures = allFeatures.filter((f) => f.status === 'backlog');
+      // Exclude epics — they are container features, not schedulable work
+      const backlogFeatures = allFeatures.filter(
+        (f) => f.status === 'backlog' && !(f as Record<string, unknown>).isEpic
+      );
       const activeFeatures = allFeatures.filter((f) => f.status === 'in_progress');
 
       // Sort backlog by dependency order (features with no unmet deps first)
@@ -1000,7 +1003,10 @@ export class FleetSchedulerService {
 
     try {
       const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
-      const backlogFeatures = allFeatures.filter((f) => f.status === 'backlog');
+      // Exclude epics — they are container features, not schedulable work
+      const backlogFeatures = allFeatures.filter(
+        (f) => f.status === 'backlog' && !(f as Record<string, unknown>).isEpic
+      );
       const activeFeatures = allFeatures.filter((f) => f.status === 'in_progress');
       const orderedBacklog = this.sortByDependencyOrder(backlogFeatures, allFeatures);
       const metrics = this.deps.autoModeService?.getCapacityMetrics();
