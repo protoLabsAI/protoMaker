@@ -66,18 +66,20 @@ All responses set `expectsResponse: false` enforcing the **one-shot response pol
 Every 60 seconds (default), the reactor broadcasts a `capacity_heartbeat` message:
 
 ```typescript
-{
-  type: 'capacity_heartbeat';
+interface CapacityHeartbeat {
   instanceId: string;
-  runningAgents: number;
-  maxAgents: number;
-  backlogSize: number;
-  memoryUsagePct: number; // 0–100
-  cpuUsagePct: number; // 0–100
+  role: string;
+  backlogCount: number; // features in backlog
+  activeCount: number; // features currently in-progress
+  maxConcurrency: number; // max concurrent agents
+  cpuLoad: number; // 0–100
+  memoryUsed: number; // 0–100
 }
 ```
 
-Peer instances receive these and update their local `PeerCapacityMap`. The capacity map drives work-stealing and health alert decisions.
+Peer instances receive these and update their local `peerCapacities` map. The capacity map drives work-stealing and health alert decisions.
+
+**Note:** `[capacity_heartbeat]` messages have `source: 'system'` and are intercepted by `handleWorkStealProtocol()` before the classifier chain runs — they never trigger a classifier response.
 
 ### Work-Stealing
 
@@ -114,27 +116,25 @@ The `EscalationCoordinator` tracks pending escalations and enforces timeouts (30
 
 ### Health Alerts
 
-When a peer's heartbeat shows degraded resources, the reactor emits a `health_alert`:
+Each instance broadcasts a `[health_alert]` when its own resource usage exceeds fixed thresholds (checked during the capacity heartbeat cycle):
 
 ```typescript
-{
-  type: 'health_alert';
-  instanceId: string;       // degraded peer
-  severity: 'warning' | 'critical';
-  memoryUsagePct?: number;
-  cpuUsagePct?: number;
-  reason: string;
+interface HealthAlert {
+  instanceId: string;
+  memoryUsed: number; // percentage 0–100
+  cpuLoad: number; // percentage 0–100
+  alertTimestamp: string; // ISO 8601
 }
 ```
 
 **Thresholds:**
 
-| Resource | Warning | Critical |
-| -------- | ------- | -------- |
-| Memory   | > 85%   | > 95%    |
-| CPU      | > 90%   | > 98%    |
+| Resource | Threshold |
+| -------- | --------- |
+| Memory   | > 85%     |
+| CPU      | > 90%     |
 
-While a peer is marked degraded, work-stealing from that peer is paused. Degraded status clears automatically when the next heartbeat shows recovery.
+While a peer is marked degraded (has sent a recent `health_alert`), work-stealing from that peer is paused for 5 minutes. There is a single threshold level (no warning/critical distinction).
 
 ### DORA Reports
 

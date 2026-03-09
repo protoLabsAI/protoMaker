@@ -255,17 +255,19 @@ CRDT shard change (new message arrives)
 
 The classifier chain determines whether a message warrants a response. Rules are pure functions evaluated highest-to-lowest priority. The first non-null result wins.
 
-| Priority | Rule                | Blocks When                                                |
-| -------- | ------------------- | ---------------------------------------------------------- |
-| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                |
-| 90       | TerminalMessageRule | `expectsResponse === false`                                |
-| 80       | SelfMessageRule     | `instanceId === localInstanceId`                           |
-| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                      |
-| 70       | SystemSourceRule    | `source: 'system'` (unless `[BugReport]`/`[SystemAlert]`)  |
-| 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` --> respond  |
-| 40       | CoordinationRule    | `intent: 'coordination'` --> respond if capacity available |
-| 30       | EscalationRule      | `intent: 'escalation'` --> respond if depth < 3            |
-| 0        | DefaultRule         | Everything else --> informational, no response             |
+**Protocol message pre-filter:** Before the classifier chain runs, `handleWorkStealProtocol()` intercepts any `source: 'system'` message whose content starts with a `[bracket_prefix]` (e.g. `[capacity_heartbeat]`, `[work_request]`, `[schedule_assignment]`). These machine-to-machine messages are dispatched to typed handlers and never enter the classifier chain.
+
+| Priority | Rule                | Blocks When                                                              |
+| -------- | ------------------- | ------------------------------------------------------------------------ |
+| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                              |
+| 90       | TerminalMessageRule | `expectsResponse === false`                                              |
+| 80       | SelfMessageRule     | `instanceId === localInstanceId`                                         |
+| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                                    |
+| 70       | SystemSourceRule    | `source: 'system'` (residual — protocol messages already filtered above) |
+| 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` --> respond                |
+| 40       | CoordinationRule    | `intent: 'coordination'` --> respond if capacity available               |
+| 30       | EscalationRule      | `intent: 'escalation'` --> respond if depth < 3                          |
+| 0        | DefaultRule         | Everything else --> informational, no response                           |
 
 **Usage:**
 
