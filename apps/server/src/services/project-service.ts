@@ -441,6 +441,53 @@ export class ProjectService {
   }
 
   /**
+   * Update a single phase's claim fields on the shared project doc.
+   * Used by WorkIntakeService for phase claiming and completion reporting.
+   */
+  async updatePhaseClaim(
+    projectPath: string,
+    projectSlug: string,
+    milestoneSlug: string,
+    phaseName: string,
+    update: Partial<import('@protolabsai/types').Phase>
+  ): Promise<void> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) throw new Error(`Project "${projectSlug}" not found`);
+
+    const milestone = project.milestones.find((m) => m.slug === milestoneSlug);
+    if (!milestone)
+      throw new Error(`Milestone "${milestoneSlug}" not found in project "${projectSlug}"`);
+
+    const phase = milestone.phases.find((p) => p.name === phaseName);
+    if (!phase) throw new Error(`Phase "${phaseName}" not found in milestone "${milestoneSlug}"`);
+
+    Object.assign(phase, update);
+    project.updatedAt = new Date().toISOString();
+
+    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
+    await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
+  }
+
+  /**
+   * Read the latest state of a single phase.
+   * Used by WorkIntakeService to verify claims survived Automerge merge.
+   */
+  async getPhase(
+    projectPath: string,
+    projectSlug: string,
+    milestoneSlug: string,
+    phaseName: string
+  ): Promise<import('@protolabsai/types').Phase | null> {
+    const project = await this.getProject(projectPath, projectSlug);
+    if (!project) return null;
+
+    const milestone = project.milestones.find((m) => m.slug === milestoneSlug);
+    if (!milestone) return null;
+
+    return milestone.phases.find((p) => p.name === phaseName) ?? null;
+  }
+
+  /**
    * Update an existing project
    */
   async updateProject(
