@@ -9,7 +9,7 @@
  * output-available, and output-error.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Wrench, Loader2, Check, AlertTriangle } from 'lucide-react';
 import { cn } from '../lib/utils.js';
 import { ConfirmationCard } from './confirmation-card.js';
@@ -181,6 +181,17 @@ export function ToolInvocationPart({
   onReject,
 }: ToolInvocationPartProps) {
   const [isOpen, setIsOpen] = useState(false);
+  // Track whether we've already auto-expanded so manual collapse is preserved
+  const hasAutoExpanded = useRef(false);
+
+  // Auto-expand when tool transitions to output-available (once only)
+  useEffect(() => {
+    if ((state === 'output-available' || state === 'output-error') && !hasAutoExpanded.current) {
+      hasAutoExpanded.current = true;
+      setIsOpen(true);
+    }
+  }, [state]);
+
   const config = stateConfig[state] ?? stateConfig['input-available'];
   const StateIcon = config.icon;
   const isRunning =
