@@ -16,6 +16,7 @@ This is a greenfield codebase. We are building the future, not maintaining the p
 
 - When creating plans, start with the minimal viable scope. Do NOT propose multi-phase plans unless explicitly asked. Default to the smallest, lowest-risk approach first.
 - Do not exit plan mode or transition away from planning until the user explicitly confirms the plan is complete and approved. Wait for user signal before proceeding to implementation.
+- **Plan completion verification**: Before committing a multi-step plan implementation, run the verification checklist in `.automaker/context/plan-completion-verification.md`. CI catches broken code but NOT unwired code — a service with passing tests can be completely disconnected from the runtime. Every new file must have a non-test importer. Every new service must have an integration test covering its wiring point.
 
 ## Git Workflow
 
