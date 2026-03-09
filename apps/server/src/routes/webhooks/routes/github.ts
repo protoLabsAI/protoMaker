@@ -7,7 +7,11 @@
 
 import type { Request, Response } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
+
+const execAsync = promisify(exec);
 import type { EventEmitter } from '../../../lib/events.js';
 import type { SettingsService } from '../../../services/settings-service.js';
 import { FeatureLoader } from '../../../services/feature-loader.js';
@@ -93,6 +97,56 @@ function verifySignature(secret: string, signature: string | undefined, body: st
     return timingSafeEqual(Buffer.from(hash), Buffer.from(parts[1]));
   } catch {
     return false;
+  }
+}
+
+/**
+ * After a PR merges, update all other open PRs targeting the same base branch
+ * so they stay current and don't go CONFLICTING. Uses GitHub's update-branch
+ * API (equivalent to the "Update branch" button in the UI).
+ *
+ * Runs fire-and-forget — failures are logged but never block the webhook response.
+ */
+async function cascadeUpdateBranches(
+  repoFullName: string,
+  baseBranch: string,
+  mergedPrNumber: number
+): Promise<void> {
+  try {
+    const { stdout } = await execAsync(
+      `gh pr list --repo ${repoFullName} --base ${baseBranch} --state open --json number --limit 50`
+    );
+
+    const openPRs = JSON.parse(stdout) as Array<{ number: number }>;
+    const siblingsToUpdate = openPRs.filter((pr) => pr.number !== mergedPrNumber);
+
+    if (siblingsToUpdate.length === 0) {
+      return;
+    }
+
+    logger.info(
+      `Cascade rebase: updating ${siblingsToUpdate.length} open PR(s) targeting ${baseBranch} after PR #${mergedPrNumber} merged`
+    );
+
+    // Update branches sequentially to avoid GitHub API rate limits
+    for (const pr of siblingsToUpdate) {
+      try {
+        await execAsync(
+          `gh api repos/${repoFullName}/pulls/${pr.number}/update-branch --method PUT -f update_method=rebase`
+        );
+        logger.info(`Cascade rebase: updated PR #${pr.number} branch`);
+      } catch (err) {
+        // update-branch fails if there are conflicts — that's expected and non-fatal.
+        // The PR will show as CONFLICTING in the UI and require manual resolution.
+        logger.debug(
+          `Cascade rebase: could not update PR #${pr.number} (may have conflicts): ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+  } catch (err) {
+    logger.warn(
+      `Cascade rebase: failed to list open PRs for ${baseBranch}: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 }
 
@@ -443,6 +497,13 @@ export function createGitHubWebhookHandler(events: EventEmitter, settingsService
           );
         }
       }
+
+      // Cascade rebase: update other open PRs targeting the same base branch
+      // so they don't go CONFLICTING after this merge.
+      const repoFullName = payload.repository.full_name;
+      cascadeUpdateBranches(repoFullName, baseBranch, prNumber).catch((err) =>
+        logger.warn(`Cascade branch update failed (non-fatal):`, err)
+      );
 
       res.json({
         success: true,
