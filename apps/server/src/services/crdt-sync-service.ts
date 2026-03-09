@@ -84,6 +84,8 @@ export class CrdtSyncService {
   private started = false;
   private instanceId: string;
   private instanceUrl: string | null = null;
+  /** Project name from proto.config.yaml — used to scope CRDT sync to same-project peers */
+  private projectName: string | null = null;
   private primaryUrl: string | null = null;
   private lastPrimaryContact: number | null = null;
   private selfPriority = -1;
@@ -247,6 +249,7 @@ export class CrdtSyncService {
         eventType: type,
         payload,
         timestamp: new Date().toISOString(),
+        projectName: this.projectName ?? undefined,
       };
       const raw = JSON.stringify(msg);
 
@@ -282,6 +285,13 @@ export class CrdtSyncService {
       protoConfig = (await loadProtoConfig(repoRoot)) as Record<string, unknown> | null;
     } catch (err) {
       logger.warn('[CRDT] Failed to load proto.config.yaml, using defaults:', err);
+    }
+
+    this.projectName = (protoConfig?.['name'] as string) || null;
+    if (this.projectName) {
+      logger.info(`[CRDT] Project name: ${this.projectName}`);
+    } else {
+      logger.warn('[CRDT] No project name in proto.config.yaml — cross-project filtering disabled');
     }
 
     const protolab = protoConfig?.['protolab'] as
@@ -894,6 +904,16 @@ export class CrdtSyncService {
         // since we only send to peers, but guard against misconfigured loops).
         if (msg.instanceId === this.instanceId) break;
         if (!this._eventBus) break;
+
+        // Reject events from foreign projects to prevent cross-project contamination.
+        // If the sender includes a projectName and it doesn't match ours, drop the event.
+        if (this.projectName && msg.projectName && msg.projectName !== this.projectName) {
+          logger.warn(
+            `[CRDT] Rejecting feature event from foreign project "${msg.projectName}" (local: "${this.projectName}")`,
+            { eventType: msg.eventType, instanceId: msg.instanceId }
+          );
+          break;
+        }
 
         logger.info(
           `[CRDT] Received remote feature event: ${msg.eventType} from ${msg.instanceId}`

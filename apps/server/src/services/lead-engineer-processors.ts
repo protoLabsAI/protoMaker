@@ -8,6 +8,7 @@
 import { createLogger } from '@protolabsai/utils';
 import { resolveModelString, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 import { areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
+import { loadProtoConfig } from '@protolabsai/platform';
 import type { AgentRole, Feature } from '@protolabsai/types';
 import { getWorkflowSettings, getPhaseModelWithOverrides } from '../lib/settings-helpers.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
@@ -37,6 +38,11 @@ export class IntakeProcessor implements StateProcessor {
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
     const { feature } = ctx;
+
+    // Guard: reject features that don't belong to this project.
+    // Catches cross-project contamination from CRDT sync or mis-targeted MCP calls.
+    const foreignCheck = await this.checkForeignFeature(ctx);
+    if (foreignCheck) return foreignCheck;
 
     // Validate dependencies using the shared resolver (same logic as loadPendingFeatures)
     if (feature.dependencies && feature.dependencies.length > 0) {
@@ -154,6 +160,48 @@ export class IntakeProcessor implements StateProcessor {
     }
 
     return DEFAULT_MODELS.autoMode; // sonnet
+  }
+
+  /**
+   * Detect features that don't belong to this project.
+   * Reads the project's proto.config.yaml to get the tech stack and package manager,
+   * then checks if the feature description references foreign tooling.
+   */
+  private async checkForeignFeature(ctx: StateContext): Promise<StateTransitionResult | null> {
+    const { feature } = ctx;
+    const desc = `${feature.title ?? ''} ${feature.description ?? ''}`.toLowerCase();
+
+    try {
+      const config = (await loadProtoConfig(ctx.projectPath)) as Record<string, unknown> | null;
+      if (!config) return null;
+
+      const projectName = (config['name'] as string) ?? '';
+      const techStack = config['techStack'] as Record<string, string> | undefined;
+      const packageManager = techStack?.packageManager ?? 'npm';
+
+      // Check 1: feature references a different package manager than this project uses
+      const foreignPMs = ['pnpm', 'yarn', 'bun', 'npm'].filter((pm) => pm !== packageManager);
+      const referencedForeignPM = foreignPMs.find((pm) => {
+        // Match "pnpm install", "pnpm build", etc. — not just the word in passing
+        const regex = new RegExp(`\\b${pm}\\s+(install|build|run|add|exec|dlx)\\b`);
+        return regex.test(desc);
+      });
+
+      if (referencedForeignPM) {
+        const reason = `Foreign project feature detected: references "${referencedForeignPM}" but this project uses "${packageManager}"`;
+        logger.warn(`[INTAKE] ${reason}`, { featureId: feature.id, projectName });
+        ctx.escalationReason = reason;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason,
+        };
+      }
+    } catch {
+      // If config can't be loaded, skip the check — don't block legitimate features
+    }
+
+    return null;
   }
 
   private assignPersona(feature: Feature): AgentRole {

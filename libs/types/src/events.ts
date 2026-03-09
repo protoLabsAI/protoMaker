@@ -35,4 +35,6 @@ export interface CrdtFeatureEvent {
   eventType: EventType;
   payload: unknown;
   timestamp: string;
+  /** Project name from proto.config.yaml — receivers reject events for foreign projects */
+  projectName?: string;
 }
