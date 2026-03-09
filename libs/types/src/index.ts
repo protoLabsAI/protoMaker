@@ -946,6 +946,14 @@ export type { DoraMetrics, MetricValue, DoraRegulationAlert } from './dora-metri
 // Friction tracker types (self-improvement loop — recurring failure pattern detection)
 export type { FrictionReport } from './friction-report.js';
 
+// ReactiveSpawner types (trigger-based agent spawning with rate limiting and circuit breaking)
+export type {
+  TriggerCategory,
+  TriggerContext,
+  SpawnResult,
+  HealingBudget,
+} from './reactive-spawner.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
