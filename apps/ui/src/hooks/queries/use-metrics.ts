@@ -244,6 +244,44 @@ export function useStageDurations(projectPath: string | undefined) {
   });
 }
 
+const FLOW_METRICS_STALE_TIME = 60 * 1000; // 1 minute
+
+/** Daily status counts entry from GET /api/metrics/flow */
+export interface FlowDayEntry {
+  date: string;
+  backlog: number;
+  in_progress: number;
+  review: number;
+  done: number;
+}
+
+/** Full response from GET /api/metrics/flow */
+export interface FlowMetricsResponse {
+  success: boolean;
+  days: FlowDayEntry[];
+  wipLimit: number;
+  statuses: readonly ['backlog', 'in_progress', 'review', 'done'];
+}
+
+/**
+ * Fetch value stream flow data for the Cumulative Flow Diagram.
+ * Uses GET /api/metrics/flow.
+ */
+export function useFlowMetrics(projectPath: string | undefined, days?: number, wipLimit?: number) {
+  return useQuery({
+    queryKey: queryKeys.metrics.flow(projectPath ?? '', days),
+    queryFn: async (): Promise<FlowMetricsResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.flow(projectPath, days, wipLimit) as Promise<FlowMetricsResponse>;
+    },
+    enabled: !!projectPath,
+    staleTime: FLOW_METRICS_STALE_TIME,
+    refetchInterval: FLOW_METRICS_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
 const ENGINE_STATUS_STALE_TIME = 10 * 1000; // 10 seconds
 const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
 

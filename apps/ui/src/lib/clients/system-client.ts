@@ -240,6 +240,21 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
           };
           featureCount: number;
         }>(`/api/metrics/stage-durations?projectPath=${encodeURIComponent(projectPath)}`),
+      flow: (projectPath: string, days?: number, wipLimit?: number) =>
+        this.get<{
+          success: boolean;
+          days: Array<{
+            date: string;
+            backlog: number;
+            in_progress: number;
+            review: number;
+            done: number;
+          }>;
+          wipLimit: number;
+          statuses: readonly ['backlog', 'in_progress', 'review', 'done'];
+        }>(
+          `/api/metrics/flow?projectPath=${encodeURIComponent(projectPath)}${days ? `&days=${days}` : ''}${wipLimit != null ? `&wipLimit=${wipLimit}` : ''}`
+        ),
     };
 
     // Integrations API
