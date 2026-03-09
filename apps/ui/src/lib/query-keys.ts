@@ -310,6 +310,8 @@ export const queryKeys = {
     /** Cycle time distribution */
     cycleTimeDistribution: (projectPath: string, startDate?: string, endDate?: string) =>
       ['metrics', 'ledger', 'cycleTimeDistribution', projectPath, startDate, endDate] as const,
+    /** Value stream flow data (CFD) */
+    flow: (projectPath: string, days?: number) => ['metrics', 'flow', projectPath, days] as const,
   },
 
   // ============================================

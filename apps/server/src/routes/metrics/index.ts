@@ -10,7 +10,7 @@ import type { DoraMetricsService } from '../../services/dora-metrics-service.js'
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createLedgerRoutes } from './ledger.js';
-import { createDoraHistoryRoute, createStageDurationsRoute } from './dora.js';
+import { createDoraHistoryRoute, createStageDurationsRoute, createFlowRoute } from './dora.js';
 
 export function createMetricsRoutes(
   metricsService: MetricsService,
@@ -33,6 +33,11 @@ export function createMetricsRoutes(
   // Mount stage durations route at /api/metrics/stage-durations
   if (featureLoader) {
     router.use('/', createStageDurationsRoute(featureLoader));
+  }
+
+  // Mount flow (CFD) route at /api/metrics/flow
+  if (featureLoader) {
+    router.use('/', createFlowRoute(featureLoader));
   }
 
   /**

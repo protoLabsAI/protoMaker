@@ -8,6 +8,7 @@
  *
  * Also provides GET /api/metrics/dora/history for time-bucketed DORA trend data.
  * Also provides GET /api/metrics/stage-durations for per-feature stage duration analytics.
+ * Also provides GET /api/metrics/flow for cumulative flow diagram time-series data.
  */
 
 import { Router } from 'express';
@@ -25,6 +26,167 @@ export interface DoraRouteDependencies {
 
 /** Statuses tracked in stage duration analytics (excludes done/interrupted). */
 const TRACKED_STATUSES: FeatureStatus[] = ['backlog', 'in_progress', 'review', 'blocked'];
+
+/** Statuses tracked in the cumulative flow diagram. */
+const CFD_STATUSES = ['backlog', 'in_progress', 'review', 'done'] as const;
+type CfdStatus = (typeof CFD_STATUSES)[number];
+
+/** Default WIP limit used when none is provided by the caller. */
+const DEFAULT_WIP_LIMIT = 3;
+
+/** One day's worth of per-status feature counts. */
+export interface FlowDayEntry {
+  date: string;
+  backlog: number;
+  in_progress: number;
+  review: number;
+  done: number;
+}
+
+/** Response shape for GET /api/metrics/flow. */
+export interface FlowMetricsResponse {
+  success: true;
+  days: FlowDayEntry[];
+  wipLimit: number;
+  statuses: typeof CFD_STATUSES;
+}
+
+/**
+ * createFlowRoute — mounts GET /flow.
+ * Expected mount: router.use('/', createFlowRoute(featureLoader))
+ *
+ * Replays each feature's statusHistory to reconstruct the board state at every
+ * calendar day from the earliest known transition up to today, then returns a
+ * time-series array of daily status counts.
+ */
+export function createFlowRoute(featureLoader: FeatureLoader): Router {
+  const router = Router();
+
+  /**
+   * GET /flow
+   *
+   * Query params:
+   *   - projectPath (required): path to the project
+   *   - days (optional, default 90): number of trailing days to return
+   *   - wipLimit (optional, default 3): WIP limit echoed back to the client
+   */
+  router.get('/flow', async (req: Request, res: Response) => {
+    try {
+      const projectPath = req.query.projectPath as string | undefined;
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
+        return;
+      }
+
+      const daysParam = req.query.days ? parseInt(req.query.days as string, 10) : 90;
+      const days = isNaN(daysParam) || daysParam < 1 ? 90 : daysParam;
+
+      const wipLimitParam = req.query.wipLimit
+        ? parseInt(req.query.wipLimit as string, 10)
+        : DEFAULT_WIP_LIMIT;
+      const wipLimit =
+        isNaN(wipLimitParam) || wipLimitParam < 1 ? DEFAULT_WIP_LIMIT : wipLimitParam;
+
+      const features = await featureLoader.getAll(projectPath);
+      const now = Date.now();
+
+      // Determine the date range: last `days` calendar days ending today
+      const todayDate = new Date(now);
+      todayDate.setHours(0, 0, 0, 0);
+      const startDate = new Date(todayDate.getTime() - (days - 1) * 24 * 60 * 60 * 1000);
+
+      // Build a map: featureId → sorted list of (timestampMs, status) transitions
+      // Each transition records the status the feature entered at that timestamp.
+      type Transition = { tsMs: number; status: CfdStatus };
+      const featureTransitions: Map<string, Transition[]> = new Map();
+
+      for (const feature of features) {
+        const history = feature.statusHistory ?? [];
+        const transitions: Transition[] = [];
+
+        if (history.length === 0) {
+          // No history — treat the feature as having been in its current status
+          // since createdAt (or the window start if createdAt is unavailable).
+          const status = (feature.status ?? 'backlog') as string;
+          const cfdStatus: CfdStatus = CFD_STATUSES.includes(status as CfdStatus)
+            ? (status as CfdStatus)
+            : 'backlog';
+          const createdMs = feature.createdAt
+            ? new Date(feature.createdAt).getTime()
+            : startDate.getTime();
+          transitions.push({ tsMs: createdMs, status: cfdStatus });
+        } else {
+          for (const entry of history) {
+            const status = entry.to as string;
+            const cfdStatus: CfdStatus = CFD_STATUSES.includes(status as CfdStatus)
+              ? (status as CfdStatus)
+              : 'backlog';
+            transitions.push({ tsMs: new Date(entry.timestamp).getTime(), status: cfdStatus });
+          }
+          // Sort ascending by timestamp
+          transitions.sort((a, b) => a.tsMs - b.tsMs);
+        }
+
+        featureTransitions.set(feature.id, transitions);
+      }
+
+      // For each calendar day in the window, determine the status of every feature
+      // by finding the last transition on or before midnight of that day.
+      const result: FlowDayEntry[] = [];
+
+      for (let d = 0; d < days; d++) {
+        const dayStart = new Date(startDate.getTime() + d * 24 * 60 * 60 * 1000);
+        const dayEndMs = dayStart.getTime() + 24 * 60 * 60 * 1000 - 1; // end of day
+
+        const counts: Record<CfdStatus, number> = {
+          backlog: 0,
+          in_progress: 0,
+          review: 0,
+          done: 0,
+        };
+
+        for (const transitions of featureTransitions.values()) {
+          if (transitions.length === 0) continue;
+
+          // Find the last transition that occurred on or before this day
+          let statusAtDay: CfdStatus | null = null;
+          for (const t of transitions) {
+            if (t.tsMs <= dayEndMs) {
+              statusAtDay = t.status;
+            } else {
+              break;
+            }
+          }
+
+          if (statusAtDay !== null) {
+            counts[statusAtDay]++;
+          }
+        }
+
+        result.push({
+          date: dayStart.toISOString().slice(0, 10),
+          backlog: counts.backlog,
+          in_progress: counts.in_progress,
+          review: counts.review,
+          done: counts.done,
+        });
+      }
+
+      const response: FlowMetricsResponse = {
+        success: true,
+        days: result,
+        wipLimit,
+        statuses: CFD_STATUSES,
+      };
+
+      res.json(response);
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  return router;
+}
 
 /** Per-feature stage duration entry returned by the /stage-durations endpoint. */
 export interface FeatureStageDuration {

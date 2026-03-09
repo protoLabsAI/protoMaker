@@ -25,6 +25,7 @@ import { ThroughputChart } from './throughput-chart';
 import { ModelPieChart } from './model-pie';
 import { CycleTimeChart } from './cycle-time-chart';
 import { SuccessChart } from './success-chart';
+import { FlowCharts } from './flow-charts';
 
 interface ProjectMetricsTabProps {
   projectPath: string;
@@ -125,6 +126,9 @@ export function ProjectMetricsTab({
       <div className="grid grid-cols-1 gap-3">
         <StageBreakdownChart projectPath={projectPath} />
       </div>
+
+      {/* Row 7: Value Stream (CFD + WIP trend) */}
+      <FlowCharts projectPath={projectPath} />
     </div>
   );
 }
