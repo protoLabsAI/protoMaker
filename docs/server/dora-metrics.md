@@ -159,14 +159,6 @@ interface DoraRegulationAlert {
 
 Thresholds are configurable at service construction time via `DoraMetricsService(featureLoader, thresholds?)`.
 
-## Key Files
-
-| File                                               | Role                                        |
-| -------------------------------------------------- | ------------------------------------------- |
-| `apps/server/src/routes/dora/index.ts`             | HTTP route — GET /api/dora/metrics          |
-| `apps/server/src/services/dora-metrics-service.ts` | Metric computation and threshold evaluation |
-| `libs/types/src/dora-metrics.ts`                   | `DoraMetrics`, `DoraRegulationAlert` types  |
-
 ## Limitations
 
 DORA metrics here are **feature-based proxies**, not pipeline measurements:
@@ -177,6 +169,68 @@ DORA metrics here are **feature-based proxies**, not pipeline measurements:
 - **Recovery time** measures board-level blocking, not infrastructure incident duration
 
 These are suitable for **team health monitoring and trend detection**, not compliance reporting or SLO measurement.
+
+## Operational Intelligence API
+
+Two additional endpoints expose real-time agent operational data. These are mounted under `/api/metrics` alongside the DORA sub-routes.
+
+### GET /api/metrics/friction
+
+Returns the top recurring failure patterns tracked by `FrictionTrackerService`. Patterns are extracted from agent error messages and accumulated in memory across the instance's lifetime.
+
+**Query parameters:** none
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "patterns": [
+    { "pattern": "TypeScript type mismatch", "count": 14, "lastSeen": "2026-03-09T10:23:00.000Z" },
+    { "pattern": "Missing import path", "count": 7, "lastSeen": "2026-03-09T09:11:00.000Z" }
+  ],
+  "total": 2
+}
+```
+
+Patterns are sorted descending by occurrence count.
+
+### GET /api/metrics/failure-breakdown
+
+Aggregates `failureClassification.category` across all features in the project to produce a breakdown of failure types.
+
+**Query parameters:**
+
+| Param         | Type   | Required | Description                       |
+| ------------- | ------ | -------- | --------------------------------- |
+| `projectPath` | string | ✓        | Absolute path to the project root |
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "categories": [
+    { "category": "type_error", "count": 8 },
+    { "category": "test_failure", "count": 3 },
+    { "category": "build_error", "count": 2 }
+  ],
+  "total": 13
+}
+```
+
+Features without a `failureClassification.category` are excluded.
+
+## Key Files
+
+| File                                                   | Role                                                    |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `apps/server/src/routes/metrics/dora.ts`               | DORA, friction, and failure-breakdown route factories   |
+| `apps/server/src/routes/metrics/index.ts`              | `/api/metrics` router — mounts all metrics sub-routes   |
+| `apps/server/src/routes/dora/index.ts`                 | Legacy `/api/dora/metrics` endpoint (full DORA payload) |
+| `apps/server/src/services/dora-metrics-service.ts`     | Metric computation and threshold evaluation             |
+| `apps/server/src/services/friction-tracker-service.ts` | In-memory friction pattern accumulator                  |
+| `libs/types/src/dora-metrics.ts`                       | `DoraMetrics`, `DoraRegulationAlert` types              |
 
 ## See Also
 

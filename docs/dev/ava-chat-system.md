@@ -102,7 +102,7 @@ The Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) exposes three hook types
 | `Notification` | SDK informational events (context, etc) | Surface warnings in agent output log               |
 | `SubagentStop` | Inner agent session ends                | Mark sub-run complete, aggregate cost into parent  |
 
-**`canUseTool` gate:** When `subagentTrust` is set below the tool's required trust level, the SDK's `canUseTool` callback returns `false`, preventing the inner agent from calling that tool. This is how Ava enforces that delegated agents cannot exceed their granted permissions.
+**`canUseTool` gate:** When `AvaConfig.subagentTrust` is `'gated'`, a `canUseTool` callback is built via `buildCanUseToolCallback()` and passed to `DynamicAgentExecutor`. Each tool call by the inner agent emits a `subagent:tool-approval-requested` event on the shared event bus and awaits a `subagent:tool-approval-response` event before proceeding. The human operator responds via `POST /api/chat/tool-approval`. When `subagentTrust` is `'full'` (the default), no `canUseTool` callback is wired and inner agents run with `bypassPermissions`.
 
 **Custom MCP servers:** If `AvaConfig.mcpServers` lists server entries, they are passed to the SDK via `createChatOptions({ mcpServers })` before the inner agent runs. This lets Ava-delegated agents access project-specific MCP tools (e.g., GitHub, filesystem) without exposing them to the outer Ava loop.
 
@@ -142,34 +142,34 @@ The `inputHash` is a stable JSON hash of the tool arguments. This ensures approv
 
 ### AvaConfig Reference
 
-Full set of supported fields, including newer delegation and trust fields:
+Full set of supported fields, including tool groups, delegation, and trust fields:
 
 ```typescript
 interface AvaConfig {
   // Model
   model: 'haiku' | 'sonnet' | 'opus';
 
-  // Tool access gates
+  // Tool access gates (all default to true)
   toolGroups: {
-    boardRead: boolean; // get_board_summary, list_features, get_feature
+    boardRead: boolean; // list_features, get_feature, get_board_summary
     boardWrite: boolean; // create_feature, update_feature, move_feature, delete_feature
-    agentControl: boolean; // list_running_agents, start_agent, stop_agent, get_agent_output
+    agentControl: boolean; // start_agent, stop_agent, list_running_agents, get_agent_output
     autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
     projectMgmt: boolean; // get_project_spec, update_project_spec
     orchestration: boolean; // get_execution_order, set_feature_dependencies
-    agentDelegation: boolean; // execute_dynamic_agent tool
-    notes: boolean; // notes read/write tools
-    metrics: boolean; // metrics and DORA tools
-    prWorkflow: boolean; // PR workflow tools
-    promotion: boolean; // release/promotion tools
-    contextFiles: boolean; // context file management tools
-    projects: boolean; // project management tools
-    briefing: boolean; // get_briefing tool
-    avaChannel: boolean; // Ava Channel read/write tools
-    discord: boolean; // Discord message tools
-    calendar: boolean; // calendar event tools
-    health: boolean; // health status tools
-    settings: boolean; // settings read/write tools
+    agentDelegation: boolean; // execute_dynamic_agent (subagent spawning)
+    notes: boolean; // create_note, list_notes, get_note, delete_note
+    metrics: boolean; // get_metrics, get_dora_metrics
+    prWorkflow: boolean; // get_pr_status, run_pr_workflow
+    promotion: boolean; // promote_to_staging, promote_to_production
+    contextFiles: boolean; // list_context_files, get_context_file, update_context_file
+    projects: boolean; // get_project, list_projects, create_project
+    briefing: boolean; // get_briefing
+    avaChannel: boolean; // post_ava_message, get_ava_messages
+    discord: boolean; // send_discord_message, list_discord_channels
+    calendar: boolean; // list_events, create_event, update_event, delete_event
+    health: boolean; // get_health, get_sync_status
+    settings: boolean; // get_settings, update_settings
   };
 
   // Context injection
@@ -179,16 +179,16 @@ interface AvaConfig {
   // Custom prompt
   systemPromptExtension: string; // Appended after all other prompt layers
 
-  // Tool approval
-  autoApproveTools: boolean; // When true, destructive tools skip HITL confirmation
+  // Tool auto-approval (when true, destructive tools skip HITL confirmation)
+  autoApproveTools: boolean;
 
   // Agent delegation
-  mcpServers?: MCPServerConfig[]; // Custom MCP servers for inner agents
-  subagentTrust: 'full' | 'gated'; // 'full' = bypassPermissions; 'gated' = approval flow
+  mcpServers?: MCPServerConfig[]; // MCP servers available to Ava and delegated inner agents
+  subagentTrust: 'full' | 'gated'; // 'full' = bypassPermissions; 'gated' = per-tool approval
 }
 ```
 
-All fields default to enabled. `subagentTrust` defaults to `'full'`. `mcpServers` defaults to `[]`. See `apps/server/src/routes/chat/ava-config.ts`.
+All `toolGroups` flags default to `true`. `autoApproveTools` defaults to `false`. `subagentTrust` defaults to `'full'`. `mcpServers` is optional (defaults to `[]`). See `apps/server/src/routes/chat/ava-config.ts`.
 
 ## Server API
 
@@ -212,7 +212,27 @@ Main chat endpoint. Uses Vercel AI SDK `streamText()`.
 - Reasoning chunks (extended thinking)
 - Tool invocation parts (call + result)
 - Step boundaries (`step-start`)
-- Citations (`data-citations`)
+- `data-citations` — resolved `[[feature:id]]` / `[[doc:path]]` citations
+- `data-usage` — real token counts `{ inputTokens, outputTokens }` (written after response completes)
+- `data-plan` — structured plan from a ` ```plan ``` ` JSON block in the response (when present)
+
+### `POST /api/chat/tool-approval`
+
+Resolves a pending subagent tool-approval when `subagentTrust` is `'gated'`.
+
+**Request body:**
+
+```typescript
+{
+  approvalId: string;   // ID from the subagent:tool-approval-requested event
+  approved: boolean;    // Whether to permit the tool call
+  message?: string;     // Optional rejection reason
+}
+```
+
+**Response:** `{ ok: true }`
+
+Emits `subagent:tool-approval-response` on the shared event bus, unblocking the waiting `canUseTool` promise in the inner agent.
 
 ### `GET /api/ava/config` / `POST /api/ava/config`
 
@@ -220,31 +240,33 @@ Read/write per-project AvaConfig.
 
 ### AvaConfig
 
-Stored at `{projectPath}/.automaker/ava-config.json`. See the [AvaConfig Reference](#avaconfig-reference) section above for the full interface definition. All fields default to enabled. See `apps/server/src/routes/chat/ava-config.ts`.
+Stored at `{projectPath}/.automaker/ava-config.json`. Deep-merged with defaults on load so partial configs are safe.
+
+See the [AvaConfig Reference](#avaconfig-reference) above for the full field list with all 18 tool groups. See `apps/server/src/routes/chat/ava-config.ts`.
 
 ## Tool Groups
 
-| Group           | Representative Tools                                                   | Custom Card                                                |
-| --------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
-| boardRead       | `get_board_summary`, `list_features`, `get_feature`                    | `BoardSummaryCard`, `FeatureListCard`, `FeatureDetailCard` |
-| boardWrite      | `create_feature`, `update_feature`, `move_feature`, `delete_feature`   | `FeatureCreatedCard`, `FeatureUpdatedCard`, HITL           |
-| agentControl    | `start_agent`, `stop_agent`, `list_running_agents`, `get_agent_output` | `AgentStatusCard`, `AgentOutputCard`                       |
-| autoMode        | `get_auto_mode_status`, `start_auto_mode`, `stop_auto_mode`            | `AutoModeStatusCard`                                       |
-| projectMgmt     | `get_project_spec`, `update_project_spec`                              | HITL for write ops                                         |
-| orchestration   | `get_execution_order`, `set_feature_dependencies`                      | `ExecutionOrderCard`                                       |
-| agentDelegation | `execute_dynamic_agent`                                                | `AgentOutputCard`                                          |
-| notes           | notes read/write tools                                                 | (JSON fallback)                                            |
-| metrics         | metrics and DORA tools                                                 | (JSON fallback)                                            |
-| prWorkflow      | PR workflow tools                                                      | (JSON fallback)                                            |
-| promotion       | release/promotion tools                                                | (JSON fallback)                                            |
-| contextFiles    | context file management tools                                          | (JSON fallback)                                            |
-| projects        | project management tools                                               | (JSON fallback)                                            |
-| briefing        | `get_briefing`                                                         | (JSON fallback)                                            |
-| avaChannel      | Ava Channel read/write tools                                           | (JSON fallback)                                            |
-| discord         | Discord message tools                                                  | (JSON fallback)                                            |
-| calendar        | calendar event tools                                                   | (JSON fallback)                                            |
-| health          | health status tools                                                    | (JSON fallback)                                            |
-| settings        | settings read/write tools                                              | (JSON fallback)                                            |
+| Group           | Representative Tools                                                   | Notes                                                              |
+| --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| boardRead       | `get_board_summary`, `list_features`, `get_feature`                    | Custom cards: BoardSummaryCard, FeatureListCard, FeatureDetailCard |
+| boardWrite      | `create_feature`, `update_feature`, `move_feature`, `delete_feature`   | `delete_feature` requires HITL                                     |
+| agentControl    | `start_agent`, `stop_agent`, `list_running_agents`, `get_agent_output` | `stop_agent` requires HITL                                         |
+| autoMode        | `get_auto_mode_status`, `start_auto_mode`, `stop_auto_mode`            | AutoModeStatusCard                                                 |
+| projectMgmt     | `get_project_spec`, `update_project_spec`                              | `update_project_spec` requires HITL                                |
+| orchestration   | `get_execution_order`, `set_feature_dependencies`                      | ExecutionOrderCard for execution order                             |
+| agentDelegation | `execute_dynamic_agent`                                                | Spawns inner agents via DynamicAgentExecutor                       |
+| notes           | `create_note`, `list_notes`, `get_note`, `delete_note`                 | Note management                                                    |
+| metrics         | `get_metrics`, `get_dora_metrics`                                      | DORA and project metrics                                           |
+| prWorkflow      | `get_pr_status`, `run_pr_workflow`                                     | PR lifecycle management                                            |
+| promotion       | `promote_to_staging`, `promote_to_production`                          | Deployment promotion (HITL for production)                         |
+| contextFiles    | `list_context_files`, `get_context_file`, `update_context_file`        | `.automaker/context/` file management                              |
+| projects        | `get_project`, `list_projects`, `create_project`                       | Project management                                                 |
+| briefing        | `get_briefing`                                                         | Daily sitrep / briefing                                            |
+| avaChannel      | `post_ava_message`, `get_ava_messages`                                 | Ava Channel messaging                                              |
+| discord         | `send_discord_message`, `list_discord_channels`                        | Discord integration                                                |
+| calendar        | `list_events`, `create_event`, `update_event`, `delete_event`          | Calendar management                                                |
+| health          | `get_health`, `get_sync_status`                                        | System and sync health                                             |
+| settings        | `get_settings`, `update_settings`                                      | Global settings read/write                                         |
 
 ## HITL Confirmation Flow
 
@@ -410,6 +432,25 @@ Ava is instructed to use citation syntax when referencing entities:
 When referencing a feature, use [[feature:<featureId>]].
 When referencing a document, use [[doc:<filePath>]].
 ```
+
+## Server-Side Context Management
+
+The chat endpoint applies two layers of context management to prevent the model context from growing unboundedly:
+
+**Client-side compaction** (before the request is sent):
+
+`compactMessageHistory()` estimates token count and trims the in-memory message list to fit within `COMPACTION_BUDGET_TOKENS`. Older tool results are replaced with one-line summaries; recent messages are preserved verbatim.
+
+**Anthropic server-side context management** (handled at the API level):
+
+Two `contextManagement.edits` rules are applied:
+
+| Rule                       | Trigger                | Action                                                                        |
+| -------------------------- | ---------------------- | ----------------------------------------------------------------------------- |
+| `clear_tool_uses_20250919` | Input tokens > 80,000  | Clears old tool use blocks, keeping the last 5; clears at least 10,000 tokens |
+| `compact_20260112`         | Input tokens > 150,000 | Anthropic server-side compaction of the conversation context                  |
+
+When `compact_20260112` fires, the server logs: `Server-side compaction activated`. A warning is also logged when the estimated input payload exceeds 150,000 tokens.
 
 ## Extended Thinking
 

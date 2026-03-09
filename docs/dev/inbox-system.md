@@ -79,23 +79,28 @@ Priority scoring is computed by `getEffectivePriority()` in `libs/types/src/acti
 
 The `ActionableItemBridgeService` subscribes to system events and auto-creates actionable items:
 
-| Event                        | Creates Item Type | Priority | Notes                                |
-| ---------------------------- | ----------------- | -------- | ------------------------------------ |
-| `hitl:form-requested`        | `hitl_form`       | high     | Links to form via `formId`           |
-| `notification:created`       | `notification`    | low      | Informational                        |
-| `escalation:ui-notification` | `escalation`      | varies   | Maps escalation severity to priority |
-| `pipeline:gate-waiting`      | `gate`            | high     | Links to feature via `featureId`     |
-| `ceremony:fired`             | `notification`    | low      | Ceremony delivery status             |
+| Event                         | Creates Item Type | Priority       | Notes                                                                |
+| ----------------------------- | ----------------- | -------------- | -------------------------------------------------------------------- |
+| `hitl:form-requested`         | `hitl_form`       | high           | Links to form via `formId`                                           |
+| `notification:created`        | `notification`    | low            | Informational; `feature_waiting_approval` type upgrades to medium    |
+| `escalation:ui-notification`  | `escalation`      | varies         | Maps escalation severity to priority                                 |
+| `pipeline:gate-waiting`       | `gate`            | high           | Links to feature via `featureId`                                     |
+| `authority:awaiting-approval` | `approval`        | varies by risk | Agent action waiting for human approval; risk→priority mapping below |
+| `feature:status-changed`      | _(auto-dismiss)_  | —              | Dismisses existing items when feature transitions out of `blocked`   |
+
+Authority risk → priority mapping: `critical`/`high` → `urgent`, `medium` → `high`, `low` → `medium`.
+
+The bridge also handles `hitl:form-responded` for authority-approval forms — when the HITL form is submitted it resolves the pending `AuthorityService` approval request directly (does not create a new inbox item).
 
 ## Auto-clear on feature unblock
 
-When a feature transitions from `blocked` to `backlog` or `in_progress`, the system auto-dismisses associated actionable items. This prevents stale escalation and gate items from cluttering the inbox after the underlying issue is resolved.
+When a feature transitions from `blocked` to `backlog` or `in_progress`, the bridge service auto-dismisses all pending and snoozed actionable items associated with that feature. This prevents stale escalation and gate items from cluttering the inbox after the underlying issue is resolved.
 
-The auto-dismiss is triggered by the `escalation:acknowledged` event subscriber in `event-subscriptions.module.ts`, which:
+The auto-dismiss is triggered directly by the `feature:status-changed` event in `ActionableItemBridgeService`. When the event fires:
 
-1. Finds the blocked feature associated with the deduplication key
-2. Transitions the feature back to `backlog`
-3. Dismisses any pending actionable items linked to that feature
+1. The bridge checks `previousStatus === 'blocked'` and `newStatus` is `backlog` or `in_progress`
+2. All pending/snoozed items with a matching `actionPayload.featureId` are dismissed
+3. A log entry records the count of dismissed items
 
 ## 4-tab UI
 

@@ -201,6 +201,86 @@ The Lead Engineer's fast-path rules evaluate on every event and catch drift that
 | Webhook configured + GitHub sends event | < 5 seconds               |
 | Webhook not configured, auto-mode idle  | 5 minutes (drift scan)    |
 
+## Extended Feature Fields
+
+Beyond status, the `Feature` interface in `libs/types/src/feature.ts` carries several structured fields added to support richer pipeline semantics:
+
+### Failure Classification
+
+When an agent fails, `failureClassification` records a structured diagnosis:
+
+```typescript
+interface FailureClassification {
+  category: string; // e.g. "build_error", "test_failure", "merge_conflict"
+  confidence: number; // 0–1 confidence score for the category
+  recoveryStrategy: string; // Suggested next action (e.g. "retry", "human_review")
+  retryable: boolean; // Whether the agent should auto-retry
+  timestamp: string; // ISO 8601 when the classification was set
+}
+```
+
+### Success Criteria and Kill Conditions
+
+`successCriteria` and `killConditions` are free-text fields (typically multi-line strings) that describe what "done" looks like and under what circumstances the feature should be abandoned:
+
+```typescript
+interface Feature {
+  successCriteria?: string; // What constitutes a successful outcome
+  killConditions?: string; // Conditions that warrant abandoning the feature
+}
+```
+
+### Customer Context
+
+Captures the user-facing motivation behind a feature (PRD-style):
+
+```typescript
+interface CustomerContext {
+  who: string; // Target user/persona
+  problem: string; // Pain point being addressed
+  expectedBenefit: string; // Value the feature delivers
+}
+```
+
+### Hypothesis
+
+A free-text field for the assumption the feature is testing. Useful for experiment-style features:
+
+```typescript
+interface Feature {
+  hypothesis?: string;
+}
+```
+
+### Pipeline State
+
+`pipelineState` reflects the Lead Engineer pipeline phase (separate from Kanban status):
+
+```typescript
+type FeatureState =
+  | 'INTAKE' // Feature received, not yet analyzed
+  | 'PLAN' // Planning phase
+  | 'EXECUTE' // Agent actively implementing
+  | 'REVIEW' // Under review (code review, QA)
+  | 'MERGE' // PR being merged
+  | 'DEPLOY' // Being deployed
+  | 'VERIFY' // Post-deploy verification
+  | 'DONE' // Complete
+  | 'ESCALATE'; // Escalated to human
+```
+
+This is distinct from `FeatureStatus` (the Kanban column). A feature can be `in_progress` on the board while at any pipeline stage.
+
+### PRD Metadata
+
+`prdMetadata` carries metadata from an associated Product Requirements Document:
+
+```typescript
+interface Feature {
+  prdMetadata?: Record<string, unknown>; // Arbitrary PRD fields (title, author, version, etc.)
+}
+```
+
 ## Future Work
 
 - Integrate Authority System `workItemState` with canonical statuses
