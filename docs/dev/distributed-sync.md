@@ -1,27 +1,29 @@
 # Distributed Sync
 
-How protoLabs synchronizes state across multiple instances using Automerge CRDTs, partition detection, reconnection resilience, and fleet-wide feature scheduling.
+How protoLabs synchronizes state across multiple instances using Automerge CRDTs, partition detection, and reconnection resilience.
 
 ## Architecture Overview
 
-protoLabs uses two parallel WebSocket layers for distributed sync:
+protoLabs uses a **dual-channel sync architecture** where each instance runs two separate WebSocket services:
 
-1. **Peer mesh** (`CrdtSyncService`, port 4444) — heartbeats, peer TTL, leader election, feature/project/settings event broadcast, and registry sync.
-2. **Automerge binary sync** (`CRDTStore`, port 4445) — low-level Automerge document replication for the Ava Channel, calendar events, and todos.
+| Service           | Port                          | Purpose                                                 |
+| ----------------- | ----------------------------- | ------------------------------------------------------- |
+| `CrdtSyncService` | `syncPort` (default 4444)     | Peer mesh: heartbeats, event broadcast, leader election |
+| `CRDTStore`       | `syncPort + 1` (default 4445) | Automerge binary document replication (primary only)    |
 
-One instance acts as **primary** and others connect as **workers** on both ports. The ports are derived from `protolab.syncPort` in `proto.config.yaml`; the CRDT store always uses `syncPort + 1`.
+One instance acts as **primary** and others connect as **workers**. The primary instance listens on both ports; workers connect to both.
 
 ```
-Worker A ──────┐
-               ▼
-Worker B ────▶ Primary (peer mesh :4444, CRDT store :4445)
-               ▲
-Worker C ──────┘
+                            :4444 (CrdtSyncService — event mesh)
+Worker A ──────┐            ┌─── heartbeats, feature_event, settings_event
+               ▼            │
+Worker B ────▶ Primary ─────┤
+               ▲            │
+Worker C ──────┘            └─── :4445 (CRDTStore — Automerge binary sync)
+                                 AvaChannel, Calendar, Todo documents
 ```
 
-Fleet coordination (work assignment, capacity advertising, escalations, scheduling) is layered on top via the Ava Channel — a daily-sharded CRDT document that all instances write to and the `AvaChannelReactorService` subscribes to.
-
-Instance roles are set in `proto.config.yaml`:
+Instance roles are set in `proto.config.yaml`. **`hivemind.enabled` must be `true`** for distributed mode to activate; without it both services run in single-instance mode and skip all peer connections.
 
 ```yaml
 protolab:
@@ -31,6 +33,7 @@ protolab:
   instanceUrl: ws://100.x.x.x:4444
 
 hivemind:
+  enabled: true # REQUIRED — set false (or omit) for single-instance mode
   heartbeatIntervalMs: 30000
   peerTtlMs: 120000
   peers:
@@ -39,35 +42,33 @@ hivemind:
     - ws://100.64.0.3:4444 # worker-2
 ```
 
-## CRDT Store and Service Injection
+### Services Using CRDTStore
 
-`crdt-store.module.ts` initializes the `CRDTStore` (Automerge document persistence) when hivemind mode is enabled, then injects the store into three services via their `setCrdtStore()` hook:
+`CrdtStoreModule` initializes the `CRDTStore` on startup and injects it into services that need document-level Automerge sync:
 
-- `AvaChannelService` — daily-sharded coordination messages
-- `CalendarService` — shared calendar events synced under `doc:calendar/shared`
-- `TodoService` — shared todo workspace synced under `doc:todos/workspace`
+- `AvaChannelService` — daily-sharded coordination messages (`doc:ava-channel/YYYY-MM-DD`)
+- `CalendarService` — shared calendar events (`doc:calendar/shared`)
+- `TodoService` — shared todo workspace (`doc:todos/workspace`)
 
-Features and projects do **not** use the CRDT store directly; they rely on EventBus-based sync handled by `crdt-sync.module.ts`.
+Features and Projects use EventBus-based sync (handled by `crdt-sync.module.ts`) because their storage is filesystem-primary with event notifications.
 
-## Registry Sync (Split-Brain Prevention)
+### TodoService Permission Model
 
-The CRDT store uses a **registry** to track which document IDs are known to the fleet. Without this, instances that miss document creation events can end up with orphaned or diverged documents.
+`TodoService` enforces a three-tier write-permission model per list. Permissions are checked before any CRDT mutation:
 
-`CrdtSyncService` exposes two hooks:
+| List type      | User can write | Ava (owning instance) can write | Ava (other instances) can write |
+| -------------- | -------------- | ------------------------------- | ------------------------------- |
+| `shared`       | yes            | yes                             | yes                             |
+| `user`         | yes            | no (read-only)                  | no (read-only)                  |
+| `ava-instance` | yes            | yes                             | no                              |
 
-```typescript
-// Primary: provide a snapshot of all known documents (key → URL map)
-crdtSyncService.setRegistryProvider(() => store.getRegistry());
+All write methods accept a `TodoWriterIdentity` (`{ isAva: boolean, instanceId?: string }`). In hivemind mode the owning Ava `instanceId` is stored in `list.ownerInstanceId` and replicated to all peers via the CRDT document.
 
-// Worker: adopt incoming registry snapshots from the primary
-crdtSyncService.onRegistryReceived((remoteRegistry) => {
-  const { adopted, conflicts } = store.adoptRemoteRegistry(remoteRegistry);
-  // adopted: count of newly accepted entries
-  // conflicts: count of URL conflicts resolved in favour of the primary
-});
-```
+### Storage Locations
 
-When a worker connects (or reconnects after a partition), the primary sends its full registry snapshot. The worker adopts any missing documents by calling `store.adoptRemoteRegistry()`, which resolves URL conflicts in favour of the primary's copy. This prevents split-brain where two instances believe they hold the authoritative version of the same logical document.
+CRDT documents are persisted to `.automaker/crdt/` relative to the repository root. The `CRDTStore` runs automatic compaction every **5 minutes** (`compactIntervalMs: 5 * 60 * 1000`).
+
+`AvaChannelService` shards older than **30 days** are archived to disk as JSON files and unloaded from active memory.
 
 ## Sync Health Metrics
 
@@ -135,6 +136,31 @@ If a worker cannot reach the primary and the TTL has expired, it checks whether 
 1. Announces the promotion to any connected workers via a `promote` message.
 2. Starts a WebSocket server on `syncPort`.
 3. Workers receive the promotion message and reconnect to the new primary.
+
+## Split-Brain Prevention (Registry Sync)
+
+When two instances independently start up before they can communicate, they may each create separate Automerge documents for the same `domain:id` pair with different internal URLs. This is a split-brain scenario.
+
+**How it's resolved:** On every new worker connection, the primary immediately broadcasts a `registry_sync` message containing its full `CRDTStore` document registry (`Record<string, string>` mapping `domain:id` → document URL). The worker calls `store.adoptRemoteRegistry(remoteRegistry)` to overwrite any conflicting local URLs with the primary's versions.
+
+```
+Worker connects → primary sends registry_sync
+                  → worker adopts primary's URLs
+                  → split-brain resolved
+```
+
+This happens automatically via two wiring calls in `CrdtStoreModule`:
+
+```typescript
+// Primary side — broadcasts on each new peer identity message
+crdtSyncService.setRegistryProvider(() => store.getRegistry());
+
+// Worker side — adopts registry when received from primary
+crdtSyncService.onRegistryReceived((remoteRegistry) => {
+  const { adopted, conflicts } = store.adoptRemoteRegistry(remoteRegistry);
+  // adopted = entries overwritten, conflicts = URL mismatches resolved
+});
+```
 
 ## Compaction Diagnostics
 
@@ -211,184 +237,109 @@ Each entry includes:
 
 This is useful for diagnosing merge conflicts, identifying the source of unexpected state, and reconstructing the sequence of events during a network partition.
 
-## Fleet Coordination via Ava Channel
-
-While the CRDT sync mesh handles state replication, **fleet coordination** (which instance works on which features) is handled through the **Ava Channel** — a daily-sharded CRDT document (`doc:ava-channel/YYYY-MM-DD`) that all instances read and write. The `AvaChannelReactorService` subscribes to this document and dispatches coordination messages.
-
-The reactor is activated by `ava-channel-reactor.module.ts`, which requires **all three** conditions to be met:
-
-1. The `reactorEnabled` feature flag is `true` in global settings.
-2. `proto.config.yaml` exists with `hivemind.enabled: true`.
-3. The `CRDTStore` has been registered by `crdt-store.module` (i.e. `crdt-store.module` must run first).
-
-The `FleetSchedulerService` is instantiated and started inside the same module registration and shares the same lifecycle.
-
-### Ava Channel Document
-
-Each message in the Ava Channel has:
-
-```typescript
-interface AvaChatMessage {
-  id: string;
-  instanceId: string;
-  instanceName: string;
-  content: string;
-  context?: AvaChannelContext; // optional machine-readable metadata
-  source: 'ava' | 'operator' | 'system';
-  timestamp: string; // ISO 8601
-  intent?: MessageIntent; // request | inform | response | coordination | escalation | system_alert
-  inReplyTo?: string; // ID of the parent message in a thread
-  expectsResponse?: boolean;
-  conversationDepth?: number;
-}
-```
-
-`AvaChannelContext` carries optional structured metadata alongside the free-form `content`:
-
-```typescript
-interface AvaChannelContext {
-  featureId?: string;
-  boardSummary?: string;
-  capacity?: { runningAgents: number; maxAgents: number; backlogCount: number };
-}
-```
-
-The reactor classifies incoming messages via a rule chain of `MessageClassifierRule` patterns and dispatches appropriate responses. Loop prevention is enforced at three layers: (1) classifier chain (`shouldRespond` result), (2) per-thread cooldown timer, and (3) a busy gate that queues one pending message while a response is in-flight.
-
-**Protocol message filtering**: Messages with `source='system'` that start with a `[bracket_prefix]` (e.g. `[capacity_heartbeat]`, `[work_request]`, `[schedule_assignment]`, `[dora_report]`) are intercepted by `handleWorkStealProtocol()` before reaching the classifier chain. These machine-to-machine protocol messages are dispatched directly to their typed handlers and never generate a classifier response.
-
-### Work-Stealing Protocol
-
-When a fleet instance finishes its assigned features and has spare capacity, it advertises itself and requests more work:
-
-1. Every 60s, each reactor broadcasts a `CapacityHeartbeat` with its current load.
-2. An idle instance posts a `WorkRequest` (requesting up to 2 features).
-3. The primary (or any instance with spare inventory) responds with a `WorkOffer`.
-4. The requesting instance accepts the offer and begins work.
-
-This allows the fleet to self-balance without any centralized coordinator — any instance can fulfill a `WorkRequest`. Epics are excluded from work-stealing; only leaf features are eligible.
-
-### Escalation Protocol (Blocked Feature Handoff)
-
-When an instance is blocked on a feature (e.g., waiting for a human decision) and cannot make progress:
-
-1. The blocked instance posts an `EscalationRequest` to the Ava Channel.
-2. Any instance with capacity responds with an `EscalationOffer`.
-3. The blocked instance replies with `EscalationAccept`, transferring ownership.
-4. The accepting instance takes over the feature from its current state.
-
-This prevents features from stalling when an individual instance is stuck.
-
-### Health Alerts
-
-Each instance monitors its own resource usage and posts `HealthAlert` messages when thresholds are exceeded (memory > 85%, CPU > 90%):
-
-```typescript
-interface HealthAlert {
-  instanceId: string;
-  memoryUsed: number; // percentage 0–100
-  cpuLoad: number; // percentage 0–100
-  alertTimestamp: string; // ISO 8601
-}
-```
-
-Peers that receive a `HealthAlert` pause work-stealing from the degraded instance for 5 minutes.
-
-### Self-Healing Subscription
-
-`AvaChannelReactorService` uses exponential backoff on subscription failure: 5-second base delay, capped at 60 seconds. If the daily-sharded document is unavailable at startup, the reactor retries automatically without manual intervention.
-
-## Fleet Scheduler
-
-`FleetSchedulerService` is a higher-level scheduler that distributes **project phases** across fleet instances. It runs on top of the Ava Channel and handles parallel execution of independent work. Epics are excluded from fleet scheduling; only concrete features are assigned.
-
-### How It Works
-
-1. **Inventory Broadcast**: Every instance periodically posts a `[work_inventory]` message describing its current backlog and active features (in dependency order).
-2. **Schedule Assignment**: The active scheduler runs `runScheduleCycle()` every 5 minutes, computing an optimal assignment of features to instances. It posts a `[schedule_assignment]` message mapping `instanceId → featureIds[]`.
-3. **Failover**: If no `[scheduler_heartbeat]` is received within 10 minutes, the longest-running worker instance takes over as active scheduler (last-writer-wins on uptime, with lower `instanceId` as tiebreaker).
-4. **Conflict Resolution**: If two instances both claim the same feature, a `[schedule_conflict]` is broadcast. The instance with the **higher** `instanceId` (lexicographic) releases the claim and moves the feature back to backlog.
-
-### Phase Parallelization
-
-When a new project is created, the fleet scheduler decomposes it into phases using a topological sort (Kahn's BFS). Independent phases are grouped and dispatched to separate instances simultaneously:
-
-```
-Phase 1 (setup)
-    ├── Phase 2a (feature-A)  → Instance prod-01
-    ├── Phase 2b (feature-B)  → Instance prod-02
-    └── Phase 2c (feature-C)  → Instance prod-03
-Phase 3 (integration) — starts after all Phase 2 complete
-```
-
-Progress is tracked via `ProjectProgressMsg`, which each instance posts when it completes a phase. The scheduler waits for all parallel phases to complete before unblocking dependent phases.
-
-### Fleet Status API
-
-```
-GET /api/projects/:slug/fleet-status
-```
-
-Returns the aggregated execution status of a project across all fleet instances:
-
-```json
-{
-  "projectSlug": "my-project",
-  "phases": [
-    {
-      "milestoneSlug": "milestone-1",
-      "phaseName": "feature-A",
-      "status": "done",
-      "instanceId": "prod-01",
-      "timestamp": "2026-03-09T10:00:00.000Z"
-    },
-    {
-      "milestoneSlug": "milestone-1",
-      "phaseName": "feature-B",
-      "status": "in_progress",
-      "instanceId": "prod-02",
-      "timestamp": "2026-03-09T10:05:00.000Z"
-    }
-  ]
-}
-```
-
-This endpoint is backed by `FleetSchedulerService.getProjectFleetStatus()`, which aggregates `ProjectProgress` (a.k.a. `ProjectProgressMsg`) entries received via the Ava Channel and stored in the in-memory `projectProgressByPhase` map.
-
-### Fleet Scheduler Message Types
-
-| Message Type            | Frequency    | Purpose                                        |
-| ----------------------- | ------------ | ---------------------------------------------- |
-| `WorkInventoryMsg`      | Per instance | Broadcast backlog + active features            |
-| `ScheduleAssignmentMsg` | Every 5 min  | Primary assigns features to instances          |
-| `SchedulerHeartbeatMsg` | Every 1 min  | Failover detection (absent >10 min = takeover) |
-| `ScheduleConflictMsg`   | On conflict  | Resolve double-claims (lower instanceId wins)  |
-| `ProjectProgressMsg`    | Per phase    | Track phase completion across instances        |
-
-### Key Timing Constants
-
-| Constant                 | Value      | Purpose                                       |
-| ------------------------ | ---------- | --------------------------------------------- |
-| Peer inventory TTL       | 6 minutes  | Stale inventory is ignored in schedule cycles |
-| Primary absent threshold | 10 minutes | No heartbeat for 10 min triggers failover     |
-| Schedule cycle interval  | 5 minutes  | How often the primary recomputes assignments  |
-| Scheduler heartbeat      | 1 minute   | Proves primary is still running the scheduler |
-
-## Observability: DORA Metrics and Friction Tracking
-
-`AvaChannelReactorService` also posts higher-level operational signals:
-
-- **`DoraReport`**: Deployment frequency, lead time, and blocked feature count. Broadcast as a `[dora_report]` system message **every hour**. Peers merge incoming reports into the aggregate CRDT entry under `domain='metrics', id='dora'`.
-- **`PatternResolved`**: Broadcast as a `[pattern_resolved]` system message when a System Improvement feature completes. Peers clear their local friction counters for the resolved pattern on receipt.
-- **Friction Tracker**: Monitors repeated failures via `FrictionTrackerService`. When the same failure pattern recurs, a System Improvement feature is automatically filed. Incoming `[friction_report]` messages from peers are used for de-duplication.
-
-These signals are visible in the Ava Channel for fleet-wide visibility and can be consumed by the metrics dashboard.
-
 ## Sync Events
 
-| Event                      | Payload                               | Description                                                      |
-| -------------------------- | ------------------------------------- | ---------------------------------------------------------------- |
-| `sync:partition-recovered` | `{ instanceId, partitionDurationMs }` | Emitted after a network partition heals and changes are replayed |
-| `sync:peer-unreachable`    | `{ instanceId, lastSeen, peerTtlMs }` | Emitted when a peer exceeds its TTL                              |
+Events emitted on the internal `EventEmitter` passed to `crdtSyncService.attachEventBus()`:
 
-These events are emitted on the internal `EventEmitter` passed to `crdtSyncService.attachEventBus()`.
+| Event                      | Payload                               | Description                                                                                               |
+| -------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sync:partition-recovered` | `{ instanceId, partitionDurationMs }` | Emitted after a network partition heals and changes are replayed                                          |
+| `sync:peer-unreachable`    | `{ instanceId, lastSeen, peerTtlMs }` | Emitted when a peer exceeds its TTL                                                                       |
+| `bug:reported`             | `{ content, featureId? }`             | Consumed (not emitted) — forwarded to Ava Channel as a system message via `attachAvaChannelBugReporter()` |
+
+### Wiring the Ava Channel Bug Reporter
+
+```typescript
+crdtSyncService.attachAvaChannelBugReporter(async (content, featureId) => {
+  await avaChannelService.postSystemMessage(content, featureId);
+});
+```
+
+When this callback is registered, any `bug:reported` event on the event bus is automatically relayed to the Ava Channel as a system message.
+
+## Fleet Coordination via Ava Channel
+
+While the CRDT sync mesh handles state replication, **fleet coordination** (which instance works on which features) uses the **Ava Channel** — a daily-sharded CRDT document (`doc:ava-channel/YYYY-MM-DD`) that all instances read and write. The `AvaChannelReactorService` subscribes to this document and dispatches coordination messages.
+
+### FleetSchedulerService
+
+`FleetSchedulerService` distributes backlog features and project phases across fleet instances:
+
+1. **Inventory Broadcast**: Every instance periodically posts a `[work_inventory]` message with its current backlog and active features (sorted by dependency order).
+2. **Schedule Assignment**: The active scheduler runs `runScheduleCycle()` every 5 minutes, computing an optimal assignment of features to instances. Posts a `[schedule_assignment]` message mapping `instanceId → featureIds[]`.
+3. **Failover**: If no `[scheduler_heartbeat]` arrives within 10 minutes, the longest-running worker instance takes over as active scheduler. Tiebreaker: lower `instanceId` (lexicographic) wins.
+4. **Conflict Resolution**: If two instances both claim the same feature, a `[schedule_conflict]` is broadcast. The instance with the **higher** `instanceId` releases the claim and moves the feature back to backlog.
+
+**Phase Parallelization**: When a new project is created, the scheduler decomposes it into phases using Kahn's BFS topological sort. Independent phases are distributed across instances simultaneously; dependent phases wait for their prerequisites.
+
+| Message Type            | Frequency    | Purpose                                         |
+| ----------------------- | ------------ | ----------------------------------------------- |
+| `WorkInventoryMsg`      | Per instance | Broadcast backlog + active features             |
+| `ScheduleAssignmentMsg` | Every 5 min  | Primary assigns features to instances           |
+| `SchedulerHeartbeatMsg` | Every 1 min  | Failover detection (absent >10 min = takeover)  |
+| `ScheduleConflictMsg`   | On conflict  | Resolve double-claims (higher instanceId loses) |
+| `ProjectProgressMsg`    | Per phase    | Track phase completion across instances         |
+
+### DORA Metrics and Friction Observability
+
+`AvaChannelReactorService` also posts operational signals over the Ava Channel:
+
+- **`DoraReport`**: Per-instance DORA metrics broadcast as `[dora_report]` **every hour** using a 1-day sliding window from `DoraMetricsService`. Peers merge incoming reports into a `MetricsDocument` (`domain='metrics', id='dora'`). Metrics include `deploymentsLast24h`, `avgLeadTimeMs`, `blockedCount`, `doneCount`, and `computedAt`.
+- **`FrictionReport`**: Recurring failure patterns from `FrictionTrackerService`. When the same failure pattern exceeds a threshold, a System Improvement feature is automatically filed.
+- **`PatternResolved`**: Broadcast as `[pattern_resolved]` when a System Improvement feature completes. Peers clear local friction counters for the resolved pattern.
+
+### Metrics API Endpoints
+
+| Endpoint                             | Description                                                     |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `GET /api/metrics/dora`              | Local DORA metrics merged with the aggregate CRDT snapshot      |
+| `GET /api/metrics/dora/history`      | Time-bucketed DORA trend data                                   |
+| `GET /api/metrics/stage-durations`   | Per-feature time in each status stage with flow efficiency      |
+| `GET /api/metrics/flow`              | Cumulative flow diagram time-series (daily status counts)       |
+| `GET /api/metrics/friction`          | Active recurring failure patterns from `FrictionTrackerService` |
+| `GET /api/metrics/failure-breakdown` | Aggregated `failureClassification.category` counts              |
+
+`/friction` is instance-local. All other endpoints require a `projectPath` query parameter.
+
+## Actionable Item Bridge
+
+`ActionableItemBridgeService` converts distributed events into entries in the operator's unified inbox. It listens to the event bus and auto-creates actionable items for each signal type:
+
+| Source event                         | Creates item type            | Priority                                                          |
+| ------------------------------------ | ---------------------------- | ----------------------------------------------------------------- |
+| `hitl:form-requested`                | `hitl_form`                  | high                                                              |
+| `notification:created`               | `notification` or `approval` | low; `feature_waiting_approval` → medium                          |
+| `escalation:ui-notification`         | `escalation`                 | maps severity: critical→urgent, high→high, medium→medium, low→low |
+| `pipeline:gate-waiting`              | `gate`                       | high                                                              |
+| `authority:awaiting-approval`        | `approval`                   | high or urgent (based on risk level)                              |
+| `feature:status-changed` (unblocked) | (dismisses items)            | auto-dismisses pending items for the feature                      |
+| `hitl:form-responded` (authority)    | (resolves approval)          | resolves via `AuthorityService.resolveApproval()`                 |
+
+The bridge holds no state. It wires `AuthorityService` via `setAuthorityService()` to avoid circular dependency at construction.
+
+## Authority Service
+
+`AuthorityService` enforces trust-based policy for agent-proposed actions. Each action proposal is evaluated against the agent's trust level and the action's risk level.
+
+### Storage
+
+Persisted in `.automaker/authority/` (not CRDT-synced — each instance maintains an independent registry for its own agents):
+
+| File                  | Contents                                      |
+| --------------------- | --------------------------------------------- |
+| `agents.json`         | Registered agents with roles and trust levels |
+| `trust-profiles.json` | Per-role risk stats                           |
+| `approval-queue.json` | Pending proposals awaiting human approval     |
+| `audit-log.json`      | AI auto-approval decision records             |
+| `decisions.json`      | Append-only JSONL log of all policy decisions |
+
+### Trust Levels
+
+| Trust level | Default roles                                                                | Max risk allowed |
+| ----------- | ---------------------------------------------------------------------------- | ---------------- |
+| 0           | (untrusted / unregistered)                                                   | low              |
+| 1           | `product-manager`, `project-manager`, `engineering-manager`, `gtm-authority` | low              |
+| 2           | `principal-engineer`                                                         | medium           |
+| 3           | `cto`                                                                        | high             |
+
+When a proposal's risk ≤ the agent's max allowed risk it is auto-approved (or auto-approved by the risk classifier if `preApproved: true`). Otherwise the proposal enters the approval queue and `authority:awaiting-approval` is emitted.
