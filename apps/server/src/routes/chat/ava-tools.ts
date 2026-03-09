@@ -1699,6 +1699,71 @@ export function buildAvaTools(
         }
       },
     });
+
+    tools['message_instance'] = makeTool({
+      description:
+        'Send a message to another Ava instance via the backchannel and wait for a response. Uses a correlation ID to match the reply. Returns the response content or a timeout error.',
+      inputSchema: z.object({
+        instanceId: z.string().describe('Target instance ID to send the message to'),
+        message: z.string().describe('Message to send to the target instance'),
+        timeout_ms: z
+          .number()
+          .optional()
+          .describe('How long to wait for a response in milliseconds (default: 60000)'),
+      }),
+      execute: async ({ instanceId, message, timeout_ms }) => {
+        const correlationId = randomUUID();
+        const timeoutMs = timeout_ms ?? 60000;
+        const pollIntervalMs = 2000;
+
+        // Send the structured backchannel message with correlation ID
+        const sentAt = new Date();
+        await avaChannel.postMessage(
+          `[message_instance] correlationId:${correlationId} to:${instanceId} ${message}`,
+          'ava',
+          {
+            intent: 'request',
+            expectsResponse: true,
+          }
+        );
+
+        // Poll for a response referencing the correlation ID
+        const deadline = sentAt.getTime() + timeoutMs;
+        while (Date.now() < deadline) {
+          await new Promise<void>((resolve) => setTimeout(resolve, pollIntervalMs));
+
+          const since = new Date(sentAt.getTime() - 1000);
+          const recent = await avaChannel.getMessages({
+            from: since,
+            includeProtocol: true,
+          });
+
+          const reply = recent.find(
+            (m) =>
+              m.instanceId === instanceId &&
+              m.content.includes(`correlationId:${correlationId}`) &&
+              new Date(m.timestamp).getTime() > sentAt.getTime()
+          );
+
+          if (reply) {
+            return {
+              success: true,
+              instanceId,
+              correlationId,
+              response: reply.content,
+              responseTimestamp: reply.timestamp,
+            };
+          }
+        }
+
+        return {
+          success: false,
+          instanceId,
+          correlationId,
+          error: `Timeout: no response from instance "${instanceId}" within ${timeoutMs}ms`,
+        };
+      },
+    });
   }
 
   // -----------------------------------------------------------------------
