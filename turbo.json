@@ -7,6 +7,10 @@
       "inputs": ["src/**", "tsconfig.json", "tsup.config.*", "package.json"],
       "outputs": ["dist/**"]
     },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json", "tsconfig.*.json"]
+    },
     "lint": {
       "dependsOn": ["^build"],
       "inputs": ["src/**", "*.config.*", "eslint.config.*"]
