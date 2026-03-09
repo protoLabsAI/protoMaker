@@ -7,7 +7,16 @@
  */
 
 import { Card, CardContent } from '@protolabsai/ui/atoms';
-import { TrendingUp, TrendingDown, Minus, Clock, Rocket, AlertTriangle, HeartPulse, RotateCcw } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Clock,
+  Rocket,
+  AlertTriangle,
+  HeartPulse,
+  RotateCcw,
+} from 'lucide-react';
 import type { DoraMetrics, MetricValue } from '@protolabsai/types';
 
 interface DoraKpiCardsProps {
@@ -100,9 +109,7 @@ function DoraMetricCard({
             <p className={`text-2xl font-bold tracking-tight ${valueColor}`}>{displayValue}</p>
             <div className="flex items-center gap-1">
               <TrendIcon trend={metric.trend} />
-              <p className="text-xs text-muted-foreground capitalize">
-                {metric.trend ?? 'stable'}
-              </p>
+              <p className="text-xs text-muted-foreground capitalize">{metric.trend ?? 'stable'}</p>
             </div>
           </div>
           <div className={`rounded-lg p-2 ml-2 flex-shrink-0 ${iconColor}`}>

@@ -75,11 +75,7 @@ export function ProjectMetricsTab({
       />
 
       {/* DORA KPI Cards */}
-      <DoraKpiCards
-        data={dora.data?.metrics}
-        isLoading={dora.isLoading}
-        error={dora.error}
-      />
+      <DoraKpiCards data={dora.data?.metrics} isLoading={dora.isLoading} error={dora.error} />
 
       {/* Row 2: Cost + Feature Throughput */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
