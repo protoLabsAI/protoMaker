@@ -120,10 +120,11 @@ export function createAvaChannelRoutes(
    */
   router.get('/messages', async (req: Request, res: Response): Promise<void> => {
     try {
-      const { since, until, instanceId } = req.query as {
+      const { since, until, instanceId, includeProtocol } = req.query as {
         since?: string;
         until?: string;
         instanceId?: string;
+        includeProtocol?: string;
       };
 
       if (!avaChannelService) {
@@ -144,6 +145,7 @@ export function createAvaChannelRoutes(
         from: from && !isNaN(from.getTime()) ? from : undefined,
         to: to && !isNaN(to.getTime()) ? to : undefined,
         instanceId,
+        includeProtocol: includeProtocol === 'true',
       });
 
       const seen = new Set<string>();

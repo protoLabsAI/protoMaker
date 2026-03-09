@@ -296,6 +296,12 @@ export interface GetMessagesOptions {
   instanceId?: string;
   /** Filter to messages from a specific source */
   source?: 'ava' | 'operator' | 'system';
+  /**
+   * Whether to include protocol messages (content starting with '[').
+   * Defaults to false — protocol messages (heartbeats, work-steal, DORA reports, etc.)
+   * are hidden by default.
+   */
+  includeProtocol?: boolean;
 }
 
 // ---------------------------------------------------------------------------
