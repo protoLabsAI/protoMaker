@@ -6,11 +6,11 @@ Trigger-based agent spawning with rate limiting, deduplication, and circuit brea
 
 `ReactiveSpawnerService` spawns Ava agents in response to three trigger categories:
 
-| Category | Method | Description |
-|----------|--------|-------------|
-| `message` | `spawnForMessage(msg)` | React to an incoming `AvaChatMessage` |
-| `error` | `spawnForError(ctx)` | Investigate and remediate an `ErrorContext` |
-| `cron` | `spawnForCron(taskName, desc)` | Execute a scheduled task |
+| Category  | Method                         | Description                                 |
+| --------- | ------------------------------ | ------------------------------------------- |
+| `message` | `spawnForMessage(msg)`         | React to an incoming `AvaChatMessage`       |
+| `error`   | `spawnForError(ctx)`           | Investigate and remediate an `ErrorContext` |
+| `cron`    | `spawnForCron(taskName, desc)` | Execute a scheduled task                    |
 
 ## Budget Controls
 
@@ -23,12 +23,12 @@ Trigger-based agent spawning with rate limiting, deduplication, and circuit brea
 
 ```ts
 interface ErrorContext {
-  message: string;          // Human-readable error message (required)
-  errorType?: string;       // Classifier, e.g. 'high_memory_usage', 'feature_failure'
-  code?: string;            // Node.js ErrnoException code, e.g. 'ENOENT'
-  stack?: string;           // Stack trace (alias for stackTrace)
-  stackTrace?: string;      // Stack trace
-  featureId?: string;       // Feature ID associated with the error
+  message: string; // Human-readable error message (required)
+  errorType?: string; // Classifier, e.g. 'high_memory_usage', 'feature_failure'
+  code?: string; // Node.js ErrnoException code, e.g. 'ENOENT'
+  stack?: string; // Stack trace (alias for stackTrace)
+  stackTrace?: string; // Stack trace
+  featureId?: string; // Feature ID associated with the error
   severity?: 'low' | 'medium' | 'critical';
   metadata?: Record<string, unknown>;
 }
@@ -43,6 +43,7 @@ Three system components call `spawnForError()` to trigger self-healing:
 **File:** `apps/server/src/services/health-monitor-service.ts`
 
 Triggers when:
+
 - Heap usage exceeds **90%** (`MEMORY_SPAWN_THRESHOLD = 0.9`)
 - Any health check issue is classified as `severity: 'critical'`
 
