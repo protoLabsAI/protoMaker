@@ -10,9 +10,28 @@ import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { TimeSeriesMetric, TimeGroupBy } from '@protolabsai/types';
 
+const DORA_STALE_TIME = 60 * 1000; // 1 minute
 const METRICS_STALE_TIME = 30 * 1000; // 30 seconds
 const CAPACITY_STALE_TIME = 10 * 1000; // 10 seconds
 const LEDGER_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
+ */
+export function useDora(projectPath: string | undefined, timeWindowDays?: number) {
+  return useQuery({
+    queryKey: queryKeys.dora.metrics(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.dora.metrics(projectPath, timeWindowDays);
+    },
+    enabled: !!projectPath,
+    staleTime: DORA_STALE_TIME,
+    refetchInterval: DORA_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
 
 /**
  * Fetch project-level aggregated metrics (cost, velocity, success rate, throughput)

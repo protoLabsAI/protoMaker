@@ -12,10 +12,12 @@ import {
   useTimeSeries,
   useModelDistribution,
   useCycleTimeDistribution,
+  useDora,
 } from '@/hooks/queries/use-metrics';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import { TimeRangeSelector, useTimeRangeDates, type TimeRange } from './time-range';
 import { KpiCards } from './kpi-cards';
+import { DoraKpiCards } from './dora-kpi-cards';
 import { CostChart } from './cost-chart';
 import { ThroughputChart } from './throughput-chart';
 import { ModelPieChart } from './model-pie';
@@ -37,6 +39,7 @@ export function ProjectMetricsTab({
   const { startDate, endDate } = useTimeRangeDates(timeRange);
 
   const aggregate = useLedgerAggregate(projectPath, startDate, endDate);
+  const dora = useDora(projectPath);
   const costSeries = useTimeSeries(projectPath, 'cost', 'day', startDate, endDate);
   const throughputSeries = useTimeSeries(projectPath, 'throughput', 'day', startDate, endDate);
   const prSeries = useTimeSeries(projectPath, 'pr_throughput', 'day', startDate, endDate);
@@ -70,6 +73,9 @@ export function ProjectMetricsTab({
         }
         isLoading={aggregate.isLoading}
       />
+
+      {/* DORA KPI Cards */}
+      <DoraKpiCards data={dora.data?.metrics} isLoading={dora.isLoading} error={dora.error} />
 
       {/* Row 2: Cost + Feature Throughput */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

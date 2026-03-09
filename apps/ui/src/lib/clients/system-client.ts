@@ -23,6 +23,8 @@ import type {
 } from './api-types';
 import type {
   DiscordChannelSignalConfig,
+  DoraMetrics,
+  DoraRegulationAlert,
   Project,
   ProjectHealth,
   HivemindPeer,
@@ -162,6 +164,14 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         stepIds: string[]
       ): Promise<{ success: boolean; error?: string }> =>
         this.post('/api/pipeline/steps/reorder', { projectPath, stepIds }),
+    };
+
+    // DORA Metrics API
+    dora = {
+      metrics: (projectPath: string, timeWindowDays?: number) =>
+        this.get<{ success: boolean; metrics: DoraMetrics; alerts: DoraRegulationAlert[] }>(
+          `/api/dora/metrics?projectPath=${encodeURIComponent(projectPath)}${timeWindowDays ? `&timeWindowDays=${timeWindowDays}` : ''}`
+        ),
     };
 
     // Metrics API
