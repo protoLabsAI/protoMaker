@@ -163,7 +163,9 @@ export function AutoModeControlCard({ output, state, toolName }: ToolResultRende
           <span
             className={cn(
               'flex items-center gap-1 rounded px-1.5 py-0.5',
-              queueLength > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-muted/60 text-muted-foreground'
+              queueLength > 0
+                ? 'bg-amber-500/10 text-amber-500'
+                : 'bg-muted/60 text-muted-foreground'
             )}
           >
             {queueLength} in queue

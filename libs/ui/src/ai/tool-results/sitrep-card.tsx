@@ -34,14 +34,10 @@ export function SitrepCard({ output, state }: ToolResultRendererProps) {
     );
   }
 
-  const json =
-    typeof output === 'string' ? output : JSON.stringify(output, null, 2);
+  const json = typeof output === 'string' ? output : JSON.stringify(output, null, 2);
 
   return (
-    <div
-      data-slot="sitrep-card"
-      className="rounded-md border border-border/50 bg-muted/30 text-xs"
-    >
+    <div data-slot="sitrep-card" className="rounded-md border border-border/50 bg-muted/30 text-xs">
       <div className="flex items-center gap-1.5 border-b border-border/50 px-3 py-1.5">
         <Activity className="size-3.5 text-muted-foreground" />
         <span className="font-medium text-foreground/80">Situation Report</span>

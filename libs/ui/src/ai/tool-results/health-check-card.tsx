@@ -78,11 +78,7 @@ export function HealthCheckCard({ output, state }: ToolResultRendererProps) {
             : 'bg-red-500/10 text-red-600 dark:text-red-400'
         )}
       >
-        {healthy ? (
-          <CheckCircle2 className="size-3" />
-        ) : (
-          <AlertCircle className="size-3" />
-        )}
+        {healthy ? <CheckCircle2 className="size-3" /> : <AlertCircle className="size-3" />}
         {healthy ? 'Healthy' : 'Unhealthy'}
       </span>
     </div>
