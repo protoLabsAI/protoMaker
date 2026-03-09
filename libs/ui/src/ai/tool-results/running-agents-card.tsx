@@ -114,9 +114,7 @@ function AgentRow({ agent }: { agent: RunningAgent }) {
       <span
         className={cn(
           'shrink-0 rounded px-1.5 py-0.5 font-medium',
-          isIdle
-            ? 'bg-muted/60 text-muted-foreground'
-            : 'bg-blue-500/10 text-blue-500'
+          isIdle ? 'bg-muted/60 text-muted-foreground' : 'bg-blue-500/10 text-blue-500'
         )}
       >
         {isIdle ? 'Idle' : 'Running'}
