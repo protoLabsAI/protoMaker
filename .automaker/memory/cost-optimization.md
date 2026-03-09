@@ -5,7 +5,7 @@ relevantTo: [cost-optimization]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 31
+  loaded: 32
   referenced: 11
   successfulFeatures: 11
 ---

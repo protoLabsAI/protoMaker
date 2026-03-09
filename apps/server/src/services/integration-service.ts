@@ -35,8 +35,16 @@ export interface DiscordMessagePayload {
   channelId?: string;
   webhookId?: string;
   webhookToken?: string;
-  action: 'send_message' | 'create_thread' | 'add_reaction';
+  action: 'send_message' | 'send_embed' | 'create_thread' | 'add_reaction';
   content?: string;
+  embed?: {
+    title: string;
+    description?: string;
+    color?: number;
+    fields?: Array<{ name: string; value: string; inline?: boolean }>;
+    footer?: { text: string };
+    timestamp?: string;
+  };
   mention?: string;
 }
 
@@ -291,9 +299,12 @@ export class IntegrationService {
     const feature = await this.loadFeature(projectPath, featureId);
     if (!feature) return;
 
-    // Discord: Send error notification with optional mention
+    // Discord: Send error notification as embed with optional mention
     if (integrations.discord?.enabled && integrations.discord.notifyOnError) {
       const mention = integrations.discord.mentionOnError || '';
+      const errorText = error || 'Unknown error';
+      // Truncate error to Discord embed description limit (4096 chars)
+      const description = errorText.length > 4000 ? errorText.slice(0, 4000) + '...' : errorText;
       await this.emitDiscordEvent({
         projectPath,
         featureId,
@@ -302,8 +313,18 @@ export class IntegrationService {
         channelId: integrations.discord.channelId,
         webhookId: integrations.discord.webhookId,
         webhookToken: integrations.discord.webhookToken,
-        action: 'send_message',
-        content: `Feature failed: **${feature.title}**\nError: ${error || 'Unknown error'}`,
+        action: 'send_embed',
+        embed: {
+          title: `Feature Failed: ${feature.title}`,
+          description,
+          color: 0xed4245, // Discord red
+          fields: [
+            { name: 'Feature', value: feature.id, inline: true },
+            { name: 'Status', value: 'blocked', inline: true },
+          ],
+          footer: { text: 'protoLabs Studio' },
+          timestamp: new Date().toISOString(),
+        },
         mention,
       });
     }

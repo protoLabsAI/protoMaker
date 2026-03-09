@@ -48,9 +48,9 @@ function getChainAndContext(settings: Parameters<typeof createClassifierChain>[1
 // ---------------------------------------------------------------------------
 
 describe('createClassifierChain', () => {
-  it('returns 9 rules sorted by descending priority', () => {
+  it('returns all rules sorted by descending priority', () => {
     const { rules } = getChainAndContext();
-    expect(rules).toHaveLength(9);
+    expect(rules).toHaveLength(10);
     for (let i = 1; i < rules.length; i++) {
       expect(rules[i - 1].priority).toBeGreaterThanOrEqual(rules[i].priority);
     }

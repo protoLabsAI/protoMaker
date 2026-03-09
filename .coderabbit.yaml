@@ -1,11 +1,15 @@
 # CodeRabbit configuration
 # https://docs.coderabbit.ai/configuration
+language: typescript
+tone_instructions: concise
 reviews:
   # Don't review operational data files — they generate noise threads
   # that block PR merges via required_review_thread_resolution
   path_filters:
     - '!.automaker/memory/**'
     - '!.automaker/projects/**'
+    - '!.generated/**'
+    - '!node_modules/**'
     - '!data/**'
   # Post a GitHub commit status check ("CodeRabbit") so it can be
   # added as a required check in branch protection.
@@ -20,3 +24,21 @@ reviews:
     base_branches:
       - '^dev$'
       - '^staging$'
+  path_instructions:
+    - path: 'packages/types/**'
+      instructions: >
+        Apply strict schema validation review. Check for: correct use of Zod schemas,
+        consistent type exports, no `any` types, proper discriminated unions, and that
+        all schema changes are backward-compatible unless intentionally breaking.
+    - path: 'agent/**'
+      instructions: >
+        Review for LangGraph patterns. Verify: correct use of StateGraph, proper node
+        and edge definitions, state annotations follow LangGraph conventions, no
+        direct state mutation outside reducers, and checkpointer usage is consistent.
+    - path: 'apps/rabbit-hole/**'
+      instructions: >
+        Review for Next.js App Router patterns. Check for: correct use of Server vs
+        Client Components (`use client` directive), proper data fetching with async
+        Server Components, no direct use of `useEffect` for data fetching in Server
+        Components, correct metadata API usage, and route handlers follow App Router
+        conventions.

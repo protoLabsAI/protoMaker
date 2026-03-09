@@ -47,7 +47,7 @@ export const integrationTools: Tool[] = [
   {
     name: 'send_discord_channel_message',
     description:
-      'Send a message to a Discord channel by channel ID. Uses the Automaker Discord bot to post the message.',
+      'Send a message or embed to a Discord channel by channel ID. Use embed for structured notifications (errors, status updates, heartbeats).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -57,10 +57,45 @@ export const integrationTools: Tool[] = [
         },
         content: {
           type: 'string',
-          description: 'Message content to send',
+          description: 'Plain text message content (required if no embed)',
+        },
+        embed: {
+          type: 'object',
+          description: 'Rich embed object. When provided, sends as an embed instead of plain text.',
+          properties: {
+            title: { type: 'string', description: 'Embed title' },
+            description: { type: 'string', description: 'Embed body text' },
+            color: {
+              type: 'number',
+              description: 'Embed color as decimal (e.g. 3066993 for green, 15548997 for red)',
+            },
+            fields: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  value: { type: 'string' },
+                  inline: { type: 'boolean' },
+                },
+                required: ['name', 'value'],
+              },
+              description: 'Embed fields',
+            },
+            footer: {
+              type: 'object',
+              properties: { text: { type: 'string' } },
+              required: ['text'],
+            },
+            timestamp: {
+              type: 'string',
+              description: 'ISO 8601 timestamp',
+            },
+          },
+          required: ['title'],
         },
       },
-      required: ['channelId', 'content'],
+      required: ['channelId'],
     },
   },
   {

@@ -805,7 +805,8 @@ export class EventHookService {
   }
 
   /**
-   * Execute a Discord message hook via DiscordBotService
+   * Execute a Discord message hook via DiscordBotService.
+   * Critical and error events are sent as embeds; others as plain messages.
    */
   private async executeDiscordHook(
     action: EventHookDiscordAction,
@@ -820,7 +821,37 @@ export class EventHookService {
     try {
       // Use DiscordBotService if available
       if (this.discordBotService) {
-        const success = await this.discordBotService.sendToChannel(channelId, message);
+        // Send critical/error events as embeds for better readability
+        const isErrorEvent =
+          context.eventType === 'feature_error' ||
+          context.eventType === 'auto_mode_error' ||
+          context.eventType === 'health_check_critical' ||
+          context.eventType === 'feature_permanently_blocked' ||
+          context.eventType === 'pr_ci_failure';
+
+        let success: boolean;
+        if (isErrorEvent) {
+          success = await this.discordBotService.sendEmbed(channelId, {
+            title: context.featureName
+              ? `Feature Failed: ${context.featureName}`
+              : `Event: ${context.eventType ?? 'error'}`,
+            description: message.length > 4000 ? message.slice(0, 4000) + '...' : message,
+            color: 0xed4245, // Discord red
+            fields: [
+              ...(context.featureId
+                ? [{ name: 'Feature', value: context.featureId, inline: true }]
+                : []),
+              ...(context.projectName
+                ? [{ name: 'Project', value: context.projectName, inline: true }]
+                : []),
+            ],
+            footer: { text: 'protoLabs Studio' },
+            timestamp: new Date().toISOString(),
+          });
+        } else {
+          success = await this.discordBotService.sendToChannel(channelId, message);
+        }
+
         if (success) {
           logger.info(`Discord hook "${hookName}" completed successfully`);
           return;

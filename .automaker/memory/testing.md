@@ -5,7 +5,7 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 65
+  loaded: 70
   referenced: 25
   successfulFeatures: 25
 ---
@@ -1168,3 +1168,13 @@ usageStats:
 - **Problem solved:** Feature (Tool Approval Cards) was reported as complete in ask-ava-tab.tsx, but without tracing the exact lines, it wasn't clear if it was actually working.
 - **Why this works:** Playwright E2E tests can verify: (1) no JS parse errors on bundle load, (2) runtime math is correct (WaitingTimer countdown, JSON truncation), (3) component made it into the bundle. Faster than manual inspection.
 - **Trade-offs:** Temporary tests = fast verification + easy cleanup, but leave no artifact for the next developer. Permanent tests = maintainability burden but catch regressions.
+
+#### [Gotcha] vitest vi.mock() calls inside test functions are NOT hoisted and do not apply. Only module-scope vi.mock() calls are hoisted by vitest's compile-time transformation. (2026-03-09)
+- **Situation:** Initial test strategy attempted to mock AvaChannelReactorService constructor inside a test function to capture constructor arguments. The mock never applied, causing test failures.
+- **Root cause:** Vitest's hoisting mechanism is compile-time and only processes module-scope calls. In-function vi.mock() calls execute at runtime after hoisting, too late to intercept module imports.
+- **How to avoid:** Had to switch to direct service instantiation + type-casting private methods instead. Less elegant than mocking, but more reliable and transparent about what's being tested.
+
+#### [Pattern] Type-cast service instances to access private methods for testing: `(service as unknown as { dispatchResponse(...): void }).dispatchResponse(...)`. Allows verification of internal behavior without exposing implementation details publicly. (2026-03-09)
+- **Problem solved:** dispatchResponse is private because it's an implementation detail of how messages are routed internally. But the dispatch mechanism is critical to service correctness and must be tested.
+- **Why this works:** Balances two competing goals: keep implementation details private (dispatchResponse is not part of the public contract) while testing critical internal behavior. The cost of dispatch bugs in production justifies coupled tests.
+- **Trade-offs:** Tests are tightly coupled to implementation (refactoring dispatchResponse breaks tests), but this coupling is intentional and forces awareness of changes to critical internal behavior.

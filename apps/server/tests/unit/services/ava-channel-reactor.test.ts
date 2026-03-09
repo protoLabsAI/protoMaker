@@ -384,10 +384,10 @@ describe('Classifier chain — all 9 rules', () => {
   describe('DefaultRule (priority 0)', () => {
     it('catches messages that do not match any specific rule', () => {
       const { rules, context } = makeChain();
-      // An inform message from a remote instance with expectsResponse:true but no special intent
-      // will not match Request/Coordination/Escalation, so DefaultRule fires
+      // A non-ava source message bypasses PeerAvaMessageRule and falls through to DefaultRule
       const result = runClassifierChain(
         makeMessage({
+          source: 'discord',
           intent: 'inform',
           expectsResponse: true,
           instanceId: 'remote',

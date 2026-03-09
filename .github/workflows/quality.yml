@@ -1,0 +1,37 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - staging
+      - dev
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: namespace-profile-protolabs-linux
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          check-lockfile: 'false'
+          skip-native-rebuild: 'true'
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint

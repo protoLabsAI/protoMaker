@@ -138,7 +138,7 @@
           "featureId": "feature-1773072822741-t6p0iyo14"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773072822737-hb66k6qab"
     }
   ],
@@ -158,5 +158,5 @@
     ]
   },
   "createdAt": "2026-03-09T16:12:07.810Z",
-  "updatedAt": "2026-03-09T16:37:22.570Z"
+  "updatedAt": "2026-03-09T17:11:58.649Z"
 }

@@ -7,10 +7,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Use vi.hoisted so the mock variable is available inside the vi.mock factory
+const { mockLoggerInfo } = vi.hoisted(() => ({
+  mockLoggerInfo: vi.fn(),
+}));
+
 // Mock logger before any imports that create module-level loggers
 vi.mock('@protolabsai/utils', () => ({
   createLogger: vi.fn(() => ({
-    info: vi.fn(),
+    info: mockLoggerInfo,
     debug: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
@@ -93,6 +98,7 @@ describe('AvaChannelReactorService — reactiveSpawnerService wiring', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockLoggerInfo.mockClear();
     deps = makeDeps();
     reactor = new AvaChannelReactorService(deps);
     await reactor.start();
@@ -144,6 +150,27 @@ describe('AvaChannelReactorService — reactiveSpawnerService wiring', () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(deps.reactiveSpawnerService!.spawnForMessage).not.toHaveBeenCalled();
+  });
+
+  it('logs an info message after successfully spawning a session for a request-type message', async () => {
+    const message = makeMessage({ intent: 'request', expectsResponse: true });
+
+    (deps.crdtStore as unknown as { _trigger: (doc: unknown) => void })._trigger({
+      messages: [message],
+    });
+
+    // Allow async operations to settle
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // At least one logger.info call should mention the message id and "spawned"
+    const infoMessages: string[] = mockLoggerInfo.mock.calls
+      .filter((args) => typeof args[0] === 'string')
+      .map((args) => args[0] as string);
+    const spawnLog = infoMessages.find(
+      (msg) => msg.includes('dispatchResponse') && msg.includes(message.id)
+    );
+    expect(spawnLog).toBeDefined();
+    expect(spawnLog).toContain('spawned session for request message');
   });
 
   it('falls back to text-only response when reactiveSpawnerService is not provided', async () => {

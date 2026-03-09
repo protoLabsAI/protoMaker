@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 82
+  loaded: 86
   referenced: 30
   successfulFeatures: 30
 ---
@@ -3956,3 +3956,70 @@ usageStats:
 - **Rejected:** Alternative: Server sends category metadata alongside messages (but then toggling chips requires a fetchMessages round-trip per toggle, breaking responsiveness). Alternative: Unknown tags assigned to 'Other' category (but then filtering is fragile—semantics of unknown tags are undefined).
 - **Trade-offs:** Instant UX (no server latency for chip toggles) vs. incomplete filtering (unknown tags always visible, polluting filtered views if tag schema evolves). Bandwidth not saved by category filtering (you still fetch full protocol messages to the client, then filter locally).
 - **Breaking if changed:** If you move category filtering to server, add a categories parameter to fetchMessages—you'll need to handle partial selection ('show only Heartbeat') by round-tripping to server. If you start hiding unknown tags instead of passing them through, future protocol extensions will silently drop messages with new bracket types until the UI catches up.
+
+### Domain services use dedicated *.module.ts files for initialization rather than being instantiated in central createServices(). AvaChannelReactorService is instantiated in ava-channel-reactor.module.ts, which reads hivemind config and feature flags before conditional creation. (2026-03-09)
+- **Context:** Service requires config-driven initialization and should only instantiate if feature flags are enabled. Centralizing this in createServices() would require the generic container to know about all domain-specific startup logic.
+- **Why:** Keeps domain-specific initialization encapsulated and allows conditional instantiation based on configuration. Prevents the main container from becoming a god object.
+- **Rejected:** Centralizing all service instantiation in createServices() - would force the generic container to depend on all domain configs and feature flags, violating separation of concerns.
+- **Trade-offs:** Distributed initialization (more files to search through) but better encapsulation (each domain manages its own startup). Discovering all wiring requires checking both createServices() and *.module.ts files.
+- **Breaking if changed:** If you audit service wiring and assume createServices() is the complete picture, you'll miss domain module instantiations. Services may be wired in multiple locations.
+
+### All spawn operation safety mechanisms (circuit breaker: 3 failures → open, hourly cap: 3/hour, error deduplication) are encapsulated in ReactiveSpawnerService rather than distributed across middleware. (2026-03-09)
+- **Context:** Multiple constraints needed to prevent spawn session storms: preventing concurrent duplicates, enforcing hourly limits, tracking failure patterns, and opening circuit after repeated failures.
+- **Why:** These are all related to spawn operation safety and use shared state (failure counters, session cache, error hash tracking). Keeping them together prevents inconsistencies and makes the safety rules clear in one place.
+- **Rejected:** Separate middleware/interceptors for each concern - would require coordinating state across multiple services and make the safety rules implicit and scattered.
+- **Trade-offs:** Single point of failure for all spawn safety (if ReactiveSpawnerService fails, all safety mechanisms fail), but easier to test, reason about, and modify safety rules.
+- **Breaking if changed:** If you need to change spawn safety logic (e.g., increase hourly cap to 5), you must touch ReactiveSpawnerService. No way to override individual safety mechanisms independently.
+
+#### [Gotcha] Service wiring is not centralized in a single file. Dependency injection happens both in createServices() AND in domain-specific *.module.ts files. Initial audit missed the module files because only createServices() was checked. (2026-03-09)
+- **Situation:** Auditing service wiring to verify ReactiveSpawnerService was properly injected. Checked services.ts and found most wiring, but the actual AvaChannelReactorService → ReactiveSpawnerService wiring lives in ava-channel-reactor.module.ts.
+- **Root cause:** Each domain (ava-channel-reactor, fleet-scheduler, etc.) manages its own service initialization through a module pattern. This keeps domain dependencies close to domain logic and allows conditional instantiation.
+- **How to avoid:** Distributed wiring (harder to find) but better domain encapsulation (each domain controls its own startup). Requires knowing to look for *.module.ts files.
+
+### Use merge commits (--merge) for all environment promotions instead of squash commits (--squash) (2026-03-09)
+- **Context:** Three-branch promotion flow where code flows feature/* → dev → staging → main, requiring multiple sequential merges across environments
+- **Why:** Preserving DAG (directed acyclic graph) ancestry prevents 'conflict storms' on subsequent promotions. When you squash at each promotion, downstream merges accumulate unresolved conflicts from all squashed commits, causing exponential merge friction
+- **Rejected:** Squash commits - creates linear history but causes merge conflict compounding when same code flows through multiple promotion stages
+- **Trade-offs:** Merge commits preserve full ancestry (easier conflict resolution, clearer audit trail) but create more verbose git history. The operational stability of promotions outweighs history verbosity
+- **Breaking if changed:** Switching to squash strategy breaks subsequent promotions by creating conflict storms that require manual resolution at each stage
+
+#### [Gotcha] Branch protection requires the exact job name 'source-branch' in GitHub Actions workflow to recognize it as a status check for PRs (2026-03-09)
+- **Situation:** promotion-check.yml job naming scheme for enforcing which branches can PR to which environment branches
+- **Root cause:** GitHub Actions expects this specific naming convention to expose the workflow result as a mergeable status check in branch protection rules
+- **How to avoid:** Constrains job naming but ensures GitHub properly integrates the enforcement; renaming is a one-line change with immediate breaking effect
+
+#### [Pattern] Include bootstrap exception and recovery branch patterns (e.g., chore/promote-staging-main-*) in promotion checks (2026-03-09)
+- **Problem solved:** Protecting main/staging from direct merges while still allowing repository initialization and recovery from DAG divergence edge cases
+- **Why this works:** Pure enforcement creates operational dead-ends: can't bootstrap empty repo with full protection, and complex merge scenarios can break the promotion chain permanently. Exceptions solve this without weakening the model
+- **Trade-offs:** Adds code paths to maintenance surface but prevents operational catastrophes. Recovery branches are rarely used but critical when needed
+
+### Environment-pinned blocking: main only accepts from staging, staging only accepts from dev or promote/*, feature branches merge to dev (2026-03-09)
+- **Context:** Enforcing a strict promotion pipeline where code must flow through lower environments before reaching production
+- **Why:** Directionality guarantee: code must pass through dev (testing) and staging (production-like) before reaching main. Prevents accidental direct commits, forces testing, and maintains artifact lineage
+- **Rejected:** Single main branch with all features, or looser rules allowing feature→staging→main shortcuts - breaks the guarantee that all code sees staging conditions
+- **Trade-offs:** Strict flow adds promotion overhead but eliminates classes of deployment bugs (untested code, staging-specific failures). Operationally discoverable path replaces ad-hoc merge decisions
+- **Breaking if changed:** Loosening any directional constraint re-introduces risk of code reaching production without passing through lower-environment validation
+
+### Three-tier build command pattern: `build` (full monorepo), `build:packages` (specific workspaces with --filter), `build:libs` (shared deps only). Top-level delegates to turbo, but granular commands bypass it. (2026-03-09)
+- **Context:** Monorepo with 15 shared libraries, multiple packages, and apps. Developers need different build scopes depending on workflow.
+- **Why:** Balances full reproducibility (turbo for CI) vs developer velocity (filtered builds for local iteration). Allows engineer to rebuild only changed dependencies without full monorepo pipeline.
+- **Rejected:** Single `turbo run build` command only, or separate npm scripts per-workspace. Single turbo forces full rebuild; separate scripts lose dependency graph awareness.
+- **Trade-offs:** More commands to learn (+complexity) vs faster local builds and CI caching (-developer friction). Pre-built packages in node_modules enable working on single package without rebuilding world.
+- **Breaking if changed:** Removing `build:packages/build:libs` forces engineers to rebuild entire monorepo on every change (hours vs minutes). Removing turbo delegation loses caching and determinism in CI.
+
+#### [Pattern] Upstream dependency orchestration: `build` task has `"dependsOn": ["^build"]`, meaning 'build my dependencies first, then me.' This creates a directed acyclic graph (DAG) that turbo executes in topological order. (2026-03-09)
+- **Problem solved:** Monorepo with shared libraries (@automaker/types, @automaker/utils) that multiple packages and apps depend on. Without orchestration, a package's build could run before its dependency is ready.
+- **Why this works:** Declarative dependency graph is more maintainable than imperative build scripts. Turbo can parallelize builds across independent paths in DAG (e.g., build @automaker/types and @automaker/ui in parallel if they don't depend on each other).
+- **Trade-offs:** Declarative is self-documenting (+) but requires understanding DAG model (-). Turbo automatically finds shortest critical path for parallelization (+).
+
+### Global `"outputs": ["dist/**"]` in turbo.json root, not per-package. All tasks output to same pattern; turbo caches and hashes this directory for all workspaces. (2026-03-09)
+- **Context:** 15 shared libraries + 3 packages + 2 apps, each with their own build output directory. Configuring outputs in each would require 20 separate turbo.json files or root duplication.
+- **Why:** DRY principle. Single source of truth for output semantics. Consistent hashing/caching across all builds.
+- **Rejected:** Per-package turbo configs in each workspace (npm workspaces support this). Creates 20 config files, inconsistency when outputs change, and turbo loses monorepo-wide cache visibility.
+- **Trade-offs:** Simpler (+) but assumes all builds output to `dist/`. If a package uses different output dir (e.g., `build/`), turbo won't cache it and you lose benefits.
+- **Breaking if changed:** If one package changes output to `build/` without updating root turbo.json, that package's output won't be cached. Silent performance regression (no error message).
+
+#### [Gotcha] Feature was mostly pre-implemented in the worktree before manual changes. Only gap: root `package.json` `build` script still used `npm run build:packages && npm run build --workspace=apps/ui` instead of delegating to `turbo run build`. (2026-03-09)
+- **Situation:** Investigation revealed `turbo.json` already existed with all pipelines configured. No need to build from scratch.
+- **Root cause:** Real-world projects evolve incrementally. Infrastructure tooling (turbo) was added in earlier sprint; root scripts were overlooked in the final delegation step.
+- **How to avoid:** Small, focused change (+) but required understanding existing state first (-). Reduced risk of breaking working config (++).

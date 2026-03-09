@@ -91,11 +91,11 @@ export class DiscordChannelEscalation implements EscalationChannel {
   }
 
   /**
-   * Sends the escalation signal to the appropriate Discord channel
+   * Sends the escalation signal to the appropriate Discord channel as an embed
    */
   async send(signal: EscalationSignal): Promise<void> {
     const channelName = this.getChannelForSignal(signal);
-    const message = this.formatMessage(signal);
+    const embed = this.formatEmbed(signal);
 
     logger.info(`Routing ${signal.severity} signal to #${channelName}`, {
       source: signal.source,
@@ -110,17 +110,17 @@ export class DiscordChannelEscalation implements EscalationChannel {
         throw new Error(channelResult.error || `Channel #${channelName} not found`);
       }
 
-      // Send message to channel
-      const sendResult = await this.discordService.sendMessage({
+      // Send embed to channel
+      const sendResult = await this.discordService.sendEmbed({
         channelId: channelResult.data.id,
-        message,
+        embed,
       });
 
       if (!sendResult.success) {
-        throw new Error(sendResult.error || 'Failed to send Discord message');
+        throw new Error(sendResult.error || 'Failed to send Discord embed');
       }
 
-      logger.info(`Successfully sent escalation to #${channelName}`, {
+      logger.info(`Successfully sent escalation embed to #${channelName}`, {
         signalType: signal.type,
         channelId: channelResult.data.id,
       });
@@ -166,45 +166,50 @@ export class DiscordChannelEscalation implements EscalationChannel {
   }
 
   /**
-   * Formats the escalation signal into a Discord message
-   * Includes severity badge, source context, and action items
+   * Formats the escalation signal into a Discord embed
    */
-  private formatMessage(signal: EscalationSignal): string {
-    const severityBadge = this.getSeverityBadge(signal.severity);
+  private formatEmbed(signal: EscalationSignal): {
+    title: string;
+    description?: string;
+    color?: number;
+    fields?: Array<{ name: string; value: string; inline?: boolean }>;
+    footer?: { text: string };
+    timestamp?: string;
+  } {
     const sourceContext = this.getSourceContext(signal);
     const actionItems = this.getActionItems(signal);
 
-    return [
-      `${severityBadge} **Escalation: ${signal.type}**`,
-      '',
-      '**Source Context:**',
-      sourceContext,
-      '',
-      '**Action Items:**',
-      actionItems,
-      '',
-      `_Deduplication Key: ${signal.deduplicationKey}_`,
-      `_Timestamp: ${signal.timestamp || new Date().toISOString()}_`,
-    ].join('\n');
+    return {
+      title: `Escalation: ${signal.type}`,
+      description: sourceContext,
+      color: this.getSeverityColor(signal.severity),
+      fields: [
+        { name: 'Severity', value: signal.severity.toUpperCase(), inline: true },
+        { name: 'Source', value: signal.source, inline: true },
+        { name: 'Action Items', value: actionItems },
+      ],
+      footer: { text: `Key: ${signal.deduplicationKey} | protoLabs Studio` },
+      timestamp: signal.timestamp || new Date().toISOString(),
+    };
   }
 
   /**
-   * Gets the severity badge emoji for the message
+   * Gets the Discord embed color for the severity level
    */
-  private getSeverityBadge(severity: EscalationSeverity): string {
+  private getSeverityColor(severity: EscalationSeverity): number {
     switch (severity) {
       case EscalationSeverity.emergency:
-        return '🚨 **EMERGENCY**';
+        return 0xed4245; // red
       case EscalationSeverity.critical:
-        return '🔴 **CRITICAL**';
+        return 0xed4245; // red
       case EscalationSeverity.high:
-        return '🟠 **HIGH**';
+        return 0xe67e22; // orange
       case EscalationSeverity.medium:
-        return '🟡 **MEDIUM**';
+        return 0xf1c40f; // yellow
       case EscalationSeverity.low:
-        return '🟢 **LOW**';
+        return 0x2ecc71; // green
       default:
-        return '⚪ **UNKNOWN**';
+        return 0x95a5a6; // grey
     }
   }
 

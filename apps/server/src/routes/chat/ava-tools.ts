@@ -1606,12 +1606,25 @@ export function buildAvaTools(
 
     tools['send_channel_message'] = makeTool({
       description:
-        'Send a message to the Ava backchannel (cross-instance communication channel). Messages are visible to all connected instances.',
+        'Send a message to the Ava backchannel (cross-instance communication channel). Messages are visible to all connected instances. Set expectsResponse:true when you need peers to reply (e.g. status checks, questions). Set intent to classify the message type.',
       inputSchema: z.object({
         content: z.string().describe('Message content to send'),
+        intent: z
+          .enum(['inform', 'request', 'coordination', 'escalation'])
+          .optional()
+          .describe(
+            'Message intent. inform=FYI (default), request=expects a reply, coordination=work-steal/capacity, escalation=urgent'
+          ),
+        expectsResponse: z
+          .boolean()
+          .optional()
+          .describe('Set to true if peers should respond to this message (default: false)'),
       }),
-      execute: async ({ content }) => {
-        const msg = await avaChannel.postMessage(content, 'ava');
+      execute: async ({ content, intent, expectsResponse }) => {
+        const msg = await avaChannel.postMessage(content, 'ava', {
+          intent: intent ?? 'inform',
+          expectsResponse: expectsResponse ?? false,
+        });
         return { success: true, messageId: msg.id, timestamp: msg.timestamp };
       },
     });
@@ -1719,14 +1732,47 @@ export function buildAvaTools(
 
     tools['send_discord_channel_message'] = makeTool({
       description:
-        'Send a message to a Discord channel by channel ID. Common channels: #ava=1469195643590541353, #dev=1469080556720623699, #infra=1469109809939742814.',
+        'Send a message or embed to a Discord channel by channel ID. Use embed for structured notifications (errors, status updates, heartbeats). Common channels: #ava=1469195643590541353, #dev=1469080556720623699, #infra=1469109809939742814.',
       inputSchema: z.object({
         channelId: z.string().describe('Discord channel ID'),
-        content: z.string().describe('Message content'),
+        content: z
+          .string()
+          .optional()
+          .describe('Plain text message content (required if no embed)'),
+        embed: z
+          .object({
+            title: z.string().describe('Embed title'),
+            description: z.string().optional().describe('Embed body text'),
+            color: z
+              .number()
+              .optional()
+              .describe('Embed color as decimal (e.g. 3066993 for green, 15548997 for red)'),
+            fields: z
+              .array(
+                z.object({
+                  name: z.string(),
+                  value: z.string(),
+                  inline: z.boolean().optional(),
+                })
+              )
+              .optional()
+              .describe('Embed fields'),
+            footer: z.object({ text: z.string() }).optional(),
+            timestamp: z.string().optional().describe('ISO 8601 timestamp'),
+          })
+          .optional()
+          .describe('Rich embed object. When provided, sends as an embed instead of plain text.'),
       }),
-      execute: async ({ channelId, content }) => {
-        const sent = await discord.sendToChannel(channelId, content);
-        return { success: sent };
+      execute: async ({ channelId, content, embed }) => {
+        if (embed) {
+          const sent = await discord.sendEmbed(channelId, embed);
+          return { success: sent };
+        }
+        if (content) {
+          const sent = await discord.sendToChannel(channelId, content);
+          return { success: sent };
+        }
+        return { success: false, error: 'Either content or embed is required' };
       },
     });
 

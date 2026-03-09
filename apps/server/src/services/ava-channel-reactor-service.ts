@@ -478,8 +478,9 @@ export class AvaChannelReactorService {
           return this.deps.reactiveSpawnerService!.spawnForMessage(message);
         })
         .then(() => {
-          logger.debug(
-            `Spawned agent for message ${message.id} (type=${classification.type}, depth=${conversationDepth})`
+          logger.info(
+            `dispatchResponse: spawned session for request message ${message.id} ` +
+              `(depth=${conversationDepth})`
           );
           this.responsesSent++;
           this.setCooldown(message.inReplyTo ?? message.id);

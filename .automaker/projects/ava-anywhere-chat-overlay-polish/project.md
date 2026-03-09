@@ -4,7 +4,7 @@ Bring the Ask Ava / Ava Anywhere chat overlay to production quality across four 
 
 **Status:** active
 **Created:** 2026-03-09T15:47:21.685Z
-**Updated:** 2026-03-09T16:37:47.424Z
+**Updated:** 2026-03-09T17:09:40.751Z
 
 ## PRD
 
@@ -54,7 +54,7 @@ Render pending tool approval requests as interactive cards in the Ask Ava chat. 
 
 Improve the Ava Channel (#backchannel) filter bar with category-based filter chips. Protocol messages self-identify via bracket prefixes — use these to categorize client-side without schema changes.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 

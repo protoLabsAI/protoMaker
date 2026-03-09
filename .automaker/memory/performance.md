@@ -5,7 +5,7 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 31
+  loaded: 35
   referenced: 12
   successfulFeatures: 12
 ---
@@ -261,3 +261,13 @@ usageStats:
 - **Problem solved:** Streaming AI responses deliver tokens incrementally. Any useEffect depending on `code`/`content` re-fires on every token.
 - **Why this works:** Rendered output during streaming doesn't need to be perfect (users watch text appear). Deferring Prism.js until streaming completes produces identical final result while keeping UI responsive during delivery.
 - **Trade-offs:** Easier: eliminates render thrashing, smooth UX. Harder: requires threading `isStreaming` prop through component tree from parent.
+
+#### [Gotcha] Remote caching config in `turbo.json` (Vercel) is inert without `TURBO_TOKEN` and `TURBO_TEAM` env vars. Builds still work—turbo gracefully falls back to local filesystem cache—but remote cache is silently disabled. (2026-03-09)
+- **Situation:** Initial investigation: why is remote cache config present but CI builds aren't using Vercel's cache?
+- **Root cause:** Vercel's Turborepo is the official remote cache provider. Connection requires OAuth tokens that are environment-specific (local dev ≠ CI ≠ different CI providers).
+- **How to avoid:** Local caching works immediately with zero config (+) but misses 30-40% speedup from shared cache across machines (-). CI setup complexity: must inject TURBO_TOKEN/TURBO_TEAM.
+
+#### [Pattern] The `dev` task is excluded from caching (`"cache": false`) and marked `"persistent": true`. This prevents turbo from treating long-running dev servers as completed tasks and respects file watching. (2026-03-09)
+- **Problem solved:** Dev servers (e.g., `npm run dev` on apps/server, apps/ui) must stay running and restart on file changes. If cached, turbo would mark task as done and not re-run on changes.
+- **Why this works:** Dev servers are stateful, long-lived processes. Caching is designed for deterministic, repeatable tasks (build, test). Persistent flag tells turbo to ignore task completion and let the server manage its own lifecycle.
+- **Trade-offs:** Dev UX is preserved (+) but dev servers bypass cache infrastructure (slower feedback than cached tasks, but acceptable for iteration).

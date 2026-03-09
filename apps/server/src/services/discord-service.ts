@@ -344,6 +344,36 @@ export class DiscordService {
   }
 
   /**
+   * Send a rich embed to a channel
+   */
+  async sendEmbed(options: {
+    channelId: string;
+    embed: {
+      title: string;
+      description?: string;
+      color?: number;
+      fields?: Array<{ name: string; value: string; inline?: boolean }>;
+      footer?: { text: string };
+      timestamp?: string;
+    };
+  }): Promise<DiscordOperationResult<DiscordMessage>> {
+    try {
+      logger.info(`Sending embed to channel: ${options.channelId}`);
+
+      // Call Discord MCP tool via provider
+      throw new Error('Discord MCP integration not yet implemented in provider layer');
+    } catch (error) {
+      const { type, message } = parseDiscordError(error);
+      logger.error(`Failed to send embed to channel ${options.channelId}:`, message);
+      return {
+        success: false,
+        error: message,
+        errorType: type,
+      };
+    }
+  }
+
+  /**
    * Read recent messages from a channel
    */
   async readMessages(

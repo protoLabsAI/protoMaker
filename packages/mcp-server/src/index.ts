@@ -1076,6 +1076,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/discord/send-channel-message', {
         channelId: args.channelId,
         content: args.content,
+        embed: args.embed,
       });
 
     case 'read_discord_channel_messages':
@@ -1964,6 +1965,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         message: args.message,
         context: args.context,
         instanceId: args.instanceId,
+        intent: args.intent,
+        expectsResponse: args.expectsResponse,
       });
 
     case 'read_channel_messages':

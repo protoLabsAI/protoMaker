@@ -31,6 +31,17 @@ export const avaChannelTools: Tool[] = [
           description:
             'Optional context about what prompted this message (e.g., "after reviewing PR #123", "noticed this 3 times today")',
         },
+        intent: {
+          type: 'string',
+          enum: ['inform', 'request', 'coordination', 'escalation'],
+          description:
+            'Message intent. inform=FYI (default), request=expects a reply, coordination=work-steal/capacity, escalation=urgent. Controls how peers classify and respond to the message.',
+        },
+        expectsResponse: {
+          type: 'boolean',
+          description:
+            'Set to true if peers should respond to this message (e.g., status checks, questions). Default: false.',
+        },
       },
       required: ['projectPath', 'message'],
     },

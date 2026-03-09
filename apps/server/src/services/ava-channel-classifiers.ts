@@ -250,6 +250,40 @@ const EscalationRule: MessageClassifierRule = {
 };
 
 /**
+ * PeerAvaMessageRule (priority 20)
+ * Ava-sourced messages from other instances with explicit intent/expectsResponse
+ * fields are routed based on those fields. This is the primary mechanism for
+ * cross-instance coordination — senders set intent and expectsResponse on the message.
+ */
+const PeerAvaMessageRule: MessageClassifierRule = {
+  id: 'PeerAvaMessageRule',
+  priority: 20,
+  classify(message, context) {
+    // Only applies to ava-sourced messages from other instances
+    if (message.source !== 'ava') return null;
+    if (message.instanceId === context.localInstanceId) return null;
+
+    // If the sender explicitly set expectsResponse, honor it
+    if (message.expectsResponse === true) {
+      const intent = message.intent ?? 'request';
+      return {
+        type:
+          intent === 'escalation'
+            ? 'escalation'
+            : intent === 'coordination'
+              ? 'coordination'
+              : 'request',
+        shouldRespond: true,
+        intent,
+        reason: `Peer ava message with expectsResponse:true, intent:${intent}`,
+      };
+    }
+
+    return null;
+  },
+};
+
+/**
  * DefaultRule (priority 0)
  * Catch-all: anything that didn't match a higher-priority rule is informational.
  */
@@ -304,6 +338,7 @@ export function createClassifierChain(
     RequestRule,
     CoordinationRule,
     EscalationRule,
+    PeerAvaMessageRule,
     DefaultRule,
   ].sort((a, b) => b.priority - a.priority);
 

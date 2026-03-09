@@ -4,7 +4,7 @@ Replace JSON fallback renderers for high-frequency Ava tools with purpose-built 
 
 **Status:** active
 **Created:** 2026-03-09T16:12:07.810Z
-**Updated:** 2026-03-09T16:37:22.570Z
+**Updated:** 2026-03-09T17:11:58.649Z
 
 ## PRD
 
@@ -65,7 +65,7 @@ Cards for the shipping workflow: merge confirmation, promotion status, and PR wa
 
 Cards for auto-mode controls and agent operations that currently render as JSON.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 

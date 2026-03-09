@@ -62,10 +62,12 @@ export function createAvaChannelRoutes(
    */
   router.post('/send', async (req: Request, res: Response): Promise<void> => {
     try {
-      const { message, context, instanceId } = req.body as {
+      const { message, context, instanceId, intent, expectsResponse } = req.body as {
         message?: string;
         context?: string;
         instanceId?: string;
+        intent?: 'inform' | 'request' | 'coordination' | 'escalation';
+        expectsResponse?: boolean;
       };
 
       if (!message || typeof message !== 'string') {
@@ -95,6 +97,8 @@ export function createAvaChannelRoutes(
       const source = instanceId === 'operator' ? ('operator' as const) : ('ava' as const);
       const posted = await avaChannelService.postMessage(content, source, {
         instanceName: instanceId,
+        intent: intent ?? 'inform',
+        expectsResponse: expectsResponse ?? false,
       });
 
       res.json({
