@@ -22,14 +22,22 @@ import type { AgentFactoryService } from './agent-factory-service.js';
 
 const logger = createLogger('ReactiveSpawnerService');
 
-/** Simplified error context shape — callers supply the relevant fields */
+/** Error context shape — callers supply the relevant fields */
 export interface ErrorContext {
   /** Human-readable error message */
   message: string;
-  /** Optional error code or type string */
+  /** Error type or classifier (e.g. 'high_memory', 'feature_failure', 'uncaught_exception') */
+  errorType?: string;
+  /** Optional error code (e.g. Node.js ErrnoException code) */
   code?: string;
-  /** Optional stack trace (used for hashing) */
+  /** Optional stack trace (used for hashing and prompt context) */
   stack?: string;
+  /** Alias for stack — callers may use either field */
+  stackTrace?: string;
+  /** Optional feature ID associated with the error */
+  featureId?: string;
+  /** Severity level of the error */
+  severity?: 'low' | 'medium' | 'critical';
   /** Optional metadata */
   metadata?: Record<string, unknown>;
 }
@@ -132,11 +140,21 @@ export class ReactiveSpawnerService {
     }, ERROR_DEDUP_WINDOW_MS);
     this.errorHashTimers.push(timer);
 
+    const stackTrace = ctx.stackTrace ?? ctx.stack;
     const prompt =
       `Investigate and remediate the following error:\n\n` +
+      (ctx.errorType ? `Error Type: ${ctx.errorType}\n` : '') +
       `Message: ${ctx.message}\n` +
       (ctx.code ? `Code: ${ctx.code}\n` : '') +
-      (ctx.stack ? `Stack:\n${ctx.stack}\n` : '');
+      (ctx.severity ? `Severity: ${ctx.severity}\n` : '') +
+      (ctx.featureId ? `Feature ID: ${ctx.featureId}\n` : '') +
+      (stackTrace ? `Stack Trace:\n${stackTrace}\n` : '') +
+      `\n` +
+      `Instructions:\n` +
+      `1. Investigate the root cause of this error.\n` +
+      `2. If you can fix the root cause directly, do so.\n` +
+      `3. If fixing requires a pull request (code changes), file a bug ticket on the board instead.\n` +
+      `4. Do NOT restart the dev server under any circumstances.\n`;
 
     return this.spawn('error', prompt);
   }
@@ -217,7 +235,7 @@ export class ReactiveSpawnerService {
 
   /** Simple deterministic hash for error deduplication */
   private hashError(ctx: ErrorContext): string {
-    return `${ctx.code ?? ''}::${ctx.message}`;
+    return `${ctx.errorType ?? ctx.code ?? ''}::${ctx.message}`;
   }
 
   /** Schedule the hourly session-counter reset */

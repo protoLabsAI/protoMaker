@@ -9,6 +9,7 @@ import type { ServiceContainer } from './services.js';
 import { getTerminalService } from '../services/terminal-service.js';
 import { shutdownLangfuse } from '../lib/langfuse-singleton.js';
 import { shutdownOtel } from '../lib/otel.js';
+import { getReactiveSpawnerService } from '../services/reactive-spawner-service.js';
 
 const logger = createLogger('Server:Shutdown');
 
@@ -143,6 +144,24 @@ export function setupShutdown(server: http.Server, services: ServiceContainer): 
 
     // For truly fatal exceptions: attempt graceful shutdown with timeout
     logger.error('Fatal uncaught exception — initiating graceful shutdown...');
+
+    // Notify Ava to investigate the root cause before we shut down
+    try {
+      const spawner = getReactiveSpawnerService();
+      spawner
+        .spawnForError({
+          errorType: 'uncaught_exception',
+          message: error.message,
+          stackTrace: error.stack,
+          severity: 'critical',
+        })
+        .catch((spawnErr) =>
+          logger.error('ReactiveSpawner: spawnForError (uncaught_exception) failed:', spawnErr)
+        );
+    } catch {
+      // ReactiveSpawnerService may not be initialized — continue with shutdown
+    }
+
     const forceExitTimeout = setTimeout(() => {
       logger.error('Graceful shutdown timed out after 10s, forcing exit');
       process.exit(1);
