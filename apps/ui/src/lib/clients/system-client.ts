@@ -20,6 +20,8 @@ import type {
   CapacityMetricsResponse,
   IntegrationStatusResponse,
   SystemHealthResponse,
+  FrictionResponse,
+  FailureBreakdownResponse,
 } from './api-types';
 import type {
   DiscordChannelSignalConfig,
@@ -255,6 +257,9 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         }>(
           `/api/metrics/flow?projectPath=${encodeURIComponent(projectPath)}${days ? `&days=${days}` : ''}${wipLimit != null ? `&wipLimit=${wipLimit}` : ''}`
         ),
+      friction: (): Promise<FrictionResponse> => this.get('/api/metrics/friction'),
+      failureBreakdown: (projectPath: string): Promise<FailureBreakdownResponse> =>
+        this.get(`/api/metrics/failure-breakdown?projectPath=${encodeURIComponent(projectPath)}`),
     };
 
     // Integrations API

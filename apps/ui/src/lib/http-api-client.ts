@@ -59,6 +59,8 @@ export type {
   CapacityMetricsResponse,
   IntegrationStatusResponse,
   SystemHealthResponse,
+  FrictionResponse,
+  FailureBreakdownResponse,
   DevServerStartedEvent,
   DevServerOutputEvent,
   DevServerStoppedEvent,
