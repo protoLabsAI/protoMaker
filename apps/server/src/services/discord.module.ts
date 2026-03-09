@@ -50,28 +50,12 @@ export async function register(container: ServiceContainer): Promise<void> {
     const p = payload as {
       channelId?: string;
       content?: string;
-      embed?: {
-        title: string;
-        description?: string;
-        color?: number;
-        fields?: Array<{ name: string; value: string; inline?: boolean }>;
-        footer?: { text: string };
-        timestamp?: string;
-      };
       action?: string;
       correlationId?: string;
     };
-    if (!p.channelId) return;
-    if (p.action !== 'send_message' && p.action !== 'send_embed') return;
-
+    if (p.action !== 'send_message' || !p.channelId || !p.content) return;
     try {
-      if (p.action === 'send_embed' && p.embed) {
-        await discordBotService.sendEmbed(p.channelId, p.embed);
-      } else if (p.content) {
-        await discordBotService.sendToChannel(p.channelId, p.content);
-      } else {
-        return;
-      }
+      await discordBotService.sendToChannel(p.channelId, p.content);
       if (p.correlationId) {
         ceremonyAuditLog.updateDeliveryStatus(p.correlationId, 'delivered');
       }
