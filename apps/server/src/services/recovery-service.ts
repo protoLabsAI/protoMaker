@@ -683,6 +683,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       merge_conflict: 'A git merge conflict was detected.',
       dependency: 'A required dependency is missing.',
       authentication: 'Authentication with the API failed.',
+      retry_exhausted: 'The agent exhausted all retry attempts without success.',
       unknown: 'An unexpected error occurred.',
     };
 

@@ -451,6 +451,7 @@ export class FailureClassifierService {
       merge_conflict: 0,
       dependency: 3000,
       authentication: 0,
+      retry_exhausted: 0,
       unknown: 0,
     };
 
@@ -482,6 +483,7 @@ export class FailureClassifierService {
       merge_conflict: 0,
       dependency: 0,
       authentication: 0,
+      retry_exhausted: 0,
       unknown: 0,
     };
 
