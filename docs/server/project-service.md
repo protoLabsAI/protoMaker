@@ -7,6 +7,7 @@ Manages project orchestration data: CRUD operations for projects, milestones, an
 `ProjectService` is the persistence and coordination layer for protoLabs project documents. Projects are stored as Markdown and JSON files under `.automaker/projects/{slug}/`. When `proto.config.yaml` is present, the service wraps each project in an Automerge document for conflict-free multi-instance sync.
 
 Key responsibilities:
+
 - **Project CRUD** — create, read, update, delete projects and their sub-structure
 - **Milestone and phase management** — full lifecycle for milestones and phases within a project
 - **Automerge documents** — per-project CRDT state keyed by `projectPath`
@@ -15,7 +16,7 @@ Key responsibilities:
 
 ## Storage Layout
 
-```
+```text
 .automaker/
   projects/
     {slug}/
@@ -40,6 +41,7 @@ private _isCrdtEnabled(projectPath: string): boolean {
 ```
 
 When CRDT is enabled:
+
 - All mutations go through Automerge `change()` for conflict-free merging
 - Events are emitted on `_crdtEvents` for the sync mesh to broadcast
 - Remote changes arrive via `applyRemoteChange(projectPath, change)`
@@ -113,11 +115,11 @@ private readonly _initPromises = new Map<string, Promise<void>>();
 
 Every mutation triggers regeneration of the human-readable Markdown files via `@protolabsai/utils`:
 
-| Function                  | Output file                            |
-| ------------------------- | -------------------------------------- |
-| `generateProjectMarkdown` | `.automaker/projects/{slug}/project.md`|
-| `generateMilestoneMarkdown`| `.automaker/projects/{slug}/milestones/{m}/milestone.md` |
-| `generatePhaseMarkdown`   | `.automaker/projects/{slug}/milestones/{m}/{phase}.md` |
+| Function                    | Output file                                              |
+| --------------------------- | -------------------------------------------------------- |
+| `generateProjectMarkdown`   | `.automaker/projects/{slug}/project.md`                  |
+| `generateMilestoneMarkdown` | `.automaker/projects/{slug}/milestones/{m}/milestone.md` |
+| `generatePhaseMarkdown`     | `.automaker/projects/{slug}/milestones/{m}/{phase}.md`   |
 
 These files are git-tracked and provide human-readable context for agents and reviewers.
 
@@ -144,13 +146,13 @@ When `CalendarService` is wired in via `setCalendarService()`, project milestone
 
 ## Key Files
 
-| File                                                  | Role                                                |
-| ----------------------------------------------------- | --------------------------------------------------- |
-| `apps/server/src/services/project-service.ts`         | Core service — CRUD, Automerge, Markdown generation |
-| `apps/server/src/services/project-service.module.ts`  | NestJS module wiring                                |
-| `libs/platform/src/paths.ts`                          | Path helpers (`getProjectDir`, `getMilestoneDir`, …)|
-| `libs/utils/src/project-utils.ts`                     | `createProject`, Markdown generators, phase utils   |
-| `libs/types/src/project.ts`                           | `Project`, `Milestone`, `Phase`, input types        |
+| File                                                 | Role                                                 |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| `apps/server/src/services/project-service.ts`        | Core service — CRUD, Automerge, Markdown generation  |
+| `apps/server/src/services/project-service.module.ts` | NestJS module wiring                                 |
+| `libs/platform/src/paths.ts`                         | Path helpers (`getProjectDir`, `getMilestoneDir`, …) |
+| `libs/utils/src/project-utils.ts`                    | `createProject`, Markdown generators, phase utils    |
+| `libs/types/src/project.ts`                          | `Project`, `Milestone`, `Phase`, input types         |
 
 ## See Also
 

@@ -15,7 +15,7 @@ Autonomous feature implementation engine that drives agent execution, worktree l
 
 ## Architecture
 
-```
+```text
 AutoModeService
   ├── FeatureScheduler      — loop ownership, feature loading, dispatch
   ├── ExecutionService      — per-feature execution logic (plan, build, verify, merge)
@@ -27,7 +27,7 @@ AutoModeService
 
 ### Feature Execution Flow
 
-```
+```text
 startAutoLoop()
   --> FeatureScheduler.loop()
     --> Load next backlog feature
@@ -48,6 +48,7 @@ startAutoLoop()
 ### FeatureScheduler
 
 Owns the auto-loop tick. Each iteration:
+
 1. Checks if auto-mode is still running
 2. Loads backlog features respecting dependency order
 3. Filters blocked features (human-assigned deps, pipeline gates)
@@ -56,6 +57,7 @@ Owns the auto-loop tick. Each iteration:
 ### ExecutionService
 
 Handles all per-feature execution logic:
+
 - Worktree creation/reuse
 - Prompt assembly (`buildPromptWithImages`, context file loading)
 - Claude Agent SDK invocation with MCP servers
@@ -66,6 +68,7 @@ Handles all per-feature execution logic:
 ### ConcurrencyManager
 
 Controls how many agents run simultaneously. Slot-based approach:
+
 - Slots are claimed synchronously before any async work
 - Released on completion (success or failure)
 - Separate from per-project concurrency — global cap is `MAX_SYSTEM_CONCURRENCY`
@@ -93,10 +96,10 @@ After `CONSECUTIVE_FAILURE_THRESHOLD` (2) failures within `FAILURE_WINDOW_MS` (6
 
 Heap usage is checked before starting new agents:
 
-| Threshold | Env Var               | Default | Behavior                       |
-| --------- | --------------------- | ------- | ------------------------------ |
-| Stop      | `HEAP_STOP_THRESHOLD` | `0.80`  | Block new agent starts         |
-| Abort     | `HEAP_ABORT_THRESHOLD`| `0.90`  | Abort running agents           |
+| Threshold | Env Var                | Default | Behavior               |
+| --------- | ---------------------- | ------- | ---------------------- |
+| Stop      | `HEAP_STOP_THRESHOLD`  | `0.80`  | Block new agent starts |
+| Abort     | `HEAP_ABORT_THRESHOLD` | `0.90`  | Abort running agents   |
 
 ## LoopDetectedError
 
@@ -152,40 +155,40 @@ interface AutoModeConfig {
 
 Settings read from `workflowSettings` in `.automaker/settings.json`:
 
-| Setting                | Description                                  |
-| ---------------------- | -------------------------------------------- |
-| `agentExecutionModel`  | Primary model for agent execution            |
-| `maxConcurrency`       | Max parallel agents (capped at system limit) |
-| `useWorktrees`         | Enable per-feature git worktrees             |
-| `autoLoadClaudeMd`     | Auto-inject CLAUDE.md into agent context     |
-| `mcpServers`           | MCP server config passed to Claude SDK       |
-| `planningMode`         | Enable plan approval gating                  |
+| Setting               | Description                                  |
+| --------------------- | -------------------------------------------- |
+| `agentExecutionModel` | Primary model for agent execution            |
+| `maxConcurrency`      | Max parallel agents (capped at system limit) |
+| `useWorktrees`        | Enable per-feature git worktrees             |
+| `autoLoadClaudeMd`    | Auto-inject CLAUDE.md into agent context     |
+| `mcpServers`          | MCP server config passed to Claude SDK       |
+| `planningMode`        | Enable plan approval gating                  |
 
 ## Prometheus Metrics
 
-| Metric                       | Type    | Description                            |
-| ---------------------------- | ------- | -------------------------------------- |
-| `agent_cost_total`           | Counter | Cumulative cost (USD) across all agents|
-| `agent_execution_duration`   | Histogram| Feature execution time (seconds)       |
-| `active_agents_count`        | Gauge   | Currently running agents               |
-| `agent_tokens_input_total`   | Counter | Total input tokens consumed            |
-| `agent_tokens_output_total`  | Counter | Total output tokens generated          |
-| `agent_executions_total`     | Counter | Total feature executions               |
+| Metric                      | Type      | Description                             |
+| --------------------------- | --------- | --------------------------------------- |
+| `agent_cost_total`          | Counter   | Cumulative cost (USD) across all agents |
+| `agent_execution_duration`  | Histogram | Feature execution time (seconds)        |
+| `active_agents_count`       | Gauge     | Currently running agents                |
+| `agent_tokens_input_total`  | Counter   | Total input tokens consumed             |
+| `agent_tokens_output_total` | Counter   | Total output tokens generated           |
+| `agent_executions_total`    | Counter   | Total feature executions                |
 
 ## Key Files
 
-| File                                                           | Role                                              |
-| -------------------------------------------------------------- | ------------------------------------------------- |
-| `apps/server/src/services/auto-mode-service.ts`                | Core service — loop orchestration and public API  |
-| `apps/server/src/services/auto-mode/execution-service.ts`      | Per-feature execution logic                       |
-| `apps/server/src/services/auto-mode/concurrency-manager.ts`    | Concurrency slot management                       |
-| `apps/server/src/services/auto-mode/auto-loop-coordinator.ts`  | Per-worktree loop state                           |
-| `apps/server/src/services/auto-mode/feature-state-manager.ts`  | Persist-before-emit status transitions            |
-| `apps/server/src/services/auto-mode/typed-event-bus.ts`        | Type-safe event wrappers                          |
-| `apps/server/src/services/feature-scheduler.ts`                | Loop tick and feature dispatch                    |
-| `apps/server/src/services/lead-engineer-service.ts`            | Claude Agent SDK invocation                       |
-| `apps/server/src/services/stream-observer-service.ts`          | Agent output monitoring (loop detection)          |
-| `apps/server/src/services/recovery-service.ts`                 | Crash recovery and resume logic                   |
+| File                                                          | Role                                             |
+| ------------------------------------------------------------- | ------------------------------------------------ |
+| `apps/server/src/services/auto-mode-service.ts`               | Core service — loop orchestration and public API |
+| `apps/server/src/services/auto-mode/execution-service.ts`     | Per-feature execution logic                      |
+| `apps/server/src/services/auto-mode/concurrency-manager.ts`   | Concurrency slot management                      |
+| `apps/server/src/services/auto-mode/auto-loop-coordinator.ts` | Per-worktree loop state                          |
+| `apps/server/src/services/auto-mode/feature-state-manager.ts` | Persist-before-emit status transitions           |
+| `apps/server/src/services/auto-mode/typed-event-bus.ts`       | Type-safe event wrappers                         |
+| `apps/server/src/services/feature-scheduler.ts`               | Loop tick and feature dispatch                   |
+| `apps/server/src/services/lead-engineer-service.ts`           | Claude Agent SDK invocation                      |
+| `apps/server/src/services/stream-observer-service.ts`         | Agent output monitoring (loop detection)         |
+| `apps/server/src/services/recovery-service.ts`                | Crash recovery and resume logic                  |
 
 ## See Also
 

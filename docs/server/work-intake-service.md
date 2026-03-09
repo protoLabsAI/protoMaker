@@ -17,7 +17,7 @@ Pull-based phase claiming that distributes work across the Hivemind mesh — ins
 
 ## Architecture
 
-```
+```text
 WorkIntakeService.tick()
   --> getProjects(projectPath)               // Read local Automerge replica
   --> getClaimablePhases(project, instanceId, role, tags)   // Pure function
@@ -33,7 +33,7 @@ WorkIntakeService.tick()
 
 ## Phase Lifecycle
 
-```
+```text
 claimable
   --> claimed (claimedBy: instanceId, claimedAt: ISO)
     --> executing (executionStatus: 'running')
@@ -41,17 +41,17 @@ claimable
       --> failed (executionStatus: 'failed')
 ```
 
-Stale claims (no activity for `claimTimeoutMs`, default 30 min) become reclaimable if the claiming instance is no longer alive in the peer registry.
+Stale claims (no activity for `claimTimeoutMs`, default 30 min) become reclaimable if the claiming instance is no longer alive in the peer registry or if the claim has exceeded `claimTimeoutMs`.
 
 ## Pure Functions (from `@protolabsai/utils`)
 
-| Function              | Purpose                                                                  |
-| --------------------- | ------------------------------------------------------------------------ |
-| `getClaimablePhases`  | Returns phases this instance can claim based on role, tags, and status   |
-| `holdsClaim`          | Returns true if the given instanceId owns the claim on a phase           |
-| `isReclaimable`       | Returns true if a stale claim can be recovered by another instance       |
-| `materializeFeature`  | Converts a `Phase` into a `Feature` record ready for execution           |
-| `phasePriority`       | Numeric priority for ordering claims (milestone order × phase index)     |
+| Function             | Purpose                                                                |
+| -------------------- | ---------------------------------------------------------------------- |
+| `getClaimablePhases` | Returns phases this instance can claim based on role, tags, and status |
+| `holdsClaim`         | Returns true if the given instanceId owns the claim on a phase         |
+| `isReclaimable`      | Returns true if a stale claim can be recovered by another instance     |
+| `materializeFeature` | Converts a `Phase` into a `Feature` record ready for execution         |
+| `phasePriority`      | Numeric priority for ordering claims (milestone order × phase index)   |
 
 All logic is pure and testable independently of the service.
 
@@ -60,8 +60,8 @@ All logic is pure and testable independently of the service.
 ```typescript
 interface WorkIntakeConfig {
   enabled: boolean;
-  tickIntervalMs: number;   // Default: 30_000 (30s)
-  claimTimeoutMs: number;   // Default: 1_800_000 (30 min)
+  tickIntervalMs: number; // Default: 30_000 (30s)
+  claimTimeoutMs: number; // Default: 1_800_000 (30 min)
 }
 ```
 
@@ -109,6 +109,7 @@ The tick runs immediately on `start()`, then at `tickIntervalMs` intervals.
 ## Stale Claim Recovery
 
 When `isReclaimable(phase, peerStatus, claimTimeoutMs)` is true:
+
 - The claiming instance is not in `peerStatus` (it went offline)
 - OR the claim is older than `claimTimeoutMs`
 
@@ -140,12 +141,12 @@ When a phase has no role constraint, any instance can claim it.
 
 ## Key Files
 
-| File                                                      | Role                                                    |
-| --------------------------------------------------------- | ------------------------------------------------------- |
-| `apps/server/src/services/work-intake-service.ts`         | Core service — tick loop, claim protocol, completion    |
-| `apps/server/src/services/work-intake.module.ts`          | NestJS module wiring — wires dependencies at startup    |
-| `libs/utils/src/work-intake-utils.ts`                     | Pure functions: `getClaimablePhases`, `holdsClaim`, etc.|
-| `libs/types/src/project.ts`                               | `Phase`, `InstanceRole`, `InstanceIdentity` types       |
+| File                                              | Role                                                     |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `apps/server/src/services/work-intake-service.ts` | Core service — tick loop, claim protocol, completion     |
+| `apps/server/src/services/work-intake.module.ts`  | NestJS module wiring — wires dependencies at startup     |
+| `libs/utils/src/work-intake-utils.ts`             | Pure functions: `getClaimablePhases`, `holdsClaim`, etc. |
+| `libs/types/src/project.ts`                       | `Phase`, `InstanceRole`, `InstanceIdentity` types        |
 
 ## See Also
 

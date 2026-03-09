@@ -7,6 +7,7 @@ WebSocket-based multi-instance coordination layer that keeps feature events, pro
 `CrdtSyncService` manages the low-level peer-to-peer sync transport between protoLabs instances. It reads `proto.config.yaml` at startup to determine whether this instance is the **primary** (runs a WebSocket server) or a **worker** (connects as a client).
 
 Key responsibilities:
+
 - **Heartbeat protocol** — publishes live capacity metrics to all peers every 30s
 - **Feature event sync** — broadcasts `feature:created`, `feature:updated`, `feature:deleted`, and `feature:status-changed` to all peers
 - **Project event sync** — broadcasts project CRUD events so all instances stay consistent
@@ -17,7 +18,7 @@ Key responsibilities:
 
 ## Architecture
 
-```
+```text
 proto.config.yaml
   --> role: primary → start WebSocket server (default port 4444)
   --> role: worker  → connect as WebSocket client to primary URL
@@ -31,10 +32,10 @@ CrdtSyncService
 
 ## Instance Roles
 
-| Role      | Behavior                                                          |
-| --------- | ----------------------------------------------------------------- |
-| `primary` | Runs `WebSocketServer`; relays messages between all workers       |
-| `worker`  | Connects to primary URL; receives relay of all peer messages      |
+| Role      | Behavior                                                     |
+| --------- | ------------------------------------------------------------ |
+| `primary` | Runs `WebSocketServer`; relays messages between all workers  |
+| `worker`  | Connects to primary URL; receives relay of all peer messages |
 
 Role is determined by the `instance.syncRole` (or `role`) field in `proto.config.yaml`. If the file is absent, the instance starts as a standalone worker (no sync).
 
@@ -48,9 +49,9 @@ Sent by every instance on connect and every 30 seconds:
 interface PeerMessage {
   type: 'heartbeat' | 'goodbye' | 'identity' | 'promote';
   instanceId: string;
-  name?: string;          // from proto.config.yaml instance.name
-  role?: InstanceRole;    // from proto.config.yaml instance.role
-  tags?: string[];        // from proto.config.yaml instance.tags
+  name?: string; // from proto.config.yaml instance.name
+  role?: InstanceRole; // from proto.config.yaml instance.role
+  tags?: string[]; // from proto.config.yaml instance.tags
   url?: string;
   timestamp: string;
   priority?: number;
@@ -71,7 +72,7 @@ interface CrdtFeatureEvent {
   eventType: string;
   payload: Record<string, unknown>;
   timestamp: string;
-  projectName?: string;  // project-scoping — reject if mismatch
+  projectName?: string; // project-scoping — reject if mismatch
 }
 ```
 
@@ -105,19 +106,19 @@ interface CrdtRegistrySyncEvent {
 
 ## Heartbeat and TTL
 
-| Constant                  | Default    | Description                               |
-| ------------------------- | ---------- | ----------------------------------------- |
-| `DEFAULT_HEARTBEAT_MS`    | `30_000`   | Interval between heartbeat broadcasts     |
-| `DEFAULT_TTL_MS`          | `120_000`  | Peer eviction timeout (no heartbeat)      |
-| `RECONNECT_INTERVAL_MS`   | `5_000`    | Worker reconnect retry interval           |
-| `TTL_CHECK_INTERVAL_MS`   | `10_000`   | Frequency of TTL enforcement checks       |
-| `DEFAULT_SYNC_PORT`       | `4444`     | WebSocket server port on primary          |
+| Constant                | Default   | Description                           |
+| ----------------------- | --------- | ------------------------------------- |
+| `DEFAULT_HEARTBEAT_MS`  | `30_000`  | Interval between heartbeat broadcasts |
+| `DEFAULT_TTL_MS`        | `120_000` | Peer eviction timeout (no heartbeat)  |
+| `RECONNECT_INTERVAL_MS` | `5_000`   | Worker reconnect retry interval       |
+| `TTL_CHECK_INTERVAL_MS` | `10_000`  | Frequency of TTL enforcement checks   |
+| `DEFAULT_SYNC_PORT`     | `4444`    | WebSocket server port on primary      |
 
 ## Leader Election
 
 When the primary is unreachable (worker loses connection and cannot reconnect), a promotion flow is initiated:
 
-```
+```text
 Worker detects primary unreachable
   --> Sends `promote` PeerMessage to remaining peers
   --> Peer with highest priority wins election
@@ -130,6 +131,7 @@ Worker detects primary unreachable
 ## Network Partition Handling
 
 When a worker is disconnected from the mesh:
+
 - `partitionSince` is set to the ISO timestamp of disconnect
 - Outbound events are queued in `outboundQueue` (in-memory)
 - On reconnect, queued messages are replayed to the primary
@@ -145,22 +147,22 @@ When a worker is disconnected from the mesh:
 
 ## Callbacks (must be set before `start()`)
 
-| Method                        | When called                                            |
-| ----------------------------- | ------------------------------------------------------ |
-| `onSettingsReceived(cb)`      | A remote peer sent a `settings_event`                  |
-| `onRemoteFeatureEvent(cb)`    | A remote peer sent a `feature_event`                   |
-| `setCapacityProvider(fn)`     | Each heartbeat — returns current `InstanceCapacity`    |
-| `setCompactionDiagnosticsProvider(fn)` | Each `getSyncStatus()` call                   |
-| `attachAvaChannelBugReporter(cb)` | `bug:reported` events on the EventBus              |
-| `setRegistryProvider(fn)`     | Primary calls this to supply registry for new workers  |
-| `onRegistryReceived(cb)`      | Worker receives a `registry_sync` from primary         |
+| Method                                 | When called                                           |
+| -------------------------------------- | ----------------------------------------------------- |
+| `onSettingsReceived(cb)`               | A remote peer sent a `settings_event`                 |
+| `onRemoteFeatureEvent(cb)`             | A remote peer sent a `feature_event`                  |
+| `setCapacityProvider(fn)`              | Each heartbeat — returns current `InstanceCapacity`   |
+| `setCompactionDiagnosticsProvider(fn)` | Each `getSyncStatus()` call                           |
+| `attachAvaChannelBugReporter(cb)`      | `bug:reported` events on the EventBus                 |
+| `setRegistryProvider(fn)`              | Primary calls this to supply registry for new workers |
+| `onRegistryReceived(cb)`               | Worker receives a `registry_sync` from primary        |
 
 ## `getSyncStatus()` Response
 
 ```typescript
 interface SyncServerStatus {
-  role: SyncRole;           // 'primary' | 'worker'
-  connected: boolean;       // worker: connected to primary; primary: server running
+  role: SyncRole; // 'primary' | 'worker'
+  connected: boolean; // worker: connected to primary; primary: server running
   peerCount: number;
   peers: HivemindPeer[];
   syncPort: number;
@@ -172,11 +174,11 @@ interface SyncServerStatus {
 
 ## Key Files
 
-| File                                                  | Role                                                    |
-| ----------------------------------------------------- | ------------------------------------------------------- |
-| `apps/server/src/services/crdt-sync-service.ts`       | Core sync service — WebSocket server/client lifecycle   |
-| `apps/server/src/services/crdt-sync.module.ts`        | NestJS module wiring — injects dependencies at startup  |
-| `libs/types/src/events.ts`                            | `CrdtFeatureEvent` wire type with `projectName` field   |
+| File                                            | Role                                                   |
+| ----------------------------------------------- | ------------------------------------------------------ |
+| `apps/server/src/services/crdt-sync-service.ts` | Core sync service — WebSocket server/client lifecycle  |
+| `apps/server/src/services/crdt-sync.module.ts`  | NestJS module wiring — injects dependencies at startup |
+| `libs/types/src/events.ts`                      | `CrdtFeatureEvent` wire type with `projectName` field  |
 
 ## See Also
 
