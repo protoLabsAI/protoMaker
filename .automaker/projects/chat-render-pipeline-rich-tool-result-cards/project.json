@@ -49,7 +49,7 @@
           "featureId": "feature-1773072822715-bvaoxuehk"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773072822703-v7b3vghx9"
     },
     {
@@ -79,7 +79,7 @@
           "featureId": "feature-1773072822723-rx5k2pgu1"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773072822719-iepyw8ib1"
     },
     {
@@ -158,5 +158,5 @@
     ]
   },
   "createdAt": "2026-03-09T16:12:07.810Z",
-  "updatedAt": "2026-03-09T16:13:42.830Z"
+  "updatedAt": "2026-03-09T16:37:22.570Z"
 }

@@ -5,6 +5,7 @@
  * Contains: queue panel, conversation history panel, settings panel, chat area.
  */
 
+import { useEffect, useState } from 'react';
 import type { UIMessage } from 'ai';
 import {
   ChatMessageList,
@@ -20,6 +21,21 @@ import { ConversationList } from './conversation-list';
 import { AvaSettingsPanel } from './ava-settings-panel';
 import type { ChatSession } from '@/store/chat-store';
 import type { SuggestionItem } from '@protolabsai/ui/ai';
+import type { PendingSubagentApproval } from '@/hooks/use-chat-session';
+
+/** Displays a live "Waiting Xs" counter from a receivedAt ISO timestamp. */
+function WaitingTimer({ receivedAt }: { receivedAt: string }) {
+  const [seconds, setSeconds] = useState(() =>
+    Math.floor((Date.now() - new Date(receivedAt).getTime()) / 1000)
+  );
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSeconds(Math.floor((Date.now() - new Date(receivedAt).getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [receivedAt]);
+  return <span className="text-xs text-amber-500/80">Waiting {seconds}s</span>;
+}
 
 export interface AskAvaTabProps {
   displayedMessages: UIMessage[];
@@ -61,6 +77,11 @@ export interface AskAvaTabProps {
   onToggleQueuePause: () => void;
   onModelChange: (alias: string) => void;
   getToolProgressLabel: (toolCallId: string) => string | undefined;
+
+  /** Pending subagent tool approval requests */
+  pendingSubagentApprovals: PendingSubagentApproval[];
+  approveSubagentTool: (approvalId: string) => void;
+  denySubagentTool: (approvalId: string) => void;
 }
 
 export function AskAvaTab({
@@ -96,6 +117,9 @@ export function AskAvaTab({
   onToggleQueuePause,
   onModelChange,
   getToolProgressLabel,
+  pendingSubagentApprovals,
+  approveSubagentTool,
+  denySubagentTool,
 }: AskAvaTabProps) {
   return (
     <div className="flex min-h-0 flex-1">
@@ -153,6 +177,47 @@ export function AskAvaTab({
         {/* Contextual suggestions — shown only when no messages in current session */}
         {displayedMessages.length === 0 && (
           <SuggestionList suggestions={suggestions} onSelect={onSuggestionSelect} />
+        )}
+
+        {/* Subagent tool approval cards — rendered above the chat input */}
+        {pendingSubagentApprovals.length > 0 && (
+          <div className="flex flex-col gap-2 px-3 pt-2">
+            {pendingSubagentApprovals.map((approval) => {
+              const preview = JSON.stringify(approval.toolInput);
+              const truncated = preview.length > 200 ? preview.slice(0, 200) + '…' : preview;
+              return (
+                <div
+                  key={approval.approvalId}
+                  className="flex flex-col gap-2 rounded-md border border-amber-500/50 bg-amber-500/5 p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-amber-500">
+                      Tool approval required
+                    </span>
+                    <WaitingTimer receivedAt={approval.receivedAt} />
+                  </div>
+                  <div className="text-xs font-medium text-foreground">{approval.toolName}</div>
+                  <pre className="rounded bg-muted px-2 py-1.5 text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                    {truncated}
+                  </pre>
+                  <div className="flex gap-2">
+                    <button
+                      className="flex-1 rounded border border-amber-500 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-500 hover:bg-amber-500/20 transition-colors"
+                      onClick={() => approveSubagentTool(approval.approvalId)}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="flex-1 rounded border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                      onClick={() => denySubagentTool(approval.approvalId)}
+                    >
+                      Deny
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {/* PromptInputProvider scopes input state to this chat area */}

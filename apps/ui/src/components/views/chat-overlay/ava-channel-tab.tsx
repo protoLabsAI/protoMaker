@@ -15,6 +15,42 @@ import { useAvaChannelStore, useAvaChannelLiveUpdates } from '@/store/ava-channe
 import type { AvaChatMessage } from '@protolabsai/types';
 
 // ============================================================================
+// Protocol category helpers
+// ============================================================================
+
+type ProtocolCategory = 'Heartbeat' | 'Work Steal' | 'Escalation' | 'Metrics' | 'Scheduler';
+
+const ALL_CATEGORIES: ProtocolCategory[] = [
+  'Heartbeat',
+  'Work Steal',
+  'Escalation',
+  'Metrics',
+  'Scheduler',
+];
+
+const CATEGORY_TAG_MAP: Record<string, ProtocolCategory> = {
+  heartbeat: 'Heartbeat',
+  capacity: 'Heartbeat',
+  'work-request': 'Work Steal',
+  'work-offer': 'Work Steal',
+  escalation: 'Escalation',
+  health_alert: 'Escalation',
+  'dora-report': 'Metrics',
+  'pattern-resolved': 'Metrics',
+  'work-inventory': 'Scheduler',
+  'schedule-assignment': 'Scheduler',
+  'scheduler-heartbeat': 'Scheduler',
+  'schedule-conflict': 'Scheduler',
+  'project-progress': 'Scheduler',
+};
+
+function getProtocolCategory(content: string): ProtocolCategory | null {
+  const match = /^\[([^\]]+)\]/.exec(content);
+  if (!match) return null;
+  return CATEGORY_TAG_MAP[match[1]] ?? null;
+}
+
+// ============================================================================
 // Sub-components
 // ============================================================================
 
@@ -127,6 +163,9 @@ export function AvaChannelTab() {
   const [operatorInput, setOperatorInput] = useState('');
   const [sending, setSending] = useState(false);
   const [showProtocol, setShowProtocol] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<Set<ProtocolCategory>>(
+    new Set(ALL_CATEGORIES)
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Fetch messages on mount and when showProtocol changes

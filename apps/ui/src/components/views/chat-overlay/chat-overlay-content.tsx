@@ -62,6 +62,9 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     handleModelChange,
     approveToolAction,
     rejectToolAction,
+    pendingSubagentApprovals,
+    approveSubagentTool,
+    denySubagentTool,
     historyOpen,
     toggleHistory,
     setHistoryOpen,
@@ -485,6 +488,9 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           onToggleQueuePause={() => setQueuePaused((v) => !v)}
           onModelChange={handleModelChange}
           getToolProgressLabel={getProgressLabel}
+          pendingSubagentApprovals={pendingSubagentApprovals}
+          approveSubagentTool={approveSubagentTool}
+          denySubagentTool={denySubagentTool}
         />
       ) : (
         <AvaChannelTab />

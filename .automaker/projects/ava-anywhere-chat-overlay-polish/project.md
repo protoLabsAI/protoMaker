@@ -4,7 +4,7 @@ Bring the Ask Ava / Ava Anywhere chat overlay to production quality across four 
 
 **Status:** active
 **Created:** 2026-03-09T15:47:21.685Z
-**Updated:** 2026-03-09T16:20:42.642Z
+**Updated:** 2026-03-09T16:37:47.424Z
 
 ## PRD
 
@@ -44,7 +44,7 @@ Add regenerate button and branch navigation to chat messages. Branch tracking lo
 
 Render pending tool approval requests as interactive cards in the Ask Ava chat. The approval plumbing already exists in use-chat-session.ts — this milestone adds the UI to surface it.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 

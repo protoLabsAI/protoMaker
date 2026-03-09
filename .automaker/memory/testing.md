@@ -1163,3 +1163,8 @@ usageStats:
 - **Situation:** Implementation uses Playwright testing patterns from web UI components but this is a Node.js CLI tool
 - **Root cause:** Playwright tests browser rendering, not actual CLI execution. Direct node execution (node /path/to/cli.js args) tests the real consumer experience and is faster.
 - **How to avoid:** Direct CLI testing is simpler and faster but only covers CLI execution; programmatic import patterns need separate tests
+
+#### [Pattern] When verifying a feature claimed to be complete but not immediately obvious from the codebase structure, create temporary E2E verification tests that exercise compilation, bundle inclusion, and math logic without testing full integration. Delete after verification passes. (2026-03-09)
+- **Problem solved:** Feature (Tool Approval Cards) was reported as complete in ask-ava-tab.tsx, but without tracing the exact lines, it wasn't clear if it was actually working.
+- **Why this works:** Playwright E2E tests can verify: (1) no JS parse errors on bundle load, (2) runtime math is correct (WaitingTimer countdown, JSON truncation), (3) component made it into the bundle. Faster than manual inspection.
+- **Trade-offs:** Temporary tests = fast verification + easy cleanup, but leave no artifact for the next developer. Permanent tests = maintainability burden but catch regressions.

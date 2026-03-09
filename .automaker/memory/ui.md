@@ -533,3 +533,29 @@ usageStats:
 - **Situation:** In hivemind mode, messages come from multiple instances. Without badges, users can't tell which instance said what
 - **Root cause:** Multi-instance streams are ambiguous without source information. Badges provide instant visual context without reading metadata
 - **How to avoid:** Takes screen space, but prevents user confusion and is expected UX pattern in distributed systems
+
+### Input preview truncated to exactly 200 characters + ellipsis. Uses JSON.stringify on raw toolInput object, not formatted display. (2026-03-09)
+- **Context:** Tool inputs vary wildly (bash: 'ls /tmp' vs 20KB file content). Need readable preview without breaking card layout.
+- **Why:** 200 chars = sweet spot where simple bash/node/agent commands remain readable, complex inputs truncate gracefully. Ellipsis signals truncation (vs silent clipping). JSON.stringify matches internal representation.
+- **Rejected:** Fixed 100-char preview (too many commands truncated); 500-char preview (breaks card width on mobile); formatted/syntax-highlighted display (adds complexity, changes semantics); word-wrap to multiple lines (breaks vertical card stacking)
+- **Trade-offs:** Easier: single regex-free truncation logic. Harder: users see raw JSON, not formatted/pretty preview. Some tools with nested configs lose detail.
+- **Breaking if changed:** If you increase to 500+ chars, vertical card stacking becomes unstable on narrow viewports. If you use JSON.parse + format, you lose fidelity to actual tool invocation.
+
+#### [Pattern] WaitingTimer extracted as sub-component using useEffect + useState to count elapsed seconds live from server-provided receivedAt ISO timestamp. Recalculates every interval. (2026-03-09)
+- **Problem solved:** Approval cards need to show 'how long has user been waiting for this approval' in real-time.
+- **Why this works:** Client-side timer decouples UX feedback (show urgency now) from server clock sync (use server's timestamp as reference). Server can't know how long approval should 'wait' from user's perspective. Component re-renders show live elapsed time.
+- **Trade-offs:** Easier: timer always accurate to user's view. Harder: each card running useEffect means N timers in background; requires cleanup.
+
+### Cards use amber-500 color with opacity modifiers: border-amber-500/50 (border), bg-amber-500/5 (background). No other pending-state colors tested. (2026-03-09)
+- **Context:** Visual distinction needed for 'awaiting approval' state. Must signal attention without aggression (not error-red).
+- **Why:** Amber = caution/attention without urgency. Opacity (_/50 border, _/5 background) creates hierarchy: border visible, background subtle. Matches design convention for 'needs action' vs 'blocked' (red) or 'normal' (gray).
+- **Rejected:** Red (signals error, too aggressive for deliberate approval gate); blue (signals info, too neutral); yellow (too bright); full opacity amber (too harsh)
+- **Trade-offs:** Easier: clear visual grouping of approval cards. Harder: color coding assumes users know amber=action-needed; may need legend on first use.
+- **Breaking if changed:** If you remove opacity and use solid amber, cards become visually aggressive and fight for attention. If you change to red, users may confuse 'approval pending' with 'error state'.
+
+### Tool input preview truncates at 200 chars + ellipsis via simple string slicing of `JSON.stringify(toolInput)`, not semantic JSON parsing. (2026-03-09)
+- **Context:** Approval cards need to show a preview of what the tool will receive, but tool inputs can be very large (nested objects, large arrays).
+- **Why:** Simple string truncation is deterministic, fast, and gives the user a sense of the input structure (they see valid JSON up to 200 chars, then '…'). Parsing and selectively eliding keys would be more complex and harder to predict.
+- **Rejected:** Could parse JSON and show first N fields, but that's context-sensitive (what if the first field is a huge array?). Could show keys only (no values), but that loses critical context.
+- **Trade-offs:** String truncation = fast + predictable, but users might see cut-off field names or incomplete objects. Semantic approach = smarter but non-deterministic and slower.
+- **Breaking if changed:** If you increase the 200-char limit too much, wide tool inputs could overflow the card layout. If you decrease it, users won't see enough context to understand what they're approving. 200 was likely picked through design iteration.

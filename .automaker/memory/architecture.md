@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 77
-  referenced: 28
-  successfulFeatures: 28
+  loaded: 81
+  referenced: 29
+  successfulFeatures: 29
 ---
 # architecture
 
@@ -3908,3 +3908,32 @@ usageStats:
 - **Situation:** World state contains snapshots that rule evaluation depends on; source entities (Feature, Agent, PR, Milestone) may change over time
 - **Root cause:** Snapshots are immutable inputs to pure rule functions; stale snapshots cause rules to miss critical state changes or make decisions on outdated data
 - **How to avoid:** Deterministic rule evaluation vs. snapshot staleness; must rebuild world state frequently to stay current
+
+#### [Pattern] Hook-driven state management for tool approvals: pendingSubagentApprovals, approveSubagentTool, denySubagentTool were already implemented in useChatSession (handling SSE events, state lifecycle, action handlers). Feature completion involved only UI integration, no new hook code needed. (2026-03-09)
+- **Problem solved:** Expected to build approval UI against new state management; discovered existing hook already owned the entire flow.
+- **Why this works:** When architecture separates concerns correctly (hook manages data/actions, component renders), UI additions become thin integration layers. Indicates approvals were designed with streaming/hooks from inception.
+- **Trade-offs:** Easier: pure presentational component. Harder: understand hook implementation first before building UI.
+
+#### [Pattern] Reactive state binding: component renders exactly what useChatSession provides, no local state duplication, no optimistic updates. Approval card presence = array length > 0. (2026-03-09)
+- **Problem solved:** Could have implemented local state to track visibility, animated removal, or local confirmation before calling action handlers.
+- **Why this works:** Single source of truth (hook) prevents stale state, race conditions, and sync bugs. SSE event adds approval → hook updates → component re-renders. Action (approve/deny) → hook removes → card vanishes. Pure data flow.
+- **Trade-offs:** Easier: no state sync bugs. Harder: no local control over visibility/animation timing.
+
+#### [Pattern] Dual-file memory convention: pattern.md vs patterns.md and gotcha.md vs gotchas.md are intentionally separate files with different frontmatter tags ([pattern] vs [patterns], [gotcha] vs [gotchas]) loaded in different semantic contexts by the memory system. (2026-03-09)
+- **Problem solved:** Documentation review task encountered two files with similar names but different purposes, which appeared to be duplicates at first glance.
+- **Why this works:** Allows fine-grained context routing—agents can load specific file variants based on semantic relevance without hardcoding file paths. Enables polymorph loading of contextually appropriate knowledge.
+- **Trade-offs:** More complex file structure (+cognitive load) but enables semantic routing (-coupling to file paths, +contextual precision)
+
+### Large monolithic architecture.md (571 KB) is maintained as single source-of-truth rather than split into focused subdocuments. (2026-03-09)
+- **Context:** Architecture documentation is comprehensive and large, covering multiple disparate architectural topics in one file.
+- **Why:** Centralized reference ensures architectural coherence and single source of truth for agents querying architecture context. Splitting would create coordination problem.
+- **Rejected:** Split into subdocuments (e.g., architecture-services.md, architecture-database.md, architecture-api.md) would improve discoverability but fragment the authoritative source.
+- **Trade-offs:** Single large file is harder to navigate for specific topics (+fragmentation risk if split) but stronger coherence (+discoverability if indexed)
+- **Breaking if changed:** Splitting architecture.md would require updating all references in memory system and agent context routing; agents expecting monolithic architecture reference would receive partial knowledge.
+
+### WaitingTimer component uses `Date.now()` inside a 1-second `useEffect` interval to calculate elapsed seconds from `receivedAt` (ISO timestamp), rather than incrementing a local counter. (2026-03-09)
+- **Context:** UI needs to show 'Waiting 5s...' live counter that ticks up as user waits for tool approval.
+- **Why:** Date.now() approach is resilient to missed renders (if effect doesn't fire exactly on 1s boundary) and guarantees monotonic time progression. Counter increments could skip or go backwards if React suspends/resumes rendering.
+- **Rejected:** Local counter: `useState` + `setInterval` incrementing 0→1→2... is simpler but vulnerable to React batching/suspension. Could also pass elapsed time from parent, but that couples the timer to parent lifecycle.
+- **Trade-offs:** Date.now() = slightly more CPU (datetime math per interval) but more robust. Counter = simpler logic but fragile to React internals. Given this is a UI element with <100 instances, the robustness win outweighs the trivial CPU cost.
+- **Breaking if changed:** If you switch to a simple counter without re-architecting how it's initialized/synced with parent state, the timer could fall behind real time, showing 'Waiting 3s...' when the user has actually been waiting 5s+.

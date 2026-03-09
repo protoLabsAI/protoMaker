@@ -44,7 +44,9 @@
           "name": "pending-tool-approval-cards",
           "title": "Pending Tool Approval Cards",
           "description": "In the Ask Ava tab, render each entry in pendingSubagentApprovals as an inline card above the chat input. Each card shows: tool name, a truncated preview of toolInput (JSON, max 200 chars), an Approve button (calls approveSubagentTool), and a Deny button (calls denySubagentTool). Cards should be visually distinct (amber border or accent) so they are immediately noticeable. When no approvals are pending, render nothing. Multiple pending approvals stack vertically. Add a received timestamp ('Waiting Xs') that counts up from receivedAt.",
-          "filesToModify": ["apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx"],
+          "filesToModify": [
+            "apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx"
+          ],
           "acceptanceCriteria": [
             "Pending tool approval cards render above the chat input when pendingSubagentApprovals is non-empty",
             "Each card shows tool name, input preview, approve button, deny button",
@@ -57,7 +59,7 @@
           "featureId": "feature-1773071246989-4y9op8gq8"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773071246984-1j8jtrh31"
     },
     {
@@ -71,7 +73,9 @@
           "name": "category-filter-chips-for-protocol-messages",
           "title": "Category Filter Chips for Protocol Messages",
           "description": "In ava-channel-tab.tsx, replace or augment the binary protocol toggle with category filter chips: Heartbeat ([heartbeat], [capacity]), Work Steal ([work-request], [work-offer]), Escalation ([escalation], [health_alert]), Metrics ([dora-report], [pattern-resolved]), Scheduler ([work-inventory], [schedule-assignment], [scheduler-heartbeat], [schedule-conflict], [project-progress]). Add a helper function getProtocolCategory(content: string) that maps the opening bracket tag to one of these categories. Filter chip UI: small pill buttons below the search bar, each toggleable. When a chip is deselected, messages of that category are hidden. The existing showProtocol toggle becomes 'Show All Protocol' which selects all chips at once. Store selected categories in local component state (no store change needed).",
-          "filesToModify": ["apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx"],
+          "filesToModify": [
+            "apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx"
+          ],
           "acceptanceCriteria": [
             "Five category chips appear when showProtocol is enabled: Heartbeat, Work Steal, Escalation, Metrics, Scheduler",
             "Toggling a chip hides/shows messages of that category",
@@ -134,5 +138,5 @@
     ]
   },
   "createdAt": "2026-03-09T15:47:21.685Z",
-  "updatedAt": "2026-03-09T16:20:42.642Z"
+  "updatedAt": "2026-03-09T16:37:47.424Z"
 }
