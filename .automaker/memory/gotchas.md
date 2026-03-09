@@ -9,6 +9,7 @@ usageStats:
   referenced: 254
   successfulFeatures: 254
 ---
+
 # gotchas
 
 #### [Gotcha] .gitignore negative patterns require parent directory to be unignored first, or the negative rule is ineffective (2026-02-10)
@@ -595,8 +596,8 @@ usageStats:
 - **Root cause:** Without checking Set membership before cleanup, timeout firing after legitimate completion could corrupt state machine (double removal, or re-lock an already-running feature). The check prevents this.
 - **How to avoid:** Gained: Safety from race conditions, self-healing on hangs. Lost: Slight complexity in cleanup logic (must check Set membership).
 
-
 #### [Gotcha] Silent guards with no diagnostic context are worse than incomplete pattern matching. A failure dropped silently is harder to debug than a failure marked as 'unknown' with the raw reason visible. (2026-03-09)
+
 - **Situation:** The friction-tracker service silently returned on 'unknown' patterns without logging. Combined with debug-level logging in the classifier, unclassified failures were invisible end-to-end.
 - **Root cause:** When a failure is silently dropped, nobody knows it happened. When it's logged at warn level with context ('unclassified: needs human input'), operators and monitoring can detect the gap and request pattern expansion.
 - **How to avoid:** Easier to spot failure gaps now, but requires disciplined log analysis. Trade-off is worth it because it unblocks system improvement.

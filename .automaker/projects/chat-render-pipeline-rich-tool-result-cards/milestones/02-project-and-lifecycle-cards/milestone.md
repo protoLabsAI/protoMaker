@@ -14,9 +14,9 @@ Cards for project management views: project list, project detail, and lifecycle 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-projectlistcard-and-projectdetailcard.md](./phase-01-projectlistcard-and-projectdetailcard.md) | 1 week | None | TBD |
+| Phase | File                                                                                                     | Duration | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------- | -------- | ------------ | ----- |
+| 1     | [phase-01-projectlistcard-and-projectdetailcard.md](./phase-01-projectlistcard-and-projectdetailcard.md) | 1 week   | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

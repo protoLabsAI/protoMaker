@@ -14,9 +14,9 @@ Render pending tool approval requests as interactive cards in the Ask Ava chat. 
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-pending-tool-approval-cards.md](./phase-01-pending-tool-approval-cards.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                 | Duration  | Dependencies | Owner |
+| ----- | ------------------------------------------------------------------------------------ | --------- | ------------ | ----- |
+| 1     | [phase-01-pending-tool-approval-cards.md](./phase-01-pending-tool-approval-cards.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M2 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

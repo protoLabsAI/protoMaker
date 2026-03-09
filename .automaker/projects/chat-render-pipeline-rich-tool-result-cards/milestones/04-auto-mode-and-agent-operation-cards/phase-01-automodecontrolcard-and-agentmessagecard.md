@@ -16,11 +16,13 @@ Create AutoModeControlCard shared by start_auto_mode and stop_auto_mode — show
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/ui/src/ai/tool-results/auto-mode-control-card.tsx`
 - [ ] `libs/ui/src/ai/tool-results/agent-message-card.tsx`
 - [ ] `libs/ui/src/ai/tool-invocation-part.tsx`
 
 ### Verification
+
 - [ ] AutoModeControlCard shows start/stop action with config details
 - [ ] AgentMessageCard shows message sent to agent with delivery status
 - [ ] Both registered in tool-invocation-part.tsx

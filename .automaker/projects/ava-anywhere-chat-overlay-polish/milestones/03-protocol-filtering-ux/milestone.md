@@ -14,9 +14,9 @@ Improve the Ava Channel (#backchannel) filter bar with category-based filter chi
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-category-filter-chips-for-protocol-messages.md](./phase-01-category-filter-chips-for-protocol-messages.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                                                 | Duration  | Dependencies | Owner |
+| ----- | -------------------------------------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-category-filter-chips-for-protocol-messages.md](./phase-01-category-filter-chips-for-protocol-messages.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable

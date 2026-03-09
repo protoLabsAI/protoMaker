@@ -16,11 +16,13 @@ Create SitrepCard for get_sitrep tool output. The sitrep contains: board summary
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/ui/src/ai/tool-results/sitrep-card.tsx`
 - [ ] `libs/ui/src/ai/tool-results/health-check-card.tsx`
 - [ ] `libs/ui/src/ai/tool-invocation-part.tsx`
 
 ### Verification
+
 - [ ] SitrepCard renders board counts, auto-mode status, running agents, blocked features, open PRs
 - [ ] HealthCheckCard renders version, uptime, memory stats
 - [ ] Both handle loading states and missing data gracefully

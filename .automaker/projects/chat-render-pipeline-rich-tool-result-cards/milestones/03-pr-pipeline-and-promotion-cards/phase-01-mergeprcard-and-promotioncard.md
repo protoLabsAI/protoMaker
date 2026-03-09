@@ -16,11 +16,13 @@ Create MergePRCard for merge_pr — shows PR number, title, merge status (succes
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `libs/ui/src/ai/tool-results/merge-pr-card.tsx`
 - [ ] `libs/ui/src/ai/tool-results/promotion-card.tsx`
 - [ ] `libs/ui/src/ai/tool-invocation-part.tsx`
 
 ### Verification
+
 - [ ] MergePRCard shows PR merge status with number, title, branch, commit hash
 - [ ] PromotionCard shows promotion status with branch info and commit count
 - [ ] Both handle error states (merge failed, conflicts)

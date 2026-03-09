@@ -16,9 +16,11 @@ In the Ask Ava tab, render each entry in pendingSubagentApprovals as an inline c
 ## Tasks
 
 ### Files to Create/Modify
+
 - [ ] `apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx`
 
 ### Verification
+
 - [ ] Pending tool approval cards render above the chat input when pendingSubagentApprovals is non-empty
 - [ ] Each card shows tool name, input preview, approve button, deny button
 - [ ] Approve calls approveSubagentTool(approvalId) and removes the card

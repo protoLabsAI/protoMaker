@@ -14,9 +14,9 @@ Cards for the shipping workflow: merge confirmation, promotion status, and PR wa
 
 ## Phases
 
-| Phase | File | Duration | Dependencies | Owner |
-|-------|------|----------|--------------|-------|
-| 1 | [phase-01-mergeprcard-and-promotioncard.md](./phase-01-mergeprcard-and-promotioncard.md) | 0.5 weeks | None | TBD |
+| Phase | File                                                                                     | Duration  | Dependencies | Owner |
+| ----- | ---------------------------------------------------------------------------------------- | --------- | ------------ | ----- |
+| 1     | [phase-01-mergeprcard-and-promotioncard.md](./phase-01-mergeprcard-and-promotioncard.md) | 0.5 weeks | None         | TBD   |
 
 ---
 
@@ -34,6 +34,7 @@ M3 is **complete** when:
 ## Outputs
 
 ### For Next Milestone
+
 - Foundation work ready for dependent features
 - APIs stable and documented
 - Types exported and usable
