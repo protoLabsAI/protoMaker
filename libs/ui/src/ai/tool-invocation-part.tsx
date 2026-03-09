@@ -22,6 +22,8 @@ import { FeatureUpdatedCard, MoveFeatureCard } from './tool-results/feature-upda
 import { AgentStatusCard } from './tool-results/agent-status-card.js';
 import { AgentOutputCard } from './tool-results/agent-output-card.js';
 import { AutoModeStatusCard } from './tool-results/auto-mode-status-card.js';
+import { AutoModeControlCard } from './tool-results/auto-mode-control-card.js';
+import { AgentMessageCard } from './tool-results/agent-message-card.js';
 import { ExecutionOrderCard } from './tool-results/execution-order-card.js';
 import { ArtifactCard } from './tool-results/artifact-card.js';
 import { ImageCard } from './tool-results/image-card.js';
@@ -57,6 +59,11 @@ toolResultRegistry.register('get_agent_output', AgentOutputCard);
 
 // Register custom renderers for the autoMode tool group
 toolResultRegistry.register('get_auto_mode_status', AutoModeStatusCard);
+toolResultRegistry.register('start_auto_mode', AutoModeControlCard);
+toolResultRegistry.register('stop_auto_mode', AutoModeControlCard);
+
+// Register custom renderers for the agentMessaging tool group
+toolResultRegistry.register('send_message_to_agent', AgentMessageCard);
 
 // Register custom renderers for the orchestration tool group
 toolResultRegistry.register('get_execution_order', ExecutionOrderCard);
