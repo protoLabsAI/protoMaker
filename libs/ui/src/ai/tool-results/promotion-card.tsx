@@ -121,7 +121,9 @@ export function PromotionCard({ output, state }: ToolResultRendererProps) {
             <span className="shrink-0 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               Commits
             </span>
-            <span className="font-semibold tabular-nums text-foreground/80">{data.commitCount}</span>
+            <span className="font-semibold tabular-nums text-foreground/80">
+              {data.commitCount}
+            </span>
             <span className="text-muted-foreground">
               commit{data.commitCount !== 1 ? 's' : ''} promoted
             </span>
@@ -160,7 +162,9 @@ export function PromotionCard({ output, state }: ToolResultRendererProps) {
                   {conflict.file ?? 'Unknown file'}
                 </span>
                 {conflict.type && (
-                  <span className="shrink-0 text-[10px] text-muted-foreground">{conflict.type}</span>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                    {conflict.type}
+                  </span>
                 )}
               </div>
             ))}

@@ -79,9 +79,7 @@ export function MergePRCard({ output, state }: ToolResultRendererProps) {
         <span
           className={cn(
             'ml-auto rounded px-1.5 py-0.5 font-medium',
-            merged
-              ? 'bg-purple-500/10 text-purple-500'
-              : 'bg-destructive/10 text-destructive'
+            merged ? 'bg-purple-500/10 text-purple-500' : 'bg-destructive/10 text-destructive'
           )}
         >
           {merged ? 'Merged' : 'Failed'}
