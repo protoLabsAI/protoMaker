@@ -7,6 +7,7 @@
  * snapshot stored under domain='metrics', id='dora'.
  *
  * Also provides GET /api/metrics/dora/history for time-bucketed DORA trend data.
+ * Also provides GET /api/metrics/stage-durations for per-feature stage duration analytics.
  */
 
 import { Router } from 'express';
@@ -14,10 +15,166 @@ import type { Request, Response } from 'express';
 import type { DoraMetricsService } from '../../services/dora-metrics-service.js';
 import type { CRDTStore } from '@protolabsai/crdt';
 import type { MetricsDocument } from '@protolabsai/crdt';
+import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { FeatureStatus } from '@protolabsai/types';
 
 export interface DoraRouteDependencies {
   doraMetricsService: DoraMetricsService;
   crdtStore: CRDTStore;
+}
+
+/** Statuses tracked in stage duration analytics (excludes done/interrupted). */
+const TRACKED_STATUSES: FeatureStatus[] = ['backlog', 'in_progress', 'review', 'blocked'];
+
+/** Per-feature stage duration entry returned by the /stage-durations endpoint. */
+export interface FeatureStageDuration {
+  featureId: string;
+  title: string;
+  /** Duration in milliseconds spent in each tracked status. */
+  stages: { backlog: number; in_progress: number; review: number; blocked: number };
+  /** Total elapsed time in milliseconds (sum of all tracked stages). */
+  totalMs: number;
+  /** Flow efficiency: in_progress time / total time (0–1). */
+  flowEfficiency: number;
+}
+
+/** Aggregate stage percentages across all features. */
+export interface StageDurationsAggregate {
+  totalMs: number;
+  stages: { backlog: number; in_progress: number; review: number; blocked: number };
+  /** Percentage of total time spent in each stage (0–100). */
+  percentages: { backlog: number; in_progress: number; review: number; blocked: number };
+  /** Average flow efficiency across all features (0–1). */
+  flowEfficiency: number;
+}
+
+/** Response shape for GET /api/metrics/stage-durations. */
+export interface StageDurationsResponse {
+  success: true;
+  features: FeatureStageDuration[];
+  aggregate: StageDurationsAggregate;
+  featureCount: number;
+}
+
+/**
+ * createStageDurationsRoute — mounts GET /stage-durations.
+ * Expected mount: router.use('/', createStageDurationsRoute(featureLoader))
+ */
+export function createStageDurationsRoute(featureLoader: FeatureLoader): Router {
+  const router = Router();
+
+  /**
+   * GET /stage-durations
+   *
+   * Query params:
+   *   - projectPath (required): path to the project
+   *
+   * Returns per-feature stage durations computed from statusHistory timestamps,
+   * plus aggregate percentages and flow efficiency.
+   */
+  router.get('/stage-durations', async (req: Request, res: Response) => {
+    try {
+      const projectPath = req.query.projectPath as string | undefined;
+      if (!projectPath) {
+        res.status(400).json({ success: false, error: 'projectPath query parameter is required' });
+        return;
+      }
+
+      const features = await featureLoader.getAll(projectPath);
+      const now = Date.now();
+
+      const featureResults: FeatureStageDuration[] = [];
+
+      for (const feature of features) {
+        const history = feature.statusHistory ?? [];
+        // Initialise stage buckets
+        const stages = {
+          backlog: 0,
+          in_progress: 0,
+          review: 0,
+          blocked: 0,
+        };
+
+        if (history.length === 0) {
+          // No history — if the feature has a current tracked status, treat the
+          // entire elapsed time since createdAt as time in that status.
+          const currentStatus = feature.status as FeatureStatus | undefined;
+          if (currentStatus && TRACKED_STATUSES.includes(currentStatus)) {
+            const createdMs = feature.createdAt ? new Date(feature.createdAt).getTime() : now;
+            stages[currentStatus as keyof typeof stages] = Math.max(0, now - createdMs);
+          }
+        } else {
+          // Walk pairs of consecutive history entries to compute time in each stage.
+          for (let i = 0; i < history.length; i++) {
+            const entry = history[i];
+            const status = entry.to as FeatureStatus;
+            if (!TRACKED_STATUSES.includes(status)) continue;
+
+            const startMs = new Date(entry.timestamp).getTime();
+            // End time is the timestamp of the next transition, or now if this is
+            // the last entry and the feature is still in this status.
+            const nextEntry = history[i + 1];
+            const endMs = nextEntry ? new Date(nextEntry.timestamp).getTime() : now;
+            const durationMs = Math.max(0, endMs - startMs);
+            stages[status as keyof typeof stages] += durationMs;
+          }
+        }
+
+        const totalMs = stages.backlog + stages.in_progress + stages.review + stages.blocked;
+        const flowEfficiency = totalMs > 0 ? stages.in_progress / totalMs : 0;
+
+        featureResults.push({
+          featureId: feature.id,
+          title: feature.title ?? feature.id,
+          stages,
+          totalMs,
+          flowEfficiency,
+        });
+      }
+
+      // Compute aggregate totals and percentages across features that have >0 totalMs
+      const featuresWithTime = featureResults.filter((f) => f.totalMs > 0);
+      const aggStages = { backlog: 0, in_progress: 0, review: 0, blocked: 0 };
+      let grandTotal = 0;
+
+      for (const f of featuresWithTime) {
+        aggStages.backlog += f.stages.backlog;
+        aggStages.in_progress += f.stages.in_progress;
+        aggStages.review += f.stages.review;
+        aggStages.blocked += f.stages.blocked;
+        grandTotal += f.totalMs;
+      }
+
+      const percentages = {
+        backlog: grandTotal > 0 ? Number(((aggStages.backlog / grandTotal) * 100).toFixed(1)) : 0,
+        in_progress:
+          grandTotal > 0 ? Number(((aggStages.in_progress / grandTotal) * 100).toFixed(1)) : 0,
+        review: grandTotal > 0 ? Number(((aggStages.review / grandTotal) * 100).toFixed(1)) : 0,
+        blocked: grandTotal > 0 ? Number(((aggStages.blocked / grandTotal) * 100).toFixed(1)) : 0,
+      };
+
+      const flowEfficiency =
+        grandTotal > 0 ? Number((aggStages.in_progress / grandTotal).toFixed(4)) : 0;
+
+      const response: StageDurationsResponse = {
+        success: true,
+        features: featureResults,
+        featureCount: featureResults.length,
+        aggregate: {
+          totalMs: grandTotal,
+          stages: aggStages,
+          percentages,
+          flowEfficiency,
+        },
+      };
+
+      res.json(response);
+    } catch (err) {
+      res.status(500).json({ success: false, error: (err as Error).message });
+    }
+  });
+
+  return router;
 }
 
 /** A single time-bucketed DORA snapshot returned by the /history endpoint. */

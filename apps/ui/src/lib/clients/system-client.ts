@@ -222,6 +222,24 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
       ): Promise<CycleTimeDistributionResponse> =>
         this.post('/api/metrics/ledger/cycle-time-distribution', { projectPath, ...opts }),
       backfill: (projectPath: string) => this.post('/api/metrics/ledger/backfill', { projectPath }),
+      stageDurations: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          features: Array<{
+            featureId: string;
+            title: string;
+            stages: { backlog: number; in_progress: number; review: number; blocked: number };
+            totalMs: number;
+            flowEfficiency: number;
+          }>;
+          aggregate: {
+            totalMs: number;
+            stages: { backlog: number; in_progress: number; review: number; blocked: number };
+            percentages: { backlog: number; in_progress: number; review: number; blocked: number };
+            flowEfficiency: number;
+          };
+          featureCount: number;
+        }>(`/api/metrics/stage-durations?projectPath=${encodeURIComponent(projectPath)}`),
     };
 
     // Integrations API

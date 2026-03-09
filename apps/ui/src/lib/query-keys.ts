@@ -276,6 +276,8 @@ export const queryKeys = {
   metrics: {
     /** Project metrics summary */
     summary: (projectPath: string) => ['metrics', 'summary', projectPath] as const,
+    /** Stage durations (cycle time by status) */
+    stageDurations: (projectPath: string) => ['metrics', 'stage-durations', projectPath] as const,
     /** Capacity metrics */
     capacity: (projectPath: string) => ['metrics', 'capacity', projectPath] as const,
     /** Forecast for a complexity level */
