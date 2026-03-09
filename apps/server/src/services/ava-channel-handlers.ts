@@ -48,7 +48,7 @@ const HelpRequestHandler: ReactorHandler = {
     const hasCapacity = runningAgents < maxAgents;
 
     const content = hasCapacity
-      ? `[Help] I have capacity (${runningAgents}/${maxAgents} agents). How can I assist?`
+      ? `Working on it... (capacity: ${runningAgents}/${maxAgents} agents running)`
       : `[Help] I'm at capacity (${runningAgents}/${maxAgents} agents). Try again later.`;
 
     await ctx.avaChannelService.postMessage(content, 'ava', {

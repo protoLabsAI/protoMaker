@@ -117,6 +117,7 @@ export async function register(
     projectPath: repoRoot,
     frictionTrackerService: container.frictionTrackerService,
     fleetSchedulerService,
+    reactiveSpawnerService: container.reactiveSpawnerService,
   });
 
   await service.start();
