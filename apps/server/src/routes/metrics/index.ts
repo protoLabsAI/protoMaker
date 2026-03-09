@@ -6,18 +6,26 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import type { MetricsService } from '../../services/metrics-service.js';
 import type { LedgerService } from '../../services/ledger-service.js';
+import type { DoraMetricsService } from '../../services/dora-metrics-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createLedgerRoutes } from './ledger.js';
+import { createDoraHistoryRoute } from './dora.js';
 
 export function createMetricsRoutes(
   metricsService: MetricsService,
-  ledgerService?: LedgerService
+  ledgerService?: LedgerService,
+  doraMetricsService?: DoraMetricsService
 ): Router {
   const router = Router();
 
   // Mount ledger sub-routes at /api/metrics/ledger/*
   if (ledgerService) {
     router.use('/ledger', createLedgerRoutes(ledgerService));
+  }
+
+  // Mount DORA history sub-routes at /api/metrics/dora/*
+  if (doraMetricsService) {
+    router.use('/dora', createDoraHistoryRoute(doraMetricsService));
   }
 
   /**

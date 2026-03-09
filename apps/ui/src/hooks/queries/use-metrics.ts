@@ -174,6 +174,30 @@ export function useCycleTimeDistribution(
   });
 }
 
+const DORA_HISTORY_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch time-bucketed DORA history snapshots for trend charts.
+ * Uses GET /api/metrics/dora/history.
+ */
+export function useDoraHistory(
+  projectPath: string | undefined,
+  window: '7d' | '30d' | '90d' = '30d'
+) {
+  return useQuery({
+    queryKey: queryKeys.dora.history(projectPath ?? '', window),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.dora.history(projectPath, window);
+    },
+    enabled: !!projectPath,
+    staleTime: DORA_HISTORY_STALE_TIME,
+    refetchInterval: DORA_HISTORY_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
 const ENGINE_STATUS_STALE_TIME = 10 * 1000; // 10 seconds
 const EVENT_HISTORY_STALE_TIME = 30 * 1000; // 30 seconds
 

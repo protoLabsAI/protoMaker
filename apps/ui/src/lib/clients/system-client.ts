@@ -172,6 +172,20 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         this.get<{ success: boolean; metrics: DoraMetrics; alerts: DoraRegulationAlert[] }>(
           `/api/dora/metrics?projectPath=${encodeURIComponent(projectPath)}${timeWindowDays ? `&timeWindowDays=${timeWindowDays}` : ''}`
         ),
+      history: (projectPath: string, window?: '7d' | '30d' | '90d') =>
+        this.get<{
+          success: boolean;
+          buckets: Array<{
+            date: string;
+            leadTime: number;
+            recoveryTime: number;
+            deploymentFrequency: number;
+            changeFailureRate: number;
+          }>;
+          window: string;
+        }>(
+          `/api/dora/history?projectPath=${encodeURIComponent(projectPath)}${window ? `&window=${window}` : ''}`
+        ),
     };
 
     // Metrics API

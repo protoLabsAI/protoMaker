@@ -265,6 +265,9 @@ export const queryKeys = {
     /** DORA metrics (lead time, deploy freq, change failure rate, recovery time) */
     metrics: (projectPath: string, timeWindowDays?: number) =>
       ['dora', 'metrics', projectPath, timeWindowDays] as const,
+    /** DORA history buckets for trend charts */
+    history: (projectPath: string, window: '7d' | '30d' | '90d') =>
+      ['dora', 'history', projectPath, window] as const,
   },
 
   // ============================================

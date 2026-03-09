@@ -18,6 +18,7 @@ import { useChartColors } from '@/hooks/use-chart-colors';
 import { TimeRangeSelector, useTimeRangeDates, type TimeRange } from './time-range';
 import { KpiCards } from './kpi-cards';
 import { DoraKpiCards } from './dora-kpi-cards';
+import { DoraTrendCharts } from './dora-trend-charts';
 import { CostChart } from './cost-chart';
 import { ThroughputChart } from './throughput-chart';
 import { ModelPieChart } from './model-pie';
@@ -76,6 +77,9 @@ export function ProjectMetricsTab({
 
       {/* DORA KPI Cards */}
       <DoraKpiCards data={dora.data?.metrics} isLoading={dora.isLoading} error={dora.error} />
+
+      {/* DORA Trend Charts */}
+      <DoraTrendCharts projectPath={projectPath} />
 
       {/* Row 2: Cost + Feature Throughput */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
