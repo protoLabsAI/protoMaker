@@ -270,4 +270,6 @@ export {
   type ProtoConfigDiscord,
   type ProtoConfigServer,
   type ProtoConfigHive,
+  type ProtoConfigProtolab,
+  type ProtoConfigInstance,
 } from './proto-config.js';

@@ -107,6 +107,7 @@ import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
 import { AvaChannelService } from '../services/ava-channel-service.js';
+import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
 import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
 import type { FleetSchedulerService } from '../services/fleet-scheduler-service.js';
@@ -158,6 +159,7 @@ export interface ServiceContainer {
 
   // Auto-mode
   autoModeService: AutoModeService;
+  workIntakeService: WorkIntakeService;
   hitlFormService: HITLFormService;
 
   // Claude usage
@@ -335,6 +337,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Calendar service (singleton wired in wireServices)
   const googleCalendarSyncService = new GoogleCalendarSyncService(settingsService, calendarService);
   const autoModeService = new AutoModeService(events, settingsService);
+  const workIntakeService = new WorkIntakeService();
   const hitlFormService = new HITLFormService({
     events,
     followUpFeature: (projectPath, featureId, prompt) =>
@@ -793,6 +796,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     automationService,
     jobExecutorService,
     autoModeService,
+    workIntakeService,
     hitlFormService,
     claudeUsageService,
     mcpTestService,

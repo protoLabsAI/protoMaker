@@ -27,7 +27,10 @@
             "Build passes with no TypeScript errors"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773071246977-otgnov5q6"
+          "featureId": "feature-1773071246977-otgnov5q6",
+          "claimedBy": "mac-dev",
+          "claimedAt": "2026-03-09T22:05:32.473Z",
+          "executionStatus": "in_progress"
         }
       ],
       "status": "completed",
@@ -56,7 +59,10 @@
             "Build passes with no TypeScript errors"
           ],
           "complexity": "small",
-          "featureId": "feature-1773071246989-4y9op8gq8"
+          "featureId": "feature-1773071246989-4y9op8gq8",
+          "claimedBy": "mac-dev",
+          "claimedAt": "2026-03-09T22:05:32.695Z",
+          "executionStatus": "in_progress"
         }
       ],
       "status": "completed",
@@ -85,7 +91,10 @@
             "Build passes with no TypeScript errors"
           ],
           "complexity": "small",
-          "featureId": "feature-1773071247003-55274be31"
+          "featureId": "feature-1773071247003-55274be31",
+          "claimedBy": "mac-dev",
+          "claimedAt": "2026-03-09T22:06:02.474Z",
+          "executionStatus": "in_progress"
         }
       ],
       "status": "completed",
@@ -116,7 +125,10 @@
             "Server unit test added or updated for ReactiveSpawnerService wiring"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773071247014-9i0q7ko9j"
+          "featureId": "feature-1773071247014-9i0q7ko9j",
+          "claimedBy": "mac-dev",
+          "claimedAt": "2026-03-09T22:08:28.805Z",
+          "executionStatus": "in_progress"
         }
       ],
       "status": "pending",
@@ -138,5 +150,5 @@
     ]
   },
   "createdAt": "2026-03-09T15:47:21.685Z",
-  "updatedAt": "2026-03-09T17:09:40.751Z"
+  "updatedAt": "2026-03-09T22:08:29.011Z"
 }

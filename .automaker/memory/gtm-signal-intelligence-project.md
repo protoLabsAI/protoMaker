@@ -1,15 +1,14 @@
 ---
 tags: []
-summary: 'relevantTo: []'
+summary: "relevantTo: []"
 relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 180
+  loaded: 186
   referenced: 32
   successfulFeatures: 32
 ---
-
 # GTM Signal Intelligence & Content Operations
 
 ## Status: ACTIVE — Linear project created, content pipeline running

@@ -16,6 +16,7 @@ import { register as registerInfrastructure } from '../services/infrastructure.m
 import { register as registerProjectPm } from '../services/project-pm.module.js';
 import { register as registerEventLedger } from '../services/event-ledger.module.js';
 import { register as registerCrdtSync } from '../services/crdt-sync.module.js';
+import { register as registerWorkIntake } from '../services/work-intake.module.js';
 import { register as registerAvaChannel } from '../services/ava-channel.module.js';
 
 /**
@@ -42,6 +43,7 @@ export async function wireServices(services: ServiceContainer): Promise<void> {
   await registerProjectPm(services);
   await registerEventLedger(services);
   await registerCrdtSync(services);
+  await registerWorkIntake(services);
   await registerAvaChannel(services);
 
   // Start built-in sensors (websocket-clients + electron-idle) after all wiring is complete.

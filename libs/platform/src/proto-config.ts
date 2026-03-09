@@ -62,6 +62,24 @@ export interface ProtoConfigHive {
   instanceId?: string;
 }
 
+export interface ProtoConfigProtolab {
+  /** Whether ProtoLab sync is enabled for this project */
+  enabled?: boolean;
+  /** Port used for CRDT sync WebSocket connection */
+  syncPort?: number;
+  /** Unique instance identifier for mesh coordination */
+  instanceId?: string;
+}
+
+export interface ProtoConfigInstance {
+  /** Human-readable display name for this instance */
+  name?: string;
+  /** Primary work focus (default: fullstack) */
+  role?: string;
+  /** Additional capabilities beyond the primary role */
+  tags?: string[];
+}
+
 /**
  * Top-level shape of proto.config.yaml.
  * Open-ended (`[key: string]: unknown`) so callers can store additional fields.
@@ -73,6 +91,8 @@ export interface ProtoConfig {
   discord?: ProtoConfigDiscord;
   server?: ProtoConfigServer;
   hive?: ProtoConfigHive;
+  protolab?: ProtoConfigProtolab;
+  instance?: ProtoConfigInstance;
   [key: string]: unknown;
 }
 
