@@ -180,11 +180,11 @@ export class ChangelogService {
         logger.debug(`Changelog artifact saved for milestone ${milestoneTitle}`);
       }
 
-      // Post to Discord
-      await this.postToDiscord(
+      // Post to Discord as embed
+      await this.postChangelogEmbed(
         projectPath,
-        `Changelog: Milestone ${milestoneNumber} - ${milestoneTitle}`,
-        changelogContent
+        `Milestone ${milestoneNumber} — ${milestoneTitle}`,
+        milestoneFeatures
       );
 
       logger.info(`Changelog generated for milestone ${milestoneTitle}`);
@@ -233,12 +233,8 @@ export class ChangelogService {
         logger.debug(`Changelog artifact saved for project ${projectTitle}`);
       }
 
-      // Post to Discord
-      await this.postToDiscord(
-        projectPath,
-        `Changelog: ${projectTitle} - Project Complete`,
-        changelogContent
-      );
+      // Post to Discord as embed
+      await this.postChangelogEmbed(projectPath, `${projectTitle} — Complete`, mergedFeatures);
 
       logger.info(`Comprehensive changelog generated for project ${projectTitle}`);
     } catch (error) {
@@ -439,16 +435,48 @@ export class ChangelogService {
   }
 
   /**
-   * Post changelog to Discord
+   * Build embed fields from grouped features.
+   * Each category becomes an embed field with bullet-pointed feature titles.
    */
-  private async postToDiscord(projectPath: string, title: string, content: string): Promise<void> {
+  private buildEmbedFields(
+    groups: ChangelogGroup
+  ): Array<{ name: string; value: string; inline?: boolean }> {
+    const fields: Array<{ name: string; value: string; inline?: boolean }> = [];
+
+    const addSection = (label: string, features: Feature[]) => {
+      if (features.length === 0) return;
+      const lines = features.map((f) => {
+        const title = f.title || 'Untitled';
+        const desc = f.description ? ` — ${f.description.split('\n')[0].slice(0, 80)}` : '';
+        return `- ${title}${desc}`;
+      });
+      // Discord embed field value max is 1024 chars
+      const value = lines.join('\n').slice(0, 1024);
+      fields.push({ name: label, value });
+    };
+
+    addSection('Features', groups.features);
+    addSection('Fixes', groups.fixes);
+    addSection('Improvements', groups.improvements);
+    addSection('Other Changes', groups.other);
+
+    return fields;
+  }
+
+  /**
+   * Post changelog to Discord as a rich embed
+   */
+  private async postChangelogEmbed(
+    projectPath: string,
+    title: string,
+    features: Feature[]
+  ): Promise<void> {
     if (!this.emitter || !this.settingsService) {
       logger.warn('Cannot post to Discord: emitter or settings service not initialized');
       return;
     }
 
     try {
-      // Get project settings for Discord config
       const projectSettings = await this.settingsService.getProjectSettings(projectPath);
       const discordConfig = projectSettings.integrations?.discord;
 
@@ -457,68 +485,50 @@ export class ChangelogService {
         return;
       }
 
-      // Get ceremony settings for channel configuration
       const ceremonySettings = projectSettings.ceremonySettings;
       if (!ceremonySettings?.enabled) {
         logger.debug('Ceremony settings not enabled, skipping changelog post');
         return;
       }
 
-      // Split content into chunks to respect Discord's 2000 char limit
-      const chunks = this.splitMessage(content, 2000);
+      const groups = this.groupFeaturesByCategory(features);
+      const fields = this.buildEmbedFields(groups);
 
-      for (const chunk of chunks) {
-        this.emitter.emit('integration:discord', {
-          projectPath,
-          featureId: 'changelog',
-          feature: { id: 'changelog', title } as Feature,
-          serverId: discordConfig.serverId,
-          channelId:
-            discordConfig.channels?.ceremonies ||
-            ceremonySettings.discordChannelId ||
-            discordConfig.channelId,
-          webhookId: discordConfig.webhookId,
-          webhookToken: discordConfig.webhookToken,
-          action: 'send_message',
-          content: chunk,
-        });
-      }
+      const totalCost = features.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+      const stats = [
+        `**${features.length}** changes`,
+        groups.features.length ? `${groups.features.length} features` : '',
+        groups.fixes.length ? `${groups.fixes.length} fixes` : '',
+        groups.improvements.length ? `${groups.improvements.length} improvements` : '',
+        totalCost > 0 ? `$${totalCost.toFixed(2)} cost` : '',
+      ]
+        .filter(Boolean)
+        .join(' | ');
 
-      logger.info(`Changelog posted to Discord: ${title}`);
+      this.emitter.emit('integration:discord', {
+        projectPath,
+        featureId: 'changelog',
+        feature: { id: 'changelog', title } as Feature,
+        serverId: discordConfig.serverId,
+        channelId:
+          discordConfig.channels?.ceremonies ||
+          ceremonySettings.discordChannelId ||
+          discordConfig.channelId,
+        action: 'send_embed',
+        embed: {
+          title,
+          description: stats,
+          color: 0x7c3aed, // Purple accent matching the brand
+          fields,
+          footer: { text: 'protoLabs Studio' },
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      logger.info(`Changelog embed posted to Discord: ${title}`);
     } catch (error) {
-      logger.error('Failed to post changelog to Discord:', error);
+      logger.error('Failed to post changelog embed to Discord:', error);
     }
-  }
-
-  /**
-   * Split message into chunks that fit Discord's 2000 char limit
-   */
-  private splitMessage(content: string, maxLength: number): string[] {
-    if (content.length <= maxLength) {
-      return [content];
-    }
-
-    const chunks: string[] = [];
-    const lines = content.split('\n');
-    let currentChunk = '';
-
-    for (const line of lines) {
-      // If adding this line would exceed the limit, start a new chunk
-      if (currentChunk.length + line.length + 1 > maxLength) {
-        if (currentChunk) {
-          chunks.push(currentChunk.trim());
-        }
-        currentChunk = line + '\n';
-      } else {
-        currentChunk += line + '\n';
-      }
-    }
-
-    if (currentChunk) {
-      chunks.push(currentChunk.trim());
-    }
-
-    return chunks;
   }
 }
 

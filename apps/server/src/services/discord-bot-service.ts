@@ -30,6 +30,7 @@ import {
   type PartialMessageReaction,
   type TextChannel,
   type ThreadChannel,
+  EmbedBuilder,
   Events,
 } from 'discord.js';
 import { createLogger } from '@protolabsai/utils';
@@ -1497,6 +1498,46 @@ export class DiscordBotService {
       return true;
     } catch (error) {
       logger.error(`Failed to send to channel ${channelId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Send a rich embed to a specific channel.
+   */
+  async sendEmbed(
+    channelId: string,
+    embed: {
+      title: string;
+      description?: string;
+      color?: number;
+      fields?: Array<{ name: string; value: string; inline?: boolean }>;
+      footer?: { text: string };
+      timestamp?: string;
+    }
+  ): Promise<boolean> {
+    if (!this.client) return false;
+
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return false;
+
+      const builder = new EmbedBuilder().setTitle(embed.title);
+
+      if (embed.description) builder.setDescription(embed.description);
+      if (embed.color !== undefined) builder.setColor(embed.color);
+      if (embed.fields) {
+        for (const field of embed.fields) {
+          builder.addFields({ name: field.name, value: field.value, inline: field.inline });
+        }
+      }
+      if (embed.footer) builder.setFooter({ text: embed.footer.text });
+      if (embed.timestamp) builder.setTimestamp(new Date(embed.timestamp));
+
+      await channel.send({ embeds: [builder] });
+      return true;
+    } catch (error) {
+      logger.error(`Failed to send embed to channel ${channelId}:`, error);
       return false;
     }
   }
