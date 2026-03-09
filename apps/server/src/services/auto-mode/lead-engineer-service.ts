@@ -89,9 +89,7 @@ export async function processFeatureState(
     };
   }
 
-  logger.info(
-    `Feature ${featureId}: ${currentState} → ${result.nextState} (${result.reason})`
-  );
+  logger.info(`Feature ${featureId}: ${currentState} → ${result.nextState} (${result.reason})`);
 
   return result;
 }

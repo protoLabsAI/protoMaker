@@ -146,9 +146,7 @@ async function runCriteriaVerification(
   const rawCriteria = (feature as unknown as { successCriteria?: string[] }).successCriteria;
 
   if (!rawCriteria || rawCriteria.length === 0) {
-    logger.warn(
-      `Feature ${featureId} has no successCriteria defined — auto-passing verification`
-    );
+    logger.warn(`Feature ${featureId} has no successCriteria defined — auto-passing verification`);
     return { ok: true, reason: 'No successCriteria configured — auto-pass' };
   }
 

@@ -26,7 +26,18 @@ export const STATE_TRANSITIONS: ReadonlyMap<FeatureState, ReadonlySet<FeatureSta
   [FeatureState.DEPLOY, new Set([FeatureState.VERIFY, FeatureState.ESCALATE])],
   [FeatureState.VERIFY, new Set([FeatureState.DONE, FeatureState.ESCALATE])],
   [FeatureState.DONE, new Set()],
-  [FeatureState.ESCALATE, new Set([FeatureState.INTAKE, FeatureState.PLAN, FeatureState.EXECUTE, FeatureState.REVIEW, FeatureState.MERGE, FeatureState.DEPLOY, FeatureState.VERIFY])],
+  [
+    FeatureState.ESCALATE,
+    new Set([
+      FeatureState.INTAKE,
+      FeatureState.PLAN,
+      FeatureState.EXECUTE,
+      FeatureState.REVIEW,
+      FeatureState.MERGE,
+      FeatureState.DEPLOY,
+      FeatureState.VERIFY,
+    ]),
+  ],
 ]);
 
 /**
