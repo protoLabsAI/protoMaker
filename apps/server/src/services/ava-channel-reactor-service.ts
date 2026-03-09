@@ -109,6 +109,10 @@ export interface ReactorDependencies {
   events?: EventEmitter;
   /** Optional: fleet scheduler for proactive coordination */
   fleetSchedulerService?: FleetSchedulerService;
+  /** Optional: reactive spawner for triggering agents on incoming requests */
+  reactiveSpawnerService?: {
+    spawnForMessage(msg: AvaChatMessage): Promise<unknown>;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -455,37 +459,71 @@ export class AvaChannelReactorService {
   private dispatchResponse(message: AvaChatMessage, classification: MessageClassification): void {
     this.isBusy = true;
 
-    const responseContent = `[Reactor/${classification.type}] Acknowledged from ${this.deps.instanceName}`;
     const conversationDepth = (message.conversationDepth ?? 0) + 1;
 
-    this.deps.avaChannelService
-      .postMessage(responseContent, 'ava', {
-        intent: 'response',
-        expectsResponse: false,
-        context: {
-          featureId: message.context?.featureId,
-        },
-      })
-      .then((posted) => {
-        // The postMessage API does not accept inReplyTo/conversationDepth via
-        // PostMessageOptions, so the response is posted as a standalone message.
-        // Future: extend PostMessageOptions if threaded replies are needed.
-        logger.debug(
-          `Dispatched response ${posted.id} for message ${message.id} ` +
-            `(type=${classification.type}, depth=${conversationDepth})`
-        );
+    if (classification.type === 'request' && this.deps.reactiveSpawnerService) {
+      // Post a brief acknowledgment first so the sender knows we received the request.
+      this.deps.avaChannelService
+        .postMessage('Working on it...', 'ava', {
+          intent: 'response',
+          expectsResponse: false,
+          context: {
+            featureId: message.context?.featureId,
+          },
+        })
+        .then(() => {
+          logger.debug(
+            `Posted acknowledgment for request message ${message.id}, spawning agent...`
+          );
+          return this.deps.reactiveSpawnerService!.spawnForMessage(message);
+        })
+        .then(() => {
+          logger.debug(
+            `Spawned agent for message ${message.id} (type=${classification.type}, depth=${conversationDepth})`
+          );
+          this.responsesSent++;
+          this.setCooldown(message.inReplyTo ?? message.id);
+        })
+        .catch((err) => {
+          this.errorCount++;
+          logger.error(`Failed to handle request message ${message.id}:`, err);
+        })
+        .finally(() => {
+          this.isBusy = false;
+          this.drainPendingQueue();
+        });
+    } else {
+      const responseContent = `[Reactor/${classification.type}] Acknowledged from ${this.deps.instanceName}`;
 
-        this.responsesSent++;
-        this.setCooldown(message.inReplyTo ?? message.id);
-      })
-      .catch((err) => {
-        this.errorCount++;
-        logger.error(`Failed to dispatch response for message ${message.id}:`, err);
-      })
-      .finally(() => {
-        this.isBusy = false;
-        this.drainPendingQueue();
-      });
+      this.deps.avaChannelService
+        .postMessage(responseContent, 'ava', {
+          intent: 'response',
+          expectsResponse: false,
+          context: {
+            featureId: message.context?.featureId,
+          },
+        })
+        .then((posted) => {
+          // The postMessage API does not accept inReplyTo/conversationDepth via
+          // PostMessageOptions, so the response is posted as a standalone message.
+          // Future: extend PostMessageOptions if threaded replies are needed.
+          logger.debug(
+            `Dispatched response ${posted.id} for message ${message.id} ` +
+              `(type=${classification.type}, depth=${conversationDepth})`
+          );
+
+          this.responsesSent++;
+          this.setCooldown(message.inReplyTo ?? message.id);
+        })
+        .catch((err) => {
+          this.errorCount++;
+          logger.error(`Failed to dispatch response for message ${message.id}:`, err);
+        })
+        .finally(() => {
+          this.isBusy = false;
+          this.drainPendingQueue();
+        });
+    }
   }
 
   // ---------------------------------------------------------------------------
