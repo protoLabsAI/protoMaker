@@ -160,9 +160,7 @@ describe('AvaChannelReactorService — reactiveSpawnerService wiring', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    const postMessageMock = depsNoSpawner.avaChannelService.postMessage as ReturnType<
-      typeof vi.fn
-    >;
+    const postMessageMock = depsNoSpawner.avaChannelService.postMessage as ReturnType<typeof vi.fn>;
     expect(postMessageMock).toHaveBeenCalled();
     // Should post a text-only fallback, not "Working on it..."
     const firstCall = postMessageMock.mock.calls[0];
