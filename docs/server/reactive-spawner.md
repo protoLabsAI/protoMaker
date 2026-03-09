@@ -113,6 +113,34 @@ All `spawnForError` calls produce a prompt that includes:
 3. A directive to **file a bug ticket on the board** if fixing requires a PR
 4. An explicit instruction **NOT to restart the dev server**
 
+## Cron-Trigger Patterns
+
+Three built-in Ava cron tasks call `spawnForCron()` via `registerAvaCronTasks()`.
+
+**File:** `apps/server/src/services/ava-cron-tasks.ts`
+**Registered in:** `apps/server/src/server/services.ts` after `ReactiveSpawnerService` is initialized.
+
+| Task ID                    | Schedule        | Purpose                                                                            |
+| -------------------------- | --------------- | ---------------------------------------------------------------------------------- |
+| `ava-daily-board-health`   | `0 9 * * *`     | Check for stale features (>24h no activity), blocked agents, open PRs with failing CI — file tickets for anything needing attention |
+| `ava-pr-triage`            | `0 */4 * * *`   | Scan open PRs for CodeRabbit threads, CI failures, merge conflicts — act or file tickets |
+| `ava-staging-ping`         | `*/30 * * * *`  | Post a capacity_heartbeat to the Ava Channel; alert if staging has been quiet >2h |
+
+### Calendar Reminder Integration
+
+`CalendarService` exposes an `onReminder(callback)` method backed by a Node.js `EventEmitter`.
+When a calendar event is due (fired via `calendarService.emitReminder(payload)`), the wiring
+in `services.ts` calls `reactiveSpawnerService.spawnForCron(title, description)` automatically.
+
+```ts
+calendarService.onReminder((payload) => {
+  void reactiveSpawnerService.spawnForCron(payload.title, payload.description);
+});
+```
+
+This connects one-time calendar job events to the same cron rate-limiting and circuit-breaking
+budget controls as the recurring tasks above.
+
 ## Circuit Breaker Behavior
 
 Each trigger category has its own circuit breaker:

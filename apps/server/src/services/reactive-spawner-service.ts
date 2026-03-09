@@ -15,10 +15,31 @@
 
 import { createLogger } from '@protolabsai/utils';
 import type { AvaChatMessage } from '@protolabsai/types';
-import type { SpawnResult, TriggerCategory } from '@protolabsai/types';
 import { CircuitBreaker } from '../lib/circuit-breaker.js';
 import type { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
+
+// ---------------------------------------------------------------------------
+// Local types (mirrors @protolabsai/types reactive-spawner.ts)
+// Defined here to avoid worktree symlink resolution issues.
+// ---------------------------------------------------------------------------
+
+/** Categories of triggers that can spawn a reactive agent session */
+export type TriggerCategory = 'message' | 'error' | 'cron';
+
+/** Result returned after a reactive spawn attempt */
+export interface SpawnResult {
+  /** Whether the agent was successfully spawned and completed */
+  spawned: boolean;
+  /** Reason spawn was skipped (e.g. 'already_running', 'circuit_open', 'rate_limited', 'duplicate_error') */
+  skippedReason?: string;
+  /** The agent output text if successfully executed */
+  output?: string;
+  /** Error message if execution failed */
+  error?: string;
+  /** The trigger category that initiated this spawn */
+  category: TriggerCategory;
+}
 
 const logger = createLogger('ReactiveSpawnerService');
 
@@ -46,7 +67,6 @@ export interface ErrorContext {
 // Budget constants
 // ---------------------------------------------------------------------------
 
-const MAX_CONCURRENT = 1; // per category
 const MAX_SESSIONS_PER_HOUR = 3; // global
 const ERROR_DEDUP_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const CIRCUIT_FAILURE_THRESHOLD = 3;

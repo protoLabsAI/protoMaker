@@ -90,6 +90,7 @@ import {
   getReactiveSpawnerService,
   ReactiveSpawnerService,
 } from '../services/reactive-spawner-service.js';
+import { registerAvaCronTasks } from '../services/ava-cron-tasks.js';
 
 // Services originally loaded via top-level dynamic imports — now static for proper typing
 import { ProjectLifecycleService } from '../services/project-lifecycle-service.js';
@@ -721,6 +722,16 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     dynamicAgentExecutor,
     repoRoot
   );
+
+  // Register Ava cron tasks (daily board health, PR triage, staging ping)
+  void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
+
+  // Subscribe to calendar:reminder events and forward to ReactiveSpawner
+  calendarService.onReminder((payload) => {
+    void reactiveSpawnerService
+      .spawnForCron(payload.title, payload.description)
+      .catch((err) => logger.warn('[CalendarReminder] spawnForCron failed:', err));
+  });
 
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
