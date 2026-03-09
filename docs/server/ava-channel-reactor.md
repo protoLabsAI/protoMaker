@@ -1,0 +1,226 @@
+# Ava Channel Reactor
+
+Reactive orchestrator that makes Ava instances responsive to each other and coordinates fleet-level work distribution across the multi-instance mesh.
+
+## Overview
+
+The `AvaChannelReactorService` subscribes to the CRDT-backed Ava Channel and autonomously responds to messages from peer instances. Beyond basic message response, it handles:
+
+- **Message classification** — rule-based chain determines whether a message warrants a response
+- **Loop prevention** — three independent layers prevent infinite message cycles
+- **Fleet coordination** — work-stealing, capacity heartbeats, and escalation protocol
+- **Health monitoring** — pauses work acquisition from degraded peers
+- **DORA reporting** — hourly broadcast of local DORA metrics to the mesh
+- **Friction tracking** — receives and de-duplicates recurring failure pattern reports
+
+## Architecture
+
+```
+CRDT shard change (new message arrives)
+  --> AvaChannelReactorService.onShardChange()
+    --> Filter: is this message already known? (skip if yes)
+    --> Layer 1: Classifier chain (pure functions, priority-ordered)
+    --> Layer 2: Per-thread cooldown (30s default, prevents rapid replies)
+    --> Layer 3: Busy gate (one response at a time, pending queue)
+    --> Specialized handler dispatch:
+          work_request / work_offer   --> WorkStealingHandler
+          capacity_heartbeat          --> PeerCapacityTracker
+          escalation_*                --> EscalationCoordinator
+          health_alert                --> HealthAlertHandler
+          friction_report             --> FrictionTrackerService
+          pattern_resolved            --> FrictionTrackerService
+          dora_report                 --> DoraMetricsAggregator
+          [classified message]        --> Response handlers
+    --> Response via AvaChannelService.postMessage()
+         --> expectsResponse: false on all responses (one-shot policy)
+```
+
+## Classifier Chain
+
+Pure functions evaluated highest-to-lowest priority. The first non-null result wins.
+
+| Priority | Rule                | Blocks When                                                |
+| -------- | ------------------- | ---------------------------------------------------------- |
+| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                |
+| 90       | TerminalMessageRule | `expectsResponse === false`                                |
+| 80       | SelfMessageRule     | `instanceId === localInstanceId`                           |
+| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                      |
+| 70       | SystemSourceRule    | `source: 'system'` (unless `[BugReport]`/`[SystemAlert]`) |
+| 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` → respond   |
+| 40       | CoordinationRule    | `intent: 'coordination'` → respond if capacity available  |
+| 30       | EscalationRule      | `intent: 'escalation'` → respond if depth < 3             |
+| 0        | DefaultRule         | Everything else → informational, no response               |
+
+## Loop Prevention (Three Layers)
+
+1. **Classifier chain** — Self-messages, terminal messages, stale messages, and depth-exceeded messages blocked before any handler runs
+2. **Per-thread cooldown** — After responding to a thread, the reactor ignores that thread for 30 seconds (configurable via `cooldownMs`)
+3. **Busy gate** — Only one response dispatches at a time; additional messages queue and are re-evaluated when the gate opens
+
+All responses set `expectsResponse: false` enforcing the **one-shot response policy** at the type level.
+
+## Fleet Coordination
+
+### Capacity Heartbeats
+
+Every 60 seconds (default), the reactor broadcasts a `capacity_heartbeat` message:
+
+```typescript
+{
+  type: 'capacity_heartbeat';
+  instanceId: string;
+  runningAgents: number;
+  maxAgents: number;
+  backlogSize: number;
+  memoryUsagePct: number;   // 0–100
+  cpuUsagePct: number;      // 0–100
+}
+```
+
+Peer instances receive these and update their local `PeerCapacityMap`. The capacity map drives work-stealing and health alert decisions.
+
+### Work-Stealing
+
+When a peer broadcasts a `work_request` and this instance has capacity:
+
+```
+work_request (from peer with backlogSize > 0, runningAgents < maxAgents)
+  --> Has local capacity? (running < max, not degraded)
+  --> Acquire up to MAX_STEAL_PER_CYCLE (2) features from FleetSchedulerService
+  --> Send work_offer with featureIds[]
+  --> Peer accepts → FleetSchedulerService.assignFeatures(featureIds, peerId)
+```
+
+The reactor sends its own `work_request` when local backlog is low and peers have available capacity.
+
+**Limits:**
+
+| Constant              | Default | Description                               |
+| --------------------- | ------- | ----------------------------------------- |
+| `MAX_STEAL_PER_CYCLE` | `2`     | Maximum features acquired per work-steal  |
+
+### Escalation Protocol
+
+Three-message handshake for handing off a blocked feature to a peer:
+
+```
+escalation_request (from stuck instance)
+  --> Peer: able to take it? → send escalation_offer
+  --> Requester: accept offer → send escalation_accept
+  --> FleetSchedulerService.reassign(featureId, acceptingInstanceId)
+```
+
+The `EscalationCoordinator` tracks pending escalations and enforces timeouts (30s default). If no offer arrives within the timeout, the stuck instance retries escalation to a different peer.
+
+### Health Alerts
+
+When a peer's heartbeat shows degraded resources, the reactor emits a `health_alert`:
+
+```typescript
+{
+  type: 'health_alert';
+  instanceId: string;       // degraded peer
+  severity: 'warning' | 'critical';
+  memoryUsagePct?: number;
+  cpuUsagePct?: number;
+  reason: string;
+}
+```
+
+**Thresholds:**
+
+| Resource  | Warning | Critical |
+| --------- | ------- | -------- |
+| Memory    | > 85%   | > 95%    |
+| CPU       | > 90%   | > 98%    |
+
+While a peer is marked degraded, work-stealing from that peer is paused. Degraded status clears automatically when the next heartbeat shows recovery.
+
+### DORA Reports
+
+Every hour, if a `DoraMetricsService` is wired in, the reactor broadcasts:
+
+```typescript
+{
+  type: 'dora_report';
+  instanceId: string;
+  deploymentFrequency: number;   // deployments per day
+  leadTimeHours: number;
+  changeFailureRate: number;     // 0–1
+  windowDays: number;            // reporting window
+  timestamp: string;             // ISO-8601
+}
+```
+
+Peers store incoming DORA reports in `CRDTStore` under `domain='metrics', id='dora'` for aggregate queries.
+
+## Friction Tracking Integration
+
+The reactor connects to `FrictionTrackerService` (optional):
+
+- On `friction_report` messages — calls `handlePeerReport(report)` for cross-instance de-duplication
+- On `pattern_resolved` messages — calls `resolvePattern(pattern)` to reset counters
+- On handler failures — calls `recordFailure(pattern)` after 3 occurrences auto-files a System Improvement
+
+See [Friction Tracker](./friction-tracker) for threshold and filing logic.
+
+## ReactorStatus
+
+The `getStatus()` method returns current operational metrics:
+
+```typescript
+interface ReactorStatus {
+  active: boolean;                  // subscription is live
+  enabled: boolean;                 // from settings
+  peersCount: number;               // peers with recent heartbeat
+  responsesSent: number;            // responses dispatched (lifetime)
+  errorCount: number;               // dispatch failures (lifetime)
+  cooldownThreads: number;          // threads currently in cooldown
+  degradedPeerCount: number;        // peers above health thresholds
+  pendingEscalationCount: number;   // escalations awaiting offer
+}
+```
+
+## Self-Healing
+
+- **Subscription failure** — retries with exponential backoff (5s base, 60s cap)
+- **Midnight shard rotation** — automatically rotates to the new UTC day's shard
+- **Known message hydration** — on startup, loads existing messages to prevent retroactive responses
+- **Heartbeat timeout** — peers absent for > `peerTtlMs` (default 120s) are evicted from capacity map
+
+## Configuration
+
+Configured in `.automaker/settings.json` under `workflowSettings.avaChannelReactor`:
+
+| Setting                   | Default  | Description                                              |
+| ------------------------- | -------- | -------------------------------------------------------- |
+| `enabled`                 | `true`   | Enable/disable the reactor                               |
+| `maxConversationDepth`    | `1`      | Max reply depth before loop breaker activates            |
+| `cooldownMs`              | `30000`  | Per-thread cooldown after responding (ms)                |
+| `staleMessageThresholdMs` | `300000` | Ignore messages older than this (ms)                     |
+| `enableFrictionTracking`  | `true`   | Track recurring friction patterns                        |
+| `heartbeatIntervalMs`     | `60000`  | Interval between capacity heartbeat broadcasts (ms)      |
+| `doraReportIntervalMs`    | `3600000`| Interval between DORA metric broadcasts (ms)             |
+| `peerTtlMs`               | `120000` | Time before absent peer is evicted from capacity map (ms)|
+
+## Key Files
+
+| File                                                                | Role                                                            |
+| ------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `apps/server/src/services/ava-channel-reactor-service.ts`           | Core reactor — subscription, classification, fleet coordination |
+| `apps/server/src/services/ava-channel-reactor.module.ts`            | Wiring — injects dependencies and starts the reactor on boot   |
+| `apps/server/src/services/ava-channel-classifiers.ts`               | Classifier chain — 9 pure-function rules for message routing    |
+| `apps/server/src/services/ava-channel-handlers.ts`                  | Response handlers — HelpRequest, Coordination, SystemAlert      |
+| `apps/server/src/services/ava-channel-friction-tracker.ts`          | Channel-level friction tracker (distinct from service-level)    |
+| `apps/server/src/services/ava-channel-service.ts`                   | Storage engine — provides message I/O to the reactor            |
+| `apps/server/src/services/fleet-scheduler-service.ts`               | Fleet scheduler — work assignment and reassignment              |
+| `apps/server/src/services/friction-tracker-service.ts`              | Service-level friction tracker — files System Improvements      |
+| `apps/server/src/services/dora-metrics-service.ts`                  | DORA computation — supplies metrics for hourly DORA reports     |
+
+## See Also
+
+- [Ava Channel](./ava-channel) — transport layer, message protocol, HTTP API
+- [Fleet Scheduler](./fleet-scheduler) — feature assignment and fleet execution management
+- [Friction Tracker](./friction-tracker) — pattern detection and System Improvement auto-filing
+- [DORA Metrics](./dora-metrics) — metrics computation and aggregation
+- [Distributed Sync](../dev/distributed-sync.md) — CRDT mesh and leader election

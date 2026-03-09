@@ -15,6 +15,7 @@ The server is an Express 5 application with WebSocket streaming, organized into 
 - **[Calendar API](./calendar-api)** — Calendar events, Google Calendar sync, and MCP tools
 - **[Knowledge Store](./knowledge-store)** — SQLite FTS5 knowledge base for agent context retrieval
 - **[Ava Channel](./ava-channel)** — Multi-instance Ava coordination channel, CRDT-backed message store, and System Improvements auto-filing
+- **[Ava Channel Reactor](./ava-channel-reactor)** — Reactive orchestrator for fleet coordination: work-stealing, health monitoring, DORA reporting, and escalation protocol
 - **[DORA Metrics](./dora-metrics)** — Team health monitoring via feature-based proxy metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
 
 ## Key Technologies

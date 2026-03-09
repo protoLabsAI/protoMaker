@@ -212,7 +212,7 @@ In memory mode, `POST /api/ava-channel/send` and `GET /api/ava-channel/messages`
 
 The archival cycle runs hourly. Shards older than 30 days are:
 
-1. Written to `{archiveDir}/ava-channel-YYYY-MM-DD.json`
+1. Written to `{archiveDir}/YYYY-MM-DD.json`
 2. Removed from the CRDT store / memory
 
 Archived shards are read transparently by `getMessages()` when a query's date range includes archived dates.
@@ -235,6 +235,8 @@ Archived shards are read transparently by `getMessages()` when a query's date ra
 ## Reactive Reactor
 
 The reactor makes Ava instances responsive to each other's messages. When one instance posts a help request or coordination message, peer instances evaluate and respond autonomously.
+
+> **Full reference:** See [Ava Channel Reactor](./ava-channel-reactor) for complete documentation including fleet coordination, work-stealing, health alerts, DORA reporting, and escalation protocol.
 
 ### Architecture
 
@@ -377,5 +379,6 @@ The expected usage pattern for Ava instances filing improvement tickets:
 
 ## See Also
 
+- [Ava Channel Reactor](./ava-channel-reactor) — Full reactor reference: fleet coordination, work-stealing, health alerts, DORA reporting
 - [Distributed Sync](../dev/distributed-sync.md) — CRDT mesh, leader election, and partition recovery
 - [Route Organization](./route-organization.md) — Express route registration patterns

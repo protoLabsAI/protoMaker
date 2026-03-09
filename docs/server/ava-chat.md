@@ -17,11 +17,19 @@ The Ava chat system extends the base chat endpoint with:
 ```
 POST /api/chat
   ├── loadAvaConfig(projectPath)       → AvaConfig (from .automaker/ava-config.json)
-  ├── loadContextFiles(projectPath)    → projectContext string (if contextInjection: true)
+  ├── loadAvaContext(projectPath)      → CLAUDE.md + ava-prompt.md (if contextInjection: true)
   ├── getSitrep(projectPath)           → sitrep markdown (if sitrepInjection: true, cached 5min)
   ├── buildAvaSystemPrompt(opts)       → enriched system prompt
-  ├── buildAvaTools(projectPath, ...)  → tool set gated by toolGroups flags
-  └── streamText({ tools, maxSteps: 10 })
+  ├── buildAvaTools(projectPath, ...)  → tool set gated by toolGroups flags (19 groups)
+  ├── compactMessageHistory(messages)  → message-level compaction when > budget tokens
+  ├── streamText({ tools, maxSteps: 10, extendedThinking })
+  └── post-stream:
+        ├── extractAndResolveCitations(text) → data-citations chunk
+        ├── extractPlan(text)                → data-plan chunk
+        └── usage stats                      → data-usage chunk
+
+POST /api/chat/tool-approval
+  └── Resolves pending subagent tool-approval (gated trust mode only)
 
 GET/POST /api/ava/config/get
 POST     /api/ava/config/update
@@ -36,20 +44,36 @@ Stored at `{projectPath}/.automaker/ava-config.json`. Defaults are used when the
 interface AvaConfig {
   model: 'haiku' | 'sonnet' | 'opus';
   toolGroups: {
-    boardRead: boolean; // get_board_summary, list_features, get_feature
+    boardRead: boolean; // get_board_summary, list_features, get_feature, create_plan
     boardWrite: boolean; // create_feature, update_feature, move_feature, delete_feature
     agentControl: boolean; // list_running_agents, start_agent, stop_agent, get_agent_output
     autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
-    projectMgmt: boolean; // get_project_spec, update_project_spec
+    projectMgmt: boolean; // get_project_spec, update_project_spec, update_project
     orchestration: boolean; // get_execution_order, set_feature_dependencies
+    agentDelegation: boolean; // execute_dynamic_agent, list_agent_templates
+    notes: boolean; // list_note_tabs, read_note_tab, write_note_tab
+    metrics: boolean; // get_project_metrics, get_capacity_metrics
+    prWorkflow: boolean; // check_pr_status, get_pr_feedback, merge_pr
+    promotion: boolean; // list_staging_candidates, promote_to_staging
+    contextFiles: boolean; // list_context_files, get_context_file, create_context_file
+    projects: boolean; // list_projects, get_project, create_project
+    briefing: boolean; // get_briefing, get_board_summary_extended
+    avaChannel: boolean; // Ava coordination channel tools
+    discord: boolean; // Discord messaging tools
+    calendar: boolean; // Calendar event tools
+    health: boolean; // Health monitoring tools
+    settings: boolean; // Global settings access tools
   };
   sitrepInjection: boolean;
   contextInjection: boolean;
   systemPromptExtension: string;
+  autoApproveTools: boolean; // When true, destructive tools skip HITL confirmation
+  mcpServers?: MCPServerConfig[];
+  subagentTrust: 'full' | 'gated';
 }
 ```
 
-All tool groups default to `true`. Model defaults to `sonnet`.
+All tool groups default to `true`. Model defaults to `sonnet`. `autoApproveTools` defaults to `false`. `subagentTrust` defaults to `'full'`.
 
 ## Key Files
 
@@ -57,7 +81,7 @@ All tool groups default to `true`. Model defaults to `sonnet`.
 | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `apps/server/src/routes/chat/index.ts`                     | Main chat route — wires config, sitrep, tools, streamText              |
 | `apps/server/src/routes/chat/ava-config.ts`                | `loadAvaConfig` / `saveAvaConfig` with deep-merge defaults             |
-| `apps/server/src/routes/chat/ava-tools.ts`                 | `buildAvaTools(projectPath, services, config)` — all 6 tool groups     |
+| `apps/server/src/routes/chat/ava-tools.ts`                 | `buildAvaTools(projectPath, services, config)` — 19 tool groups        |
 | `apps/server/src/routes/chat/sitrep.ts`                    | `getSitrep(projectPath)` — 5-min TTL cache, `invalidateSitrep()`       |
 | `apps/server/src/routes/chat/personas.ts`                  | `buildAvaSystemPrompt({ ctx, projectContext, sitrep, extension })`     |
 | `apps/server/src/routes/ava/index.ts`                      | `/api/ava/config/get` and `/api/ava/config/update` HTTP endpoints      |
@@ -81,6 +105,25 @@ Tool availability is gated per-request by `AvaConfig.toolGroups`. Disabling `boa
 - Auto-mode enabled/disabled status
 
 Results are cached for 5 minutes per project path. Call `invalidateSitrep(projectPath)` to force a refresh on the next request (called automatically after board-write tool calls).
+
+## Citation Extraction
+
+After streaming completes, the server scans the full assistant response text for `[[feature:id]]` and `[[doc:path]]` markers. Each unique citation is resolved and sent to the client as a `data-citations` chunk on the UI message stream. Feature citations are resolved via `FeatureLoader.get()`; doc citations use the path as the title.
+
+The client renders these as inline badges and a Sources section at the bottom of the response.
+
+## Plan Extraction
+
+When the assistant response contains a fenced ` ```plan ``` ` block containing valid JSON with a `steps` array, the server parses it and sends a `data-plan` chunk to the client. The client renders this as a visual plan card with titled steps and status indicators.
+
+## Message Compaction
+
+Before sending messages to the model, the server estimates the token count. When it exceeds `COMPACTION_BUDGET_TOKENS`, `compactMessageHistory()` summarizes older tool results to one line and truncates long assistant responses, preserving the most recent messages verbatim.
+
+In addition, Anthropic-side context management is configured per request:
+
+- At 80k input tokens: clears tool uses, keeping 5 most recent (removes tool inputs)
+- At 150k input tokens: activates server-side `compact_20260112` compaction
 
 ## Session Scoping
 
@@ -122,17 +165,16 @@ These servers are passed to `createChatOptions({ mcpServers })` before the inner
 
 ## Trust Model
 
-`AvaConfig.subagentTrust` controls the maximum trust level granted to agents Ava delegates to:
+`AvaConfig.subagentTrust` controls how subagent tool calls are authorized:
 
-| Level        | Effect                                                                      |
-| ------------ | --------------------------------------------------------------------------- |
-| `high`       | Inner agents may call all tools including destructive ones without approval |
-| `standard`   | Inner agents call most tools; destructive tools still require approval      |
-| `restricted` | Inner agents are limited to read-only and low-risk tools                    |
+| Level   | Effect                                                                                                                                                       |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `full`  | Subagents run with `bypassPermissions`; all tool calls execute immediately without approval (default)                                                        |
+| `gated` | Each subagent tool call emits a `subagent:tool-approval-request` event; the client must approve via `POST /api/chat/tool-approval` before execution proceeds |
 
-Trust is enforced via the SDK's `canUseTool` callback in `DynamicAgentExecutor`. If the requested tool's required trust level exceeds `subagentTrust`, `canUseTool` returns `false` and the SDK does not execute the tool. Ava receives `"tool_blocked"` as the tool result.
+Trust is enforced via the `canUseTool` callback built by `buildCanUseToolCallback()` in `agent-trust.ts`. In `gated` mode, the callback suspends the agent execution and waits for a `subagent:tool-approval-response` event on the shared event bus before resolving.
 
-Omitting `subagentTrust` from `ava-config.json` defaults to `standard`.
+Omitting `subagentTrust` from `ava-config.json` defaults to `'full'`.
 
 ## Tool Progress WebSocket Events
 
