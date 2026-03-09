@@ -1,12 +1,30 @@
 import { useState } from 'react';
-import { ArrowLeft, Trash2, PanelLeft, MessageSquareDot } from 'lucide-react';
-import { Badge } from '@protolabsai/ui/atoms';
-import { Button } from '@protolabsai/ui/atoms';
+import { ArrowLeft, Trash2, PanelLeft, MessageSquareDot, ChevronDown } from 'lucide-react';
+import {
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@protolabsai/ui/atoms';
 import { HealthIndicator } from './health-indicator';
 import { getProjectStatusVariant } from '../lib/status-variants';
 import { DeleteConfirmDialog } from '@/components/shared/delete-confirm-dialog';
 import { useProjectFeatures } from '../hooks/use-project-features';
-import type { Project, ProjectHealth } from '@protolabsai/types';
+import { useProjectUpdate } from '../hooks/use-project';
+import type { Project, ProjectHealth, ProjectStatus } from '@protolabsai/types';
+
+const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
+  { value: 'ongoing', label: 'Ongoing' },
+  { value: 'researching', label: 'Researching' },
+  { value: 'drafting', label: 'Drafting' },
+  { value: 'reviewing', label: 'Reviewing' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'scaffolded', label: 'Scaffolded' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+];
 
 interface ProjectHeaderProps {
   project: Project;
@@ -29,10 +47,15 @@ export function ProjectHeader({
 }: ProjectHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { data: featuresData } = useProjectFeatures(project.slug);
+  const updateProject = useProjectUpdate(project.slug);
 
   const features = (featuresData?.data?.features ?? []) as Array<{ status?: string }>;
   const totalFeatures = features.length;
   const doneFeatures = features.filter((f) => f.status === 'done').length;
+
+  const handleStatusChange = (status: ProjectStatus) => {
+    updateProject.mutate({ status });
+  };
 
   return (
     <div className="shrink-0 px-6 py-4 border-b border-border/40">
@@ -56,13 +79,43 @@ export function ProjectHeader({
             <h1 className="text-lg font-semibold text-foreground tracking-tight truncate">
               {project.title}
             </h1>
-            <Badge
-              variant={getProjectStatusVariant(project.status)}
-              size="sm"
-              className="uppercase tracking-wider shrink-0"
-            >
-              {project.status}
-            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+                >
+                  <Badge
+                    variant={getProjectStatusVariant(project.status)}
+                    size="sm"
+                    className="uppercase tracking-wider"
+                  >
+                    {project.status}
+                  </Badge>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {PROJECT_STATUSES.map((s) => (
+                  <DropdownMenuItem
+                    key={s.value}
+                    onClick={() => handleStatusChange(s.value)}
+                    className="gap-2"
+                  >
+                    <Badge
+                      variant={getProjectStatusVariant(s.value)}
+                      size="sm"
+                      className="uppercase tracking-wider text-[10px]"
+                    >
+                      {s.label}
+                    </Badge>
+                    {s.value === project.status && (
+                      <span className="text-[10px] text-muted-foreground ml-auto">current</span>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {totalFeatures > 0 && (
               <span className="text-xs text-muted-foreground shrink-0">
                 {doneFeatures} / {totalFeatures} done

@@ -1,0 +1,142 @@
+{
+  "slug": "ava-anywhere-chat-overlay-polish",
+  "title": "Ava Anywhere Chat Overlay Polish",
+  "goal": "Bring the Ask Ava / Ava Anywhere chat overlay to production quality across four areas: message regeneration UI, tool approval visual feedback, protocol message filtering UX, and dispatchResponse wiring.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-message-regeneration-ui",
+      "title": "Message Regeneration UI",
+      "description": "Add regenerate button and branch navigation to chat messages. Branch tracking logic already exists — this milestone only adds the UI layer on top of it.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "regenerate-button-and-branch-navigator",
+          "title": "Regenerate Button and Branch Navigator",
+          "description": "Add a regenerate icon button below each assistant message in the Ask Ava tab. When multiple variants exist (branchMap has >1 entry for a message), show prev/next arrows and a '1 of N' counter. Wire the regenerate button to the existing onRegenerate handler in chat-overlay-content.tsx. Wire prev/next to update currentBranchIndex. The branchInfoMap computed state already provides { branchIndex, branchCount, origId } — use it to drive the UI. Add a subtle 'Regenerating...' shimmer state while pendingBranchFor is set for this message.",
+          "filesToModify": [
+            "apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx",
+            "apps/ui/src/components/views/chat-overlay/chat-overlay-content.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Regenerate button appears below the last assistant message",
+            "Clicking regenerate calls onRegenerate and shows a loading state",
+            "When branchCount > 1, prev/next arrows and '1 of N' counter appear",
+            "Navigating branches updates the displayed message",
+            "Build passes with no TypeScript errors"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773071246977-otgnov5q6"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773071246971-u73kkx2l9"
+    },
+    {
+      "number": 2,
+      "slug": "02-tool-approval-visual-cards",
+      "title": "Tool Approval Visual Cards",
+      "description": "Render pending tool approval requests as interactive cards in the Ask Ava chat. The approval plumbing already exists in use-chat-session.ts — this milestone adds the UI to surface it.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "pending-tool-approval-cards",
+          "title": "Pending Tool Approval Cards",
+          "description": "In the Ask Ava tab, render each entry in pendingSubagentApprovals as an inline card above the chat input. Each card shows: tool name, a truncated preview of toolInput (JSON, max 200 chars), an Approve button (calls approveSubagentTool), and a Deny button (calls denySubagentTool). Cards should be visually distinct (amber border or accent) so they are immediately noticeable. When no approvals are pending, render nothing. Multiple pending approvals stack vertically. Add a received timestamp ('Waiting Xs') that counts up from receivedAt.",
+          "filesToModify": [
+            "apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Pending tool approval cards render above the chat input when pendingSubagentApprovals is non-empty",
+            "Each card shows tool name, input preview, approve button, deny button",
+            "Approve calls approveSubagentTool(approvalId) and removes the card",
+            "Deny calls denySubagentTool(approvalId) and removes the card",
+            "Cards have an amber/warning visual treatment to draw attention",
+            "Build passes with no TypeScript errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773071246989-4y9op8gq8"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773071246984-1j8jtrh31"
+    },
+    {
+      "number": 3,
+      "slug": "03-protocol-filtering-ux",
+      "title": "Protocol Filtering UX",
+      "description": "Improve the Ava Channel (#backchannel) filter bar with category-based filter chips. Protocol messages self-identify via bracket prefixes — use these to categorize client-side without schema changes.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "category-filter-chips-for-protocol-messages",
+          "title": "Category Filter Chips for Protocol Messages",
+          "description": "In ava-channel-tab.tsx, replace or augment the binary protocol toggle with category filter chips: Heartbeat ([heartbeat], [capacity]), Work Steal ([work-request], [work-offer]), Escalation ([escalation], [health_alert]), Metrics ([dora-report], [pattern-resolved]), Scheduler ([work-inventory], [schedule-assignment], [scheduler-heartbeat], [schedule-conflict], [project-progress]). Add a helper function getProtocolCategory(content: string) that maps the opening bracket tag to one of these categories. Filter chip UI: small pill buttons below the search bar, each toggleable. When a chip is deselected, messages of that category are hidden. The existing showProtocol toggle becomes 'Show All Protocol' which selects all chips at once. Store selected categories in local component state (no store change needed).",
+          "filesToModify": [
+            "apps/ui/src/components/views/chat-overlay/ava-channel-tab.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Five category chips appear when showProtocol is enabled: Heartbeat, Work Steal, Escalation, Metrics, Scheduler",
+            "Toggling a chip hides/shows messages of that category",
+            "'Show All Protocol' enables all chips at once",
+            "Text search still works alongside category filtering",
+            "Human messages (non-protocol) are never hidden by category filters",
+            "Build passes with no TypeScript errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773071247003-55274be31"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773071246996-1g73q50cb"
+    },
+    {
+      "number": 4,
+      "slug": "04-dispatchresponse-wiring-audit",
+      "title": "dispatchResponse Wiring Audit",
+      "description": "Audit whether ReactiveSpawnerService is fully wired into the service container and passed to AvaChannelReactorService. Fix any gaps so dispatchResponse correctly spawns Claude sessions for request-type backchannel messages.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "wire-reactivespawnerservice-into-service-container",
+          "title": "Wire ReactiveSpawnerService into Service Container",
+          "description": "Audit apps/server/src/server/services.ts: check if ReactiveSpawnerService is instantiated and if it is passed to AvaChannelReactorService. Audit ava-channel-reactor-service.ts: confirm dispatchResponse calls reactiveSpawnerService.spawnForMessage() for request-type messages. Audit reactive-spawner-service.ts: confirm it is initialized with DynamicAgentExecutor and the 'ava' template. Fix any missing wiring. If ReactiveSpawnerService is not instantiated in services.ts, add it. If it is not passed to the reactor, pass it. If the ava template is not registered in the role registry at startup, register it. Ensure the circuit breaker, hourly cap (3 sessions/hour), and error dedup set are active. Add a log line when dispatchResponse successfully spawns a session so it is observable.",
+          "filesToModify": [
+            "apps/server/src/server/services.ts",
+            "apps/server/src/services/ava-channel-reactor-service.ts",
+            "apps/server/src/services/reactive-spawner-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "ReactiveSpawnerService is instantiated in services.ts",
+            "ReactiveSpawnerService is passed to AvaChannelReactorService",
+            "dispatchResponse logs a message when it spawns a session for a request-type message",
+            "Circuit breaker, hourly cap, and error dedup are confirmed active via log output or code inspection",
+            "Build passes with no TypeScript errors",
+            "Server unit test added or updated for ReactiveSpawnerService wiring"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773071247014-9i0q7ko9j"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773071247008-8r4z9cu2b"
+    }
+  ],
+  "prd": {
+    "situation": "The Ask Ava chat overlay (Cmd+K) and Ava Channel (#backchannel) are structurally complete. Branch tracking, tool approval hooks, protocol filtering, and the reactive spawner all exist in the codebase. However, several surfaces lack the UI polish or final wiring to be production-ready.",
+    "problem": "Four specific gaps block production quality: (1) Message regeneration logic exists but there is no UI — no regenerate button, no prev/next branch navigation, no '1 of N' indicator. (2) Tool approval events fire and handlers exist, but the chat UI shows no cards for pending approvals — users cannot approve or deny tool calls. (3) The Ava Channel filter bar is a single text search and a binary protocol toggle with no category granularity. (4) dispatchResponse in the reactor may not be fully wired to ReactiveSpawnerService in the service container.",
+    "approach": "Milestone 1 adds the regeneration button and branch navigation UI to chat messages. Milestone 2 renders pending tool approval cards inline in the chat. Milestone 3 adds category-based filter chips to the Ava Channel tab. Milestone 4 audits and completes the ReactiveSpawnerService wiring into the service container and verifies dispatchResponse calls it correctly for request-type messages.",
+    "results": "Users can regenerate Ava responses and navigate between variants. Pending tool approvals surface as interactive cards. The #backchannel tab supports per-category protocol filtering. Backchannel messages classified as 'request' trigger real Claude sessions via the reactive spawner with circuit breaker protection.",
+    "constraints": [
+      "Thumbs up/down feedback stays as no-op — out of scope",
+      "Browser extension ignored — out of scope",
+      "Branch tracking state (branchMap, currentBranchIndex, pendingBranchFor) already exists in chat-overlay-content.tsx — do not rewrite, only add UI on top",
+      "Tool approval plumbing already exists (use-chat-session.ts pendingSubagentApprovals, approveSubagentTool, denySubagentTool) — only add rendering",
+      "No new CRDT document types — protocol category filtering is client-side only",
+      "ReactiveSpawnerService circuit breaker config (3 failures, 5min cooldown, 3 sessions/hour) must not be changed"
+    ]
+  },
+  "createdAt": "2026-03-09T15:47:21.685Z",
+  "updatedAt": "2026-03-09T16:20:42.642Z"
+}

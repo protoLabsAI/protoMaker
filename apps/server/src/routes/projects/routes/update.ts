@@ -3,7 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { Project, ProjectStatus, SPARCPrd, PRDReviewComment } from '@protolabsai/types';
+import type { Project, UpdateProjectInput } from '@protolabsai/types';
 import {
   getProjectJsonPath,
   getProjectFilePath,
@@ -18,14 +18,7 @@ import { getErrorMessage, logError } from '../common.js';
 interface UpdateProjectRequest {
   projectPath: string;
   projectSlug: string;
-  updates: {
-    title?: string;
-    goal?: string;
-    status?: ProjectStatus;
-    prd?: SPARCPrd;
-    researchSummary?: string;
-    reviewComments?: PRDReviewComment[];
-  };
+  updates: UpdateProjectInput;
 }
 
 export function createUpdateHandler() {
@@ -64,24 +57,14 @@ export function createUpdateHandler() {
         return;
       }
 
-      // Apply updates
-      if (updates.title !== undefined) {
-        project.title = updates.title;
-      }
-      if (updates.goal !== undefined) {
-        project.goal = updates.goal;
-      }
-      if (updates.status !== undefined) {
-        project.status = updates.status;
-      }
+      // Apply all updates via spread — UpdateProjectInput defines the allowed fields
+      const { prd: _prd, researchSummary: _rs, ...safeUpdates } = updates;
+      Object.assign(project, safeUpdates);
       if (updates.prd !== undefined) {
         project.prd = updates.prd;
       }
       if (updates.researchSummary !== undefined) {
         project.researchSummary = updates.researchSummary;
-      }
-      if (updates.reviewComments !== undefined) {
-        project.reviewComments = updates.reviewComments;
       }
 
       project.updatedAt = new Date().toISOString();

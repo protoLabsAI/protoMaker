@@ -1,0 +1,162 @@
+{
+  "slug": "chat-render-pipeline-rich-tool-result-cards",
+  "title": "Chat Render Pipeline — Rich Tool Result Cards",
+  "goal": "Replace JSON fallback renderers for high-frequency Ava tools with purpose-built cards. Currently 22 of 65+ tools have custom cards; this project adds cards for the most commonly surfaced tools so structured data renders as rich UI instead of raw markdown or JSON.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-sitrep-and-status-cards",
+      "title": "Sitrep and Status Cards",
+      "description": "Cards for the most-asked status questions: system sitrep, running agents, and health check. These are the #1 reason users open the chat overlay.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "sitrepcard-and-healthcheckcard",
+          "title": "SitrepCard and HealthCheckCard",
+          "description": "Create SitrepCard for get_sitrep tool output. The sitrep contains: board summary (backlog/in_progress/review/done counts), auto-mode status, running agents list, blocked features, review features, escalations, open PRs with CI status, staging delta, recent commits, and server health. Render as a compact dashboard card with sections for each area, status indicators, and counts. Also create HealthCheckCard for health_check — shows server version, uptime, memory, connected services. Register both in tool-invocation-part.tsx.",
+          "filesToModify": [
+            "libs/ui/src/ai/tool-results/sitrep-card.tsx",
+            "libs/ui/src/ai/tool-results/health-check-card.tsx",
+            "libs/ui/src/ai/tool-invocation-part.tsx"
+          ],
+          "acceptanceCriteria": [
+            "SitrepCard renders board counts, auto-mode status, running agents, blocked features, open PRs",
+            "HealthCheckCard renders version, uptime, memory stats",
+            "Both handle loading states and missing data gracefully",
+            "Both registered in tool-invocation-part.tsx",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773072822710-7fnv163jd"
+        },
+        {
+          "number": 2,
+          "name": "runningagentscard",
+          "title": "RunningAgentsCard",
+          "description": "Create RunningAgentsCard for list_running_agents. Shows each running agent as a row with: feature title, agent model, elapsed time, turn count, and a status indicator (running/idle). If no agents running, show an empty state. Register in tool-invocation-part.tsx.",
+          "filesToModify": [
+            "libs/ui/src/ai/tool-results/running-agents-card.tsx",
+            "libs/ui/src/ai/tool-invocation-part.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Card shows each running agent with feature title, model, elapsed time",
+            "Empty state shown when no agents running",
+            "Registered in tool-invocation-part.tsx",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773072822715-bvaoxuehk"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773072822703-v7b3vghx9"
+    },
+    {
+      "number": 2,
+      "slug": "02-project-and-lifecycle-cards",
+      "title": "Project and Lifecycle Cards",
+      "description": "Cards for project management views: project list, project detail, and lifecycle status.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "projectlistcard-and-projectdetailcard",
+          "title": "ProjectListCard and ProjectDetailCard",
+          "description": "Create ProjectListCard for list_projects — renders projects as compact rows with title, status badge, milestone progress (e.g. 2/5 milestones done), and goal preview. Create ProjectDetailCard for get_project — renders full project info: title, goal, status, PRD summary, milestone breakdown with phase counts and completion percentages. Register both.",
+          "filesToModify": [
+            "libs/ui/src/ai/tool-results/project-list-card.tsx",
+            "libs/ui/src/ai/tool-results/project-detail-card.tsx",
+            "libs/ui/src/ai/tool-invocation-part.tsx"
+          ],
+          "acceptanceCriteria": [
+            "ProjectListCard renders project rows with title, status, milestone progress",
+            "ProjectDetailCard renders full project with milestone breakdown",
+            "Both handle empty/missing data",
+            "Both registered in tool-invocation-part.tsx",
+            "Build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773072822723-rx5k2pgu1"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773072822719-iepyw8ib1"
+    },
+    {
+      "number": 3,
+      "slug": "03-pr-pipeline-and-promotion-cards",
+      "title": "PR Pipeline and Promotion Cards",
+      "description": "Cards for the shipping workflow: merge confirmation, promotion status, and PR watch.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "mergeprcard-and-promotioncard",
+          "title": "MergePRCard and PromotionCard",
+          "description": "Create MergePRCard for merge_pr — shows PR number, title, merge status (success/failed), target branch, and merge commit hash. Create PromotionCard for promote_to_staging — shows promotion status, source/target branches, commit count, and any conflicts. Register both.",
+          "filesToModify": [
+            "libs/ui/src/ai/tool-results/merge-pr-card.tsx",
+            "libs/ui/src/ai/tool-results/promotion-card.tsx",
+            "libs/ui/src/ai/tool-invocation-part.tsx"
+          ],
+          "acceptanceCriteria": [
+            "MergePRCard shows PR merge status with number, title, branch, commit hash",
+            "PromotionCard shows promotion status with branch info and commit count",
+            "Both handle error states (merge failed, conflicts)",
+            "Both registered in tool-invocation-part.tsx",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773072822733-t74d1vvup"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773072822729-ysuo9p3nf"
+    },
+    {
+      "number": 4,
+      "slug": "04-auto-mode-and-agent-operation-cards",
+      "title": "Auto-Mode and Agent Operation Cards",
+      "description": "Cards for auto-mode controls and agent operations that currently render as JSON.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "automodecontrolcard-and-agentmessagecard",
+          "title": "AutoModeControlCard and AgentMessageCard",
+          "description": "Create AutoModeControlCard shared by start_auto_mode and stop_auto_mode — shows action taken (started/stopped), current configuration (max concurrency, model tier), and queue depth. Distinct from existing get_auto_mode_status card which shows ongoing status. Create AgentMessageCard for send_message_to_agent — shows the message sent, target feature/agent, and delivery confirmation. Register both.",
+          "filesToModify": [
+            "libs/ui/src/ai/tool-results/auto-mode-control-card.tsx",
+            "libs/ui/src/ai/tool-results/agent-message-card.tsx",
+            "libs/ui/src/ai/tool-invocation-part.tsx"
+          ],
+          "acceptanceCriteria": [
+            "AutoModeControlCard shows start/stop action with config details",
+            "AgentMessageCard shows message sent to agent with delivery status",
+            "Both registered in tool-invocation-part.tsx",
+            "Build passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773072822741-t6p0iyo14"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773072822737-hb66k6qab"
+    }
+  ],
+  "prd": {
+    "situation": "The Ask Ava chat overlay has a mature tool result card system — a ToolResultRegistry maps tool names to React components, with 22 cards already registered. However, 43+ tools still fall back to raw JSON preview. High-frequency tools like get_sitrep, list_projects, list_running_agents, merge_pr, and auto-mode controls render as unformatted data, making Ava's responses hard to scan.",
+    "problem": "When users ask Ava about system status, projects, running agents, or PR pipeline, the responses render as markdown tables or JSON blobs instead of structured cards. This makes the chat overlay feel like a terminal rather than a dashboard. The tool result card pattern already exists and is proven — we just need more cards.",
+    "approach": "Add custom tool result cards in 4 milestones: (1) Sitrep and status overview cards for the most-asked questions, (2) Project and lifecycle cards for project management, (3) PR pipeline and promotion cards for shipping workflow, (4) Auto-mode and agent operation cards. Each card follows the existing pattern: ToolResultRendererProps interface, data extraction from ToolResult envelope, loading state handling, and registration in tool-invocation-part.tsx.",
+    "results": "All high-frequency Ava tools render rich, scannable cards instead of JSON. Users can quickly assess system status, project health, agent activity, and PR pipeline at a glance within the chat overlay.",
+    "constraints": [
+      "Follow existing ToolResultRendererProps interface — no changes to the registry system",
+      "All cards go in libs/ui/src/ai/tool-results/ following naming convention",
+      "Register in libs/ui/src/ai/tool-invocation-part.tsx alongside existing registrations",
+      "Each card must handle loading states (input-streaming, input-available, approval-responded)",
+      "Each card must handle the ToolResult envelope pattern ({ success, data }) and direct output",
+      "Use lucide-react icons and Tailwind CSS consistent with existing cards",
+      "No changes to server-side tools — only UI rendering"
+    ]
+  },
+  "createdAt": "2026-03-09T16:12:07.810Z",
+  "updatedAt": "2026-03-09T16:13:42.830Z"
+}

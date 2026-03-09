@@ -28,6 +28,7 @@ export function useProjectUpdate(projectSlug: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+      queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
     },
   });
 }

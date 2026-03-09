@@ -5,11 +5,10 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 375
-  referenced: 84
-  successfulFeatures: 84
+  loaded: 380
+  referenced: 85
+  successfulFeatures: 85
 ---
-
 # api
 
 ### Using GitHub GraphQL API with resolveReviewThread mutation rather than REST API for thread resolution (2026-02-10)
