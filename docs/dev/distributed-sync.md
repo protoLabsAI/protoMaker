@@ -57,15 +57,17 @@ The CRDT store uses a **registry** to track which document IDs are known to the 
 
 ```typescript
 // Primary: provide a snapshot of all known documents (key → URL map)
-crdtSyncService.setRegistryProvider(() => store.getKnownDocumentIds());
+crdtSyncService.setRegistryProvider(() => store.getRegistry());
 
-// All instances: receive and reconcile incoming registry snapshots
-crdtSyncService.onRegistryReceived((registry) => {
-  store.reconcileRegistry(registry);
+// Worker: adopt incoming registry snapshots from the primary
+crdtSyncService.onRegistryReceived((remoteRegistry) => {
+  const { adopted, conflicts } = store.adoptRemoteRegistry(remoteRegistry);
+  // adopted: count of newly accepted entries
+  // conflicts: count of URL conflicts resolved in favour of the primary
 });
 ```
 
-When a worker connects (or reconnects after a partition), the primary sends its full registry snapshot. The worker reconciles any missing documents by requesting them from the primary before replaying buffered changes. This prevents split-brain where two instances believe they hold the authoritative version of the same logical document.
+When a worker connects (or reconnects after a partition), the primary sends its full registry snapshot. The worker adopts any missing documents by calling `store.adoptRemoteRegistry()`, which resolves URL conflicts in favour of the primary's copy. This prevents split-brain where two instances believe they hold the authoritative version of the same logical document.
 
 ## Sync Health Metrics
 
