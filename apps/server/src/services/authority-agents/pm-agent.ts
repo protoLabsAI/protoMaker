@@ -96,6 +96,15 @@ interface PMReviewResult {
   }>;
 }
 
+/** Result of SPARC PRD generation */
+interface PRDResult {
+  prd: string;
+  complexity: PMReviewResult['complexity'];
+  milestones: Array<{ title: string; description: string }>;
+  successCriteria?: string[];
+  killConditions?: string[];
+}
+
 export class PMAuthorityAgent {
   private readonly events: EventEmitter;
   private readonly authorityService: AuthorityService;
@@ -508,6 +517,8 @@ export class PMAuthorityAgent {
             generatedAt: new Date().toISOString(),
             model: PM_RESEARCH_MODEL,
           },
+          ...(prdResult.successCriteria ? { successCriteria: prdResult.successCriteria } : {}),
+          ...(prdResult.killConditions ? { killConditions: prdResult.killConditions } : {}),
         });
 
         // Emit PRD ready for Discord posting
@@ -852,11 +863,7 @@ Explore the project structure and relevant code, then provide a structured resea
     feature: Feature,
     researchSummary: string,
     projectPath: string
-  ): Promise<{
-    prd: string;
-    complexity: PMReviewResult['complexity'];
-    milestones: Array<{ title: string; description: string }>;
-  }> {
+  ): Promise<PRDResult> {
     const title = feature.title || 'Untitled';
     const description = feature.description || '';
 
@@ -889,7 +896,9 @@ You MUST respond with valid JSON matching this schema:
   "complexity": "small" | "medium" | "large" | "architectural",
   "milestones": [
     { "title": "Milestone name", "description": "What this milestone covers" }
-  ]
+  ],
+  "successCriteria": ["Measurable outcome 1", "Measurable outcome 2"],
+  "killConditions": ["Stop/pivot trigger 1", "Stop/pivot trigger 2"]
 }
 
 Guidelines:
@@ -898,7 +907,9 @@ Guidelines:
 - Define clear acceptance criteria in the Results section
 - Break into logical milestones for iterative delivery
 - Be specific and actionable — engineers should be able to implement from this PRD
-- Complexity: small (< 1 file), medium (2-5 files), large (5-15 files), architectural (system-wide)`;
+- Complexity: small (< 1 file), medium (2-5 files), large (5-15 files), architectural (system-wide)
+- successCriteria: 2-5 measurable outcomes that define when this feature is complete and successful
+- killConditions: 2-4 conditions that should trigger a stop or pivot (e.g., cost exceeds threshold, dependency blocked, approach invalidated)`;
 
     const prompt = `Create a SPARC PRD for this feature:
 
@@ -928,11 +939,7 @@ Generate a comprehensive SPARC PRD as JSON.`;
         return this.fallbackPRD(title, description, researchSummary);
       }
 
-      const parsed = JSON.parse(jsonMatch[0]) as {
-        prd: string;
-        complexity: PMReviewResult['complexity'];
-        milestones: Array<{ title: string; description: string }>;
-      };
+      const parsed = JSON.parse(jsonMatch[0]) as PRDResult;
 
       if (!parsed.prd || !parsed.complexity) {
         logger.warn('PRD generation missing required fields, using fallback');

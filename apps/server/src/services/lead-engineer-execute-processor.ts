@@ -103,6 +103,39 @@ export class ExecuteProcessor implements StateProcessor {
       };
     }
 
+    // Check kill conditions before proceeding with execution
+    const killConditions = ctx.feature.killConditions;
+    if (killConditions && killConditions.length > 0) {
+      // Check if any cost-based kill condition is triggered
+      const costKill = killConditions.find((condition: string) => {
+        const lower = condition.toLowerCase();
+        if (!lower.includes('cost') && !lower.includes('usd') && !lower.includes('$')) {
+          return false;
+        }
+        // Extract a numeric threshold from the condition string (e.g., "$5", "5 USD", "5.00")
+        const match = condition.match(/\$?\s*(\d+(?:\.\d+)?)\s*(?:usd)?/i);
+        if (match) {
+          const threshold = parseFloat(match[1]);
+          return !isNaN(threshold) && totalCost >= threshold;
+        }
+        return false;
+      });
+
+      if (costKill) {
+        ctx.escalationReason = `Kill condition triggered: ${costKill}`;
+        logger.warn('[EXECUTE] Kill condition triggered, escalating', {
+          featureId: ctx.feature.id,
+          condition: costKill,
+          costUsd: totalCost,
+        });
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: true,
+          reason: ctx.escalationReason,
+        };
+      }
+    }
+
     // Check agent retry limit (configurable via workflow settings, falls back to module constant)
     const maxAgentRetries = await this.resolveMaxAgentRetries(ctx.projectPath);
     if (ctx.retryCount >= maxAgentRetries) {
