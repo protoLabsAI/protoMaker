@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 870
-  referenced: 257
-  successfulFeatures: 257
+  loaded: 873
+  referenced: 259
+  successfulFeatures: 259
 ---
 # gotchas
 
@@ -610,3 +610,8 @@ usageStats:
 - **Situation:** Parallel development created stashed changes that weren't properly merged during rebase/merge operations.
 - **Root cause:** Git stash markers are not valid TypeScript syntax and prevent tsc from parsing the file, killing the entire monorepo build.
 - **How to avoid:** Spending 5 mins to resolve merge conflict (keep both import/registration sets) vs. hours of blocked CI/CD. The additive merge is safe because both sitrep-card and health-check-card files exist and their tool IDs don't collide.
+
+#### [Gotcha] useEffect dependencies on incrementally-updated streaming content (e.g., `code` prop) re-fire on every token, not just on initial mount. Expensive operations like Prism.js highlight thrashing occur at every token delivery. (2026-03-09)
+- **Situation:** Code block receives streaming tokens character-by-character; the `code` dependency genuinely changes on each token, triggering effects.
+- **Root cause:** Root cause: useEffect correctly identifies `code` as a dependency that changed. The gotcha is that streaming creates high-frequency changes, not low-frequency initialization.
+- **How to avoid:** Understanding: recognize that streaming is high-frequency state change, not initialization. Solution complexity: requires `isStreaming` flag to distinguish initialization from streaming completion.

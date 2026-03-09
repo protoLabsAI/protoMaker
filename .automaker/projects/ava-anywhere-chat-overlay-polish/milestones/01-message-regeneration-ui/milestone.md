@@ -1,6 +1,6 @@
 # M1: Message Regeneration UI
 
-**Status**: 🔴 Not started
+**Status**: ✅ Completed
 **Duration**: 1-2 weeks (estimated)
 **Dependencies**: None
 
@@ -24,10 +24,10 @@ Add regenerate button and branch navigation to chat messages. Branch tracking lo
 
 M1 is **complete** when:
 
-- [ ] All phases complete
-- [ ] Tests passing
-- [ ] Documentation updated
-- [ ] Team reviewed and approved
+- [x] All phases complete
+- [x] Tests passing
+- [x] Documentation updated
+- [x] Team reviewed and approved
 
 ---
 

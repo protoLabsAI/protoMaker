@@ -201,9 +201,14 @@ export function AvaChannelTab() {
 
   // Filter messages by query and protocol visibility
   const filteredMessages = messages.filter((m) => {
-    // Hide protocol messages when showProtocol is false
-    if (!showProtocol && isProtocolMessage(m)) return false;
-    // Apply text search filter
+    if (isProtocolMessage(m)) {
+      // Hide all protocol messages when showProtocol is false
+      if (!showProtocol) return false;
+      // When showProtocol is true, apply category chip filtering
+      const category = getProtocolCategory(m.content);
+      if (category !== null && !selectedCategories.has(category)) return false;
+    }
+    // Apply text search filter (applies to all message types)
     if (filterQuery.trim()) {
       return (
         m.content.toLowerCase().includes(filterQuery.toLowerCase()) ||
@@ -213,43 +218,91 @@ export function AvaChannelTab() {
     return true;
   });
 
+  const toggleCategory = (cat: ProtocolCategory) => {
+    setSelectedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) {
+        next.delete(cat);
+      } else {
+        next.add(cat);
+      }
+      return next;
+    });
+  };
+
+  const showAllProtocol = () => {
+    setSelectedCategories(new Set(ALL_CATEGORIES));
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Filter bar */}
-      <div className="flex items-center gap-1.5 border-b border-border px-2 py-1.5">
-        <Search className="size-3 text-muted-foreground shrink-0" />
-        <input
-          type="text"
-          value={filterQuery}
-          onChange={(e) => setFilterQuery(e.target.value)}
-          placeholder="Filter messages..."
-          className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
-        />
-        <button
-          type="button"
-          onClick={() => setShowProtocol((v) => !v)}
-          title={showProtocol ? 'Hide protocol messages' : 'Show protocol messages'}
-          aria-pressed={showProtocol}
-          className={cn(
-            'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
-            showProtocol
-              ? 'bg-primary/10 text-primary'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          Protocol
-        </button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6"
-          onClick={() => fetchMessages({ limit: 50, includeProtocol: showProtocol })}
-          title="Refresh"
-          aria-label="Refresh channel messages"
-          disabled={loading}
-        >
-          <RefreshCw className={cn('size-3', loading && 'animate-spin')} />
-        </Button>
+      <div className="border-b border-border">
+        <div className="flex items-center gap-1.5 px-2 py-1.5">
+          <Search className="size-3 text-muted-foreground shrink-0" />
+          <input
+            type="text"
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            placeholder="Filter messages..."
+            className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (showProtocol) {
+                // When protocol is visible, "Show All Protocol" selects all chips
+                showAllProtocol();
+              } else {
+                // When protocol is hidden, enable it with all chips selected
+                setShowProtocol(true);
+                showAllProtocol();
+              }
+            }}
+            title={showProtocol ? 'Select all protocol categories' : 'Show protocol messages'}
+            aria-pressed={showProtocol}
+            className={cn(
+              'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+              showProtocol
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {showProtocol ? 'Show All Protocol' : 'Protocol'}
+          </button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            onClick={() => fetchMessages({ limit: 50, includeProtocol: showProtocol })}
+            title="Refresh"
+            aria-label="Refresh channel messages"
+            disabled={loading}
+          >
+            <RefreshCw className={cn('size-3', loading && 'animate-spin')} />
+          </Button>
+        </div>
+        {/* Category filter chips — only visible when showProtocol is true */}
+        {showProtocol && (
+          <div className="flex flex-wrap items-center gap-1 px-2 pb-1.5">
+            {ALL_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => toggleCategory(cat)}
+                aria-pressed={selectedCategories.has(cat)}
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors',
+                  selectedCategories.has(cat)
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-muted text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Error banner */}

@@ -1,6 +1,6 @@
 # M2: Tool Approval Visual Cards
 
-**Status**: 🔴 Not started
+**Status**: ✅ Completed
 **Duration**: 1-2 weeks (estimated)
 **Dependencies**: None
 
@@ -24,10 +24,10 @@ Render pending tool approval requests as interactive cards in the Ask Ava chat. 
 
 M2 is **complete** when:
 
-- [ ] All phases complete
-- [ ] Tests passing
-- [ ] Documentation updated
-- [ ] Team reviewed and approved
+- [x] All phases complete
+- [x] Tests passing
+- [x] Documentation updated
+- [x] Team reviewed and approved
 
 ---
 

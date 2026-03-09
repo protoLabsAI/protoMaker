@@ -16,25 +16,23 @@ In the Ask Ava tab, render each entry in pendingSubagentApprovals as an inline c
 ## Tasks
 
 ### Files to Create/Modify
-
-- [ ] `apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx`
+- [x] `apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx`
 
 ### Verification
-
-- [ ] Pending tool approval cards render above the chat input when pendingSubagentApprovals is non-empty
-- [ ] Each card shows tool name, input preview, approve button, deny button
-- [ ] Approve calls approveSubagentTool(approvalId) and removes the card
-- [ ] Deny calls denySubagentTool(approvalId) and removes the card
-- [ ] Cards have an amber/warning visual treatment to draw attention
-- [ ] Build passes with no TypeScript errors
+- [x] Pending tool approval cards render above the chat input when pendingSubagentApprovals is non-empty
+- [x] Each card shows tool name, input preview, approve button, deny button
+- [x] Approve calls approveSubagentTool(approvalId) and removes the card
+- [x] Deny calls denySubagentTool(approvalId) and removes the card
+- [x] Cards have an amber/warning visual treatment to draw attention
+- [x] Build passes with no TypeScript errors
 
 ---
 
 ## Deliverables
 
-- [ ] Code implemented and working
-- [ ] Tests passing
-- [ ] Documentation updated
+- [x] Code implemented and working
+- [x] Tests passing
+- [x] Documentation updated
 
 ---
 
@@ -42,10 +40,10 @@ In the Ask Ava tab, render each entry in pendingSubagentApprovals as an inline c
 
 Before marking Phase 1 complete:
 
-- [ ] All tasks complete
-- [ ] Tests passing
-- [ ] Code reviewed
-- [ ] PR merged to main
-- [ ] Team notified
+- [x] All tasks complete
+- [x] Tests passing
+- [x] Code reviewed
+- [x] PR merged to main
+- [x] Team notified
 
 **Next**: Phase 2

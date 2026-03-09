@@ -16,25 +16,23 @@ Add a regenerate icon button below each assistant message in the Ask Ava tab. Wh
 ## Tasks
 
 ### Files to Create/Modify
-
-- [ ] `apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx`
-- [ ] `apps/ui/src/components/views/chat-overlay/chat-overlay-content.tsx`
+- [x] `apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx`
+- [x] `apps/ui/src/components/views/chat-overlay/chat-overlay-content.tsx`
 
 ### Verification
-
-- [ ] Regenerate button appears below the last assistant message
-- [ ] Clicking regenerate calls onRegenerate and shows a loading state
-- [ ] When branchCount > 1, prev/next arrows and '1 of N' counter appear
-- [ ] Navigating branches updates the displayed message
-- [ ] Build passes with no TypeScript errors
+- [x] Regenerate button appears below the last assistant message
+- [x] Clicking regenerate calls onRegenerate and shows a loading state
+- [x] When branchCount > 1, prev/next arrows and '1 of N' counter appear
+- [x] Navigating branches updates the displayed message
+- [x] Build passes with no TypeScript errors
 
 ---
 
 ## Deliverables
 
-- [ ] Code implemented and working
-- [ ] Tests passing
-- [ ] Documentation updated
+- [x] Code implemented and working
+- [x] Tests passing
+- [x] Documentation updated
 
 ---
 
@@ -42,10 +40,10 @@ Add a regenerate icon button below each assistant message in the Ask Ava tab. Wh
 
 Before marking Phase 1 complete:
 
-- [ ] All tasks complete
-- [ ] Tests passing
-- [ ] Code reviewed
-- [ ] PR merged to main
-- [ ] Team notified
+- [x] All tasks complete
+- [x] Tests passing
+- [x] Code reviewed
+- [x] PR merged to main — [PR#2061](https://github.com/protoLabsAI/protoMaker/pull/2061)
+- [x] Team notified
 
 **Next**: Phase 2

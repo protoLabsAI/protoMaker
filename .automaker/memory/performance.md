@@ -256,3 +256,8 @@ usageStats:
 - **Problem solved:** Project setup can chain multiple operations; research is expensive (filesystem traversal + git inspection)
 - **Why this works:** Allows flexibility: research can be done once and reused, or each step can stand alone without tight coupling. Caller decides whether to cache.
 - **Trade-offs:** More flexible API, but potential for stale data if function called multiple times in session without recomputing research. Caller responsible for managing research freshness.
+
+#### [Pattern] Gate expensive render-time operations (syntax highlighting, markdown parsing, diff computation) behind an `isStreaming` prop. Defer enhancement to completion. (2026-03-09)
+- **Problem solved:** Streaming AI responses deliver tokens incrementally. Any useEffect depending on `code`/`content` re-fires on every token.
+- **Why this works:** Rendered output during streaming doesn't need to be perfect (users watch text appear). Deferring Prism.js until streaming completes produces identical final result while keeping UI responsive during delivery.
+- **Trade-offs:** Easier: eliminates render thrashing, smooth UX. Harder: requires threading `isStreaming` prop through component tree from parent.
