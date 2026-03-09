@@ -414,6 +414,28 @@ export class AutoModeService {
     this.pipelineCheckpointService = service;
   }
 
+  // Work Intake service for pull-based phase claiming (optional, set by work-intake.module)
+  private workIntakeService: import('./work-intake-service.js').WorkIntakeService | null = null;
+
+  setWorkIntakeService(service: import('./work-intake-service.js').WorkIntakeService): void {
+    this.workIntakeService = service;
+  }
+
+  /** Total number of currently running agent features across all projects. */
+  getRunningAgentCount(): number {
+    return this.runningFeatures.size;
+  }
+
+  /** Maximum concurrency from the first active auto-loop, or default. */
+  getMaxConcurrency(): number {
+    for (const [, state] of this.coordinator.loops) {
+      if (state.isRunning) {
+        return state.config.maxConcurrency;
+      }
+    }
+    return DEFAULT_MAX_CONCURRENCY;
+  }
+
   /**
    * Wire up the Feature Health service for periodic health sweeps in auto-mode.
    * When set, the auto-loop runs board audits every ~100s and escalates issues.
@@ -901,6 +923,9 @@ export class AutoModeService {
         this.scheduler.runLoop(worktreeKey, state)
       );
 
+      // Start work intake tick loop (pull-based phase claiming from shared projects)
+      this.workIntakeService?.start(projectPath);
+
       return resolvedMaxConcurrency;
     } catch (error) {
       // If initialization fails, clean up the state we just set
@@ -992,6 +1017,9 @@ export class AutoModeService {
         logger.info(`Cancelled retry timer for feature ${featureId} during auto-loop stop`);
       }
     }
+
+    // Stop work intake tick loop
+    this.workIntakeService?.stop();
 
     // Clear execution state when auto-loop is explicitly stopped
     await this.clearExecutionState(projectPath, branchName);
