@@ -13,23 +13,34 @@ import { createLogger } from '@protolabsai/utils';
 import type { EventType } from '@protolabsai/types';
 import type { ActionableItemService } from './actionable-item-service.js';
 import type { EventEmitter, UnsubscribeFn } from '../lib/events.js';
+import type { AuthorityService } from './authority-service.js';
 
 const logger = createLogger('ActionableItemBridge');
 
 interface BridgeOptions {
   actionableItemService: ActionableItemService;
   events: EventEmitter;
+  authorityService?: AuthorityService;
 }
 
 export class ActionableItemBridgeService {
   private actionableItemService: ActionableItemService;
   private events: EventEmitter;
+  private authorityService: AuthorityService | null = null;
   private unsubscribe: UnsubscribeFn | null = null;
 
-  constructor({ actionableItemService, events }: BridgeOptions) {
+  constructor({ actionableItemService, events, authorityService }: BridgeOptions) {
     this.actionableItemService = actionableItemService;
     this.events = events;
+    this.authorityService = authorityService ?? null;
     this.start();
+  }
+
+  /**
+   * Wire in the AuthorityService after construction to avoid circular dependencies.
+   */
+  setAuthorityService(authorityService: AuthorityService): void {
+    this.authorityService = authorityService;
   }
 
   private start() {
@@ -49,6 +60,12 @@ export class ActionableItemBridgeService {
           break;
         case 'feature:status-changed':
           this.handleFeatureStatusChanged(payload);
+          break;
+        case 'authority:awaiting-approval':
+          this.handleAuthorityAwaitingApproval(payload);
+          break;
+        case 'hitl:form-responded':
+          this.handleHITLFormResponded(payload);
           break;
       }
     });
@@ -262,6 +279,118 @@ export class ActionableItemBridgeService {
       );
     } catch (error) {
       logger.error(`Failed to auto-dismiss items for feature ${data.featureId}:`, error);
+    }
+  }
+
+  /**
+   * Handle authority:awaiting-approval — creates an actionable item of type 'approval'
+   * so the request appears in the unified inbox as a HITL form for the human to act on.
+   */
+  private async handleAuthorityAwaitingApproval(payload: unknown) {
+    const data = payload as {
+      projectPath: string;
+      proposal: {
+        who: string;
+        what: string;
+        target: string;
+        justification: string;
+        risk: string;
+      };
+      decision: {
+        verdict: string;
+        reason: string;
+        approver?: string;
+      };
+      requestId: string;
+    };
+
+    if (!data.projectPath) {
+      logger.warn('authority:awaiting-approval without projectPath, skipping bridge');
+      return;
+    }
+
+    // Risk level to priority mapping
+    const riskToPriority: Record<string, 'low' | 'medium' | 'high' | 'urgent'> = {
+      critical: 'urgent',
+      high: 'urgent',
+      medium: 'high',
+      low: 'medium',
+    };
+    const priority = riskToPriority[data.proposal.risk] ?? 'high';
+
+    try {
+      await this.actionableItemService.createActionableItem({
+        projectPath: data.projectPath,
+        actionType: 'approval',
+        priority,
+        title: `Approval required: ${data.proposal.what}`,
+        message: `Agent ${data.proposal.who} requests "${data.proposal.what}" on "${data.proposal.target}". Reason: ${data.decision.reason}`,
+        category: 'authority',
+        actionPayload: {
+          requestId: data.requestId,
+          proposalWho: data.proposal.who,
+          proposalWhat: data.proposal.what,
+          proposalTarget: data.proposal.target,
+          proposalRisk: data.proposal.risk,
+          proposalJustification: data.proposal.justification,
+        },
+      });
+      logger.info(`Created actionable item for authority approval request: ${data.requestId}`);
+    } catch (error) {
+      logger.error('Failed to create actionable item for authority approval:', error);
+    }
+  }
+
+  /**
+   * Handle hitl:form-responded — if the form is an authority approval form,
+   * resolve the pending approval request based on the HITL response.
+   *
+   * Authority approval HITL forms encode their requestId in the formId field
+   * when callerType is 'authority-approval'. The response array's first entry
+   * should contain a 'decision' field ('approve' or 'reject').
+   */
+  private async handleHITLFormResponded(payload: unknown) {
+    const data = payload as {
+      formId: string;
+      callerType?: string;
+      projectPath?: string;
+      cancelled?: boolean;
+      response?: Record<string, unknown>[];
+    };
+
+    // Only handle authority-approval forms
+    if (data.callerType !== 'authority-approval') {
+      return;
+    }
+
+    if (!data.projectPath || data.cancelled || !data.response || !this.authorityService) {
+      return;
+    }
+
+    // Extract decision from first response step
+    const firstStep = data.response[0] ?? {};
+    const decisionValue = firstStep['decision'] as string | undefined;
+    const respondedBy = (firstStep['respondedBy'] as string | undefined) ?? 'hitl-form';
+
+    if (!decisionValue) {
+      logger.warn(`authority-approval HITL form ${data.formId} has no decision in response`);
+      return;
+    }
+
+    const resolution: 'approve' | 'reject' = decisionValue === 'approve' ? 'approve' : 'reject';
+
+    try {
+      await this.authorityService.resolveApproval(
+        data.formId,
+        resolution,
+        respondedBy,
+        data.projectPath
+      );
+      logger.info(
+        `Resolved authority approval request ${data.formId} via HITL form: ${resolution} by ${respondedBy}`
+      );
+    } catch (error) {
+      logger.error(`Failed to resolve authority approval via HITL form ${data.formId}:`, error);
     }
   }
 
