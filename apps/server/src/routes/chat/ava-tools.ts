@@ -1871,7 +1871,7 @@ export function buildAvaTools(
       description: 'Update global application settings. Supports partial updates (deep merge).',
       inputSchema: z.object({
         updates: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .describe('Partial settings object to merge into global settings'),
       }),
       needsApproval: destructiveNeedsApproval,
@@ -1895,7 +1895,7 @@ export function buildAvaTools(
       description: 'Update project-specific settings. Supports partial updates (deep merge).',
       inputSchema: z.object({
         updates: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .describe('Partial settings object to merge into project settings'),
       }),
       needsApproval: destructiveNeedsApproval,

@@ -9,10 +9,30 @@ import { useQuery } from '@tanstack/react-query';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { TimeSeriesMetric, TimeGroupBy } from '@protolabsai/types';
+import type { FrictionResponse, FailureBreakdownResponse } from '@/lib/http-api-client';
 
+const DORA_STALE_TIME = 60 * 1000; // 1 minute
 const METRICS_STALE_TIME = 30 * 1000; // 30 seconds
 const CAPACITY_STALE_TIME = 10 * 1000; // 10 seconds
 const LEDGER_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
+ */
+export function useDora(projectPath: string | undefined, timeWindowDays?: number) {
+  return useQuery({
+    queryKey: queryKeys.dora.metrics(projectPath ?? ''),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.dora.metrics(projectPath, timeWindowDays);
+    },
+    enabled: !!projectPath,
+    staleTime: DORA_STALE_TIME,
+    refetchInterval: DORA_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
 
 /**
  * Fetch project-level aggregated metrics (cost, velocity, success rate, throughput)
@@ -151,6 +171,197 @@ export function useCycleTimeDistribution(
     },
     enabled: !!projectPath,
     staleTime: LEDGER_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+const DORA_HISTORY_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch time-bucketed DORA history snapshots for trend charts.
+ * Uses GET /api/metrics/dora/history.
+ */
+export function useDoraHistory(
+  projectPath: string | undefined,
+  window: '7d' | '30d' | '90d' = '30d'
+) {
+  return useQuery({
+    queryKey: queryKeys.dora.history(projectPath ?? '', window),
+    queryFn: async () => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.dora.history(projectPath, window);
+    },
+    enabled: !!projectPath,
+    staleTime: DORA_HISTORY_STALE_TIME,
+    refetchInterval: DORA_HISTORY_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+const STAGE_DURATIONS_STALE_TIME = 60 * 1000; // 1 minute
+
+/** Per-feature stage duration entry from GET /api/metrics/stage-durations */
+export interface FeatureStageDuration {
+  featureId: string;
+  title: string;
+  totalMs: number;
+  stages: { backlog: number; in_progress: number; review: number; blocked: number };
+  flowEfficiency: number;
+}
+
+/** Aggregate stage duration summary */
+export interface StageDurationsAggregate {
+  totalMs: number;
+  stages: { backlog: number; in_progress: number; review: number; blocked: number };
+  percentages: { backlog: number; in_progress: number; review: number; blocked: number };
+  flowEfficiency: number;
+}
+
+/** Full response from GET /api/metrics/stage-durations */
+export interface StageDurationsResponse {
+  success: boolean;
+  features: FeatureStageDuration[];
+  aggregate: StageDurationsAggregate;
+  featureCount: number;
+}
+
+/**
+ * Fetch per-feature stage durations and aggregate flow efficiency.
+ * Uses GET /api/metrics/stage-durations.
+ */
+export function useStageDurations(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.metrics.stageDurations(projectPath ?? ''),
+    queryFn: async (): Promise<StageDurationsResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.stageDurations(projectPath) as Promise<StageDurationsResponse>;
+    },
+    enabled: !!projectPath,
+    staleTime: STAGE_DURATIONS_STALE_TIME,
+    refetchInterval: STAGE_DURATIONS_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+const FLOW_METRICS_STALE_TIME = 60 * 1000; // 1 minute
+
+/** Daily status counts entry from GET /api/metrics/flow */
+export interface FlowDayEntry {
+  date: string;
+  backlog: number;
+  in_progress: number;
+  review: number;
+  done: number;
+}
+
+/** Full response from GET /api/metrics/flow */
+export interface FlowMetricsResponse {
+  success: boolean;
+  days: FlowDayEntry[];
+  wipLimit: number;
+  statuses: readonly ['backlog', 'in_progress', 'review', 'done'];
+}
+
+/**
+ * Fetch value stream flow data for the Cumulative Flow Diagram.
+ * Uses GET /api/metrics/flow.
+ */
+export function useFlowMetrics(projectPath: string | undefined, days?: number, wipLimit?: number) {
+  return useQuery({
+    queryKey: queryKeys.metrics.flow(projectPath ?? '', days),
+    queryFn: async (): Promise<FlowMetricsResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.flow(projectPath, days, wipLimit) as Promise<FlowMetricsResponse>;
+    },
+    enabled: !!projectPath,
+    staleTime: FLOW_METRICS_STALE_TIME,
+    refetchInterval: FLOW_METRICS_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+const OPS_INTELLIGENCE_STALE_TIME = 60 * 1000; // 1 minute
+
+/**
+ * Fetch friction tracker patterns (operational intelligence).
+ * Returns all active patterns sorted descending by occurrence count.
+ */
+export function useFrictionPatterns() {
+  return useQuery({
+    queryKey: queryKeys.metrics.friction(),
+    queryFn: async (): Promise<FrictionResponse> => {
+      const api = getHttpApiClient();
+      return api.metrics.friction();
+    },
+    staleTime: OPS_INTELLIGENCE_STALE_TIME,
+    refetchInterval: OPS_INTELLIGENCE_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Fetch failure classification breakdown (operational intelligence).
+ * Aggregates failureClassification.category across all features in the project.
+ */
+export function useFailureBreakdown(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.metrics.failureBreakdown(projectPath ?? ''),
+    queryFn: async (): Promise<FailureBreakdownResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.failureBreakdown(projectPath);
+    },
+    enabled: !!projectPath,
+    staleTime: OPS_INTELLIGENCE_STALE_TIME,
+    refetchInterval: OPS_INTELLIGENCE_STALE_TIME,
+    refetchOnWindowFocus: false,
+  });
+}
+
+const BLOCKED_TIMELINE_STALE_TIME = 60 * 1000; // 1 minute
+
+/** A single blocked period for a feature. */
+export interface BlockedPeriod {
+  startDate: string;
+  endDate: string;
+  durationMs: number;
+  reason: string;
+  category: 'dependency' | 'review' | 'unclear' | 'other';
+}
+
+/** Per-feature entry returned by GET /api/metrics/blocked-timeline */
+export interface BlockedTimelineEntry {
+  featureId: string;
+  title: string;
+  blockedPeriods: BlockedPeriod[];
+  totalBlockedMs: number;
+}
+
+/** Full response from GET /api/metrics/blocked-timeline */
+export interface BlockedTimelineResponse {
+  success: boolean;
+  features: BlockedTimelineEntry[];
+  featureCount: number;
+}
+
+/**
+ * Fetch blocked period timeline data for the Value Stream visualization.
+ * Uses GET /api/metrics/blocked-timeline.
+ */
+export function useBlockedTimeline(projectPath: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.metrics.blockedTimeline(projectPath ?? ''),
+    queryFn: async (): Promise<BlockedTimelineResponse> => {
+      if (!projectPath) throw new Error('No project path');
+      const api = getHttpApiClient();
+      return api.metrics.blockedTimeline(projectPath) as Promise<BlockedTimelineResponse>;
+    },
+    enabled: !!projectPath,
+    staleTime: BLOCKED_TIMELINE_STALE_TIME,
+    refetchInterval: BLOCKED_TIMELINE_STALE_TIME,
     refetchOnWindowFocus: false,
   });
 }

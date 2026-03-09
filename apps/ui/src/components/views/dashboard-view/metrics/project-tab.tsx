@@ -12,15 +12,22 @@ import {
   useTimeSeries,
   useModelDistribution,
   useCycleTimeDistribution,
+  useDora,
 } from '@/hooks/queries/use-metrics';
+import { StageBreakdownChart } from './stage-breakdown-chart';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import { TimeRangeSelector, useTimeRangeDates, type TimeRange } from './time-range';
 import { KpiCards } from './kpi-cards';
+import { DoraKpiCards } from './dora-kpi-cards';
+import { DoraTrendCharts } from './dora-trend-charts';
 import { CostChart } from './cost-chart';
 import { ThroughputChart } from './throughput-chart';
 import { ModelPieChart } from './model-pie';
 import { CycleTimeChart } from './cycle-time-chart';
 import { SuccessChart } from './success-chart';
+import { FlowCharts } from './flow-charts';
+import { FrictionPatternList, FailureDonutChart } from './ops-intelligence';
+import { BlockedTimeline } from './blocked-timeline';
 
 interface ProjectMetricsTabProps {
   projectPath: string;
@@ -37,6 +44,7 @@ export function ProjectMetricsTab({
   const { startDate, endDate } = useTimeRangeDates(timeRange);
 
   const aggregate = useLedgerAggregate(projectPath, startDate, endDate);
+  const dora = useDora(projectPath);
   const costSeries = useTimeSeries(projectPath, 'cost', 'day', startDate, endDate);
   const throughputSeries = useTimeSeries(projectPath, 'throughput', 'day', startDate, endDate);
   const prSeries = useTimeSeries(projectPath, 'pr_throughput', 'day', startDate, endDate);
@@ -70,6 +78,12 @@ export function ProjectMetricsTab({
         }
         isLoading={aggregate.isLoading}
       />
+
+      {/* DORA KPI Cards */}
+      <DoraKpiCards data={dora.data?.metrics} isLoading={dora.isLoading} error={dora.error} />
+
+      {/* DORA Trend Charts */}
+      <DoraTrendCharts projectPath={projectPath} />
 
       {/* Row 2: Cost + Feature Throughput */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -108,6 +122,30 @@ export function ProjectMetricsTab({
       {/* Row 5: Success rate */}
       <div className="grid grid-cols-1 gap-3">
         <SuccessChart data={successSeries.data} isLoading={successSeries.isLoading} />
+      </div>
+
+      {/* Row 6: Stage cycle time breakdown */}
+      <div className="grid grid-cols-1 gap-3">
+        <StageBreakdownChart projectPath={projectPath} />
+      </div>
+
+      {/* Row 7: Value Stream (CFD + WIP trend) */}
+      <FlowCharts projectPath={projectPath} />
+
+      {/* Operational Intelligence */}
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
+          Operational Intelligence
+        </h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <FrictionPatternList projectPath={projectPath} />
+          <FailureDonutChart projectPath={projectPath} />
+        </div>
+      </div>
+
+      {/* Row 8: Blocked Feature Timeline */}
+      <div className="grid grid-cols-1 gap-3">
+        <BlockedTimeline projectPath={projectPath} />
       </div>
     </div>
   );

@@ -34,7 +34,11 @@ interface AvaChannelState {
 }
 
 interface AvaChannelActions {
-  fetchMessages: (options?: { limit?: number; since?: string }) => Promise<void>;
+  fetchMessages: (options?: {
+    limit?: number;
+    since?: string;
+    includeProtocol?: boolean;
+  }) => Promise<void>;
   appendMessage: (message: AvaChatMessage) => void;
   sendOperatorMessage: (content: string) => Promise<void>;
   setHivemindActive: (active: boolean) => void;
@@ -61,6 +65,7 @@ export const useAvaChannelStore = create<AvaChannelState & AvaChannelActions>()(
       const params = new URLSearchParams();
       if (options.limit) params.set('limit', String(options.limit));
       if (options.since) params.set('since', options.since);
+      if (options.includeProtocol) params.set('includeProtocol', 'true');
 
       const response = await apiFetch(`/api/ava-channel/messages?${params.toString()}`, 'GET');
 

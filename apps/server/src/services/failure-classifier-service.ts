@@ -161,7 +161,8 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     maxRetries: 2,
     createRecoveryStrategy: () => ({
       type: 'retry_with_context',
-      context: 'Build failed - review compiler output and fix errors',
+      context:
+        'Build failed - run `npm run build:packages` first (shared types), then `npm run build:server`. Read the FULL compiler output and fix ALL errors before retrying. Use `npm run typecheck` to find all type errors at once.',
       delay: 1000,
     }),
     contextToPreserve: ['buildOutput', 'errorFiles', 'lastChanges'],
@@ -187,7 +188,8 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     maxRetries: 2,
     createRecoveryStrategy: () => ({
       type: 'retry_with_context',
-      context: 'Type error detected - review and fix type definitions',
+      context:
+        'TypeScript type error - run `npm run typecheck` to see ALL errors at once. Fix each one: update type definitions, correct interface shapes, and update all consumers. Never use `as any` or `// @ts-ignore`.',
       delay: 1000,
     }),
     contextToPreserve: ['typeErrors', 'affectedFiles'],
@@ -284,6 +286,34 @@ const FAILURE_PATTERNS: FailurePattern[] = [
     contextToPreserve: ['validationErrors', 'input'],
     explanation: 'Input validation failed - needs human review of inputs',
     confidence: 0.8,
+  },
+
+  // Git hook / pre-commit / lint failures
+  {
+    patterns: [
+      /git.*hook.*fail/i,
+      /pre-commit.*fail/i,
+      /commit.*hook.*fail/i,
+      /lint-staged.*fail/i,
+      /prettier.*fail/i,
+      /eslint.*fail/i,
+      /hook.*exit.*code/i,
+      /husky.*fail/i,
+      /commit.*attempt/i,
+    ],
+    category: 'tool_error',
+    isRetryable: true,
+    suggestedDelay: 2000,
+    maxRetries: 2,
+    createRecoveryStrategy: () => ({
+      type: 'retry_with_context',
+      context:
+        'Git hook / lint failure - run `npm run format` to auto-fix Prettier, then `npm run lint` for ESLint errors. Stage the formatted files and retry the commit. If hooks are missing, run `npm install` in the worktree first.',
+      delay: 2000,
+    }),
+    contextToPreserve: ['hookOutput', 'lastChanges', 'affectedFiles'],
+    explanation: 'Git hook or pre-commit check failed - fix linting/formatting issues',
+    confidence: 0.9,
   },
 
   // Network/transient errors (catch-all for network issues)
@@ -424,6 +454,7 @@ export class FailureClassifierService {
       merge_conflict: 0,
       dependency: 3000,
       authentication: 0,
+      retry_exhausted: 0,
       unknown: 0,
     };
 
@@ -455,6 +486,7 @@ export class FailureClassifierService {
       merge_conflict: 0,
       dependency: 0,
       authentication: 0,
+      retry_exhausted: 0,
       unknown: 0,
     };
 

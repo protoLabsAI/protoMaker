@@ -212,7 +212,7 @@ In memory mode, `POST /api/ava-channel/send` and `GET /api/ava-channel/messages`
 
 The archival cycle runs hourly. Shards older than 30 days are:
 
-1. Written to `{archiveDir}/ava-channel-YYYY-MM-DD.json`
+1. Written to `{archiveDir}/YYYY-MM-DD.json`
 2. Removed from the CRDT store / memory
 
 Archived shards are read transparently by `getMessages()` when a query's date range includes archived dates.
@@ -236,6 +236,8 @@ Archived shards are read transparently by `getMessages()` when a query's date ra
 
 The reactor makes Ava instances responsive to each other's messages. When one instance posts a help request or coordination message, peer instances evaluate and respond autonomously.
 
+> **Full reference:** See [Ava Channel Reactor](./ava-channel-reactor) for complete documentation including fleet coordination, work-stealing, health alerts, DORA reporting, and escalation protocol.
+
 ### Architecture
 
 ```
@@ -253,17 +255,19 @@ CRDT shard change (new message arrives)
 
 The classifier chain determines whether a message warrants a response. Rules are pure functions evaluated highest-to-lowest priority. The first non-null result wins.
 
-| Priority | Rule                | Blocks When                                                |
-| -------- | ------------------- | ---------------------------------------------------------- |
-| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                |
-| 90       | TerminalMessageRule | `expectsResponse === false`                                |
-| 80       | SelfMessageRule     | `instanceId === localInstanceId`                           |
-| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                      |
-| 70       | SystemSourceRule    | `source: 'system'` (unless `[BugReport]`/`[SystemAlert]`)  |
-| 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` --> respond  |
-| 40       | CoordinationRule    | `intent: 'coordination'` --> respond if capacity available |
-| 30       | EscalationRule      | `intent: 'escalation'` --> respond if depth < 3            |
-| 0        | DefaultRule         | Everything else --> informational, no response             |
+**Protocol message pre-filter:** Before the classifier chain runs, `handleWorkStealProtocol()` intercepts any `source: 'system'` message whose content starts with a `[bracket_prefix]` (e.g. `[capacity_heartbeat]`, `[work_request]`, `[schedule_assignment]`). These machine-to-machine messages are dispatched to typed handlers and never enter the classifier chain.
+
+| Priority | Rule                | Blocks When                                                              |
+| -------- | ------------------- | ------------------------------------------------------------------------ |
+| 100      | LoopBreakerRule     | `conversationDepth >= maxConversationDepth`                              |
+| 90       | TerminalMessageRule | `expectsResponse === false`                                              |
+| 80       | SelfMessageRule     | `instanceId === localInstanceId`                                         |
+| 75       | StaleMessageRule    | Message older than `staleThresholdMs`                                    |
+| 70       | SystemSourceRule    | `source: 'system'` (residual — protocol messages already filtered above) |
+| 50       | RequestRule         | `intent: 'request'` + `expectsResponse: true` --> respond                |
+| 40       | CoordinationRule    | `intent: 'coordination'` --> respond if capacity available               |
+| 30       | EscalationRule      | `intent: 'escalation'` --> respond if depth < 3                          |
+| 0        | DefaultRule         | Everything else --> informational, no response                           |
 
 **Usage:**
 
@@ -377,5 +381,6 @@ The expected usage pattern for Ava instances filing improvement tickets:
 
 ## See Also
 
+- [Ava Channel Reactor](./ava-channel-reactor) — Full reactor reference: fleet coordination, work-stealing, health alerts, DORA reporting
 - [Distributed Sync](../dev/distributed-sync.md) — CRDT mesh, leader election, and partition recovery
 - [Route Organization](./route-organization.md) — Express route registration patterns

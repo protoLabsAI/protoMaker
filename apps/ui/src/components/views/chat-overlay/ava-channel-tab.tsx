@@ -55,9 +55,28 @@ function InstanceBadge({
   );
 }
 
-function ChannelMessage({ message }: { message: AvaChatMessage }) {
+function isErrorMessage(message: AvaChatMessage): boolean {
   return (
-    <div className="flex flex-col gap-0.5 py-2 border-b border-border/50 last:border-0">
+    message.content.includes('error') ||
+    message.content.includes('ERROR') ||
+    (message.source === 'system' && message.content.startsWith('[health_alert]'))
+  );
+}
+
+function isProtocolMessage(message: AvaChatMessage): boolean {
+  return message.content.startsWith('[');
+}
+
+function ChannelMessage({ message, isProtocol }: { message: AvaChatMessage; isProtocol: boolean }) {
+  const isError = isErrorMessage(message);
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-0.5 py-2 border-b border-border/50 last:border-0',
+        isError && 'border-l-2 border-l-destructive pl-2',
+        isProtocol && 'opacity-50'
+      )}
+    >
       <div className="flex items-center gap-2">
         <InstanceBadge instanceName={message.instanceName} source={message.source} />
         <span className="text-[10px] text-muted-foreground">
@@ -107,12 +126,13 @@ export function AvaChannelTab() {
   const [operatorOpen, setOperatorOpen] = useState(false);
   const [operatorInput, setOperatorInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [showProtocol, setShowProtocol] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch messages on mount
+  // Fetch messages on mount and when showProtocol changes
   useEffect(() => {
-    fetchMessages({ limit: 50 });
-  }, [fetchMessages]);
+    fetchMessages({ limit: 50, includeProtocol: showProtocol });
+  }, [fetchMessages, showProtocol]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -140,14 +160,19 @@ export function AvaChannelTab() {
     [handleSendOperator]
   );
 
-  // Filter messages by query
-  const filteredMessages = filterQuery.trim()
-    ? messages.filter(
-        (m) =>
-          m.content.toLowerCase().includes(filterQuery.toLowerCase()) ||
-          m.instanceName.toLowerCase().includes(filterQuery.toLowerCase())
-      )
-    : messages;
+  // Filter messages by query and protocol visibility
+  const filteredMessages = messages.filter((m) => {
+    // Hide protocol messages when showProtocol is false
+    if (!showProtocol && isProtocolMessage(m)) return false;
+    // Apply text search filter
+    if (filterQuery.trim()) {
+      return (
+        m.content.toLowerCase().includes(filterQuery.toLowerCase()) ||
+        m.instanceName.toLowerCase().includes(filterQuery.toLowerCase())
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -161,11 +186,25 @@ export function AvaChannelTab() {
           placeholder="Filter messages..."
           className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
         />
+        <button
+          type="button"
+          onClick={() => setShowProtocol((v) => !v)}
+          title={showProtocol ? 'Hide protocol messages' : 'Show protocol messages'}
+          aria-pressed={showProtocol}
+          className={cn(
+            'shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors',
+            showProtocol
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          Protocol
+        </button>
         <Button
           variant="ghost"
           size="icon"
           className="size-6"
-          onClick={() => fetchMessages({ limit: 50 })}
+          onClick={() => fetchMessages({ limit: 50, includeProtocol: showProtocol })}
           title="Refresh"
           aria-label="Refresh channel messages"
           disabled={loading}
@@ -196,7 +235,11 @@ export function AvaChannelTab() {
         ) : (
           <div className="py-2">
             {filteredMessages.map((message) => (
-              <ChannelMessage key={message.id} message={message} />
+              <ChannelMessage
+                key={message.id}
+                message={message}
+                isProtocol={isProtocolMessage(message)}
+              />
             ))}
           </div>
         )}

@@ -20,9 +20,13 @@ import type {
   CapacityMetricsResponse,
   IntegrationStatusResponse,
   SystemHealthResponse,
+  FrictionResponse,
+  FailureBreakdownResponse,
 } from './api-types';
 import type {
   DiscordChannelSignalConfig,
+  DoraMetrics,
+  DoraRegulationAlert,
   Project,
   ProjectHealth,
   HivemindPeer,
@@ -164,6 +168,28 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
         this.post('/api/pipeline/steps/reorder', { projectPath, stepIds }),
     };
 
+    // DORA Metrics API
+    dora = {
+      metrics: (projectPath: string, timeWindowDays?: number) =>
+        this.get<{ success: boolean; metrics: DoraMetrics; alerts: DoraRegulationAlert[] }>(
+          `/api/dora/metrics?projectPath=${encodeURIComponent(projectPath)}${timeWindowDays ? `&timeWindowDays=${timeWindowDays}` : ''}`
+        ),
+      history: (projectPath: string, window?: '7d' | '30d' | '90d') =>
+        this.get<{
+          success: boolean;
+          buckets: Array<{
+            date: string;
+            leadTime: number;
+            recoveryTime: number;
+            deploymentFrequency: number;
+            changeFailureRate: number;
+          }>;
+          window: string;
+        }>(
+          `/api/dora/history?projectPath=${encodeURIComponent(projectPath)}${window ? `&window=${window}` : ''}`
+        ),
+    };
+
     // Metrics API
     metrics = {
       summary: (projectPath: string) => this.post('/api/metrics/summary', { projectPath }),
@@ -198,6 +224,59 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
       ): Promise<CycleTimeDistributionResponse> =>
         this.post('/api/metrics/ledger/cycle-time-distribution', { projectPath, ...opts }),
       backfill: (projectPath: string) => this.post('/api/metrics/ledger/backfill', { projectPath }),
+      stageDurations: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          features: Array<{
+            featureId: string;
+            title: string;
+            stages: { backlog: number; in_progress: number; review: number; blocked: number };
+            totalMs: number;
+            flowEfficiency: number;
+          }>;
+          aggregate: {
+            totalMs: number;
+            stages: { backlog: number; in_progress: number; review: number; blocked: number };
+            percentages: { backlog: number; in_progress: number; review: number; blocked: number };
+            flowEfficiency: number;
+          };
+          featureCount: number;
+        }>(`/api/metrics/stage-durations?projectPath=${encodeURIComponent(projectPath)}`),
+      flow: (projectPath: string, days?: number, wipLimit?: number) =>
+        this.get<{
+          success: boolean;
+          days: Array<{
+            date: string;
+            backlog: number;
+            in_progress: number;
+            review: number;
+            done: number;
+          }>;
+          wipLimit: number;
+          statuses: readonly ['backlog', 'in_progress', 'review', 'done'];
+        }>(
+          `/api/metrics/flow?projectPath=${encodeURIComponent(projectPath)}${days ? `&days=${days}` : ''}${wipLimit != null ? `&wipLimit=${wipLimit}` : ''}`
+        ),
+      friction: (): Promise<FrictionResponse> => this.get('/api/metrics/friction'),
+      failureBreakdown: (projectPath: string): Promise<FailureBreakdownResponse> =>
+        this.get(`/api/metrics/failure-breakdown?projectPath=${encodeURIComponent(projectPath)}`),
+      blockedTimeline: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          features: Array<{
+            featureId: string;
+            title: string;
+            blockedPeriods: Array<{
+              startDate: string;
+              endDate: string;
+              durationMs: number;
+              reason: string;
+              category: 'dependency' | 'review' | 'unclear' | 'other';
+            }>;
+            totalBlockedMs: number;
+          }>;
+          featureCount: number;
+        }>(`/api/metrics/blocked-timeline?projectPath=${encodeURIComponent(projectPath)}`),
     };
 
     // Integrations API

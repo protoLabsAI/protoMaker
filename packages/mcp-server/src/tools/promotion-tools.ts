@@ -80,7 +80,7 @@ export const promotionTools: Tool[] = [
   {
     name: 'promote_to_main',
     description:
-      'Creates the staging→main PR but does NOT merge. Human approval required via HITL form. Ava calls this to initiate a staging→main promotion, which opens a PR and fires a HITL form for a human to review and approve before any merge occurs.',
+      'Creates the staging→main PR but does NOT merge. Human approval required via HITL form. Ava calls this to initiate a staging→main promotion, which opens a PR and fires a HITL form for a human to review and approve before any merge occurs. Requires sufficient trust tier — if trust is insufficient, an approval request is created instead.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -91,6 +91,11 @@ export const promotionTools: Tool[] = [
         batchId: {
           type: 'string',
           description: 'The promotion batch ID to promote from staging to main.',
+        },
+        requestingAgentId: {
+          type: 'string',
+          description:
+            'Optional agent ID for trust tier enforcement. If the agent lacks sufficient trust, an approval request is created instead of executing.',
         },
       },
       required: ['projectPath', 'batchId'],

@@ -259,11 +259,25 @@ export const queryKeys = {
       ['git', 'diffs', projectPath, filePath] as const,
   },
   // ============================================
+  // DORA Metrics
+  // ============================================
+  dora: {
+    /** DORA metrics (lead time, deploy freq, change failure rate, recovery time) */
+    metrics: (projectPath: string, timeWindowDays?: number) =>
+      ['dora', 'metrics', projectPath, timeWindowDays] as const,
+    /** DORA history buckets for trend charts */
+    history: (projectPath: string, window: '7d' | '30d' | '90d') =>
+      ['dora', 'history', projectPath, window] as const,
+  },
+
+  // ============================================
   // Metrics
   // ============================================
   metrics: {
     /** Project metrics summary */
     summary: (projectPath: string) => ['metrics', 'summary', projectPath] as const,
+    /** Stage durations (cycle time by status) */
+    stageDurations: (projectPath: string) => ['metrics', 'stage-durations', projectPath] as const,
     /** Capacity metrics */
     capacity: (projectPath: string) => ['metrics', 'capacity', projectPath] as const,
     /** Forecast for a complexity level */
@@ -296,6 +310,15 @@ export const queryKeys = {
     /** Cycle time distribution */
     cycleTimeDistribution: (projectPath: string, startDate?: string, endDate?: string) =>
       ['metrics', 'ledger', 'cycleTimeDistribution', projectPath, startDate, endDate] as const,
+    /** Value stream flow data (CFD) */
+    flow: (projectPath: string, days?: number) => ['metrics', 'flow', projectPath, days] as const,
+    /** Friction tracker patterns (operational intelligence) */
+    friction: () => ['metrics', 'friction'] as const,
+    /** Failure classification breakdown (operational intelligence) */
+    failureBreakdown: (projectPath: string) =>
+      ['metrics', 'failure-breakdown', projectPath] as const,
+    /** Blocked timeline data (Gantt-style per-feature blocked periods) */
+    blockedTimeline: (projectPath: string) => ['metrics', 'blocked-timeline', projectPath] as const,
   },
 
   // ============================================

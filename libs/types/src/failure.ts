@@ -19,6 +19,7 @@ export type FailureCategory =
   | 'merge_conflict' // Git conflict - needs resolution
   | 'dependency' // Missing dep - attempt auto-install
   | 'authentication' // Auth error - needs credential fix
+  | 'retry_exhausted' // Agent exhausted retries - escalate to human
   | 'unknown'; // Unclassified - escalate
 
 /**

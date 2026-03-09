@@ -77,6 +77,7 @@ import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js'
 import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
 import { writeLock, removeLock } from '../../lib/worktree-lock.js';
+import { getReactiveSpawnerService } from '../reactive-spawner-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
 import type {
@@ -1208,6 +1209,33 @@ export class ExecutionService {
             failureCount: newFailureCount,
           });
           logger.info(`Feature ${featureId} failure count: ${newFailureCount}`);
+
+          // Trigger self-healing when a feature has failed twice
+          if (newFailureCount === 2) {
+            try {
+              const spawner = getReactiveSpawnerService();
+              spawner
+                .spawnForError({
+                  errorType: 'feature_failure',
+                  message: `Feature "${feature.title || featureId}" has failed ${newFailureCount} times. Last error: ${errorInfo.message}`,
+                  featureId,
+                  severity: 'medium',
+                  metadata: {
+                    worktreePath: tempRunningFeature.worktreePath ?? undefined,
+                    failureCount: newFailureCount,
+                    errorType: errorInfo.type,
+                  },
+                })
+                .catch((err) =>
+                  logger.error(
+                    `ReactiveSpawner: spawnForError (feature_failure ${featureId}) failed:`,
+                    err
+                  )
+                );
+            } catch {
+              // ReactiveSpawnerService may not be initialized — silently skip
+            }
+          }
         }
 
         // Detect git commit / pre-commit hook failures. These are deterministic — retrying

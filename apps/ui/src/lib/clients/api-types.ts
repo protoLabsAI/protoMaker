@@ -141,6 +141,24 @@ export interface CapacityMetricsResponse {
 }
 
 /**
+ * Response from GET /api/metrics/friction
+ */
+export interface FrictionResponse {
+  success: boolean;
+  patterns: Array<{ pattern: string; count: number; lastSeen: string }>;
+  total: number;
+}
+
+/**
+ * Response from GET /api/metrics/failure-breakdown
+ */
+export interface FailureBreakdownResponse {
+  success: boolean;
+  categories: Array<{ category: string; count: number }>;
+  total: number;
+}
+
+/**
  * Dev server log event payloads for WebSocket streaming
  */
 export interface DevServerStartedEvent {

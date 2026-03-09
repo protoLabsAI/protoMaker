@@ -153,7 +153,7 @@ export class AvaChannelService {
    * If a time range is provided, transparently queries all shards within range.
    */
   async getMessages(options: GetMessagesOptions = {}): Promise<AvaChatMessage[]> {
-    const { from, to, instanceId, source } = options;
+    const { from, to, instanceId, source, includeProtocol = false } = options;
 
     const shardDates = from || to ? buildDateRange(from, to) : [todayDateKey()];
 
@@ -178,6 +178,10 @@ export class AvaChannelService {
     if (to) {
       const toMs = to.getTime();
       filtered = filtered.filter((m) => new Date(m.timestamp).getTime() <= toMs);
+    }
+    // Filter out protocol messages (content starting with '[') unless includeProtocol is true
+    if (!includeProtocol) {
+      filtered = filtered.filter((m) => !m.content.startsWith('['));
     }
 
     // Sort ascending by timestamp

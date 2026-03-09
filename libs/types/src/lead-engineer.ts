@@ -125,7 +125,8 @@ export type LeadRuleAction =
         failureCount?: number;
         awaitingGatePhase?: null;
       };
-    };
+    }
+  | { type: 'rollback_feature'; featureId: string; projectPath: string; reason: string };
 
 // ────────────────────────── Fast-Path Rules ──────────────────────────
 
@@ -180,11 +181,12 @@ export interface LeadRuleLogEntry {
  * Feature lifecycle states managed by the Lead Engineer
  *
  * Flow:
- * INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
+ * INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → VERIFY → DONE
  *
  * Short-circuits:
  * - Any state can → ESCALATE (on critical errors or max retries)
  * - ESCALATE → [appropriate state] (after human intervention)
+ * - VERIFY → ESCALATE (on verification failure)
  */
 export enum FeatureState {
   /** Initial state: feature created, awaiting intake */
@@ -199,6 +201,8 @@ export enum FeatureState {
   MERGE = 'MERGE',
   /** Deploy phase: merged to main, deployment in progress */
   DEPLOY = 'DEPLOY',
+  /** Verification phase: post-deploy health checks and criteria validation */
+  VERIFY = 'VERIFY',
   /** Terminal state: feature fully deployed and verified */
   DONE = 'DONE',
   /** Escalation state: blocked, needs human intervention */

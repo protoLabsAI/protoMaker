@@ -11,6 +11,7 @@
  */
 
 import path from 'path';
+import { EventEmitter as NodeEventEmitter } from 'node:events';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
 import { getAutomakerDir } from '@protolabsai/platform';
 import * as secureFs from '../lib/secure-fs.js';
@@ -28,6 +29,13 @@ const logger = createLogger('CalendarService');
 // Re-export shared types for consumers that import from this module
 export type { CalendarEvent, CalendarEventType, CalendarQueryOptions };
 
+/** Payload emitted with the 'calendar:reminder' event */
+export interface CalendarReminderPayload {
+  title: string;
+  description: string;
+  event: CalendarEvent;
+}
+
 /** Document id used for the shared global calendar in the CRDT store */
 const CALENDAR_DOC_ID = 'shared';
 
@@ -39,7 +47,27 @@ export class CalendarService {
   private featureLoader: FeatureLoader | null = null;
   private crdtStore: CRDTStore | null = null;
 
+  /** Internal Node.js EventEmitter for calendar:reminder events */
+  private readonly reminderEmitter = new NodeEventEmitter();
+
   private constructor() {}
+
+  /**
+   * Subscribe to 'calendar:reminder' events.
+   * The callback receives a CalendarReminderPayload with title, description, and the full event.
+   */
+  onReminder(callback: (payload: CalendarReminderPayload) => void): void {
+    this.reminderEmitter.on('calendar:reminder', callback);
+  }
+
+  /**
+   * Emit a 'calendar:reminder' event for a calendar event that is due.
+   * Called by external code (e.g. JobExecutorService) when a job event fires.
+   */
+  emitReminder(payload: CalendarReminderPayload): void {
+    this.reminderEmitter.emit('calendar:reminder', payload);
+    logger.info(`[CalendarService] Emitted calendar:reminder for "${payload.title}"`);
+  }
 
   static getInstance(): CalendarService {
     if (!CalendarService.instance) {

@@ -350,7 +350,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       dependency:
         'Check that all required packages are installed. Run `npm install` in the worktree before building. Verify import paths match the monorepo package structure.',
       tool_error:
-        'If a tool command fails, check the error output carefully. Try alternative approaches rather than retrying the same command.',
+        'Read the FULL error output before making any changes. For build/TypeScript errors: run `npm run build:packages` first, then `npm run build:server`, fix every error (not just the first). For git hook/lint failures: run `npm run format` to auto-fix Prettier, then `npm run lint` for ESLint issues. Never retry the same command without first making a code change.',
       transient:
         'Transient errors are usually temporary. Wait briefly and retry. If they persist, check network connectivity and API status.',
       rate_limit:
@@ -683,6 +683,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       merge_conflict: 'A git merge conflict was detected.',
       dependency: 'A required dependency is missing.',
       authentication: 'Authentication with the API failed.',
+      retry_exhausted: 'The agent exhausted all retry attempts without success.',
       unknown: 'An unexpected error occurred.',
     };
 

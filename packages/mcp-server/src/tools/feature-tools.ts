@@ -205,7 +205,8 @@ export const featureTools: Tool[] = [
   },
   {
     name: 'delete_feature',
-    description: 'Delete a feature from the board.',
+    description:
+      'Delete a feature from the board. This is a destructive action — requires sufficient trust tier. If trust is insufficient, an approval request is created instead.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -216,6 +217,11 @@ export const featureTools: Tool[] = [
         featureId: {
           type: 'string',
           description: 'The feature ID (UUID)',
+        },
+        requestingAgentId: {
+          type: 'string',
+          description:
+            'Optional agent ID for trust tier enforcement. If the agent lacks sufficient trust, an approval request is created instead of executing.',
         },
       },
       required: ['projectPath', 'featureId'],
@@ -288,6 +294,25 @@ export const featureTools: Tool[] = [
         prBaseBranch: {
           type: 'string',
           description: 'Base branch for PR creation (optional, default: main)',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
+  {
+    name: 'rollback_feature',
+    description:
+      "Rollback a deployed feature by reverting its merge commit. Finds the merge commit from the feature's prNumber, runs git revert -m 1, and moves the feature back to review status.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory (git repo root)',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID) to roll back',
         },
       },
       required: ['projectPath', 'featureId'],
