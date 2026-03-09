@@ -166,9 +166,7 @@ export function BlockedTimeline({ projectPath }: BlockedTimelineProps) {
                     tick={{ fontSize: 10, fill: colors.mutedForeground }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(v: string) =>
-                      v.length > 18 ? v.slice(0, 16) + '…' : v
-                    }
+                    tickFormatter={(v: string) => (v.length > 18 ? v.slice(0, 16) + '…' : v)}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="durationMs" radius={[0, 4, 4, 0]} minPointSize={4}>
