@@ -293,4 +293,23 @@ export const featureTools: Tool[] = [
       required: ['projectPath', 'featureId'],
     },
   },
+  {
+    name: 'rollback_feature',
+    description:
+      "Rollback a deployed feature by reverting its merge commit. Finds the merge commit from the feature's prNumber, runs git revert -m 1, and moves the feature back to review status.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory (git repo root)',
+        },
+        featureId: {
+          type: 'string',
+          description: 'The feature ID (UUID) to roll back',
+        },
+      },
+      required: ['projectPath', 'featureId'],
+    },
+  },
 ];

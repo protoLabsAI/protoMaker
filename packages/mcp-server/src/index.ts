@@ -297,6 +297,12 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         updates: { status: args.status },
       });
 
+    case 'rollback_feature':
+      return apiCall('/features/rollback', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
+
     case 'update_feature_git_settings': {
       const gitWorkflow: Record<string, unknown> = {};
       if (args.autoCommit !== undefined) gitWorkflow.autoCommit = args.autoCommit;
