@@ -1,9 +1,0 @@
-{
-  "slug": "lead-engineer-lifecycle-gaps",
-  "title": "Lead Engineer Lifecycle Gaps",
-  "goal": "Fix three gaps in the Lead Engineer state machine: MergeProcessor not setting prMergedAt, no detection of externally-merged PRs, and world state staleness for fast-path rules.",
-  "status": "active",
-  "milestones": [],
-  "createdAt": "2026-03-10T17:12:11.584Z",
-  "updatedAt": "2026-03-10T17:18:19.201Z"
-}

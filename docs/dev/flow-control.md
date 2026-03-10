@@ -156,11 +156,11 @@ The error budget state is persisted to `.automaker/metrics/error-budget.json`. T
 
 The execution gate (`executionGate` setting, default: `true`) bundles all flow control checks into a single pre-pickup guard:
 
-| Check | Setting | Behavior on failure |
-|-------|---------|---------------------|
-| Review queue depth | `maxPendingReviews` | Return feature to backlog |
-| Error budget exhausted | `errorBudgetThreshold` + `errorBudgetAutoFreeze` | Block new starts |
-| CI saturation | `maxPendingCiRuns` (default: 10) | Return feature to backlog |
+| Check                  | Setting                                          | Behavior on failure       |
+| ---------------------- | ------------------------------------------------ | ------------------------- |
+| Review queue depth     | `maxPendingReviews`                              | Return feature to backlog |
+| Error budget exhausted | `errorBudgetThreshold` + `errorBudgetAutoFreeze` | Block new starts          |
+| CI saturation          | `maxPendingCiRuns` (default: 10)                 | Return feature to backlog |
 
 ```typescript
 interface WorkflowSettings {
@@ -189,9 +189,11 @@ GET /api/settings/workflow
 ```
 
 Query parameters:
+
 - `projectPath: string` — path to the project root
 
 Response:
+
 ```json
 {
   "success": true,
@@ -206,6 +208,7 @@ PUT /api/settings/workflow
 ```
 
 Body:
+
 ```json
 {
   "projectPath": "/path/to/project",
@@ -222,6 +225,7 @@ Body:
 Accepts partial `WorkflowSettings`. The response includes the full merged settings after the update. Emits a `settings:workflow-changed` event on the server event bus.
 
 Response:
+
 ```json
 {
   "success": true,
