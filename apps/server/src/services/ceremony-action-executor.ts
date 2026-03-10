@@ -304,33 +304,12 @@ export class CeremonyActionExecutor {
           retroSource,
           result.item
         );
-      } else if (result.actionType === 'gate-tuning' && result.signalDescription) {
-        this.emitter.emit('gate:tuning-signal', {
-          projectPath,
-          projectSlug,
-          milestoneSlug,
-          retroSource,
-          signal: result.signalDescription,
-          originalItem: result.item,
-          timestamp: new Date().toISOString(),
-        });
-        logger.info(
-          `CeremonyActionExecutor: emitted gate:tuning-signal for ${retroSource}: ${result.signalDescription}`
-        );
       }
     }
 
     logger.info(
       `CeremonyActionExecutor: processed ${classified.length} retro items for ${retroSource}`
     );
-
-    this.emitter.emit('retro:improvements:created', {
-      projectPath,
-      projectSlug,
-      milestoneSlug,
-      retroSource,
-      itemsProcessed: classified.length,
-    });
   }
 }
 

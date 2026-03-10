@@ -100,30 +100,6 @@ export class ProjMAuthorityAgent {
           void this.handleApprovedIdea(data);
         }
       }
-
-      // Also listen for legacy pm-epic-created and pm-research-completed for backward compat
-      if (type === 'authority:pm-epic-created') {
-        const data = payload as { projectPath: string; featureId?: string; epicId?: string };
-
-        if (!this.state.isInitialized(data.projectPath)) {
-          logger.warn(
-            `[ProjMAgent] Received pm-epic-created event for uninitialized project: ${data.projectPath}`
-          );
-          void (async () => {
-            try {
-              await this.initialize(data.projectPath);
-              await this.scanForPlannedFeatures(data.projectPath);
-            } catch (error) {
-              logger.error(
-                `[ProjMAgent] Auto-initialization failed for ${data.projectPath}:`,
-                error
-              );
-            }
-          })();
-        } else {
-          void this.scanForPlannedFeatures(data.projectPath);
-        }
-      }
     });
   }
 
