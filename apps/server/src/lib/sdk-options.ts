@@ -654,6 +654,9 @@ export function createChatOptions(config: CreateSdkOptionsConfig): Options {
   // Build thinking options
   const thinkingOptions = buildThinkingOptions(config.thinkingLevel);
 
+  // Build worktree write guard hook (blocks writes outside the worktree)
+  const worktreeHooks = buildWorktreeGuardHooks(config);
+
   return {
     ...getBaseOptions(),
     model: getModelForUseCase('chat', effectiveModel),
@@ -662,6 +665,7 @@ export function createChatOptions(config: CreateSdkOptionsConfig): Options {
     allowedTools: [...TOOL_PRESETS.chat],
     ...claudeMdOptions,
     ...thinkingOptions,
+    ...worktreeHooks,
     ...(config.abortController && { abortController: config.abortController }),
     ...mcpOptions.mcpServerOptions,
   };
@@ -738,6 +742,9 @@ export function createCustomOptions(
     ? [...config.allowedTools]
     : [...TOOL_PRESETS.readOnly];
 
+  // Build worktree write guard hook (blocks writes outside the worktree)
+  const worktreeHooks = buildWorktreeGuardHooks(config);
+
   return {
     ...getBaseOptions(),
     model: getModelForUseCase('default', config.model),
@@ -746,6 +753,7 @@ export function createCustomOptions(
     allowedTools: effectiveAllowedTools,
     ...claudeMdOptions,
     ...thinkingOptions,
+    ...worktreeHooks,
     ...(config.abortController && { abortController: config.abortController }),
     ...mcpOptions.mcpServerOptions,
   };
