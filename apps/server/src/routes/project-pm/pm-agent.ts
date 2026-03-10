@@ -6,7 +6,7 @@
  * as the streaming PM chat endpoint.
  */
 
-import { generateText, stepCountIs, type Tool } from 'ai';
+import { generateText, stepCountIs, type ModelMessage, type Tool } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { createLogger } from '@protolabsai/utils';
@@ -372,10 +372,10 @@ export async function queryPm(
     model: anthropic(resolvedModelId),
     system: systemPrompt,
     messages: [
-      ...sessionHistory.map((m) => ({
-        role: m.role as 'user' | 'assistant' | 'system' | 'tool',
+      ...(sessionHistory.map((m) => ({
+        role: m.role,
         content: (m.content as string) ?? '',
-      })),
+      })) as ModelMessage[]),
       { role: 'user' as const, content: question },
     ],
     tools,
