@@ -36,8 +36,17 @@ export interface CalendarReminderPayload {
   event: CalendarEvent;
 }
 
-/** Document id used for the shared global calendar in the CRDT store */
-const CALENDAR_DOC_ID = 'shared';
+/**
+ * Derive a stable, project-scoped CRDT document ID from a projectPath.
+ * Replaces path separators with dashes and strips leading/trailing dashes.
+ * e.g. "/Users/kj/dev/automaker" → "Users-kj-dev-automaker"
+ */
+function calendarDocId(projectPath: string): string {
+  return projectPath
+    .replace(/\//g, '-')
+    .replace(/\\/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 /**
  * Singleton service for managing calendar events
@@ -103,7 +112,7 @@ export class CalendarService {
       try {
         const handle = await this.crdtStore.getOrCreate<CalendarDocument>(
           'calendar',
-          CALENDAR_DOC_ID,
+          calendarDocId(projectPath),
           { events: {}, updatedAt: new Date().toISOString() }
         );
         const doc = handle.doc();
@@ -121,9 +130,9 @@ export class CalendarService {
   /**
    * Write a single event — to CRDT if available, otherwise rebuild filesystem.
    */
-  private async upsertEventToCrdt(event: CalendarEvent): Promise<void> {
+  private async upsertEventToCrdt(projectPath: string, event: CalendarEvent): Promise<void> {
     if (!this.crdtStore) return;
-    await this.crdtStore.change<CalendarDocument>('calendar', CALENDAR_DOC_ID, (doc) => {
+    await this.crdtStore.change<CalendarDocument>('calendar', calendarDocId(projectPath), (doc) => {
       if (!doc.events) {
         (doc as CalendarDocument).events = {};
       }
@@ -135,9 +144,9 @@ export class CalendarService {
   /**
    * Delete a single event from CRDT by id.
    */
-  private async deleteEventFromCrdt(id: string): Promise<void> {
+  private async deleteEventFromCrdt(projectPath: string, id: string): Promise<void> {
     if (!this.crdtStore) return;
-    await this.crdtStore.change<CalendarDocument>('calendar', CALENDAR_DOC_ID, (doc) => {
+    await this.crdtStore.change<CalendarDocument>('calendar', calendarDocId(projectPath), (doc) => {
       if (doc.events) {
         delete doc.events[id];
       }
@@ -301,7 +310,7 @@ export class CalendarService {
 
     if (this.crdtStore) {
       // Write through CRDT layer — syncs to all peers
-      await this.upsertEventToCrdt(event);
+      await this.upsertEventToCrdt(projectPath, event);
     } else {
       // Filesystem fallback
       const events = await this.readCalendarFile(projectPath);
@@ -337,7 +346,7 @@ export class CalendarService {
         updatedAt: new Date().toISOString(),
       };
 
-      await this.upsertEventToCrdt(updatedEvent);
+      await this.upsertEventToCrdt(projectPath, updatedEvent);
       logger.info(`Updated calendar event ${id}`);
       return updatedEvent;
     }
@@ -381,7 +390,7 @@ export class CalendarService {
         throw new Error(`Calendar event ${id} not found`);
       }
 
-      await this.deleteEventFromCrdt(id);
+      await this.deleteEventFromCrdt(projectPath, id);
       logger.info(`Deleted calendar event ${id}`);
       return;
     }
@@ -429,7 +438,7 @@ export class CalendarService {
           createdAt: existingEvent.createdAt,
           updatedAt: now,
         };
-        await this.upsertEventToCrdt(updated);
+        await this.upsertEventToCrdt(projectPath, updated);
         return { event: updated, created: false };
       }
 
@@ -442,7 +451,7 @@ export class CalendarService {
         createdAt: now,
         updatedAt: now,
       };
-      await this.upsertEventToCrdt(newEvent);
+      await this.upsertEventToCrdt(projectPath, newEvent);
       logger.info(`Created synced calendar event ${id} (sourceId: ${sourceId})`);
       return { event: newEvent, created: true };
     }
