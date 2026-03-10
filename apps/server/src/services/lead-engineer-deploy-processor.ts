@@ -6,16 +6,24 @@
  */
 
 import path from 'node:path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
 import { getFeatureDir } from '@protolabsai/platform';
 import type { EventType } from '@protolabsai/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import type {
   ProcessorServiceContext,
   StateContext,
   StateProcessor,
   StateTransitionResult,
 } from './lead-engineer-types.js';
+
+const execAsync = promisify(exec);
+
+/** Timeout for each post-merge verification command (ms) */
+const POST_MERGE_VERIFICATION_TIMEOUT_MS = 120_000;
 
 const logger = createLogger('LeadEngineerService');
 
@@ -40,6 +48,9 @@ export class DeployProcessor implements StateProcessor {
       });
       logger.info(`[DEPLOY] Updated feature status to done`);
     }
+
+    // Run post-merge verification (typecheck, optional build:packages)
+    await this.runPostMergeVerification(ctx);
 
     // Emit completion event (board janitor and other listeners use this)
     this.serviceContext.events.emit('feature:completed' as EventType, {
@@ -72,6 +83,125 @@ export class DeployProcessor implements StateProcessor {
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[DEPLOY] Deployment verification completed');
+  }
+
+  /**
+   * Run post-merge verification commands to catch type or build regressions.
+   * On command failure: creates a bug-fix feature on the board.
+   * On timeout: logs a warning and continues (does not block the pipeline).
+   */
+  private async runPostMergeVerification(ctx: StateContext): Promise<void> {
+    const workflowSettings = await getWorkflowSettings(
+      ctx.projectPath,
+      this.serviceContext.settingsService
+    );
+
+    const verificationEnabled = workflowSettings.postMergeVerification ?? true;
+    if (!verificationEnabled) {
+      logger.info('[DEPLOY] Post-merge verification disabled, skipping');
+      return;
+    }
+
+    const baseCommands: string[] = workflowSettings.postMergeVerificationCommands ?? [
+      'npm run typecheck',
+    ];
+
+    // Check if the merged commit touched any libs/ files — if so, also build packages
+    let touchedLibs = false;
+    try {
+      const { stdout: diffFiles } = await execAsync('git diff --name-only HEAD~1 HEAD', {
+        cwd: ctx.projectPath,
+        timeout: 10_000,
+      });
+      touchedLibs = diffFiles.split('\n').some((f) => f.trim().startsWith('libs/'));
+    } catch {
+      // If git diff fails, skip the libs/ detection
+    }
+
+    const commands = [...baseCommands];
+    const buildPackagesCmd = 'npm run build:packages';
+    if (touchedLibs && !commands.includes(buildPackagesCmd)) {
+      commands.push(buildPackagesCmd);
+    }
+
+    logger.info(`[DEPLOY] Running post-merge verification commands: ${commands.join(', ')}`);
+
+    const failures: { cmd: string; output: string }[] = [];
+
+    for (const cmd of commands) {
+      try {
+        await execAsync(cmd, {
+          cwd: ctx.projectPath,
+          timeout: POST_MERGE_VERIFICATION_TIMEOUT_MS,
+        });
+        logger.info(`[DEPLOY] Verification passed: ${cmd}`);
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // child_process timeout kills the process and sets `killed: true` on the error object,
+        // or includes "timeout" in the message
+        const isTimeout =
+          errMsg.toLowerCase().includes('timeout') ||
+          (err !== null &&
+            typeof err === 'object' &&
+            'killed' in err &&
+            (err as { killed: boolean }).killed === true);
+
+        if (isTimeout) {
+          logger.warn(
+            `[DEPLOY] Verification command timed out after ${POST_MERGE_VERIFICATION_TIMEOUT_MS / 1000}s, skipping: ${cmd}`
+          );
+          continue;
+        }
+
+        const output = errMsg.slice(0, 2000);
+        logger.warn(`[DEPLOY] Verification command failed: ${cmd}`, { output });
+        failures.push({ cmd, output });
+      }
+    }
+
+    if (failures.length > 0) {
+      await this.createVerificationBugFeature(ctx, failures);
+    }
+  }
+
+  /**
+   * Create a bug-fix feature on the board when post-merge verification fails.
+   */
+  private async createVerificationBugFeature(
+    ctx: StateContext,
+    failures: { cmd: string; output: string }[]
+  ): Promise<void> {
+    try {
+      const failureSummary = failures
+        .map((f) => `**\`${f.cmd}\`**\n\`\`\`\n${f.output}\n\`\`\``)
+        .join('\n\n');
+
+      const description = `## Post-Merge Verification Failure
+
+Feature **${ctx.feature.title}** (${ctx.feature.id}) was merged but post-merge verification failed. The code is live — this bug fix should address the regression.
+
+## Failed Commands
+
+${failureSummary}
+
+## Context
+- Original feature: ${ctx.feature.id}
+- PR: ${ctx.prNumber ? `#${ctx.prNumber}` : 'unknown'}
+- Branch: ${ctx.feature.branchName ?? 'unknown'}
+`;
+
+      await this.serviceContext.featureLoader.create(ctx.projectPath, {
+        title: `Fix: post-merge verification failure for "${ctx.feature.title}"`,
+        description,
+        category: 'bug',
+        complexity: 'medium',
+        status: 'backlog',
+      });
+
+      logger.info(`[DEPLOY] Created bug-fix feature for verification failure of ${ctx.feature.id}`);
+    } catch (err) {
+      logger.warn(`[DEPLOY] Failed to create bug-fix feature:`, err);
+    }
   }
 
   private async generateReflection(ctx: StateContext): Promise<void> {

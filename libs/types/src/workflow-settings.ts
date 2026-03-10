@@ -161,6 +161,19 @@ export interface WorkflowSettings {
     /** Also create GitHub issues (existing behavior, default: true) */
     createGithubIssues?: boolean;
   };
+  /**
+   * Run verification commands (typecheck, build) after merge to catch regressions.
+   * On failure, creates a bug-fix feature on the board. Original feature is still marked done
+   * since the code is already merged.
+   * @default true
+   */
+  postMergeVerification?: boolean;
+  /**
+   * Commands to execute during post-merge verification.
+   * `npm run build:packages` is added automatically when libs/ files were touched.
+   * @default ['npm run typecheck']
+   */
+  postMergeVerificationCommands?: string[];
 }
 
 /** Default workflow settings */
@@ -192,4 +205,6 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     enabled: false,
     createGithubIssues: true,
   },
+  postMergeVerification: true,
+  postMergeVerificationCommands: ['npm run typecheck'],
 };
