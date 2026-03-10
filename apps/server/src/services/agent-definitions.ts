@@ -5,6 +5,9 @@
  * agent role. These are compatible with the `agents` parameter of the Claude
  * Agent SDK's `query()` function.
  *
+ * Model aliases ('sonnet', 'opus', 'haiku') are passed as-is — the Claude
+ * Agent SDK resolves them internally to full model IDs.
+ *
  * All functions are pure: no side effects, no service dependencies, no I/O.
  */
 

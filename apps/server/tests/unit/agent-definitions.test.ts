@@ -45,9 +45,9 @@ describe('agent-definitions.ts', () => {
       expect(agent.prompt.trim().length).toBeGreaterThan(0);
     });
 
-    it('specifies a model', () => {
+    it('uses sonnet model alias', () => {
       const agent = createAvaAgent(baseContext);
-      expect(['sonnet', 'opus', 'haiku', 'inherit', undefined]).toContain(agent.model);
+      expect(agent.model).toBe('sonnet');
     });
 
     it('is pure — same context produces equal output', () => {
@@ -95,9 +95,9 @@ describe('agent-definitions.ts', () => {
       expect(agent.prompt.trim().length).toBeGreaterThan(0);
     });
 
-    it('specifies a model', () => {
+    it('uses sonnet model alias', () => {
       const agent = createPMAgent(baseContext);
-      expect(['sonnet', 'opus', 'haiku', 'inherit', undefined]).toContain(agent.model);
+      expect(agent.model).toBe('sonnet');
     });
 
     it('is pure — same context produces equal output', () => {
@@ -145,9 +145,9 @@ describe('agent-definitions.ts', () => {
       expect(agent.prompt.trim().length).toBeGreaterThan(0);
     });
 
-    it('specifies a model', () => {
+    it('uses opus model alias', () => {
       const agent = createLEAgent(baseContext);
-      expect(['sonnet', 'opus', 'haiku', 'inherit', undefined]).toContain(agent.model);
+      expect(agent.model).toBe('opus');
     });
 
     it('is pure — same context produces equal output', () => {
@@ -162,7 +162,30 @@ describe('agent-definitions.ts', () => {
     });
   });
 
-  // ─── Cross-factory checks ──────────────────────────────────────────────────
+  // ─── Model alias assignment ─────────────────────────────────────────────
+
+  describe('model alias assignment', () => {
+    it('Ava and PM both use sonnet', () => {
+      const ava = createAvaAgent(baseContext);
+      const pm = createPMAgent(baseContext);
+      expect(ava.model).toBe('sonnet');
+      expect(pm.model).toBe('sonnet');
+    });
+
+    it('LE uses opus (higher capability for implementation)', () => {
+      const le = createLEAgent(baseContext);
+      expect(le.model).toBe('opus');
+    });
+
+    it('all models are valid SDK alias values', () => {
+      const validAliases = new Set(['sonnet', 'opus', 'haiku', 'inherit']);
+      expect(validAliases.has(createAvaAgent(baseContext).model!)).toBe(true);
+      expect(validAliases.has(createPMAgent(baseContext).model!)).toBe(true);
+      expect(validAliases.has(createLEAgent(baseContext).model!)).toBe(true);
+    });
+  });
+
+  // ─── Cross-factory checks ──────────────────────────────────────────────
 
   describe('all factories', () => {
     it('all three factories accept worldState without error', () => {
