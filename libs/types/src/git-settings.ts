@@ -37,6 +37,18 @@ export interface GitWorkflowSettings {
   waitForCI?: boolean;
   /** Base branch for PR creation (default: 'main') */
   prBaseBranch?: string;
+  /**
+   * Maximum total lines changed (insertions + deletions) before flagging PR as oversized.
+   * Oversized PRs receive an 'oversized-pr' label and an actionable item for human review.
+   * Set to 0 to disable the check. (default: 500)
+   */
+  maxPRLinesChanged?: number;
+  /**
+   * Maximum number of files touched before flagging PR as oversized.
+   * Oversized PRs receive an 'oversized-pr' label and an actionable item for human review.
+   * Set to 0 to disable the check. (default: 20)
+   */
+  maxPRFilesTouched?: number;
 }
 
 /**
@@ -50,6 +62,8 @@ export const DEFAULT_GIT_WORKFLOW_SETTINGS: Required<GitWorkflowSettings> = {
   prMergeStrategy: 'squash',
   waitForCI: true,
   prBaseBranch: 'dev',
+  maxPRLinesChanged: 500,
+  maxPRFilesTouched: 20,
 };
 
 /**

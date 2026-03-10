@@ -25,6 +25,7 @@ import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { buildPROwnershipWatermark } from '../routes/github/utils/pr-ownership.js';
 import { createGitExecEnv, extractTitleFromDescription } from '@protolabsai/git-utils';
+import type { ActionableItemService } from './actionable-item-service.js';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -162,6 +163,14 @@ export class GitWorkflowService {
   private activeWorkflows = 0;
   private recentOperations: RecentOperation[] = [];
   private readonly MAX_RECENT_OPERATIONS = 10;
+  private actionableItemService?: ActionableItemService;
+
+  /**
+   * Wire in the ActionableItemService for creating oversized-PR actionable items.
+   */
+  setActionableItemService(service: ActionableItemService): void {
+    this.actionableItemService = service;
+  }
 
   /**
    * Get current status of the git workflow service
@@ -230,6 +239,14 @@ export class GitWorkflowService {
         featureOverride.prBaseBranch ??
         global.prBaseBranch ??
         DEFAULT_GIT_WORKFLOW_SETTINGS.prBaseBranch,
+      maxPRLinesChanged:
+        featureOverride.maxPRLinesChanged ??
+        global.maxPRLinesChanged ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.maxPRLinesChanged,
+      maxPRFilesTouched:
+        featureOverride.maxPRFilesTouched ??
+        global.maxPRFilesTouched ??
+        DEFAULT_GIT_WORKFLOW_SETTINGS.maxPRFilesTouched,
     };
   }
 
@@ -516,6 +533,21 @@ export class GitWorkflowService {
               this.trackOperation('pr_create', featureId, true);
               logger.info(`PR ${result.prAlreadyExisted ? 'exists' : 'created'}: ${result.prUrl}`);
             }
+
+            // Step 3.5: Check PR size and flag if oversized (non-blocking)
+            if (result.prNumber) {
+              await this.checkAndFlagOversizedPR(
+                workDir,
+                projectPath,
+                feature,
+                featureId,
+                result.prNumber,
+                result.prUrl,
+                prBaseBranch,
+                gitSettings.maxPRLinesChanged,
+                gitSettings.maxPRFilesTouched
+              );
+            }
           } catch (prError) {
             const errorMsg = prError instanceof Error ? prError.message : String(prError);
             this.trackOperation('pr_create', featureId, false, errorMsg);
@@ -662,6 +694,153 @@ export class GitWorkflowService {
       result.error = errorMsg;
       this.activeWorkflows--;
       return result;
+    }
+  }
+
+  /**
+   * Calculate the number of lines changed and files touched in a PR diff.
+   * Uses `git diff --numstat` against the remote base branch.
+   *
+   * @returns Object with linesChanged and filesTouched counts, or null on failure.
+   */
+  private async calculatePRDiffStats(
+    workDir: string,
+    prBaseBranch: string
+  ): Promise<{ linesChanged: number; filesTouched: number } | null> {
+    try {
+      // Ensure we have up-to-date base branch info (non-fatal if fetch fails)
+      await execAsync(`git fetch origin ${prBaseBranch}`, {
+        cwd: workDir,
+        env: execEnv,
+        timeout: 30_000,
+      }).catch(() => {
+        // Non-fatal: fetch may fail if origin is unavailable; proceed with cached refs
+      });
+
+      const { stdout } = await execAsync(`git diff --numstat origin/${prBaseBranch}...HEAD`, {
+        cwd: workDir,
+        env: execEnv,
+      });
+
+      const lines = stdout.trim().split('\n').filter(Boolean);
+      let linesChanged = 0;
+      let filesTouched = 0;
+
+      for (const line of lines) {
+        filesTouched++;
+        // numstat format: "{insertions}\t{deletions}\t{filename}"
+        // Binary files show "-\t-\t{filename}" — skip for line count
+        const parts = line.split('\t');
+        if (parts.length >= 2 && parts[0] !== '-' && parts[1] !== '-') {
+          linesChanged += parseInt(parts[0], 10) + parseInt(parts[1], 10);
+        }
+      }
+
+      return { linesChanged, filesTouched };
+    } catch (error) {
+      logger.warn(
+        `Failed to calculate PR diff stats: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Check if a PR exceeds size limits and flag it if so.
+   * Adds an 'oversized-pr' label to the PR and creates an actionable item for human review.
+   * Does NOT block the PR — purely advisory.
+   */
+  private async checkAndFlagOversizedPR(
+    workDir: string,
+    projectPath: string,
+    feature: Feature,
+    featureId: string,
+    prNumber: number,
+    prUrl: string | null,
+    prBaseBranch: string,
+    maxLinesChanged: number,
+    maxFilesTouched: number
+  ): Promise<void> {
+    try {
+      const stats = await this.calculatePRDiffStats(workDir, prBaseBranch);
+      if (!stats) return;
+
+      const { linesChanged, filesTouched } = stats;
+
+      const linesExceeded = maxLinesChanged > 0 && linesChanged > maxLinesChanged;
+      const filesExceeded = maxFilesTouched > 0 && filesTouched > maxFilesTouched;
+
+      if (!linesExceeded && !filesExceeded) {
+        logger.debug(
+          `PR #${prNumber} size OK: ${linesChanged} lines changed, ${filesTouched} files touched`
+        );
+        return;
+      }
+
+      const reasons: string[] = [];
+      if (linesExceeded) {
+        reasons.push(`${linesChanged} lines changed (limit: ${maxLinesChanged})`);
+      }
+      if (filesExceeded) {
+        reasons.push(`${filesTouched} files touched (limit: ${maxFilesTouched})`);
+      }
+      const reasonStr = reasons.join(', ');
+
+      logger.warn(
+        `[PRSizeCheck] PR #${prNumber} for feature ${featureId} is oversized: ${reasonStr}. ` +
+          `Adding 'oversized-pr' label and creating actionable item.`
+      );
+
+      // Add 'oversized-pr' label to the PR (best-effort, non-blocking)
+      try {
+        await execFileAsync('gh', ['pr', 'edit', String(prNumber), '--add-label', 'oversized-pr'], {
+          cwd: workDir,
+          env: execEnv,
+        });
+        logger.info(`Added 'oversized-pr' label to PR #${prNumber}`);
+      } catch (labelError) {
+        logger.warn(
+          `Failed to add 'oversized-pr' label to PR #${prNumber}: ${labelError instanceof Error ? labelError.message : String(labelError)}`
+        );
+      }
+
+      // Create actionable item for human review (if service is wired)
+      if (this.actionableItemService) {
+        try {
+          const title = feature.title || `Feature ${featureId}`;
+          await this.actionableItemService.createActionableItem({
+            projectPath,
+            actionType: 'review',
+            priority: 'high',
+            title: `Oversized PR: ${title}`,
+            message:
+              `PR #${prNumber} exceeds size limits and requires human review. ` +
+              `Reason: ${reasonStr}. ` +
+              `Consider breaking this PR into smaller, more focused changes.` +
+              (prUrl ? ` PR: ${prUrl}` : ''),
+            category: 'pr-size',
+            actionPayload: {
+              featureId,
+              prNumber,
+              prUrl: prUrl ?? undefined,
+              linesChanged,
+              filesTouched,
+              maxLinesChanged,
+              maxFilesTouched,
+            },
+          });
+          logger.info(`Created actionable item for oversized PR #${prNumber}`);
+        } catch (actionableError) {
+          logger.warn(
+            `Failed to create actionable item for oversized PR #${prNumber}: ${actionableError instanceof Error ? actionableError.message : String(actionableError)}`
+          );
+        }
+      }
+    } catch (error) {
+      // Never let size check errors propagate — purely advisory
+      logger.warn(
+        `[PRSizeCheck] Unexpected error checking PR size (non-fatal): ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
