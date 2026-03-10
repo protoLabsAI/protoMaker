@@ -578,14 +578,14 @@ describe('CeremonyService', () => {
       });
 
       // While flow is running, reflection should be active
-      await new Promise((r) => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 50));
       const status = ceremonyService.getReflectionStatus();
       expect(status.active).toBe(true);
       expect(status.activeProject).toBe('My Project');
 
       // Complete the flow
       resolveFlow();
-      await new Promise((r) => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 50));
 
       const after = ceremonyService.getReflectionStatus();
       expect(after.active).toBe(false);
