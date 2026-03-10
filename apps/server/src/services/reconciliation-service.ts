@@ -271,10 +271,7 @@ export class ReconciliationService {
     });
 
     if (this.hitlFormService) {
-      const existingForm = this.hitlFormService.getByFeatureId(
-        drift.featureId,
-        drift.projectPath
-      );
+      const existingForm = this.hitlFormService.getByFeatureId(drift.featureId, drift.projectPath);
 
       if (!existingForm) {
         try {
@@ -291,9 +288,21 @@ export class ReconciliationService {
                       type: 'string',
                       title: 'Resolution',
                       oneOf: [
-                        { const: 'retry', title: 'Retry', description: 'Reset and re-run the agent' },
-                        { const: 'provide_context', title: 'Provide context', description: 'Give the agent additional information' },
-                        { const: 'close', title: 'Close as blocked', description: 'Keep blocked for manual handling' },
+                        {
+                          const: 'retry',
+                          title: 'Retry',
+                          description: 'Reset and re-run the agent',
+                        },
+                        {
+                          const: 'provide_context',
+                          title: 'Provide context',
+                          description: 'Give the agent additional information',
+                        },
+                        {
+                          const: 'close',
+                          title: 'Close as blocked',
+                          description: 'Keep blocked for manual handling',
+                        },
                       ],
                     },
                   },
@@ -313,10 +322,14 @@ export class ReconciliationService {
           logger.error(`Failed to create HITL form for stuck feature ${drift.featureId}:`, err);
         }
       } else {
-        logger.info(`HITL form ${existingForm.id} already pending for feature ${drift.featureId}, skipping`);
+        logger.info(
+          `HITL form ${existingForm.id} already pending for feature ${drift.featureId}, skipping`
+        );
       }
     } else {
-      logger.warn(`HITLFormService not available, cannot create HITL form for feature ${drift.featureId}`);
+      logger.warn(
+        `HITLFormService not available, cannot create HITL form for feature ${drift.featureId}`
+      );
     }
 
     return 'moved-to-blocked-hitl-created';
@@ -334,7 +347,9 @@ export class ReconciliationService {
     }
 
     if (!this.worktreeLifecycleService) {
-      logger.warn(`WorktreeLifecycleService not available, cannot clean up orphaned worktree for branch ${branchName}`);
+      logger.warn(
+        `WorktreeLifecycleService not available, cannot clean up orphaned worktree for branch ${branchName}`
+      );
       return 'skipped-service-unavailable';
     }
 
@@ -398,16 +413,21 @@ export class ReconciliationService {
 
     const isTransient = classification?.isRetryable ?? false;
 
-    logger.info(`PR #${drift.prNumber} CI failure — classified as ${classification?.category ?? 'unknown'}, isTransient=${isTransient}`, {
-      featureId: drift.featureId,
-      failedChecks,
-    });
+    logger.info(
+      `PR #${drift.prNumber} CI failure — classified as ${classification?.category ?? 'unknown'}, isTransient=${isTransient}`,
+      {
+        featureId: drift.featureId,
+        failedChecks,
+      }
+    );
 
     if (isTransient) {
       // Re-trigger CI by emitting the existing ci-failure event with a transient marker.
       // Downstream consumers (PRFeedbackService) already handle ci-failure and will re-run
       // the agent to push an empty commit or re-run the workflow as appropriate.
-      logger.info(`Re-triggering CI for PR #${drift.prNumber} (transient failure: ${classification?.category ?? 'unknown'})`);
+      logger.info(
+        `Re-triggering CI for PR #${drift.prNumber} (transient failure: ${classification?.category ?? 'unknown'})`
+      );
 
       this.events.emit('pr:ci-failure', {
         projectPath: drift.projectPath,
@@ -524,7 +544,10 @@ export class ReconciliationService {
         );
         logger.info(`Processed unresolved threads for PR #${drift.prNumber} before merge`);
       } catch (err) {
-        logger.warn(`Failed to process threads for PR #${drift.prNumber}, proceeding with merge:`, err);
+        logger.warn(
+          `Failed to process threads for PR #${drift.prNumber}, proceeding with merge:`,
+          err
+        );
       }
     }
 
@@ -567,16 +590,17 @@ export class ReconciliationService {
       throw new Error('prNumber required for pr-stale');
     }
 
-    const staleForMs = typeof drift.details.staleForMs === 'number'
-      ? drift.details.staleForMs
-      : 0;
+    const staleForMs = typeof drift.details.staleForMs === 'number' ? drift.details.staleForMs : 0;
     const HOURS_48_MS = 48 * 60 * 60 * 1000;
     const isVeryStale = staleForMs >= HOURS_48_MS;
 
-    logger.info(`PR #${drift.prNumber} is stale (staleForMs=${staleForMs}, isVeryStale=${isVeryStale})`, {
-      featureId: drift.featureId,
-      projectPath: drift.projectPath,
-    });
+    logger.info(
+      `PR #${drift.prNumber} is stale (staleForMs=${staleForMs}, isVeryStale=${isVeryStale})`,
+      {
+        featureId: drift.featureId,
+        projectPath: drift.projectPath,
+      }
+    );
 
     // Add a comment to the PR requesting review
     try {
@@ -584,10 +608,9 @@ export class ReconciliationService {
       const staleDuration = staleHours > 0 ? `${staleHours} hours` : 'some time';
       const commentBody = `This PR has had no activity for ${staleDuration}. Please review or provide an update on the status.`;
 
-      await execAsync(
-        `gh pr comment ${drift.prNumber} --body ${JSON.stringify(commentBody)}`,
-        { cwd: drift.projectPath }
-      );
+      await execAsync(`gh pr comment ${drift.prNumber} --body ${JSON.stringify(commentBody)}`, {
+        cwd: drift.projectPath,
+      });
 
       logger.info(`Added stale comment to PR #${drift.prNumber}`);
     } catch (err) {
@@ -614,9 +637,21 @@ export class ReconciliationService {
                       type: 'string',
                       title: 'Action',
                       oneOf: [
-                        { const: 'nudge_reviewer', title: 'Nudge reviewer', description: 'Ping the reviewer to take action' },
-                        { const: 'close_pr', title: 'Close PR', description: 'Close this PR as abandoned' },
-                        { const: 'merge', title: 'Merge anyway', description: 'Merge the PR without waiting for review' },
+                        {
+                          const: 'nudge_reviewer',
+                          title: 'Nudge reviewer',
+                          description: 'Ping the reviewer to take action',
+                        },
+                        {
+                          const: 'close_pr',
+                          title: 'Close PR',
+                          description: 'Close this PR as abandoned',
+                        },
+                        {
+                          const: 'merge',
+                          title: 'Merge anyway',
+                          description: 'Merge the PR without waiting for review',
+                        },
                       ],
                     },
                   },
@@ -636,7 +671,9 @@ export class ReconciliationService {
           logger.error(`Failed to create HITL form for stale PR #${drift.prNumber}:`, err);
         }
       } else {
-        logger.info(`HITL form ${existingForm.id} already pending for stale PR ${drift.prNumber}, skipping`);
+        logger.info(
+          `HITL form ${existingForm.id} already pending for stale PR ${drift.prNumber}, skipping`
+        );
       }
 
       return 'stale-pr-pinged-hitl-escalated';
