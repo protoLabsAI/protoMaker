@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { createAvaAgent, createPMAgent, createLEAgent } from '@/services/agent-definitions.js';
 import type { AgentDefinitionContext } from '@protolabsai/types';
 
+/** Full Claude model IDs — aliases must be resolved before reaching the SDK */
+const FULL_MODEL_PATTERN = /^claude-/;
+
 const baseContext: AgentDefinitionContext = {
   projectPath: '/test/project',
 };
@@ -45,9 +48,10 @@ describe('agent-definitions.ts', () => {
       expect(agent.prompt.trim().length).toBeGreaterThan(0);
     });
 
-    it('specifies a model', () => {
+    it('resolves model alias to a full Claude model string', () => {
       const agent = createAvaAgent(baseContext);
-      expect(['sonnet', 'opus', 'haiku', 'inherit', undefined]).toContain(agent.model);
+      expect(typeof agent.model).toBe('string');
+      expect(agent.model).toMatch(FULL_MODEL_PATTERN);
     });
 
     it('is pure — same context produces equal output', () => {
@@ -95,9 +99,10 @@ describe('agent-definitions.ts', () => {
       expect(agent.prompt.trim().length).toBeGreaterThan(0);
     });
 
-    it('specifies a model', () => {
+    it('resolves model alias to a full Claude model string', () => {
       const agent = createPMAgent(baseContext);
-      expect(['sonnet', 'opus', 'haiku', 'inherit', undefined]).toContain(agent.model);
+      expect(typeof agent.model).toBe('string');
+      expect(agent.model).toMatch(FULL_MODEL_PATTERN);
     });
 
     it('is pure — same context produces equal output', () => {
@@ -145,9 +150,10 @@ describe('agent-definitions.ts', () => {
       expect(agent.prompt.trim().length).toBeGreaterThan(0);
     });
 
-    it('specifies a model', () => {
+    it('resolves model alias to a full Claude model string', () => {
       const agent = createLEAgent(baseContext);
-      expect(['sonnet', 'opus', 'haiku', 'inherit', undefined]).toContain(agent.model);
+      expect(typeof agent.model).toBe('string');
+      expect(agent.model).toMatch(FULL_MODEL_PATTERN);
     });
 
     it('is pure — same context produces equal output', () => {
@@ -159,6 +165,29 @@ describe('agent-definitions.ts', () => {
     it('includes Bash in default tools (LE has full access)', () => {
       const agent = createLEAgent(baseContext);
       expect(agent.tools).toContain('Bash');
+    });
+  });
+
+  // ─── Alias resolution ──────────────────────────────────────────────────────
+
+  describe('alias resolution', () => {
+    it('no factory returns a bare alias (sonnet/opus/haiku) as the model', () => {
+      const bareAliases = new Set(['sonnet', 'opus', 'haiku', 'inherit']);
+      expect(bareAliases.has(createAvaAgent(baseContext).model ?? '')).toBe(false);
+      expect(bareAliases.has(createPMAgent(baseContext).model ?? '')).toBe(false);
+      expect(bareAliases.has(createLEAgent(baseContext).model ?? '')).toBe(false);
+    });
+
+    it('Ava and PM resolve to the same model (both use sonnet)', () => {
+      const ava = createAvaAgent(baseContext);
+      const pm = createPMAgent(baseContext);
+      expect(ava.model).toBe(pm.model);
+    });
+
+    it('LE resolves to a different model than Ava/PM (opus vs sonnet)', () => {
+      const ava = createAvaAgent(baseContext);
+      const le = createLEAgent(baseContext);
+      expect(le.model).not.toBe(ava.model);
     });
   });
 
