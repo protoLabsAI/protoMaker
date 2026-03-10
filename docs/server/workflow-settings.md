@@ -15,6 +15,7 @@ type PRDComplexity = 'small' | 'medium' | 'large' | 'architectural';
 ```
 
 Complexity determines:
+
 - Whether the PLAN phase runs (large/architectural, or ≥3 files → always plans)
 - Which LLM model is selected (small → haiku, others → sonnet, architectural → opus)
 - Whether an antagonistic review gate applies
@@ -46,8 +47,8 @@ All conditions in a rule must match for auto-approval:
 
 ```typescript
 interface AutoApproveRule {
-  complexity?: PRDComplexity[];   // e.g. ['small']
-  category?: PRDCategory[];       // e.g. ['ops', 'bug', 'improvement']
+  complexity?: PRDComplexity[]; // e.g. ['small']
+  category?: PRDCategory[]; // e.g. ['ops', 'bug', 'improvement']
 }
 ```
 
@@ -77,15 +78,15 @@ Controls the core feature execution pipeline behavior.
 ```typescript
 interface WorkflowSettings {
   pipeline: {
-    goalGatesEnabled: boolean;          // Enable goal gate checks. Default: true
-    checkpointEnabled: boolean;         // Enable LangGraph checkpointing. Default: true
-    loopDetectionEnabled: boolean;      // Detect and break infinite agent loops. Default: true
-    supervisorEnabled: boolean;         // Enable supervisor oversight. Default: true
-    maxAgentRuntimeMinutes: number;     // Timeout per agent run. Default: 45
-    maxAgentCostUsd: number;            // Max cost per feature in USD. Default: 15
-    antagonisticPlanReview: boolean;    // Run antagonistic review for large/arch plans. Default: true
-    maxAgentRetries: number;            // Agent re-run retry budget. Default: 3
-    maxInfraRetries: number;            // Transient infra retry budget. Default: 3
+    goalGatesEnabled: boolean; // Enable goal gate checks. Default: true
+    checkpointEnabled: boolean; // Enable LangGraph checkpointing. Default: true
+    loopDetectionEnabled: boolean; // Detect and break infinite agent loops. Default: true
+    supervisorEnabled: boolean; // Enable supervisor oversight. Default: true
+    maxAgentRuntimeMinutes: number; // Timeout per agent run. Default: 45
+    maxAgentCostUsd: number; // Max cost per feature in USD. Default: 15
+    antagonisticPlanReview: boolean; // Run antagonistic review for large/arch plans. Default: true
+    maxAgentRetries: number; // Agent re-run retry budget. Default: 3
+    maxInfraRetries: number; // Transient infra retry budget. Default: 3
   };
 }
 ```
@@ -99,6 +100,7 @@ Transient infrastructure failures (lock files, push conflicts) use a separate `m
 ### `maxAgentCostUsd`
 
 Hard cap on spend per feature. Execution is blocked when this threshold is reached. The budget is checked:
+
 - Before launching the agent
 - After each agent completion
 
@@ -113,7 +115,7 @@ When `true`, plans for `large` and `architectural` features are submitted to the
 ```typescript
 interface WorkflowSettings {
   preFlightChecks: {
-    enabled: boolean;    // Default: true
+    enabled: boolean; // Default: true
   };
 }
 ```
@@ -131,7 +133,7 @@ When enabled, the EXECUTE processor runs three checks before launching the agent
 ```typescript
 interface WorkflowSettings {
   retro: {
-    enabled: boolean;              // Generate retros automatically. Default: true
+    enabled: boolean; // Generate retros automatically. Default: true
     triggerOnFeatureDone: boolean; // Trigger retro after each feature. Default: true
   };
 }
@@ -144,8 +146,8 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   cleanup: {
-    enabled: boolean;                  // Auto-cleanup stale worktrees. Default: true
-    staleWorktreeHours: number;        // Hours before a worktree is considered stale. Default: 4
+    enabled: boolean; // Auto-cleanup stale worktrees. Default: true
+    staleWorktreeHours: number; // Hours before a worktree is considered stale. Default: 4
   };
 }
 ```
@@ -157,9 +159,9 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   signalIntake: {
-    defaultCategory: PRDCategory;   // Category assigned to uncategorized signals. Default: 'feature'
-    autoResearch: boolean;          // Auto-research incoming signals. Default: true
-    autoApprove: boolean;           // Apply trust boundary auto-approve logic. Default: true
+    defaultCategory: PRDCategory; // Category assigned to uncategorized signals. Default: 'feature'
+    autoResearch: boolean; // Auto-research incoming signals. Default: true
+    autoApprove: boolean; // Apply trust boundary auto-approve logic. Default: true
   };
 }
 ```
@@ -171,7 +173,7 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   bugs: {
-    enabled: boolean;          // Enable bug tracking. Default: true
+    enabled: boolean; // Enable bug tracking. Default: true
     createGitHubIssue: boolean; // Mirror bugs as GitHub issues. Default: false
   };
 }
@@ -184,9 +186,9 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   postMergeVerification: {
-    enabled: boolean;         // Run typecheck + build after merge. Default: true
-    runTypecheck: boolean;    // Default: true
-    runBuild: boolean;        // Default: true
+    enabled: boolean; // Run typecheck + build after merge. Default: true
+    runTypecheck: boolean; // Default: true
+    runBuild: boolean; // Default: true
   };
 }
 ```
@@ -199,7 +201,7 @@ interface WorkflowSettings {
 
 ```typescript
 interface WorkflowSettings {
-  maxPendingReviews: number;   // Pause feature pickup when queue is full. Default: 5
+  maxPendingReviews: number; // Pause feature pickup when queue is full. Default: 5
 }
 ```
 
@@ -209,8 +211,8 @@ When the number of features awaiting human review reaches `maxPendingReviews`, t
 
 ```typescript
 interface WorkflowSettings {
-  errorBudgetWindow: number;      // Rolling window in days. Default: 7
-  errorBudgetThreshold: number;   // CFR threshold (0.0–1.0). Default: 0.2
+  errorBudgetWindow: number; // Rolling window in days. Default: 7
+  errorBudgetThreshold: number; // CFR threshold (0.0–1.0). Default: 0.2
 }
 ```
 

@@ -44,18 +44,19 @@ The `IntakeProcessor` prepares the feature for execution:
 
 The intake processor assigns an engineering persona based on the feature's domain:
 
-| Domain | Persona |
-|--------|---------|
-| `qa`, `test` | `qa-engineer` |
-| `doc`, `readme`, `changelog` | `docs-engineer` |
-| `ui`, `frontend`, `component`, `page` | `frontend-engineer` |
-| `infra`, `deploy`, `ci`, `docker` | `devops-engineer` |
-| `manage`, `plan`, `retro` | `engineering-manager` |
-| _(all others)_ | `backend-engineer` |
+| Domain                                | Persona               |
+| ------------------------------------- | --------------------- |
+| `qa`, `test`                          | `qa-engineer`         |
+| `doc`, `readme`, `changelog`          | `docs-engineer`       |
+| `ui`, `frontend`, `component`, `page` | `frontend-engineer`   |
+| `infra`, `deploy`, `ci`, `docker`     | `devops-engineer`     |
+| `manage`, `plan`, `retro`             | `engineering-manager` |
+| _(all others)_                        | `backend-engineer`    |
 
 ### Plan Requirement
 
 The PLAN phase runs when any of the following are true:
+
 - Complexity is `architectural` or `large`
 - The feature touches 3 or more files
 
@@ -106,6 +107,7 @@ To disable for specific projects, set `pipeline.antagonisticPlanReview: false` i
 ### Plan Handoff
 
 After a successful plan, a handoff record is written with:
+
 - Plan text summary
 - Verdict (`APPROVE` or `WARN` if review had concerns)
 - Model used for planning
@@ -130,6 +132,7 @@ The `ExecuteProcessor` runs the feature agent inside a git worktree and manages 
 ### Budget Enforcement
 
 Execution is blocked when:
+
 - Total feature cost exceeds `$10 USD` (configurable via `pipeline.maxAgentCostUsd`)
 - A `kill_condition` flag is set in the feature metadata
 
@@ -137,11 +140,11 @@ Execution is blocked when:
 
 Before launching the agent, the processor validates the worktree environment:
 
-| Check | What It Does |
-|-------|-------------|
+| Check                 | What It Does                                                          |
+| --------------------- | --------------------------------------------------------------------- |
 | **Worktree currency** | `git fetch` + `git rebase origin/dev` to sync with the latest changes |
-| **Package builds** | Ensures all required packages are compiled before the agent runs |
-| **Dependency merge** | Verifies blocking dependencies have been merged and are available |
+| **Package builds**    | Ensures all required packages are compiled before the agent runs      |
+| **Dependency merge**  | Verifies blocking dependencies have been merged and are available     |
 
 Pre-flight checks can be disabled globally via `preFlightChecks.enabled: false`.
 
@@ -149,11 +152,11 @@ Pre-flight checks can be disabled globally via `preFlightChecks.enabled: false`.
 
 The processor listens for one of three completion events:
 
-| Event | Meaning |
-|-------|---------|
-| `feature:completed` | Agent finished successfully |
-| `feature:stopped` | Agent was halted (budget, kill condition, etc.) |
-| `feature:error` | Agent encountered an unrecoverable error |
+| Event               | Meaning                                         |
+| ------------------- | ----------------------------------------------- |
+| `feature:completed` | Agent finished successfully                     |
+| `feature:stopped`   | Agent was halted (budget, kill condition, etc.) |
+| `feature:error`     | Agent encountered an unrecoverable error        |
 
 **Timeout**: 30 minutes (configurable via `pipeline.maxAgentRuntimeMinutes`)
 
@@ -162,20 +165,26 @@ The processor listens for one of three completion events:
 Failures are classified into three categories, each with different retry semantics:
 
 #### Fatal Infrastructure Failures
+
 Immediate escalation, no retry:
+
 - Permission denied errors
 - Worktree corruption or missing
 - Unresolvable merge conflicts
 - Timeout without any progress
 
 #### Transient Infrastructure Failures
+
 Retry without re-running the agent (does NOT consume agent retry budget):
+
 - Lock file conflicts
 - Git push blocked by another push
 - Temporary network or disk errors
 
 #### Agent Failures
+
 Retry with accumulated context (consumes agent retry budget):
+
 - Agent reached wrong conclusion
 - Test failures
 - Build errors with fixable root cause
@@ -186,8 +195,8 @@ Both retry budgets are configurable per-project via workflow settings:
 
 ```yaml
 pipeline:
-  maxAgentRetries: 3      # How many times the agent re-runs
-  maxInfraRetries: 3      # How many transient infra retries allowed
+  maxAgentRetries: 3 # How many times the agent re-runs
+  maxInfraRetries: 3 # How many transient infra retries allowed
 ```
 
 Infrastructure retries are tracked separately from agent retries—a transient infra failure won't burn your agent retry budget.
@@ -206,6 +215,7 @@ The FTS5 semantic search falls back to loading `facts.json` from the trajectory 
 ### Lead Handoff
 
 After execution, the processor parses the agent's output to extract:
+
 - **Modified files** list
 - **Questions** or blockers identified
 - **Verdict**: `APPROVE`, `WARN`, or `BLOCK`
@@ -226,18 +236,18 @@ Workflow settings that affect the lead engineer pipeline:
 // libs/types/src/workflow-settings.ts
 interface WorkflowSettings {
   pipeline: {
-    goalGatesEnabled: boolean;           // default: true
-    checkpointEnabled: boolean;          // default: true
-    loopDetectionEnabled: boolean;       // default: true
-    supervisorEnabled: boolean;          // default: true
-    maxAgentRuntimeMinutes: number;      // default: 45
-    maxAgentCostUsd: number;             // default: 15
-    antagonisticPlanReview: boolean;     // default: true
-    maxAgentRetries: number;             // default: 3
-    maxInfraRetries: number;             // default: 3
+    goalGatesEnabled: boolean; // default: true
+    checkpointEnabled: boolean; // default: true
+    loopDetectionEnabled: boolean; // default: true
+    supervisorEnabled: boolean; // default: true
+    maxAgentRuntimeMinutes: number; // default: 45
+    maxAgentCostUsd: number; // default: 15
+    antagonisticPlanReview: boolean; // default: true
+    maxAgentRetries: number; // default: 3
+    maxInfraRetries: number; // default: 3
   };
   preFlightChecks: {
-    enabled: boolean;                    // default: true
+    enabled: boolean; // default: true
   };
 }
 ```
@@ -248,11 +258,11 @@ See [Workflow Settings](../server/workflow-settings.md) for the full configurati
 
 ## Related Files
 
-| File | Role |
-|------|------|
-| `apps/server/src/services/lead-engineer-processors.ts` | `IntakeProcessor` and `PlanProcessor` |
-| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor` |
-| `apps/server/src/services/antagonistic-review-service.ts` | Plan review gate |
-| `libs/types/src/workflow-settings.ts` | Configuration types |
-| `docs/protolabs/antagonistic-review.md` | Antagonistic review system |
-| `docs/server/workflow-settings.md` | Settings reference |
+| File                                                          | Role                                  |
+| ------------------------------------------------------------- | ------------------------------------- |
+| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor` |
+| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                    |
+| `apps/server/src/services/antagonistic-review-service.ts`     | Plan review gate                      |
+| `libs/types/src/workflow-settings.ts`                         | Configuration types                   |
+| `docs/protolabs/antagonistic-review.md`                       | Antagonistic review system            |
+| `docs/server/workflow-settings.md`                            | Settings reference                    |
