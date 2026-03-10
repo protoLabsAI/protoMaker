@@ -40,12 +40,14 @@ import type { AvaChannelService } from '../../services/ava-channel-service.js';
 import type { DiscordBotService } from '../../services/discord-bot-service.js';
 import type { CalendarService } from '../../services/calendar-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
+import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
 import { buildProgressHooks } from '../../lib/agent-hooks.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
 import { getPRWatcherService } from '../../services/pr-watcher-service.js';
 import { getEventHistoryService } from '../../services/event-history-service.js';
 import { getBriefingCursorService } from '../../services/briefing-cursor-service.js';
+import { queryPm } from '../project-pm/pm-agent.js';
 
 // ---------------------------------------------------------------------------
 // Plan types
@@ -97,8 +99,14 @@ export interface AvaToolsServices {
     getOrCreateSession(
       projectPath: string,
       projectSlug: string
-    ): { projectSlug: string; createdAt: string };
+    ): {
+      messages: Array<{ role: string; content: unknown }>;
+      projectSlug: string;
+      createdAt: string;
+    };
   };
+  /** Ceremony service — optional, required for delegate_to_pm tool */
+  ceremonyService?: CeremonyService;
   /** Tool progress emitter — optional, enables real-time progress labels in chat */
   toolProgressEmitter?: ToolProgressEmitter;
   /**
@@ -163,6 +171,8 @@ export interface AvaToolsConfig {
   health?: boolean;
   /** Enable settings tools (global settings access) */
   settings?: boolean;
+  /** Enable PM delegation tool (delegate_to_pm) */
+  delegateToPm?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -2021,6 +2031,62 @@ export function buildAvaTools(
             }
           );
         });
+      },
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // delegateToPm – delegate a question to the Project Manager
+  // -----------------------------------------------------------------------
+  if (config.delegateToPm) {
+    tools['delegate_to_pm'] = makeTool({
+      description:
+        'Delegate a question about a project to the Project Manager (PM). ' +
+        'The PM has full project context (goals, milestones, features, ceremony state) ' +
+        'and can answer questions about project status, health, and planning. ' +
+        "Returns the PM's text response.",
+      inputSchema: z.object({
+        projectSlug: z.string().describe('The slug of the project to query'),
+        question: z.string().describe('The question to ask the PM about this project'),
+      }),
+      execute: async ({ projectSlug, question }) => {
+        if (!services.projectPMService) {
+          return { error: 'PM service not available' };
+        }
+        if (!services.projectService) {
+          return { error: 'Project service not available' };
+        }
+        if (!services.ceremonyService) {
+          return { error: 'Ceremony service not available' };
+        }
+        if (!services.events) {
+          return { error: 'Event emitter not available' };
+        }
+
+        const timeoutMs = 60_000;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+          const response = await queryPm(
+            {
+              projectPath,
+              projectService: services.projectService,
+              ceremonyService: services.ceremonyService,
+              featureLoader: services.featureLoader,
+              projectPmService: services.projectPMService,
+              events: services.events,
+            },
+            projectSlug,
+            question
+          );
+          return { response };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return { error: `PM delegation failed: ${message}` };
+        } finally {
+          clearTimeout(timer);
+        }
       },
     });
   }
