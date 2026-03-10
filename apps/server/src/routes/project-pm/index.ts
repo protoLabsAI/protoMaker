@@ -35,7 +35,6 @@ import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { EventEmitter } from '../../lib/events.js';
-import type { EventType } from '@protolabsai/types';
 import { buildCeremonyTools } from './pm-tools.js';
 
 const logger = createLogger('ProjectPMRoutes');
@@ -451,7 +450,7 @@ export function createProjectPmRoutes(
               .describe('Milestone slug (required for retro and project-retro)'),
           }),
           execute: async ({ ceremonyType, milestoneSlug }) => {
-            events.emit('ceremony:trigger-requested' as EventType, {
+            events.emit('ceremony:trigger-requested', {
               projectPath,
               projectSlug,
               ceremonyType,
@@ -564,7 +563,7 @@ export function createProjectPmRoutes(
               .describe('Severity level'),
           }),
           execute: async ({ message, severity }) => {
-            events.emit('notification:created' as EventType, {
+            events.emit('notification:created', {
               source: `PM Agent (${projectSlug})`,
               message,
               severity,

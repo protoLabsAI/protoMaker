@@ -205,6 +205,7 @@ export type EventType =
   | 'ceremony:project-retro'
   | 'ceremony:triggered'
   | 'ceremony:fired'
+  | 'ceremony:trigger-requested'
   | 'ceremony:post-project-docs'
   | 'ceremony:post-project-docs:complete'
   | 'ceremony:post-project-docs:failed'
