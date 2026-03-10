@@ -39,6 +39,7 @@ docs/.vitepress/cache/
 .automaker/archive/
 
 # Runtime data — never git-track
+.automaker/crdt/
 .automaker/trajectory/
 .automaker/ledger/
 .automaker/recovery/
