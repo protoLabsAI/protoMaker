@@ -5,13 +5,22 @@
  * corrective actions to bring actual state in line with desired state.
  */
 
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
 import type { ExecutionState } from '@protolabsai/types';
 import { getExecutionStatePath } from '@protolabsai/platform';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
+import type { WorktreeLifecycleService } from './worktree-lifecycle-service.js';
+import type { GitHubMergeService } from './github-merge-service.js';
+import type { FailureClassifierService } from './failure-classifier-service.js';
+import type { PRFeedbackService } from './pr-feedback-service.js';
+import type { HITLFormService } from './hitl-form-service.js';
 import * as secureFs from '../lib/secure-fs.js';
+
+const execAsync = promisify(exec);
 
 const logger = createLogger('ReconciliationService');
 
@@ -55,7 +64,12 @@ export class ReconciliationService {
   constructor(
     private events: EventEmitter,
     private featureLoader: FeatureLoader,
-    private autoModeService: AutoModeService
+    private autoModeService: AutoModeService,
+    private worktreeLifecycleService?: WorktreeLifecycleService,
+    private githubMergeService?: GitHubMergeService,
+    private failureClassifierService?: FailureClassifierService,
+    private prFeedbackService?: PRFeedbackService,
+    private hitlFormService?: HITLFormService
   ) {}
 
   /**
@@ -222,18 +236,96 @@ export class ReconciliationService {
    * Feature has been in-progress for too long (likely stuck)
    */
   private async reconcileFeatureStuck(drift: Drift): Promise<string> {
-    // TODO: Escalate to higher complexity model or mark as needing intervention
-    logger.warn('Feature stuck - needs intervention', drift);
-    return 'escalated-for-intervention';
+    if (!drift.featureId) {
+      throw new Error('featureId required for feature-stuck');
+    }
+
+    const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+    if (!feature) {
+      return 'feature-not-found';
+    }
+
+    const failureCount = (feature.failureCount as number | undefined) ?? 0;
+
+    if (failureCount < 3) {
+      logger.info(
+        `Feature ${drift.featureId} stuck (failureCount=${failureCount}), resetting to backlog`
+      );
+      await this.featureLoader.update(drift.projectPath, drift.featureId, {
+        status: 'backlog',
+        failureCount: 0,
+      });
+      return 'reset-to-backlog';
+    }
+
+    // failureCount >= 3 — move to blocked and create HITL form
+    logger.warn(
+      `Feature ${drift.featureId} stuck with failureCount=${failureCount} >= 3, blocking and creating HITL form`
+    );
+    await this.featureLoader.update(drift.projectPath, drift.featureId, {
+      status: 'blocked',
+    });
+
+    if (this.hitlFormService) {
+      await this.hitlFormService.create({
+        title: `Feature stuck: ${feature.title ?? drift.featureId}`,
+        callerType: 'agent',
+        featureId: drift.featureId,
+        projectPath: drift.projectPath,
+        steps: [
+          {
+            title: 'Feature Stuck',
+            description:
+              'This feature has been stuck for too long and failed 3+ times. What should the agent do next?',
+            schema: {
+              type: 'object',
+              properties: {
+                action: {
+                  type: 'string',
+                  title: 'Action',
+                  enum: ['retry', 'skip', 'reassign'],
+                  default: 'retry',
+                },
+                notes: {
+                  type: 'string',
+                  title: 'Notes',
+                },
+              },
+              required: ['action'],
+            },
+          },
+        ],
+      });
+      return 'blocked-hitl-form-created';
+    }
+
+    return 'blocked-no-hitl';
   }
 
   /**
    * Worktree exists but feature is done or branch is gone
    */
   private async reconcileOrphanedWorktree(drift: Drift): Promise<string> {
-    // TODO: Delete orphaned worktree
-    logger.info('TODO: Delete orphaned worktree', drift);
-    return 'worktree-cleaned';
+    const branchName = drift.branchName ?? (drift.details.branchName as string | undefined);
+
+    if (!branchName) {
+      logger.warn('reconcileOrphanedWorktree: no branchName in drift, skipping cleanup', drift);
+      return 'skipped-no-branch';
+    }
+
+    if (!this.worktreeLifecycleService) {
+      logger.warn('reconcileOrphanedWorktree: worktreeLifecycleService not available');
+      return 'skipped-no-service';
+    }
+
+    logger.info(`Cleaning up orphaned worktree for branch ${branchName} in ${drift.projectPath}`);
+    await this.worktreeLifecycleService.cleanupWorktree(
+      drift.projectPath,
+      branchName,
+      drift.featureId
+    );
+
+    return 'worktree-cleanup-triggered';
   }
 
   /**

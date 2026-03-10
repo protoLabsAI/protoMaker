@@ -30,7 +30,6 @@ export interface ServiceNodeData {
 export type EngineServiceId =
   | 'signal-sources'
   | 'triage'
-  | 'project-planning'
   | 'decomposition'
   | 'launch'
   | 'auto-mode'

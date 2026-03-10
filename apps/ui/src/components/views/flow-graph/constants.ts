@@ -21,7 +21,6 @@ export const NODE_IDS = {
   // Pre-production pipeline (Lane 1)
   signalSources: 'engine-signal-sources',
   triage: 'engine-triage',
-  projectPlanning: 'engine-project-planning',
   decomposition: 'engine-decomposition',
   launch: 'engine-launch',
   // Production engine (Lane 2)
@@ -69,16 +68,10 @@ export const ENGINE_SERVICES: Array<{
     position: { x: 350, y: 50 },
   },
   {
-    nodeId: NODE_IDS.projectPlanning,
-    serviceId: 'project-planning',
-    label: 'Project Planning',
-    position: { x: 600, y: 50 },
-  },
-  {
     nodeId: NODE_IDS.decomposition,
     serviceId: 'decomposition',
     label: 'Decomposition',
-    position: { x: 850, y: 50 },
+    position: { x: 600, y: 50 },
   },
   {
     nodeId: NODE_IDS.launch,
@@ -162,14 +155,8 @@ export const STATIC_EDGES: FlowEdge[] = [
     type: 'workflow',
   },
   {
-    id: 'e-triage-planning',
+    id: 'e-triage-decomp',
     source: NODE_IDS.triage,
-    target: NODE_IDS.projectPlanning,
-    type: 'workflow',
-  },
-  {
-    id: 'e-planning-decomp',
-    source: NODE_IDS.projectPlanning,
     target: NODE_IDS.decomposition,
     type: 'workflow',
   },
@@ -399,8 +386,8 @@ export const PIPELINE_PHASE_TO_SERVICE: Record<
 > = {
   TRIAGE: { ops: 'triage', gtm: 'triage' },
   RESEARCH: { ops: 'signal-sources', gtm: 'content-pipeline' },
-  SPEC: { ops: 'project-planning', gtm: 'content-pipeline' },
-  SPEC_REVIEW: { ops: 'project-planning', gtm: 'content-pipeline' },
+  SPEC: { ops: 'decomposition', gtm: 'content-pipeline' },
+  SPEC_REVIEW: { ops: 'decomposition', gtm: 'content-pipeline' },
   DESIGN: { ops: 'decomposition', gtm: 'content-pipeline' },
   PLAN: { ops: 'launch', gtm: 'content-pipeline' },
   EXECUTE: { ops: 'agent-execution', gtm: 'content-pipeline' },

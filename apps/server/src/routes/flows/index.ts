@@ -3,7 +3,6 @@
  *
  * Provides endpoints for:
  * - Antagonistic review flow (Ava + Jon PRD review)
- * - Project planning flow (research → PRD → milestones → issues)
  *
  * All endpoints use handler factories that receive required services.
  * Mounted at /api/flows in the main server.

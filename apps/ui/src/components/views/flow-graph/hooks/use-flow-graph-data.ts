@@ -129,14 +129,6 @@ function getServiceStatus(
         statusLine: isActive ? 'Classifying signals' : 'Route signals: Ops vs GTM',
       };
     }
-    case 'project-planning': {
-      const activePRDs = engineStatus.projectLifecycle?.activePRDs ?? 0;
-      return {
-        status: activePRDs > 0 ? 'active' : 'idle',
-        throughput: activePRDs,
-        statusLine: 'SPARC PRD + Antagonistic Review',
-      };
-    }
     case 'decomposition': {
       const activeProjects = engineStatus.projectLifecycle?.activeProjects ?? 0;
       return {
@@ -245,7 +237,6 @@ function getServiceStatus(
  */
 const SERVICE_TO_GRAPH_MAP: Partial<Record<EngineServiceId, string>> = {
   'auto-mode': 'coordinator-flow',
-  'project-planning': 'project-planning',
   'agent-execution': 'content-creation',
   'pr-feedback': 'antagonistic-review',
   'signal-sources': 'research-flow',

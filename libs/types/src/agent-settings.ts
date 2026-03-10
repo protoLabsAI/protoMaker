@@ -258,7 +258,6 @@ export const DEFAULT_PHASE_MODELS: PhaseModelConfig = {
 export const DEFAULT_FLOW_MODELS: Record<string, PhaseModelEntry> = {
   'content-creation': { model: 'claude-sonnet' },
   'antagonistic-review': { model: 'claude-sonnet' },
-  'project-planning': { model: 'claude-sonnet' },
 };
 
 // ============================================================================
