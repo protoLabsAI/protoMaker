@@ -176,32 +176,6 @@ interface AutoModeConfig {
   branchName: string | null; // null = main worktree
 }
 
-/**
- * Generate a unique key for worktree-scoped auto loop state
- * @param projectPath - The project path
- * @param branchName - The branch name, or null for main worktree
- */
-function getWorktreeAutoLoopKey(projectPath: string, branchName: string | null): string {
-  const normalizedBranch = branchName === 'main' ? null : branchName;
-  return `${projectPath}::${normalizedBranch ?? '__main__'}`;
-}
-
-/**
- * Per-worktree autoloop state for multi-project/worktree support
- */
-interface ProjectAutoLoopState {
-  abortController: AbortController;
-  config: AutoModeConfig;
-  isRunning: boolean;
-  consecutiveFailures: { timestamp: number; error: string }[];
-  pausedDueToFailures: boolean;
-  hasEmittedIdleEvent: boolean;
-  branchName: string | null; // null = main worktree
-  cooldownTimer: NodeJS.Timeout | null; // Timer for auto-resume after cooldown
-  startingFeatures: Set<string>; // Track features being started to prevent race conditions
-  humanBlockedCount: number; // Count of features blocked by human-assigned dependencies
-}
-
 // ExecutionState is defined in libs/types/src/auto-mode.ts and imported from @protolabsai/types.
 
 // Default empty execution state
@@ -217,9 +191,6 @@ const DEFAULT_EXECUTION_STATE: ExecutionState = {
 
 // Duration before auto-resuming a paused loop after circuit-breaker activation
 const COOLDOWN_PERIOD_MS = 300_000; // 5 minutes
-// Legacy constants for global failure tracking (used by legacy methods only)
-const CONSECUTIVE_FAILURE_THRESHOLD = 2; // Pause after 2 consecutive failures (circuit breaker)
-const FAILURE_WINDOW_MS = 60000; // Failures within 1 minute count as consecutive
 
 export class AutoModeService {
   private events: EventEmitter;
@@ -233,14 +204,10 @@ export class AutoModeService {
   // Legacy single-project properties (kept for backward compatibility during transition)
   private autoLoopRunning = false;
   private autoLoopAbortController: AbortController | null = null;
-  private config: AutoModeConfig | null = null;
   private pendingApprovals = new Map<string, PendingApproval>();
   // Track retry timers so they can be cancelled on shutdown
   private retryTimers = new Map<string, NodeJS.Timeout>();
   private settingsService: SettingsService | null = null;
-  // Track consecutive failures to detect quota/API issues (legacy global)
-  private consecutiveFailures: { timestamp: number; error: string }[] = [];
-  private pausedDueToFailures = false;
   // Track if idle event has been emitted (legacy global)
   private hasEmittedIdleEvent = false;
   // Recovery service for automatic failure recovery
@@ -525,8 +492,7 @@ export class AutoModeService {
     const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
     const hasState = this.coordinator.getState(worktreeKey) !== undefined;
     if (!hasState) {
-      // Fall back to legacy global tracking
-      return this.trackFailureAndCheckPause(errorInfo);
+      return false;
     }
 
     // Immediately pause for critical errors that should trigger circuit breaker
@@ -539,37 +505,6 @@ export class AutoModeService {
     }
 
     return this.coordinator.trackFailure(worktreeKey, errorInfo.message);
-  }
-
-  /**
-   * Track a failure and check if we should pause due to consecutive failures (legacy global).
-   */
-  private trackFailureAndCheckPause(errorInfo: { type: string; message: string }): boolean {
-    const now = Date.now();
-
-    // Add this failure
-    this.consecutiveFailures.push({ timestamp: now, error: errorInfo.message });
-
-    // Remove old failures outside the window
-    this.consecutiveFailures = this.consecutiveFailures.filter(
-      (f) => now - f.timestamp < FAILURE_WINDOW_MS
-    );
-
-    // Check if we've hit the threshold
-    if (this.consecutiveFailures.length >= CONSECUTIVE_FAILURE_THRESHOLD) {
-      return true; // Should pause
-    }
-
-    // Immediately pause for critical errors that should trigger circuit breaker
-    if (
-      errorInfo.type === 'quota_exhausted' ||
-      errorInfo.type === 'rate_limit' ||
-      errorInfo.type === 'network'
-    ) {
-      return true;
-    }
-
-    return false;
   }
 
   /**
@@ -586,8 +521,6 @@ export class AutoModeService {
     const worktreeKey = this.coordinator.makeKey(projectPath, branchName);
     const projectState = this.coordinator.getState(worktreeKey);
     if (!projectState) {
-      // Fall back to legacy global pause
-      this.signalShouldPause(errorInfo);
       return;
     }
 
@@ -605,7 +538,7 @@ export class AutoModeService {
     const cooldownMinutes = Math.floor(COOLDOWN_PERIOD_MS / 60000);
     this.emitAutoModeEvent('auto_mode_paused_failures', {
       message:
-        failureCount >= CONSECUTIVE_FAILURE_THRESHOLD
+        failureCount >= 2
           ? `Auto Mode paused: ${failureCount} consecutive failures detected. Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`
           : `Auto Mode paused: Critical error detected (${errorInfo.type}). Circuit breaker activated. Auto-resume in ${cooldownMinutes} minutes.`,
       errorType: errorInfo.type,
@@ -702,36 +635,6 @@ export class AutoModeService {
   }
 
   /**
-   * Signal that we should pause due to repeated failures or quota exhaustion (legacy global).
-   */
-  private signalShouldPause(errorInfo: { type: string; message: string }): void {
-    if (this.pausedDueToFailures) {
-      return; // Already paused
-    }
-
-    this.pausedDueToFailures = true;
-    const failureCount = this.consecutiveFailures.length;
-    logger.info(
-      `Pausing auto loop after ${failureCount} consecutive failures. Last error: ${errorInfo.type}`
-    );
-
-    // Emit event to notify UI
-    this.emitAutoModeEvent('auto_mode_paused_failures', {
-      message:
-        failureCount >= CONSECUTIVE_FAILURE_THRESHOLD
-          ? `Auto Mode paused: ${failureCount} consecutive failures detected. This may indicate a quota limit or API issue. Please check your usage and try again.`
-          : 'Auto Mode paused: Usage limit or API error detected. Please wait for your quota to reset or check your API configuration.',
-      errorType: errorInfo.type,
-      originalError: errorInfo.message,
-      failureCount,
-      projectPath: this.config?.projectPath,
-    });
-
-    // Stop the auto loop
-    this.stopAutoLoop();
-  }
-
-  /**
    * Reset failure tracking for a specific project
    * @param projectPath - The project to reset failure tracking for
    * @param branchName - The branch name, or null for main worktree
@@ -746,10 +649,10 @@ export class AutoModeService {
 
   /**
    * Reset failure tracking (called when user manually restarts auto mode) - legacy global
+   * @deprecated Fields removed; no-op kept for call-site compatibility during transition
    */
   private resetFailureTracking(): void {
-    this.consecutiveFailures = [];
-    this.pausedDueToFailures = false;
+    // no-op: legacy global failure tracking fields removed
   }
 
   /**
@@ -764,9 +667,10 @@ export class AutoModeService {
 
   /**
    * Record a successful feature completion to reset consecutive failure count - legacy global
+   * @deprecated Field removed; no-op kept for call-site compatibility during transition
    */
   private recordSuccess(): void {
-    this.consecutiveFailures = [];
+    // no-op: legacy global consecutiveFailures field removed
   }
 
   /**
@@ -1170,12 +1074,6 @@ export class AutoModeService {
 
     this.autoLoopRunning = true;
     this.autoLoopAbortController = new AbortController();
-    this.config = {
-      maxConcurrency,
-      useWorktrees: true,
-      projectPath,
-      branchName: null,
-    };
 
     this.emitAutoModeEvent('auto_mode_started', {
       message: `Auto mode started with max ${maxConcurrency} concurrent features`,
@@ -1188,7 +1086,7 @@ export class AutoModeService {
     // Note: Memory folder initialization is now handled by loadContextFiles
 
     // Run the loop in the background
-    this.runAutoLoop().catch((error) => {
+    this.runAutoLoop(projectPath, maxConcurrency).catch((error) => {
       logger.error('Loop error:', error);
       const errorInfo = classifyError(error);
       this.emitAutoModeEvent('auto_mode_error', {
@@ -1202,7 +1100,10 @@ export class AutoModeService {
   /**
    * @deprecated Use runAutoLoopForProject instead
    */
-  private async runAutoLoop(): Promise<void> {
+  private async runAutoLoop(
+    projectPath: string,
+    maxConcurrency: number = DEFAULT_MAX_CONCURRENCY
+  ): Promise<void> {
     while (
       this.autoLoopRunning &&
       this.autoLoopAbortController &&
@@ -1210,13 +1111,13 @@ export class AutoModeService {
     ) {
       try {
         // Check if we have capacity
-        if (this.runningFeatures.size >= (this.config?.maxConcurrency || DEFAULT_MAX_CONCURRENCY)) {
+        if (this.runningFeatures.size >= maxConcurrency) {
           await this.sleep(5000);
           continue;
         }
 
         // Load pending features
-        const pendingFeatures = await this.scheduler.loadPendingFeatures(this.config!.projectPath);
+        const pendingFeatures = await this.scheduler.loadPendingFeatures(projectPath);
 
         if (pendingFeatures.length === 0) {
           // Emit idle event only once when backlog is empty AND no features are running
@@ -1224,7 +1125,7 @@ export class AutoModeService {
           if (runningCount === 0 && !this.hasEmittedIdleEvent) {
             this.emitAutoModeEvent('auto_mode_idle', {
               message: 'No pending features - auto mode idle',
-              projectPath: this.config!.projectPath,
+              projectPath,
             });
             this.hasEmittedIdleEvent = true;
             logger.info(`[AutoLoop] Backlog complete, auto mode now idle`);
@@ -1266,9 +1167,9 @@ export class AutoModeService {
 
           // Start feature execution in background
           this.executeFeature(
-            this.config!.projectPath,
+            projectPath,
             nextFeature.id,
-            this.config!.useWorktrees,
+            true, // useWorktrees
             true
           ).catch((error) => {
             logger.error(`Feature ${nextFeature.id} error:`, error);
@@ -1291,7 +1192,7 @@ export class AutoModeService {
    */
   async stopAutoLoop(): Promise<number> {
     const wasRunning = this.autoLoopRunning;
-    const projectPath = this.config?.projectPath;
+    const projectPath = undefined;
     this.autoLoopRunning = false;
     if (this.autoLoopAbortController) {
       this.autoLoopAbortController.abort();
@@ -3995,7 +3896,7 @@ You can use the Read tool to view these images at any time during implementation
       const state: ExecutionState = {
         version: 1,
         autoLoopWasRunning: this.autoLoopRunning,
-        maxConcurrency: this.config?.maxConcurrency ?? DEFAULT_MAX_CONCURRENCY,
+        maxConcurrency: DEFAULT_MAX_CONCURRENCY,
         projectPath,
         branchName: null, // Legacy global auto mode uses main worktree
         runningFeatureIds: Array.from(this.runningFeatures.keys()),

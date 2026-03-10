@@ -4317,3 +4317,32 @@ usageStats:
 - **Problem solved:** dev:headless implements production-mode server startup that runs locally. Requires pre-compiled JavaScript in dist/, unlike watch-mode which uses tsx for runtime compilation.
 - **Why this works:** tsx enables hot-reload and live development iteration. Headless mode uses plain 'node dist/index.js' which requires pre-compiled output. These are two fundamentally different execution models with incompatible build requirements.
 - **Trade-offs:** Multiple build commands increase cognitive overhead and configuration complexity, but avoid unnecessary tsc compilation and keep runtime TS compilation isolated to dev
+
+#### [Gotcha] Identically-named services in different architectural layers (auto-mode/lead-engineer-service.ts vs services/lead-engineer-service.ts) create silent removal and refactoring hazards. Team had to explicitly verify no import collisions before deletion. (2026-03-10)
+- **Situation:** Removed lead-engineer files from auto-mode/ subdirectory while live lead-engineer-service exists at services/ level. Same domain concept, similar naming across layers.
+- **Root cause:** Multi-layer architecture naturally reuses domain names (lead-engineer), but this creates disambiguation burden during refactoring. Easy to accidentally delete wrong file or miss cross-layer imports.
+- **How to avoid:** Current naming is semantically clear but risky during maintenance. Renaming adds churn but removes ambiguity. Team chose clarity over safety.
+
+#### [Pattern] Parallel architecture supersession via no-op method stubs: methods like resetFailureTracking() and recordSuccess() retain signatures but empty bodies. Old callers work; new coordinator handles real state. (2026-03-10)
+- **Problem solved:** Legacy global failure-tracking pattern (this.config, consecutiveFailures) superseded by per-project AutoLoopCoordinator. Can't delete methods immediately due to call-site coupling.
+- **Why this works:** Enables gradual migration without rewriting all callers at once. Maintains API contract during architecture transition. Reduces refactoring risk.
+- **Trade-offs:** Easier migration path, but no-op stubs can hide future bugs if someone calls them expecting side effects. Dead code remains (just hidden).
+
+### Inlined CONSECUTIVE_FAILURE_THRESHOLD constant (2) directly into active code signalShouldPauseForProject() rather than keeping constant when deleting its parent file. (2026-03-10)
+- **Context:** Constant defined in deleted auto-mode/lead-engineer-rules.ts but used in active method. Had to decide: extract constant or inline value.
+- **Why:** Inlining acknowledges the constant was never meant to be configurable—it's an implementation detail of the old pattern. Avoids creating orphaned constants. New per-project coordinator will define its own thresholds.
+- **Rejected:** Extract constant to a legacy-constants file. Adds indirection for a single value; suggests false reusability.
+- **Trade-offs:** Inlined values are less DRY and harder to change globally, but avoid creating false architecture (orphaned constants). Signals intentionality: this is not a knob, it's a fixed value.
+- **Breaking if changed:** If code needs to change the threshold, it must now find the inlined `2` rather than a named constant. Makes threshold less discoverable.
+
+#### [Gotcha] Removing fallback delegation changes behavior silently. trackFailureAndCheckPauseForProject(undefined) now returns false (no per-project state) instead of delegating to removed global trackFailureAndCheckPause(). (2026-03-10)
+- **Situation:** Active method had fallback: if per-project coordinator state missing, use global method. Deletion removes fallback, forcing explicit false return.
+- **Root cause:** Global fallback was safety net for edge case (no per-project state). Removal assumes coordinator always exists. Per-project pattern is now mandatory.
+- **How to avoid:** Silent return false is cleaner (no exceptions) but could mask coordinator initialization bugs. Forces confidence in coordinator's per-project coverage.
+
+### Migrated from class state mutation (this.config) to parameter injection in runAutoLoop(projectPath, maxConcurrency). Avoids mutable instance state in async loop. (2026-03-10)
+- **Context:** runAutoLoop was reading this.config.projectPath and this.config.maxConcurrency. These values set once at start, never updated, but held as mutable state.
+- **Why:** State mutation in async loops creates race conditions and debugging complexity. Parameters are immutable, clear data flow. Aligns with functional style and per-project coordinator pattern.
+- **Rejected:** Keep this.config but make it readonly/private. Still allows aliasing and indirect mutation; parameters are more explicit.
+- **Trade-offs:** Parameter injection requires updating call sites (startAutoLoop→runAutoLoop). More argument passing, but clearer intent. Better testability (no mock config setup).
+- **Breaking if changed:** If code modifies this.config mid-loop expecting effects on runAutoLoop, those effects are gone. Removes implicit state coupling.

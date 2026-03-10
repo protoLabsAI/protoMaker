@@ -247,7 +247,7 @@ export function WorkflowSettingsPanel() {
     setLocalSettings((prev) => ({
       ...prev,
       [section]: {
-        ...prev[section],
+        ...(prev[section] as Record<string, unknown>),
         [key]: value,
       },
     }));

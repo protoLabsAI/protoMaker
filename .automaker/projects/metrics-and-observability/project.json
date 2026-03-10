@@ -1,0 +1,106 @@
+{
+  "slug": "metrics-and-observability",
+  "title": "Metrics and Observability",
+  "goal": "Implement DORA metrics and agentic-specific metrics to measure and tune system performance, enabling data-driven gate threshold calibration.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-dora-metrics-collection",
+      "title": "DORA Metrics Collection",
+      "description": "Track the four core DORA metrics from existing events and git data.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "implement-dora-metrics-service",
+          "title": "Implement DORA metrics service",
+          "description": "Create MetricsCollectionService that subscribes to events and tracks: (1) Deployment frequency — count of PRs merged to dev per day/week, (2) Change lead time — time from feature creation to PR merge, (3) Change fail rate — ratio of features that fail CI or require remediation after merge to total merged, (4) Recovery time — time from failure detection to fix merge. Persist to `.automaker/metrics/dora.json` as time-series entries. Add to ServiceContainer.",
+          "filesToModify": [
+            "apps/server/src/services/metrics-collection-service.ts",
+            "apps/server/src/server/services.ts",
+            "libs/types/src/metrics.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 4 DORA metrics tracked",
+            "Time-series data persisted to disk",
+            "Event-driven collection (no polling)",
+            "npm run build:server passes",
+            "npm run test:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773135527181-jhyiuct53"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773135527180-vdlbmj3h9"
+    },
+    {
+      "number": 2,
+      "slug": "02-agentic-metrics",
+      "title": "Agentic Metrics",
+      "description": "Track metrics specific to autonomous agent development.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-agentic-metrics-to-collection-service",
+          "title": "Add agentic metrics to collection service",
+          "description": "Extend MetricsCollectionService to track: (1) Autonomy rate — % of features reaching done without human intervention beyond approval gates, (2) Remediation loop count — PR iterations per feature, (3) Cost per shipped feature — LLM cost from Langfuse per feature, (4) WIP saturation index — current WIP / WIP limit per pipeline stage (execution, review, approval). Derive from existing events: feature:status-changed, agent:completed, pr:merged, pr:review-requested. Persist to `.automaker/metrics/agentic.json`.",
+          "filesToModify": [
+            "apps/server/src/services/metrics-collection-service.ts",
+            "libs/types/src/metrics.ts"
+          ],
+          "acceptanceCriteria": [
+            "All 4 agentic metrics tracked",
+            "Autonomy rate accurately reflects human intervention",
+            "WIP saturation calculated per stage",
+            "npm run build:server passes",
+            "npm run test:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773135527185-sm7lazw1o"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773135527183-bvg17kula"
+    },
+    {
+      "number": 3,
+      "slug": "03-metrics-api-and-dashboard",
+      "title": "Metrics API and Dashboard",
+      "description": "Expose metrics via REST API and add a dashboard panel.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-metrics-rest-endpoints-and-dashboard-panel",
+          "title": "Add metrics REST endpoints and dashboard panel",
+          "description": "Create /api/metrics routes: GET /api/metrics/dora (returns DORA metrics for time range), GET /api/metrics/agentic (returns agentic metrics), GET /api/metrics/summary (returns current snapshot). Add a MetricsPanel component to the existing analytics-view or dashboard-view that shows: DORA metric trends (sparklines), current autonomy rate, WIP saturation gauges, cost/feature trend. Reuse existing chart/visualization patterns from the analytics view.",
+          "filesToModify": [
+            "apps/server/src/routes/metrics/index.ts",
+            "apps/ui/src/components/views/dashboard-view/metrics/dora-metrics-panel.tsx",
+            "apps/server/src/server/routes.ts"
+          ],
+          "acceptanceCriteria": [
+            "REST endpoints return metrics data",
+            "Dashboard panel shows DORA trends",
+            "Agentic metrics visible in UI",
+            "npm run typecheck passes",
+            "npm run build passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773135527187-i7j6pbf2h"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773135527186-8zo9ndnbt"
+    }
+  ],
+  "prd": {
+    "situation": "The system has cost tracking via Langfuse but no DORA metrics (deployment frequency, change lead time, change fail rate, recovery time) and no agentic-specific metrics (autonomy rate, WIP saturation, remediation loop counts). Without measurement, flow controls and gate thresholds cannot be calibrated.",
+    "problem": "Cannot answer basic questions: What is our change fail rate? What percentage of features ship without human intervention? How long does a feature take from creation to merge? What is our WIP saturation at each pipeline stage? Without these metrics, flow controls are guesswork.",
+    "approach": "Three milestones: (1) DORA metrics collection from existing events and git data, (2) Agentic-specific metrics derived from board state and agent execution data, (3) REST API endpoints and UI dashboard panel for visualization.",
+    "results": "Real-time DORA metrics available via API. Agentic metrics (autonomy rate, cost/feature, remediation loops, WIP saturation) tracked and queryable. Dashboard panel showing trends over time. Metrics data available for gate threshold calibration.",
+    "constraints": "Must not add significant overhead to the event loop. Metrics collection should be event-driven, not polling. Storage in flat files (.automaker/metrics/) for simplicity. Dashboard should reuse existing analytics-view infrastructure."
+  },
+  "createdAt": "2026-03-10T09:31:39.277Z",
+  "updatedAt": "2026-03-10T09:38:47.194Z"
+}

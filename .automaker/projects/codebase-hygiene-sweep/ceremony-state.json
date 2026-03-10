@@ -1,0 +1,16 @@
+{
+  "phase": "milestone_active",
+  "projectPath": "/Users/kj/dev/automaker",
+  "projectSlug": "codebase-hygiene-sweep",
+  "lastStandup": "",
+  "lastRetro": "",
+  "standupCadence": "0 9 * * 1",
+  "history": [
+    {
+      "from": "awaiting_kickoff",
+      "to": "milestone_active",
+      "trigger": "project:lifecycle:launched",
+      "timestamp": "2026-03-10T09:05:37.267Z"
+    }
+  ]
+}

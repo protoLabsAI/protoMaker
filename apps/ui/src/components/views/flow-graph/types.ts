@@ -38,7 +38,8 @@ export type EngineServiceId =
   | 'pr-feedback'
   | 'lead-engineer-rules'
   | 'reflection'
-  | 'content-pipeline';
+  | 'content-pipeline'
+  | 'project-planning';
 
 export interface EngineServiceNodeData {
   label: string;
