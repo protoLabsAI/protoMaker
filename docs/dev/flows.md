@@ -499,6 +499,27 @@ const flow = createProjectPlanningFlow({
 | `project-planning/nodes/research.ts`        | Research executor node                       |
 | `project-planning/nodes/generate-prd.ts`    | SPARC PRD generation node                    |
 
+## Ceremony Flows
+
+The `@protolabsai/flows` package exports three ceremony flows for automated team rituals. These are thin LangGraph wrappers around the server-side ceremony logic:
+
+| Export                   | Description                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| `createStandupFlow`      | Daily standup summarization — aggregates recent feature activity into team standup notes |
+| `createRetroFlow`        | Sprint/cycle retrospective — generates insights from completed and failed features       |
+| `createProjectRetroFlow` | Project-level retrospective — holistic review across milestones and epics                |
+
+For full ceremony configuration, trigger mechanics, and audit logging, see [Ceremonies](../agents/ceremonies.md).
+
+### Maintenance Flows
+
+The flows package also exports maintenance utilities used by the lead engineer pipeline:
+
+- **Pre-flight check helpers** — Worktree sync, package build validation
+- **Recovery context builders** — Shape retry context from prior execution trajectories
+
+---
+
 ## Known Gotchas
 
 - **LangGraph node name types:** `StateGraph` requires string literal types that match `'__start__'`. For dynamic edge building, cast to `any`: `const g = graph as any`.

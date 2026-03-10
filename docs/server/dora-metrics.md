@@ -238,7 +238,122 @@ DORA metrics here are **feature-based proxies**, not pipeline measurements:
 
 These are suitable for **team health monitoring and trend detection**, not compliance reporting or SLO measurement.
 
+## Event-Driven Metrics Collection
+
+The `MetricsCollectionService` and `AgenticMetricsService` automatically collect metrics from the event bus — no manual API calls required.
+
+### MetricsCollectionService
+
+Subscribes to deployment lifecycle events and updates the DORA time-series persisted to `.automaker/metrics/dora.json`.
+
+| Event                    | DORA Impact                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| `feature:pr-merged`      | Records deployment; updates deployment frequency and change lead time |
+| `pr:ci-failure`          | Increments change failure count                                       |
+| `pr:remediation-started` | Records recovery start timestamp                                      |
+
+Each snapshot is a `DoraTimeSeriesEntry`:
+
+```typescript
+interface DoraTimeSeriesEntry {
+  timestamp: string; // ISO-8601
+  deploymentFrequency: number; // deployments per day (7-day window)
+  changeLeadTime: number; // average hours from PR open to merge
+  changeFailRate: number; // ratio of failed deployments (7-day window)
+  recoveryTime: number; // average hours to remediate
+}
+```
+
+Entries are appended to `DoraTimeSeriesDocument` and persisted atomically (via `atomicWriteJson`).
+
+### AgenticMetricsService
+
+Tracks AI-specific health signals and persists to `.automaker/metrics/agentic.json`.
+
+| Event                    | Agentic Impact                                  |
+| ------------------------ | ----------------------------------------------- |
+| `feature:status-changed` | Updates WIP stage saturation                    |
+| `agent:completed`        | Records autonomy success/failure, cost data     |
+| `pr:merged`              | Counts autonomous completions for autonomy rate |
+| `pr:review-requested`    | Records remediation loop if it's a re-review    |
+
+#### Autonomy Rate
+
+```typescript
+interface AgenticAutonomyRate {
+  windowDays: number; // Rolling window
+  autonomousCount: number; // Features completed without human intervention
+  totalCount: number;
+  rate: number; // autonomousCount / totalCount
+}
+```
+
+#### Remediation Records
+
+```typescript
+interface AgenticRemediationRecord {
+  featureId: string;
+  prIterations: number; // Number of PR review cycles
+  resolvedAt?: string;
+}
+```
+
+#### WIP Saturation
+
+```typescript
+interface AgenticWipSaturation {
+  execution: number; // Features currently in agent execution
+  review: number; // Features awaiting PR review
+  approval: number; // Features awaiting human approval
+}
+```
+
+Snapshots are recorded as `AgenticMetricsEntry` objects appended to `AgenticMetricsDocument`.
+
+---
+
+## Metrics Ledger
+
+For per-feature analytics (cost, cycle time, execution count), see the **metrics ledger** persisted to `.automaker/ledger/metrics.jsonl`.
+
+Each `MetricsLedgerRecord` captures:
+
+```typescript
+interface MetricsLedgerRecord {
+  recordId: string;
+  featureId: string;
+  epicId?: string;
+  projectSlug: string;
+  complexity: PRDComplexity;
+  entryType: 'completed' | 'escalated' | 'abandoned';
+
+  // Lifecycle timestamps
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+
+  // Cost tracking
+  totalCostUsd: number;
+  costByModel: Record<string, number>;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+
+  // Quality signals
+  executionCount: number; // How many times the agent ran
+  failureCount: number; // Agent failures before success
+  escalated: boolean;
+
+  // Per-run details
+  executions: LedgerExecution[];
+}
+```
+
+The ledger is append-only JSONL, safe for concurrent writes via `atomicWriteJson`.
+
+---
+
 ## See Also
 
 - [Route Organization](./route-organization.md) — Express route registration patterns
 - [Knowledge Store](./knowledge-store.md) — SQLite FTS5 for feature retrieval
+- [Workflow Settings](./workflow-settings.md) — Error budget window and threshold configuration

@@ -597,8 +597,86 @@ const result = await compiled.invoke({
 console.log('Review completed:', result.reviewResult);
 ```
 
+## AntagonisticReviewAdapter (Flow-Based)
+
+The `AntagonisticReviewAdapter` is a drop-in replacement for `AntagonisticReviewService` that routes execution through the LangGraph flow defined in `libs/flows`. It implements the same interface, making it transparent to callers.
+
+### Usage
+
+```typescript
+import { createAntagonisticReviewAdapter } from './antagonistic-review-adapter';
+
+const adapter = createAntagonisticReviewAdapter({
+  checkpointerDb: './checkpoints.db', // SQLite path for HITL resume
+  langfuseConfig: {
+    /* optional */
+  },
+});
+
+// Same interface as AntagonisticReviewService
+const result = await adapter.executeReview({
+  prd: myPrd,
+  prdId: 'prd-abc123',
+  projectPath: '/path/to/project',
+});
+```
+
+### Switching Between Flow and Legacy
+
+`AntagonisticReviewService` checks a feature flag to decide which implementation to use:
+
+```typescript
+// In the service:
+if (this.useFlowBasedReview) {
+  return this.adapter.executeReview(request);
+} else {
+  return this.legacyExecuteReview(request);
+}
+```
+
+The feature flag is controlled at construction time. The `AntagonisticReviewAdapter` handles:
+
+- LangGraph flow execution with SQLite checkpointing
+- HITL resume via `resumeReview(threadId, feedback)`
+- Token usage aggregation for cost tracking
+- Full Langfuse tracing
+
+### HITL Resume
+
+When a review is paused waiting for human input:
+
+```typescript
+// Later, when feedback arrives:
+const resumed = await adapter.resumeReview(threadId, {
+  approved: true,
+  feedback: 'The concerns about scalability are valid, but acceptable for v1.',
+});
+```
+
+---
+
+## Plan Verification
+
+`AntagonisticReviewService.verifyPlan()` is used by the [Lead Engineer Pipeline](../dev/lead-engineer-pipeline.md) to gate large and architectural features before agent execution begins.
+
+```typescript
+const result = await antagonisticReviewService.verifyPlan({
+  plan: implementationPlan,
+  featureDescription: feature.description,
+  projectPath: feature.projectPath,
+});
+// result: { approved: boolean; reason?: string } | null
+```
+
+- Returns `null` if the service is unavailable (caller falls back to inline review)
+- Returns `{ approved: false, reason: "..." }` to block plan and trigger regeneration
+- Returns `{ approved: true }` to proceed to EXECUTE
+
+---
+
 ## Next Steps
 
+- **[Lead Engineer Pipeline](../dev/lead-engineer-pipeline.md)** — How the plan review gate is integrated
 - **[Content Pipeline](./content-pipeline.md)** — Multi-phase content generation with HITL gates
 - **[Flows Package](../dev/flows.md)** — LangGraph flow primitives and utilities
 - **[Observability Package](../dev/observability-package.md)** — Langfuse tracing and prompt management
