@@ -3,8 +3,9 @@
  *
  * POST /api/project-pm/chat — streaming chat with the Project PM agent.
  *   Body: { projectPath, projectSlug, messages }
+ *   Headers: x-model-alias (optional) — override model (haiku|sonnet|opus)
  *   Uses Vercel AI SDK streamText with PM system prompt and inline tools.
- *   PM agent is haiku model, no bash, no file write.
+ *   PM agent defaults to sonnet model; supports extended thinking on sonnet/opus.
  *
  * GET /api/project-pm/sessions — returns all active PM sessions.
  * GET /api/project-pm/session/:slug — returns session history + ceremony state.
@@ -331,7 +332,12 @@ export function createProjectPmRoutes(
         }),
       };
 
-      const resolvedModelId = resolveModelString('haiku', 'haiku');
+      // Model selection: x-model-alias header > default (sonnet)
+      const modelAlias = (req.headers['x-model-alias'] as string) || 'sonnet';
+      const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
+      const extendedThinking =
+        resolvedModelId.includes('opus') || resolvedModelId.includes('sonnet');
+
       const messages: ModelMessage[] = await convertToModelMessages(rawMessages, { tools });
 
       // Prepend session history (system event messages from feature completions, etc.)
@@ -341,7 +347,7 @@ export function createProjectPmRoutes(
       const allMessages: ModelMessage[] = [...sessionHistory, ...messages];
 
       logger.info(
-        `PM chat request: ${messages.length} user messages + ${sessionHistory.length} session events, project=${projectSlug}, model=haiku`
+        `PM chat request: ${messages.length} user messages + ${sessionHistory.length} session events, project=${projectSlug}, model=${modelAlias}, extendedThinking=${extendedThinking}`
       );
 
       const result = streamText({
@@ -350,6 +356,13 @@ export function createProjectPmRoutes(
         messages: allMessages,
         tools,
         stopWhen: stepCountIs(5),
+        ...(extendedThinking && {
+          providerOptions: {
+            anthropic: {
+              thinking: { type: 'enabled', budgetTokens: 10_000 },
+            },
+          },
+        }),
         experimental_telemetry: {
           isEnabled: true,
           metadata: { route: '/api/project-pm/chat', projectSlug },
