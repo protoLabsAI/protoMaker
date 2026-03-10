@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response } from 'express';
-import {
-  createSummaryHandler,
-  computeWipSaturation,
-} from '@/routes/features/routes/summary.js';
+import { createSummaryHandler, computeWipSaturation } from '@/routes/features/routes/summary.js';
 import type { FeatureLoader } from '@/services/feature-loader.js';
 import type { SettingsService } from '@/services/settings-service.js';
 import { createMockExpressContext } from '../../utils/mocks.js';
@@ -149,11 +146,7 @@ describe('board summary - wipSaturation', () => {
     });
 
     it('uses default limits when settingsService is not provided', async () => {
-      const features = [
-        { status: 'in_progress' },
-        { status: 'review' },
-        { status: 'review' },
-      ];
+      const features = [{ status: 'in_progress' }, { status: 'review' }, { status: 'review' }];
 
       vi.mocked(mockFeatureLoader.getAll).mockResolvedValue(features as any);
 
