@@ -23,3 +23,6 @@ export { isBranchMerged, isCommitOnBranch, getBranchHeadCommit, branchExists } f
 
 // Export rebase utilities
 export { rebaseWorktreeOnMain, type RebaseResult } from './rebase.js';
+
+// Export exec environment utilities
+export { createGitExecEnv, extractTitleFromDescription } from './exec-env.js';

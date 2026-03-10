@@ -77,7 +77,7 @@ import {
   getExecutionStatePath,
   ensureAutomakerDir,
 } from '@protolabsai/platform';
-import { rebaseWorktreeOnMain } from '@protolabsai/git-utils';
+import { rebaseWorktreeOnMain, extractTitleFromDescription } from '@protolabsai/git-utils';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -2654,7 +2654,7 @@ Address the follow-up instructions above. Review the previous work and make the 
       // Load feature for commit message
       const feature = await this.loadFeature(projectPath, featureId);
       const commitMessage = feature
-        ? `feat: ${this.extractTitleFromDescription(
+        ? `feat: ${extractTitleFromDescription(
             feature.description
           )}\n\nImplemented by Automaker auto-mode`
         : `feat: Feature ${featureId}`;
@@ -3543,24 +3543,6 @@ Format your response as a structured markdown document.`;
     }
   }
 
-  /**
-   * Extract a title from feature description (first line or truncated)
-   */
-  private extractTitleFromDescription(description: string): string {
-    if (!description || !description.trim()) {
-      return 'Untitled Feature';
-    }
-
-    // Get first line, or first 60 characters if no newline
-    const firstLine = description.split('\n')[0].trim();
-    if (firstLine.length <= 60) {
-      return firstLine;
-    }
-
-    // Truncate to 60 characters and add ellipsis
-    return firstLine.substring(0, 57) + '...';
-  }
-
   private buildFeaturePrompt(
     feature: Feature,
     taskExecutionPrompts: {
@@ -3568,7 +3550,7 @@ Format your response as a structured markdown document.`;
       playwrightVerificationInstructions: string;
     }
   ): string {
-    const title = this.extractTitleFromDescription(feature.description);
+    const title = extractTitleFromDescription(feature.description);
 
     let prompt = `## Feature Implementation Task
 

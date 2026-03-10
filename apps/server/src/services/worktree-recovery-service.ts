@@ -13,36 +13,13 @@ import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
 import { DEFAULT_GIT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 import { buildGitAddCommand } from '../lib/git-staging-utils.js';
+import { createGitExecEnv } from '@protolabsai/git-utils';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 const logger = createLogger('WorktreeRecovery');
 
-// Extended PATH for git/gh CLI availability (mirrors git-workflow-service pattern)
-const pathSeparator = process.platform === 'win32' ? ';' : ':';
-const additionalPaths: string[] = [];
-
-if (process.platform === 'win32') {
-  if (process.env.LOCALAPPDATA) {
-    additionalPaths.push(`${process.env.LOCALAPPDATA}\\Programs\\Git\\cmd`);
-  }
-  if (process.env.PROGRAMFILES) {
-    additionalPaths.push(`${process.env.PROGRAMFILES}\\Git\\cmd`);
-  }
-} else {
-  additionalPaths.push(
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    '/home/linuxbrew/.linuxbrew/bin',
-    `${process.env.HOME}/.local/bin`
-  );
-}
-
-const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
-  .filter(Boolean)
-  .join(pathSeparator);
-
-const execEnv = { ...process.env, PATH: extendedPath, HUSKY: '0' };
+const execEnv = createGitExecEnv();
 
 export interface WorktreeRecoveryResult {
   /** Whether any uncommitted changes were detected */

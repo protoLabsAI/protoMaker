@@ -11,41 +11,12 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
+import { createGitExecEnv } from '@protolabsai/git-utils';
 
 const execAsync = promisify(exec);
 const logger = createLogger('CodeRabbitResolver');
 
-// Extended PATH for finding gh CLI (same pattern as git-workflow-service)
-const pathSeparator = process.platform === 'win32' ? ';' : ':';
-const additionalPaths: string[] = [];
-
-if (process.platform === 'win32') {
-  if (process.env.LOCALAPPDATA) {
-    additionalPaths.push(`${process.env.LOCALAPPDATA}\\Programs\\Git\\cmd`);
-  }
-  if (process.env.PROGRAMFILES) {
-    additionalPaths.push(`${process.env.PROGRAMFILES}\\Git\\cmd`);
-  }
-  if (process.env['ProgramFiles(x86)']) {
-    additionalPaths.push(`${process.env['ProgramFiles(x86)']}\\Git\\cmd`);
-  }
-} else {
-  additionalPaths.push(
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    '/home/linuxbrew/.linuxbrew/bin',
-    `${process.env.HOME}/.local/bin`
-  );
-}
-
-const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
-  .filter(Boolean)
-  .join(pathSeparator);
-
-const execEnv = {
-  ...process.env,
-  PATH: extendedPath,
-};
+const execEnv = createGitExecEnv();
 
 /**
  * Known bot accounts whose review threads should be auto-resolved

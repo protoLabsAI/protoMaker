@@ -6,7 +6,7 @@
  * - executePipelineSteps / executePipelineStep: post-implementation pipeline steps
  * - runAgent: low-level agent streaming
  * - buildFeaturePrompt / buildTaskPrompt / buildPipelineStepPrompt: prompt assembly
- * - getPlanningPromptPrefix / extractTitleFromDescription: prompt helpers
+ * - getPlanningPromptPrefix: prompt helpers
  * - recordLearningsFromFeature: post-success learning extraction
  * - getHeapUsagePercent: memory monitoring helper
  */
@@ -43,7 +43,7 @@ import {
 } from '@protolabsai/utils';
 import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 import { getFeatureDir } from '@protolabsai/platform';
-import { rebaseWorktreeOnMain } from '@protolabsai/git-utils';
+import { rebaseWorktreeOnMain, extractTitleFromDescription } from '@protolabsai/git-utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { randomUUID } from 'crypto';
@@ -2810,7 +2810,7 @@ After generating the revised spec, output:
       playwrightVerificationInstructions: string;
     }
   ): string {
-    const title = this.extractTitleFromDescription(feature.description);
+    const title = extractTitleFromDescription(feature.description);
 
     let prompt = `## Feature Implementation Task
 
@@ -2860,24 +2860,6 @@ You can use the Read tool to view these images at any time during implementation
     }
 
     return prompt;
-  }
-
-  /**
-   * Extract a title from feature description (first line or truncated).
-   */
-  extractTitleFromDescription(description: string): string {
-    if (!description || !description.trim()) {
-      return 'Untitled Feature';
-    }
-
-    // Get first line, or first 60 characters if no newline
-    const firstLine = description.split('\n')[0].trim();
-    if (firstLine.length <= 60) {
-      return firstLine;
-    }
-
-    // Truncate to 60 characters and add ellipsis
-    return firstLine.substring(0, 57) + '...';
   }
 
   /**

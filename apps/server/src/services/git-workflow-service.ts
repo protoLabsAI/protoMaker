@@ -24,6 +24,7 @@ import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { buildPROwnershipWatermark } from '../routes/github/utils/pr-ownership.js';
+import { createGitExecEnv, extractTitleFromDescription } from '@protolabsai/git-utils';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -70,38 +71,7 @@ async function retryWithExponentialBackoff<T>(
   throw new Error('Unreachable');
 }
 
-// Extended PATH for finding git and gh CLI (same as worktree routes)
-const pathSeparator = process.platform === 'win32' ? ';' : ':';
-const additionalPaths: string[] = [];
-
-if (process.platform === 'win32') {
-  if (process.env.LOCALAPPDATA) {
-    additionalPaths.push(`${process.env.LOCALAPPDATA}\\Programs\\Git\\cmd`);
-  }
-  if (process.env.PROGRAMFILES) {
-    additionalPaths.push(`${process.env.PROGRAMFILES}\\Git\\cmd`);
-  }
-  if (process.env['ProgramFiles(x86)']) {
-    additionalPaths.push(`${process.env['ProgramFiles(x86)']}\\Git\\cmd`);
-  }
-} else {
-  additionalPaths.push(
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    '/home/linuxbrew/.linuxbrew/bin',
-    `${process.env.HOME}/.local/bin`
-  );
-}
-
-const extendedPath = [process.env.PATH, ...additionalPaths.filter(Boolean)]
-  .filter(Boolean)
-  .join(pathSeparator);
-
-const execEnv = {
-  ...process.env,
-  PATH: extendedPath,
-  HUSKY: '0', // Disable husky hooks in worktrees — agents handle formatting themselves
-};
+const execEnv = createGitExecEnv();
 
 /**
  * Build PR body with issue closing references.
@@ -186,26 +156,6 @@ interface RecentOperation {
 export interface GitWorkflowStatus {
   activeWorkflows: number;
   recentOperations: RecentOperation[];
-}
-
-/**
- * Extract a clean title from feature description for commit message
- */
-function extractTitleFromDescription(description: string): string {
-  // Take first line, remove markdown formatting
-  const firstLine = description.split('\n')[0].trim();
-  const cleaned = firstLine
-    .replace(/^#+\s*/, '') // Remove markdown headers
-    .replace(/\*\*/g, '') // Remove bold
-    .replace(/\*/g, '') // Remove italic
-    .replace(/`/g, '') // Remove code marks
-    .trim();
-
-  // Limit length
-  if (cleaned.length > 72) {
-    return cleaned.substring(0, 69) + '...';
-  }
-  return cleaned || 'Feature implementation';
 }
 
 export class GitWorkflowService {
