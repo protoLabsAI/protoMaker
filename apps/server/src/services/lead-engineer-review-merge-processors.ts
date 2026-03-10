@@ -471,9 +471,18 @@ export class MergeProcessor implements StateProcessor {
         };
       }
 
-      // Update feature status
+      // Update feature status with merge timestamps
+      const now = new Date().toISOString();
+      const prReviewDurationMs =
+        ctx.feature.prCreatedAt != null
+          ? Date.now() - new Date(ctx.feature.prCreatedAt).getTime()
+          : undefined;
+
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
         status: 'done',
+        prMergedAt: now,
+        completedAt: now,
+        ...(prReviewDurationMs !== undefined ? { prReviewDurationMs } : {}),
       });
 
       // Emit merge event
