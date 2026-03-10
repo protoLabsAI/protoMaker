@@ -17,9 +17,12 @@ import { Annotation } from '@langchain/langgraph';
 import { type PairReviewResult, type ReviewVerdict, type SPARCPrd } from '@protolabsai/types';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
+import { createLogger } from '@protolabsai/utils';
 import { GraphBuilder } from '../../graphs/builder.js';
 import { wrapSubgraph } from '../../graphs/utils/subgraph-wrapper.js';
 import { executeWithFallback } from './classify-topic.js';
+
+const logger = createLogger('pair-review');
 
 /**
  * Configuration for a reviewer in the pair
@@ -138,7 +141,7 @@ async function reviewerANode(state: PairReviewState): Promise<Partial<PairReview
   const { reviewerA } = pairConfig;
   const nodeName = `PairReview:${pairConfig.section}:${reviewerA.name}`;
 
-  console.log(`[${nodeName}] Starting review`);
+  logger.info(`[${nodeName}] Starting review`);
 
   // Fallback: deterministic output when no models available
   if (!smartModel && !fastModel) {
@@ -197,11 +200,11 @@ ${parsed.recommendations.map((r) => `- ${r}`).join('\n')}
 
 Verdict: ${parsed.verdict.toUpperCase()}`;
 
-    console.log(`[${nodeName}] Review complete: ${parsed.verdict}`);
+    logger.info(`[${nodeName}] Review complete: ${parsed.verdict}`);
     return { reviewerAOutput };
   } catch (error) {
     // If parsing fails, use raw output
-    console.warn(`[${nodeName}] Failed to parse structured output, using raw`);
+    logger.warn(`[${nodeName}] Failed to parse structured output, using raw`);
     return { reviewerAOutput: result };
   }
 }
@@ -220,7 +223,7 @@ async function reviewerBNode(state: PairReviewState): Promise<Partial<PairReview
     );
   }
 
-  console.log(`[${nodeName}] Reviewing with ${reviewerA.name}'s context`);
+  logger.info(`[${nodeName}] Reviewing with ${reviewerA.name}'s context`);
 
   // Fallback: deterministic output when no models available
   if (!smartModel && !fastModel) {
@@ -283,10 +286,10 @@ ${parsed.recommendations.map((r) => `- ${r}`).join('\n')}
 
 Verdict: ${parsed.verdict.toUpperCase()}`;
 
-    console.log(`[${nodeName}] Review complete: ${parsed.verdict}`);
+    logger.info(`[${nodeName}] Review complete: ${parsed.verdict}`);
     return { reviewerBOutput };
   } catch (error) {
-    console.warn(`[${nodeName}] Failed to parse structured output, using raw`);
+    logger.warn(`[${nodeName}] Failed to parse structured output, using raw`);
     return { reviewerBOutput: result };
   }
 }
@@ -331,7 +334,7 @@ async function miniConsolidationNode(state: PairReviewState): Promise<Partial<Pa
     );
   }
 
-  console.log(
+  logger.info(
     `[${nodeName}] Consolidating ${pairConfig.reviewerA.name} and ${pairConfig.reviewerB.name} reviews`
   );
 
@@ -391,13 +394,13 @@ Return ONLY the JSON object.`,
       completedAt: new Date().toISOString(),
     };
 
-    console.log(
+    logger.info(
       `[${nodeName}] Consolidation complete: consensus=${result.consensus}, verdict=${result.agreedVerdict}`
     );
     return { result };
   } catch (error) {
     // Fallback: extract verdicts heuristically from raw outputs
-    console.warn(`[${nodeName}] Failed to parse consolidation, using heuristic fallback`);
+    logger.warn(`[${nodeName}] Failed to parse consolidation, using heuristic fallback`);
 
     const verdictA =
       reviewerAOutput.match(/Verdict:\s*(\w[\w-]*)/i)?.[1]?.toLowerCase() || 'approve';

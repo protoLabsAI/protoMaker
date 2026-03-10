@@ -13,7 +13,10 @@
 
 import { LangfuseClient } from '@protolabsai/observability';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import { createLogger } from '@protolabsai/utils';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
+
+const logger = createLogger('assembler');
 
 /**
  * Document section with content and metadata
@@ -184,7 +187,7 @@ async function checkCoherence(
 
     // TODO: Call LLM provider for coherence checking
     // For now, return the merged sections as-is
-    console.log('[assembler] Coherence checking not yet implemented with LLM');
+    logger.info('[assembler] Coherence checking not yet implemented with LLM');
 
     // Flush trace if available
     if (langfuseClient && traceId) {
@@ -193,7 +196,7 @@ async function checkCoherence(
 
     return sectionsText;
   } catch (error) {
-    console.error('[assembler] Error in coherence check:', error);
+    logger.error('[assembler] Error in coherence check:', error);
     throw error;
   }
 }
@@ -382,9 +385,9 @@ export async function assembler(
     : undefined;
 
   try {
-    console.log('[assembler] Starting document assembly...');
-    console.log(`[assembler] Document type: ${state.documentType}`);
-    console.log(`[assembler] Sections: ${state.sections.length}`);
+    logger.info('[assembler] Starting document assembly...');
+    logger.info(`[assembler] Document type: ${state.documentType}`);
+    logger.info(`[assembler] Sections: ${state.sections.length}`);
 
     // Emit heartbeat
     if (config) {
@@ -428,7 +431,7 @@ export async function assembler(
     // Step 6: Optional coherence checking with LLM
     let coherenceChecked = false;
     if (langfuseClient && coherencePrompt) {
-      console.log('[assembler] Checking coherence with LLM...');
+      logger.info('[assembler] Checking coherence with LLM...');
       await checkCoherence(state.sections, langfuseClient, coherencePrompt);
       coherenceChecked = true;
     }
@@ -436,13 +439,13 @@ export async function assembler(
     // Step 7: Run deduplication detection (non-blocking)
     const validationWarnings = detectDuplicates(state.sections);
     if (validationWarnings.length > 0) {
-      console.log(`[assembler] Found ${validationWarnings.length} validation warning(s):`);
+      logger.info(`[assembler] Found ${validationWarnings.length} validation warning(s):`);
       for (const w of validationWarnings) {
-        console.log(`  [${w.type}] ${w.message}`);
+        logger.info(`  [${w.type}] ${w.message}`);
       }
     }
 
-    console.log('[assembler] Assembly complete');
+    logger.info('[assembler] Assembly complete');
 
     // Emit completion state
     if (config) {
@@ -465,7 +468,7 @@ export async function assembler(
       validationWarnings: validationWarnings.length > 0 ? validationWarnings : undefined,
     };
   } catch (error) {
-    console.error('[assembler] Error during assembly:', error);
+    logger.error('[assembler] Error during assembly:', error);
     throw error;
   }
 }

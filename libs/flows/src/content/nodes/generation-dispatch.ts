@@ -7,7 +7,10 @@
 
 import { Send, Command } from '@langchain/langgraph';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import { createLogger } from '@protolabsai/utils';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
+
+const logger = createLogger('generation-dispatch');
 
 /**
  * Section specification for generation
@@ -138,7 +141,7 @@ export async function generationCollectorNode(
   const receivedCount = sections.length;
 
   if (receivedCount !== expectedCount) {
-    console.warn(`Section count mismatch: expected ${expectedCount}, received ${receivedCount}`);
+    logger.warn(`Section count mismatch: expected ${expectedCount}, received ${receivedCount}`);
   }
 
   // Sort sections by outline position
@@ -160,16 +163,16 @@ export async function generationCollectorNode(
 
   // Log results
   if (isComplete) {
-    console.log(
-      `✓ Generation complete: ${receivedCount}/${expectedCount} sections generated successfully`
+    logger.info(
+      `Generation complete: ${receivedCount}/${expectedCount} sections generated successfully`
     );
   } else {
-    console.warn(`⚠ Partial failure: ${receivedCount}/${expectedCount} sections received`);
+    logger.warn(`Partial failure: ${receivedCount}/${expectedCount} sections received`);
     if (failedSections.length > 0) {
-      console.warn(`  Failed sections: ${failedSections.join(', ')}`);
+      logger.warn(`  Failed sections: ${failedSections.join(', ')}`);
     }
     if (missingSections.length > 0) {
-      console.warn(`  Missing sections: ${missingSections.join(', ')}`);
+      logger.warn(`  Missing sections: ${missingSections.join(', ')}`);
     }
   }
 

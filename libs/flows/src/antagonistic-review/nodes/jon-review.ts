@@ -16,12 +16,15 @@
 
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
+import { createLogger } from '@protolabsai/utils';
 import { executeWithFallback } from './classify-topic.js';
 import {
   ReviewerPerspectiveSchema,
   type ReviewerPerspective,
   type NodeTokenUsage,
 } from './ava-review.js';
+
+const logger = createLogger('jon-review');
 
 /**
  * State interface for jon-review node
@@ -45,7 +48,7 @@ export async function jonReviewNode(state: JonReviewState): Promise<Partial<JonR
   const { prd, avaReview, smartModel, fastModel } = state;
   const nodeName = 'JonReviewNode';
 
-  console.log(`[${nodeName}] Starting Jon's market review`);
+  logger.info(`[${nodeName}] Starting Jon's market review`);
 
   try {
     // Build context about Ava's concerns if available
@@ -139,13 +142,13 @@ Be strategic, business-focused, and consider customer impact above all. Return O
     // Parse and validate the LLM response
     const jonReview = parseAndValidateReview(result.content, nodeName);
 
-    console.log(
+    logger.info(
       `[${nodeName}] Review complete: ${jonReview.verdict} (${jonReview.sections.length} sections)`
     );
 
     return { jonReview, tokenUsage: result.tokenUsage };
   } catch (error) {
-    console.error(`[${nodeName}] Failed:`, error);
+    logger.error(`[${nodeName}] Failed:`, error);
     throw error;
   }
 }
@@ -175,7 +178,7 @@ function parseAndValidateReview(output: string, nodeName: string): ReviewerPersp
 
     return validated;
   } catch (error) {
-    console.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
+    logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid review format: ${issues}`);

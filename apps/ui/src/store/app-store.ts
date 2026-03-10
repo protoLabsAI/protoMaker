@@ -490,12 +490,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
       return;
     }
 
-    console.log('[MOVE_TO_TRASH] Moving project to trash:', {
-      projectId,
-      projectName: project.name,
-      currentProjectCount: get().projects.length,
-    });
-
     const remainingProjects = get().projects.filter((p) => p.id !== projectId);
     const existingTrash = get().trashedProjects.filter((p) => p.id !== projectId);
     const trashedProject: TrashedProject = {
@@ -506,11 +500,6 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     const isCurrent = get().currentProject?.id === projectId;
     const nextCurrentProject = isCurrent ? null : get().currentProject;
-
-    console.log('[MOVE_TO_TRASH] Updating store with new state:', {
-      newProjectCount: remainingProjects.length,
-      newTrashedCount: [trashedProject, ...existingTrash].length,
-    });
 
     set({
       projects: remainingProjects,

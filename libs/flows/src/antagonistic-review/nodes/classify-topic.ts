@@ -18,6 +18,9 @@
 
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
+import { createLogger } from '@protolabsai/utils';
+
+const logger = createLogger('classify-topic');
 
 /**
  * Complexity classification schema
@@ -85,7 +88,7 @@ export async function executeWithFallback<T>(
     try {
       return await promptFn(model);
     } catch (error) {
-      console.warn(
+      logger.warn(
         `[${nodeName}] Model ${name} failed:`,
         error instanceof Error ? error.message : String(error)
       );
@@ -108,7 +111,7 @@ export async function classifyTopicNode(
   const { prd, smartModel, fastModel } = state;
   const nodeName = 'ClassifyTopicNode';
 
-  console.log(`[${nodeName}] Starting PRD classification`);
+  logger.info(`[${nodeName}] Starting PRD classification`);
 
   try {
     // Execute with model fallback
@@ -153,13 +156,13 @@ Return ONLY the JSON object, no additional text.`,
     // Parse and validate the LLM response
     const classification = parseAndValidateClassification(result, nodeName);
 
-    console.log(
+    logger.info(
       `[${nodeName}] Classification complete: ${classification.complexity} (depth: ${classification.distillationDepth})`
     );
 
     return { classification };
   } catch (error) {
-    console.error(`[${nodeName}] Failed:`, error);
+    logger.error(`[${nodeName}] Failed:`, error);
     throw error;
   }
 }
@@ -189,7 +192,7 @@ function parseAndValidateClassification(output: string, nodeName: string): Class
 
     return validated;
   } catch (error) {
-    console.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
+    logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid classification format: ${issues}`);
