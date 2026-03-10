@@ -21,7 +21,6 @@ import type { HITLFormService } from './hitl-form-service.js';
 import * as secureFs from '../lib/secure-fs.js';
 
 const execAsync = promisify(exec);
-
 const logger = createLogger('ReconciliationService');
 
 export type DriftType =
@@ -249,57 +248,78 @@ export class ReconciliationService {
 
     if (failureCount < 3) {
       logger.info(
-        `Feature ${drift.featureId} stuck (failureCount=${failureCount}), resetting to backlog`
+        `Feature ${drift.featureId} stuck with failureCount=${failureCount} (<3), resetting to backlog`
       );
+
       await this.featureLoader.update(drift.projectPath, drift.featureId, {
         status: 'backlog',
         failureCount: 0,
+        error: undefined,
       });
+
       return 'reset-to-backlog';
     }
 
-    // failureCount >= 3 — move to blocked and create HITL form
+    // failureCount >= 3: move to blocked and create HITL form
     logger.warn(
-      `Feature ${drift.featureId} stuck with failureCount=${failureCount} >= 3, blocking and creating HITL form`
+      `Feature ${drift.featureId} stuck with failureCount=${failureCount} (>=3), moving to blocked`
     );
+
     await this.featureLoader.update(drift.projectPath, drift.featureId, {
       status: 'blocked',
+      error: `Feature stuck after ${failureCount} failures — requires human intervention`,
     });
 
     if (this.hitlFormService) {
-      await this.hitlFormService.create({
-        title: `Feature stuck: ${feature.title ?? drift.featureId}`,
-        callerType: 'agent',
-        featureId: drift.featureId,
-        projectPath: drift.projectPath,
-        steps: [
-          {
-            title: 'Feature Stuck',
-            description:
-              'This feature has been stuck for too long and failed 3+ times. What should the agent do next?',
-            schema: {
-              type: 'object',
-              properties: {
-                action: {
-                  type: 'string',
-                  title: 'Action',
-                  enum: ['retry', 'skip', 'reassign'],
-                  default: 'retry',
-                },
-                notes: {
-                  type: 'string',
-                  title: 'Notes',
+      const existingForm = this.hitlFormService.getByFeatureId(
+        drift.featureId,
+        drift.projectPath
+      );
+
+      if (!existingForm) {
+        try {
+          const form = await this.hitlFormService.create({
+            title: `Feature stuck: ${feature.title ?? drift.featureId}`,
+            description: `Feature has been stuck for too long with ${failureCount} failures. Manual intervention required.`,
+            steps: [
+              {
+                title: 'How would you like to proceed?',
+                schema: {
+                  type: 'object',
+                  properties: {
+                    resolution: {
+                      type: 'string',
+                      title: 'Resolution',
+                      oneOf: [
+                        { const: 'retry', title: 'Retry', description: 'Reset and re-run the agent' },
+                        { const: 'provide_context', title: 'Provide context', description: 'Give the agent additional information' },
+                        { const: 'close', title: 'Close as blocked', description: 'Keep blocked for manual handling' },
+                      ],
+                    },
+                  },
+                  required: ['resolution'],
                 },
               },
-              required: ['action'],
-            },
-          },
-        ],
-      });
-      return 'blocked-hitl-form-created';
+            ],
+            callerType: 'api',
+            featureId: drift.featureId,
+            projectPath: drift.projectPath,
+          });
+
+          if (form) {
+            logger.info(`Created HITL form ${form.id} for stuck feature ${drift.featureId}`);
+          }
+        } catch (err) {
+          logger.error(`Failed to create HITL form for stuck feature ${drift.featureId}:`, err);
+        }
+      } else {
+        logger.info(`HITL form ${existingForm.id} already pending for feature ${drift.featureId}, skipping`);
+      }
+    } else {
+      logger.warn(`HITLFormService not available, cannot create HITL form for feature ${drift.featureId}`);
     }
 
-    return 'blocked-no-hitl';
+    return 'moved-to-blocked-hitl-created';
   }
 
   /**
@@ -309,23 +329,25 @@ export class ReconciliationService {
     const branchName = drift.branchName ?? (drift.details.branchName as string | undefined);
 
     if (!branchName) {
-      logger.warn('reconcileOrphanedWorktree: no branchName in drift, skipping cleanup', drift);
-      return 'skipped-no-branch';
+      logger.warn('reconcileOrphanedWorktree: no branchName in drift, cannot clean up', { drift });
+      return 'skipped-no-branch-name';
     }
 
     if (!this.worktreeLifecycleService) {
-      logger.warn('reconcileOrphanedWorktree: worktreeLifecycleService not available');
-      return 'skipped-no-service';
+      logger.warn(`WorktreeLifecycleService not available, cannot clean up orphaned worktree for branch ${branchName}`);
+      return 'skipped-service-unavailable';
     }
 
     logger.info(`Cleaning up orphaned worktree for branch ${branchName} in ${drift.projectPath}`);
+
     await this.worktreeLifecycleService.cleanupWorktree(
       drift.projectPath,
       branchName,
       drift.featureId
     );
 
-    return 'worktree-cleanup-triggered';
+    logger.info(`Orphaned worktree cleaned for branch ${branchName}`);
+    return 'worktree-cleaned';
   }
 
   /**
@@ -361,51 +383,265 @@ export class ReconciliationService {
    * PR has CI failures
    */
   private async reconcilePRCIFailure(drift: Drift): Promise<string> {
-    // TODO: Notify EM agent to create intervention task
-    logger.warn('PR has CI failures - notifying EM', drift);
+    if (!drift.prNumber) {
+      throw new Error('prNumber required for pr-ci-failure');
+    }
 
+    const failedChecksRaw = drift.details.failedChecks;
+    const failedChecks = Array.isArray(failedChecksRaw) ? (failedChecksRaw as string[]) : [];
+    const failureReason = failedChecks.join(', ') || String(drift.details.error ?? 'CI failure');
+
+    // Classify the failure to determine if it is transient or persistent
+    const classification = this.failureClassifierService
+      ? this.failureClassifierService.classify(failureReason)
+      : null;
+
+    const isTransient = classification?.isRetryable ?? false;
+
+    logger.info(`PR #${drift.prNumber} CI failure — classified as ${classification?.category ?? 'unknown'}, isTransient=${isTransient}`, {
+      featureId: drift.featureId,
+      failedChecks,
+    });
+
+    if (isTransient) {
+      // Re-trigger CI by emitting the existing ci-failure event with a transient marker.
+      // Downstream consumers (PRFeedbackService) already handle ci-failure and will re-run
+      // the agent to push an empty commit or re-run the workflow as appropriate.
+      logger.info(`Re-triggering CI for PR #${drift.prNumber} (transient failure: ${classification?.category ?? 'unknown'})`);
+
+      this.events.emit('pr:ci-failure', {
+        projectPath: drift.projectPath,
+        featureId: drift.featureId,
+        prNumber: drift.prNumber,
+        failedChecks,
+        isTransient: true,
+        failureCategory: classification?.category,
+      });
+
+      return 'ci-retriggered';
+    }
+
+    // Persistent failure: move feature back to in_progress so the agent can fix it
+    if (drift.featureId) {
+      logger.warn(
+        `PR #${drift.prNumber} has persistent CI failure, moving feature ${drift.featureId} back to in_progress`
+      );
+
+      await this.featureLoader.update(drift.projectPath, drift.featureId, {
+        status: 'in_progress',
+        error: `CI failure: ${failureReason.slice(0, 500)}`,
+      });
+
+      return 'feature-moved-to-in-progress';
+    }
+
+    // No feature to update — emit the original event for downstream handling
+    logger.warn('PR has persistent CI failures and no featureId, emitting pr:ci-failure', drift);
     this.events.emit('pr:ci-failure', {
       projectPath: drift.projectPath,
       featureId: drift.featureId,
       prNumber: drift.prNumber,
-      failedChecks: drift.details.failedChecks,
+      failedChecks,
     });
 
-    return 'em-notified';
+    return 'ci-failure-emitted';
   }
 
   /**
    * PR has requested changes (feedback)
    */
   private async reconcilePRHasFeedback(drift: Drift): Promise<string> {
-    // TODO: Trigger EM agent to address feedback
-    logger.info('PR has feedback - triggering EM', drift);
+    if (!drift.featureId) {
+      throw new Error('featureId required for pr-has-feedback');
+    }
 
-    this.events.emit('pr:changes-requested', {
-      projectPath: drift.projectPath,
-      featureId: drift.featureId,
-      prNumber: drift.prNumber,
-      feedback: drift.details.reviews,
-    });
+    if (!drift.prNumber) {
+      throw new Error('prNumber required for pr-has-feedback');
+    }
 
-    return 'em-triggered';
+    if (!this.prFeedbackService) {
+      // Fall back to emitting event for downstream handling
+      logger.warn('PRFeedbackService not available, emitting pr:changes-requested event');
+      this.events.emit('pr:changes-requested', {
+        projectPath: drift.projectPath,
+        featureId: drift.featureId,
+        prNumber: drift.prNumber,
+        feedback: drift.details.reviews,
+      });
+      return 'event-emitted-no-service';
+    }
+
+    // Check iteration cap before routing to PRFeedbackService
+    const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+    const iterationCount = (feature?.prIterationCount as number | undefined) ?? 0;
+    const MAX_PR_ITERATIONS = 2;
+
+    if (iterationCount >= MAX_PR_ITERATIONS) {
+      logger.warn(
+        `PR #${drift.prNumber} for feature ${drift.featureId} has reached max iterations (${iterationCount}/${MAX_PR_ITERATIONS}), skipping remediation`
+      );
+      return 'max-iterations-reached';
+    }
+
+    logger.info(
+      `Routing PR #${drift.prNumber} feedback to PRFeedbackService for remediation (iteration ${iterationCount})`
+    );
+
+    await this.prFeedbackService.processThreadFeedback(
+      drift.projectPath,
+      drift.featureId,
+      drift.prNumber
+    );
+
+    return 'feedback-routed-to-pr-feedback-service';
   }
 
   /**
    * PR is approved but not merged yet
    */
   private async reconcilePRApprovedNotMerged(drift: Drift): Promise<string> {
-    // TODO: Auto-merge if configured, otherwise notify
-    logger.info('PR approved but not merged', drift);
-    return 'auto-merge-pending';
+    if (!drift.prNumber) {
+      throw new Error('prNumber required for pr-approved-not-merged');
+    }
+
+    if (!this.githubMergeService) {
+      logger.warn(`GitHubMergeService not available, cannot merge PR #${drift.prNumber}`);
+      return 'skipped-service-unavailable';
+    }
+
+    logger.info(`Attempting to merge approved PR #${drift.prNumber}`, {
+      featureId: drift.featureId,
+      projectPath: drift.projectPath,
+    });
+
+    // Check for unresolved threads first via PRFeedbackService
+    if (this.prFeedbackService && drift.featureId) {
+      try {
+        await this.prFeedbackService.processThreadFeedback(
+          drift.projectPath,
+          drift.featureId,
+          drift.prNumber
+        );
+        logger.info(`Processed unresolved threads for PR #${drift.prNumber} before merge`);
+      } catch (err) {
+        logger.warn(`Failed to process threads for PR #${drift.prNumber}, proceeding with merge:`, err);
+      }
+    }
+
+    const mergeResult = await this.githubMergeService.mergePR(
+      drift.projectPath,
+      drift.prNumber,
+      'squash',
+      true
+    );
+
+    if (mergeResult.success) {
+      logger.info(`Successfully merged PR #${drift.prNumber}`, {
+        mergeCommitSha: mergeResult.mergeCommitSha,
+        autoMergeEnabled: mergeResult.autoMergeEnabled,
+      });
+      return mergeResult.autoMergeEnabled ? 'auto-merge-enabled' : 'merged';
+    }
+
+    logger.warn(`Failed to merge PR #${drift.prNumber}: ${mergeResult.error}`, {
+      checksPending: mergeResult.checksPending,
+      checksFailed: mergeResult.checksFailed,
+    });
+
+    if (mergeResult.checksPending) {
+      return 'merge-blocked-checks-pending';
+    }
+
+    if (mergeResult.checksFailed) {
+      return `merge-blocked-checks-failed`;
+    }
+
+    return `merge-failed: ${mergeResult.error ?? 'unknown'}`;
   }
 
   /**
    * PR has no activity for > 7 days
    */
   private async reconcilePRStale(drift: Drift): Promise<string> {
-    // TODO: Ping author or close if abandoned
-    logger.info('PR is stale', drift);
+    if (!drift.prNumber) {
+      throw new Error('prNumber required for pr-stale');
+    }
+
+    const staleForMs = typeof drift.details.staleForMs === 'number'
+      ? drift.details.staleForMs
+      : 0;
+    const HOURS_48_MS = 48 * 60 * 60 * 1000;
+    const isVeryStale = staleForMs >= HOURS_48_MS;
+
+    logger.info(`PR #${drift.prNumber} is stale (staleForMs=${staleForMs}, isVeryStale=${isVeryStale})`, {
+      featureId: drift.featureId,
+      projectPath: drift.projectPath,
+    });
+
+    // Add a comment to the PR requesting review
+    try {
+      const staleHours = Math.floor(staleForMs / (60 * 60 * 1000));
+      const staleDuration = staleHours > 0 ? `${staleHours} hours` : 'some time';
+      const commentBody = `This PR has had no activity for ${staleDuration}. Please review or provide an update on the status.`;
+
+      await execAsync(
+        `gh pr comment ${drift.prNumber} --body ${JSON.stringify(commentBody)}`,
+        { cwd: drift.projectPath }
+      );
+
+      logger.info(`Added stale comment to PR #${drift.prNumber}`);
+    } catch (err) {
+      logger.warn(`Failed to add comment to PR #${drift.prNumber}:`, err);
+    }
+
+    // Escalate to HITL if stale > 48h
+    if (isVeryStale && this.hitlFormService && drift.featureId) {
+      const feature = await this.featureLoader.get(drift.projectPath, drift.featureId);
+      const existingForm = this.hitlFormService.getByFeatureId(drift.featureId, drift.projectPath);
+
+      if (!existingForm) {
+        try {
+          const form = await this.hitlFormService.create({
+            title: `Stale PR needs attention: #${drift.prNumber}`,
+            description: `PR #${drift.prNumber} has been stale for more than 48 hours. Human review or action is required.`,
+            steps: [
+              {
+                title: 'How would you like to proceed?',
+                schema: {
+                  type: 'object',
+                  properties: {
+                    action: {
+                      type: 'string',
+                      title: 'Action',
+                      oneOf: [
+                        { const: 'nudge_reviewer', title: 'Nudge reviewer', description: 'Ping the reviewer to take action' },
+                        { const: 'close_pr', title: 'Close PR', description: 'Close this PR as abandoned' },
+                        { const: 'merge', title: 'Merge anyway', description: 'Merge the PR without waiting for review' },
+                      ],
+                    },
+                  },
+                  required: ['action'],
+                },
+              },
+            ],
+            callerType: 'api',
+            featureId: drift.featureId,
+            projectPath: drift.projectPath,
+          });
+
+          if (form) {
+            logger.info(`Created HITL form ${form.id} for stale PR #${drift.prNumber}`);
+          }
+        } catch (err) {
+          logger.error(`Failed to create HITL form for stale PR #${drift.prNumber}:`, err);
+        }
+      } else {
+        logger.info(`HITL form ${existingForm.id} already pending for stale PR ${drift.prNumber}, skipping`);
+      }
+
+      return 'stale-pr-pinged-hitl-escalated';
+    }
+
     return 'stale-pr-pinged';
   }
 
