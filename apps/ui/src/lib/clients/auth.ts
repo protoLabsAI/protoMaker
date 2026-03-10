@@ -90,7 +90,18 @@ export const initServerUrl = async (): Promise<void> => {
   }
 };
 
+const SERVER_URL_OVERRIDE_KEY = 'automaker:serverUrlOverride';
+
 export const getServerUrl = (): string => {
+  // Check runtime override stored in localStorage (set via app-store.setServerUrlOverride)
+  if (typeof window !== 'undefined') {
+    try {
+      const runtimeOverride = window.localStorage.getItem(SERVER_URL_OVERRIDE_KEY);
+      if (runtimeOverride) return runtimeOverride;
+    } catch {
+      // localStorage might be disabled; fall through to other sources
+    }
+  }
   if (cachedServerUrl) return cachedServerUrl;
   if (typeof window !== 'undefined') {
     const envUrl = import.meta.env.VITE_SERVER_URL;

@@ -27,7 +27,7 @@ setupSentry();
 import { execSync } from 'node:child_process';
 import express from 'express';
 import { createServer } from 'http';
-import { initAllowedPaths } from '@protolabsai/platform';
+import { initAllowedPaths, loadProtoConfig } from '@protolabsai/platform';
 import { createLogger, registerLogTransport } from '@protolabsai/utils';
 import { MAX_SYSTEM_CONCURRENCY } from '@protolabsai/types';
 import { createFileLogTransport } from './lib/server-log.js';
@@ -107,9 +107,17 @@ if (process.env.ANTHROPIC_API_KEY) {
 // Initialize security
 initAllowedPaths();
 
+// Detect hivemind mode to decide whether to allow all CORS origins
+const _protoConfig = await loadProtoConfig(REPO_ROOT).catch(() => null);
+const _hivemindConfig = _protoConfig?.['hivemind'] as { enabled?: boolean } | undefined;
+const hivemindEnabled = _hivemindConfig?.enabled === true;
+if (hivemindEnabled) {
+  logger.info('[SERVER_STARTUP] Hivemind enabled — CORS will accept requests from any origin');
+}
+
 // Create Express app and wire all server modules
 const app = express();
-setupMiddleware(app);
+setupMiddleware(app, { allowAllOrigins: hivemindEnabled });
 
 const services = await createServices(DATA_DIR, REPO_ROOT);
 await wireServices(services);

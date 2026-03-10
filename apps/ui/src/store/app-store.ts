@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 // Note: persist middleware removed - settings now sync via API (use-settings-sync.ts)
 import type { Project, TrashedProject } from '@/lib/electron';
-import { getHttpApiClient } from '@/lib/http-api-client';
+import { getHttpApiClient, invalidateHttpClient } from '@/lib/http-api-client';
 import { createLogger } from '@protolabsai/utils/logger';
 import { UI_SANS_FONT_OPTIONS, UI_MONO_FONT_OPTIONS } from '@/config/ui-font-options';
 import type {
@@ -159,6 +159,10 @@ export interface AppState {
   peers: HivemindPeer[];
   instanceFilter: 'all' | 'mine'; // 'all' = show features from all instances, 'mine' = local only
   selfInstanceId: string | null; // The instanceId of this Automaker instance
+
+  // Server URL runtime override
+  serverUrlOverride: string | null; // Runtime server URL override (null = use env var / default)
+  recentServerUrls: string[]; // Recently used server URLs, max 10, persisted in localStorage
 }
 
 export interface AppActions {
@@ -323,6 +327,9 @@ export interface AppActions {
   setSelfInstanceId: (id: string | null) => void;
   fetchSelfInstanceId: () => Promise<void>;
 
+  // Server URL runtime override actions
+  setServerUrlOverride: (url: string | null) => void;
+
   // Reset
   reset: () => void;
 }
@@ -401,6 +408,22 @@ const initialState: AppState = {
   peers: [],
   instanceFilter: 'all',
   selfInstanceId: null,
+  // Server URL runtime override
+  serverUrlOverride: (() => {
+    try {
+      return localStorage.getItem('automaker:serverUrlOverride') ?? null;
+    } catch {
+      return null;
+    }
+  })(),
+  recentServerUrls: (() => {
+    try {
+      const stored = localStorage.getItem('automaker:recentServerUrls');
+      return stored ? (JSON.parse(stored) as string[]) : [];
+    } catch {
+      return [];
+    }
+  })(),
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1276,6 +1299,36 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     } catch (err) {
       logger.warn('[AppStore] Failed to fetch self instanceId:', err);
     }
+  },
+
+  // Server URL runtime override actions
+  setServerUrlOverride: (url) => {
+    // Persist override to localStorage
+    try {
+      if (url) {
+        localStorage.setItem('automaker:serverUrlOverride', url);
+      } else {
+        localStorage.removeItem('automaker:serverUrlOverride');
+      }
+    } catch {
+      // localStorage might be disabled
+    }
+
+    // Update recent URLs (deduplicated, max 10)
+    let recentServerUrls = get().recentServerUrls;
+    if (url) {
+      recentServerUrls = [url, ...recentServerUrls.filter((u) => u !== url)].slice(0, 10);
+      try {
+        localStorage.setItem('automaker:recentServerUrls', JSON.stringify(recentServerUrls));
+      } catch {
+        // localStorage might be disabled
+      }
+    }
+
+    set({ serverUrlOverride: url, recentServerUrls });
+
+    // Invalidate cached HTTP client and trigger WebSocket reconnection
+    invalidateHttpClient();
   },
 
   // Reset

@@ -74,6 +74,26 @@ export class BaseHttpClient {
     }
   }
 
+  /**
+   * Force-close the current WebSocket connection and reconnect using the current server URL.
+   * Called when the server URL override changes at runtime.
+   */
+  public reconnect(): void {
+    this.serverUrl = getServerUrl();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
+      this.ws.onclose = null; // suppress auto-reconnect from the old socket's onclose
+      this.ws.close();
+      this.ws = null;
+    }
+    this.isConnecting = false;
+    this.reconnectAttempt = 0;
+    this.connectWebSocket();
+  }
+
   // -- WebSocket infrastructure -----------------------------------------------
 
   private async fetchWsToken(): Promise<string | null> {
