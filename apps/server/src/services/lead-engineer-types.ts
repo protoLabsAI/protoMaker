@@ -147,6 +147,8 @@ export interface StateContext {
   reviewFeedback?: string;
   /** Learnings from sibling features: structured facts (markdown, grouped by category) from facts.json, or raw reflection.md content as fallback */
   siblingReflections?: string[];
+  /** Aggregated facts from completed milestones in this project, formatted as "Project Knowledge" markdown section */
+  projectKnowledge?: string;
   /** ISO 8601 timestamp when processing started */
   startedAt?: string;
 }

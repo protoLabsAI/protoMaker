@@ -322,6 +322,73 @@ export class ExecuteProcessor implements StateProcessor {
       logger.warn('[EXECUTE] Failed to load sibling reflections:', err);
     }
 
+    // Load milestone facts (project-level knowledge accumulation)
+    try {
+      if (ctx.feature.projectSlug) {
+        const fsPromises = await import('node:fs/promises');
+        const milestoneFactsDir = path.join(
+          getAutomakerDir(ctx.projectPath),
+          'projects',
+          ctx.feature.projectSlug,
+          'milestone-facts'
+        );
+        let entries: string[] = [];
+        try {
+          const dirEntries = await fsPromises.readdir(milestoneFactsDir);
+          entries = dirEntries.filter((e) => e.endsWith('.json'));
+        } catch {
+          // No milestone-facts directory yet — skip
+        }
+        if (entries.length > 0) {
+          const allFacts: Array<{ content: string; category: string; confidence: number }> = [];
+          for (const entry of entries) {
+            try {
+              const raw = await fsPromises.readFile(path.join(milestoneFactsDir, entry), 'utf-8');
+              const parsed = JSON.parse(raw) as {
+                facts: Array<{ content: string; category: string; confidence: number }>;
+              };
+              allFacts.push(...(parsed.facts ?? []));
+            } catch {
+              // Skip malformed files
+            }
+          }
+          if (allFacts.length > 0) {
+            // Group by category and format as Project Knowledge section
+            const byCategory = new Map<string, Array<{ content: string; confidence: number }>>();
+            for (const fact of allFacts) {
+              const cat = fact.category || 'general';
+              if (!byCategory.has(cat)) byCategory.set(cat, []);
+              byCategory.get(cat)!.push({
+                content: fact.content,
+                confidence: fact.confidence,
+              });
+            }
+            const lines: string[] = [
+              '## Project Knowledge\n\nPatterns established in completed milestones:\n',
+            ];
+            for (const [cat, catFacts] of byCategory) {
+              lines.push(`### ${cat}`);
+              for (const { confidence, content } of catFacts) {
+                lines.push(`- [${Math.round(confidence * 100)}%] ${content}`);
+              }
+            }
+            let projectKnowledge = lines.join('\n');
+            // Cap at ~2000 tokens (approx 8000 chars at 4 chars/token)
+            const TOKEN_CHAR_CAP = 8000;
+            if (projectKnowledge.length > TOKEN_CHAR_CAP) {
+              projectKnowledge = projectKnowledge.slice(0, TOKEN_CHAR_CAP) + '\n...(truncated)';
+            }
+            ctx.projectKnowledge = projectKnowledge;
+            logger.info(
+              `[EXECUTE] Loaded project knowledge from ${entries.length} milestone fact files (${allFacts.length} facts)`
+            );
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn('[EXECUTE] Failed to load milestone facts:', err);
+    }
+
     // Run pre-flight checks (worktree currency, package builds, dep merge verification)
     const preFlightEnabled = await this.isPreFlightEnabled(ctx.projectPath);
     if (preFlightEnabled) {
@@ -876,6 +943,9 @@ export class ExecuteProcessor implements StateProcessor {
         contextParts.push(
           `## Review Feedback (Changes Requested)\n\nAddress these issues:\n\n${ctx.reviewFeedback}`
         );
+      }
+      if (ctx.projectKnowledge) {
+        contextParts.push(ctx.projectKnowledge);
       }
       if (ctx.siblingReflections && ctx.siblingReflections.length > 0) {
         contextParts.push(

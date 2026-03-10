@@ -13,7 +13,7 @@ import path from 'path';
 import fs from 'fs';
 import readline from 'readline';
 import { createLogger } from '@protolabsai/utils';
-import { secureFs, getProjectDir, getDataDirectory } from '@protolabsai/platform';
+import { secureFs, getProjectDir, getDataDirectory, getAutomakerDir } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
 import type { CeremonyState } from '@protolabsai/types';
@@ -556,6 +556,19 @@ export class CeremonyService {
     // State transition: milestone_active → milestone_retro
     await this.applyTransition(projectPath, projectSlug, 'milestone:completed', payload);
 
+    // Aggregate milestone facts for project-level knowledge accumulation
+    const milestoneSlugForFacts = milestoneTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    void this.aggregateMilestoneFacts(
+      projectPath,
+      projectSlug,
+      milestoneSlugForFacts,
+      payload.featureSummaries?.map((f) => f.id) ?? []
+    ).catch((err) => {
+      logger.warn(
+        `Milestone fact aggregation failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    });
+
     const projectSettings = await this.settingsService.getProjectSettings(projectPath);
     const ceremonySettings = projectSettings.ceremonySettings;
     if (!ceremonySettings?.enabled || !ceremonySettings?.enableMilestoneUpdates) {
@@ -643,6 +656,95 @@ export class CeremonyService {
         payload: { title: `Retro: ${milestoneTitle}` },
       });
     }
+  }
+
+  /**
+   * Aggregate facts from all features in a completed milestone.
+   * Deduplicates by exact content match, filters to confidence >= 0.8,
+   * and writes to .automaker/projects/{projectSlug}/milestone-facts/{milestoneSlug}.json
+   */
+  private async aggregateMilestoneFacts(
+    projectPath: string,
+    projectSlug: string,
+    milestoneSlug: string,
+    featureIds: string[]
+  ): Promise<void> {
+    const fsPromises = await import('node:fs/promises');
+    const automakerDir = getAutomakerDir(projectPath);
+
+    // If no featureIds from payload, load from featureLoader by milestoneSlug
+    let ids = featureIds;
+    if (ids.length === 0 && this.featureLoader) {
+      const all = await this.featureLoader.getAll(projectPath);
+      ids = all
+        .filter((f) => (f as { milestoneSlug?: string }).milestoneSlug === milestoneSlug)
+        .map((f) => f.id);
+    }
+
+    if (ids.length === 0) {
+      logger.debug(`No features found for milestone ${milestoneSlug}, skipping fact aggregation`);
+      return;
+    }
+
+    // Gather facts from each feature's trajectory
+    const seen = new Set<string>();
+    const aggregated: Array<{
+      content: string;
+      category: string;
+      confidence: number;
+      featureId: string;
+    }> = [];
+
+    for (const featureId of ids) {
+      try {
+        const factsPath = path.join(automakerDir, 'trajectory', featureId, 'facts.json');
+        const content = await fsPromises.readFile(factsPath, 'utf-8');
+        const parsed = JSON.parse(content) as {
+          facts: Array<{ content: string; category: string; confidence: number }>;
+        };
+        for (const fact of parsed.facts ?? []) {
+          if (
+            typeof fact.confidence === 'number' &&
+            fact.confidence >= 0.8 &&
+            !seen.has(fact.content)
+          ) {
+            seen.add(fact.content);
+            aggregated.push({
+              content: fact.content,
+              category: fact.category ?? 'general',
+              confidence: fact.confidence,
+              featureId,
+            });
+          }
+        }
+      } catch {
+        // No facts.json for this feature — skip
+      }
+    }
+
+    // Write aggregated facts to project milestone-facts directory
+    const milestoneFactsDir = path.join(automakerDir, 'projects', projectSlug, 'milestone-facts');
+    await fsPromises.mkdir(milestoneFactsDir, { recursive: true });
+    const outputPath = path.join(milestoneFactsDir, `${milestoneSlug}.json`);
+    await fsPromises.writeFile(
+      outputPath,
+      JSON.stringify(
+        {
+          milestoneSlug,
+          projectSlug,
+          aggregatedAt: new Date().toISOString(),
+          featureCount: ids.length,
+          facts: aggregated,
+        },
+        null,
+        2
+      ),
+      'utf-8'
+    );
+
+    logger.info(
+      `Aggregated ${aggregated.length} milestone facts for ${projectSlug}/${milestoneSlug} (from ${ids.length} features)`
+    );
   }
 
   private async handleCeremonyFired(payload: CeremonyFiredPayload): Promise<void> {
