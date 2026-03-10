@@ -12,24 +12,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
-import {
-  Bot,
-  Layers,
-  DollarSign,
-  Clock,
-  Rocket,
-  AlertTriangle,
-  HeartPulse,
-} from 'lucide-react';
+import { Bot, Layers, DollarSign, Clock, Rocket, AlertTriangle, HeartPulse } from 'lucide-react';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useDora, useDoraHistory, useLedgerAggregate } from '@/hooks/queries/use-metrics';
 import { useTimeRangeDates } from './time-range';
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-} from 'recharts';
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 import { useChartColors } from '@/hooks/use-chart-colors';
 import type { AgenticWipSaturation } from '@protolabsai/types';
 
@@ -180,7 +167,10 @@ function WipBar({ stage, currentWip, wipLimit, saturation }: AgenticWipSaturatio
       </div>
       <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
         {pct !== null && (
-          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+          <div
+            className={`h-full rounded-full transition-all ${barColor}`}
+            style={{ width: `${pct}%` }}
+          />
         )}
       </div>
     </div>
@@ -198,9 +188,7 @@ function CostTrend({ costPerFeature }: { costPerFeature: number }) {
           <DollarSign className="h-3 w-3 text-muted-foreground" />
         </div>
         <p className="text-lg font-bold tabular-nums">
-          {costPerFeature >= 1
-            ? `$${costPerFeature.toFixed(2)}`
-            : `$${costPerFeature.toFixed(4)}`}
+          {costPerFeature >= 1 ? `$${costPerFeature.toFixed(2)}` : `$${costPerFeature.toFixed(4)}`}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">avg per completed feature</p>
       </CardContent>
@@ -321,10 +309,7 @@ export function DoraMetricsPanel({ projectPath }: DoraMetricsPanelProps) {
         <h3 className="text-sm font-medium text-muted-foreground">Agentic Health</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Autonomy Rate */}
-          <AutonomyRateCard
-            rate={autonomyRate.rate}
-            totalDone={autonomyRate.autonomousDone}
-          />
+          <AutonomyRateCard rate={autonomyRate.rate} totalDone={autonomyRate.autonomousDone} />
 
           {/* WIP Saturation */}
           <Card className="bg-card/50 backdrop-blur-sm border-border/50 md:col-span-1">
