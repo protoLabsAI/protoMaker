@@ -180,8 +180,12 @@ export interface AgentDefinition {
   prompt: string;
   /** Restricted tool list (if omitted, inherits all tools) */
   tools?: string[];
-  /** Model override for this agent */
-  model?: 'sonnet' | 'opus' | 'haiku' | 'inherit';
+  /** Model override for this agent. May be a short alias (e.g. 'sonnet') or a
+   *  fully-resolved Claude model string (e.g. 'claude-sonnet-4-6'). Factory
+   *  functions in agent-definitions.ts resolve aliases via resolveModelString()
+   *  before constructing this object, so consumers can rely on receiving a full
+   *  model ID. */
+  model?: string;
 }
 
 /**
