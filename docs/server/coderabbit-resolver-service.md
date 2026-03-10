@@ -27,15 +27,15 @@ Matching is case-insensitive and uses `includes()` — partial matches work.
 
 Before resolving a thread, the service parses the first comment body to determine severity:
 
-| Marker | Severity |
-| ------ | -------- |
-| `**Severity**: critical` or `**Severity**: high` | `critical` |
-| `**Severity**: warning` or `**Severity**: medium` | `warning` |
+| Marker                                            | Severity     |
+| ------------------------------------------------- | ------------ |
+| `**Severity**: critical` or `**Severity**: high`  | `critical`   |
+| `**Severity**: warning` or `**Severity**: medium` | `warning`    |
 | `**Severity**: suggestion` or `**Severity**: low` | `suggestion` |
-| `🚨` emoji | `critical` |
-| `⚠️` emoji | `warning` |
-| `💡` emoji | `suggestion` |
-| _(none of the above)_ | `info` |
+| `🚨` emoji                                        | `critical`   |
+| `⚠️` emoji                                        | `warning`    |
+| `💡` emoji                                        | `suggestion` |
+| _(none of the above)_                             | `info`       |
 
 **Critical threads are never auto-resolved**, even if created by a bot. They remain open for human review.
 
@@ -63,9 +63,9 @@ Returns the GraphQL node ID for a PR — needed for `addPullRequestReviewThreadR
 ```typescript
 interface ResolveThreadsResult {
   success: boolean;
-  resolvedCount: number;   // threads that were resolved
-  skippedCount: number;    // human threads + critical bot threads skipped
-  totalThreads: number;    // all threads checked
+  resolvedCount: number; // threads that were resolved
+  skippedCount: number; // human threads + critical bot threads skipped
+  totalThreads: number; // all threads checked
   error?: string;
 }
 ```
@@ -94,11 +94,11 @@ mutation {
 
 ## Key Files
 
-| File | Role |
-| ---- | ---- |
-| `apps/server/src/services/coderabbit-resolver-service.ts` | Service (singleton `codeRabbitResolverService`) |
-| `apps/server/src/services/git-workflow-service.ts` | Calls `resolveThreads()` before merge |
-| `libs/git-utils/src/index.ts` | Provides `createGitExecEnv()` for child process environment |
+| File                                                      | Role                                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------- |
+| `apps/server/src/services/coderabbit-resolver-service.ts` | Service (singleton `codeRabbitResolverService`)             |
+| `apps/server/src/services/git-workflow-service.ts`        | Calls `resolveThreads()` before merge                       |
+| `libs/git-utils/src/index.ts`                             | Provides `createGitExecEnv()` for child process environment |
 
 ## See Also
 

@@ -48,12 +48,12 @@ Branch name is sanitized (`/[^a-zA-Z0-9_./-]/g` stripped) to prevent shell injec
 
 ```typescript
 interface WorktreeRecoveryResult {
-  detected: boolean;    // uncommitted changes were found
-  recovered: boolean;   // commit + push + PR succeeded
-  prUrl?: string;       // e.g., https://github.com/org/repo/pull/42
+  detected: boolean; // uncommitted changes were found
+  recovered: boolean; // commit + push + PR succeeded
+  prUrl?: string; // e.g., https://github.com/org/repo/pull/42
   prNumber?: number;
   prCreatedAt?: string; // ISO-8601 timestamp
-  error?: string;       // message if recovery failed
+  error?: string; // message if recovery failed
 }
 ```
 
@@ -65,12 +65,12 @@ If the pathspec stages nothing (e.g., all files are in unusual locations), the s
 
 ## Key Files
 
-| File | Role |
-| ---- | ---- |
-| `apps/server/src/services/worktree-recovery-service.ts` | Core function `checkAndRecoverUncommittedWork` |
-| `apps/server/src/lib/git-staging-utils.ts` | `buildGitAddCommand()` — pathspec builder |
-| `apps/server/src/services/auto-mode/execution-service.ts` | Calls recovery after agent exits |
-| `libs/git-utils/src/index.ts` | `createGitExecEnv()` for process environment |
+| File                                                      | Role                                           |
+| --------------------------------------------------------- | ---------------------------------------------- |
+| `apps/server/src/services/worktree-recovery-service.ts`   | Core function `checkAndRecoverUncommittedWork` |
+| `apps/server/src/lib/git-staging-utils.ts`                | `buildGitAddCommand()` — pathspec builder      |
+| `apps/server/src/services/auto-mode/execution-service.ts` | Calls recovery after agent exits               |
+| `libs/git-utils/src/index.ts`                             | `createGitExecEnv()` for process environment   |
 
 ## See Also
 

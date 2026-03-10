@@ -48,21 +48,21 @@ Settings come from `GitWorkflowSettings` in `.automaker/settings.json`:
 
 ```typescript
 interface GitWorkflowSettings {
-  commitMessage?: string;        // default: derived from feature title
-  prBaseBranch?: string;         // default: 'dev'
-  prTemplate?: string;           // PR body template
-  autoMerge?: boolean;           // enable auto-merge
+  commitMessage?: string; // default: derived from feature title
+  prBaseBranch?: string; // default: 'dev'
+  prTemplate?: string; // PR body template
+  autoMerge?: boolean; // enable auto-merge
   mergeStrategy?: PRMergeStrategy; // 'merge' | 'squash' | 'rebase'
-  closeIssues?: boolean;         // add "Closes #<id>" refs
+  closeIssues?: boolean; // add "Closes #<id>" refs
 }
 ```
 
-| Setting | Default | Description |
-| ------- | ------- | ----------- |
-| `prBaseBranch` | `'dev'` | Target branch for PR creation |
-| `mergeStrategy` | `'squash'` | How the PR is merged |
-| `autoMerge` | `true` | Enable GitHub auto-merge if CI is pending |
-| `closeIssues` | `true` | Include issue-closing references in PR body |
+| Setting         | Default    | Description                                 |
+| --------------- | ---------- | ------------------------------------------- |
+| `prBaseBranch`  | `'dev'`    | Target branch for PR creation               |
+| `mergeStrategy` | `'squash'` | How the PR is merged                        |
+| `autoMerge`     | `true`     | Enable GitHub auto-merge if CI is pending   |
+| `closeIssues`   | `true`     | Include issue-closing references in PR body |
 
 ## PR Ownership Watermark
 
@@ -92,14 +92,14 @@ interface GitWorkflowResult {
 
 ## Key Files
 
-| File | Role |
-| ---- | ---- |
-| `apps/server/src/services/git-workflow-service.ts` | Core service — full pipeline |
-| `apps/server/src/services/github-merge-service.ts` | PR merge via gh CLI |
-| `apps/server/src/services/merge-eligibility-service.ts` | Auto-merge eligibility checks |
-| `apps/server/src/services/coderabbit-resolver-service.ts` | Bot thread resolution pre-merge |
-| `apps/server/src/routes/github/utils/pr-ownership.ts` | PR watermark builder |
-| `apps/server/src/lib/git-staging-utils.ts` | Pathspec-based git add command builder |
+| File                                                      | Role                                   |
+| --------------------------------------------------------- | -------------------------------------- |
+| `apps/server/src/services/git-workflow-service.ts`        | Core service — full pipeline           |
+| `apps/server/src/services/github-merge-service.ts`        | PR merge via gh CLI                    |
+| `apps/server/src/services/merge-eligibility-service.ts`   | Auto-merge eligibility checks          |
+| `apps/server/src/services/coderabbit-resolver-service.ts` | Bot thread resolution pre-merge        |
+| `apps/server/src/routes/github/utils/pr-ownership.ts`     | PR watermark builder                   |
+| `apps/server/src/lib/git-staging-utils.ts`                | Pathspec-based git add command builder |
 
 ## See Also
 

@@ -51,11 +51,11 @@ executeReview(ReviewRequest)
 
 Singleton service that owns the review pipeline. Key methods:
 
-| Method | Description |
-| ------ | ----------- |
-| `executeReview(request)` | Run full pipeline; routes to flow or legacy path |
-| `resumeReview(threadId, feedback)` | Resume a HITL-paused flow review |
-| `verifyPlan(params)` | Lightweight plan quality gate (uses `simpleQuery` with Haiku) |
+| Method                             | Description                                                   |
+| ---------------------------------- | ------------------------------------------------------------- |
+| `executeReview(request)`           | Run full pipeline; routes to flow or legacy path              |
+| `resumeReview(threadId, feedback)` | Resume a HITL-paused flow review                              |
+| `verifyPlan(params)`               | Lightweight plan quality gate (uses `simpleQuery` with Haiku) |
 
 The `verifyPlan` method is called by `PlanProcessor` before executing large/architectural features. It uses a one-turn Haiku query to check for missing error handling, architectural risks, missing tests, and overly complex approaches. Returns `null` on error (callers approve by default).
 
@@ -117,39 +117,39 @@ interface ConsolidatedReview {
   error?: string;
 }
 
-function extractPRDFromText(text: string, fallback: SPARCPrd): SPARCPrd
+function extractPRDFromText(text: string, fallback: SPARCPrd): SPARCPrd;
 ```
 
 ## Langfuse Tracing
 
 When Langfuse is available, the adapter creates:
 
-| Span | Tracks |
-| ---- | ------ |
+| Span                  | Tracks                            |
+| --------------------- | --------------------------------- |
 | `antagonistic-review` | Top-level trace with PRD metadata |
-| `graph-execution` | Full graph invocation time |
-| `ava-review` | Ava node input/output + verdict |
-| `jon-review` | Jon node input/output + verdict |
-| `consolidate` | Resolution node input/output |
-| `error` | Error details on failure |
+| `graph-execution`     | Full graph invocation time        |
+| `ava-review`          | Ava node input/output + verdict   |
+| `jon-review`          | Jon node input/output + verdict   |
+| `consolidate`         | Resolution node input/output      |
+| `error`               | Error details on failure          |
 
 Token usage from each node (`avaTokenUsage`, `jonTokenUsage`, `consolidateTokenUsage`) is used to calculate total cost via `calculateCost()`.
 
 ## Events
 
-| Event | Payload |
-| ----- | ------- |
-| `prd:review:started` | `{ prdId, projectPath, timestamp }` |
+| Event                  | Payload                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `prd:review:started`   | `{ prdId, projectPath, timestamp }`                                             |
 | `prd:review:completed` | `{ prdId, projectPath, totalDurationMs, success, error?, traceId?, timestamp }` |
 
 ## Key Files
 
-| File | Role |
-| ---- | ---- |
-| `apps/server/src/services/antagonistic-review-service.ts` | Orchestration service, feature flag routing, plan verification |
-| `apps/server/src/services/antagonistic-review-adapter.ts` | LangGraph flow adapter with HITL and Langfuse tracing |
-| `libs/types/src/antagonistic-review.ts` | Shared `ReviewRequest`, `ReviewResult`, `ConsolidatedReview` types |
-| `libs/flows/src/index.ts` | Exports `createAntagonisticReviewGraph()` |
+| File                                                      | Role                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------ |
+| `apps/server/src/services/antagonistic-review-service.ts` | Orchestration service, feature flag routing, plan verification     |
+| `apps/server/src/services/antagonistic-review-adapter.ts` | LangGraph flow adapter with HITL and Langfuse tracing              |
+| `libs/types/src/antagonistic-review.ts`                   | Shared `ReviewRequest`, `ReviewResult`, `ConsolidatedReview` types |
+| `libs/flows/src/index.ts`                                 | Exports `createAntagonisticReviewGraph()`                          |
 
 ## See Also
 

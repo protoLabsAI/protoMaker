@@ -6,12 +6,12 @@ State-machine-driven feature execution pipeline that classifies complexity, gene
 
 The Lead Engineer pipeline processes features through discrete state phases, each handled by a dedicated `StateProcessor`. The four main phases are:
 
-| Phase | Processor | Description |
-| ----- | --------- | ----------- |
-| `INTAKE` | `IntakeProcessor` | Load feature, classify complexity, assign persona, validate deps |
-| `PLAN` | `PlanProcessor` | Generate implementation plan, run antagonistic plan review |
-| `EXECUTE` | `ExecuteProcessor` | Run agent in worktree, monitor completion, retry on failure |
-| `ESCALATE` | _(escalation handler)_ | Surface blocked/failed features to the board |
+| Phase      | Processor              | Description                                                      |
+| ---------- | ---------------------- | ---------------------------------------------------------------- |
+| `INTAKE`   | `IntakeProcessor`      | Load feature, classify complexity, assign persona, validate deps |
+| `PLAN`     | `PlanProcessor`        | Generate implementation plan, run antagonistic plan review       |
+| `EXECUTE`  | `ExecuteProcessor`     | Run agent in worktree, monitor completion, retry on failure      |
+| `ESCALATE` | _(escalation handler)_ | Surface blocked/failed features to the board                     |
 
 ## Architecture
 
@@ -76,12 +76,12 @@ interface StateContext {
 
 ## Key Files
 
-| File | Role |
-| ---- | ---- |
-| `apps/server/src/services/lead-engineer-processors.ts` | `IntakeProcessor` and `PlanProcessor` |
-| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor` |
-| `apps/server/src/services/lead-engineer-types.ts` | `StateProcessor`, `StateContext`, `StateTransitionResult` interfaces |
-| `apps/server/src/services/lead-engineer-service.ts` | Main service wiring processors into state machine |
+| File                                                          | Role                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor`                                |
+| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                                                   |
+| `apps/server/src/services/lead-engineer-types.ts`             | `StateProcessor`, `StateContext`, `StateTransitionResult` interfaces |
+| `apps/server/src/services/lead-engineer-service.ts`           | Main service wiring processors into state machine                    |
 
 ## See Also
 

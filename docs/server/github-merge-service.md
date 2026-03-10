@@ -55,22 +55,22 @@ if (checkIdentifier.includes('coderabbit') && conclusion === 'failure') {
 
 ## Merge Strategies
 
-| Strategy | Flag | Description |
-| -------- | ---- | ----------- |
+| Strategy | Flag       | Description                           |
+| -------- | ---------- | ------------------------------------- |
 | `squash` | `--squash` | Squash all commits into one (default) |
-| `merge` | `--merge` | Standard merge commit |
-| `rebase` | `--rebase` | Rebase commits onto base branch |
+| `merge`  | `--merge`  | Standard merge commit                 |
+| `rebase` | `--rebase` | Rebase commits onto base branch       |
 
 ## Result Types
 
 ```typescript
 interface PRMergeResult {
   success: boolean;
-  mergeCommitSha?: string;     // present on MERGED state
-  autoMergeEnabled?: boolean;  // true when GitHub will merge later
-  checksPending?: boolean;     // true when CI still running
-  checksFailed?: boolean;      // true when CI hard-failed
-  failedChecks?: string[];     // names of failed checks
+  mergeCommitSha?: string; // present on MERGED state
+  autoMergeEnabled?: boolean; // true when GitHub will merge later
+  checksPending?: boolean; // true when CI still running
+  checksFailed?: boolean; // true when CI hard-failed
+  failedChecks?: string[]; // names of failed checks
   error?: string;
 }
 
@@ -85,11 +85,11 @@ interface PRCheckStatus {
 
 ## Key Files
 
-| File | Role |
-| ---- | ---- |
-| `apps/server/src/services/github-merge-service.ts` | Service implementation (singleton exported as `githubMergeService`) |
-| `apps/server/src/services/git-workflow-service.ts` | Primary caller |
-| `apps/server/src/services/merge-eligibility-service.ts` | Higher-level eligibility evaluation |
+| File                                                    | Role                                                                |
+| ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `apps/server/src/services/github-merge-service.ts`      | Service implementation (singleton exported as `githubMergeService`) |
+| `apps/server/src/services/git-workflow-service.ts`      | Primary caller                                                      |
+| `apps/server/src/services/merge-eligibility-service.ts` | Higher-level eligibility evaluation                                 |
 
 ## See Also
 
