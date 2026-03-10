@@ -14,9 +14,16 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { EventEmitter } from 'node:events';
 import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('ErrorBudgetService');
+
+/** Burn rate above which the budget is considered fully exhausted (100% consumed). */
+const EXHAUSTION_BURN_RATE = 1.0;
+
+/** Burn rate below which the budget is considered recovered. */
+const RECOVERY_BURN_RATE = 0.8;
 
 // ---------------------------------------------------------------------------
 // Disk document shape
@@ -49,7 +56,7 @@ function ensureDir(dir: string): void {
 // Service
 // ---------------------------------------------------------------------------
 
-export class ErrorBudgetService {
+export class ErrorBudgetService extends EventEmitter {
   /** Path to the project root — used to resolve `.automaker/metrics/error-budget.json`. */
   private readonly projectPath: string;
 
@@ -58,6 +65,12 @@ export class ErrorBudgetService {
 
   /** Fail rate threshold above which the budget is exhausted (default: 0.2 = 20%). */
   private readonly threshold: number;
+
+  /**
+   * Whether the budget is currently in the exhausted state.
+   * Used to avoid emitting duplicate exhausted/recovered events.
+   */
+  private _isExhaustedState = false;
 
   constructor(
     projectPath: string,
@@ -68,6 +81,7 @@ export class ErrorBudgetService {
       threshold?: number;
     } = {}
   ) {
+    super();
     this.projectPath = projectPath;
     this.windowMs = (options.windowDays ?? 7) * 24 * 60 * 60 * 1000;
     this.threshold = options.threshold ?? 0.2;
@@ -96,10 +110,15 @@ export class ErrorBudgetService {
 
     this.writeDocument(doc);
 
+    const failRate = this.getFailRate();
+    const exhausted = this.isExhausted();
+
     logger.info(
       `[ErrorBudget] Recorded merge featureId=${featureId} failedCi=${failedCi} ` +
-        `failRate=${this.getFailRate().toFixed(3)} exhausted=${this.isExhausted()}`
+        `failRate=${failRate.toFixed(3)} exhausted=${exhausted}`
     );
+
+    this._checkAndEmitBudgetEvents(failRate);
   }
 
   /**
@@ -121,6 +140,7 @@ export class ErrorBudgetService {
         doc.updatedAt = new Date().toISOString();
         this.writeDocument(doc);
         logger.info(`[ErrorBudget] Marked CI failure for featureId=${featureId}`);
+        this._checkAndEmitBudgetEvents(this.getFailRate());
       }
     } else {
       // No prior merge record in the window — create one representing a CI failure
@@ -171,6 +191,46 @@ export class ErrorBudgetService {
   // ---------------------------------------------------------------------------
   // Internal helpers
   // ---------------------------------------------------------------------------
+
+  /**
+   * Check current burn rate and emit `error_budget:exhausted` or
+   * `error_budget:recovered` events when the state crosses a threshold.
+   *
+   * Exhausted fires when burn rate >= EXHAUSTION_BURN_RATE (1.0) and the
+   * service was not already in the exhausted state.
+   *
+   * Recovered fires when burn rate drops below RECOVERY_BURN_RATE (0.8) and
+   * the service was in the exhausted state.
+   */
+  private _checkAndEmitBudgetEvents(failRate: number): void {
+    const { total, failed } = this.getWindowCounts();
+
+    if (!this._isExhaustedState && failRate >= EXHAUSTION_BURN_RATE) {
+      this._isExhaustedState = true;
+      logger.warn(
+        `[ErrorBudget] Budget exhausted: failRate=${failRate.toFixed(3)} >= ${EXHAUSTION_BURN_RATE} — emitting error_budget:exhausted`
+      );
+      this.emit('error_budget:exhausted', {
+        projectPath: this.projectPath,
+        failRate,
+        threshold: EXHAUSTION_BURN_RATE,
+        totalMerges: total,
+        failedMerges: failed,
+      });
+    } else if (this._isExhaustedState && failRate < RECOVERY_BURN_RATE) {
+      this._isExhaustedState = false;
+      logger.info(
+        `[ErrorBudget] Budget recovered: failRate=${failRate.toFixed(3)} < ${RECOVERY_BURN_RATE} — emitting error_budget:recovered`
+      );
+      this.emit('error_budget:recovered', {
+        projectPath: this.projectPath,
+        failRate,
+        threshold: EXHAUSTION_BURN_RATE,
+        totalMerges: total,
+        failedMerges: failed,
+      });
+    }
+  }
 
   private getWindowCounts(): { total: number; failed: number } {
     const doc = this.readDocument();

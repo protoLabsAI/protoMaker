@@ -130,6 +130,7 @@ import {
   type LoopState,
   type AutoModeLoopConfig,
 } from './auto-mode/auto-loop-coordinator.js';
+import { AutoModeCoordinator } from './auto-mode/auto-mode-coordinator.js';
 import { FeatureStateManager } from './auto-mode/feature-state-manager.js';
 import { ExecutionService } from './auto-mode/execution-service.js';
 import type {
@@ -198,6 +199,7 @@ export class AutoModeService {
   private concurrencyManager: ConcurrencyManager;
   private runningFeatures = new Map<string, RunningFeature>();
   private readonly coordinator = new AutoLoopCoordinator();
+  private autoModeCoordinator!: AutoModeCoordinator;
   /** Guards against TOCTOU race in startAutoLoopForProject: keys claimed synchronously before any await */
   private readonly pendingLoopStarts = new Set<string>();
   private featureLoader = new FeatureLoader();
@@ -248,6 +250,7 @@ export class AutoModeService {
     this.settingsService = settingsService ?? null;
     this.recoveryService = getRecoveryService(events);
     this.featureStateManager = new FeatureStateManager(this.events, this.featureLoader);
+    this.autoModeCoordinator = new AutoModeCoordinator(events, this.settingsService);
 
     // Initialize ExecutionService with all dependencies and callbacks
     const callbacks: IAutoModeCallbacks = {
@@ -313,6 +316,7 @@ export class AutoModeService {
       sleep: this.sleep.bind(this),
       HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: this.HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD,
       HEAP_USAGE_ABORT_AGENTS_THRESHOLD: this.HEAP_USAGE_ABORT_AGENTS_THRESHOLD,
+      isPickupFrozen: () => this.autoModeCoordinator.isPickupFrozen(),
     };
     this.scheduler = new FeatureScheduler({
       featureLoader: this.featureLoader,
