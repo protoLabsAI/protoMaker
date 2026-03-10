@@ -29,13 +29,6 @@ import type {
   PatternResolved,
 } from '@protolabsai/types';
 
-// Fleet scheduler message types (mirrored locally to avoid npm hoisting issues in worktrees)
-import type {
-  WorkInventoryMsg as WorkInventory,
-  ScheduleAssignmentMsg as ScheduleAssignment,
-  SchedulerHeartbeatMsg as SchedulerHeartbeat,
-  ScheduleConflictMsg as ScheduleConflict,
-} from './fleet-scheduler-service.js';
 import { DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FrictionTrackerService } from './friction-tracker-service.js';
@@ -49,7 +42,6 @@ import {
   type MessageClassification,
 } from './ava-channel-classifiers.js';
 import type { AvaChannelService } from './ava-channel-service.js';
-import type { FleetSchedulerService } from './fleet-scheduler-service.js';
 
 const logger = createLogger('AvaChannelReactor');
 
@@ -107,8 +99,6 @@ export interface ReactorDependencies {
   doraMetricsService?: DoraMetricsService;
   /** Optional: EventEmitter for feature lifecycle event subscriptions */
   events?: EventEmitter;
-  /** Optional: fleet scheduler for proactive coordination */
-  fleetSchedulerService?: FleetSchedulerService;
   /** Optional: reactive spawner for triggering agents on incoming requests */
   reactiveSpawnerService?: {
     spawnForMessage(msg: AvaChatMessage): Promise<unknown>;
@@ -750,27 +740,6 @@ export class AvaChannelReactorService {
       await this.onDoraReport(message);
       return;
     }
-
-    // Fleet scheduler protocol handlers
-    if (message.content.startsWith('[work_inventory]')) {
-      this.onWorkInventory(message);
-      return;
-    }
-
-    if (message.content.startsWith('[schedule_assignment]')) {
-      await this.onScheduleAssignment(message);
-      return;
-    }
-
-    if (message.content.startsWith('[scheduler_heartbeat]')) {
-      this.onSchedulerHeartbeat(message);
-      return;
-    }
-
-    if (message.content.startsWith('[schedule_conflict]')) {
-      await this.onScheduleConflict(message);
-      return;
-    }
   }
 
   private async onCapacityHeartbeat(message: AvaChatMessage): Promise<void> {
@@ -1228,74 +1197,6 @@ export class AvaChannelReactorService {
       `Pausing work-steal from ${alert.instanceId} for ${HEALTH_ALERT_PAUSE_MS / 1000}s ` +
         `(memoryUsed=${alert.memoryUsed}% cpuLoad=${alert.cpuLoad}%)`
     );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Fleet scheduler protocol handlers
-  // ---------------------------------------------------------------------------
-
-  private onWorkInventory(message: AvaChatMessage): void {
-    if (!this.deps.fleetSchedulerService) return;
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let inventory: WorkInventory;
-    try {
-      const json = message.content.replace('[work_inventory]', '').trim();
-      inventory = JSON.parse(json) as WorkInventory;
-    } catch {
-      logger.warn('Received malformed work_inventory, ignoring');
-      return;
-    }
-
-    this.deps.fleetSchedulerService.onWorkInventory(inventory);
-  }
-
-  private async onScheduleAssignment(message: AvaChatMessage): Promise<void> {
-    if (!this.deps.fleetSchedulerService) return;
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let assignment: ScheduleAssignment;
-    try {
-      const json = message.content.replace('[schedule_assignment]', '').trim();
-      assignment = JSON.parse(json) as ScheduleAssignment;
-    } catch {
-      logger.warn('Received malformed schedule_assignment, ignoring');
-      return;
-    }
-
-    await this.deps.fleetSchedulerService.onScheduleAssignment(assignment);
-  }
-
-  private onSchedulerHeartbeat(message: AvaChatMessage): void {
-    if (!this.deps.fleetSchedulerService) return;
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let heartbeat: SchedulerHeartbeat;
-    try {
-      const json = message.content.replace('[scheduler_heartbeat]', '').trim();
-      heartbeat = JSON.parse(json) as SchedulerHeartbeat;
-    } catch {
-      logger.warn('Received malformed scheduler_heartbeat, ignoring');
-      return;
-    }
-
-    this.deps.fleetSchedulerService.onSchedulerHeartbeat(heartbeat);
-  }
-
-  private async onScheduleConflict(message: AvaChatMessage): Promise<void> {
-    if (!this.deps.fleetSchedulerService) return;
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let conflict: ScheduleConflict;
-    try {
-      const json = message.content.replace('[schedule_conflict]', '').trim();
-      conflict = JSON.parse(json) as ScheduleConflict;
-    } catch {
-      logger.warn('Received malformed schedule_conflict, ignoring');
-      return;
-    }
-
-    await this.deps.fleetSchedulerService.onScheduleConflict(conflict);
   }
 
   // ---------------------------------------------------------------------------

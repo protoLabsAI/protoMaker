@@ -3,12 +3,10 @@ name: headsdown
 description: Deep work mode - autonomously process features, merge PRs, groom the board, and stay productive until the system is void of work.
 argument-hint: [project-path]
 allowed-tools:
+  # Read-only — headsdown monitors, reports, and escalates; never edits code directly
   - Read
-  - Write
-  - Edit
   - Glob
   - Grep
-  - Bash
   - Task
   - TaskCreate
   - TaskUpdate
@@ -66,7 +64,6 @@ You are in **deep work mode**. Your job is to autonomously process features, mer
 These run automatically in the background — don't duplicate their work:
 
 - **Safety guard** blocks dangerous bash commands (`rm -rf /`, force push to main, `git reset --hard`, etc.). You can't accidentally break things.
-- **Auto-format** runs prettier on every Edit/Write. Never run `npm run format` manually.
 - **Compaction restore** re-injects operational context if the conversation compacts.
 
 ## Context7 — Live Library Docs
@@ -84,7 +81,7 @@ Use Context7 to look up current library docs when implementing features. Two-ste
 - **Merge aggressively** - Ready PRs get merged, don't let them pile up
 - **Clean as you go** - Groom the board, fix stale features, resolve blockers
 - **Act, don't ask** - Make autonomous decisions. Only escalate to the user when truly stuck.
-- **File bugs immediately** - When you observe a bug or recurring failure pattern, create a bug ticket on the board FIRST, THEN fix it. Never fix a bug and file the ticket after — the ticket exists to track the problem, not to document a completed fix.
+- **File bugs immediately** - When you observe a bug or recurring failure pattern, create a bug ticket on the board. Do NOT fix it yourself — the ticket ensures the system learns from the failure and agents implement the fix.
 - **Exponential backoff** - When truly blocked, sleep intelligently
 
 ## Main Loop
@@ -215,7 +212,7 @@ Check why:
 - **Stale or blocked features?** -> Phase 5 (Board Groom)
 - **Blocked on dependencies?** -> Work on unblocked items or productive tasks
 - **Auto-mode paused?** -> Restart if appropriate
-- **Error state?** -> Diagnose and fix
+- **Error state?** -> Diagnose, file bug ticket, and move on
 
 ---
 
@@ -317,11 +314,11 @@ Scan all blocked features. For each, check `statusChangeReason`. Features with a
 For each "Needs Action" feature:
 
 1. Read the full `statusChangeReason` to understand the root cause
-2. Fix it: rebase the worktree, fix formatting, clarify the feature description, or resolve the underlying issue
-3. Reset `failureCount: 0` and move back to `backlog`
-4. **Do NOT simply reset status and let auto-mode retry** — that will reproduce the same failure
+2. **File a bug ticket** on the board describing the root cause and recovery steps needed
+3. Do NOT fix it yourself — do NOT rebase, reformat, or edit code directly
+4. Do NOT simply reset status and let auto-mode retry — that will reproduce the same failure
 
-These are surfaced with an amber "Needs Action" badge in the UI. Never leave them sitting blocked.
+These are surfaced with an amber "Needs Action" badge in the UI. The bug ticket ensures the failure gets a proper fix through the agent pipeline.
 
 ### 5.1 Stale Feature Remediation
 
@@ -356,45 +353,31 @@ For features in `in_progress` or `review` with no activity > 24h:
 
 When blocked on external factors (PR review, CI build, rate limits), use time productively.
 
-### Tier 1: Code Quality (5-10 min tasks)
+### Tier 1: Board Hygiene (5-10 min tasks)
 
-```bash
-# Run linter, fix issues
-npm run lint -- --fix
+- Review board for stale features, update statuses
+- Check dependency chains are correct
+- Verify done features have merged PRs
 
-# Type check
-npm run build:packages
-```
+### Tier 2: Monitoring & Reporting (10-20 min tasks)
 
-### Tier 2: Documentation (10-20 min tasks)
+- Check agent outputs for quality issues
+- Review PR feedback for patterns
+- Post status updates to Discord
 
-- Update README if features changed
-- Add JSDoc comments to new functions
-- Update CLAUDE.md if patterns evolved
-- Review and update API docs
+### Tier 3: Bug Filing (15-30 min tasks)
 
-### Tier 3: Cleanup (15-30 min tasks)
-
-- Remove dead code
-- Consolidate duplicate utilities
-- Clean up TODO comments (fix or create issues)
-- Archive completed project docs
-
-### Tier 4: Maintenance (30+ min tasks)
-
-- Dependency updates (minor versions)
-- Test coverage for new code
-- Performance profiling
-- Security audit of new endpoints
+- Investigate recurring failure patterns
+- File bug tickets for any issues found
+- Audit blocked features for root causes
 
 ### Task Selection Priority
 
 ```
-1. Directly related to current feature work
-2. Blocking issues from previous features
-3. General code quality
-4. Documentation
-5. Nice-to-have improvements
+1. Board consistency and hygiene
+2. Monitoring agent and PR health
+3. Filing bugs for observed issues
+4. Reporting status to Discord
 ```
 
 ---
@@ -482,22 +465,20 @@ Exit headsdown mode **only** when ALL of these conditions are met:
 1. Read agent output for error details
 2. Check if it's a transient error (network, rate limit)
 3. If transient -> retry with backoff
-4. If code error -> analyze and potentially fix manually
-5. If blocked -> create issue, move to next feature
+4. If code error -> file a bug ticket on the board, move to next feature
+5. If blocked -> file a bug ticket, move to next feature
 
 ### Build Failure
 
-1. Run build locally to reproduce
-2. Check for missing dependencies
-3. Fix type errors
-4. Retry
+1. Read build output to diagnose
+2. File a bug ticket on the board with the error details
+3. Move to next feature
 
 ### Test Failure
 
-1. Run specific failing test
-2. Analyze test output
-3. Fix if straightforward
-4. If complex, create follow-up feature
+1. Read test output to diagnose
+2. File a bug ticket on the board with the failure details
+3. Move to next feature
 
 ### Complete Block
 

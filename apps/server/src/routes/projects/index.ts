@@ -31,16 +31,13 @@ import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 import type { EventLedgerService } from '../../services/event-ledger-service.js';
-import { createFleetStatusHandler } from './fleet-status.js';
-import type { FleetSchedulerService } from '../../services/fleet-scheduler-service.js';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,
   events: EventEmitter,
   projectService: ProjectService,
   lifecycleService?: ProjectLifecycleService,
-  eventLedgerService?: EventLedgerService,
-  fleetSchedulerService?: FleetSchedulerService
+  eventLedgerService?: EventLedgerService
 ): Router {
   const router = Router();
 
@@ -93,11 +90,6 @@ export function createProjectsRoutes(
   // Ceremony timeline routes — append-only paper trail per project
   router.post('/:slug/ceremony-timeline', createPostCeremonyTimelineHandler());
   router.get('/:slug/ceremony-timeline', createGetCeremonyTimelineHandler());
-
-  // Fleet status route — GET /api/projects/:slug/fleet-status
-  if (fleetSchedulerService) {
-    router.get('/:slug/fleet-status', createFleetStatusHandler(fleetSchedulerService));
-  }
 
   // Mount lifecycle routes if service is available
   if (lifecycleService) {
