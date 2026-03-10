@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 441
-  referenced: 103
-  successfulFeatures: 103
+  loaded: 454
+  referenced: 107
+  successfulFeatures: 107
 ---
 # api
 
@@ -900,3 +900,35 @@ usageStats:
 - **Problem solved:** User changes server URL at runtime; all subsequent requests must route to new server
 - **Why this works:** Invalidation ensures clean state: no stale auth tokens, cached routes, or pending requests to old server. Simpler than managing connection migration.
 - **Trade-offs:** Clean state achieved but creates brief unavailability window; any in-flight requests at invalidation moment are lost and must be retried; requires app-level retry logic
+
+### HTTP client invalidation completely recreates the singleton instance on URL change, not just reconnecting existing connection (2026-03-10)
+- **Context:** When user overrides server URL, existing HTTP client might have cached data, connection state, or credentials for old server
+- **Why:** Clean slate prevents: (1) stale cached responses from old server, (2) mixed authentication state, (3) orphaned WebSocket connections. Fresh instance ensures no cross-contamination.
+- **Rejected:** Just calling reconnect() on existing client could leave cached state; just switching URL could reuse auth tokens for wrong server
+- **Trade-offs:** More aggressive approach than minimal reconnect, but guarantees correctness. Cost: rebuild HTTP client singleton (minimal perf impact)
+- **Breaking if changed:** If you remove the invalidation and only reconnect, stale cache responses leak between servers
+
+#### [Pattern] URL fallback precedence: Electron-cached URL → localStorage override → VITE_SERVER_URL env var → relative URL → hostname-based default (2026-03-10)
+- **Problem solved:** Multiple sources of truth for server URL across different deployment scenarios (Electron app, web app, env-based)
+- **Why this works:** This ordering respects existing deployments (Electron comes first) while allowing override to supersede hardcoded env vars. Relative URL as fallback supports any deployment origin.
+- **Trade-offs:** Gained: backwards compatibility, gradual migration path. Lost: precedence is implicit and order-dependent; if someone upgrades, the override behavior might be masked by Electron cache.
+
+#### [Pattern] getServerUrl() in auth.ts uses layered fallback: localStorage override → ENV.SERVER_URL → fallback default (2026-03-10)
+- **Problem solved:** Need to support three sources of server URL with clear priority: runtime override (localStorage) > build-time env > hardcoded default
+- **Why this works:** Layered fallback ensures feature gracefully degrades if localStorage is missing (stale browser) or env var is unset (CI/test environments). Each layer has different lifecycle.
+- **Trade-offs:** More sources = more potential bugs (which source was actually used?). Requires understanding precedence. Easier than complex conditional logic.
+
+#### [Pattern] Graceful degradation of localStorage with silent try-catch: localStorage persistence is opportunistic, feature works without it (no state persistence but session works) (2026-03-10)
+- **Problem solved:** Recent URLs persisted to localStorage inside setServerUrlOverride action. localStorage can be unavailable or throw quota exceeded.
+- **Why this works:** localStorage is a 'nice-to-have' for UX (remember recent servers), not critical for core functionality. Wrapping in try-catch ensures feature doesn't break if localStorage unavailable (private mode, quota exceeded, permissions denied).
+- **Trade-offs:** Loss of persistence across sessions when localStorage unavailable, but maintains feature functionality. User just re-types URL instead of picking from recent list.
+
+#### [Gotcha] Auth layer specifically checks Electron IPC between localStorage and env vars - order matters. Electron main process config is middle priority. (2026-03-10)
+- **Situation:** Native Electron app uses IPC to communicate config from main process to renderer
+- **Root cause:** Electron main process may have access to system config or native APIs that renderer doesn't. Checking IPC before env vars allows main process to override without restarting app.
+- **How to avoid:** Adds Electron IPC dependency in web code (wrapped in try/catch), but gains Electron configurability
+
+#### [Pattern] When a calculated field is conditionally present (depends on input availability), omit it entirely from object payload rather than setting to null/undefined. Use conditional spread: ...(field !== undefined ? { field } : {}) to build objects with optional fields. (2026-03-10)
+- **Problem solved:** prReviewDurationMs only computed when prCreatedAt exists; when missing, field should be absent from update payload
+- **Why this works:** Produces cleaner JSON (no null fields), aligns with TypeScript optional semantics (fieldName?: type), and clearly signals absence vs presence. Consumers check hasOwnProperty or optional chaining rather than null-checking.
+- **Trade-offs:** Consumers must handle field absence defensively; smaller payloads and explicit intent

@@ -5,9 +5,9 @@ relevantTo: [performance]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 35
-  referenced: 12
-  successfulFeatures: 12
+  loaded: 36
+  referenced: 13
+  successfulFeatures: 13
 ---
 # performance
 
@@ -291,3 +291,15 @@ usageStats:
 - **Problem solved:** Need lightweight duplication detection to prevent similar features from duplicating in backlog under capacity pressure
 - **Why this works:** O(n*w) complexity where w is word count (vs O(n²) for edit distance or network latency for embeddings); word-order-invariant (semantically handles paraphrasing); deterministic and debuggable
 - **Trade-offs:** Gained: fast, simple, no external deps. Lost: semantic understanding (doesn't catch 'fix auth bug' vs 'authentication issue' as similar)
+
+#### [Pattern] Singleton HTTP client maintained across lifetime with explicit invalidation when server URL changes (invalidateHttpClient), rather than creating new clients per request (2026-03-10)
+- **Problem solved:** Need efficient connection reuse (TCP pooling, keep-alive) while supporting runtime server URL changes
+- **Why this works:** Singleton achieves connection pooling and caching efficiency; invalidation pattern allows responding to runtime config changes without losing benefits
+- **Trade-offs:** More complex state management (must track and invalidate stale singleton) but significant performance benefit from connection reuse
+
+### Reload feature status early in `process()` and check if it's already done before running external merge detection. Skip gh CLI calls entirely if feature is done. (2026-03-10)
+- **Context:** External merge detection requires gh CLI call. Early exit avoids this expensive operation when feature status was already updated by parallel process or earlier state change.
+- **Why:** gh CLI calls are relatively expensive (subprocess spawn, network latency to GitHub). Single status check (reload) is cheap. Skip detection if not needed.
+- **Rejected:** Always running merge detection regardless of current status — wastes gh CLI calls on features that are already done
+- **Trade-offs:** Extra feature reload on every REVIEW.process() call, but saves many gh CLI calls. Reload is cached/fast; gh calls are not.
+- **Breaking if changed:** If early status check is removed, forces unnecessary gh CLI calls on every loop iteration, increasing latency and GitHub API quota usage

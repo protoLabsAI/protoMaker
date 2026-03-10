@@ -571,3 +571,79 @@ usageStats:
 - **Rejected:** Static CORS policy for all deployments (breaks either single-tenant security or hivemind flexibility), no CORS validation (adds attack surface)
 - **Trade-offs:** Hivemind users gain server flexibility but must rely entirely on backend auth; single-tenant users get origin-level defense in depth
 - **Breaking if changed:** If proto config changes at runtime without server restart, CORS policy stales; if deployment misses auth layer behind hivemind, origins become untrusted; if proto.enabled flag flips unexpectedly, CORS silently opens/closes
+
+#### [Gotcha] preApproved flag bypasses risk-tier checks completely, creating a high-risk override vector (2026-03-10)
+- **Situation:** Some actions need to execute without approval gate but still be auditable
+- **Root cause:** Avoids infinite approval loops and allows self-healing/critical actions to bypass human approval
+- **How to avoid:** Flexibility vs security: any bug in how preApproved is set could bypass all protections without being detected
+
+### CORS middleware only enables `Allow-All-Origins` when `hivemindEnabled` feature flag is true (2026-03-10)
+- **Context:** Hivemind feature requires remote browser access from any origin, but default secure posture should reject cross-origin requests
+- **Why:** Prevents accidental exposure of internal APIs to untrusted origins. Feature flag ties security surface to intentional feature activation, not global config.
+- **Rejected:** Always allowing origin would be insecure in default deployment; requiring manual origin whitelist would be fragile for hivemind dynamic use case
+- **Trade-offs:** Couples middleware behavior to feature flag state (adds runtime check), but correctly scopes security exception to feature scope
+- **Breaking if changed:** Removing the conditional check exposes CORS to all origins even when hivemind disabled—security regression
+
+#### [Gotcha] Enabling hivemind mode implicitly enables CORS-to-all (allowAllOrigins). This dependency is not explicitly surfaced in code or comments. (2026-03-10)
+- **Situation:** Server detects hivemind mode and passes flag to middleware. Middleware echoes back origin header, allowing any cross-origin request, to support headless remote client.
+- **Root cause:** Hivemind enables remote architecture; automating CORS prevents manual config errors. But creates silent coupling between mode and security policy.
+- **How to avoid:** Pro: fewer config knobs, less chance of CORS mismatch. Con: enabling hivemind for any reason silently opens CORS.
+
+### CORS (allowAllOrigins) only enabled when hivemindEnabled feature flag is true, not by default (2026-03-10)
+- **Context:** CORS exposes security surface; collaborative/remote client mode (hivemind) is the only scenario requiring cross-origin access
+- **Why:** Security principle: minimize exposed surface area. CORS is only safe when the use case actively requires it.
+- **Rejected:** Could enable CORS for all requests unconditionally, simpler but larger attack surface
+- **Trade-offs:** Requires feature flag plumbing through server initialization, but provides security boundary and opt-in model
+- **Breaking if changed:** Unconditionally enabling CORS exposes the server to broader attack surface; removing feature flag check removes security boundary
+
+### CORS allowAllOrigins is gated behind hivemind.enabled flag — accept any origin only when hivemind is explicitly enabled (2026-03-10)
+- **Context:** Server needs to accept requests from remote clients (UI served from different origin), but CORS is a security boundary
+- **Why:** Principle of secure-by-default: restrictive CORS in normal mode prevents accidental CORS misconfiguration. Hivemind flag acts as explicit opt-in for distributed mode.
+- **Rejected:** Always allow CORS (security risk); always restrict CORS (breaks remote client feature).
+- **Trade-offs:** Gained: security by default, clear intent (hivemind=distributed). Lost: developers debugging remote clients must remember to enable hivemind, otherwise cryptic CORS errors.
+- **Breaking if changed:** Removing the conditional breaks remote client mode when hivemind.enabled is false; always-restrict would break the feature entirely.
+
+### CORS allowAllOrigins configured via proto.config.yaml hivemind setting, not hardcoded. Middleware reads config and only enables CORS if hivemind is active. (2026-03-10)
+- **Context:** Server must accept cross-origin requests when hivemind mode (local dev setup) is enabled, but reject them in production.
+- **Why:** Config-driven approach separates policy from code. Hivemind is a dev-only feature, so CORS risk is scoped to non-production. Reading from yaml keeps config centralized.
+- **Rejected:** Always enable CORS (security risk), never enable CORS (blocks dev workflow), environment variable per deployment (no single config file)
+- **Trade-offs:** Requires yaml file reading at startup (one-time cost); config change requires server restart (not runtime); if config file is missing, CORS fails silently
+- **Breaking if changed:** If yaml parsing fails without fallback, CORS is silently disabled; if hivemind key name changes, existing configs stop working; if allowAllOrigins is removed from middleware, CORS stops working regardless of config
+
+### CORS middleware echoes back the `Origin` header (not hardcoded `*`) and only when `hivemind.enabled = true`. Conditional CORS controlled by feature flag. (2026-03-10)
+- **Context:** Need to allow cross-origin requests in development (hivemind mode) but remain secure by default
+- **Why:** Echoing Origin is more controlled than `Access-Control-Allow-Origin: *`. Allows any origin but not third-party credentials. Feature flag (`hivemind.enabled`) ensures CORS is only open when explicitly enabled for development.
+- **Rejected:** Hardcoding `Access-Control-Allow-Origin: *` is simpler but loses control and security. Explicit origin whitelist requires configuration per deployment.
+- **Trade-offs:** Echo strategy allows flexibility for multi-domain dev setups without config burden. Slightly less restrictive than whitelist but gated by feature flag.
+- **Breaking if changed:** If flag check removed, CORS always open (security regression). If CORS not set at all, hivemind cross-origin requests fail silently.
+
+#### [Pattern] Before interpolating branch name into shell command (`gh pr list --head <branch>`), validate it against regex pattern to prevent shell injection. (2026-03-10)
+- **Problem solved:** Shell command construction with user-controlled input (branch name) is injection vector. gh CLI is invoked via child_process exec.
+- **Why this works:** Branch names can contain special characters (e.g., `feature/$(rm -rf /)`). Regex validation (e.g., `/^[a-zA-Z0-9._/-]+$/`) ensures safe interpolation.
+- **Trade-offs:** Single-line validation adds minimal overhead, prevents category of attack entirely. Only allows valid git branch names.
+
+### Server CORS middleware accepts all origins (Access-Control-Allow-Origin: *) only when process.env.HIVEMIND_ENABLED is true (2026-03-10)
+- **Context:** Feature allows connecting to arbitrary server URLs at runtime, which requires CORS to be open. But CORS=* is unsafe in production.
+- **Why:** Hivemind mode is a deployment flag that indicates 'this is a multi-instance/multi-tenant environment where cross-origin requests are expected.' CORS security is thus conditional on deployment context, not hardcoded.
+- **Rejected:** Always allow CORS (too permissive for single-server deployments) or never allow CORS (breaks multi-instance feature)
+- **Trade-offs:** Coupling security policy to feature flag means security posture changes based on runtime config. Simpler than origin whitelist logic but less granular.
+- **Breaking if changed:** If HIVEMIND_ENABLED is accidentally set in production, app accepts requests from any origin. If unset, override feature silently fails (cross-origin requests blocked).
+
+#### [Pattern] Risk-based proposal mapping: high-risk actions like `abort_and_resume` carry `risk: 'high'` metadata in the proposal (2026-03-10)
+- **Problem solved:** Different action types pose different operational risks
+- **Why this works:** Authority system can make different decisions based on risk level. High-risk actions (stopping + resuming features) are more likely to trigger approval requirement than status moves.
+- **Trade-offs:** Risk taxonomy must be maintained in code (+clarity, -brittleness if action semantics change)
+
+### CORS hivemind mode conditional: origin: '*' + credentials: false only when HIVEMIND_ENABLED=true; otherwise strict origin allowlist + credentials: true (2026-03-10)
+- **Context:** Server must support both local credential-based auth (cookies) and remote hivemind clients from unknown origins. These have incompatible CORS requirements.
+- **Why:** Browsers enforce: origin: '*' disallows credentials: true in same CORS policy. Hivemind (remote clients from any host) requires relaxing origin checking, but this is only safe if credentials are disabled (no cookie theft risk).
+- **Rejected:** Always allowing origin: '*' - exposes auth cookies to CSRF. Always requiring credentials: true - blocks remote hivemind clients from other hosts.
+- **Trade-offs:** Runtime conditional adds complexity, but allows single codebase to support both architectures. Trade-off: hivemind mode is less secure (no auth cookies) but intentionally so for distributed use case.
+- **Breaking if changed:** Attempting origin: '*' + credentials: true fails at browser/CORS level (policy rejection). Setting hivemind without disabling credentials prevents remote clients from connecting.
+
+### Server CORS middleware allows all origins (Access-Control-Allow-Origin: *) ONLY when HIVEMIND_ENABLED env var is true (2026-03-10)
+- **Context:** Development/testing mode for local network collaboration vs production deployment
+- **Why:** Hivemind is explicitly a development feature. Gating CORS behind env var prevents accidentally shipping open CORS to production while enabling it for intended use.
+- **Rejected:** Always open CORS would be too permissive; hardcoded origin list would break for different dev IPs
+- **Trade-offs:** Conditional security posture - dev mode is more open, but requires explicit opt-in
+- **Breaking if changed:** Removing env var check would allow any origin to hit production server - CSRF/security boundary violation

@@ -685,3 +685,38 @@ usageStats:
 - **Problem solved:** Track recently connected servers without unbounded localStorage growth.
 - **Why this works:** Move-to-front ensures most recent appears first (good UX for dropdowns); dedup prevents duplicate entries (cleaner list); slice(0, 10) bounds memory. Standard pattern for 'recent items'.
 - **Trade-offs:** Array operations are O(n) but n ≤ 10 so negligible. Move-to-front is intuitive for users.
+
+#### [Pattern] Recent server URLs stored in localStorage with deduplication and max-10 limit (2026-03-10)
+- **Problem solved:** UI needs to offer quick-pick list of previously used server URLs for user convenience
+- **Why this works:** Max-10 prevents localStorage bloat (localStorage has per-domain size limit ~5MB). Dedup prevents confusing duplicate entries. localStorage persists across page reloads without server round-trip.
+- **Trade-offs:** Hard max-10 limit loses history beyond that, but acceptable for convenience feature. localStorage requires JSON serialization overhead.
+
+#### [Pattern] Recent server URLs are deduplicated with move-to-front semantics: remove old occurrence, then append. Not simple membership check. (2026-03-10)
+- **Problem solved:** Recent URLs dropdown shows frequently-used servers. Recency must reflect true usage order, not insertion order.
+- **Why this works:** Move-to-front preserves recency when user revisits same URL. Simple 'is in list' check fails because repeated access doesn't reposition the entry to end.
+- **Trade-offs:** Pro: correct recency semantics. Con: more code (find then remove then append).
+
+#### [Pattern] Recent URLs history using move-to-front deduplication: when URL accessed, remove from array if exists, push to front, enforce max size limit (2026-03-10)
+- **Problem solved:** URL history UX should show most-recently-used first without stale duplicates; limited space (max 10)
+- **Why this works:** LRU (Least Recently Used) cache pattern optimizes for relevance: user most likely to want recently-used servers, duplicates confuse UI
+- **Trade-offs:** Requires array manipulation logic but creates clean, relevant UX with bounded size
+
+#### [Pattern] Recent server URLs stored as max-10 deduplicated array in localStorage, persisted from app-store (2026-03-10)
+- **Problem solved:** UX feature to help users quickly switch between known servers (e.g., local dev, staging, production)
+- **Why this works:** Small bounded list (10) is reasonable for a dropdown without becoming unwieldy. Deduplication avoids clutter when same URL is selected multiple times.
+- **Trade-offs:** Gained: improved UX for switching, no backend dependency. Lost: deduplication algorithm unspecified (case-sensitive? trailing slash?), limit is arbitrary.
+
+#### [Pattern] Recent server URLs stored as deduplicating, front-inserting list capped at 10. Adding duplicate URL moves it to front, not added twice. JSON.stringify to localStorage. (2026-03-10)
+- **Problem solved:** User switches between multiple servers (dev, staging, prod, remote). Need to show recent list without duplicates or unbounded growth.
+- **Why this works:** Move-to-front + dedup pattern keeps most-recently-used at front (O(n) but n≤10 so negligible). Max 10 balances UX (not too long) with utility (covers most workflows). Array serialization via JSON is simplest persistence.
+- **Trade-offs:** O(n) filter operation acceptable for n≤10. Loses frequency data (only order preserved). No automatic expiry of old URLs.
+
+#### [Pattern] `recentServerUrls` is separate state from `serverUrlOverride`. Not mixed together. Automatically deduplicates in store (not UI), with max 10 entries. Both persisted to localStorage. (2026-03-10)
+- **Problem solved:** Users need to switch between multiple servers during development and want to see history of recent servers
+- **Why this works:** Separation of concerns: current state (override) vs history (recent URLs). Dedup in store (single source of truth) rather than UI prevents duplicate logic. Automatic dedup on `setServerUrlOverride()` means UI doesn't need to handle it.
+- **Trade-offs:** Separate state is slightly more verbose but clearer intent. Automatic dedup adds 1 array search per override but UI is simpler. Max 10 prevents localStorage bloat.
+
+#### [Pattern] MRU (most-recently-used) deduplication for recent URLs: filter-then-prepend approach (remove existing, add to front, slice max 10) maintains order and uniqueness in single operation (2026-03-10)
+- **Problem solved:** Recent server URLs stored in localStorage for quick-pick dropdown. Need to prevent duplicates while keeping most-recent at front.
+- **Why this works:** Filter-then-prepend is elegant because it handles both new URLs and revisiting old ones uniformly: set https://server1 → [https://server1], then set https://server1 again → still [https://server1] at front, not duplicate
+- **Trade-offs:** Filter-then-prepend creates new array each time (small cost), but gives clean semantics: always move to front regardless of whether URL was already present

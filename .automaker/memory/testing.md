@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 71
-  referenced: 26
-  successfulFeatures: 26
+  loaded: 72
+  referenced: 27
+  successfulFeatures: 27
 ---
 # testing
 
@@ -1242,3 +1242,28 @@ usageStats:
 - **Situation:** Needed to verify localStorage read/write behavior without full server integration
 - **Root cause:** about:blank has null origin and restricted localStorage access; app root '/' provides proper browser context with localStorage enabled
 - **How to avoid:** Using real app context requires running dev server (slower test); mocking would be faster but miss real browser quirks
+
+#### [Pattern] Comprehensive test matrix covering all three decision paths (allowed, blocked, pre-approved) plus edge cases (unregistered agent, higher trust tiers) (2026-03-10)
+- **Problem solved:** Security-critical code with multiple decision paths needs exhaustive coverage
+- **Why this works:** Tests serve as specification: each test documents a specific enforcement rule and proves it works
+- **Trade-offs:** 16 unit tests are fast but don't test integration with actual ActionableItemService or event emission system
+
+#### [Gotcha] localStorage is origin-specific in browsers. about:blank has different origin than 'http://localhost:5173', so localStorage keys are not shared. Tests must navigate to '/' to access app's localStorage. (2026-03-10)
+- **Situation:** Temporary verification tests initially used page.goto('about:blank') to test localStorage override logic but found no localStorage access.
+- **Root cause:** Browser security model isolates storage by origin (protocol + domain + port). about:blank is a special origin distinct from any served origin.
+- **How to avoid:** Navigating to app origin requires app to be running; pure isolated tests not possible for localStorage without Playwright's built-in page context
+
+#### [Pattern] Temporary Playwright verification tests created and deleted after passing. Tests verified localStorage logic without live server dependency by navigating to app origin and evaluating JS directly. (2026-03-10)
+- **Problem solved:** Feature is already implemented; needed to verify core logic (override reading, deduplication, persistence) was correct without end-to-end flow.
+- **Why this works:** Tight feedback loop during investigation. Playwright's page.evaluate() can run JS in app context. Tests are self-contained and don't require external servers.
+- **Trade-offs:** Tests are deleted after use (not in CI), so logic not protected going forward; Playwright overhead for simple JS logic. Fast verification during development.
+
+#### [Pattern] Authority verdict system uses tristate model: `allow`, `deny`, `require_approval` — each with distinct execution consequences (2026-03-10)
+- **Problem solved:** Need granular control over when actions execute
+- **Why this works:** `allow` executes immediately, `deny` blocks and emits event, `require_approval` blocks pending human intervention. Three states allow workflow to handle escalation separately from rejection.
+- **Trade-offs:** Third state simplifies approval workflows (+flexibility, -complexity in authority service implementation)
+
+#### [Gotcha] Vitest vi.mock factories are hoisted at compile-time, making top-level variable declarations inaccessible within the factory function. When mocking Node built-ins (e.g., node:child_process), variables referenced inside the factory must be declared via vi.hoisted(() => ({ var: vi.fn() })) to create a hoisted scope. (2026-03-10)
+- **Situation:** Mocking node:child_process.exec required mockExec to be referenced inside vi.mock factory, but top-level const was undefined at factory evaluation time
+- **Root cause:** ES module hoisting combined with vitest's compile-time mock transformation evaluates factories in a scope that predates variable declarations. vi.hoisted() creates a hoisted scope accessible to the factory.
+- **How to avoid:** Slightly more verbose, but necessary for proper Node built-in mocking with callback-based APIs

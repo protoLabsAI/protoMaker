@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 102
-  referenced: 39
-  successfulFeatures: 39
+  loaded: 114
+  referenced: 50
+  successfulFeatures: 50
 ---
 # architecture
 
@@ -4550,3 +4550,290 @@ usageStats:
 - **Problem solved:** Same codebase must support single-tenant and multi-tenant deployments with different security/feature policies
 - **Why this works:** Single config object as source-of-truth reduces conditional logic branches and makes policy derivable from one place. Wired early (startup) ensures all dependent behavior is consistent.
 - **Trade-offs:** Centralized policy but requires early config parsing; if config is invalid/malformed, entire server fails; runtime config changes don't apply without restart
+
+### Gate uses permissive-by-default error handling: when any check fails (error budget service unavailable, gh CLI missing, etc.), the check logs a warning and the gate passes through rather than blocking. (2026-03-10)
+- **Context:** Each of three capacity checks (review queue, error budget, CI saturation) is wrapped in try-catch with non-fatal fallthrough.
+- **Why:** Prioritizes availability over hard safety. If a check can't run, allow execution rather than unknowingly block the agent. Assumes operator will catch missing tools in logs.
+- **Rejected:** Fail-safe model (block execution if can't verify capacity). Would provide stronger guarantees but risks locking agents completely if a single check becomes unavailable.
+- **Trade-offs:** Easier: agents never permanently stuck. Harder: silent mask of missing `gh` CLI or error budget service crashes means saturation might not actually be detected.
+- **Breaking if changed:** If you switch to fail-safe logic, must ensure all check dependencies (gh CLI, ErrorBudgetService) are guaranteed available at runtime.
+
+#### [Pattern] Three independent capacity signals (review queue depth, error budget, CI saturation) are checked as a conjunction: gate fails if ANY signal indicates saturation. (2026-03-10)
+- **Problem solved:** ExecuteProcessor gates before launching each agent with three sequential checks against different bottleneck types.
+- **Why this works:** Addresses three distinct system constraints: human review capacity (review queue), reliability (error budget), compute/CI capacity (pending checks). Each can saturate independently; gate should block when any is unhealthy.
+- **Trade-offs:** Easier: comprehensive view of system health. Harder: all three checks must pass, so misconfigured threshold on one check can block entire agent fleet.
+
+### When execution gate blocks, feature is demoted from execution → backlog with statusChangeReason, not marked as failed. (2026-03-10)
+- **Context:** Gate failure returns feature to backlog state rather than a 'gate_blocked' or 'failed' state.
+- **Why:** Gate is a capacity control, not a validation failure. Feature is valid but system is saturated. Returning to backlog allows retry on next executor pass when capacity frees up.
+- **Rejected:** Mark as 'failed' or 'gate_blocked' state. Would require additional state definition and explicit retry logic to get back to execution.
+- **Trade-offs:** Easier: reuses existing backlog → execution transition. Harder: feature's history is less clear (why did it go back to backlog?). Mitigated by statusChangeReason.
+- **Breaking if changed:** If you change to mark as 'failed', must define what 'success' means for a feature that was just capacity-blocked, not actually broken.
+
+#### [Gotcha] CI saturation check runs `gh pr list --head <branch>` followed by `gh pr checks` for each review-status feature. This is O(n) API calls and slow for many features in review. (2026-03-10)
+- **Situation:** For each feature with status='review' and a branchName, code queries `gh pr list` then `gh pr checks`. Loop has no batching or caching.
+- **Root cause:** Direct and simple. Each feature maps to one branch; iterate and query. No need to understand GitHub API batching.
+- **How to avoid:** Easier: straightforward logic. Harder: scales linearly with review queue depth; on 20 features in review, costs 40 API calls.
+
+### ErrorBudgetService is dynamically imported inside runExecutionGate using `await import('./error-budget-service.js')` rather than static import at top of file. (2026-03-10)
+- **Context:** Line: `const { ErrorBudgetService } = await import('./error-budget-service.js');`
+- **Why:** Likely avoids circular dependency (ErrorBudgetService may import this processor) and delays load until needed (lazy loading).
+- **Rejected:** Static import at top of file. Would be clearer but risks circular dependency or always loading unused service.
+- **Trade-offs:** Easier: avoids circular deps. Harder: every gate run pays async import cost; less obvious dependency; error surfaces at runtime not parse time.
+- **Breaking if changed:** If ErrorBudgetService is moved or renamed, failure is runtime-only. Static import would catch at build time.
+
+#### [Pattern] All three capacity checks have independent try-catch blocks that log but don't rethrow. Gate passes if check is unreachable. (2026-03-10)
+- **Problem solved:** Each check (review queue, error budget, CI) is wrapped: `try { ... check logic ... } catch (err) { logger.warn(...); }`
+- **Why this works:** Gate should never be the reason an agent doesn't launch. If infrastructure is broken, better to alert and proceed than deadlock.
+- **Trade-offs:** Easier: resilient to partial failures. Harder: silent degradation if check is broken; requires operational alerting.
+
+### Opt-in enforcement via WorkflowSettings.authorityEnforcement boolean flag (defaults undefined/false) creates dual-mode service: passthrough when disabled, enforcement when enabled (2026-03-10)
+- **Context:** Needed backward compatibility without changing existing agent/project behavior
+- **Why:** Allows gradual rollout and explicit opt-in per workflow rather than forcing all systems into enforcement immediately
+- **Rejected:** Always-on enforcement (breaks existing projects) or environment-based flag (less granular control)
+- **Trade-offs:** Service now has two complete code paths to maintain; easier compatibility costs harder testing and mental model
+- **Breaking if changed:** If enforcement is ever made mandatory/non-optional, all existing workflows without the flag will suddenly change behavior
+
+#### [Pattern] Three-phase decision gate: (1) agent registered check, (2) preApproved override, (3) risk vs trust-tier enforcement (2026-03-10)
+- **Problem solved:** Multiple independent checks needed before allowing an action
+- **Why this works:** Separates identity validation, policy override, and capability enforcement into distinct concerns
+- **Trade-offs:** Each phase is independently testable but creates implicit ordering dependency: all phases must pass
+
+#### [Gotcha] Blocked actions create approval requests via ActionableItemService, creating dual-state problem: proposal + approval request are separate entities (2026-03-10)
+- **Situation:** Need to track that an action was blocked and who needs to approve it
+- **Root cause:** Decouples the actionable work item (approval request) from the blocked proposal, allows approval workflow to be independent
+- **How to avoid:** Flexibility in approval workflow but state consistency risk: proposal and approval request could diverge if service crashes between creation
+
+### Error budget state persisted to disk (`.automaker/metrics/error-budget.json`) using file-based storage instead of in-memory or SQLite (2026-03-10)
+- **Context:** ExecuteProcessor needs to gate pipeline execution based on recent CI failure rate even after server restarts. Gate must survive crashes without resetting.
+- **Why:** In-memory-only state resets on server restart, causing gate to always open immediately after crash (defeating the purpose). SQLite adds unnecessary dependency for single counter. File-based is simple, inspectable, and persistent.
+- **Rejected:** In-memory state (loses gate state on restart); SQLite (overkill dependency for one metric)
+- **Trade-offs:** File-based state is inspectable and doesn't depend on schema, but trades atomicity — uses standard fs.writeFileSync without atomic-write protection
+- **Breaking if changed:** If `isExhausted()` check is removed from ExecuteProcessor.runExecutionGate(), error-budget-exhausted state no longer blocks execution. Gate state file at `.automaker/metrics/error-budget.json` can be manually edited to reset budget.
+
+#### [Pattern] Non-fatal gate pattern: all 3 system-health checks (review queue, error budget, CI saturation) wrapped in try/catch. If any check fails, feature proceeds. When blocked, feature returns to BACKLOG (not ESCALATE). (2026-03-10)
+- **Problem solved:** Execution gate runs before launching feature agents. Multiple async checks that could fail; need to prevent check failures from blocking the entire pipeline.
+- **Why this works:** Degradation is preferable to outage — a flaky check or transient error shouldn't cascade into system halt. Using BACKLOG (re-queue) instead of ESCALATE (alert human) prevents alert fatigue while preserving the feature for retry.
+- **Trade-offs:** Gate adds latency to each execute cycle (3 async checks), but failures are non-blocking and transparent. Trade-off is worth it to keep system running during check failures.
+
+#### [Pattern] Three-outcome gate in SignalIntakeService: allow (proceed normally), block (create `status: 'blocked'` feature for human review), defer (push to in-memory `deferredQueue` for later retry) (2026-03-10)
+- **Problem solved:** Portfolio gate evaluates incoming signals for capacity (>50 active features), duplication (cosine similarity >0.6), and architectural-signal error budget (>30% fail rate). Need to handle cases where signals should not be discarded but delayed.
+- **Why this works:** Binary yes/no gate cannot capture 'come back later' scenario. Three outcomes let gate redirect marginal signals (architectural work during high failure rate) for retry without losing them or alerting humans.
+- **Trade-offs:** More complex control flow and state management, but prevents loss of viable signals that arrive at wrong time. Trade-off is complexity for better signal retention.
+
+### Architectural signals (keywords: architecture, infrastructure, migration, refactor, platform, framework) are specifically gated by error budget separate from regular signal capacity gating (2026-03-10)
+- **Context:** Portfolio gate needs to prevent destabilizing system changes (refactors, platform migrations) from merging during high CI failure rate, while allowing non-architectural features to proceed with normal capacity checks.
+- **Why:** Architectural changes amplify existing instability — high failure rate means the codebase is fragile, so large-scope changes would make recovery harder. Regular features are gated by capacity but architectural work needs stricter stability requirement.
+- **Rejected:** Same gating policy for all signal types (doesn't distinguish risk levels); error budget gating for all signals (would block too aggressively)
+- **Trade-offs:** Requires signal classification logic and separate gate paths, but prevents architectural changes from compounding system instability during failures.
+- **Breaking if changed:** If keyword-based classification is removed, architectural migrations will proceed even during high failure rates, potentially cascading failures. If architectural signals revert to capacity gating instead of error-budget gating, risk-mitigation strategy is lost.
+
+### Capacity threshold (50 active features) and similarity threshold (0.6) are hardcoded constants, not user-configurable settings (2026-03-10)
+- **Context:** Portfolio gate checks need tunable parameters. Gate could read thresholds from project settings (configurable by user) or use hardcoded defaults.
+- **Why:** Hardcoding allows fast iteration on values based on observed system behavior before committing to configuration schema. Simpler implementation with fewer config migrations.
+- **Rejected:** User-configurable settings (requires config schema, migration logic, and validation before observing real behavior)
+- **Trade-offs:** Less flexibility now (gate behavior is same for all projects), but can iterate faster on optimal thresholds. Once optimal values are discovered, can move to settings schema.
+- **Breaking if changed:** If thresholds are moved to user-configurable settings, projects with custom thresholds from before would need default values. High threshold projects might see sudden behavioral changes if defaults change.
+
+### Server URL resolution uses precedence chain: localStorage override → Electron cache → env var → relative default (2026-03-10)
+- **Context:** Need to support multiple sources of server URL configuration with user override capability
+- **Why:** Precedence order enables: (1) user/runtime override to win, (2) Electron integration for cross-platform caching, (3) deployment env config fallback, (4) safe default. Each layer is only checked if previous fails.
+- **Rejected:** Flat merging or env-var-first would make overrides non-functional or lose Electron context
+- **Trade-offs:** Multiple persistence layers increases state complexity, but enables both UI-based overrides and app-specific caching. Checking localStorage on every call adds minor perf overhead.
+- **Breaking if changed:** Changing precedence order breaks user expectations (e.g., if env var checked first, user override would be ignored)
+
+#### [Pattern] Custom React hook (`useRecentServerUrls`) wraps Zustand store to expose state and actions as abstraction boundary (2026-03-10)
+- **Problem solved:** Components need access to server URL state and ability to set override, but should not directly couple to store implementation
+- **Why this works:** Hook abstraction decouples component code from store library (Zustand). Allows store refactor without touching component code. Provides type-safe API surface.
+- **Trade-offs:** Extra indirection (one more function call layer), but isolates implementation from consumers
+
+#### [Gotcha] HTTP client singleton pattern combined with app-store management creates dual control points for URL state (2026-03-10)
+- **Situation:** Both app-store holds `serverUrlOverride` AND HTTP client needs current server URL for requests
+- **Root cause:** Store is source of truth for user intent; HTTP client is source of truth for active URL. They must stay synchronized via `invalidateHttpClient()` call on override change.
+- **How to avoid:** Requires discipline to always invalidate when store changes. Benefit: store readable/writable from UI without HTTP client access
+
+### App-store state action (`addRecentServerUrl`) handles deduplication and max-10 enforcement internally (2026-03-10)
+- **Context:** Need to maintain invariant: recent URLs list is always deduplicated and never exceeds 10 items
+- **Why:** Enforcing invariant at action boundary (not in components) ensures it holds everywhere. Single place to change logic if limits shift.
+- **Rejected:** Pushing dedup logic to components would scatter invariant across codebase and make it easy to violate
+- **Trade-offs:** Action becomes slightly more complex (needs to track duplicates), but guarantees correctness everywhere
+- **Breaking if changed:** If you move dedup logic to callers, it only applies when called correctly—easy to add duplicates
+
+#### [Pattern] Client invalidation must be explicitly triggered on state mutation. setServerUrlOverride() calls invalidateHttpClient() which clears HTTP singleton AND triggers WebSocket reconnection—state change alone is insufficient. (2026-03-10)
+- **Problem solved:** Both HTTP client and WebSocket client cache the server URL internally. Changing app state without invalidating cached clients leaves them connected to the old server.
+- **Why this works:** Ensures invariant: serverUrlOverride change → clients reconnect. Centralizes side-effect logic in the action itself rather than external watchers, preventing the gotcha of forgetting to reconnect.
+- **Trade-offs:** Pro: guaranteed invariant, single modification point. Con: actions have side effects, harder to unit-test in isolation.
+
+#### [Pattern] Multi-layer URL resolution: localStorage override → Electron IPC → environment variable → default. Each layer serves a different deployment mode. (2026-03-10)
+- **Problem solved:** Codebase runs in Electron (main process via IPC), web with env injection, and web with runtime override. Single getServerUrl() function must work everywhere.
+- **Why this works:** Eliminates platform-specific getServerUrl implementations while respecting each deployment's URL source. Priority order places most-specific (user override) first.
+- **Trade-offs:** Pro: unified code path. Con: behavior varies subtly between contexts, harder to debug which fallback activated.
+
+### Multi-level fallback chain for server URL resolution: localStorage override → Electron IPC → env vars → relative URL (2026-03-10)
+- **Context:** Different deployment contexts (Electron app, web app, local dev) have different default sources of truth for server configuration
+- **Why:** Allows runtime override without hardcoding, supports multiple deployment modes with correct priority order
+- **Rejected:** Single source (only env var, or only localStorage) would break flexibility in one or more deployment contexts
+- **Trade-offs:** More complex initialization logic but supports all deployment contexts correctly
+- **Breaking if changed:** Removing any fallback level breaks the corresponding deployment context; changing order breaks override priority
+
+#### [Gotcha] Invalidation cascade required: when server URL changes, BOTH HTTP client singleton AND WebSocket connection must be invalidated together (2026-03-10)
+- **Situation:** HTTP and WebSocket clients are stateful singletons that cache the server URL internally
+- **Root cause:** If only one is invalidated, requests split between old/new servers causing connection errors and inconsistent state
+- **How to avoid:** Requires coordinating invalidation across multiple subsystems but ensures immediate consistency
+
+### Used localStorage as the persistence layer for serverUrlOverride instead of URL parameters, query strings, or server-side config (2026-03-10)
+- **Context:** Need to allow runtime server URL switching for remote client architecture without server round-trips
+- **Why:** localStorage provides immediate availability across page reloads, is programmatically accessible from app-store, and doesn't pollute URL state. Avoids query parameter bloat and server configuration complexity.
+- **Rejected:** Query parameters (visible in URLs, can't be set programmatically); URL fragments (requires routing changes); server config (needs backend changes, slower).
+- **Trade-offs:** Gained: instant persistence, programmatic control, clean URLs. Lost: localStorage is per-origin, cross-tab sync requires manual listeners, not shareable via URL.
+- **Breaking if changed:** Removing localStorage check breaks runtime override feature entirely; URL fallback chain becomes invalid.
+
+#### [Gotcha] HTTP client invalidation creates a new client instance when server URL changes, orphaning any in-flight requests (2026-03-10)
+- **Situation:** When user switches server URL at runtime, need to ensure HTTP client points to new URL and WebSocket reconnects
+- **Root cause:** Creating a new instance ensures clean state and avoids complexity of migrating in-flight requests. Orphaning is acceptable because server switch implies old requests are invalid anyway.
+- **How to avoid:** Gained: clean state, simpler logic, no migration bugs. Lost: in-flight requests are abruptly cancelled, no graceful drain period.
+
+### BaseHttpClient keeps the same instance alive with reconnect() method that closes WebSocket and re-initializes connection, rather than replacing entire client (2026-03-10)
+- **Context:** When URL changes, need WebSocket to reconnect to new server, but other code may hold references to the client instance
+- **Why:** Keeping instance identity allows external code holding client references to work without updates. The reconnect() method is a lifecycle hook that resets connection state without invalidating the object itself.
+- **Rejected:** Always replace client (breaks external references, forces cascading updates); store client in dependency injection only (limits flexibility, harder to test).
+- **Trade-offs:** Gained: references to client remain valid, less cascading changes. Lost: client object has complex lifecycle (instance+connection separate concerns), requires careful testing of reconnect scenarios.
+- **Breaking if changed:** Removing reconnect() and replacing client entirely breaks any code holding client references that expects them to remain valid.
+
+### Server URL override stored in localStorage, not backend config. Three-level fallback: localStorage override → env var (VITE_SERVER_URL) → derived default. (2026-03-10)
+- **Context:** Needed runtime server URL switching for dev/testing without server restart or rebuild.
+- **Why:** localStorage gives immediate runtime flexibility per-browser without infrastructure changes. Fallback chain provides sensible defaults.
+- **Rejected:** Backend config file (requires server restart), environment variables at deploy time (requires redeploy), hardcoded default (no flexibility)
+- **Trade-offs:** localStorage override is browser-local not team-global; clearing localStorage loses override; browser quota limits (though negligible for single URL)
+- **Breaking if changed:** If fallback precedence changes (e.g., env var checked first), production deployments could ignore overrides; if localStorage key name changes, existing overrides become orphaned
+
+#### [Gotcha] HTTP client is a singleton. When server URL changes via setServerUrlOverride(), must call invalidateHttpClient() to force reconnection. Without this, stale client connections persist to old server. (2026-03-10)
+- **Situation:** App creates HTTP client once at startup. Changing localStorage doesn't automatically create new client instance.
+- **Root cause:** Singletons optimize memory/connection pooling but require explicit invalidation. getServerUrl() is checked at client construction, not on every request.
+- **How to avoid:** Explicit invalidation call needed (easy to forget) vs. automatic detection (adds overhead). Current approach puts burden on caller to understand singleton pattern.
+
+### Fallback chain in getServerUrl() checks localStorage first, then IPC, then env vars. Order is critical: runtime override (localStorage) takes precedence over cached main-process URL (IPC) which takes precedence over environment config. (2026-03-10)
+- **Context:** Need to support runtime server switching while maintaining compatibility with Electron IPC and env-based configuration
+- **Why:** More specific config layers should override less specific ones. Runtime user selection is most specific; environment is least specific. Ensures `setServerUrlOverride()` actually works across page reloads.
+- **Rejected:** Could check IPC first (main-process authority) but then runtime override wouldn't persist through page reload. Could use memory-only override but then loses state on reload.
+- **Trade-offs:** localStorage adds 1 lookup per request. Could optimize with cached value in store, but localStorage survives crashes/disconnects.
+- **Breaking if changed:** If order reversed (env first), runtime override is ignored. If localStorage not checked, page reload reverts to env URL and user thinks switching failed.
+
+#### [Pattern] HTTP client invalidation is not just recreating the client—it explicitly closes WebSocket, nulls the singleton, and forces fresh instance creation. Two separate concerns (HTTP + WebSocket) both tied to server URL. (2026-03-10)
+- **Problem solved:** Switching server URL requires two things to reset: in-flight HTTP requests and persistent WebSocket connection
+- **Why this works:** HTTP client and WebSocket are separate channels with independent caches/connections. HTTP client is a singleton that caches baseURL; WebSocket may be hung/stale. Both must reset atomically when server URL changes, otherwise requests fail or auth fails.
+- **Trade-offs:** Explicit invalidation is verbose but guarantees clean state. Automatic on-first-use recreation is simpler but leaves zombie connections.
+
+### `connectToServer(url)` action does health check (`/api/health`) before committing override. Separate from `setServerUrlOverride()` which just sets state. Two different entry points. (2026-03-10)
+- **Context:** User clicks 'connect to server' in UI vs programmatic override (e.g., from config or another source)
+- **Why:** Prevents switching to dead/unreachable servers. Health check validates connectivity BEFORE state change, so failure doesn't leave app in inconsistent state. Separating validation from state change means validation is optional for programmatic use.
+- **Rejected:** Could always validate in `setServerUrlOverride()` but then programmatic callers always pay health check cost. Could validate in UI but then validation logic is scattered.
+- **Trade-offs:** Two actions is slightly more API surface but provides flexibility. Health check adds latency to user action (necessary cost for good UX).
+- **Breaking if changed:** If health check removed: switching to unreachable server leaves app unable to connect (user confused why nothing works). If both actions do health check: programmatic code paths become slower or break.
+
+#### [Gotcha] localStorage persistence of `serverUrlOverride` is not just convenience—it's required for correct behavior. Page reload without localStorage would silently revert to env-var URL, making user think the override didn't work. (2026-03-10)
+- **Situation:** User switches server URL, page reloads (browser crash, dev rebuild, etc.), expects override to still be active
+- **Root cause:** Without persistence, state is lost and app reverts to environment config. User experience is confusing: 'I set the server URL but it reverted!' is actually just state loss.
+- **How to avoid:** localStorage lookup on init adds negligible latency. Slight increase in code complexity (localStorage migration if schema changes).
+
+#### [Gotcha] State machine termination requires `nextState: null` + `shouldContinue: false`, NOT `nextState: 'DONE'` + `shouldContinue: true`. The state machine has no registered DONE processor, so transitioning there would escalate instead of breaking the loop. (2026-03-10)
+- **Situation:** ReviewProcessor looped infinitely because it tried to transition to DONE, but DONE state has no processor. Breaking the loop requires explicit control-flow termination signal.
+- **Root cause:** State machine architecture: processors only exist for active states. DONE is a terminal status, not a state with a processor. Escalation happens when transitioning to unregistered states.
+- **How to avoid:** Explicit control signal (`shouldContinue: false`) is less declarative than state transition, but correctly signals loop termination without triggering escalation logic
+
+### External merge detection uses `gh pr list --head <branchName> --state merged` (branch-based query) instead of relying on stored `prNumber`. If branchName is set, runs this query; otherwise falls through to existing prNumber logic. (2026-03-10)
+- **Context:** PR merges via external tools (gh pr merge, auto-merge, GitHub UI) don't update the in-app prNumber. Features remained in REVIEW state looping until escalation because the processor never detected the merge.
+- **Why:** Branch name is the source of truth for PR identity. External merge tools preserve branch name but bypass in-app prNumber storage. Querying by branch catches all merge methods.
+- **Rejected:** Relying only on stored prNumber — misses external merges. Polling GitHub API — unnecessary overhead vs gh CLI.
+- **Trade-offs:** Adds one extra `gh pr list` call per REVIEW iteration when branchName is set (lightweight), but guarantees detection of external merges. Features without branchName gracefully skip this check.
+- **Breaking if changed:** If branchName is not set on feature, external merge detection is skipped entirely. If this query is removed, external merges become undetectable.
+
+#### [Pattern] Two-level defense: (1) Early exit if `feature.status === 'done'` after reload prevents loop continuation immediately, (2) External merge detection updates status to done if PR is merged. Neither fix alone is sufficient. (2026-03-10)
+- **Problem solved:** Initial diagnosis found 8 stale escalations. Root cause was not single failure point but dual missing logic. Early exit alone would miss detection; detection alone wouldn't help if status wasn't already done.
+- **Why this works:** Defensive layering. Early exit is cheap (single status check) and breaks obvious cases. Merge detection is more expensive (gh CLI call) but necessary for real external merges. Together they eliminate all paths to false escalation.
+- **Trade-offs:** Slightly more complex processor logic, but bulletproof against the two root causes. Alternative (monolithic detection) would be slower.
+
+### HTTP and WebSocket clients are invalidated and recreated on serverUrlOverride change, rather than hot-updating their base URL configuration (2026-03-10)
+- **Context:** Needed to support runtime server URL switching without page reload or configuration reload cycle
+- **Why:** Invalidation prevents stale client state and in-flight requests using old URLs. Simpler than tracking and updating every client instance. Creates clear lifecycle: old client closed → new client created with new URL.
+- **Rejected:** Hot-updating client URL config (simpler but risks stale connections) or using query parameters (loses override on navigation)
+- **Trade-offs:** Trade latency (reconnection delay) for consistency (no mixed-URL requests). Forces all pending requests to fail/retry.
+- **Breaking if changed:** If code holds HTTP client references directly instead of asking store, client swap becomes invisible and requests use wrong URL. Requires all code to get client through store getter.
+
+#### [Pattern] Zustand store initializes state from localStorage on app startup and persists state back to localStorage on mutations (2026-03-10)
+- **Problem solved:** Need to persist serverUrlOverride and recentServerUrls across page reloads so user doesn't lose their custom server selection
+- **Why this works:** localStorage is the simplest persistence layer for client-side state. Zustand mutation subscriptions allow automatic sync. Avoids double-binding complexity.
+- **Trade-offs:** Simple and centralized, but localStorage is synchronous and has size limits (~5-10MB). Requires careful initialization: if localStorage key is missing, must have sensible default.
+
+#### [Pattern] Recent server URLs are stored in localStorage with automatic deduplication and size limit (max 10 entries) (2026-03-10)
+- **Problem solved:** User may want to switch between multiple custom servers; need quick access to recently used URLs without re-typing
+- **Why this works:** Deduplication prevents stale/duplicate entries when user re-selects same server. Size limit prevents localStorage bloat and keeps UI dropdown manageable. Follows browser history UX pattern.
+- **Trade-offs:** 10-entry limit loses older URLs (acceptable for typical workflow) but prevents unbounded growth. Deduplication requires array scan on each add (minor perf cost).
+
+#### [Gotcha] localStorage key naming uses 'automaker:' prefix (e.g., 'automaker:serverUrlOverride', 'automaker:recentServerUrls') (2026-03-10)
+- **Situation:** App shares localStorage with potentially other apps in same browser/domain
+- **Root cause:** Namespacing prevents key collisions with other code on same origin. Indicates assumption that multiple independent Automaker instances may coexist (e.g., localhost:3000, localhost:3001)
+- **How to avoid:** Namespace adds verbosity but prevents silent data corruption. Suggests app was built for multi-instance environments from the start.
+
+### Authority enforcement uses fail-open strategy: if AuthorityService throws, action proceeds rather than blocking execution (2026-03-10)
+- **Context:** Protecting lead-engineer execution from transient authority service failures
+- **Why:** Service unavailability should not break autonomous agent operation. Authority service is a gating mechanism, not a critical path dependency. Fail-closed would make the agent fragile.
+- **Rejected:** Fail-closed (require authority approval on service error, or block execution) — would create single point of failure for the lead engineer
+- **Trade-offs:** More permissive in error states (+availability, -security tightness), requires alerting on authority service errors to maintain visibility
+- **Breaking if changed:** Changing to fail-closed would make authority service outages block all agent execution; teams would need incident response for service unavailability
+
+### Authority enforcement is gated behind `authorityEnforcement?: boolean` workflow setting with default `false` (2026-03-10)
+- **Context:** Rolling out authorization layer without breaking existing workflows
+- **Why:** Opt-in design allows canary rollout per-workflow. Default false means zero impact on existing deployments until explicitly enabled. Matches safe deployment pattern.
+- **Rejected:** Always-on enforcement or no configuration flag — would require migrating all existing workflows or removing feature entirely
+- **Trade-offs:** Requires runtime settings cache and per-workflow configuration complexity (+flexibility, -always-on guarantees)
+- **Breaking if changed:** Removing the setting or flipping default to true would force authority checks on all existing workflows; those without authority service would fail-open and lose auditability
+
+### Only mutating actions undergo authority checks; informational actions (log, post_discord, escalate_llm) skip authorization (2026-03-10)
+- **Context:** Authorizing every action (including logging) is unnecessary overhead
+- **Why:** State-changing actions are the security boundary. Informational actions don't need approval — they don't modify features or execution. Reduces authorization chatter.
+- **Rejected:** Authorize all actions uniformly, or skip authorization for everything
+- **Trade-offs:** Action-by-action categorization required (+fine-grained control, -maintenance burden if new action types added)
+- **Breaking if changed:** If all actions were authorized, logging and diagnostics would require approval, creating circular dependencies. If none authorized, lose visibility and control over state changes.
+
+#### [Pattern] Blocked actions emit `lead-engineer:action-blocked` event with context (projectPath, actionType, verdict) (2026-03-10)
+- **Problem solved:** Auditability and observability of authorization decisions
+- **Why this works:** Events are immutable record of what was blocked and why. Can be used for alerting, analytics, debugging authorization policy effectiveness.
+- **Trade-offs:** Event system overhead, but gains observability and integration points (+auditability, -storage/processing cost)
+
+#### [Pattern] Multi-layer orchestration pattern: setServerUrlOverride action performs 5 coordinated steps (auth setter → store update → localStorage persist → singleton invalidation → WebSocket reconnection) rather than event-driven approach (2026-03-10)
+- **Problem solved:** Server URL changes must propagate across auth module, persistent store, HTTP client singleton, and active WebSocket connection
+- **Why this works:** Synchronous coordination ensures all layers are in sync before next HTTP/WS call. Event-driven alternative risks ordering issues and harder testing.
+- **Trade-offs:** Action becomes complex and harder to test in isolation, but guarantees consistency across all layers. Simpler to reason about than eventual consistency.
+
+#### [Gotcha] Singleton cache invalidation alone is insufficient; must also explicitly trigger reconnectToUrl() to close existing WebSocket and reconnect to new server (2026-03-10)
+- **Situation:** HTTP client is a singleton managing an active WebSocket connection. Changing the serverUrl property doesn't close or reopen the WebSocket.
+- **Root cause:** Singletons cache stateful connections. URL property change doesn't trigger lifecycle events. Explicit reconnection is needed to actually close old connection and open new one.
+- **How to avoid:** Explicit reconnection adds complexity but ensures clean handoff and no message loss. Cost is additional method call and brief downtime.
+
+#### [Pattern] Override precedence hierarchy for getServerUrl(): runtime variable > Electron cache > env var. Each layer represents different persistence scope (ephemeral → medium-term → permanent). (2026-03-10)
+- **Problem solved:** Multiple sources of truth for server URL exist: user just changed it (runtime), app cached from before (Electron), deployment config (env)
+- **Why this works:** Precedence ensures most-recent user intent (runtime) always wins, intermediate layer (Electron cache) used if no user override, permanent config used as fallback. Reflects natural priority: what user just did > what was cached > what's configured.
+- **Trade-offs:** Linear precedence is predictable and easy to reason about. Cost: understanding 3 sources and their interaction. Benefit: obvious what wins in conflicts.
+
+#### [Pattern] Layered config fallback: localStorage override → Electron IPC → env vars. Auth layer checks in strict priority order. (2026-03-10)
+- **Problem solved:** Supporting both web dev, Electron native app, and test scenarios without code branches
+- **Why this works:** Different deployment contexts (Electron with native APIs, web, tests) have different config sources. Layering allows runtime switching while maintaining fallbacks.
+- **Trade-offs:** Added complexity in auth layer, but gained flexibility across deployment targets without conditional code
+
+### URL change triggers BOTH HTTP client invalidation AND WebSocket reconnection together as atomic unit (2026-03-10)
+- **Context:** Ensuring consistency when user switches server URL at runtime
+- **Why:** HTTP and WebSocket clients must connect to same server. If only one invalidates, results in split-brain where real-time features desync from HTTP state.
+- **Rejected:** Separate invalidation calls - would create race condition window where clients disagree on server
+- **Trade-offs:** Slightly more complex state management, but prevents subtle bugs in real-time features that are hard to debug
+- **Breaking if changed:** Removing WebSocket reconnect would leave WebSocket on old URL while HTTP switches - real-time features fail silently
+
+#### [Pattern] Recent server URLs stored as bounded LRU cache (max 10) with deduplication: remove existing, prepend to list, persist to localStorage (2026-03-10)
+- **Problem solved:** UI dropdown showing recently-used server URLs
+- **Why this works:** LRU semantics ensure most-recently-used appears first (expected UX). Bounded size prevents localStorage bloat. Deduplication avoids duplicate entries in dropdown.
+- **Trade-offs:** More logic in addRecentServerUrl, but correct UX and bounded storage
+
+#### [Pattern] HTTP client is recreated (not reconfigured) when serverUrlOverride changes, forcing all code paths to use fresh instance (2026-03-10)
+- **Problem solved:** Preventing stale client references after URL switch
+- **Why this works:** Closure and reference caching bugs - if client is cached or passed via closure, URL changes won't apply. Fresh instance forces all consumers to re-fetch from store.
+- **Trade-offs:** Creates new client object (small GC cost), but guarantees consistency across app without tracking all client references

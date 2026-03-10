@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1054
-  referenced: 293
-  successfulFeatures: 293
+  loaded: 1079
+  referenced: 308
+  successfulFeatures: 308
 ---
 # gotchas
 
@@ -715,3 +715,13 @@ usageStats:
 - **Situation:** Maintaining deduplicated recent server URLs list for UI dropdown
 - **Root cause:** Simple, readable code sufficient for 10-item bounded list. Algorithm complexity was sacrificed for maintainability.
 - **How to avoid:** Clear, easy-to-read code vs. technically inefficient algorithm; works fine at 10 items, breaks visibly if list grows to 100s; synchronous localStorage means no async overhead
+
+#### [Gotcha] Review queue depth uses count of features with status='review' as proxy for PR queue depth. Assumes 1:1 mapping of feature→PR. (2026-03-10)
+- **Situation:** Code: `allFeatures.filter((f) => f.status === 'review').length`. No accounting for draft PRs, stacked PRs, or features with zero PRs.
+- **Root cause:** Simple and fast. Feature status is the single source of truth; avoids expensive GitHub API queries per feature.
+- **How to avoid:** Easier: O(1) memory/compute. Harder: doesn't detect PRs opened outside the feature system, or multiple PRs per feature.
+
+#### [Gotcha] Portfolio gate's `deferredQueue` is in-memory only — deferred signals are lost on server restart (2026-03-10)
+- **Situation:** SignalIntakeService defers incoming signals to `deferredQueue` when capacity or error-budget checks fail. Queue is not persisted to disk or database.
+- **Root cause:** Simpler initial implementation; can optimize based on observed deferral patterns before adding persistence layer. Assumption is that deferred signals are low-priority and will be re-submitted by users if important.
+- **How to avoid:** Simpler code and faster iteration on gate thresholds now, but users must re-submit deferred signals after server restart. Loss is acceptable for non-critical signals.

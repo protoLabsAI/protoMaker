@@ -8,15 +8,14 @@ The metrics system captures DORA engineering metrics, agentic pipeline health, a
 
 DORA (DevOps Research and Assessment) metrics measure delivery performance across four dimensions.
 
-| Metric                        | Description                                            |
-| ----------------------------- | ------------------------------------------------------ |
-| **Deployment Frequency**      | How often features are deployed (merged to main)       |
-| **Change Lead Time**          | Time from feature start to merge                       |
+| Metric | Description |
+|--------|-------------|
+| **Deployment Frequency** | How often features are deployed (merged to main) |
+| **Change Lead Time** | Time from feature start to merge |
 | **Change Failure Rate (CFR)** | Ratio of deployments that cause post-merge CI failures |
-| **Recovery Time**             | Time from CI failure detection to verified recovery    |
+| **Recovery Time** | Time from CI failure detection to verified recovery |
 
 DORA metrics are collected by `MetricsCollectionService`, which subscribes to:
-
 - `feature:pr-merged` — records deployment frequency and lead time
 - `pr:ci-failure` — marks a change as failed (increments CFR)
 - `pr:remediation-started` — records recovery start time
@@ -32,7 +31,6 @@ GET /api/metrics/dora
 ```
 
 Query parameters:
-
 - `projectPath: string`
 - `timeWindowDays?: number` — optional rolling window for aggregation
 
@@ -45,12 +43,10 @@ GET /api/metrics/dora/history
 ```
 
 Query parameters:
-
 - `projectPath: string`
 - `window: '7d' | '30d' | '90d'`
 
 Returns time-bucketed DORA trends:
-
 ```json
 {
   "buckets": [...DoraHistoryBucket[]],
@@ -68,21 +64,21 @@ The error budget tracks accumulated CFR against a configured threshold. It deter
 
 ```typescript
 interface ErrorBudgetState {
-  totalMerges: number; // PRs merged in the rolling window
-  failedMerges: number; // Merges where CI failed post-merge
-  failRate: number; // failedMerges / totalMerges (0.0–1.0)
-  exhausted: boolean; // failRate >= threshold
-  windowDays: number; // Configured rolling window
-  threshold: number; // Configured CFR threshold
+  totalMerges: number;      // PRs merged in the rolling window
+  failedMerges: number;     // Merges where CI failed post-merge
+  failRate: number;         // failedMerges / totalMerges (0.0–1.0)
+  exhausted: boolean;       // failRate >= threshold
+  windowDays: number;       // Configured rolling window
+  threshold: number;        // Configured CFR threshold
 }
 ```
 
 ### Events
 
-| Event                    | Condition                                 | Effect                                                                 |
-| ------------------------ | ----------------------------------------- | ---------------------------------------------------------------------- |
+| Event | Condition | Effect |
+|-------|-----------|--------|
 | `error_budget:exhausted` | `failRate >= 1.0` (budget fully consumed) | Auto-mode pauses new feature pickup (if `errorBudgetAutoFreeze: true`) |
-| `error_budget:recovered` | `failRate < 0.8` (20% headroom restored)  | Auto-mode resumes feature pickup                                       |
+| `error_budget:recovered` | `failRate < 0.8` (20% headroom restored) | Auto-mode resumes feature pickup |
 
 Recovery uses an 0.8 hysteresis threshold to prevent rapid oscillation between frozen/unfrozen states.
 
@@ -110,9 +106,9 @@ Autonomy rate measures how much of the pipeline's output is completed without hu
 
 ```typescript
 interface AgenticAutonomyRate {
-  totalDone: number; // All features moved to 'done'
-  autonomousDone: number; // Features completed without human escalation
-  rate: number; // autonomousDone / totalDone (0.0–1.0)
+  totalDone: number;       // All features moved to 'done'
+  autonomousDone: number;  // Features completed without human escalation
+  rate: number;            // autonomousDone / totalDone (0.0–1.0)
 }
 ```
 
@@ -130,13 +126,12 @@ WIP saturation tracks how full each pipeline lane is relative to its configured 
 interface AgenticWipSaturation {
   stage: 'execution' | 'review' | 'approval';
   currentWip: number;
-  wipLimit: number | null; // null = no limit configured
-  saturation: number | null; // currentWip / wipLimit, or null if no limit
+  wipLimit: number | null;       // null = no limit configured
+  saturation: number | null;     // currentWip / wipLimit, or null if no limit
 }
 ```
 
 Saturation per lane:
-
 - `execution` — features in `in_progress` state vs. `maxInProgress`
 - `review` — features in `review` state vs. `maxInReview`
 - `approval` — features awaiting human approval
@@ -150,13 +145,11 @@ POST /api/features/summary
 ```
 
 Body:
-
 ```json
 { "projectPath": "/path/to/project" }
 ```
 
 Response includes:
-
 ```json
 {
   "counts": { "backlog": 3, "in_progress": 2, "review": 1, "done": 47 },
@@ -181,7 +174,6 @@ GET /api/metrics/flow
 ```
 
 Query parameters:
-
 - `projectPath: string`
 - `days?: number` — lookback period (default: 90)
 - `wipLimit?: number` — optional WIP limit overlay
@@ -195,7 +187,6 @@ GET /api/metrics/stage-durations
 ```
 
 Query parameters:
-
 - `projectPath: string`
 
 Returns per-feature time spent in each stage (`backlog`, `in_progress`, `review`, `blocked`).
@@ -207,7 +198,6 @@ GET /api/metrics/blocked-timeline
 ```
 
 Query parameters:
-
 - `projectPath: string`
 
 Returns blocked period analysis with reason categorization (dependency, CI failure, saturation, manual hold, etc.).
@@ -219,7 +209,6 @@ GET /api/metrics/friction
 ```
 
 Query parameters:
-
 - `projectPath: string`
 
 Returns recurring failure patterns across features — useful for identifying systemic blockers.
@@ -231,7 +220,6 @@ GET /api/metrics/failure-breakdown
 ```
 
 Query parameters:
-
 - `projectPath: string`
 
 Returns a distribution of failure categories (build failures, test failures, lint errors, escalations, etc.).

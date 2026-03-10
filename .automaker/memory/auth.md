@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 43
-  referenced: 13
-  successfulFeatures: 13
+  loaded: 53
+  referenced: 22
+  successfulFeatures: 22
 ---
 # auth
 
@@ -68,3 +68,15 @@ usageStats:
 - **Rejected:** Session storage (lost on tab close); IndexedDB (overkill); URL params (exposed in history)
 - **Trade-offs:** Easier: simple string key, no serialization. Harder: no version control, survives across sessions unintentionally
 - **Breaking if changed:** If localStorage key is renamed without migration, users lose saved override. If storage cleared (browser settings), override disappears silently
+
+#### [Gotcha] Service checks agent trust tier but NOT the human/caller requesting the action. Assumes caller is already authorized to submit proposals (2026-03-10)
+- **Situation:** Who authorized the caller to request this action?
+- **Root cause:** Delegation: authority-service only enforces agent capability, not human authority. Caller must validate first.
+- **How to avoid:** Cleaner separation of concerns but creates implicit contract: caller must validate authorization before calling
+
+### Use localStorage for persistent server configuration (serverUrlOverride, recentServerUrls) instead of backend storage (2026-03-10)
+- **Context:** Server URL selection happens during app initialization before establishing server connection; users need offline capability
+- **Why:** Avoids chicken-and-egg problem: cannot persist to server if you don't know which server to connect to. Client-side persistence enables offline use.
+- **Rejected:** Backend persistence would require bootstrapping with a default server URL, creating initialization ordering issues
+- **Trade-offs:** Simpler, faster, works offline, but configuration doesn't sync across devices or persist after localStorage clear
+- **Breaking if changed:** Moving to backend storage requires solving initialization sequence (how to know server URL before connecting); removing localStorage loses offline capability

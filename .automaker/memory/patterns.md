@@ -5,9 +5,9 @@ relevantTo: [patterns]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 65
-  referenced: 21
-  successfulFeatures: 21
+  loaded: 64
+  referenced: 22
+  successfulFeatures: 22
 ---
 # patterns
 
@@ -34,18 +34,6 @@ usageStats:
 - **Problem solved:** The new 'agent escalation' pattern covers common escalation phrases that are linguistically broader than specific failure modes. Using high confidence would create false positives misclassifying other failures.
 - **Why this works:** False positives (classifying a retry-able failure as non-retryable escalation) cause more damage than false negatives (some escalations slip through to unknown). Lower confidence + high recall on unclassified logging allows gradual pattern tightening.
 - **Trade-offs:** Some real agent escalations may still be classified as unknown initially, but they'll surface in the warn logs for pattern refinement. Avoids breaking the retry system with false escalations.
-
-#### [Pattern] Execution gate in ExecuteProcessor checks 3 system health signals (review queue depth, error budget, CI saturation) before launching a feature agent. Returns feature to BACKLOG if any check fails. Gate enabled via `workflow.executionGate` setting. (2026-03-10)
-
-- **Problem solved:** Auto-mode was launching feature agents even when the system was overloaded (review queue saturated, high CI failure rate, pending CI runs piled up). This wasted compute and worsened the health problem.
-- **Why this works:** All 3 checks are non-fatal (wrapped in try/catch) — if a check throws, the feature proceeds. Gate logic lives entirely in `runExecutionGate()` and is toggled via project settings. Settings override defaults (`errorBudgetThreshold`, `errorBudgetWindow`, `maxPendingReviews`, `maxPendingCiRuns`).
-- **Trade-offs:** Gate adds latency to each execute cycle (3 async checks). Accepted: failures are caught and non-blocking. Feature goes to BACKLOG (not ESCALATE) when blocked — it re-queues rather than alerting humans.
-
-#### [Pattern] Portfolio gate in SignalIntakeService evaluates incoming signals with 3 checks: capacity (>50 active features → defer), duplication (cosine similarity >0.6 → block), architectural-signal error budget (>30% fail rate → defer). Gate enabled via `settings.portfolioGate`. (2026-03-10)
-
-- **Problem solved:** Signal intake was creating features without regard for backlog depth, near-duplicate ideas, or system stability. Board filled up with duplicate/low-value items during unstable periods.
-- **Why this works:** Three-outcome gate (allow/block/defer) maps to distinct actions: block creates a `status: 'blocked'` feature for human review; defer pushes to `deferredQueue` for later retry; allow proceeds normally. Architectural signals (keywords: architecture, infrastructure, migration, refactor, platform, framework) are specifically gated by error budget to prevent destabilizing changes during failures.
-- **Trade-offs:** Similarity check requires embedding comparison (potential latency). `deferredQueue` is in-memory — deferred signals are lost on server restart. Capacity threshold (50) and similarity threshold (0.6) are hardcoded constants, not yet user-configurable.
 
 #### [Pattern] Gate expensive render-time operations (syntax highlighting, heavy transforms) behind an `isStreaming` prop to prevent thrashing during token delivery. Apply the operation only on completion. (2026-03-09)
 

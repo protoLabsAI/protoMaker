@@ -169,3 +169,8 @@ usageStats:
 - **Rejected:** Maintaining in-place aggregate (compact to {totalLastWeek, failedLastWeek}): loses history, requires scheduled compaction job, complex to get window transitions right.
 - **Trade-offs:** Easier: correctness guaranteed by query logic. Harder: file grows unbounded (mitigated by low event frequency—~handful per day worst case).
 - **Breaking if changed:** If changed to compacting aggregate: history lost, audit trail gone, window boundary logic becomes complex and bug-prone.
+
+#### [Gotcha] prReviewDurationMs calculated as Date.now() - prCreatedAt in same code block as prMergedAt assignment. Calculation uses raw milliseconds while prMergedAt is serialized to ISO string, creating subtle timing/precision inconsistency. Refactoring or delaying calculation breaks the implicit coupling and causes duration divergence. (2026-03-10)
+- **Situation:** Persisting merge metrics: both prMergedAt and prReviewDurationMs set synchronously after merge confirmation
+- **Root cause:** Works currently due to colocation, but creates hidden dependency. Better design: calculate duration from deserialized prMergedAt to ensure values are verifiably consistent.
+- **How to avoid:** Simple synchronous approach works when collocated; explicit dependency would require parsing prMergedAt post-persistence
