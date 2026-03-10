@@ -120,6 +120,19 @@ export function getHttpApiClient(): HttpApiClient {
   return httpApiClientInstance;
 }
 
+/**
+ * Invalidate the cached HTTP client singleton and trigger WebSocket reconnection.
+ * Called when the server URL override changes so the new URL is picked up immediately.
+ */
+export function invalidateHttpClient(): void {
+  if (httpApiClientInstance) {
+    httpApiClientInstance.reconnect();
+  }
+  httpApiClientInstance = null;
+  // Re-create immediately so callers get a fresh instance pointing at the new URL
+  httpApiClientInstance = new HttpApiClient();
+}
+
 // Start API key initialization immediately when this module is imported
 // This ensures the init promise is created early, even before React components mount
 // The actual async work happens in the background and won't block module loading
