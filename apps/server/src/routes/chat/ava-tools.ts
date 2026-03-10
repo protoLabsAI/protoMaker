@@ -2004,8 +2004,8 @@ export function buildAvaTools(
         const formId = `chat-form-${randomUUID().slice(0, 8)}`;
         const timestamp = new Date().toISOString();
 
-        // Emit the user_input_request event so the UI renders an inline form
-        eventsEmitter.emit('chat:user-input-request' as EventType, {
+        // Broadcast the user_input_request event so the UI renders an inline form
+        eventsEmitter.broadcast('chat:user-input-request' as EventType, {
           formId,
           title,
           description,
