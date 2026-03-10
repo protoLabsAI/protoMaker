@@ -66,11 +66,21 @@ function setupEmptyMockFs() {
   vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'));
 }
 
-function setupMilestoneFs(milestones: Array<{ slug: string; title: string; phases: number; completed: number; dueAt?: string }>) {
+function setupMilestoneFs(
+  milestones: Array<{
+    slug: string;
+    title: string;
+    phases: number;
+    completed: number;
+    dueAt?: string;
+  }>
+) {
   vi.mocked(fs.readdir).mockImplementation(async (dirPath) => {
     const p = String(dirPath);
     if (p.endsWith('projects')) {
-      return [{ name: 'test-project', isDirectory: () => true }] as unknown as import('node:fs').Dirent[];
+      return [
+        { name: 'test-project', isDirectory: () => true },
+      ] as unknown as import('node:fs').Dirent[];
     }
     return [];
   });
@@ -133,10 +143,14 @@ describe('PM → LE: queryLEExecutionStatus()', () => {
 
   it('provider can be replaced and new provider is used', () => {
     const providerA: ILeadEngineerStatusProvider = {
-      getExecutionStatusSummary: vi.fn().mockReturnValue({ activeProjectCount: 1, activeFeaturesCount: 1, projectStatuses: [] }),
+      getExecutionStatusSummary: vi
+        .fn()
+        .mockReturnValue({ activeProjectCount: 1, activeFeaturesCount: 1, projectStatuses: [] }),
     };
     const providerB: ILeadEngineerStatusProvider = {
-      getExecutionStatusSummary: vi.fn().mockReturnValue({ activeProjectCount: 99, activeFeaturesCount: 99, projectStatuses: [] }),
+      getExecutionStatusSummary: vi
+        .fn()
+        .mockReturnValue({ activeProjectCount: 99, activeFeaturesCount: 99, projectStatuses: [] }),
     };
 
     pm.setLeadEngineerStatusProvider(providerA);
@@ -163,7 +177,13 @@ describe('PM.getNextAssignablePhase()', () => {
 
   it('returns the first incomplete milestone after state is built', async () => {
     setupMilestoneFs([
-      { slug: 'ms-one', title: 'Milestone One', phases: 3, completed: 1, dueAt: '2026-05-01T00:00:00.000Z' },
+      {
+        slug: 'ms-one',
+        title: 'Milestone One',
+        phases: 3,
+        completed: 1,
+        dueAt: '2026-05-01T00:00:00.000Z',
+      },
       { slug: 'ms-two', title: 'Milestone Two', phases: 2, completed: 0 },
     ]);
 
@@ -178,9 +198,7 @@ describe('PM.getNextAssignablePhase()', () => {
   });
 
   it('returns null when all milestones are complete', async () => {
-    setupMilestoneFs([
-      { slug: 'ms-done', title: 'Done Milestone', phases: 2, completed: 2 },
-    ]);
+    setupMilestoneFs([{ slug: 'ms-done', title: 'Done Milestone', phases: 2, completed: 2 }]);
 
     await pm.buildState();
 
@@ -207,7 +225,11 @@ describe('LE → PM: queryPMNextAssignment()', () => {
   beforeEach(() => {
     const events = createMockEvents();
     le = new LeadEngineerService(
-      events as unknown as Parameters<typeof LeadEngineerService.prototype.initialize>[0] extends never ? never : any,
+      events as unknown as Parameters<
+        typeof LeadEngineerService.prototype.initialize
+      >[0] extends never
+        ? never
+        : any,
       createMockFeatureLoader(),
       { isRunning: vi.fn().mockReturnValue(false), getConfig: vi.fn() } as any,
       createMockProjectService(),
