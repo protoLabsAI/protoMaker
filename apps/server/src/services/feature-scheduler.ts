@@ -315,6 +315,20 @@ export class FeatureScheduler {
             continue;
           }
 
+          // Review queue WIP limit: pause pickup when too many PRs are in review
+          const reviewDepth = await this.getReviewQueueDepth(projectPath);
+          const maxPendingReviews = await this.getMaxPendingReviews(projectPath);
+          if (reviewDepth >= maxPendingReviews) {
+            logger.warn(
+              `[AutoLoop] Review queue saturated (${reviewDepth}/${maxPendingReviews} PRs in review) — pausing feature pickup for ${worktreeDesc}`
+            );
+            await this.callbacks.sleep(
+              SLEEP_INTERVAL_CAPACITY_MS,
+              projectState.abortController.signal
+            );
+            continue;
+          }
+
           // Double-check we're not at capacity (defensive check before starting)
           const currentRunningCount = await this.callbacks.getRunningCountForWorktree(
             projectPath,
@@ -1123,6 +1137,51 @@ export class FeatureScheduler {
       return settings?.autoModePickupCooldownMs ?? DEFAULT_COOLDOWN_MS;
     } catch {
       return DEFAULT_COOLDOWN_MS;
+    }
+  }
+
+  /**
+   * Read the maxPendingReviews threshold from project workflow settings.
+   * Default: 5. When the review queue depth meets or exceeds this value,
+   * auto-mode feature pickup is paused.
+   */
+  private async getMaxPendingReviews(projectPath: string): Promise<number> {
+    const DEFAULT_MAX = 5;
+    try {
+      if (!this.settingsService) return DEFAULT_MAX;
+      const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+      const workflow = projectSettings.workflow as typeof projectSettings.workflow & {
+        maxPendingReviews?: number;
+      };
+      return workflow?.maxPendingReviews ?? DEFAULT_MAX;
+    } catch {
+      return DEFAULT_MAX;
+    }
+  }
+
+  /**
+   * Count the number of features currently in 'review' state for a project.
+   * Used to enforce the review queue WIP limit.
+   */
+  private async getReviewQueueDepth(projectPath: string): Promise<number> {
+    const featuresDir = getFeaturesDir(projectPath);
+    try {
+      const entries = await secureFs.readdir(featuresDir, { withFileTypes: true });
+      let reviewCount = 0;
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const featurePath = path.join(featuresDir, entry.name, 'feature.json');
+        const result = await readJsonWithRecovery<{ status?: string } | null>(featurePath, null, {
+          maxBackups: DEFAULT_BACKUP_COUNT,
+          autoRestore: false,
+        });
+        if (result.data?.status === 'review') {
+          reviewCount++;
+        }
+      }
+      return reviewCount;
+    } catch {
+      return 0;
     }
   }
 

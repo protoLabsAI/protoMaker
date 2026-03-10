@@ -184,6 +184,14 @@ export interface WorkflowSettings {
    * @default true
    */
   preFlightChecks?: boolean;
+  /**
+   * Maximum number of PRs allowed in the review state before auto-mode pauses
+   * new feature pickup. Prevents flooding the review queue.
+   * When review count >= this threshold, the reviewQueueSaturated rule fires and
+   * the scheduler pauses pickup until the queue drains below the threshold.
+   * @default 5
+   */
+  maxPendingReviews?: number;
 }
 
 /** Default workflow settings */

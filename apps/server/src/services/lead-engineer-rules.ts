@@ -630,6 +630,91 @@ export const missingCIChecks: LeadFastPathRule = {
   },
 };
 
+// ────────────────────────── Review Queue Monitor ──────────────────────────
+
+/** Default maximum PRs allowed in review state before pausing pickup */
+const DEFAULT_MAX_PENDING_REVIEWS = 5;
+
+/**
+ * ReviewQueueMonitor — tracks review queue depth over time.
+ *
+ * Records a timestamped sample each time the queue depth is checked.
+ * Exposes helpers for determining whether the queue is saturated.
+ */
+export class ReviewQueueMonitor {
+  /** Chronological history of review queue depth samples */
+  readonly history: Array<{ timestamp: number; depth: number }> = [];
+
+  /** Maximum number of historical samples to keep */
+  private readonly maxHistory: number;
+
+  constructor(maxHistory = 100) {
+    this.maxHistory = maxHistory;
+  }
+
+  /**
+   * Record the current review queue depth.
+   * @param depth Number of features currently in review state
+   */
+  record(depth: number): void {
+    this.history.push({ timestamp: Date.now(), depth });
+    if (this.history.length > this.maxHistory) {
+      this.history.shift();
+    }
+  }
+
+  /**
+   * Return the most recently recorded depth, or 0 if no samples.
+   */
+  currentDepth(): number {
+    return this.history.length > 0 ? this.history[this.history.length - 1].depth : 0;
+  }
+
+  /**
+   * Return true if the current depth meets or exceeds the threshold.
+   */
+  isSaturated(threshold: number): boolean {
+    return this.currentDepth() >= threshold;
+  }
+}
+
+/**
+ * reviewQueueSaturated — Pause auto-mode feature pickup when the review queue is full.
+ *
+ * Fires when the number of features in 'review' state meets or exceeds
+ * `maxPendingReviews` (from WorkflowSettings, default 5). Emits a log action
+ * to surface the condition. The actual pickup pause is enforced in FeatureScheduler
+ * by checking the review queue depth before starting new features.
+ */
+export const reviewQueueSaturated: LeadFastPathRule = {
+  name: 'reviewQueueSaturated',
+  description:
+    'Review queue depth >= maxPendingReviews → log saturation (pickup paused by scheduler)',
+  triggers: ['feature:status-changed', 'feature:pr-merged', 'lead-engineer:rule-evaluated'],
+
+  evaluate(worldState, _eventType, _payload): LeadRuleAction[] {
+    const reviewCount = Object.values(worldState.features).filter(
+      (f) => f.status === 'review'
+    ).length;
+
+    const threshold =
+      (worldState as LeadWorldState & { maxPendingReviews?: number }).maxPendingReviews ??
+      DEFAULT_MAX_PENDING_REVIEWS;
+
+    if (reviewCount >= threshold) {
+      return [
+        {
+          type: 'log',
+          level: 'warn',
+          message: `reviewQueueSaturated: ${reviewCount}/${threshold} PRs in review — auto-mode feature pickup paused until queue drains`,
+        },
+      ];
+    }
+
+    return [];
+  },
+};
+
 // ────────────────────────── Exports ──────────────────────────
 
 /** Default set of fast-path rules */
@@ -649,6 +734,7 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   hitlFormResponse,
   missingCIChecks,
   rollbackTriggered,
+  reviewQueueSaturated,
 ];
 
 /**
