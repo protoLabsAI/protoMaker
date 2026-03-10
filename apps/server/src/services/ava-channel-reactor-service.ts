@@ -20,9 +20,6 @@ import type {
   CapacityHeartbeat,
   WorkRequest,
   WorkOffer,
-  EscalationRequest,
-  EscalationOffer,
-  EscalationAccept,
   HealthAlert,
   FrictionReport,
   DoraReport,
@@ -61,6 +58,8 @@ const HEALTH_ALERT_MEMORY_THRESHOLD = 85;
 const HEALTH_ALERT_CPU_THRESHOLD = 90;
 /** Duration (ms) to pause work-stealing from a degraded peer */
 const HEALTH_ALERT_PAUSE_MS = 5 * 60 * 1000;
+/** Number of blocked features in a project that triggers a project_blocked broadcast */
+const PROJECT_BLOCKED_THRESHOLD = 3;
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -122,8 +121,6 @@ export interface ReactorStatus {
   degradedPeerCount: number;
   /** Instance IDs of peers currently in health-alert pause */
   degradedPeers: string[];
-  /** Number of escalations originated by this instance awaiting resolution */
-  pendingEscalationCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,10 +172,6 @@ export class AvaChannelReactorService {
 
   // Health alert pause — set of instanceIds we should not steal work from
   private readonly degradedPeers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  // Escalation tracking — tracks pending escalation_requests we originated
-  // keyed by featureId → first-responder instanceId (set after sending accept)
-  private readonly pendingEscalations = new Map<string, string>();
 
   constructor(deps: ReactorDependencies) {
     this.deps = deps;
@@ -245,7 +238,6 @@ export class AvaChannelReactorService {
       clearTimeout(timer);
     }
     this.degradedPeers.clear();
-    this.pendingEscalations.clear();
 
     this.knownMessageIds.clear();
     this.pendingQueue.length = 0;
@@ -273,7 +265,6 @@ export class AvaChannelReactorService {
       pendingQueueSize: this.pendingQueue.length,
       degradedPeerCount: this.degradedPeers.size,
       degradedPeers: [...this.degradedPeers.keys()],
-      pendingEscalationCount: this.pendingEscalations.size,
     };
   }
 
@@ -699,24 +690,6 @@ export class AvaChannelReactorService {
       return;
     }
 
-    // escalation_request handler
-    if (message.content.startsWith('[escalation_request]')) {
-      await this.onEscalationRequest(message);
-      return;
-    }
-
-    // escalation_offer handler
-    if (message.content.startsWith('[escalation_offer]')) {
-      await this.onEscalationOffer(message);
-      return;
-    }
-
-    // escalation_accept handler
-    if (message.content.startsWith('[escalation_accept]')) {
-      await this.onEscalationAccept(message);
-      return;
-    }
-
     // health_alert handler
     if (message.content.startsWith('[health_alert]')) {
       await this.onHealthAlert(message);
@@ -927,216 +900,6 @@ export class AvaChannelReactorService {
   }
 
   // ---------------------------------------------------------------------------
-  // Escalation protocol handlers
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Post an escalation_request when a feature hits blocked status with failureCount >= 2.
-   * Called by external code (e.g., feature status watcher) when these conditions are met.
-   */
-  async postEscalationRequest(opts: {
-    featureId: string;
-    failureCount: number;
-    lastError: string;
-    worktreeState: string;
-    featureData: Record<string, unknown>;
-  }): Promise<void> {
-    if (opts.failureCount < 2) return;
-
-    const payload: EscalationRequest = {
-      featureId: opts.featureId,
-      failureCount: opts.failureCount,
-      lastError: opts.lastError,
-      worktreeState: opts.worktreeState,
-      originatingInstanceId: this.deps.instanceId,
-    };
-
-    await this.deps.avaChannelService.postMessage(
-      `[escalation_request] ${JSON.stringify({ ...payload, featureData: opts.featureData })}`,
-      'system',
-      {
-        intent: 'escalation',
-        expectsResponse: true,
-        context: { featureId: opts.featureId },
-      }
-    );
-
-    logger.info(
-      `Posted escalation_request for feature ${opts.featureId} (failureCount=${opts.failureCount})`
-    );
-  }
-
-  /**
-   * Handle an incoming escalation_request from a peer.
-   * If this instance has idle capacity, respond with an escalation_offer.
-   */
-  private async onEscalationRequest(message: AvaChatMessage): Promise<void> {
-    // Ignore self
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let payload: EscalationRequest & { featureData?: Record<string, unknown> };
-    try {
-      const json = message.content.replace('[escalation_request]', '').trim();
-      payload = JSON.parse(json) as EscalationRequest & { featureData?: Record<string, unknown> };
-    } catch {
-      logger.warn('Received malformed escalation_request, ignoring');
-      return;
-    }
-
-    // Only respond if we have idle capacity
-    const localMetrics = this.deps.autoModeService?.getCapacityMetrics();
-    const localActive = localMetrics?.runningAgents ?? 0;
-    const localMax = localMetrics?.maxAgents ?? 5;
-
-    if (localActive >= localMax) {
-      logger.debug(
-        `Received escalation_request for ${payload.featureId} but we are at capacity — skipping offer`
-      );
-      return;
-    }
-
-    const offerPayload: EscalationOffer = {
-      offeringInstanceId: this.deps.instanceId,
-      originatingInstanceId: payload.originatingInstanceId,
-      featureId: payload.featureId,
-    };
-
-    await this.deps.avaChannelService.postMessage(
-      `[escalation_offer] ${JSON.stringify(offerPayload)}`,
-      'system',
-      {
-        intent: 'response',
-        expectsResponse: false,
-        context: { featureId: payload.featureId },
-      }
-    );
-
-    logger.info(
-      `Sent escalation_offer for feature ${payload.featureId} to ${payload.originatingInstanceId}`
-    );
-  }
-
-  /**
-   * Handle an incoming escalation_offer from a peer.
-   * Accept the first offer by posting an escalation_accept with full feature data.
-   */
-  private async onEscalationOffer(message: AvaChatMessage): Promise<void> {
-    // Ignore self
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let offer: EscalationOffer;
-    try {
-      const json = message.content.replace('[escalation_offer]', '').trim();
-      offer = JSON.parse(json) as EscalationOffer;
-    } catch {
-      logger.warn('Received malformed escalation_offer, ignoring');
-      return;
-    }
-
-    // Only process if we are the originating instance
-    if (offer.originatingInstanceId !== this.deps.instanceId) return;
-
-    // Ignore if already accepted an offer for this feature
-    if (this.pendingEscalations.has(offer.featureId)) {
-      logger.debug(
-        `Received escalation_offer for ${offer.featureId} from ${offer.offeringInstanceId} but already accepted another offer — ignoring`
-      );
-      return;
-    }
-
-    // Mark this feature as delegated
-    this.pendingEscalations.set(offer.featureId, offer.offeringInstanceId);
-
-    // Retrieve full feature data to send
-    let featureData: Record<string, unknown> = {};
-    if (this.deps.featureLoader && this.deps.projectPath) {
-      try {
-        const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
-        const feature = allFeatures.find((f) => f.id === offer.featureId);
-        if (feature) {
-          featureData = feature as Record<string, unknown>;
-        }
-      } catch (err) {
-        logger.warn(`Failed to load feature data for escalation_accept: ${err}`);
-      }
-    }
-
-    const acceptPayload: EscalationAccept = {
-      acceptingInstanceId: offer.offeringInstanceId,
-      originatingInstanceId: this.deps.instanceId,
-      featureId: offer.featureId,
-      featureData,
-    };
-
-    await this.deps.avaChannelService.postMessage(
-      `[escalation_accept] ${JSON.stringify(acceptPayload)}`,
-      'system',
-      {
-        intent: 'coordination',
-        expectsResponse: false,
-        context: { featureId: offer.featureId },
-      }
-    );
-
-    logger.info(
-      `Sent escalation_accept for feature ${offer.featureId} to ${offer.offeringInstanceId}`
-    );
-  }
-
-  /**
-   * Handle an incoming escalation_accept from the originating instance.
-   * Clone the feature onto this instance's board with escalated complexity.
-   */
-  private async onEscalationAccept(message: AvaChatMessage): Promise<void> {
-    // Ignore self
-    if (message.instanceId === this.deps.instanceId) return;
-
-    let accept: EscalationAccept;
-    try {
-      const json = message.content.replace('[escalation_accept]', '').trim();
-      accept = JSON.parse(json) as EscalationAccept;
-    } catch {
-      logger.warn('Received malformed escalation_accept, ignoring');
-      return;
-    }
-
-    // Only process if we are the accepting instance
-    if (accept.acceptingInstanceId !== this.deps.instanceId) return;
-
-    if (!this.deps.featureLoader || !this.deps.projectPath) {
-      logger.warn('escalation_accept received but featureLoader/projectPath not configured');
-      return;
-    }
-
-    // Determine escalated complexity
-    const originalComplexity = (accept.featureData.complexity as string) ?? 'medium';
-    const escalatedComplexity =
-      originalComplexity === 'large' || originalComplexity === 'architectural'
-        ? 'architectural'
-        : 'large';
-
-    try {
-      const { id: _originalId, ...rest } = accept.featureData as {
-        id: string;
-        [key: string]: unknown;
-      };
-      const created = await this.deps.featureLoader.create(this.deps.projectPath, {
-        ...rest,
-        status: 'backlog',
-        complexity: escalatedComplexity,
-        escalatedFromInstanceId: accept.originatingInstanceId,
-        escalatedFromFeatureId: _originalId ?? accept.featureId,
-      });
-      logger.info(
-        `Escalated feature created locally: ${created.id} (original: ${accept.featureId}, complexity: ${escalatedComplexity})`
-      );
-    } catch (err) {
-      this.errorCount++;
-      logger.error(`Failed to create escalated feature:`, err);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
   // Health alert handlers
   // ---------------------------------------------------------------------------
 
@@ -1303,6 +1066,14 @@ export class AvaChannelReactorService {
         };
       };
 
+      // Check for project_blocked when a feature becomes blocked
+      if (newStatus === 'blocked') {
+        this.checkAndBroadcastProjectBlocked().catch((err) => {
+          this.errorCount++;
+          logger.error('Failed to check project blocked status:', err);
+        });
+      }
+
       if (newStatus !== 'done') return;
       if (!feature?.systemImprovement) return;
 
@@ -1327,6 +1098,39 @@ export class AvaChannelReactorService {
     });
 
     logger.debug('Subscribed to feature:status-changed for System Improvement resolution');
+  }
+
+  /**
+   * Check if the project has >= PROJECT_BLOCKED_THRESHOLD blocked features.
+   * If so, broadcast a project_blocked message so Ava can reassign via assign_project.
+   */
+  private async checkAndBroadcastProjectBlocked(): Promise<void> {
+    if (!this.deps.featureLoader || !this.deps.projectPath) return;
+
+    const allFeatures = await this.deps.featureLoader.getAll(this.deps.projectPath);
+    const blockedCount = allFeatures.filter((f) => f.status === 'blocked').length;
+
+    if (blockedCount < PROJECT_BLOCKED_THRESHOLD) return;
+
+    const payload = {
+      projectPath: this.deps.projectPath,
+      blockedCount,
+      instanceId: this.deps.instanceId,
+      timestamp: new Date().toISOString(),
+    };
+
+    await this.deps.avaChannelService.postMessage(
+      `[project_blocked] ${JSON.stringify(payload)}`,
+      'system',
+      {
+        intent: 'escalation',
+        expectsResponse: false,
+      }
+    );
+
+    logger.warn(
+      `Broadcast project_blocked: ${blockedCount} blocked features in project (threshold=${PROJECT_BLOCKED_THRESHOLD})`
+    );
   }
 
   // ---------------------------------------------------------------------------

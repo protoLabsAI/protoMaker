@@ -1,13 +1,10 @@
 /**
- * Temporary verification test for the escalation route handler logic.
+ * Unit tests for the escalation route handler logic.
  * Tests the route factory directly without spinning up a full HTTP server.
  *
  * This file verifies:
- * - POST /request validates failureCount >= 2
- * - POST /request validates featureId presence
- * - POST /request returns 503 when reactor is inactive
  * - GET /degraded-peers returns degraded peer state
- * - GET /status returns escalation-relevant fields
+ * - GET /status returns reactor health fields (no pendingEscalations)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -33,13 +30,11 @@ function makeMockReactor(overrides: Record<string, unknown> = {}) {
     getStatus: vi.fn().mockReturnValue({
       active: true,
       enabled: true,
-      pendingEscalationCount: 0,
       degradedPeerCount: 0,
       degradedPeers: [],
       errorCount: 0,
       ...overrides,
     }),
-    postEscalationRequest: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -98,71 +93,6 @@ describe('createEscalationRoutes', () => {
     router = createEscalationRoutes(reactor as Parameters<typeof createEscalationRoutes>[0]);
   });
 
-  describe('POST /request', () => {
-    it('returns 400 when featureId is missing', async () => {
-      const handler = getHandler(router, 'post', '/request');
-      expect(handler).toBeDefined();
-
-      const req = makeReq({ failureCount: 3 });
-      const res = makeRes();
-      await handler!(req, res as unknown as Response);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('featureId') })
-      );
-    });
-
-    it('returns 400 when failureCount < 2', async () => {
-      const handler = getHandler(router, 'post', '/request');
-      const req = makeReq({ featureId: 'feat-1', failureCount: 1 });
-      const res = makeRes();
-      await handler!(req, res as unknown as Response);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('failureCount') })
-      );
-    });
-
-    it('returns 503 when reactor is not active', async () => {
-      reactor.getStatus.mockReturnValue({
-        active: false,
-        enabled: false,
-        degradedPeerCount: 0,
-        degradedPeers: [],
-        pendingEscalationCount: 0,
-        errorCount: 0,
-      });
-      const handler = getHandler(router, 'post', '/request');
-      const req = makeReq({ featureId: 'feat-1', failureCount: 2 });
-      const res = makeRes();
-      await handler!(req, res as unknown as Response);
-
-      expect(res.status).toHaveBeenCalledWith(503);
-    });
-
-    it('returns 200 and calls postEscalationRequest on valid input', async () => {
-      const handler = getHandler(router, 'post', '/request');
-      const req = makeReq({
-        featureId: 'feat-1',
-        failureCount: 3,
-        lastError: 'Agent crashed',
-        worktreeState: 'dirty',
-        featureData: { title: 'Feature 1' },
-      });
-      const res = makeRes();
-      await handler!(req, res as unknown as Response);
-
-      expect(reactor.postEscalationRequest).toHaveBeenCalledWith(
-        expect.objectContaining({ featureId: 'feat-1', failureCount: 3 })
-      );
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ ok: true, featureId: 'feat-1' })
-      );
-    });
-  });
-
   describe('GET /degraded-peers', () => {
     it('returns degraded peer state', () => {
       reactor.getStatus.mockReturnValue({
@@ -170,7 +100,6 @@ describe('createEscalationRoutes', () => {
         enabled: true,
         degradedPeerCount: 2,
         degradedPeers: ['peer-1', 'peer-2'],
-        pendingEscalationCount: 1,
         errorCount: 0,
       });
       const handler = getHandler(router, 'get', '/degraded-peers');
@@ -188,13 +117,12 @@ describe('createEscalationRoutes', () => {
   });
 
   describe('GET /status', () => {
-    it('returns escalation status fields', () => {
+    it('returns reactor status fields without pendingEscalations', () => {
       reactor.getStatus.mockReturnValue({
         active: true,
         enabled: true,
         degradedPeerCount: 0,
         degradedPeers: [],
-        pendingEscalationCount: 3,
         errorCount: 1,
       });
 
@@ -208,10 +136,14 @@ describe('createEscalationRoutes', () => {
       expect(res.json).toHaveBeenCalledWith({
         active: true,
         enabled: true,
-        pendingEscalations: 3,
         degradedPeerCount: 0,
         errorCount: 1,
       });
+    });
+
+    it('does not expose POST /request route', () => {
+      const handler = getHandler(router, 'post', '/request');
+      expect(handler).toBeUndefined();
     });
   });
 });
