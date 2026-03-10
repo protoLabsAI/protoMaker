@@ -486,6 +486,105 @@ export class KnowledgeStoreService {
   }
 
   /**
+   * Ingest a raw text chunk with a required domain tag.
+   * Inserts a new chunk into the store tagged with the given domain.
+   *
+   * @param projectPath - Project path
+   * @param content - Text content to ingest
+   * @param domain - Domain tag to categorize the chunk
+   * @param heading - Optional heading for the chunk
+   * @returns The chunk ID
+   */
+  ingestChunk(projectPath: string, content: string, domain: string, heading?: string): string {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    const timestamp = new Date().toISOString();
+    const chunkId = `manual-${domain}-${Date.now()}`;
+    const tags = JSON.stringify([domain]);
+
+    this.db
+      .prepare(
+        `
+      INSERT INTO chunks (id, source_type, source_file, project_path, chunk_index, heading, content, tags, importance, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `
+      )
+      .run(
+        chunkId,
+        'manual',
+        `manual/${domain}`,
+        projectPath,
+        0,
+        heading ?? null,
+        content,
+        tags,
+        0.5,
+        timestamp,
+        timestamp
+      );
+
+    logger.info(`Ingested chunk ${chunkId} with domain "${domain}"`);
+    return chunkId;
+  }
+
+  /**
+   * Get chunk counts grouped by domain (tag).
+   * Returns a record mapping each domain tag to its chunk count.
+   *
+   * @param projectPath - Project path
+   * @returns Record of domain -> count
+   */
+  getStatsByDomain(projectPath: string): Record<string, number> {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    // Expand JSON tags array and count by value
+    const rows = this.db
+      .prepare(
+        `
+      SELECT json_each.value as domain, COUNT(*) as count
+      FROM chunks, json_each(chunks.tags)
+      WHERE chunks.tags IS NOT NULL
+      GROUP BY json_each.value
+      ORDER BY count DESC
+    `
+      )
+      .all() as Array<{ domain: string; count: number }>;
+
+    const result: Record<string, number> = {};
+    for (const row of rows) {
+      result[row.domain] = row.count;
+    }
+
+    // Include chunks with no tags under 'untagged'
+    const untaggedCount =
+      (
+        this.db
+          .prepare(
+            `SELECT COUNT(*) as count FROM chunks WHERE tags IS NULL OR tags = '[]' OR tags = ''`
+          )
+          .get() as { count: number }
+      )?.count || 0;
+
+    if (untaggedCount > 0) {
+      result['untagged'] = untaggedCount;
+    }
+
+    return result;
+  }
+
+  /**
    * Search for reflections and agent outputs using FTS5.
    * Convenience method that filters to reflection and agent_output source types.
    *

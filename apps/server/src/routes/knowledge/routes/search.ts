@@ -15,12 +15,14 @@ interface SearchRequest {
   maxResults?: number;
   maxTokens?: number;
   sourceTypes?: KnowledgeSourceType[] | 'all';
+  domain?: string;
 }
 
 export function createSearchHandler(knowledgeStoreService: KnowledgeStoreService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, query, maxResults, maxTokens, sourceTypes } = req.body as SearchRequest;
+      const { projectPath, query, maxResults, maxTokens, sourceTypes, domain } =
+        req.body as SearchRequest;
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -32,7 +34,14 @@ export function createSearchHandler(knowledgeStoreService: KnowledgeStoreService
         return;
       }
 
-      logger.debug('Search request', { projectPath, query, maxResults, maxTokens, sourceTypes });
+      logger.debug('Search request', {
+        projectPath,
+        query,
+        maxResults,
+        maxTokens,
+        sourceTypes,
+        domain,
+      });
 
       // Initialize for this project path (re-initializes if different)
       knowledgeStoreService.initialize(projectPath);
@@ -41,6 +50,7 @@ export function createSearchHandler(knowledgeStoreService: KnowledgeStoreService
         maxResults,
         maxTokens,
         sourceTypes: sourceTypes ?? 'all',
+        domain,
       });
 
       res.json({ success: true, results, retrieval_mode });

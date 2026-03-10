@@ -8,6 +8,7 @@ import { createSearchHandler } from './routes/search.js';
 import { createStatsHandler } from './routes/stats.js';
 import { createRebuildHandler } from './routes/rebuild.js';
 import {
+  createIngestChunkHandler,
   createIngestReflectionsHandler,
   createIngestAgentOutputsHandler,
 } from './routes/ingest.js';
@@ -19,6 +20,7 @@ export function createKnowledgeRoutes(knowledgeStoreService: KnowledgeStoreServi
   router.post('/search', createSearchHandler(knowledgeStoreService));
   router.post('/stats', createStatsHandler(knowledgeStoreService));
   router.post('/rebuild', createRebuildHandler(knowledgeStoreService));
+  router.post('/ingest', createIngestChunkHandler(knowledgeStoreService));
   router.post('/ingest/reflections', createIngestReflectionsHandler(knowledgeStoreService));
   router.post('/ingest/agent-outputs', createIngestAgentOutputsHandler(knowledgeStoreService));
   router.post('/eval-stats', createEvalStatsHandler(knowledgeStoreService));
