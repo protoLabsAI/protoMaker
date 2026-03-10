@@ -779,6 +779,12 @@ export async function getWorkflowSettings(
           ...projectSettings.workflow.signalIntake,
         },
         bugs: { ...DEFAULT_WORKFLOW_SETTINGS.bugs, ...projectSettings.workflow.bugs },
+        postMergeVerification:
+          projectSettings.workflow.postMergeVerification ??
+          DEFAULT_WORKFLOW_SETTINGS.postMergeVerification,
+        postMergeVerificationCommands:
+          projectSettings.workflow.postMergeVerificationCommands ??
+          DEFAULT_WORKFLOW_SETTINGS.postMergeVerificationCommands,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;
