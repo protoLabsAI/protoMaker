@@ -338,6 +338,7 @@ export interface AppActions {
 
   // Server URL runtime override actions
   setServerUrlOverride: (url: string | null) => void;
+  addRecentServerUrl: (url: string) => void; // Adds to recentServerUrls (max 10, deduplicated)
 
   // Server connection actions
   connectToServer: (url: string) => Promise<void>;
@@ -1368,6 +1369,16 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     // Invalidate cached HTTP client and trigger WebSocket reconnection
     invalidateHttpClient();
+  },
+
+  addRecentServerUrl: (url) => {
+    const recentServerUrls = [url, ...get().recentServerUrls.filter((u) => u !== url)].slice(0, 10);
+    try {
+      localStorage.setItem('automaker:recentServerUrls', JSON.stringify(recentServerUrls));
+    } catch {
+      // localStorage might be disabled
+    }
+    set({ recentServerUrls });
   },
 
   // Server connection actions
