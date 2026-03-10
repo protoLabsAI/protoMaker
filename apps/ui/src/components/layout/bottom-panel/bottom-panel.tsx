@@ -7,13 +7,7 @@ import { useSystemHealth } from '@/hooks/queries/use-metrics';
 import { isElectron, getOverlayAPI } from '@/lib/electron';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@protolabsai/ui/atoms';
+import { Popover, PopoverContent, PopoverTrigger } from '@protolabsai/ui/atoms';
 import {
   Bot,
   ListTodo,
@@ -23,8 +17,7 @@ import {
   Terminal,
   MessageCircle,
   HeartPulse,
-  Server,
-  Check,
+  Wifi,
 } from 'lucide-react';
 import { getServerUrlSync } from '@/lib/http-api-client';
 
@@ -99,15 +92,14 @@ export function BottomPanel() {
 
   // Server connection state
   const serverUrlOverride = useAppStore((s) => s.serverUrlOverride);
-  const recentServerUrls = useAppStore((s) => s.recentServerUrls);
-  const recentConnections = useAppStore((s) => s.recentConnections);
-  const setServerUrlOverride = useAppStore((s) => s.setServerUrlOverride);
   const instanceName = useAppStore((s) => s.instanceName);
+  const instanceRole = useAppStore((s) => s.instanceRole);
   const peers = useAppStore((s) => s.peers);
   const fetchSelfInstanceId = useAppStore((s) => s.fetchSelfInstanceId);
   const fetchPeers = useAppStore((s) => s.fetchPeers);
 
-  const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
+  const [tickerPopoverOpen, setTickerPopoverOpen] = useState(false);
+  const tickerHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasFetchedRef = useRef(false);
 
   // Fetch instance info and peers on mount (once)
@@ -152,44 +144,18 @@ export function BottomPanel() {
   const displayLabel =
     instanceName ?? (currentServerUrl ? getHostname(currentServerUrl) : 'Server');
 
-  // Online hivemind peers with a known URL (for quick-switch)
-  const peerEntries = peers
-    .filter((p) => p.identity.status !== 'offline' && p.identity.url)
-    .map((p) => ({
-      label: p.identity.name ?? p.identity.instanceId,
-      url: p.identity.url!,
-      role: p.identity.role ?? null,
-    }));
+  // Peer stats
+  const onlinePeers = peers.filter((p) => p.identity.status !== 'offline');
+  const totalPeers = peers.length;
 
-  // Recent connections (deduplicated against peer entries)
-  const peerUrls = new Set(peerEntries.map((p) => p.url));
-  const recentEntries = [
-    // Prefer typed recentConnections (new format), fall back to recentServerUrls (legacy)
-    ...recentConnections.map((c) => ({
-      url: c.url,
-      label: getHostname(c.url),
-    })),
-    ...recentServerUrls
-      .filter((url) => !recentConnections.some((c) => c.url === url))
-      .map((url) => ({ url, label: getHostname(url) })),
-  ].filter((entry) => !peerUrls.has(entry.url));
-
-  const handleSwitchServer = (url: string) => {
-    setServerUrlOverride(url);
-    setServerDropdownOpen(false);
-    // Refresh instance info after a brief delay to let the new URL take effect
-    setTimeout(() => {
-      fetchSelfInstanceId().catch(() => {});
-      fetchPeers().catch(() => {});
-    }, 500);
+  const handleTickerMouseEnter = () => {
+    if (tickerHoverTimerRef.current) clearTimeout(tickerHoverTimerRef.current);
+    tickerHoverTimerRef.current = setTimeout(() => setTickerPopoverOpen(true), 300);
   };
 
-  const handleResetToDefault = () => {
-    setServerUrlOverride(null);
-    setServerDropdownOpen(false);
-    setTimeout(() => {
-      fetchSelfInstanceId().catch(() => {});
-    }, 500);
+  const handleTickerMouseLeave = () => {
+    if (tickerHoverTimerRef.current) clearTimeout(tickerHoverTimerRef.current);
+    setTickerPopoverOpen(false);
   };
 
   return (
@@ -330,154 +296,112 @@ export function BottomPanel() {
             </TooltipContent>
           </Tooltip>
 
-          {/* Server / instance badge */}
+          {/* Server / instance ticker — hover popover */}
           <div className="h-4 w-px bg-border" />
-          <DropdownMenu open={serverDropdownOpen} onOpenChange={setServerDropdownOpen}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none p-0 focus:outline-none cursor-pointer"
-                    aria-label="Switch server connection"
-                  >
-                    <Server className="h-3.5 w-3.5" />
-                    <span className="max-w-[120px] truncate">{displayLabel}</span>
-                  </button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-xs">
-                <div className="space-y-1 min-w-[160px]">
-                  <p className="font-medium border-b border-border pb-1">Server Connection</p>
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">URL</span>
-                    <span className="font-mono text-[10px] max-w-[140px] truncate">
-                      {currentServerUrl}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status</span>
-                    <span className="text-emerald-400">connected</span>
-                  </div>
-                  <p className="text-muted-foreground/70 pt-0.5">Click to switch server</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent side="top" align="start" className="w-56 text-xs">
-              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                Switch Server
-              </div>
-              <DropdownMenuSeparator />
-
-              {/* Current connection */}
-              <DropdownMenuItem
-                className="flex items-center gap-2 text-xs"
-                onClick={() => {
-                  if (serverUrlOverride) handleResetToDefault();
-                }}
-                disabled={!serverUrlOverride}
+          <Popover open={tickerPopoverOpen} onOpenChange={setTickerPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none p-0 focus:outline-none cursor-default"
+                aria-label="Instance connection info"
+                onMouseEnter={handleTickerMouseEnter}
+                onMouseLeave={handleTickerMouseLeave}
               >
-                <Check
-                  className={cn(
-                    'h-3 w-3 shrink-0',
-                    serverUrlOverride ? 'opacity-0' : 'text-emerald-500'
-                  )}
-                />
-                <div className="flex flex-col min-w-0">
-                  <span className="truncate font-medium">{displayLabel}</span>
-                  <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
-                    {currentServerUrl}
-                  </span>
-                </div>
-              </DropdownMenuItem>
+                <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+                <span className="max-w-[120px] truncate">{displayLabel}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="start"
+              sideOffset={6}
+              className="w-64 p-3 text-xs"
+              onMouseEnter={() => {
+                if (tickerHoverTimerRef.current) clearTimeout(tickerHoverTimerRef.current);
+                setTickerPopoverOpen(true);
+              }}
+              onMouseLeave={handleTickerMouseLeave}
+            >
+              {/* Header: connection status */}
+              <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-border">
+                <span className="font-medium text-foreground">Connection</span>
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block" />
+                  connected
+                </span>
+              </div>
 
-              {/* Online hivemind peers */}
-              {peerEntries.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">Online peers</div>
-                  {peerEntries.map((entry) => {
-                    const isCurrent = entry.url === currentServerUrl;
+              {/* Instance name & role */}
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-muted-foreground">Instance</span>
+                <span className="font-medium truncate max-w-[130px]">{displayLabel}</span>
+              </div>
+              {instanceRole && (
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-muted-foreground">Role</span>
+                  <span className="capitalize text-blue-400">{instanceRole}</span>
+                </div>
+              )}
+
+              {/* Peer count */}
+              <div className="flex items-center justify-between mt-1 mb-2">
+                <span className="text-muted-foreground">Peers</span>
+                <span>
+                  <span className="text-emerald-400 font-medium">{onlinePeers.length}</span>
+                  <span className="text-muted-foreground"> / {totalPeers} total</span>
+                </span>
+              </div>
+
+              {/* Compact peer list */}
+              {peers.length > 0 && (
+                <div className="space-y-1.5 border-t border-border pt-2">
+                  <p className="text-[10px] text-muted-foreground/70 mb-1">Peers</p>
+                  {peers.map((peer) => {
+                    const { identity } = peer;
+                    const isOnline = identity.status !== 'offline';
+                    const agentUsage =
+                      identity.capacity.maxAgents > 0
+                        ? identity.capacity.runningAgents / identity.capacity.maxAgents
+                        : 0;
                     return (
-                      <DropdownMenuItem
-                        key={entry.url}
-                        className="flex items-center gap-2 text-xs"
-                        onClick={() => !isCurrent && handleSwitchServer(entry.url)}
-                        disabled={isCurrent}
-                      >
-                        <Check
+                      <div key={identity.instanceId} className="flex items-center gap-2">
+                        <span
                           className={cn(
-                            'h-3 w-3 shrink-0',
-                            isCurrent ? 'text-emerald-500' : 'opacity-0'
+                            'h-1.5 w-1.5 rounded-full shrink-0',
+                            isOnline ? 'bg-emerald-500' : 'bg-muted-foreground/40'
                           )}
                         />
-                        <div className="flex flex-col min-w-0">
-                          <span className="truncate font-medium">{entry.label}</span>
-                          <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
-                            {entry.url}
-                          </span>
-                        </div>
-                        {entry.role && (
-                          <span className="ml-auto text-[10px] text-muted-foreground/60 shrink-0">
-                            {entry.role}
+                        <span className="truncate flex-1 max-w-[100px]">
+                          {identity.name ?? identity.instanceId}
+                        </span>
+                        {identity.role && (
+                          <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                            {identity.role}
                           </span>
                         )}
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </>
-              )}
-
-              {/* Recent connections */}
-              {recentEntries.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">Recent</div>
-                  {recentEntries.map((entry) => {
-                    const isCurrent = entry.url === currentServerUrl;
-                    return (
-                      <DropdownMenuItem
-                        key={entry.url}
-                        className="flex items-center gap-2 text-xs"
-                        onClick={() => !isCurrent && handleSwitchServer(entry.url)}
-                        disabled={isCurrent}
-                      >
-                        <Check
-                          className={cn(
-                            'h-3 w-3 shrink-0',
-                            isCurrent ? 'text-emerald-500' : 'opacity-0'
-                          )}
-                        />
-                        <div className="flex flex-col min-w-0">
-                          <span className="truncate">{entry.label}</span>
-                          <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
-                            {entry.url}
-                          </span>
+                        {/* Capacity bar: running agents / max agents */}
+                        <div className="w-14 h-1 rounded-full bg-muted overflow-hidden shrink-0">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all',
+                              agentUsage > 0.85
+                                ? 'bg-red-500'
+                                : agentUsage > 0.6
+                                  ? 'bg-yellow-500'
+                                  : 'bg-emerald-500'
+                            )}
+                            style={{ width: `${Math.min(agentUsage * 100, 100)}%` }}
+                          />
                         </div>
-                      </DropdownMenuItem>
+                        <span className="text-[10px] text-muted-foreground/70 shrink-0 tabular-nums">
+                          {identity.capacity.runningAgents}/{identity.capacity.maxAgents}
+                        </span>
+                      </div>
                     );
                   })}
-                </>
-              )}
-
-              {peerEntries.length === 0 && recentEntries.length === 0 && (
-                <div className="px-2 py-2 text-xs text-muted-foreground/70 text-center">
-                  No recent connections
                 </div>
               )}
-
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-xs text-muted-foreground"
-                onClick={() => {
-                  setServerDropdownOpen(false);
-                  useAppStore.getState().setCurrentView('settings');
-                }}
-              >
-                <Server className="h-3 w-3 mr-2" />
-                Manage connections...
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Spacer */}
