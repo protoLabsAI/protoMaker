@@ -550,9 +550,7 @@ export class LeadEngineerService {
 
     for (const feature of reviewFeaturesWithPR) {
       try {
-        const { stdout } = await execAsync(
-          `gh pr view ${feature.prNumber} --json state,mergedAt`
-        );
+        const { stdout } = await execAsync(`gh pr view ${feature.prNumber} --json state,mergedAt`);
         const prData = JSON.parse(stdout.trim()) as { state: string; mergedAt?: string | null };
 
         if (prData.state !== 'MERGED') continue;

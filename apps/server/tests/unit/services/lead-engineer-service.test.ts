@@ -555,11 +555,9 @@ describe('LeadEngineerService', () => {
       await service.start('/test/project', 'my-project');
 
       const mergedAt = '2026-03-10T15:00:00Z';
-      mockExec
-        .mockRejectedValueOnce(new Error('gh: PR not found'))
-        .mockResolvedValueOnce({
-          stdout: JSON.stringify({ state: 'MERGED', mergedAt }),
-        });
+      mockExec.mockRejectedValueOnce(new Error('gh: PR not found')).mockResolvedValueOnce({
+        stdout: JSON.stringify({ state: 'MERGED', mergedAt }),
+      });
 
       await (service as any).checkMergedPRs('/test/project');
 
@@ -637,9 +635,7 @@ describe('LeadEngineerService', () => {
       await vi.advanceTimersByTimeAsync(2.5 * 60 * 1000 + 100);
       await vi.advanceTimersByTimeAsync(100);
 
-      expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('gh pr view 42')
-      );
+      expect(mockExec).toHaveBeenCalledWith(expect.stringContaining('gh pr view 42'));
     });
   });
 });
