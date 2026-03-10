@@ -787,6 +787,11 @@ export type {
   TimeGroupBy,
   DoraTimeSeriesEntry,
   DoraTimeSeriesDocument,
+  AgenticAutonomyRate,
+  AgenticRemediationRecord,
+  AgenticWipSaturation,
+  AgenticMetricsEntry,
+  AgenticMetricsDocument,
 } from './metrics.js';
 
 // Lead Engineer types (production-phase nerve center)

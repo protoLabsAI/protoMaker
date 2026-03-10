@@ -335,6 +335,9 @@ export type EventType =
   | 'work_stealing:request'
   | 'work_stealing:offer'
   | 'work_stealing:accept'
+  | 'agent:completed'
+  | 'pr:merged'
+  | 'pr:review-requested'
   | 'ava-channel:message';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;

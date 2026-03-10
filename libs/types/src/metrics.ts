@@ -261,3 +261,58 @@ export interface DoraTimeSeriesDocument {
   /** Ordered list of snapshot entries (newest last) */
   entries: DoraTimeSeriesEntry[];
 }
+
+// ---------------------------------------------------------------------------
+// Agentic Metrics Persistence
+// ---------------------------------------------------------------------------
+
+/**
+ * Autonomy rate snapshot — percentage of features that reached "done" without
+ * human intervention beyond approval gates.
+ */
+export interface AgenticAutonomyRate {
+  totalDone: number;
+  autonomousDone: number;
+  rate: number;
+}
+
+/**
+ * Remediation loop counts per feature — number of PR iterations before merge.
+ */
+export interface AgenticRemediationRecord {
+  featureId: string;
+  reviewIterations: number;
+  merged: boolean;
+}
+
+/**
+ * WIP saturation for a single pipeline stage.
+ */
+export interface AgenticWipSaturation {
+  stage: 'execution' | 'review' | 'approval';
+  currentWip: number;
+  wipLimit: number | null;
+  saturation: number | null;
+}
+
+/**
+ * A single agentic-metrics snapshot — one entry per collection event.
+ * Persisted to `.automaker/metrics/agentic.json` as an array of entries.
+ */
+export interface AgenticMetricsEntry {
+  timestamp: string;
+  autonomyRate: AgenticAutonomyRate;
+  remediationLoops: AgenticRemediationRecord[];
+  /** TODO: integrate Langfuse cost API — currently null until available */
+  costPerFeatureUsd: number | null;
+  wipSaturation: AgenticWipSaturation[];
+}
+
+/**
+ * The full agentic metrics document persisted to disk.
+ */
+export interface AgenticMetricsDocument {
+  version: 1;
+  updatedAt: string;
+  entries: AgenticMetricsEntry[];
+}
