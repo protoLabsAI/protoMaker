@@ -322,6 +322,26 @@ export class ExecuteProcessor implements StateProcessor {
       logger.warn('[EXECUTE] Failed to load sibling reflections:', err);
     }
 
+    // Run pre-flight checks (worktree currency, package builds, dep merge verification)
+    const preFlightEnabled = await this.isPreFlightEnabled(ctx.projectPath);
+    if (preFlightEnabled) {
+      const preFlightResult = await this.runPreFlightChecks(ctx);
+      if (!preFlightResult.passed) {
+        // Pre-flight failures are infrastructure failures — do NOT burn agent retry budget
+        logger.warn('[EXECUTE] Pre-flight check failed — escalating as infrastructure failure', {
+          featureId: ctx.feature.id,
+          reason: preFlightResult.reason,
+        });
+        ctx.escalationReason = `Pre-flight check failed: ${preFlightResult.reason}`;
+        return {
+          nextState: 'ESCALATE',
+          shouldContinue: false,
+          reason: ctx.escalationReason,
+        };
+      }
+      logger.info('[EXECUTE] Pre-flight checks passed', { featureId: ctx.feature.id });
+    }
+
     logger.info('[EXECUTE] Launching agent via autoModeService.executeFeature()', {
       featureId: ctx.feature.id,
       retryCount: ctx.retryCount,
@@ -573,6 +593,219 @@ export class ExecuteProcessor implements StateProcessor {
       branch: 'ops' as const,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Resolve whether pre-flight checks are enabled for this project.
+   * Reads from project workflow settings; defaults to true.
+   */
+  private async isPreFlightEnabled(projectPath: string): Promise<boolean> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        if (typeof settings.workflow?.preFlightChecks === 'boolean') {
+          return settings.workflow.preFlightChecks;
+        }
+      }
+    } catch {
+      /* non-fatal — fall through to default */
+    }
+    return true; // default: enabled
+  }
+
+  /**
+   * Pre-flight checklist run before the agent is launched.
+   *
+   * a. Worktree currency: git fetch origin + compare HEAD with origin/<baseBranch>.
+   *    If the worktree is behind, attempt a rebase. On conflict, abort and escalate.
+   * b. Package build: if any libs/ files changed since worktree creation, run
+   *    `npm run build:packages`. On failure, escalate.
+   * c. Dependency merge verification: for each dep with isFoundation=true, the dep
+   *    must be 'done'/'completed'/'verified' (i.e. merged), not merely in 'review'.
+   *
+   * Returns { passed: true } on success, or { passed: false, reason } on failure.
+   * Failures are infrastructure failures — callers must NOT burn agent retry budget.
+   */
+  private async runPreFlightChecks(
+    ctx: StateContext
+  ): Promise<{ passed: boolean; reason?: string }> {
+    const { feature, projectPath } = ctx;
+
+    // ── (a) Worktree currency check ──────────────────────────────────────────
+    const worktreeDir = await this.resolveWorktreeDir(projectPath, feature.branchName);
+    const workDir = worktreeDir ?? projectPath;
+
+    try {
+      logger.info('[EXECUTE][pre-flight] Fetching origin', { featureId: feature.id });
+      await execAsync('git fetch origin', { cwd: workDir, timeout: 30_000 });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn('[EXECUTE][pre-flight] git fetch failed (non-fatal, continuing)', { msg });
+      // Non-fatal: network blip should not block the agent
+    }
+
+    // Determine base branch (default to 'dev')
+    let baseBranch = 'dev';
+    try {
+      const { stdout: upstream } = await execAsync(
+        'git rev-parse --abbrev-ref --symbolic-full-name @{u}',
+        { cwd: workDir, timeout: 5_000 }
+      );
+      const upstreamTrimmed = upstream.trim();
+      if (upstreamTrimmed && upstreamTrimmed.startsWith('origin/')) {
+        baseBranch = upstreamTrimmed.slice('origin/'.length);
+      }
+    } catch {
+      /* no upstream set — use default */
+    }
+
+    try {
+      const { stdout: revList } = await execAsync(
+        `git rev-list --count HEAD..origin/${baseBranch}`,
+        { cwd: workDir, timeout: 10_000 }
+      );
+      const behind = parseInt(revList.trim(), 10);
+      if (!isNaN(behind) && behind > 0) {
+        logger.info(
+          `[EXECUTE][pre-flight] Worktree is ${behind} commits behind origin/${baseBranch}, rebasing`,
+          { featureId: feature.id }
+        );
+        try {
+          await execAsync(`git rebase origin/${baseBranch}`, { cwd: workDir, timeout: 60_000 });
+          logger.info('[EXECUTE][pre-flight] Rebase succeeded', { featureId: feature.id });
+        } catch (rebaseErr) {
+          // Abort the rebase to leave the worktree clean
+          try {
+            await execAsync('git rebase --abort', { cwd: workDir, timeout: 10_000 });
+          } catch {
+            /* best-effort */
+          }
+          const rebaseMsg = rebaseErr instanceof Error ? rebaseErr.message : String(rebaseErr);
+          return {
+            passed: false,
+            reason: `Worktree rebase onto origin/${baseBranch} failed (conflicts or error): ${rebaseMsg}`,
+          };
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn('[EXECUTE][pre-flight] Could not determine rev-list distance (non-fatal)', {
+        msg,
+      });
+      // Non-fatal: if we can't determine distance, proceed
+    }
+
+    // ── (b) Package build check ───────────────────────────────────────────────
+    try {
+      // Check if any libs/ files changed since the worktree branch diverged from its merge base
+      const { stdout: mergeBase } = await execAsync(`git merge-base HEAD origin/${baseBranch}`, {
+        cwd: workDir,
+        timeout: 10_000,
+      }).catch(() => ({ stdout: 'HEAD~1' }));
+
+      const { stdout: changedFiles } = await execAsync(
+        `git diff --name-only ${mergeBase.trim()} HEAD`,
+        { cwd: workDir, timeout: 10_000 }
+      ).catch(() => ({ stdout: '' }));
+
+      const libsChanged = changedFiles.split('\n').some((f) => f.trim().startsWith('libs/'));
+
+      if (libsChanged) {
+        logger.info('[EXECUTE][pre-flight] libs/ files changed — running npm run build:packages', {
+          featureId: feature.id,
+        });
+        try {
+          await execAsync('npm run build:packages', { cwd: projectPath, timeout: 120_000 });
+          logger.info('[EXECUTE][pre-flight] Package build succeeded', { featureId: feature.id });
+        } catch (buildErr) {
+          const buildMsg = buildErr instanceof Error ? buildErr.message : String(buildErr);
+          return {
+            passed: false,
+            reason: `Package build (npm run build:packages) failed after libs/ changes: ${buildMsg}`,
+          };
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn('[EXECUTE][pre-flight] Package build check error (non-fatal)', { msg });
+      // Non-fatal: proceed if we can't determine changed files
+    }
+
+    // ── (c) Dependency merge verification ────────────────────────────────────
+    if (feature.dependencies && feature.dependencies.length > 0) {
+      try {
+        const allFeatures = await this.serviceContext.featureLoader.getAll(projectPath);
+        const unmergedFoundationDeps: string[] = [];
+
+        for (const depId of feature.dependencies) {
+          const dep = allFeatures.find((f) => f.id === depId);
+          if (!dep) {
+            unmergedFoundationDeps.push(`${depId} (not found)`);
+            continue;
+          }
+          if (dep.isFoundation) {
+            // Foundation deps must be done (merged), 'review' is NOT sufficient
+            const isMerged =
+              dep.status === 'done' || dep.status === 'completed' || dep.status === 'verified';
+            if (!isMerged) {
+              unmergedFoundationDeps.push(
+                `${depId} (${dep.title || depId}, status=${dep.status} — needs merge)`
+              );
+            }
+          }
+        }
+
+        if (unmergedFoundationDeps.length > 0) {
+          return {
+            passed: false,
+            reason: `Foundation dependencies not yet merged: ${unmergedFoundationDeps.join(', ')}`,
+          };
+        }
+
+        logger.info('[EXECUTE][pre-flight] Dependency merge verification passed', {
+          featureId: feature.id,
+          depCount: feature.dependencies.length,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.warn('[EXECUTE][pre-flight] Dependency check error (non-fatal)', { msg });
+        // Non-fatal: if we can't load features, proceed
+      }
+    }
+
+    return { passed: true };
+  }
+
+  /**
+   * Resolve the worktree directory for the given branch, or null if not found.
+   * Uses `git worktree list --porcelain` in the project root.
+   */
+  private async resolveWorktreeDir(
+    projectPath: string,
+    branchName: string | undefined
+  ): Promise<string | null> {
+    if (!branchName) return null;
+    try {
+      const { stdout } = await execAsync('git worktree list --porcelain', {
+        cwd: projectPath,
+        timeout: 10_000,
+      });
+      // Porcelain format: blocks separated by blank lines
+      // Each block: "worktree <path>\nHEAD <sha>\nbranch refs/heads/<name>"
+      const blocks = stdout.trim().split(/\n\n+/);
+      for (const block of blocks) {
+        const lines = block.split('\n');
+        const worktreeLine = lines.find((l) => l.startsWith('worktree '));
+        const branchLine = lines.find((l) => l.startsWith('branch '));
+        if (!worktreeLine || !branchLine) continue;
+        const worktreePath = worktreeLine.slice('worktree '.length).trim();
+        const branch = branchLine.slice('branch refs/heads/'.length).trim();
+        if (branch === branchName) return worktreePath;
+      }
+    } catch {
+      /* non-fatal */
+    }
+    return null;
   }
 
   /**

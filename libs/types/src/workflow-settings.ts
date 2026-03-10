@@ -174,6 +174,16 @@ export interface WorkflowSettings {
    * @default ['npm run typecheck']
    */
   postMergeVerificationCommands?: string[];
+  /**
+   * Run pre-flight checks before launching the agent in EXECUTE state.
+   * Checks include: worktree currency (git fetch + rebase if behind), package build
+   * (if libs/ files changed since worktree creation), and dependency merge verification
+   * (foundation deps must be done, not just in review).
+   * Pre-flight failures are classified as infrastructure failures and do NOT count
+   * against the feature's agent retry budget.
+   * @default true
+   */
+  preFlightChecks?: boolean;
 }
 
 /** Default workflow settings */
@@ -207,4 +217,5 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   },
   postMergeVerification: true,
   postMergeVerificationCommands: ['npm run typecheck'],
+  preFlightChecks: true,
 };
