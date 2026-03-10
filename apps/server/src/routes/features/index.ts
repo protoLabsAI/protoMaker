@@ -63,7 +63,11 @@ export function createFeaturesRoutes(
     validatePathParams('projectPath'),
     createDeleteHandler(featureLoader, events)
   );
-  router.post('/summary', validatePathParams('projectPath'), createSummaryHandler(featureLoader));
+  router.post(
+    '/summary',
+    validatePathParams('projectPath'),
+    createSummaryHandler(featureLoader, settingsService)
+  );
   router.post('/agent-output', createAgentOutputHandler(featureLoader));
   router.post('/raw-output', createRawOutputHandler(featureLoader));
   router.post('/generate-title', createGenerateTitleHandler(settingsService));

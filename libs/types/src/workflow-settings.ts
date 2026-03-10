@@ -244,6 +244,18 @@ export interface WorkflowSettings {
    * @default 60
    */
   maxRuntimeMinutesPerFeature?: number;
+  /**
+   * Maximum number of features allowed in the in_progress state before the lane
+   * is considered saturated. Used to compute the wipSaturation metric on board summary.
+   * @default 5
+   */
+  maxInProgress?: number;
+  /**
+   * Maximum number of features allowed in the review state before the lane
+   * is considered saturated. Used to compute the wipSaturation metric on board summary.
+   * @default 10
+   */
+  maxInReview?: number;
 }
 
 /** Default workflow settings */
