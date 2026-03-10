@@ -96,6 +96,13 @@ export interface LeadWorldState {
 
   /** Max concurrency for auto-mode */
   maxConcurrency: number;
+
+  /**
+   * Whether the error budget is currently exhausted.
+   * When true, auto-mode should only pick up features tagged as bug-fix.
+   * Populated from ErrorBudgetService.isExhausted() at world state refresh time.
+   */
+  errorBudgetExhausted?: boolean;
 }
 
 // ────────────────────────── Rule Actions ──────────────────────────

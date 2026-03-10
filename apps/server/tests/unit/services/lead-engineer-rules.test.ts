@@ -12,6 +12,7 @@ import {
   prApproved,
   threadsBlocking,
   remediationStalled,
+  errorBudgetExhausted,
   evaluateRules,
   DEFAULT_RULES,
 } from '@/services/lead-engineer-rules.js';
@@ -561,6 +562,38 @@ describe('remediationStalled', () => {
     });
     const actions = remediationStalled.evaluate(ws, 'lead-engineer:rule-evaluated', {});
     expect(actions).toHaveLength(2);
+  });
+});
+
+// ────────────────────────── errorBudgetExhausted ──────────────────────────
+
+describe('errorBudgetExhausted', () => {
+  it('emits a warn log when errorBudgetExhausted is true', () => {
+    const ws = createMockWorldState({ errorBudgetExhausted: true });
+    const actions = errorBudgetExhausted.evaluate(ws, 'feature:pr-merged', {});
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('log');
+    if (actions[0].type === 'log') {
+      expect(actions[0].level).toBe('warn');
+      expect(actions[0].message).toContain('errorBudgetExhausted');
+    }
+  });
+
+  it('no-ops when errorBudgetExhausted is false', () => {
+    const ws = createMockWorldState({ errorBudgetExhausted: false });
+    const actions = errorBudgetExhausted.evaluate(ws, 'feature:pr-merged', {});
+    expect(actions).toHaveLength(0);
+  });
+
+  it('no-ops when errorBudgetExhausted is undefined', () => {
+    const ws = createMockWorldState({});
+    const actions = errorBudgetExhausted.evaluate(ws, 'lead-engineer:rule-evaluated', {});
+    expect(actions).toHaveLength(0);
+  });
+
+  it('is included in DEFAULT_RULES', () => {
+    const names = DEFAULT_RULES.map((r) => r.name);
+    expect(names).toContain('errorBudgetExhausted');
   });
 });
 

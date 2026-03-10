@@ -630,6 +630,42 @@ export const missingCIChecks: LeadFastPathRule = {
   },
 };
 
+// ────────────────────────── Error Budget Rule ──────────────────────────
+
+/**
+ * errorBudgetExhausted — Error budget exhausted: log warning to surface condition.
+ *
+ * Fires when `worldState.errorBudgetExhausted` is true.
+ * Emits a warn log so the condition is visible in server logs and the rule log.
+ * The actual pickup restriction (only bug-fix features) is enforced by
+ * FeatureScheduler reading errorBudgetExhausted from world state.
+ */
+export const errorBudgetExhausted: LeadFastPathRule = {
+  name: 'errorBudgetExhausted',
+  description:
+    'Error budget exhausted — log warning (scheduler restricts pickup to bug-fix features)',
+  triggers: [
+    'feature:pr-merged',
+    'pr:ci-failure',
+    'pr:remediation-started',
+    'lead-engineer:rule-evaluated',
+  ],
+
+  evaluate(worldState): LeadRuleAction[] {
+    if (!worldState.errorBudgetExhausted) return [];
+
+    return [
+      {
+        type: 'log',
+        level: 'warn',
+        message:
+          'errorBudgetExhausted: change fail rate exceeds threshold — ' +
+          'auto-mode restricted to bug-fix features until the budget recovers',
+      },
+    ];
+  },
+};
+
 // ────────────────────────── Review Queue Monitor ──────────────────────────
 
 /** Default maximum PRs allowed in review state before pausing pickup */
@@ -735,6 +771,7 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   missingCIChecks,
   rollbackTriggered,
   reviewQueueSaturated,
+  errorBudgetExhausted,
 ];
 
 /**
