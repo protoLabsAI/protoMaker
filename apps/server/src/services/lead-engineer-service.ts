@@ -581,7 +581,7 @@ export class LeadEngineerService {
     }
   }
 
-  private onEvent(type: EventType, payload: unknown): void {
+  private async onEvent(type: EventType, payload: unknown): Promise<void> {
     const p = payload as Record<string, unknown> | null;
     const nested = p?.payload as Record<string, unknown> | null;
     const projectPath = (p?.projectPath ?? nested?.projectPath) as string | undefined;
@@ -604,7 +604,20 @@ export class LeadEngineerService {
     const featureId = (p?.featureId ?? nested?.featureId) as string | undefined;
     if (featureId) {
       for (const session of this.sessions.values()) {
-        if (session.flowState !== 'running' || !session.worldState.features[featureId]) continue;
+        if (session.flowState !== 'running') continue;
+        if (!session.worldState.features[featureId]) {
+          try {
+            const feature = await this.featureLoader.get(session.projectPath, featureId);
+            if (feature) {
+              session.worldState.features[featureId] =
+                this.worldStateBuilder.featureToSnapshot(feature);
+            } else {
+              continue;
+            }
+          } catch {
+            continue;
+          }
+        }
         this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
         this.getActionExecutor(undefined, session.projectPath).evaluateAndExecute(
           session,

@@ -359,6 +359,81 @@ describe('LeadEngineerService', () => {
     });
   });
 
+  // ──── Lazy feature lookup ────
+
+  describe('lazy feature lookup in onEvent', () => {
+    it('loads unknown features from disk when event arrives with featureId', async () => {
+      // Start with empty features so worldState has none
+      featureLoader = createMockFeatureLoader([]);
+      const lazyFeature = createMockFeature({
+        id: 'lazy-1',
+        status: 'in_progress',
+        branchName: 'feature/lazy-1',
+      });
+      // featureLoader.get returns the feature on lazy lookup
+      featureLoader.get.mockResolvedValue(lazyFeature);
+
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      // Confirm feature not in worldState initially
+      const sessionBefore = service.getSession('/test/project');
+      expect(sessionBefore?.worldState.features['lazy-1']).toBeUndefined();
+
+      // Fire event for unknown feature
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'lazy-1',
+        oldStatus: 'in_progress',
+        newStatus: 'review',
+      });
+
+      // Allow async onEvent to resolve
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Feature should now be in worldState via lazy load
+      const sessionAfter = service.getSession('/test/project');
+      expect(sessionAfter?.worldState.features['lazy-1']).toBeDefined();
+      expect(featureLoader.get).toHaveBeenCalledWith('/test/project', 'lazy-1');
+    });
+
+    it('skips gracefully when lazy lookup returns null', async () => {
+      featureLoader = createMockFeatureLoader([]);
+      featureLoader.get.mockResolvedValue(null);
+
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'missing-1',
+        oldStatus: 'in_progress',
+        newStatus: 'review',
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      const session = service.getSession('/test/project');
+      expect(session?.worldState.features['missing-1']).toBeUndefined();
+    });
+  });
+
   // ──── Flow state transitions ────
 
   describe('flow state transitions', () => {
