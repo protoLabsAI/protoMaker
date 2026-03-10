@@ -16,8 +16,9 @@
 import { createLogger } from '@protolabsai/utils';
 import type { AvaChatMessage } from '@protolabsai/types';
 import { CircuitBreaker } from '../lib/circuit-breaker.js';
-import type { DynamicAgentExecutor } from './dynamic-agent-executor.js';
-import type { AgentFactoryService } from './agent-factory-service.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
+import { getAvaPrompt } from '@protolabsai/prompts';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 // ---------------------------------------------------------------------------
 // Local types (mirrors @protolabsai/types reactive-spawner.ts)
@@ -126,9 +127,7 @@ export class ReactiveSpawnerService {
   private hourlyResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly agentFactoryService: AgentFactoryService,
-    private readonly dynamicAgentExecutor: DynamicAgentExecutor,
-    /** Project path used when creating agent configs */
+    /** Project path used when spawning agents */
     private readonly projectPath: string
   ) {
     this.scheduleHourlyReset();
@@ -233,16 +232,17 @@ export class ReactiveSpawnerService {
     );
 
     try {
-      const agentConfig = this.agentFactoryService.createFromTemplate('ava', this.projectPath);
-      const result = await this.dynamicAgentExecutor.execute(agentConfig, { prompt });
+      const systemPrompt = getAvaPrompt({});
+      const result = await simpleQuery({
+        prompt,
+        model: resolveModelString('opus'),
+        cwd: this.projectPath,
+        systemPrompt,
+        maxTurns: 200,
+      });
 
-      if (result.success) {
-        breaker.recordSuccess();
-        return { spawned: true, category, output: result.output };
-      } else {
-        breaker.recordFailure();
-        return { spawned: false, error: result.error, category };
-      }
+      breaker.recordSuccess();
+      return { spawned: true, category, output: result.text };
     } catch (err) {
       breaker.recordFailure();
       const message = err instanceof Error ? err.message : String(err);
@@ -277,21 +277,15 @@ let instance: ReactiveSpawnerService | null = null;
 /**
  * Get the singleton ReactiveSpawnerService.
  *
- * Must be called with dependencies on first invocation.
+ * Must be called with projectPath on first invocation.
  * Subsequent calls with no arguments return the existing instance.
  */
-export function getReactiveSpawnerService(
-  agentFactoryService?: AgentFactoryService,
-  dynamicAgentExecutor?: DynamicAgentExecutor,
-  projectPath?: string
-): ReactiveSpawnerService {
+export function getReactiveSpawnerService(projectPath?: string): ReactiveSpawnerService {
   if (!instance) {
-    if (!agentFactoryService || !dynamicAgentExecutor || !projectPath) {
-      throw new Error(
-        'ReactiveSpawnerService: agentFactoryService, dynamicAgentExecutor, and projectPath are required on first call'
-      );
+    if (!projectPath) {
+      throw new Error('ReactiveSpawnerService: projectPath is required on first call');
     }
-    instance = new ReactiveSpawnerService(agentFactoryService, dynamicAgentExecutor, projectPath);
+    instance = new ReactiveSpawnerService(projectPath);
   }
   return instance;
 }

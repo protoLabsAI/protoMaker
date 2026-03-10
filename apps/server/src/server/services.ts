@@ -51,8 +51,6 @@ import {
   registerBuiltInIntegrations,
   wireHealthChecks,
 } from '../services/built-in-integrations.js';
-import { AgentFactoryService } from '../services/agent-factory-service.js';
-import { DynamicAgentExecutor } from '../services/dynamic-agent-executor.js';
 import { registerBuiltInTemplates } from '../services/built-in-templates.js';
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
@@ -138,12 +136,10 @@ export interface ServiceContainer {
   // Agent infrastructure
   agentService: AgentService;
   roleRegistryService: RoleRegistryService;
-  agentFactoryService: AgentFactoryService;
 
   // Sensor registry
   sensorRegistryService: SensorRegistryService;
   contextAggregator: ContextAggregator;
-  dynamicAgentExecutor: DynamicAgentExecutor;
   headsdownService: HeadsdownService;
 
   // Metrics & ledger
@@ -428,16 +424,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     logger.error('Failed to register built-in integrations:', error);
   }
 
-  // Agent Factory and Dynamic Executor (uses registry for template resolution)
-  const agentFactoryService = new AgentFactoryService(roleRegistryService, events);
-  const dynamicAgentExecutor = new DynamicAgentExecutor(events);
-
   // Antagonistic Review Service for Ava + Jon PRD reviews
-  const antagonisticReviewService = AntagonisticReviewService.getInstance(
-    agentFactoryService,
-    events,
-    settingsService
-  );
+  const antagonisticReviewService = AntagonisticReviewService.getInstance(events, settingsService);
 
   // Agent Scoring Service (auto-scores agent traces based on feature lifecycle)
   // Created for side effects only (event subscriptions in constructor)
@@ -716,11 +704,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   });
 
   // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking
-  const reactiveSpawnerService = getReactiveSpawnerService(
-    agentFactoryService,
-    dynamicAgentExecutor,
-    repoRoot
-  );
+  const reactiveSpawnerService = getReactiveSpawnerService(repoRoot);
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
@@ -809,8 +793,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     trustTierService,
     agentService,
     roleRegistryService,
-    agentFactoryService,
-    dynamicAgentExecutor,
     headsdownService,
     metricsService,
     ledgerService,

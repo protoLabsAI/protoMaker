@@ -49,8 +49,9 @@ import path from 'node:path';
 import v8 from 'node:v8';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
-import type { AgentFactoryService } from './agent-factory-service.js';
-import type { DynamicAgentExecutor } from './dynamic-agent-executor.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
+import { getPromptForRole, hasPrompt } from '@protolabsai/prompts';
+import { resolveModelString } from '@protolabsai/model-resolver';
 
 const logger = createLogger('HeadsdownService');
 
@@ -89,12 +90,6 @@ export class HeadsdownService {
 
   /** Optional role registry for dynamic role resolution + desired state */
   private roleRegistry?: RoleRegistryService;
-
-  /** Agent factory for creating agent configurations */
-  private agentFactory?: AgentFactoryService;
-
-  /** Dynamic agent executor for running agents */
-  private executor?: DynamicAgentExecutor;
 
   constructor(
     private events: EventEmitter,
@@ -151,16 +146,6 @@ export class HeadsdownService {
    */
   setDiscordBotService(service: DiscordBotServiceLike): void {
     this.discordMonitor.setDiscordBotService(service);
-  }
-
-  /**
-   * Set agent execution dependencies (factory + executor).
-   * Must be called before agents can execute work.
-   */
-  setAgentExecution(factory: AgentFactoryService, executor: DynamicAgentExecutor): void {
-    this.agentFactory = factory;
-    this.executor = executor;
-    logger.info('Agent execution capabilities initialized');
   }
 
   /**
@@ -813,11 +798,6 @@ export class HeadsdownService {
    * Claim and execute work item
    */
   private async claimAndExecute(agent: AgentInstance, workItem: WorkItem): Promise<void> {
-    if (!this.agentFactory || !this.executor) {
-      logger.error('Agent execution not initialized — call setAgentExecution() first');
-      return;
-    }
-
     agent.status = 'working';
     agent.currentTask = {
       type: workItem.type as unknown as AgentTaskType,
@@ -831,6 +811,8 @@ export class HeadsdownService {
       task: agent.currentTask,
     });
 
+    const startTime = Date.now();
+
     try {
       logger.info(`Agent ${agent.id} executing work: ${workItem.description}`);
 
@@ -842,45 +824,47 @@ export class HeadsdownService {
       // Build prompt from work item
       const prompt = this.buildPromptForWorkItem(workItem, agent);
 
-      // Create agent config from template
-      const config = this.agentFactory.createFromTemplate(agent.role, agent.projectPath);
+      // Resolve system prompt via prompt registry
+      const lookupKey = hasPrompt(agent.role) ? agent.role : agent.role;
+      const systemPrompt = hasPrompt(lookupKey)
+        ? getPromptForRole(lookupKey, { projectPath: agent.projectPath })
+        : undefined;
 
-      // Execute agent
-      const result = await this.executor.execute(config, { prompt });
+      // Execute agent directly via simpleQuery
+      const result = await simpleQuery({
+        prompt,
+        model: resolveModelString(agent.model ?? 'sonnet'),
+        cwd: agent.projectPath,
+        systemPrompt,
+        maxTurns: agent.maxTurns ?? 100,
+      });
 
-      if (result.success) {
-        // Update stats based on work type
-        agent.stats.totalTurns++;
+      const durationMs = Date.now() - startTime;
 
-        if (workItem.type === 'github_pr') {
-          agent.stats.prsReviewed++;
-        } else if (workItem.type === 'idle_task') {
-          agent.stats.idleTasksCompleted++;
-        }
+      // Update stats based on work type
+      agent.stats.totalTurns++;
 
-        // Reset consecutive errors on successful work execution
-        this.consecutiveErrors.set(agent.id, 0);
-
-        // Update last work timestamp
-        this.lastWorkTimestamp.set(agent.id, Date.now());
-
-        logger.info(
-          `Agent ${agent.id} completed work: ${workItem.description} (${result.durationMs}ms)`
-        );
-
-        this.events.emit('headsdown:agent:work-completed', {
-          agentId: agent.id,
-          workItem,
-          durationMs: result.durationMs,
-        });
-      } else {
-        logger.error(`Agent ${agent.id} work failed: ${result.error}`);
-        this.events.emit('headsdown:agent:work-failed', {
-          agentId: agent.id,
-          workItem,
-          error: result.error,
-        });
+      if (workItem.type === 'github_pr') {
+        agent.stats.prsReviewed++;
+      } else if (workItem.type === 'idle_task') {
+        agent.stats.idleTasksCompleted++;
       }
+
+      // Reset consecutive errors on successful work execution
+      this.consecutiveErrors.set(agent.id, 0);
+
+      // Update last work timestamp
+      this.lastWorkTimestamp.set(agent.id, Date.now());
+
+      logger.info(`Agent ${agent.id} completed work: ${workItem.description} (${durationMs}ms)`);
+
+      this.events.emit('headsdown:agent:work-completed', {
+        agentId: agent.id,
+        workItem,
+        durationMs,
+      });
+
+      void result; // output available via result.text if needed
     } catch (error) {
       logger.error(`Work execution failed for agent ${agent.id}:`, error);
       this.events.emit('headsdown:agent:work-failed', {

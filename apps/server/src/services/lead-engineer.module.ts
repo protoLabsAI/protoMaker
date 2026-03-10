@@ -12,7 +12,6 @@ export function register(container: ServiceContainer): void {
     prFeedbackService,
     autoModeService,
     discordBotService,
-    agentFactoryService,
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
@@ -23,7 +22,6 @@ export function register(container: ServiceContainer): void {
   leadEngineerService.setCodeRabbitResolver(codeRabbitResolverService);
   leadEngineerService.setPRFeedbackService(prFeedbackService);
   leadEngineerService.setDiscordBot(discordBotService);
-  leadEngineerService.setAgentFactory(agentFactoryService);
   leadEngineerService.setFactStoreService(factStoreService);
   leadEngineerService.setTrajectoryStoreService(trajectoryStoreService);
   leadEngineerService.setHandoffService(leadHandoffService);

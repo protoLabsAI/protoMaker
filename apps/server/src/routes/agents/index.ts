@@ -12,8 +12,6 @@
 
 import { Router } from 'express';
 import type { RoleRegistryService } from '../../services/role-registry-service.js';
-import type { AgentFactoryService } from '../../services/agent-factory-service.js';
-import type { DynamicAgentExecutor } from '../../services/dynamic-agent-executor.js';
 import { createListTemplatesHandler } from './routes/list-templates.js';
 import { createGetTemplateHandler } from './routes/get-template.js';
 import { createRegisterTemplateHandler } from './routes/register-template.js';
@@ -21,11 +19,7 @@ import { createUpdateTemplateHandler } from './routes/update-template.js';
 import { createUnregisterTemplateHandler } from './routes/unregister-template.js';
 import { createExecuteHandler } from './routes/execute.js';
 
-export function createAgentManagementRoutes(
-  registry: RoleRegistryService,
-  factory: AgentFactoryService,
-  executor: DynamicAgentExecutor
-): Router {
+export function createAgentManagementRoutes(registry: RoleRegistryService): Router {
   const router = Router();
 
   // Template CRUD
@@ -36,7 +30,7 @@ export function createAgentManagementRoutes(
   router.post('/templates/unregister', createUnregisterTemplateHandler(registry));
 
   // Agent execution
-  router.post('/execute', createExecuteHandler(factory, executor));
+  router.post('/execute', createExecuteHandler(registry));
 
   return router;
 }

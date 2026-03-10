@@ -133,8 +133,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     automationService,
     avaGatewayService,
     discordBotService,
-    agentFactoryService,
-    dynamicAgentExecutor,
     roleRegistryService,
     ceremonyService,
     ceremonyAuditLog,
@@ -367,10 +365,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   app.use('/api/discord', createDiscordRoutes(discordBotService));
-  app.use(
-    '/api/agents',
-    createAgentManagementRoutes(roleRegistryService, agentFactoryService, dynamicAgentExecutor)
-  );
+  app.use('/api/agents', createAgentManagementRoutes(roleRegistryService));
   app.use(
     '/api/ceremonies',
     createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)

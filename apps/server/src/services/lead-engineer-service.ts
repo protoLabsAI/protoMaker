@@ -49,7 +49,6 @@ import type {
   StateContext,
   IPlanReviewService,
 } from './lead-engineer-types.js';
-import type { AgentFactoryService } from './agent-factory-service.js';
 import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import type { AuthorityService } from './authority-service.js';
@@ -81,7 +80,6 @@ export class LeadEngineerService {
   private checkpointService?: PipelineCheckpointService;
   private contextFidelityService?: ContextFidelityService;
   private knowledgeStoreService?: KnowledgeStoreService;
-  private agentFactoryService?: AgentFactoryService;
   private handoffService?: LeadHandoffService;
   private factStoreService?: FactStoreService;
   private trajectoryStoreService?: TrajectoryStoreService;
@@ -130,9 +128,6 @@ export class LeadEngineerService {
   }
   setPRFeedbackService(s: PRFeedbackService): void {
     this.prFeedbackService = s;
-  }
-  setAgentFactory(s: AgentFactoryService): void {
-    this.agentFactoryService = s;
   }
   setHandoffService(s: LeadHandoffService): void {
     this.handoffService = s;
@@ -421,11 +416,8 @@ export class LeadEngineerService {
       }
 
       // Route content features to GtmReviewProcessor instead of standard ReviewProcessor
-      if (feature.featureType === 'content' && this.agentFactoryService) {
-        stateMachine.registerProcessor(
-          'REVIEW',
-          new GtmReviewProcessor(serviceContext, this.agentFactoryService)
-        );
+      if (feature.featureType === 'content') {
+        stateMachine.registerProcessor('REVIEW', new GtmReviewProcessor(serviceContext));
         logger.info(`[LeadEngineer] Content feature routed to GtmReviewProcessor`, { featureId });
       }
       // Emit pipeline:phase-sync after each LE state transition so PipelineOrchestrator

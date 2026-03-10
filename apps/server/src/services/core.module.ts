@@ -13,9 +13,6 @@ export function register(container: ServiceContainer): void {
     autoModeService,
     featureHealthService,
     integrityWatchdogService,
-    headsdownService,
-    agentFactoryService,
-    dynamicAgentExecutor,
     devServerService,
     notificationService,
     actionableItemService,
@@ -32,9 +29,6 @@ export function register(container: ServiceContainer): void {
 
   // Calendar service wiring
   calendarService.setFeatureLoader(featureLoader);
-
-  // HeadsdownService agent execution wiring
-  headsdownService.setAgentExecution(agentFactoryService, dynamicAgentExecutor);
 
   // DevServerService event emitter wiring
   devServerService.setEventEmitter(events);

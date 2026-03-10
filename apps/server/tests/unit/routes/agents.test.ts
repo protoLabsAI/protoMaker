@@ -7,9 +7,21 @@ import { createUpdateTemplateHandler } from '@/routes/agents/routes/update-templ
 import { createUnregisterTemplateHandler } from '@/routes/agents/routes/unregister-template.js';
 import { createExecuteHandler } from '@/routes/agents/routes/execute.js';
 import type { RoleRegistryService } from '@/services/role-registry-service.js';
-import type { AgentFactoryService } from '@/services/agent-factory-service.js';
-import type { DynamicAgentExecutor } from '@/services/dynamic-agent-executor.js';
 import { createMockExpressContext } from '../../utils/mocks.js';
+
+// Mock simpleQuery so execute handler tests don't make real API calls
+vi.mock('@/providers/simple-query-service.js', () => ({
+  simpleQuery: vi.fn(),
+}));
+
+vi.mock('@protolabsai/prompts', () => ({
+  getPromptForRole: vi.fn().mockReturnValue('System prompt'),
+  hasPrompt: vi.fn().mockReturnValue(false),
+}));
+
+vi.mock('@protolabsai/model-resolver', () => ({
+  resolveModelString: vi.fn().mockReturnValue('claude-sonnet-4-5-20250929'),
+}));
 
 // Valid template for testing
 const validTemplate = {
@@ -38,30 +50,14 @@ function createMockRegistry(): Partial<RoleRegistryService> {
   };
 }
 
-function createMockFactory(): Partial<AgentFactoryService> {
-  return {
-    createFromTemplate: vi.fn(),
-  };
-}
-
-function createMockExecutor(): Partial<DynamicAgentExecutor> {
-  return {
-    execute: vi.fn(),
-  };
-}
-
 describe('agent management routes', () => {
   let registry: Partial<RoleRegistryService>;
-  let factory: Partial<AgentFactoryService>;
-  let executor: Partial<DynamicAgentExecutor>;
   let req: Request;
   let res: Response;
 
   beforeEach(() => {
     vi.clearAllMocks();
     registry = createMockRegistry();
-    factory = createMockFactory();
-    executor = createMockExecutor();
     const context = createMockExpressContext();
     req = context.req;
     res = context.res;
@@ -364,42 +360,23 @@ describe('agent management routes', () => {
   });
 
   describe('POST /execute', () => {
-    const mockConfig = {
-      templateName: 'test-agent',
-      resolvedModel: 'claude-sonnet-4-5-20250929',
-      modelAlias: 'sonnet',
+    const mockTemplate = {
+      name: 'test-agent',
+      displayName: 'Test Agent',
+      description: 'A test agent',
+      role: 'backend-engineer' as const,
+      tier: 1 as const,
+      model: 'sonnet' as const,
+      maxTurns: 100,
       tools: [],
       disallowedTools: [],
-      maxTurns: 100,
-      role: 'backend-engineer',
-      displayName: 'Test Agent',
-      trustLevel: 1,
-      capabilities: {
-        canUseBash: true,
-        canModifyFiles: true,
-        canCommit: true,
-        canCreatePRs: true,
-        canSpawnAgents: false,
-      },
-      allowedSubagentRoles: [],
-      projectPath: '/test/project',
-    };
-
-    const mockResult = {
-      success: true,
-      output: 'Task completed successfully.',
-      durationMs: 5000,
-      templateName: 'test-agent',
-      model: 'sonnet',
+      tags: ['test'],
     };
 
     it('returns 400 when templateName is missing', async () => {
       req.body = { projectPath: '/test', prompt: 'Do something' };
 
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
+      const handler = createExecuteHandler(registry as RoleRegistryService);
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -412,10 +389,7 @@ describe('agent management routes', () => {
     it('returns 400 when projectPath is missing', async () => {
       req.body = { templateName: 'test-agent', prompt: 'Do something' };
 
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
+      const handler = createExecuteHandler(registry as RoleRegistryService);
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -428,10 +402,7 @@ describe('agent management routes', () => {
     it('returns 400 when prompt is missing', async () => {
       req.body = { templateName: 'test-agent', projectPath: '/test' };
 
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
+      const handler = createExecuteHandler(registry as RoleRegistryService);
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -442,52 +413,21 @@ describe('agent management routes', () => {
     });
 
     it('executes agent with valid request', async () => {
+      const { simpleQuery } = await import('@/providers/simple-query-service.js');
+      vi.mocked(simpleQuery).mockResolvedValueOnce({ text: 'Task completed successfully.' });
+
       req.body = {
         templateName: 'test-agent',
         projectPath: '/test/project',
         prompt: 'Implement the feature',
       };
-      vi.mocked(factory.createFromTemplate!).mockReturnValue(mockConfig as any);
-      vi.mocked(executor.execute!).mockResolvedValue(mockResult as any);
+      vi.mocked(registry.get!).mockReturnValue(mockTemplate as any);
 
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
+      const handler = createExecuteHandler(registry as RoleRegistryService);
       await handler(req, res);
 
-      expect(factory.createFromTemplate).toHaveBeenCalledWith(
-        'test-agent',
-        '/test/project',
-        undefined
-      );
-      expect(executor.execute).toHaveBeenCalledWith(mockConfig, {
-        prompt: 'Implement the feature',
-        additionalSystemPrompt: undefined,
-      });
+      expect(registry.get).toHaveBeenCalledWith('test-agent');
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-    });
-
-    it('passes overrides to factory', async () => {
-      req.body = {
-        templateName: 'test-agent',
-        projectPath: '/test/project',
-        prompt: 'Do it',
-        overrides: { model: 'opus', maxTurns: 50 },
-      };
-      vi.mocked(factory.createFromTemplate!).mockReturnValue(mockConfig as any);
-      vi.mocked(executor.execute!).mockResolvedValue(mockResult as any);
-
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
-      await handler(req, res);
-
-      expect(factory.createFromTemplate).toHaveBeenCalledWith('test-agent', '/test/project', {
-        model: 'opus',
-        maxTurns: 50,
-      });
     });
 
     it('returns 404 when template not found', async () => {
@@ -496,32 +436,27 @@ describe('agent management routes', () => {
         projectPath: '/test',
         prompt: 'Do it',
       };
-      vi.mocked(factory.createFromTemplate!).mockImplementation(() => {
-        throw new Error('Template "nonexistent" not found in registry. Available: none');
-      });
+      vi.mocked(registry.get!).mockReturnValue(undefined);
+      vi.mocked(registry.list!).mockReturnValue([]);
 
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
+      const handler = createExecuteHandler(registry as RoleRegistryService);
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
     it('returns 500 for execution errors', async () => {
+      const { simpleQuery } = await import('@/providers/simple-query-service.js');
+      vi.mocked(simpleQuery).mockRejectedValueOnce(new Error('API rate limit'));
+
       req.body = {
         templateName: 'test-agent',
         projectPath: '/test',
         prompt: 'Do it',
       };
-      vi.mocked(factory.createFromTemplate!).mockReturnValue(mockConfig as any);
-      vi.mocked(executor.execute!).mockRejectedValue(new Error('API rate limit'));
+      vi.mocked(registry.get!).mockReturnValue(mockTemplate as any);
 
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
+      const handler = createExecuteHandler(registry as RoleRegistryService);
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
@@ -529,40 +464,6 @@ describe('agent management routes', () => {
         success: false,
         error: 'API rate limit',
       });
-    });
-
-    it('returns failed execution result without 500', async () => {
-      req.body = {
-        templateName: 'test-agent',
-        projectPath: '/test',
-        prompt: 'Do it',
-      };
-      vi.mocked(factory.createFromTemplate!).mockReturnValue(mockConfig as any);
-      vi.mocked(executor.execute!).mockResolvedValue({
-        success: false,
-        output: '',
-        error: 'Agent timed out',
-        errorType: 'timeout',
-        durationMs: 60000,
-        templateName: 'test-agent',
-        model: 'sonnet',
-      });
-
-      const handler = createExecuteHandler(
-        factory as AgentFactoryService,
-        executor as DynamicAgentExecutor
-      );
-      await handler(req, res);
-
-      // Should return 200 with success: false (execution completed but agent failed)
-      expect(res.status).not.toHaveBeenCalled();
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          error: 'Agent timed out',
-          errorType: 'timeout',
-        })
-      );
     });
   });
 });

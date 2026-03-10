@@ -9,8 +9,9 @@
  */
 
 import { createLogger } from '@protolabsai/utils';
-import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
-import type { AgentFactoryService } from './agent-factory-service.js';
+import { simpleQuery } from '../providers/simple-query-service.js';
+import { getCindiPrompt } from '@protolabsai/prompts';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -23,26 +24,27 @@ const logger = createLogger('GtmReviewProcessor');
 const GTM_REVIEW_SCORE_THRESHOLD = 75;
 
 export class GtmReviewProcessor implements StateProcessor {
-  private executor: DynamicAgentExecutor;
-
-  constructor(
-    private serviceContext: ProcessorServiceContext,
-    private agentFactoryService: AgentFactoryService
-  ) {
-    this.executor = new DynamicAgentExecutor(serviceContext.events);
-  }
+  constructor(private serviceContext: ProcessorServiceContext) {}
 
   async enter(ctx: StateContext): Promise<void> {
     logger.info(`[GTM REVIEW] Starting content review for feature: ${ctx.feature.id}`);
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    const cindiConfig = this.agentFactoryService.createFromTemplate('cindi', ctx.projectPath);
     const prompt = this.buildReviewPrompt(ctx);
+    const systemPrompt = getCindiPrompt({});
 
-    let result;
+    let output: string;
     try {
-      result = await this.executor.execute(cindiConfig, { prompt });
+      const result = await simpleQuery({
+        prompt,
+        model: resolveModelString('sonnet'),
+        cwd: ctx.projectPath,
+        systemPrompt,
+        maxTurns: 100,
+        allowedTools: [],
+      });
+      output = result.text;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       logger.error(`[GTM REVIEW] Cindi review execution failed: ${errorMsg}`);
@@ -54,17 +56,7 @@ export class GtmReviewProcessor implements StateProcessor {
       };
     }
 
-    if (!result.success) {
-      logger.error(`[GTM REVIEW] Cindi review failed: ${result.error}`);
-      ctx.escalationReason = `GTM review failed: ${result.error}`;
-      return {
-        nextState: 'ESCALATE',
-        shouldContinue: true,
-        reason: ctx.escalationReason,
-      };
-    }
-
-    const score = this.parseConsensusScore(result.output);
+    const score = this.parseConsensusScore(output);
     logger.info(`[GTM REVIEW] Consensus score: ${score}`, {
       featureId: ctx.feature.id,
       threshold: GTM_REVIEW_SCORE_THRESHOLD,
@@ -79,7 +71,7 @@ export class GtmReviewProcessor implements StateProcessor {
     }
 
     // Score below threshold — send back to EXECUTE for revision
-    ctx.reviewFeedback = this.extractFeedback(result.output);
+    ctx.reviewFeedback = this.extractFeedback(output);
     logger.info(`[GTM REVIEW] Score below threshold, requesting revision`, {
       featureId: ctx.feature.id,
       score,

@@ -2,8 +2,8 @@
  * ReactiveSpawnerService — wiring and budget control tests
  *
  * Verifies:
- * 1. ReactiveSpawnerService instantiates correctly with DynamicAgentExecutor + AgentFactoryService
- * 2. spawnForMessage routes through agentFactoryService.createFromTemplate('ava', …)
+ * 1. ReactiveSpawnerService instantiates correctly with projectPath
+ * 2. spawnForMessage routes through simpleQuery with Ava's system prompt
  * 3. Circuit breaker is active (opens after failureThreshold=3 failures)
  * 4. Hourly session cap (3/hour) is enforced
  * 5. Error deduplication set skips repeated error contexts
@@ -16,6 +16,21 @@ import {
   resetReactiveSpawnerService,
 } from '../src/services/reactive-spawner-service.js';
 import type { AvaChatMessage } from '@protolabsai/types';
+
+// Mock simpleQuery so tests don't make real API calls
+vi.mock('@/providers/simple-query-service.js', () => ({
+  simpleQuery: vi.fn(),
+}));
+
+// Mock prompts library
+vi.mock('@protolabsai/prompts', () => ({
+  getAvaPrompt: vi.fn().mockReturnValue('Ava system prompt'),
+}));
+
+// Mock model resolver
+vi.mock('@protolabsai/model-resolver', () => ({
+  resolveModelString: vi.fn().mockReturnValue('claude-opus-4-20250514'),
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -36,36 +51,21 @@ function makeMessage(overrides: Partial<AvaChatMessage> = {}): AvaChatMessage {
   } as AvaChatMessage;
 }
 
-function makeDeps(overrides: { executeSuccess?: boolean; executeError?: boolean } = {}) {
-  const agentConfig = { template: 'ava', projectPath: '/repo' };
-
-  const agentFactoryService = {
-    createFromTemplate: vi.fn().mockReturnValue(agentConfig),
-  };
-
-  const dynamicAgentExecutor = {
-    execute: vi.fn().mockResolvedValue(
-      overrides.executeError
-        ? { success: false, error: 'executor error', output: undefined }
-        : {
-            success: overrides.executeSuccess !== false,
-            output: 'agent output',
-            error: undefined,
-          }
-    ),
-  };
-
-  return { agentFactoryService, dynamicAgentExecutor };
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe('ReactiveSpawnerService', () => {
   // Reset singleton before each test to avoid cross-test contamination
-  beforeEach(() => {
+  beforeEach(async () => {
     resetReactiveSpawnerService();
+    vi.clearAllMocks();
+    // Re-setup simpleQuery mock after clearAllMocks
+    const { simpleQuery } = await import('@/providers/simple-query-service.js');
+    vi.mocked(simpleQuery).mockResolvedValue({
+      text: 'agent output',
+      structured_output: undefined,
+    });
   });
 
   afterEach(() => {
@@ -76,44 +76,32 @@ describe('ReactiveSpawnerService', () => {
   // 1. Instantiation
   // -------------------------------------------------------------------------
 
-  it('instantiates with required dependencies', () => {
-    const { agentFactoryService, dynamicAgentExecutor } = makeDeps();
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      dynamicAgentExecutor as never,
-      '/repo'
-    );
+  it('instantiates with required projectPath', () => {
+    const service = new ReactiveSpawnerService('/repo');
     expect(service).toBeInstanceOf(ReactiveSpawnerService);
     service.close();
   });
 
   // -------------------------------------------------------------------------
-  // 2. spawnForMessage routes through agentFactoryService.createFromTemplate('ava', …)
+  // 2. spawnForMessage calls simpleQuery with Ava prompt
   // -------------------------------------------------------------------------
 
-  it('spawnForMessage calls createFromTemplate with "ava" template', async () => {
-    const { agentFactoryService, dynamicAgentExecutor } = makeDeps();
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      dynamicAgentExecutor as never,
-      '/repo'
-    );
+  it('spawnForMessage spawns an agent and returns output', async () => {
+    const service = new ReactiveSpawnerService('/repo');
 
     const result = await service.spawnForMessage(makeMessage());
 
     expect(result.spawned).toBe(true);
     expect(result.category).toBe('message');
-    expect(agentFactoryService.createFromTemplate).toHaveBeenCalledWith('ava', '/repo');
+    expect(result.output).toBe('agent output');
     service.close();
   });
 
-  it('spawnForMessage returns spawned=false and error when executor fails', async () => {
-    const { agentFactoryService, dynamicAgentExecutor } = makeDeps({ executeError: true });
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      dynamicAgentExecutor as never,
-      '/repo'
-    );
+  it('spawnForMessage returns spawned=false and error when simpleQuery throws', async () => {
+    const { simpleQuery } = await import('@/providers/simple-query-service.js');
+    vi.mocked(simpleQuery).mockRejectedValueOnce(new Error('executor error'));
+
+    const service = new ReactiveSpawnerService('/repo');
 
     const result = await service.spawnForMessage(makeMessage());
 
@@ -127,22 +115,15 @@ describe('ReactiveSpawnerService', () => {
   // -------------------------------------------------------------------------
 
   it('blocks concurrent spawns for the same category', async () => {
-    const { agentFactoryService } = makeDeps();
-    // Make execute block so the first call is still running when the second arrives
-    let resolveExecute!: (v: unknown) => void;
-    const slowExecutor = {
-      execute: vi.fn().mockReturnValue(
-        new Promise((resolve) => {
-          resolveExecute = resolve;
-        })
-      ),
-    };
-
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      slowExecutor as never,
-      '/repo'
+    const { simpleQuery } = await import('@/providers/simple-query-service.js');
+    let resolveQuery!: (v: unknown) => void;
+    vi.mocked(simpleQuery).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveQuery = resolve;
+      }) as Promise<{ text: string }>
     );
+
+    const service = new ReactiveSpawnerService('/repo');
 
     const first = service.spawnForMessage(makeMessage({ id: 'msg-1' }));
     // Second call while first is pending
@@ -152,7 +133,7 @@ describe('ReactiveSpawnerService', () => {
     expect(second.skippedReason).toBe('already_running');
 
     // Let the first call finish
-    resolveExecute({ success: true, output: 'done', error: undefined });
+    resolveQuery({ text: 'done', structured_output: undefined });
     await first;
     service.close();
   });
@@ -162,12 +143,7 @@ describe('ReactiveSpawnerService', () => {
   // -------------------------------------------------------------------------
 
   it('enforces the 3-sessions-per-hour cap', async () => {
-    const { agentFactoryService, dynamicAgentExecutor } = makeDeps();
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      dynamicAgentExecutor as never,
-      '/repo'
-    );
+    const service = new ReactiveSpawnerService('/repo');
 
     // Consume all 3 hourly slots
     await service.spawnForMessage(makeMessage({ id: 'msg-1' }));
@@ -186,12 +162,7 @@ describe('ReactiveSpawnerService', () => {
   // -------------------------------------------------------------------------
 
   it('deduplicates repeated error contexts within the TTL window', async () => {
-    const { agentFactoryService, dynamicAgentExecutor } = makeDeps();
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      dynamicAgentExecutor as never,
-      '/repo'
-    );
+    const service = new ReactiveSpawnerService('/repo');
 
     const errorCtx = { message: 'Out of memory', errorType: 'high_memory' };
     const first = await service.spawnForError(errorCtx);
@@ -208,12 +179,10 @@ describe('ReactiveSpawnerService', () => {
   // -------------------------------------------------------------------------
 
   it('opens the circuit breaker after 3 consecutive executor failures', async () => {
-    const { agentFactoryService, dynamicAgentExecutor } = makeDeps({ executeError: true });
-    const service = new ReactiveSpawnerService(
-      agentFactoryService as never,
-      dynamicAgentExecutor as never,
-      '/repo'
-    );
+    const { simpleQuery } = await import('@/providers/simple-query-service.js');
+    vi.mocked(simpleQuery).mockRejectedValue(new Error('simpleQuery failed'));
+
+    const service = new ReactiveSpawnerService('/repo');
 
     // Three consecutive failures should trip the circuit breaker
     await service.spawnForCron('task-1', 'desc 1');
@@ -239,8 +208,7 @@ describe('ReactiveSpawnerService', () => {
 
 describe('AvaChannelReactorService wiring: reactiveSpawnerService', () => {
   it('calls reactiveSpawnerService.spawnForMessage for request-type messages', async () => {
-    const { AvaChannelReactorService } =
-      await import('../src/services/ava-channel-reactor-service.js');
+    const { AvaChannelReactorService } = await import('@/services/ava-channel-reactor-service.js');
 
     const spawnForMessage = vi.fn().mockResolvedValue({ spawned: true, category: 'message' });
     const mockReactiveSpawnerService = { spawnForMessage };

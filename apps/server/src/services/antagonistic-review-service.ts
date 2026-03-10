@@ -11,8 +11,6 @@
 
 import { createLogger } from '@protolabsai/utils';
 import type { EventEmitter } from '../lib/events.js';
-import type { AgentFactoryService } from './agent-factory-service.js';
-import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 import type { SPARCPrd } from '@protolabsai/types';
 import type { ReviewResult, ConsolidatedReview, ReviewRequest } from '@protolabsai/types';
 import { extractPRDFromText } from '@protolabsai/types';
@@ -21,6 +19,7 @@ import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import { simpleQuery } from '../providers/simple-query-service.js';
+import { getAvaPrompt, getJonPrompt } from '@protolabsai/prompts';
 
 const logger = createLogger('AntagonisticReview');
 
@@ -28,22 +27,14 @@ const REVIEW_TIMEOUT_MS = 180_000; // 3 minutes
 
 export class AntagonisticReviewService {
   private static instance: AntagonisticReviewService;
-  private agentFactory: AgentFactoryService;
-  private executor: DynamicAgentExecutor;
   private events: EventEmitter;
   private settingsService: SettingsService;
   private adapter: AntagonisticReviewAdapter | null = null;
   private initPromise: Promise<void> | null = null;
 
-  constructor(
-    agentFactory: AgentFactoryService,
-    events: EventEmitter,
-    settingsService: SettingsService
-  ) {
-    this.agentFactory = agentFactory;
+  constructor(events: EventEmitter, settingsService: SettingsService) {
     this.events = events;
     this.settingsService = settingsService;
-    this.executor = new DynamicAgentExecutor(events);
   }
 
   /**
@@ -83,16 +74,11 @@ export class AntagonisticReviewService {
    * Get singleton instance
    */
   static getInstance(
-    agentFactory: AgentFactoryService,
     events: EventEmitter,
     settingsService: SettingsService
   ): AntagonisticReviewService {
     if (!AntagonisticReviewService.instance) {
-      AntagonisticReviewService.instance = new AntagonisticReviewService(
-        agentFactory,
-        events,
-        settingsService
-      );
+      AntagonisticReviewService.instance = new AntagonisticReviewService(events, settingsService);
     }
     return AntagonisticReviewService.instance;
   }
@@ -140,8 +126,8 @@ export class AntagonisticReviewService {
       return result;
     }
 
-    // Otherwise, fall back to legacy DynamicAgentExecutor implementation
-    logger.info('Using legacy DynamicAgentExecutor for antagonistic review');
+    // Otherwise, fall back to direct simpleQuery implementation
+    logger.info('Using simpleQuery for antagonistic review');
 
     try {
       // Create abort controller for timeout
@@ -273,36 +259,29 @@ export class AntagonisticReviewService {
     logger.info('Stage 1: Ava reviewing for operational feasibility');
 
     try {
-      // Create Ava agent config (assuming 'ava' or 'cos' template exists)
-      const avaConfig = this.agentFactory.createFromTemplate('ava', projectPath);
-
       const prompt = this.buildAvaPrompt(prd);
+      const systemPrompt = getAvaPrompt({});
 
-      const result = await this.executor.execute(avaConfig, {
+      const result = await simpleQuery({
         prompt,
+        model: resolveModelString('opus'),
+        cwd: projectPath,
+        systemPrompt,
+        maxTurns: 10,
+        allowedTools: [],
         abortController,
         traceContext: { agentRole: 'ava-reviewer', featureId: prdId },
       });
 
       const durationMs = Date.now() - startTime;
 
-      if (!result.success) {
-        return {
-          success: false,
-          reviewer: 'ava',
-          verdict: '',
-          durationMs,
-          error: result.error,
-        };
-      }
-
       // Parse Ava's output to extract concerns and recommendations
-      const { concerns, recommendations } = this.parseReviewOutput(result.output);
+      const { concerns, recommendations } = this.parseReviewOutput(result.text);
 
       return {
         success: true,
         reviewer: 'ava',
-        verdict: result.output,
+        verdict: result.text,
         concerns,
         recommendations,
         durationMs,
@@ -338,36 +317,29 @@ export class AntagonisticReviewService {
     logger.info('Stage 2: Jon reviewing for market value');
 
     try {
-      // Create Jon agent config (assuming 'jon' or 'ceo' template exists)
-      const jonConfig = this.agentFactory.createFromTemplate('jon', projectPath);
-
       const prompt = this.buildJonPrompt(prd, avaReview);
+      const systemPrompt = getJonPrompt({});
 
-      const result = await this.executor.execute(jonConfig, {
+      const result = await simpleQuery({
         prompt,
+        model: resolveModelString('sonnet'),
+        cwd: projectPath,
+        systemPrompt,
+        maxTurns: 10,
+        allowedTools: [],
         abortController,
         traceContext: { agentRole: 'jon-reviewer', featureId: prdId },
       });
 
       const durationMs = Date.now() - startTime;
 
-      if (!result.success) {
-        return {
-          success: false,
-          reviewer: 'jon',
-          verdict: '',
-          durationMs,
-          error: result.error,
-        };
-      }
-
       // Parse Jon's output to extract concerns and recommendations
-      const { concerns, recommendations } = this.parseReviewOutput(result.output);
+      const { concerns, recommendations } = this.parseReviewOutput(result.text);
 
       return {
         success: true,
         reviewer: 'jon',
-        verdict: result.output,
+        verdict: result.text,
         concerns,
         recommendations,
         durationMs,
@@ -402,21 +374,23 @@ export class AntagonisticReviewService {
     logger.info('Stage 3: Resolution - merging verdicts into consolidated PRD');
 
     try {
-      // Use Ava again but in CoS resolution mode
-      const resolutionConfig = this.agentFactory.createFromTemplate('ava', projectPath);
-
       const prompt = this.buildResolutionPrompt(prd, avaReview, jonReview);
+      const systemPrompt = getAvaPrompt({});
 
-      const result = await this.executor.execute(resolutionConfig, {
+      const result = await simpleQuery({
         prompt,
+        model: resolveModelString('opus'),
+        cwd: projectPath,
+        systemPrompt,
+        maxTurns: 10,
+        allowedTools: [],
         abortController,
         traceContext: { agentRole: 'ava-resolution', featureId: prdId },
       });
 
       return {
-        success: result.success,
-        output: result.output,
-        error: result.error,
+        success: true,
+        output: result.text,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

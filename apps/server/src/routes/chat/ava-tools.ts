@@ -30,8 +30,9 @@ import type { LeadEngineerService } from '../../services/lead-engineer-service.j
 import type { AgentService } from '../../services/agent-service.js';
 import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
 import type { RoleRegistryService } from '../../services/role-registry-service.js';
-import type { AgentFactoryService, AgentConfig } from '../../services/agent-factory-service.js';
-import type { DynamicAgentExecutor } from '../../services/dynamic-agent-executor.js';
+import { simpleQuery } from '../../providers/simple-query-service.js';
+import { getPromptForRole, hasPrompt } from '@protolabsai/prompts';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
@@ -82,10 +83,6 @@ export interface AvaToolsServices {
   sensorRegistryService?: SensorRegistryService;
   /** Agent template registry — required for agentDelegation tools */
   roleRegistryService?: RoleRegistryService;
-  /** Agent factory — required for agentDelegation tools */
-  agentFactoryService?: AgentFactoryService;
-  /** Dynamic agent executor — required for execute_dynamic_agent */
-  dynamicAgentExecutor?: DynamicAgentExecutor;
   /** Metrics service — required for metrics tools */
   metricsService?: MetricsService;
   /** Settings service — used for global settings access */
@@ -246,7 +243,15 @@ export function buildAvaTools(
   projectPath: string,
   services: AvaToolsServices,
   config: AvaToolsConfig,
-  avaMcpServers?: AgentConfig['mcpServers']
+  avaMcpServers?: Array<{
+    name: string;
+    type?: 'stdio' | 'sse' | 'http';
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    url?: string;
+    headers?: Record<string, string>;
+  }>
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {};
 
@@ -771,59 +776,70 @@ export function buildAvaTools(
           .describe('Model override (haiku, sonnet, opus). Defaults to template setting.'),
       }),
       execute: async ({ role, prompt, model }, { toolCallId }) => {
-        if (
-          !services.roleRegistryService ||
-          !services.agentFactoryService ||
-          !services.dynamicAgentExecutor
-        ) {
+        if (!services.roleRegistryService) {
           return { error: 'Agent delegation services not available' };
         }
         const template = services.roleRegistryService.resolve(role);
         if (!template) {
           return { error: `No agent template found for role "${role}"` };
         }
-        const agentConfig = services.agentFactoryService.createFromTemplate(
-          template.name,
-          projectPath,
-          model ? { model: model as 'haiku' | 'sonnet' | 'opus' } : undefined
-        );
+
+        // Resolve system prompt: template inline → prompt registry → undefined
+        const parts: string[] = [];
+        if (template.systemPrompt) {
+          parts.push(template.systemPrompt);
+        } else {
+          const lookupKey = hasPrompt(template.name) ? template.name : template.role;
+          if (hasPrompt(lookupKey)) {
+            parts.push(getPromptForRole(lookupKey, { projectPath }));
+          }
+        }
+        const systemPrompt = parts.length > 0 ? parts.join('\n\n') : undefined;
+
+        const modelAlias = model ?? template.model ?? 'sonnet';
+        const resolvedModel = resolveModelString(modelAlias);
 
         // Wire tool progress emitter — stream inner-agent activity to the chat UI
         const emitter = services.toolProgressEmitter;
         const agentLabel = role;
 
         // Build PostToolUse progress hooks to replace manual onToolUse progress emission.
-        // The hook fires natively after each tool execution; onText remains for text generation.
         const progressHooks =
           emitter && toolCallId
             ? { PostToolUse: buildProgressHooks({ emitter, toolCallId, agentLabel }) }
             : undefined;
 
-        const result = await services.dynamicAgentExecutor.execute(agentConfig, {
-          prompt,
-          hooks: progressHooks,
-          ...(avaMcpServers && avaMcpServers.length > 0 && { mcpServers: avaMcpServers }),
-          ...(emitter &&
-            toolCallId && {
-              onText: () => {
-                emitter.emitProgress(toolCallId, `${agentLabel} -- Composing response`);
-              },
-            }),
-          // Gated trust: pass canUseTool callback so inner agent tool calls require approval
-          ...(services.canUseTool && { canUseTool: services.canUseTool }),
-        });
+        const startTime = Date.now();
 
-        // Cleanup rate-limit tracking
-        if (emitter && toolCallId) emitter.clear(toolCallId);
+        try {
+          const result = await simpleQuery({
+            prompt,
+            model: resolvedModel,
+            cwd: projectPath,
+            systemPrompt,
+            maxTurns: template.maxTurns ?? 100,
+            allowedTools: template.tools ?? [],
+            disallowedTools: template.disallowedTools ?? [],
+            hooks: progressHooks,
+            canUseTool: services.canUseTool,
+            traceContext: { agentRole: role },
+          });
 
-        return {
-          success: result.success,
-          output: result.output,
-          error: result.error,
-          durationMs: result.durationMs,
-          templateName: result.templateName,
-          model: result.model,
-        };
+          // Cleanup rate-limit tracking
+          if (emitter && toolCallId) emitter.clear(toolCallId);
+
+          return {
+            success: true,
+            output: result.text,
+            durationMs: Date.now() - startTime,
+            templateName: template.name,
+            model: modelAlias,
+          };
+        } catch (err) {
+          if (emitter && toolCallId) emitter.clear(toolCallId);
+          const error = err instanceof Error ? err.message : String(err);
+          return { success: false, output: '', error, durationMs: Date.now() - startTime };
+        }
       },
     });
   }

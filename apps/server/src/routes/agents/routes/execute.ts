@@ -2,29 +2,30 @@
  * POST /api/agents/execute - Create and run a dynamic agent from a template
  *
  * Takes a template name, project path, optional overrides, and a prompt.
- * Uses AgentFactoryService to resolve config, then DynamicAgentExecutor to run.
+ * Uses RoleRegistryService to resolve template config, then simpleQuery to run.
  */
 
 import type { Request, Response } from 'express';
-import type {
-  AgentFactoryService,
-  AgentOverrides,
-} from '../../../services/agent-factory-service.js';
-import type { DynamicAgentExecutor } from '../../../services/dynamic-agent-executor.js';
+import type { RoleRegistryService } from '../../../services/role-registry-service.js';
+import { simpleQuery } from '../../../providers/simple-query-service.js';
+import { getPromptForRole, hasPrompt } from '@protolabsai/prompts';
+import { resolveModelString } from '@protolabsai/model-resolver';
 import { getErrorMessage, logError } from '../common.js';
 
 interface ExecuteRequest {
   templateName: string;
   projectPath: string;
   prompt: string;
-  overrides?: AgentOverrides;
   additionalSystemPrompt?: string;
+  model?: string;
 }
 
-export function createExecuteHandler(factory: AgentFactoryService, executor: DynamicAgentExecutor) {
+export function createExecuteHandler(registry: RoleRegistryService) {
   return async (req: Request, res: Response): Promise<void> => {
+    const startTime = Date.now();
+
     try {
-      const { templateName, projectPath, prompt, overrides, additionalSystemPrompt } =
+      const { templateName, projectPath, prompt, additionalSystemPrompt, model } =
         req.body as ExecuteRequest;
 
       if (!templateName) {
@@ -42,28 +43,62 @@ export function createExecuteHandler(factory: AgentFactoryService, executor: Dyn
         return;
       }
 
-      // Resolve template → config
-      const config = factory.createFromTemplate(templateName, projectPath, overrides);
+      // Resolve template from registry
+      const template = registry.get(templateName);
+      if (!template) {
+        const available = registry
+          .list()
+          .map((t) => t.name)
+          .join(', ');
+        res.status(404).json({
+          success: false,
+          error: `Template "${templateName}" not found in registry. Available: ${available || 'none'}`,
+        });
+        return;
+      }
 
-      // Execute agent
-      const result = await executor.execute(config, {
+      // Resolve system prompt: template inline → prompt registry → undefined
+      const parts: string[] = [];
+      if (template.systemPrompt) {
+        parts.push(template.systemPrompt);
+      } else {
+        const lookupKey = hasPrompt(template.name) ? template.name : template.role;
+        if (hasPrompt(lookupKey)) {
+          parts.push(getPromptForRole(lookupKey, { projectPath }));
+        }
+      }
+      if (additionalSystemPrompt) {
+        parts.push(additionalSystemPrompt);
+      }
+      const systemPrompt = parts.length > 0 ? parts.join('\n\n') : undefined;
+
+      // Resolve model
+      const modelAlias = model ?? template.model ?? 'sonnet';
+      const resolvedModel = resolveModelString(modelAlias);
+
+      // Execute via simpleQuery
+      const result = await simpleQuery({
         prompt,
-        additionalSystemPrompt,
+        model: resolvedModel,
+        cwd: projectPath,
+        systemPrompt,
+        maxTurns: template.maxTurns ?? 100,
+        allowedTools: template.tools ?? [],
+        disallowedTools: template.disallowedTools ?? [],
       });
 
+      const durationMs = Date.now() - startTime;
+
       res.json({
-        success: result.success,
-        output: result.output,
-        error: result.error,
-        errorType: result.errorType,
-        durationMs: result.durationMs,
-        templateName: result.templateName,
-        model: result.model,
+        success: true,
+        output: result.text,
+        durationMs,
+        templateName,
+        model: modelAlias,
       });
     } catch (error) {
       logError(error, 'Execute agent failed');
 
-      // Distinguish "template not found" from internal errors
       const message = getErrorMessage(error);
       const status = message.includes('not found') ? 404 : 500;
       res.status(status).json({ success: false, error: message });
