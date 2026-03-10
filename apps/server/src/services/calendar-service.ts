@@ -468,7 +468,7 @@ export class CalendarService {
     }
 
     // Create new event
-    const id = `google-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    const id = `event-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const newEvent: CalendarEvent = {
       ...data,
       id,

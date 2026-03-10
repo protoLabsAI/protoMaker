@@ -34,7 +34,7 @@ export const calendarTools: Tool[] = [
           type: 'array',
           items: {
             type: 'string',
-            enum: ['custom', 'feature_due_date', 'milestone', 'job'],
+            enum: ['custom', 'feature', 'google', 'ceremony', 'milestone', 'job'],
           },
           description: 'Optional array of event types to filter by. If omitted, returns all types.',
         },
