@@ -50,6 +50,7 @@ import type {
 import type { AgentFactoryService } from './agent-factory-service.js';
 import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
 import type { HITLFormService } from './hitl-form-service.js';
+import type { AuthorityService } from './authority-service.js';
 
 export type { FeatureProcessingState, StateContext };
 export type { ProcessorServiceContext } from './lead-engineer-types.js';
@@ -81,6 +82,9 @@ export class LeadEngineerService {
   private trajectoryStoreService?: TrajectoryStoreService;
   private antagonisticReviewService?: IPlanReviewService;
   private hitlFormService?: HITLFormService;
+  private authorityService?: AuthorityService;
+  /** Per-project workflow settings cache — populated when a session starts */
+  private workflowSettingsCache = new Map<string, import('@protolabsai/types').WorkflowSettings>();
 
   private worldStateBuilder: WorldStateBuilder;
   private sessionStore: LeadEngineerSessionStore;
@@ -139,6 +143,9 @@ export class LeadEngineerService {
   }
   setHITLFormService(s: HITLFormService): void {
     this.hitlFormService = s;
+  }
+  setAuthorityService(s: AuthorityService): void {
+    this.authorityService = s;
   }
 
   /**
@@ -251,7 +258,7 @@ export class LeadEngineerService {
             projectSlug,
             s.worldState.maxConcurrency
           );
-          this.getActionExecutor().evaluateAndExecute(
+          this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
             s,
             DEFAULT_RULES,
             'lead-engineer:rule-evaluated',
@@ -269,8 +276,10 @@ export class LeadEngineerService {
       this.settingsService,
       '[LeadEngineer]'
     );
+    this.workflowSettingsCache.set(projectPath, workflowSettings);
+
     if (workflowSettings.pipeline.supervisorEnabled) {
-      const executor = this.getActionExecutor();
+      const executor = this.getActionExecutor(workflowSettings);
       this.supervisorIntervals.set(
         projectPath,
         setInterval(() => {
@@ -293,6 +302,7 @@ export class LeadEngineerService {
       return;
     }
     this.clearIntervals(projectPath);
+    this.workflowSettingsCache.delete(projectPath);
     session.flowState = 'stopped';
     session.stoppedAt = new Date().toISOString();
     this.sessions.delete(projectPath);
@@ -463,13 +473,20 @@ export class LeadEngineerService {
 
   // ────────────────────────── Private ──────────────────────────
 
-  private getActionExecutor(): ActionExecutor {
+  private getActionExecutor(
+    workflowSettings?: import('@protolabsai/types').WorkflowSettings,
+    projectPath?: string
+  ): ActionExecutor {
+    const resolvedSettings =
+      workflowSettings ?? (projectPath ? this.workflowSettingsCache.get(projectPath) : undefined);
     return new ActionExecutor({
       events: this.events,
       featureLoader: this.featureLoader,
       autoModeService: this.autoModeService,
       codeRabbitResolver: this.codeRabbitResolver,
       discordBotService: this.discordBotService,
+      authorityService: this.authorityService,
+      workflowSettings: resolvedSettings,
     });
   }
 
@@ -495,7 +512,7 @@ export class LeadEngineerService {
       const session = this.sessions.get(projectPath);
       if (session?.flowState === 'running') {
         this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
-        this.getActionExecutor().evaluateAndExecute(
+        this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
           session,
           DEFAULT_RULES,
           type,
@@ -511,7 +528,7 @@ export class LeadEngineerService {
       for (const session of this.sessions.values()) {
         if (session.flowState !== 'running' || !session.worldState.features[featureId]) continue;
         this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
-        this.getActionExecutor().evaluateAndExecute(
+        this.getActionExecutor(undefined, session.projectPath).evaluateAndExecute(
           session,
           DEFAULT_RULES,
           type,

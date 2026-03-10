@@ -734,6 +734,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
 
+  // Wire authorityService into leadEngineerService for authority enforcement
+  leadEngineerService.setAuthorityService(authorityService);
+
   // Wire contextFidelityService into leadEngineerService
   leadEngineerService.setCheckpointService(pipelineCheckpointService);
   autoModeService.setPipelineCheckpointService(pipelineCheckpointService);

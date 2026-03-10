@@ -15,11 +15,13 @@ import type {
   LeadFastPathRule,
   LeadRuleLogEntry,
   WorkflowSettings,
+  ActionProposal,
 } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import type { CodeRabbitResolverService } from './coderabbit-resolver-service.js';
+import type { AuthorityService } from './authority-service.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -33,6 +35,8 @@ export interface ActionExecutorDeps {
   autoModeService: AutoModeService;
   codeRabbitResolver?: CodeRabbitResolverService;
   discordBotService?: { sendToChannel(channelId: string, content: string): Promise<boolean> };
+  authorityService?: AuthorityService;
+  workflowSettings?: WorkflowSettings;
 }
 
 export class ActionExecutor {
@@ -40,8 +44,38 @@ export class ActionExecutor {
 
   /**
    * Execute a single rule action.
+   * When authorityEnforcement is enabled, calls AuthorityService.submitProposal()
+   * before executing. Actions blocked by policy are not executed.
    */
   async executeAction(session: LeadEngineerSession, action: LeadRuleAction): Promise<void> {
+    // Authority enforcement pre-check
+    if (this.deps.authorityService && this.deps.workflowSettings?.authorityEnforcement === true) {
+      const proposal = buildProposalForAction(session, action);
+      if (proposal) {
+        try {
+          const decision = await this.deps.authorityService.submitProposal(
+            proposal,
+            session.projectPath
+          );
+          if (decision.verdict !== 'allow') {
+            logger.warn(
+              `[Authority] Action blocked: type=${action.type} verdict=${decision.verdict} reason=${decision.reason}`
+            );
+            this.deps.events.emit('lead-engineer:action-blocked' as EventType, {
+              projectPath: session.projectPath,
+              actionType: action.type,
+              verdict: decision.verdict,
+              reason: decision.reason,
+            });
+            return;
+          }
+        } catch (err) {
+          logger.error(`[Authority] submitProposal failed for action ${action.type}:`, err);
+          // On authority service error, fail-open: allow the action to proceed
+        }
+      }
+    }
+
     session.actionsTaken++;
 
     this.deps.events.emit('lead-engineer:action-executed', {
@@ -388,5 +422,114 @@ export class ActionExecutor {
         logger.error(`Action execution failed (${action.type}):`, err);
       });
     }
+  }
+}
+
+// ============================================================================
+// Authority Helpers
+// ============================================================================
+
+/**
+ * Map a LeadRuleAction to an ActionProposal for authority policy evaluation.
+ * Returns null for action types that don't require authority checks (e.g. log, post_discord).
+ *
+ * Risk assignment is conservative: actions that mutate agent state or move features
+ * to done/blocked are treated as medium risk; supervisor aborts are high risk.
+ * Informational-only actions (log, post_discord, escalate_llm) are skipped.
+ */
+function buildProposalForAction(
+  session: LeadEngineerSession,
+  action: LeadRuleAction
+): ActionProposal | null {
+  const who = 'lead-engineer';
+
+  switch (action.type) {
+    case 'move_feature':
+      return {
+        who,
+        what: 'update_status',
+        target: action.featureId,
+        justification: `Lead engineer rule: move feature to ${action.toStatus}`,
+        risk: action.toStatus === 'done' || action.toStatus === 'blocked' ? 'medium' : 'low',
+        statusTransition: { from: 'unknown', to: action.toStatus },
+      };
+
+    case 'reset_feature':
+      return {
+        who,
+        what: 'update_status',
+        target: action.featureId,
+        justification: `Lead engineer rule: reset feature — ${action.reason}`,
+        risk: 'medium',
+        statusTransition: { from: 'unknown', to: 'backlog' },
+      };
+
+    case 'unblock_feature':
+      return {
+        who,
+        what: 'update_status',
+        target: action.featureId,
+        justification: 'Lead engineer rule: unblock feature',
+        risk: 'low',
+        statusTransition: { from: 'blocked', to: 'backlog' },
+      };
+
+    case 'enable_auto_merge':
+      return {
+        who,
+        what: 'merge_pr',
+        target: `PR #${action.prNumber}`,
+        justification: 'Lead engineer rule: enable auto-merge on approved PR',
+        risk: 'medium',
+      };
+
+    case 'stop_agent':
+      return {
+        who,
+        what: 'assign_work',
+        target: action.featureId,
+        justification: 'Lead engineer rule: stop agent',
+        risk: 'medium',
+      };
+
+    case 'abort_and_resume':
+      return {
+        who,
+        what: 'assign_work',
+        target: action.featureId,
+        justification: `Supervisor: abort and resume — ${action.resumePrompt}`,
+        risk: 'high',
+      };
+
+    case 'restart_auto_mode':
+      return {
+        who,
+        what: 'assign_work',
+        target: action.projectPath ?? session.projectPath,
+        justification: 'Lead engineer rule: restart auto-mode',
+        risk: 'medium',
+      };
+
+    case 'update_feature':
+      return {
+        who,
+        what: 'update_status',
+        target: action.featureId,
+        justification: 'Lead engineer rule: update feature',
+        risk: 'low',
+      };
+
+    // Informational / side-effect-free actions — no authority check needed
+    case 'log':
+    case 'post_discord':
+    case 'escalate_llm':
+    case 'resolve_threads':
+    case 'resolve_threads_direct':
+    case 'send_agent_message':
+    case 'project_completing':
+      return null;
+
+    default:
+      return null;
   }
 }
