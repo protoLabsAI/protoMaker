@@ -5,12 +5,14 @@
  * agent role. These are compatible with the `agents` parameter of the Claude
  * Agent SDK's `query()` function.
  *
+ * Model aliases ('sonnet', 'opus', 'haiku') are passed as-is — the Claude
+ * Agent SDK resolves them internally to full model IDs.
+ *
  * All functions are pure: no side effects, no service dependencies, no I/O.
  */
 
 import type { AgentDefinition } from '@protolabsai/types';
 import type { AgentDefinitionContext } from '@protolabsai/types';
-import { resolveModelString } from '@protolabsai/model-resolver';
 
 // ─── Default tool sets per role ────────────────────────────────────────────────
 
@@ -58,7 +60,7 @@ Project path: ${projectPath}
 ## Operating Principle
 Act first, report after. Make decisions autonomously for operational work. Keep responses concise and action-oriented.`,
     tools: availableTools ?? AVA_DEFAULT_TOOLS,
-    model: resolveModelString('sonnet'),
+    model: 'sonnet',
   };
 }
 
@@ -106,7 +108,7 @@ Project path: ${projectPath}
 - Do NOT run bash commands that change state
 - Do NOT create git commits or PRs`,
     tools: availableTools ?? PM_DEFAULT_TOOLS,
-    model: resolveModelString('sonnet'),
+    model: 'sonnet',
   };
 }
 
@@ -156,6 +158,6 @@ Implement features and bug fixes with full autonomy over the codebase:
 - [ ] No files modified outside the spec's scope
 - [ ] Tests written or updated for changed logic`,
     tools: availableTools ?? LE_DEFAULT_TOOLS,
-    model: resolveModelString('opus'),
+    model: 'opus',
   };
 }
