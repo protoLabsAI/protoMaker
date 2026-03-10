@@ -3,8 +3,11 @@
  *
  * POST /api/project-pm/chat — streaming chat with the Project PM agent.
  *   Body: { projectPath, projectSlug, messages }
- *   Uses Vercel AI SDK streamText with PM system prompt and inline tools.
+ *   Uses Vercel AI SDK streamText with PM system prompt and tools from buildPMTools().
  *   PM agent is haiku model, no bash, no file write.
+ *
+ * POST /api/project-pm/config/get    — load PMConfig for a project
+ * POST /api/project-pm/config/update — save PMConfig for a project
  *
  * GET /api/project-pm/sessions — returns all active PM sessions.
  * GET /api/project-pm/session/:slug — returns session history + ceremony state.
@@ -18,30 +21,24 @@ import {
   pipeUIMessageStreamToResponse,
   convertToModelMessages,
   type UIMessage,
-  type Tool,
   type ModelMessage,
 } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { z } from 'zod';
 import { createLogger } from '@protolabsai/utils';
 import { resolveModelString } from '@protolabsai/model-resolver';
 import type { ProjectPMService } from '../../services/project-pm-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { AgentService } from '../../services/agent-service.js';
+import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
+import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { EventEmitter } from '../../lib/events.js';
-import type { EventType } from '@protolabsai/types';
+import { buildPMTools } from './pm-tools.js';
+import { loadPMConfig, savePMConfig } from './pm-config.js';
+import type { PMConfig } from './pm-config.js';
 
 const logger = createLogger('ProjectPMRoutes');
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function makeTool<TSchema extends z.ZodType<any>>(config: {
-  description: string;
-  inputSchema: TSchema;
-  execute: (input: z.infer<TSchema>) => Promise<unknown>;
-}): Tool {
-  return config as unknown as Tool;
-}
 
 function buildPmSystemPrompt(opts: {
   project: {
@@ -61,6 +58,7 @@ function buildPmSystemPrompt(opts: {
     '- Create status updates and manage project documentation',
     '- Coordinate ceremonies (standups, retros) when appropriate',
     '- Notify the operator about important project events',
+    '- Control agents and the Lead Engineer for autonomous feature execution',
     '',
     'You do NOT have access to the file system or bash. Use the provided tools to interact with project data.',
   ];
@@ -96,7 +94,10 @@ export function createProjectPmRoutes(
   projectService: ProjectService,
   ceremonyService: CeremonyService,
   featureLoader: FeatureLoader,
-  events: EventEmitter
+  events: EventEmitter,
+  agentService: AgentService,
+  leadEngineerService: LeadEngineerService,
+  autoModeService: AutoModeService
 ): Router {
   const router = Router();
 
@@ -146,7 +147,7 @@ export function createProjectPmRoutes(
       try {
         const features = await featureLoader.getAll(projectPath);
         recentFeatures = features
-          .filter((f) => f.status !== 'done')
+          .filter((f) => (!f.projectSlug || f.projectSlug === projectSlug) && f.status !== 'done')
           .slice(0, 20)
           .map((f) => ({ title: f.title ?? f.id, status: f.status ?? 'unknown' }));
       } catch {
@@ -155,193 +156,35 @@ export function createProjectPmRoutes(
 
       const systemPrompt = buildPmSystemPrompt({ project, ceremonyStatus, recentFeatures });
 
-      // PM inline tools (ai v6: use inputSchema not parameters)
-      const tools: Record<string, Tool> = {
-        get_project_status: makeTool({
-          description: 'Get the current project status, health, and key metrics.',
-          inputSchema: z.object({}),
-          execute: async () => {
-            const p = await projectService.getProject(projectPath, projectSlug).catch(() => null);
-            if (!p) return { error: 'Project not found' };
-            return {
-              title: p.title,
-              status: p.status,
-              health: p.health,
-              goal: p.goal,
-              milestoneCount: p.milestones?.length ?? 0,
-              updatedAt: p.updatedAt,
-            };
-          },
-        }),
+      // Load PM config for tool group toggles
+      const pmConfig = await loadPMConfig(projectPath).catch(() => null);
+      const toolGroupConfig = pmConfig?.toolGroups ?? {};
 
-        get_ceremony_state: makeTool({
-          description:
-            'Get the current ceremony phase, transition history, and cadence for this project.',
-          inputSchema: z.object({}),
-          execute: async () => {
-            try {
-              const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
-              return {
-                phase: state.phase,
-                currentMilestone: state.currentMilestone ?? null,
-                lastStandup: state.lastStandup || null,
-                lastRetro: state.lastRetro || null,
-                standupCadence: state.standupCadence,
-                transitionCount: state.history.length,
-                recentTransitions: state.history.slice(-5),
-              };
-            } catch {
-              return { error: 'Ceremony state unavailable' };
-            }
-          },
-        }),
-
-        trigger_ceremony: makeTool({
-          description: 'Trigger a ceremony (standup or retro) for the project.',
-          inputSchema: z.object({
-            ceremonyType: z
-              .enum(['standup', 'retro', 'project-retro'])
-              .describe('The type of ceremony to trigger'),
-            milestoneSlug: z
-              .string()
-              .optional()
-              .describe('Milestone slug (required for retro and project-retro)'),
-          }),
-          execute: async ({ ceremonyType, milestoneSlug }) => {
-            events.emit('ceremony:trigger-requested' as EventType, {
-              projectPath,
-              projectSlug,
-              ceremonyType,
-              milestoneSlug,
-            });
-            return { ok: true, ceremonyType, milestoneSlug };
-          },
-        }),
-
-        list_features: makeTool({
-          description: 'List features on the project board, optionally filtered by status.',
-          inputSchema: z.object({
-            status: z
-              .enum(['backlog', 'in_progress', 'review', 'blocked', 'done'])
-              .optional()
-              .describe('Filter by feature status'),
-          }),
-          execute: async ({ status }) => {
-            const features = await featureLoader.getAll(projectPath);
-            const filtered = status ? features.filter((f) => f.status === status) : features;
-            return filtered.slice(0, 50).map((f) => ({
-              id: f.id,
-              title: f.title ?? f.id,
-              status: f.status ?? 'unknown',
-              complexity: f.complexity,
-            }));
-          },
-        }),
-
-        create_status_update: makeTool({
-          description: 'Post a status update to the project timeline.',
-          inputSchema: z.object({
-            health: z
-              .enum(['on-track', 'at-risk', 'off-track'])
-              .describe('Current health of the project'),
-            body: z.string().describe('Status update message body'),
-          }),
-          execute: async ({ health, body }) => {
-            const p = await projectService.getProject(projectPath, projectSlug).catch(() => null);
-            if (!p) return { error: 'Project not found' };
-
-            const update = {
-              id: `update-${Date.now()}`,
-              health: health as 'on-track' | 'at-risk' | 'off-track',
-              body,
-              author: 'PM Agent',
-              createdAt: new Date().toISOString(),
-            };
-
-            await projectService.updateProject(projectPath, projectSlug, {
-              health: health as 'on-track' | 'at-risk' | 'off-track',
-              updates: [...(p.updates ?? []), update],
-            });
-
-            return { ok: true, updateId: update.id };
-          },
-        }),
-
-        add_link: makeTool({
-          description: 'Add an external link to the project.',
-          inputSchema: z.object({
-            label: z.string().describe('Display label for the link'),
-            url: z.string().describe('The URL to link to'),
-          }),
-          execute: async ({ label, url }) => {
-            const p = await projectService.getProject(projectPath, projectSlug).catch(() => null);
-            if (!p) return { error: 'Project not found' };
-
-            const link = {
-              id: `link-${Date.now()}`,
-              label,
-              url,
-              createdAt: new Date().toISOString(),
-            };
-
-            await projectService.updateProject(projectPath, projectSlug, {
-              links: [...(p.links ?? []), link],
-            });
-
-            return { ok: true, linkId: link.id };
-          },
-        }),
-
-        add_document: makeTool({
-          description: 'Add a text document to the project.',
-          inputSchema: z.object({
-            title: z.string().describe('Document title'),
-            content: z.string().describe('Document content (plain text or markdown)'),
-          }),
-          execute: async ({ title, content }) => {
-            const doc = await projectService.createDoc(
-              projectPath,
-              projectSlug,
-              title,
-              content,
-              'PM Agent'
-            );
-            return { ok: true, docId: doc.id, title: doc.title };
-          },
-        }),
-
-        notify_operator: makeTool({
-          description: 'Send a notification to the operator about an important project event.',
-          inputSchema: z.object({
-            message: z.string().describe('The notification message'),
-            severity: z
-              .enum(['info', 'warning', 'critical'])
-              .optional()
-              .default('info')
-              .describe('Severity level'),
-          }),
-          execute: async ({ message, severity }) => {
-            events.emit('notification:created' as EventType, {
-              source: `PM Agent (${projectSlug})`,
-              message,
-              severity,
-            });
-            return { ok: true, message, severity };
-          },
-        }),
-      };
+      // Build the expanded PM tool registry
+      const tools = buildPMTools(
+        projectPath,
+        projectSlug,
+        {
+          featureLoader,
+          agentService,
+          leadEngineerService,
+          autoModeService,
+          projectService,
+          events,
+        },
+        toolGroupConfig
+      );
 
       const resolvedModelId = resolveModelString('haiku', 'haiku');
       const messages: ModelMessage[] = await convertToModelMessages(rawMessages, { tools });
 
-      // Prepend session history (system event messages from feature completions, etc.)
-      // so the PM agent has persistent context across page refreshes.
+      // Prepend session history so the PM agent has persistent context across page refreshes.
       const session = projectPmService.getOrCreateSession(projectPath, projectSlug);
       const sessionHistory = session.messages.filter((m) => m.role === 'system');
       const allMessages: ModelMessage[] = [...sessionHistory, ...messages];
 
       logger.info(
-        `PM chat request: ${messages.length} user messages + ${sessionHistory.length} session events, project=${projectSlug}, model=haiku`
+        `PM chat request: ${messages.length} user messages + ${sessionHistory.length} session events, project=${projectSlug}, model=haiku, tools=${Object.keys(tools).length}`
       );
 
       const result = streamText({
@@ -349,7 +192,7 @@ export function createProjectPmRoutes(
         system: systemPrompt,
         messages: allMessages,
         tools,
-        stopWhen: stepCountIs(5),
+        stopWhen: stepCountIs(10),
         experimental_telemetry: {
           isEnabled: true,
           metadata: { route: '/api/project-pm/chat', projectSlug },
@@ -387,6 +230,57 @@ export function createProjectPmRoutes(
       } else {
         res.end();
       }
+    }
+  });
+
+  /**
+   * POST /api/project-pm/config/get
+   * Body: { projectPath: string }
+   */
+  router.post('/config/get', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { projectPath } = req.body as { projectPath?: string };
+      if (!projectPath || typeof projectPath !== 'string') {
+        res.status(400).json({ success: false, error: { message: 'projectPath is required' } });
+        return;
+      }
+      const config = await loadPMConfig(projectPath);
+      res.json({ success: true, config });
+    } catch (error) {
+      logger.error('Failed to get PM config:', error);
+      res.status(500).json({
+        success: false,
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
+  });
+
+  /**
+   * POST /api/project-pm/config/update
+   * Body: { projectPath: string, config: Partial<PMConfig> }
+   */
+  router.post('/config/update', async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { projectPath, config: configUpdate } = req.body as {
+        projectPath?: string;
+        config?: Partial<PMConfig>;
+      };
+      if (!projectPath || typeof projectPath !== 'string') {
+        res.status(400).json({ success: false, error: { message: 'projectPath is required' } });
+        return;
+      }
+      if (!configUpdate || typeof configUpdate !== 'object') {
+        res.status(400).json({ success: false, error: { message: 'config is required' } });
+        return;
+      }
+      const config = await savePMConfig(projectPath, configUpdate);
+      res.json({ success: true, config });
+    } catch (error) {
+      logger.error('Failed to update PM config:', error);
+      res.status(500).json({
+        success: false,
+        error: { message: error instanceof Error ? error.message : 'Unknown error' },
+      });
     }
   });
 

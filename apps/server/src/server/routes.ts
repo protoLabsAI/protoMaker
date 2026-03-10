@@ -431,7 +431,16 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // Project PM Agent routes
   app.use(
     '/api/project-pm',
-    createProjectPmRoutes(projectPmService, projectService, ceremonyService, featureLoader, events)
+    createProjectPmRoutes(
+      projectPmService,
+      projectService,
+      ceremonyService,
+      featureLoader,
+      events,
+      agentService,
+      leadEngineerService,
+      autoModeService
+    )
   );
   logger.info('Project PM routes mounted at /api/project-pm');
 
