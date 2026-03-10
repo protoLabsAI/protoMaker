@@ -188,6 +188,10 @@ export type {
   ProjectArtifact,
   MilestoneSummary,
   ProjectSummary,
+  TimelineEntryType,
+  TimelineEntryAuthor,
+  TimelineEntry,
+  ProjectTimelineFile,
 } from './project.js';
 
 // Calendar types

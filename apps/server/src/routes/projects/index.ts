@@ -23,6 +23,10 @@ import { createDeleteHandler } from './routes/delete.js';
 import { createCreateFeaturesHandler } from './routes/create-features.js';
 import { createArchiveHandler } from './routes/archive.js';
 import { createTimelineHandler } from './routes/timeline.js';
+import {
+  createPostCeremonyTimelineHandler,
+  createGetCeremonyTimelineHandler,
+} from './routes/ceremony-timeline.js';
 import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
@@ -85,6 +89,10 @@ export function createProjectsRoutes(
   if (eventLedgerService) {
     router.get('/:slug/timeline', createTimelineHandler(eventLedgerService));
   }
+
+  // Ceremony timeline routes — append-only paper trail per project
+  router.post('/:slug/ceremony-timeline', createPostCeremonyTimelineHandler());
+  router.get('/:slug/ceremony-timeline', createGetCeremonyTimelineHandler());
 
   // Fleet status route — GET /api/projects/:slug/fleet-status
   if (fleetSchedulerService) {
