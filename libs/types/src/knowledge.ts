@@ -5,6 +5,8 @@
  * code, and context for semantic search and retrieval.
  */
 
+import type { WorldStateDomain } from './lead-engineer.js';
+
 /**
  * Source type for a knowledge chunk
  */
@@ -43,6 +45,9 @@ export interface KnowledgeChunk {
 
   /** Optional tags for categorization */
   tags?: string[];
+
+  /** Optional domain classification for cross-agent retrieval scoping */
+  domain?: WorldStateDomain;
 
   /** Importance score (0-1) for ranking results */
   importance: number;

@@ -791,12 +791,15 @@ export type {
 } from './metrics.js';
 
 // Lead Engineer types (production-phase nerve center)
-export { FeatureState } from './lead-engineer.js';
+export { FeatureState, WorldStateDomain } from './lead-engineer.js';
 export type {
   LeadFeatureSnapshot,
   LeadAgentSnapshot,
   LeadPRSnapshot,
   LeadMilestoneSnapshot,
+  AvaWorldState,
+  PMWorldState,
+  LEWorldState,
   LeadWorldState,
   LeadRuleAction,
   LeadFastPathRule,
