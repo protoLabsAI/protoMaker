@@ -44,17 +44,15 @@ function makeDeps(overrides: { executeSuccess?: boolean; executeError?: boolean 
   };
 
   const dynamicAgentExecutor = {
-    execute: vi
-      .fn()
-      .mockResolvedValue(
-        overrides.executeError
-          ? { success: false, error: 'executor error', output: undefined }
-          : {
-              success: overrides.executeSuccess !== false,
-              output: 'agent output',
-              error: undefined,
-            }
-      ),
+    execute: vi.fn().mockResolvedValue(
+      overrides.executeError
+        ? { success: false, error: 'executor error', output: undefined }
+        : {
+            success: overrides.executeSuccess !== false,
+            output: 'agent output',
+            error: undefined,
+          }
+    ),
   };
 
   return { agentFactoryService, dynamicAgentExecutor };

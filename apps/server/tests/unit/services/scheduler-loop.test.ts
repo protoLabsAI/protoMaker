@@ -83,13 +83,15 @@ const mockGetFeaturesDir = getFeaturesDir as unknown as ReturnType<typeof vi.fn>
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeFeature(overrides: Partial<Feature> = {}): Feature {
+  // Use a timestamp well past the auto-mode pickup cooldown (default 30s)
+  const pastCooldown = new Date(Date.now() - 60_000).toISOString();
   return {
     id: `feature-${Math.random().toString(36).slice(2, 9)}`,
     title: 'Test feature',
     description: 'A test feature',
     status: 'backlog',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: pastCooldown,
+    updatedAt: pastCooldown,
     order: 0,
     ...overrides,
   };
