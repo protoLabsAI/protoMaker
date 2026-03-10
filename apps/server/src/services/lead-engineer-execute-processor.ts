@@ -409,6 +409,28 @@ export class ExecuteProcessor implements StateProcessor {
       logger.info('[EXECUTE] Pre-flight checks passed', { featureId: ctx.feature.id });
     }
 
+    // Execution gate: check Flow Control system state before launching the agent
+    const executionGateEnabled = await this.isExecutionGateEnabled(ctx.projectPath);
+    if (executionGateEnabled) {
+      const gateResult = await this.runExecutionGate(ctx);
+      if (!gateResult.passed) {
+        logger.warn('[EXECUTE] Execution gate blocked feature — returning to backlog', {
+          featureId: ctx.feature.id,
+          reason: gateResult.reason,
+        });
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          status: 'backlog',
+          statusChangeReason: gateResult.reason,
+        });
+        return {
+          nextState: null,
+          shouldContinue: false,
+          reason: gateResult.reason,
+        };
+      }
+      logger.info('[EXECUTE] Execution gate passed', { featureId: ctx.feature.id });
+    }
+
     logger.info('[EXECUTE] Launching agent via autoModeService.executeFeature()', {
       featureId: ctx.feature.id,
       retryCount: ctx.retryCount,
@@ -660,6 +682,143 @@ export class ExecuteProcessor implements StateProcessor {
       branch: 'ops' as const,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Resolve whether the execution gate is enabled for this project.
+   * Reads from project workflow settings; defaults to true.
+   */
+  private async isExecutionGateEnabled(projectPath: string): Promise<boolean> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        if (typeof settings.workflow?.executionGate === 'boolean') {
+          return settings.workflow.executionGate;
+        }
+      }
+    } catch {
+      /* non-fatal — fall through to default */
+    }
+    return true; // default: enabled
+  }
+
+  /**
+   * Run execution gate checks before launching the agent.
+   *
+   * (a) Review queue depth < maxPendingReviews
+   * (b) Error budget not exhausted
+   * (c) CI not saturated (pending GitHub check runs < threshold)
+   *
+   * Returns { passed: true } on success, or { passed: false, reason } on failure.
+   */
+  private async runExecutionGate(ctx: StateContext): Promise<{ passed: boolean; reason?: string }> {
+    const { projectPath } = ctx;
+
+    // Resolve thresholds from workflow settings
+    const DEFAULT_MAX_PENDING_REVIEWS = 5;
+    const DEFAULT_MAX_PENDING_CI_RUNS = 10;
+    let maxPendingReviews = DEFAULT_MAX_PENDING_REVIEWS;
+    let maxPendingCiRuns = DEFAULT_MAX_PENDING_CI_RUNS;
+    let errorBudgetThreshold = 0.2;
+    let errorBudgetWindowDays = 7;
+
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const workflow = settings.workflow as typeof settings.workflow & {
+          maxPendingReviews?: number;
+          maxPendingCiRuns?: number;
+          errorBudgetThreshold?: number;
+          errorBudgetWindow?: number;
+        };
+        if (typeof workflow?.maxPendingReviews === 'number') {
+          maxPendingReviews = workflow.maxPendingReviews;
+        }
+        if (typeof workflow?.maxPendingCiRuns === 'number') {
+          maxPendingCiRuns = workflow.maxPendingCiRuns;
+        }
+        if (typeof workflow?.errorBudgetThreshold === 'number') {
+          errorBudgetThreshold = workflow.errorBudgetThreshold;
+        }
+        if (typeof workflow?.errorBudgetWindow === 'number') {
+          errorBudgetWindowDays = workflow.errorBudgetWindow;
+        }
+      }
+    } catch {
+      /* non-fatal — use defaults */
+    }
+
+    // ── (a) Review queue depth ────────────────────────────────────────────────
+    try {
+      const allFeatures = await this.serviceContext.featureLoader.getAll(projectPath);
+      const reviewDepth = allFeatures.filter((f) => f.status === 'review').length;
+      if (reviewDepth >= maxPendingReviews) {
+        return {
+          passed: false,
+          reason: `Execution gate: review queue saturated (${reviewDepth}/${maxPendingReviews} features in review)`,
+        };
+      }
+    } catch (err) {
+      logger.warn('[EXECUTE][gate] Could not check review queue depth (non-fatal):', err);
+    }
+
+    // ── (b) Error budget ──────────────────────────────────────────────────────
+    try {
+      const { ErrorBudgetService } = await import('./error-budget-service.js');
+      const errorBudget = new ErrorBudgetService(projectPath, {
+        windowDays: errorBudgetWindowDays,
+        threshold: errorBudgetThreshold,
+      });
+      if (errorBudget.isExhausted()) {
+        const state = errorBudget.getState();
+        return {
+          passed: false,
+          reason: `Execution gate: error budget exhausted (fail rate ${(state.failRate * 100).toFixed(1)}% >= threshold ${(state.threshold * 100).toFixed(1)}%)`,
+        };
+      }
+    } catch (err) {
+      logger.warn('[EXECUTE][gate] Could not check error budget (non-fatal):', err);
+    }
+
+    // ── (c) CI saturation ─────────────────────────────────────────────────────
+    try {
+      const allFeatures = await this.serviceContext.featureLoader.getAll(projectPath);
+      const reviewFeatures = allFeatures.filter((f) => f.status === 'review' && f.branchName);
+      let pendingCiCount = 0;
+      for (const f of reviewFeatures) {
+        if (!f.branchName) continue;
+        try {
+          const { stdout } = await execAsync(
+            `gh pr list --head "${f.branchName}" --state open --json number --limit 1`,
+            { cwd: projectPath, timeout: 10_000 }
+          );
+          const prs: { number: number }[] = JSON.parse(stdout || '[]');
+          if (prs.length === 0) continue;
+          const prNumber = prs[0].number;
+          // Count pending check runs on this PR's HEAD
+          const { stdout: checksOut } = await execAsync(
+            `gh pr checks ${prNumber} --json state --jq '[.[] | select(.state == "PENDING")] | length'`,
+            { cwd: projectPath, timeout: 15_000 }
+          );
+          const pending = parseInt(checksOut.trim(), 10);
+          if (!isNaN(pending)) {
+            pendingCiCount += pending;
+          }
+        } catch {
+          /* non-fatal per PR */
+        }
+      }
+      if (pendingCiCount >= maxPendingCiRuns) {
+        return {
+          passed: false,
+          reason: `Execution gate: CI saturated (${pendingCiCount} pending check runs >= threshold ${maxPendingCiRuns})`,
+        };
+      }
+    } catch (err) {
+      logger.warn('[EXECUTE][gate] Could not check CI saturation (non-fatal):', err);
+    }
+
+    return { passed: true };
   }
 
   /**

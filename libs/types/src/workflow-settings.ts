@@ -205,6 +205,20 @@ export interface WorkflowSettings {
    * @default 0.2
    */
   errorBudgetThreshold?: number;
+  /**
+   * Enable execution gate checks before launching the agent in EXECUTE state.
+   * When enabled, checks: (1) review queue depth < maxPendingReviews,
+   * (2) error budget not exhausted, (3) CI not saturated (pending check runs < threshold).
+   * If any check fails, the feature is returned to backlog with a statusChangeReason.
+   * @default true
+   */
+  executionGate?: boolean;
+  /**
+   * Maximum number of pending GitHub check runs across open PRs before CI is
+   * considered saturated. When saturated, execution gate blocks new agent starts.
+   * @default 10
+   */
+  maxPendingCiRuns?: number;
 }
 
 /** Default workflow settings */
