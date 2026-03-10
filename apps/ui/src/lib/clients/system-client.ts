@@ -277,6 +277,39 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
           }>;
           featureCount: number;
         }>(`/api/metrics/blocked-timeline?projectPath=${encodeURIComponent(projectPath)}`),
+      agenticMetrics: (projectPath: string) =>
+        this.get<{
+          success: boolean;
+          updatedAt: string;
+          latest: {
+            timestamp: string;
+            autonomyRate: { totalDone: number; autonomousDone: number; rate: number };
+            remediationLoops: Array<{
+              featureId: string;
+              reviewIterations: number;
+              merged: boolean;
+            }>;
+            costPerFeatureUsd: number | null;
+            wipSaturation: Array<{
+              stage: 'execution' | 'review' | 'approval';
+              currentWip: number;
+              wipLimit: number | null;
+              saturation: number | null;
+            }>;
+          } | null;
+          entryCount: number;
+        }>(`/api/metrics/agentic?projectPath=${encodeURIComponent(projectPath)}`),
+      doraSnapshot: (projectPath: string, timeWindowDays?: number) =>
+        this.get<{
+          success: boolean;
+          metrics: import('@protolabsai/types').DoraMetrics;
+        }>(
+          `/api/metrics/dora?projectPath=${encodeURIComponent(projectPath)}${timeWindowDays ? `&timeWindowDays=${timeWindowDays}` : ''}`
+        ),
+      summaryGet: (projectPath: string) =>
+        this.get<{ success: boolean } & Record<string, unknown>>(
+          `/api/metrics/summary?projectPath=${encodeURIComponent(projectPath)}`
+        ),
     };
 
     // Integrations API
