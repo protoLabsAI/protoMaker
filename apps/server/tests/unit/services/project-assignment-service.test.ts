@@ -191,8 +191,7 @@ describe('ProjectAssignmentService', () => {
 
       projectService.getProject.mockImplementation(async (_path, slug) => {
         if (slug === 'proj-a') return makeProject({ slug: 'proj-a' }); // unassigned
-        if (slug === 'proj-b')
-          return makeProject({ slug: 'proj-b', assignedTo: 'instance-beta' }); // already assigned
+        if (slug === 'proj-b') return makeProject({ slug: 'proj-b', assignedTo: 'instance-beta' }); // already assigned
         return null;
       });
 

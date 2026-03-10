@@ -64,10 +64,7 @@ export class ProjectAssignmentService {
   /**
    * Clear the assignment fields on a project.
    */
-  async unassignProject(
-    projectPath: string,
-    projectSlug: string
-  ): Promise<Project | null> {
+  async unassignProject(projectPath: string, projectSlug: string): Promise<Project | null> {
     const updates: UpdateProjectInput = {
       assignedTo: undefined,
       assignedAt: undefined,
