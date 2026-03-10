@@ -163,9 +163,21 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
 
   it('counts only features with status === done', async () => {
     featureLoader.getAll.mockResolvedValue([
-      makeFeature({ status: 'in_progress', completedAt: yesterday, executionHistory: [makeExecution('auto')] }),
-      makeFeature({ status: 'backlog', completedAt: yesterday, executionHistory: [makeExecution('auto')] }),
-      makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [makeExecution('auto')] }),
+      makeFeature({
+        status: 'in_progress',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto')],
+      }),
+      makeFeature({
+        status: 'backlog',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto')],
+      }),
+      makeFeature({
+        status: 'done',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto')],
+      }),
     ]);
     const result = await service.getAutonomyMetrics(projectPath);
     expect(result.total_completed).toBe(1);
@@ -174,7 +186,11 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
 
   it('excludes features completed outside the rolling window', async () => {
     featureLoader.getAll.mockResolvedValue([
-      makeFeature({ status: 'done', completedAt: thirtyOneDaysAgo, executionHistory: [makeExecution('auto')] }),
+      makeFeature({
+        status: 'done',
+        completedAt: thirtyOneDaysAgo,
+        executionHistory: [makeExecution('auto')],
+      }),
     ]);
     const result = await service.getAutonomyMetrics(projectPath);
     expect(result.total_completed).toBe(0);
@@ -182,7 +198,11 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
 
   it('includes features completed inside the rolling window', async () => {
     featureLoader.getAll.mockResolvedValue([
-      makeFeature({ status: 'done', completedAt: thirtyDaysAgo, executionHistory: [makeExecution('auto')] }),
+      makeFeature({
+        status: 'done',
+        completedAt: thirtyDaysAgo,
+        executionHistory: [makeExecution('auto')],
+      }),
     ]);
     const result = await service.getAutonomyMetrics(projectPath);
     expect(result.total_completed).toBe(1);
@@ -191,10 +211,22 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
   it('calculates autonomy_rate correctly for mixed features', async () => {
     featureLoader.getAll.mockResolvedValue([
       // 2 fully autonomous
-      makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [makeExecution('auto')] }),
-      makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [makeExecution('auto'), makeExecution('retry')] }),
+      makeFeature({
+        status: 'done',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto')],
+      }),
+      makeFeature({
+        status: 'done',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto'), makeExecution('retry')],
+      }),
       // 1 assisted
-      makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [makeExecution('auto'), makeExecution('manual')] }),
+      makeFeature({
+        status: 'done',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto'), makeExecution('manual')],
+      }),
       // 1 manual
       makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [] }),
     ]);
@@ -208,8 +240,16 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
 
   it('returns autonomy_rate of 1 when all features are fully_autonomous', async () => {
     featureLoader.getAll.mockResolvedValue([
-      makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [makeExecution('auto')] }),
-      makeFeature({ status: 'done', completedAt: yesterday, executionHistory: [makeExecution('auto')] }),
+      makeFeature({
+        status: 'done',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto')],
+      }),
+      makeFeature({
+        status: 'done',
+        completedAt: yesterday,
+        executionHistory: [makeExecution('auto')],
+      }),
     ]);
     const result = await service.getAutonomyMetrics(projectPath);
     expect(result.autonomy_rate).toBe(1);
@@ -243,7 +283,11 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
     // Feature completed 5 days ago
     const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
     featureLoader.getAll.mockResolvedValue([
-      makeFeature({ status: 'done', completedAt: fiveDaysAgo, executionHistory: [makeExecution('auto')] }),
+      makeFeature({
+        status: 'done',
+        completedAt: fiveDaysAgo,
+        executionHistory: [makeExecution('auto')],
+      }),
     ]);
 
     // windowDays=7 should include it
@@ -257,7 +301,9 @@ describe('AutonomyMetricsService.getAutonomyMetrics()', () => {
 
   it('includes window_start and window_end in the response', async () => {
     const result = await service.getAutonomyMetrics(projectPath);
-    expect(new Date(result.window_start).getTime()).toBeLessThan(new Date(result.window_end).getTime());
+    expect(new Date(result.window_start).getTime()).toBeLessThan(
+      new Date(result.window_end).getTime()
+    );
     // window_end should be very close to now
     expect(Date.now() - new Date(result.window_end).getTime()).toBeLessThan(5000);
   });
