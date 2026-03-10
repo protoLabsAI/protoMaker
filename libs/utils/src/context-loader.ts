@@ -52,11 +52,28 @@ type KnowledgeStoreService = {
 };
 
 /**
+ * Domain classification for context files.
+ * - 'engineering': technical files relevant to lead-engineer (architecture, build, testing, deployment, etc.)
+ * - 'project': product/business files relevant to PM (PRD, roadmap, goals, etc.)
+ * - 'all': cross-cutting files shown to all roles (default when unspecified)
+ */
+export type ContextDomain = 'engineering' | 'project' | 'all';
+
+/**
+ * Role of the caller — determines which context files are loaded.
+ * - 'lead-engineer': loads engineering-domain files only (+ 'all' domain)
+ * - 'pm': loads project-domain files only (+ 'all' domain)
+ * - 'ava': loads all files, preferring distilled summaries when available
+ * - undefined: loads all files (backward compatible default)
+ */
+export type ContextRole = 'lead-engineer' | 'pm' | 'ava';
+
+/**
  * Metadata structure for context files
  * Stored in {projectPath}/.automaker/context/context-metadata.json
  */
 export interface ContextMetadata {
-  files: Record<string, { description: string }>;
+  files: Record<string, { description: string; domain?: ContextDomain; isDistilled?: boolean }>;
 }
 
 /**
@@ -67,6 +84,8 @@ export interface ContextFileInfo {
   path: string;
   content: string;
   description?: string;
+  domain?: ContextDomain;
+  isDistilled?: boolean;
 }
 
 /**
@@ -133,6 +152,41 @@ export interface LoadContextFilesOptions {
   knowledgeStore?: KnowledgeStoreService | null;
   /** Maximum tokens for knowledge retrieval (default: 8000, ~4 chars per token) */
   maxKnowledgeTokens?: number;
+  /**
+   * Role of the caller — filters which context files are loaded.
+   * - 'lead-engineer': engineering-domain files only (reduces context ~40%)
+   * - 'pm': project-domain files only
+   * - 'ava': all files, prefers distilled summaries when available
+   * - undefined: all files (backward compatible default during migration)
+   */
+  role?: ContextRole;
+}
+
+/**
+ * Determine whether a context file should be included based on the caller's role.
+ *
+ * Rules:
+ * - No role (undefined): include all files (backward compat)
+ * - 'ava': include all files (load all domains, prefer distilled summaries)
+ * - 'lead-engineer': include files with domain 'engineering' or 'all' (or no domain)
+ * - 'pm': include files with domain 'project' or 'all' (or no domain)
+ *
+ * Files without a domain in metadata are treated as 'all' for backward compatibility.
+ */
+export function shouldIncludeContextFile(
+  domain: ContextDomain | undefined,
+  role: ContextRole | undefined
+): boolean {
+  // No role = load everything (backward compat for callers not yet migrated)
+  if (!role) return true;
+  // Ava always sees all files
+  if (role === 'ava') return true;
+  // No domain on file = treat as 'all' (always include)
+  if (!domain || domain === 'all') return true;
+  // Role-specific domain matching
+  if (role === 'lead-engineer') return domain === 'engineering';
+  if (role === 'pm') return domain === 'project';
+  return true;
 }
 
 /**
@@ -244,6 +298,7 @@ export async function loadContextFiles(
     maxMemoryFiles = 5,
     knowledgeStore,
     maxKnowledgeTokens = 8000,
+    role,
   } = options;
   const contextDir = path.resolve(getContextDir(projectPath));
 
@@ -268,20 +323,43 @@ export async function loadContextFiles(
       // Load metadata for descriptions
       const metadata = await loadContextMetadata(contextDir, fsModule);
 
-      // Load each file with its content and metadata
+      // Load each file with its content and metadata, applying role-based filtering
       for (const fileName of textFiles) {
-        const filePath = path.join(contextDir, fileName);
+        const fileMeta = metadata.files[fileName];
+        const fileDomain = fileMeta?.domain;
+
+        // Apply role-based domain filtering
+        if (!shouldIncludeContextFile(fileDomain, role)) {
+          continue;
+        }
+
+        // When role is 'ava', prefer distilled version if available
+        const targetFileName =
+          role === 'ava' && fileMeta?.isDistilled === false
+            ? fileName // isDistilled:false means this IS the full version; skip — distilled handled separately
+            : fileName;
+
+        const filePath = path.join(contextDir, targetFileName);
         try {
           const content = await fsModule.readFile(filePath, 'utf-8');
           files.push({
             name: fileName,
             path: filePath,
             content: content as string,
-            description: metadata.files[fileName]?.description,
+            description: fileMeta?.description,
+            domain: fileDomain,
+            isDistilled: fileMeta?.isDistilled,
           });
         } catch (error) {
           console.warn(`[ContextLoader] Failed to read context file ${fileName}:`, error);
         }
+      }
+
+      if (role) {
+        const roleLabel = role;
+        console.log(
+          `[ContextLoader] Role '${roleLabel}' filtered context to ${files.length}/${textFiles.length} file(s)`
+        );
       }
     }
   } catch {

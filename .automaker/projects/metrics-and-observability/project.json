@@ -2,7 +2,7 @@
   "slug": "metrics-and-observability",
   "title": "Metrics and Observability",
   "goal": "Implement DORA metrics and agentic-specific metrics to measure and tune system performance, enabling data-driven gate threshold calibration.",
-  "status": "approved",
+  "status": "active",
   "milestones": [
     {
       "number": 1,
@@ -102,5 +102,5 @@
     "constraints": "Must not add significant overhead to the event loop. Metrics collection should be event-driven, not polling. Storage in flat files (.automaker/metrics/) for simplicity. Dashboard should reuse existing analytics-view infrastructure."
   },
   "createdAt": "2026-03-10T09:31:39.277Z",
-  "updatedAt": "2026-03-10T22:07:38.048Z"
+  "updatedAt": "2026-03-10T09:38:47.194Z"
 }
