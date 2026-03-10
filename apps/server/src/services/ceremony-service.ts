@@ -287,6 +287,17 @@ export class CeremonyService {
             milestoneSlug?: string;
           }
         ).catch((err) => logger.warn('Ceremony trigger-requested error:', err));
+      } else if (type === ('retro:improvements:created' as string)) {
+        const p = payload as {
+          projectPath: string;
+          projectSlug: string;
+          milestoneSlug?: string;
+          retroSource: string;
+          itemsProcessed: number;
+        };
+        logger.info(
+          `CeremonyService: retro improvements created for ${p.retroSource} — ${p.itemsProcessed} items processed`
+        );
       }
     });
 
