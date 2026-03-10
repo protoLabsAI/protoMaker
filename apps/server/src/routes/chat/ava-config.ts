@@ -61,30 +61,41 @@ export interface AvaConfig {
 
 /**
  * Default configuration used when no per-project config file exists.
- * All tools are enabled; model defaults to sonnet.
+ *
+ * Enabled by default (~20 tools): briefing, health, notes, calendar, discord,
+ * avaChannel, metrics, settings, delegation, boardRead.
+ *
+ * Disabled by default (project-tactical): boardWrite, agentControl, autoMode,
+ * prWorkflow, promotion, contextFiles, orchestration, projectMgmt,
+ * agentDelegation, projects.
+ *
+ * Any group can be re-enabled via .automaker/ava-config.json.
  */
 export const DEFAULT_AVA_CONFIG: AvaConfig = {
   model: 'sonnet',
   toolGroups: {
+    // ── Always-on: oversight & communication ──────────────────────────────
     boardRead: true,
-    boardWrite: true,
-    agentControl: true,
-    autoMode: true,
-    projectMgmt: true,
-    orchestration: true,
-    agentDelegation: true,
-    notes: true,
-    metrics: true,
-    prWorkflow: true,
-    promotion: true,
-    contextFiles: true,
-    projects: true,
     briefing: true,
-    avaChannel: true,
-    discord: true,
-    calendar: true,
     health: true,
+    notes: true,
+    calendar: true,
+    discord: true,
+    avaChannel: true,
+    metrics: true,
     settings: true,
+    delegation: true,
+    // ── Off by default: project-tactical (re-enable via ava-config.json) ──
+    boardWrite: false,
+    agentControl: false,
+    autoMode: false,
+    prWorkflow: false,
+    promotion: false,
+    contextFiles: false,
+    orchestration: false,
+    projectMgmt: false,
+    agentDelegation: false,
+    projects: false,
   },
   sitrepInjection: true,
   contextInjection: true,

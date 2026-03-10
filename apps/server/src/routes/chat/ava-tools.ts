@@ -173,6 +173,8 @@ export interface AvaToolsConfig {
   settings?: boolean;
   /** Enable PM delegation tool (delegate_to_pm) */
   delegateToPm?: boolean;
+  /** Enable delegation tool group (delegate_to_pm) — preferred alias for delegateToPm */
+  delegation?: boolean;
 }
 
 // Re-use the same status literals that the Feature type exposes
@@ -2038,7 +2040,7 @@ export function buildAvaTools(
   // -----------------------------------------------------------------------
   // delegateToPm – delegate a question to the Project Manager
   // -----------------------------------------------------------------------
-  if (config.delegateToPm) {
+  if (config.delegateToPm || config.delegation) {
     tools['delegate_to_pm'] = makeTool({
       description:
         'Delegate a question about a project to the Project Manager (PM). ' +
