@@ -4,9 +4,7 @@
     {
       "from": "../../.env",
       "to": ".env",
-      "filter": [
-        "**/*"
-      ]
+      "filter": ["**/*"]
     }
   ],
   "afterPack": null
