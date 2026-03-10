@@ -482,6 +482,12 @@ export interface Feature {
    */
   filesToModify?: string[];
 
+  /**
+   * Instance ID of the agent or process that created this feature.
+   * Used for multi-instance mesh coordination to track feature origin.
+   */
+  createdByInstance?: string;
+
   // Signal provenance — tracks which channel originated this feature
   /**
    * The channel that originated this feature (e.g. 'discord', 'github', 'ui').

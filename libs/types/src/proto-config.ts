@@ -218,6 +218,26 @@ export const SharedSettingsSchema = z.object({
 export type SharedSettings = z.infer<typeof SharedSettingsSchema>;
 
 // ---------------------------------------------------------------------------
+// Project preferences — preferred projects and overflow routing
+// ---------------------------------------------------------------------------
+
+export const ProjectPreferencesSchema = z.object({
+  /**
+   * List of project slugs this instance prefers to work on.
+   * When set, auto-mode will prioritize features from these projects.
+   */
+  preferredProjects: z.array(z.string()).optional(),
+  /**
+   * Whether this instance can accept work overflow from non-preferred projects.
+   * When false, the instance only picks up features from preferredProjects.
+   * Defaults to true.
+   */
+  overflowEnabled: z.boolean().default(true),
+});
+
+export type ProjectPreferences = z.infer<typeof ProjectPreferencesSchema>;
+
+// ---------------------------------------------------------------------------
 // Root ProtoConfig
 // ---------------------------------------------------------------------------
 
@@ -252,6 +272,8 @@ export const ProtoConfigSchema = z.object({
    * Credentials and API keys MUST NOT be placed here.
    */
   sharedSettings: SharedSettingsSchema.optional(),
+  /** Project routing preferences — which projects this instance prefers and overflow policy */
+  projectPreferences: ProjectPreferencesSchema.optional(),
 });
 
 export type ProtoConfig = z.infer<typeof ProtoConfigSchema>;

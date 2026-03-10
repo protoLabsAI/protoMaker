@@ -205,8 +205,23 @@ export interface Project {
   /** Display color (hex) */
   color?: string;
 
-  /** Ongoing projects never complete — they are persistent containers (e.g., Bugs) */
+  /**
+   * Project type — 'finite' completes when all features are done, 'ongoing' is a persistent container.
+   * Replaces the `ongoing` boolean field.
+   */
+  type?: 'finite' | 'ongoing';
+
+  /** @deprecated Use `type` field instead. */
   ongoing?: boolean;
+
+  /** Instance ID or agent name this project is assigned to */
+  assignedTo?: string;
+
+  /** ISO 8601 timestamp when the project was assigned */
+  assignedAt?: string;
+
+  /** Who performed the assignment (agent ID, instance name, or 'user') */
+  assignedBy?: string;
 
   /** External links */
   links?: ProjectLink[];
@@ -353,7 +368,13 @@ export interface CreateProjectInput {
   /** Display color (hex) */
   color?: string;
 
-  /** Create an ongoing project (never completes) */
+  /**
+   * Project type — 'finite' completes when all features are done, 'ongoing' is a persistent container.
+   * Replaces the `ongoing` boolean field.
+   */
+  type?: 'finite' | 'ongoing';
+
+  /** @deprecated Use `type` field instead. */
   ongoing?: boolean;
 
   /** Optional initial milestones */

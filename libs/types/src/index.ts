@@ -22,10 +22,6 @@ export type {
   HealthAlert,
   DoraReport,
   PatternResolved,
-  WorkInventory,
-  ScheduleAssignment,
-  SchedulerHeartbeat,
-  ScheduleConflict,
 } from './ava-channel.js';
 
 // Event Ledger types — append-only JSONL event persistence layer
@@ -938,6 +934,7 @@ export {
   ProtoWorkIntakeSchema,
   InstanceRoleSchema,
   SharedSettingsSchema,
+  ProjectPreferencesSchema,
 } from './proto-config.js';
 export type {
   ProtoConfig,
@@ -953,6 +950,7 @@ export type {
   ProtoWorkIntake,
   InstanceRole,
   SharedSettings,
+  ProjectPreferences,
 } from './proto-config.js';
 
 // DORA metrics types (lead time, deployment frequency, change failure rate, recovery time, rework rate)
