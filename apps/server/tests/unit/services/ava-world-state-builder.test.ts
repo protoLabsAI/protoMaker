@@ -92,43 +92,43 @@ describe('AvaWorldStateBuilder', () => {
   // ── getFullBriefing() — structure ──────────────────────────────────
 
   describe('getFullBriefing() — structure', () => {
-    it('should include top-level heading', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include top-level heading', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('# Ava Full Briefing');
     });
 
-    it('should include PM layer section', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include PM layer section', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('## Project Management Layer');
     });
 
-    it('should include Engineering layer section', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include Engineering layer section', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('## Engineering Layer');
     });
 
-    it('should include Strategic Context section', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include Strategic Context section', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('## Strategic Context');
     });
 
-    it('should include Team Health subsection', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include Team Health subsection', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('### Team Health');
     });
 
-    it('should include Cross-Project Dependencies subsection', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include Cross-Project Dependencies subsection', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('### Cross-Project Dependencies');
     });
 
-    it('should include Brand & Content subsection', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include Brand & Content subsection', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('### Brand & Content');
     });
 
-    it('should include a generation timestamp', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include a generation timestamp', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toMatch(/_Generated: \d{4}-\d{2}-\d{2}/);
     });
   });
@@ -136,25 +136,25 @@ describe('AvaWorldStateBuilder', () => {
   // ── getFullBriefing() — aggregation ──────────────────────────────────
 
   describe('getFullBriefing() — aggregation', () => {
-    it('should include PM distilled summary content', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include PM distilled summary content', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('## Project Status');
       expect(briefing).toContain('test-project');
     });
 
-    it('should call pmBuilder.getDistilledSummary()', () => {
-      builder.getFullBriefing();
+    it('should call pmBuilder.getDistilledSummary()', async () => {
+      await builder.getFullBriefing();
       expect(vi.mocked(pmBuilder.getDistilledSummary)).toHaveBeenCalledOnce();
     });
 
-    it('should include LE world state summary content', () => {
-      const briefing = builder.getFullBriefing();
+    it('should include LE world state summary content', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('## Engineering');
       expect(briefing).toContain('3 features in progress');
     });
 
-    it('should call leProvider.getWorldStateSummary()', () => {
-      builder.getFullBriefing();
+    it('should call leProvider.getWorldStateSummary()', async () => {
+      await builder.getFullBriefing();
       expect(vi.mocked(leProvider.getWorldStateSummary)).toHaveBeenCalledOnce();
     });
   });
@@ -162,22 +162,22 @@ describe('AvaWorldStateBuilder', () => {
   // ── Team health ──────────────────────────────────────────────────────
 
   describe('team health metrics', () => {
-    it('should show active agents count', () => {
-      const briefing = builder.getFullBriefing();
+    it('should show active agents count', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('Active Agents: 0');
     });
 
-    it('should show escalations count', () => {
-      const briefing = builder.getFullBriefing();
+    it('should show escalations count', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('Escalations: 0');
     });
 
-    it('should flag errorBudgetExhausted=true when no projects exist', () => {
-      const briefing = builder.getFullBriefing();
+    it('should flag errorBudgetExhausted=true when no projects exist', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('Error Budget Exhausted: Yes');
     });
 
-    it('should flag errorBudgetExhausted=false when projects exist', () => {
+    it('should flag errorBudgetExhausted=false when projects exist', async () => {
       pmBuilder = makeMockPmBuilder({
         projects: {
           'my-project': {
@@ -189,7 +189,7 @@ describe('AvaWorldStateBuilder', () => {
         },
       });
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider);
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('Error Budget Exhausted: No');
     });
   });
@@ -197,18 +197,18 @@ describe('AvaWorldStateBuilder', () => {
   // ── Cross-project dependencies ───────────────────────────────────────
 
   describe('cross-project dependencies', () => {
-    it('should show no-dependency placeholder with single project', () => {
+    it('should show no-dependency placeholder with single project', async () => {
       pmBuilder = makeMockPmBuilder({
         projects: {
           solo: { status: 'active', phase: 'dev', milestoneCount: 0, completedMilestones: 0 },
         },
       });
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider);
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('_No cross-project dependencies detected_');
     });
 
-    it('should flag multiple active projects', () => {
+    it('should flag multiple active projects', async () => {
       pmBuilder = makeMockPmBuilder({
         projects: {
           'proj-a': { status: 'active', phase: 'dev', milestoneCount: 1, completedMilestones: 0 },
@@ -216,7 +216,7 @@ describe('AvaWorldStateBuilder', () => {
         },
       });
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider);
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('2 active projects');
       expect(briefing).toContain('shared dependencies');
     });
@@ -225,36 +225,36 @@ describe('AvaWorldStateBuilder', () => {
   // ── Brand & content status ───────────────────────────────────────────
 
   describe('brand & content status', () => {
-    it('should show no-deadlines placeholder when none exist', () => {
-      const briefing = builder.getFullBriefing();
+    it('should show no-deadlines placeholder when none exist', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('_No brand/content deadlines on the horizon_');
     });
 
-    it('should show upcoming deadlines from PM state', () => {
+    it('should show upcoming deadlines from PM state', async () => {
       pmBuilder = makeMockPmBuilder({
         upcomingDeadlines: [
           { projectSlug: 'content', label: 'Blog Post Launch', dueAt: '2099-06-01T00:00:00.000Z' },
         ],
       });
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider);
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('Blog Post Launch');
       expect(briefing).toContain('2099-06-01');
       expect(briefing).toContain('content');
     });
 
-    it('should not show past deadlines in brand section', () => {
+    it('should not show past deadlines in brand section', async () => {
       pmBuilder = makeMockPmBuilder({
         upcomingDeadlines: [
           { projectSlug: 'old', label: 'Past Launch', dueAt: '2020-01-01T00:00:00.000Z' },
         ],
       });
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider);
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('_No brand/content deadlines on the horizon_');
     });
 
-    it('should limit brand deadlines to 3 entries', () => {
+    it('should limit brand deadlines to 3 entries', async () => {
       const deadlines = Array.from({ length: 5 }, (_, i) => ({
         projectSlug: 'proj',
         label: `Deadline ${i + 1}`,
@@ -262,7 +262,7 @@ describe('AvaWorldStateBuilder', () => {
       }));
       pmBuilder = makeMockPmBuilder({ upcomingDeadlines: deadlines });
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider);
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       const matches = briefing.match(/^- 2099-\d{2}-\d{2}/gm) ?? [];
       expect(matches.length).toBeLessThanOrEqual(3);
     });
@@ -271,16 +271,16 @@ describe('AvaWorldStateBuilder', () => {
   // ── Strategic context ────────────────────────────────────────────────
 
   describe('strategic context', () => {
-    it('should not include Strategic Directives section when not configured', () => {
-      const briefing = builder.getFullBriefing();
+    it('should not include Strategic Directives section when not configured', async () => {
+      const briefing = await builder.getFullBriefing();
       expect(briefing).not.toContain('### Strategic Directives');
     });
 
-    it('should include Strategic Directives when configured', () => {
+    it('should include Strategic Directives when configured', async () => {
       builder = new AvaWorldStateBuilder(pmBuilder, leProvider, {
         strategicContext: 'Focus on revenue-generating features this sprint.',
       });
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('### Strategic Directives');
       expect(briefing).toContain('Focus on revenue-generating features');
     });
@@ -289,27 +289,27 @@ describe('AvaWorldStateBuilder', () => {
   // ── Error resilience ─────────────────────────────────────────────────
 
   describe('error resilience', () => {
-    it('should show PM unavailable message when getDistilledSummary throws', () => {
+    it('should show PM unavailable message when getDistilledSummary throws', async () => {
       vi.mocked(pmBuilder.getDistilledSummary).mockImplementation(() => {
         throw new Error('PM disk failure');
       });
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('_PM summary unavailable_');
     });
 
-    it('should show LE unavailable message when getWorldStateSummary throws', () => {
+    it('should show LE unavailable message when getWorldStateSummary throws', async () => {
       vi.mocked(leProvider.getWorldStateSummary).mockImplementation(() => {
         throw new Error('LE service unavailable');
       });
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('_Engineering summary unavailable_');
     });
 
-    it('should still produce a complete briefing despite PM failure', () => {
+    it('should still produce a complete briefing despite PM failure', async () => {
       vi.mocked(pmBuilder.getDistilledSummary).mockImplementation(() => {
         throw new Error('oops');
       });
-      const briefing = builder.getFullBriefing();
+      const briefing = await builder.getFullBriefing();
       expect(briefing).toContain('## Strategic Context');
       expect(briefing).toContain('### Team Health');
     });

@@ -16,9 +16,27 @@ const logger = createLogger('PMWorldStateBuilder');
 
 const REFRESH_INTERVAL_MS = 60_000;
 
+/**
+ * Minimal interface for knowledge ingestion of PM project state.
+ * Implemented by any service that can persist PM state changes to the knowledge store.
+ */
+export interface PMKnowledgeIngestor {
+  ingestProjectStateChanges(projectPath: string, state: PMWorldState): Promise<number>;
+}
+
 export interface PMWorldStateBuilderConfig {
   /** Root directory to scan for project files (.automaker/projects/) */
   projectRoot?: string;
+  /**
+   * Optional knowledge ingestor for indexing PM state changes with domain='project'.
+   * When provided, state changes are written to the knowledge store on every refresh.
+   */
+  knowledgeIngestor?: PMKnowledgeIngestor;
+  /**
+   * Project path passed to the knowledge ingestor.
+   * Defaults to projectRoot if not set.
+   */
+  knowledgeProjectPath?: string;
 }
 
 /**
@@ -28,9 +46,13 @@ export class PMWorldStateBuilder {
   private state: PMWorldState;
   private refreshTimer: NodeJS.Timeout | null = null;
   private readonly projectRoot: string;
+  private readonly knowledgeIngestor: PMKnowledgeIngestor | undefined;
+  private readonly knowledgeProjectPath: string;
 
   constructor(config: PMWorldStateBuilderConfig = {}) {
     this.projectRoot = config.projectRoot ?? process.cwd();
+    this.knowledgeIngestor = config.knowledgeIngestor;
+    this.knowledgeProjectPath = config.knowledgeProjectPath ?? this.projectRoot;
     this.state = this.emptyState();
   }
 
@@ -143,6 +165,9 @@ export class PMWorldStateBuilder {
   /**
    * Read project data from disk and rebuild the PMWorldState.
    * Gracefully handles missing directories or malformed files.
+   *
+   * After a successful refresh, indexes the new state into the knowledge store
+   * (if a knowledgeIngestor was provided) with domain='project'.
    */
   async buildState(): Promise<void> {
     try {
@@ -156,6 +181,19 @@ export class PMWorldStateBuilder {
       this.state = next;
 
       logger.debug(`PMWorldState refreshed — ${Object.keys(next.projects).length} projects`);
+
+      // Index PM state changes into the knowledge store (domain='project')
+      if (this.knowledgeIngestor) {
+        try {
+          const count = await this.knowledgeIngestor.ingestProjectStateChanges(
+            this.knowledgeProjectPath,
+            next
+          );
+          logger.debug(`PM knowledge ingestion complete: ${count} chunks indexed`);
+        } catch (err) {
+          logger.warn('PM knowledge ingestion failed (non-fatal):', err);
+        }
+      }
     } catch (err) {
       logger.warn('PMWorldStateBuilder.buildState() failed, retaining previous state:', err);
     }
