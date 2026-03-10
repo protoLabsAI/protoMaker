@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { useChatStore } from '@/store/chat-store';
 import { useIsMobile } from '@/hooks/use-media-query';
@@ -8,6 +8,13 @@ import { isElectron, getOverlayAPI } from '@/lib/electron';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@protolabsai/ui/atoms';
+import {
   Bot,
   ListTodo,
   Activity,
@@ -16,7 +23,10 @@ import {
   Terminal,
   MessageCircle,
   HeartPulse,
+  Server,
+  Check,
 } from 'lucide-react';
+import { getServerUrlSync } from '@/lib/http-api-client';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -31,6 +41,14 @@ function formatUptime(seconds: number): string {
   if (d > 0) return `${d}d ${h}h`;
   if (h > 0) return `${h}h ${m}m`;
   return `${m}m`;
+}
+
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }
 
 interface StatItemProps {
@@ -79,6 +97,28 @@ export function BottomPanel() {
   } = useProjectHealth(projectPath);
   const { data: systemHealth } = useSystemHealth(projectPath);
 
+  // Server connection state
+  const serverUrlOverride = useAppStore((s) => s.serverUrlOverride);
+  const recentServerUrls = useAppStore((s) => s.recentServerUrls);
+  const recentConnections = useAppStore((s) => s.recentConnections);
+  const setServerUrlOverride = useAppStore((s) => s.setServerUrlOverride);
+  const instanceName = useAppStore((s) => s.instanceName);
+  const peers = useAppStore((s) => s.peers);
+  const fetchSelfInstanceId = useAppStore((s) => s.fetchSelfInstanceId);
+  const fetchPeers = useAppStore((s) => s.fetchPeers);
+
+  const [serverDropdownOpen, setServerDropdownOpen] = useState(false);
+  const hasFetchedRef = useRef(false);
+
+  // Fetch instance info and peers on mount (once)
+  useEffect(() => {
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchSelfInstanceId().catch(() => {});
+      fetchPeers().catch(() => {});
+    }
+  }, [fetchSelfInstanceId, fetchPeers]);
+
   const [time, setTime] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setTime(new Date()), 1_000);
@@ -106,6 +146,51 @@ export function BottomPanel() {
     warn: 'text-yellow-500',
     error: 'text-red-500',
   }[systemStatus];
+
+  // Derive display label: instanceName > hostname of current URL > 'Server'
+  const currentServerUrl = serverUrlOverride ?? getServerUrlSync();
+  const displayLabel =
+    instanceName ?? (currentServerUrl ? getHostname(currentServerUrl) : 'Server');
+
+  // Online hivemind peers with a known URL (for quick-switch)
+  const peerEntries = peers
+    .filter((p) => p.identity.status !== 'offline' && p.identity.url)
+    .map((p) => ({
+      label: p.identity.name ?? p.identity.instanceId,
+      url: p.identity.url!,
+      role: p.identity.role ?? null,
+    }));
+
+  // Recent connections (deduplicated against peer entries)
+  const peerUrls = new Set(peerEntries.map((p) => p.url));
+  const recentEntries = [
+    // Prefer typed recentConnections (new format), fall back to recentServerUrls (legacy)
+    ...recentConnections.map((c) => ({
+      url: c.url,
+      label: getHostname(c.url),
+    })),
+    ...recentServerUrls
+      .filter((url) => !recentConnections.some((c) => c.url === url))
+      .map((url) => ({ url, label: getHostname(url) })),
+  ].filter((entry) => !peerUrls.has(entry.url));
+
+  const handleSwitchServer = (url: string) => {
+    setServerUrlOverride(url);
+    setServerDropdownOpen(false);
+    // Refresh instance info after a brief delay to let the new URL take effect
+    setTimeout(() => {
+      fetchSelfInstanceId().catch(() => {});
+      fetchPeers().catch(() => {});
+    }, 500);
+  };
+
+  const handleResetToDefault = () => {
+    setServerUrlOverride(null);
+    setServerDropdownOpen(false);
+    setTimeout(() => {
+      fetchSelfInstanceId().catch(() => {});
+    }, 500);
+  };
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -244,6 +329,155 @@ export function BottomPanel() {
               )}
             </TooltipContent>
           </Tooltip>
+
+          {/* Server / instance badge */}
+          <div className="h-4 w-px bg-border" />
+          <DropdownMenu open={serverDropdownOpen} onOpenChange={setServerDropdownOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none p-0 focus:outline-none cursor-pointer"
+                    aria-label="Switch server connection"
+                  >
+                    <Server className="h-3.5 w-3.5" />
+                    <span className="max-w-[120px] truncate">{displayLabel}</span>
+                  </button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                <div className="space-y-1 min-w-[160px]">
+                  <p className="font-medium border-b border-border pb-1">Server Connection</p>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">URL</span>
+                    <span className="font-mono text-[10px] max-w-[140px] truncate">
+                      {currentServerUrl}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <span className="text-emerald-400">connected</span>
+                  </div>
+                  <p className="text-muted-foreground/70 pt-0.5">Click to switch server</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent side="top" align="start" className="w-56 text-xs">
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                Switch Server
+              </div>
+              <DropdownMenuSeparator />
+
+              {/* Current connection */}
+              <DropdownMenuItem
+                className="flex items-center gap-2 text-xs"
+                onClick={() => {
+                  if (serverUrlOverride) handleResetToDefault();
+                }}
+                disabled={!serverUrlOverride}
+              >
+                <Check
+                  className={cn(
+                    'h-3 w-3 shrink-0',
+                    serverUrlOverride ? 'opacity-0' : 'text-emerald-500'
+                  )}
+                />
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate font-medium">{displayLabel}</span>
+                  <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
+                    {currentServerUrl}
+                  </span>
+                </div>
+              </DropdownMenuItem>
+
+              {/* Online hivemind peers */}
+              {peerEntries.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">Online peers</div>
+                  {peerEntries.map((entry) => {
+                    const isCurrent = entry.url === currentServerUrl;
+                    return (
+                      <DropdownMenuItem
+                        key={entry.url}
+                        className="flex items-center gap-2 text-xs"
+                        onClick={() => !isCurrent && handleSwitchServer(entry.url)}
+                        disabled={isCurrent}
+                      >
+                        <Check
+                          className={cn(
+                            'h-3 w-3 shrink-0',
+                            isCurrent ? 'text-emerald-500' : 'opacity-0'
+                          )}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate font-medium">{entry.label}</span>
+                          <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
+                            {entry.url}
+                          </span>
+                        </div>
+                        {entry.role && (
+                          <span className="ml-auto text-[10px] text-muted-foreground/60 shrink-0">
+                            {entry.role}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Recent connections */}
+              {recentEntries.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1 text-[10px] text-muted-foreground/70">Recent</div>
+                  {recentEntries.map((entry) => {
+                    const isCurrent = entry.url === currentServerUrl;
+                    return (
+                      <DropdownMenuItem
+                        key={entry.url}
+                        className="flex items-center gap-2 text-xs"
+                        onClick={() => !isCurrent && handleSwitchServer(entry.url)}
+                        disabled={isCurrent}
+                      >
+                        <Check
+                          className={cn(
+                            'h-3 w-3 shrink-0',
+                            isCurrent ? 'text-emerald-500' : 'opacity-0'
+                          )}
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate">{entry.label}</span>
+                          <span className="text-muted-foreground/70 font-mono text-[10px] truncate">
+                            {entry.url}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </>
+              )}
+
+              {peerEntries.length === 0 && recentEntries.length === 0 && (
+                <div className="px-2 py-2 text-xs text-muted-foreground/70 text-center">
+                  No recent connections
+                </div>
+              )}
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-xs text-muted-foreground"
+                onClick={() => {
+                  setServerDropdownOpen(false);
+                  useAppStore.getState().setCurrentView('settings');
+                }}
+              >
+                <Server className="h-3 w-3 mr-2" />
+                Manage connections...
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Spacer */}
@@ -251,10 +485,18 @@ export function BottomPanel() {
 
         {/* Clock */}
         <span className="relative group text-xs tabular-nums text-muted-foreground cursor-default">
-          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+          {time.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          })}
           <span className="absolute bottom-full right-0 mb-2 px-2.5 py-1.5 rounded-lg bg-popover text-popover-foreground text-xs font-medium border border-border shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap pointer-events-none tabular-nums">
             <span className="font-semibold">
-              {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+              {time.toLocaleDateString([], {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
             </span>
             <span className="mx-1 text-muted-foreground/50">|</span>
             {time.toLocaleTimeString([], {

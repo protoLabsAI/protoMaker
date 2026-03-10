@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "extraResources": [
+    {
+      "from": "../../.env",
+      "to": ".env",
+      "filter": ["**/*"]
+    }
+  ],
+  "afterPack": null
+}

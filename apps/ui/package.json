@@ -21,6 +21,7 @@
     "dev:electron:debug": "cross-env OPEN_DEVTOOLS=true vite --clearScreen false",
     "build": "vite build",
     "build:electron": "node scripts/prepare-server.mjs && vite build && electron-builder",
+    "build:electron:legless": "vite build && electron-builder --config electron-builder.legless.json",
     "build:electron:dir": "node scripts/prepare-server.mjs && vite build && electron-builder --dir",
     "build:electron:win": "node scripts/prepare-server.mjs && vite build && electron-builder --win",
     "build:electron:win:dir": "node scripts/prepare-server.mjs && vite build && electron-builder --win --dir",

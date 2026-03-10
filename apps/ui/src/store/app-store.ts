@@ -163,6 +163,15 @@ export interface AppState {
   // Server URL runtime override
   serverUrlOverride: string | null; // Runtime server URL override (null = use env var / default)
   recentServerUrls: string[]; // Recently used server URLs, max 10, persisted in localStorage
+
+  // Server connection state
+  serverStatus: 'connected' | 'disconnected' | 'connecting'; // Current connection status
+  serverInfo: { version: string; status: string; timestamp: string } | null; // Info from /api/health
+  recentConnections: Array<{ url: string; lastConnected: string }>; // Recent connections with timestamps
+
+  // Connected instance identity
+  instanceName: string | null; // Human-readable name of the connected instance (e.g. 'Dev Server', 'Staging')
+  instanceRole: string | null; // Role of the connected instance (e.g. 'primary', 'worker')
 }
 
 export interface AppActions {
@@ -330,6 +339,12 @@ export interface AppActions {
   // Server URL runtime override actions
   setServerUrlOverride: (url: string | null) => void;
 
+  // Server connection actions
+  connectToServer: (url: string) => Promise<void>;
+  removeRecentConnection: (url: string) => void;
+  setInstanceName: (name: string | null) => void;
+  fetchInstanceInfo: () => Promise<void>;
+
   // Reset
   reset: () => void;
 }
@@ -424,6 +439,20 @@ const initialState: AppState = {
       return [];
     }
   })(),
+  // Server connection state
+  serverStatus: 'disconnected' as 'connected' | 'disconnected' | 'connecting',
+  serverInfo: null,
+  recentConnections: (() => {
+    try {
+      const stored = localStorage.getItem('automaker:recentConnections');
+      return stored ? (JSON.parse(stored) as Array<{ url: string; lastConnected: string }>) : [];
+    } catch {
+      return [];
+    }
+  })(),
+  // Connected instance identity
+  instanceName: null,
+  instanceRole: null,
 };
 
 export const useAppStore = create<AppState & AppActions>()((set, get) => ({
@@ -1295,7 +1324,17 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     try {
       const api = getHttpApiClient();
       const data = await api.hivemind.getSelf();
-      set({ selfInstanceId: data.instanceId });
+      const selfId = data.instanceId;
+      // Try to find a human-readable name via hivemind status (self shows up in onlinePeers)
+      let displayName: string | null = null;
+      try {
+        const status = await api.hivemind.getStatus();
+        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
+        displayName = selfPeer?.identity.name ?? null;
+      } catch {
+        // Status endpoint may fail — fall back to instanceId
+      }
+      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId });
     } catch (err) {
       logger.warn('[AppStore] Failed to fetch self instanceId:', err);
     }
@@ -1329,6 +1368,91 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     // Invalidate cached HTTP client and trigger WebSocket reconnection
     invalidateHttpClient();
+  },
+
+  // Server connection actions
+  connectToServer: async (url) => {
+    set({ serverStatus: 'connecting', serverInfo: null, instanceName: null, instanceRole: null });
+    try {
+      const response = await fetch(`${url}/api/health`, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) {
+        set({ serverStatus: 'disconnected' });
+        return;
+      }
+      const data = (await response.json()) as {
+        version?: string;
+        status?: string;
+        timestamp?: string;
+      };
+      const serverInfo = {
+        version: data.version ?? 'unknown',
+        status: data.status ?? 'ok',
+        timestamp: data.timestamp ?? new Date().toISOString(),
+      };
+
+      // Update recent connections (deduplicated, max 10)
+      const lastConnected = new Date().toISOString();
+      const existing = get().recentConnections.filter((c) => c.url !== url);
+      const recentConnections = [{ url, lastConnected }, ...existing].slice(0, 10);
+      try {
+        localStorage.setItem('automaker:recentConnections', JSON.stringify(recentConnections));
+      } catch {
+        // localStorage might be disabled
+      }
+
+      set({ serverStatus: 'connected', serverInfo, recentConnections });
+
+      // Apply the URL override so all subsequent API calls use the new server
+      get().setServerUrlOverride(url);
+    } catch {
+      set({ serverStatus: 'disconnected' });
+    }
+  },
+
+  removeRecentConnection: (url) => {
+    const recentConnections = get().recentConnections.filter((c) => c.url !== url);
+    try {
+      localStorage.setItem('automaker:recentConnections', JSON.stringify(recentConnections));
+    } catch {
+      // localStorage might be disabled
+    }
+    // Also remove from legacy recentServerUrls list for consistency
+    const recentServerUrls = get().recentServerUrls.filter((u) => u !== url);
+    try {
+      localStorage.setItem('automaker:recentServerUrls', JSON.stringify(recentServerUrls));
+    } catch {
+      // localStorage might be disabled
+    }
+    set({ recentConnections, recentServerUrls });
+  },
+
+  setInstanceName: (name) => set({ instanceName: name }),
+
+  fetchInstanceInfo: async () => {
+    try {
+      const api = getHttpApiClient();
+      // Fetch self instanceId
+      const selfData = await api.hivemind.getSelf();
+      const selfId = selfData.instanceId;
+      // Fetch hivemind status to get role and display name
+      let displayName: string | null = null;
+      let instanceRole: string | null = null;
+      try {
+        const status = await api.hivemind.getStatus();
+        instanceRole = status.role ?? null;
+        const selfPeer = status.onlinePeers.find((p) => p.identity.instanceId === selfId);
+        displayName = selfPeer?.identity.name ?? null;
+      } catch {
+        // Status endpoint may fail — fall back gracefully
+      }
+      set({ selfInstanceId: selfId, instanceName: displayName ?? selfId, instanceRole });
+    } catch (err) {
+      logger.warn('[AppStore] Failed to fetch instance info:', err);
+    }
   },
 
   // Reset
