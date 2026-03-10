@@ -9,7 +9,10 @@
  * passes control to the next phase (consolidation).
  */
 
+import { createLogger } from '@protolabsai/utils';
 import type { AntagonisticReviewState } from '../state.js';
+
+const logger = createLogger('aggregate-pairs');
 
 /**
  * Aggregate node that validates pair review collection
@@ -26,11 +29,11 @@ export async function aggregatePairs(
 ): Promise<Partial<AntagonisticReviewState>> {
   const { pairReviews } = state;
 
-  console.log(`[AggregatePairs] Collected ${pairReviews.length} pair review(s)`);
+  logger.info(`[AggregatePairs] Collected ${pairReviews.length} pair review(s)`);
 
   // Log summary of collected reviews
   for (const review of pairReviews) {
-    console.log(
+    logger.info(
       `[AggregatePairs] - ${review.section}: consensus=${review.consensus}, verdict=${review.agreedVerdict}`
     );
   }
@@ -38,7 +41,7 @@ export async function aggregatePairs(
   // Validation: ensure all collected reviews have required fields
   for (const review of pairReviews) {
     if (!review.section || !review.consolidatedComments) {
-      console.warn(`[AggregatePairs] Warning: Incomplete review for section ${review.section}`);
+      logger.warn(`[AggregatePairs] Warning: Incomplete review for section ${review.section}`);
     }
   }
 

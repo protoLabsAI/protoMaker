@@ -11,8 +11,14 @@
  */
 
 import { StateGraph, Annotation, END, MemorySaver } from '@langchain/langgraph';
-import { draft, type ReviewState } from './nodes/draft.js';
 import { revise } from './nodes/revise.js';
+
+export interface ReviewState {
+  content: string;
+  feedback?: string;
+  approved?: boolean;
+  revision?: number;
+}
 
 // Define the state annotation
 const ReviewStateAnnotation = Annotation.Root({
@@ -21,6 +27,17 @@ const ReviewStateAnnotation = Annotation.Root({
   approved: Annotation<boolean | undefined>,
   revision: Annotation<number | undefined>,
 });
+
+/**
+ * Draft node - Creates an initial draft document
+ */
+async function draft(state: ReviewState): Promise<Partial<ReviewState>> {
+  const draftContent = state.content || 'This is a draft document that needs review.';
+  return {
+    content: draftContent,
+    revision: (state.revision ?? 0) + 1,
+  };
+}
 
 /**
  * Human review node - This is where the interrupt occurs
@@ -71,8 +88,3 @@ export function createReviewFlow() {
     checkpointer,
   });
 }
-
-/**
- * Export the review state type for use in tests
- */
-export type { ReviewState };

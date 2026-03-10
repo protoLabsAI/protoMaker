@@ -2,7 +2,7 @@
  * Revise node - Applies feedback to revise the document
  */
 
-import type { ReviewState } from './draft.js';
+import type { ReviewState } from '../review-flow.js';
 
 export async function revise(state: ReviewState): Promise<Partial<ReviewState>> {
   // Apply feedback to revise content

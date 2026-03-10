@@ -15,7 +15,10 @@
 
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
+import { createLogger } from '@protolabsai/utils';
 import { executeWithFallback } from './classify-topic.js';
+
+const logger = createLogger('ava-review');
 
 /**
  * Review verdict schema
@@ -75,7 +78,7 @@ export async function avaReviewNode(state: AvaReviewState): Promise<Partial<AvaR
   const { prd, smartModel, fastModel } = state;
   const nodeName = 'AvaReviewNode';
 
-  console.log(`[${nodeName}] Starting Ava's operational review`);
+  logger.info(`[${nodeName}] Starting Ava's operational review`);
 
   try {
     // Execute with model fallback, capturing both content and token usage
@@ -145,13 +148,13 @@ Be direct, practical, and focus on execution realities. Return ONLY the JSON obj
     // Parse and validate the LLM response
     const avaReview = parseAndValidateReview(result.content, nodeName);
 
-    console.log(
+    logger.info(
       `[${nodeName}] Review complete: ${avaReview.verdict} (${avaReview.sections.length} sections)`
     );
 
     return { avaReview, tokenUsage: result.tokenUsage };
   } catch (error) {
-    console.error(`[${nodeName}] Failed:`, error);
+    logger.error(`[${nodeName}] Failed:`, error);
     throw error;
   }
 }
@@ -181,7 +184,7 @@ function parseAndValidateReview(output: string, nodeName: string): ReviewerPersp
 
     return validated;
   } catch (error) {
-    console.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
+    logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid review format: ${issues}`);

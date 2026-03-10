@@ -11,8 +11,11 @@
 
 import { Send, Command } from '@langchain/langgraph';
 import { DistillationDepth } from '@protolabsai/types';
+import { createLogger } from '@protolabsai/utils';
 import type { AntagonisticReviewState } from '../state.js';
 import { ALL_PAIRS, MATT_CINDI_PAIR } from '../pairs.js';
+
+const logger = createLogger('fan-out-pairs');
 
 /**
  * Fan-out node that dispatches pair reviews based on distillation depth
@@ -26,24 +29,24 @@ import { ALL_PAIRS, MATT_CINDI_PAIR } from '../pairs.js';
 export async function fanOutPairs(state: AntagonisticReviewState): Promise<Command> {
   const depth = state.distillationDepth ?? DistillationDepth.Surface;
 
-  console.log(`[FanOutPairs] Distillation depth: ${depth}`);
+  logger.info(`[FanOutPairs] Distillation depth: ${depth}`);
 
   // depth=0 (surface): Skip pair reviews entirely
   if (depth === DistillationDepth.Surface) {
-    console.log('[FanOutPairs] Depth=0, skipping all pair reviews');
+    logger.info('[FanOutPairs] Depth=0, skipping all pair reviews');
     return new Command({ goto: 'aggregate_pairs' });
   }
 
   // depth=1 (standard): Activate most relevant pair (Matt+Cindi for performance)
   if (depth === DistillationDepth.Standard) {
-    console.log(`[FanOutPairs] Depth=1, activating single pair: ${MATT_CINDI_PAIR.section}`);
+    logger.info(`[FanOutPairs] Depth=1, activating single pair: ${MATT_CINDI_PAIR.section}`);
     return new Command({
       goto: [new Send('pair_review', { pairConfig: MATT_CINDI_PAIR })],
     });
   }
 
   // depth=2 (deep): Activate all three pairs in parallel
-  console.log(`[FanOutPairs] Depth=2, activating all ${ALL_PAIRS.length} pairs in parallel`);
+  logger.info(`[FanOutPairs] Depth=2, activating all ${ALL_PAIRS.length} pairs in parallel`);
   const sends = ALL_PAIRS.map((pairConfig) => new Send('pair_review', { pairConfig }));
 
   return new Command({ goto: sends });

@@ -59,25 +59,6 @@ export interface GraphDefinition {
  */
 const GRAPH_REGISTRY: GraphDefinition[] = [
   {
-    id: 'research-flow',
-    name: 'Research Flow',
-    description: 'Linear sequential flow for research tasks',
-    topology: 'linear',
-    nodes: [
-      { id: 'gather_context', type: 'processor', description: 'Gather contextual information' },
-      { id: 'analyze', type: 'processor', description: 'Analyze gathered context' },
-      { id: 'summarize', type: 'processor', description: 'Generate summary' },
-    ],
-    edges: [
-      { from: 'gather_context', to: 'analyze' },
-      { from: 'analyze', to: 'summarize' },
-      { from: 'summarize', to: 'END' },
-    ],
-    entryPoint: 'gather_context',
-    features: ['sequential', 'stateful', 'checkpointing'],
-    useCase: 'Research and analysis workflows',
-  },
-  {
     id: 'review-flow',
     name: 'Review Flow',
     description: 'Linear flow with human-in-the-loop interrupt',

@@ -19,8 +19,11 @@
 
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { z } from 'zod';
+import { createLogger } from '@protolabsai/utils';
 import { executeWithFallback } from './classify-topic.js';
 import { type ReviewerPerspective, type NodeTokenUsage } from './ava-review.js';
+
+const logger = createLogger('consolidate');
 
 /**
  * Final verdict schema for consolidated review
@@ -74,7 +77,7 @@ export async function consolidateNode(state: ConsolidateState): Promise<Partial<
   const { prd, avaReview, jonReview, pairReviews = [], smartModel, fastModel } = state;
   const nodeName = 'ConsolidateNode';
 
-  console.log(`[${nodeName}] Starting review consolidation`);
+  logger.info(`[${nodeName}] Starting review consolidation`);
 
   // Collect all reviews
   const allReviews: ReviewerPerspective[] = [];
@@ -180,13 +183,13 @@ Be thorough, fair, and prioritize both customer value (Jon's focus) and executio
     // Parse and validate the LLM response
     const consolidatedReview = parseAndValidateConsolidation(result.content, nodeName);
 
-    console.log(
+    logger.info(
       `[${nodeName}] Consolidation complete: ${consolidatedReview.verdict} (${allReviews.length} reviews merged)`
     );
 
     return { consolidatedReview, tokenUsage: result.tokenUsage };
   } catch (error) {
-    console.error(`[${nodeName}] Failed:`, error);
+    logger.error(`[${nodeName}] Failed:`, error);
     throw error;
   }
 }
@@ -216,7 +219,7 @@ function parseAndValidateConsolidation(output: string, nodeName: string): Consol
 
     return validated;
   } catch (error) {
-    console.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
+    logger.error(`[${nodeName}] Failed to parse/validate LLM output:`, output);
     if (error instanceof z.ZodError) {
       const issues = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       throw new Error(`[${nodeName}] Invalid consolidation format: ${issues}`);

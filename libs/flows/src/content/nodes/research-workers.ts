@@ -13,7 +13,10 @@ import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import type { BaseMessage } from '@langchain/core/messages';
 import { AIMessage } from '@langchain/core/messages';
 import type { RunnableConfig } from '@langchain/core/runnables';
+import { createLogger } from '@protolabsai/utils';
 import { copilotkitEmitState, emitHeartbeat } from '../copilotkit-utils.js';
+
+const logger = createLogger('research-workers');
 
 /**
  * Structured research finding
@@ -84,7 +87,7 @@ async function executeWithFallback<T>(
     try {
       return await promptFn(model);
     } catch (error) {
-      console.warn(
+      logger.warn(
         `[${workerName}] Model ${name} failed:`,
         error instanceof Error ? error.message : String(error)
       );
@@ -108,7 +111,7 @@ export async function webResearchWorker(
   const { topic, query, smartModel, fastModel, config } = state;
   const workerName = 'WebResearchWorker';
 
-  console.log(`[${workerName}] Starting web research for topic: "${topic}"`);
+  logger.info(`[${workerName}] Starting web research for topic: "${topic}"`);
 
   // Emit state to CopilotKit
   if (config) {
@@ -171,7 +174,7 @@ export async function webResearchWorker(
       });
     }
 
-    console.log(`[${workerName}] Successfully gathered ${findings.length} findings`);
+    logger.info(`[${workerName}] Successfully gathered ${findings.length} findings`);
 
     // Emit completion state
     if (config) {
@@ -183,7 +186,7 @@ export async function webResearchWorker(
 
     return { findings };
   } catch (error) {
-    console.error(`[${workerName}] Failed:`, error);
+    logger.error(`[${workerName}] Failed:`, error);
 
     // Graceful degradation - return error finding instead of crashing
     const errorFinding: ErrorFinding = {
@@ -208,7 +211,7 @@ export async function codebaseResearchWorker(
   const { topic, smartModel, fastModel, config } = state;
   const workerName = 'CodebaseResearchWorker';
 
-  console.log(`[${workerName}] Starting codebase analysis for topic: "${topic}"`);
+  logger.info(`[${workerName}] Starting codebase analysis for topic: "${topic}"`);
 
   // Emit state to CopilotKit
   if (config) {
@@ -267,7 +270,7 @@ export async function codebaseResearchWorker(
       });
     }
 
-    console.log(
+    logger.info(
       `[${workerName}] Successfully analyzed codebase, found ${findings.length} findings`
     );
 
@@ -281,7 +284,7 @@ export async function codebaseResearchWorker(
 
     return { findings };
   } catch (error) {
-    console.error(`[${workerName}] Failed:`, error);
+    logger.error(`[${workerName}] Failed:`, error);
 
     const errorFinding: ErrorFinding = {
       worker: workerName,
@@ -306,7 +309,7 @@ export async function existingContentWorker(
   const { topic, smartModel, fastModel, config } = state;
   const workerName = 'ExistingContentWorker';
 
-  console.log(`[${workerName}] Starting existing content check for topic: "${topic}"`);
+  logger.info(`[${workerName}] Starting existing content check for topic: "${topic}"`);
 
   // Emit state to CopilotKit
   if (config) {
@@ -365,7 +368,7 @@ export async function existingContentWorker(
       });
     }
 
-    console.log(
+    logger.info(
       `[${workerName}] Successfully checked existing content, found ${findings.length} findings`
     );
 
@@ -379,7 +382,7 @@ export async function existingContentWorker(
 
     return { findings };
   } catch (error) {
-    console.error(`[${workerName}] Failed:`, error);
+    logger.error(`[${workerName}] Failed:`, error);
 
     const errorFinding: ErrorFinding = {
       worker: workerName,
