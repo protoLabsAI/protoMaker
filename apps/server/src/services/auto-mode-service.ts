@@ -2796,23 +2796,32 @@ Address the follow-up instructions above. Review the previous work and make the 
    * Check if context exists for a feature.
    *
    * Guards against the stale context trap: if agent-output.md exists but
-   * hasn't been written to in over 2 hours, the session that created it is
-   * gone. Rename it to .stale so the next run starts fresh instead of trying
-   * to resume a dead Claude session (which handshakes, fails silently, and
-   * exits immediately).
+   * hasn't been written to recently, the session that created it is gone.
+   * Rename it to .stale so the next run starts fresh instead of trying to
+   * resume a dead Claude session (which handshakes, fails silently, and
+   * exits immediately — counting as a failure toward Max agent retries).
+   *
+   * Threshold: 5 minutes by default (configurable via
+   * AUTOMAKER_STALE_SESSION_THRESHOLD_MS environment variable).
+   * Claude SDK sessions do not persist idle for more than a few minutes, so
+   * any agent-output.md older than the threshold was written by a session
+   * that no longer exists.
    */
   async contextExists(projectPath: string, featureId: string): Promise<boolean> {
     const featureDir = getFeatureDir(projectPath, featureId);
     const contextPath = path.join(featureDir, 'agent-output.md');
+
+    // Configurable stale threshold; default 5 minutes.
+    const STALE_THRESHOLD_MS =
+      parseInt(process.env.AUTOMAKER_STALE_SESSION_THRESHOLD_MS ?? '', 10) || 5 * 60 * 1000;
 
     try {
       await secureFs.access(contextPath);
 
       const stats = await secureFs.stat(contextPath);
       const ageMs = Date.now() - stats.mtime.getTime();
-      const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
-      if (ageMs > TWO_HOURS_MS) {
+      if (ageMs > STALE_THRESHOLD_MS) {
         logger.warn(
           `[contextExists] agent-output.md for ${featureId} is ${Math.round(ageMs / 60000)}m old — stale session, renaming to .stale`
         );
