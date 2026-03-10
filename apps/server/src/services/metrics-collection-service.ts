@@ -26,6 +26,7 @@ import type {
   AgenticAutonomyRate,
   AgenticRemediationRecord,
   AgenticWipSaturation,
+  Feature,
 } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -607,5 +608,135 @@ export class AgenticMetricsService {
   private isDoneStatus(status: string): boolean {
     const s = status.toLowerCase();
     return s === 'done' || s === 'completed' || s === 'verified' || s === 'merged';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AutonomyMetricsService
+// ---------------------------------------------------------------------------
+
+/**
+ * Intervention type for a completed feature.
+ *
+ *   - fully_autonomous: no human touchpoints beyond initial creation.
+ *     All executionHistory records have trigger !== 'manual'.
+ *   - assisted: at least one execution was manually triggered (e.g. via
+ *     send_message_to_agent or direct invocation with isAutoMode=false).
+ *   - manual: human did the work — either every execution was manual or the
+ *     feature completed with no agent executions at all.
+ */
+export type InterventionType = 'fully_autonomous' | 'assisted' | 'manual';
+
+/** Per-type breakdown returned by getAutonomyMetrics(). */
+export interface AutonomyBreakdown {
+  fully_autonomous: number;
+  assisted: number;
+  manual: number;
+}
+
+/** Response shape for GET /api/metrics/autonomy. */
+export interface AutonomyMetricsResult {
+  /** Rolling 30-day autonomy rate (fully_autonomous / total_completed). */
+  autonomy_rate: number;
+  /** Total completed features in the rolling window. */
+  total_completed: number;
+  /** Per-intervention-type counts. */
+  breakdown: AutonomyBreakdown;
+  /** ISO timestamp of the start of the 30-day window. */
+  window_start: string;
+  /** ISO timestamp of the end of the 30-day window (now). */
+  window_end: string;
+}
+
+/**
+ * Classify a single completed feature by its intervention type.
+ *
+ * Rules (in precedence order):
+ *   1. If there are no executionHistory entries → manual (human did it all).
+ *   2. If every executionHistory entry has trigger === 'manual' → manual.
+ *   3. If at least one entry has trigger === 'manual' (but not all) → assisted.
+ *   4. Otherwise (all entries are 'auto' or 'retry') → fully_autonomous.
+ */
+export function classifyInterventionType(feature: Feature): InterventionType {
+  const history = feature.executionHistory ?? [];
+
+  if (history.length === 0) {
+    // No agent executions — human completed the feature entirely.
+    return 'manual';
+  }
+
+  const manualCount = history.filter((r) => r.trigger === 'manual').length;
+
+  if (manualCount === history.length) {
+    // Every execution was manually triggered.
+    return 'manual';
+  }
+
+  if (manualCount > 0) {
+    // Mix of auto and manual — human intervened at least once.
+    return 'assisted';
+  }
+
+  // All executions were auto or retry — fully autonomous.
+  return 'fully_autonomous';
+}
+
+/**
+ * AutonomyMetricsService — computes autonomy rate from live feature data.
+ *
+ * Reads features via FeatureLoader, filters to those completed within the
+ * rolling 30-day window, classifies each by intervention type, and returns
+ * the aggregate rate and breakdown.
+ */
+export class AutonomyMetricsService {
+  private readonly featureLoader: FeatureLoader;
+
+  constructor(featureLoader: FeatureLoader) {
+    this.featureLoader = featureLoader;
+  }
+
+  /**
+   * Compute autonomy metrics over a rolling window.
+   *
+   * @param projectPath  Path to the project root.
+   * @param windowDays   Rolling window in days (default 30).
+   */
+  async getAutonomyMetrics(projectPath: string, windowDays = 30): Promise<AutonomyMetricsResult> {
+    const windowEnd = new Date();
+    const windowStart = new Date(windowEnd.getTime() - windowDays * 24 * 60 * 60 * 1000);
+
+    const allFeatures = await this.featureLoader.getAll(projectPath);
+
+    const breakdown: AutonomyBreakdown = {
+      fully_autonomous: 0,
+      assisted: 0,
+      manual: 0,
+    };
+
+    for (const feature of allFeatures) {
+      if (feature.status !== 'done') continue;
+
+      // Use completedAt for window filtering; fall back to updatedAt then skip.
+      const completedRaw = feature.completedAt ?? feature.updatedAt;
+      if (!completedRaw) continue;
+
+      const completedAt = new Date(completedRaw);
+      if (isNaN(completedAt.getTime())) continue;
+      if (completedAt < windowStart || completedAt > windowEnd) continue;
+
+      const type = classifyInterventionType(feature);
+      breakdown[type] += 1;
+    }
+
+    const total = breakdown.fully_autonomous + breakdown.assisted + breakdown.manual;
+    const autonomy_rate = total > 0 ? breakdown.fully_autonomous / total : 0;
+
+    return {
+      autonomy_rate,
+      total_completed: total,
+      breakdown,
+      window_start: windowStart.toISOString(),
+      window_end: windowEnd.toISOString(),
+    };
   }
 }

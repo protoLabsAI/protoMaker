@@ -13,6 +13,7 @@ import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { FrictionTrackerService } from '../../services/friction-tracker-service.js';
 import type { AgenticMetricsDocument } from '@protolabsai/types';
 import { validatePathParams } from '../../middleware/validate-paths.js';
+import { AutonomyMetricsService } from '../../services/metrics-collection-service.js';
 import { createLedgerRoutes } from './ledger.js';
 import {
   createDoraHistoryRoute,
@@ -264,6 +265,51 @@ export function createMetricsRoutes(
       res.status(500).json({ success: false, error: (err as Error).message });
     }
   });
+
+  /**
+   * GET /autonomy - Autonomy rate and intervention breakdown
+   *
+   * Query params:
+   *   - projectPath (required): path to the project
+   *   - windowDays (optional, default 30): rolling window in days
+   *
+   * Returns autonomy_rate (fully_autonomous / total_completed) plus a
+   * breakdown of feature counts by intervention type over the rolling window.
+   *
+   * Intervention types:
+   *   - fully_autonomous: no human touchpoints beyond initial creation
+   *   - assisted: human intervened at least once (e.g. send_message_to_agent)
+   *   - manual: human did the work (all executions manual or no agent runs)
+   */
+  if (featureLoader) {
+    const autonomyService = new AutonomyMetricsService(featureLoader);
+
+    router.get('/autonomy', async (req: Request, res: Response) => {
+      try {
+        const projectPath = req.query.projectPath as string | undefined;
+        if (!projectPath) {
+          res
+            .status(400)
+            .json({ success: false, error: 'projectPath query parameter is required' });
+          return;
+        }
+
+        const windowDaysParam = req.query.windowDays
+          ? parseInt(req.query.windowDays as string, 10)
+          : undefined;
+
+        if (windowDaysParam !== undefined && (isNaN(windowDaysParam) || windowDaysParam < 1)) {
+          res.status(400).json({ success: false, error: 'windowDays must be a positive integer' });
+          return;
+        }
+
+        const metrics = await autonomyService.getAutonomyMetrics(projectPath, windowDaysParam);
+        res.json({ success: true, ...metrics });
+      } catch (err) {
+        res.status(500).json({ success: false, error: (err as Error).message });
+      }
+    });
+  }
 
   return router;
 }
