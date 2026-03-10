@@ -31,9 +31,7 @@ export function buildCeremonyTools(projectPath: string, projectSlug: string): Re
         'Generate and post a standup report to the project timeline. ' +
         'Summarizes recent progress, current blockers, and next steps.',
       inputSchema: z.object({
-        progress: z
-          .string()
-          .describe('What was accomplished since the last standup (markdown)'),
+        progress: z.string().describe('What was accomplished since the last standup (markdown)'),
         blockers: z
           .string()
           .optional()
@@ -73,15 +71,9 @@ export function buildCeremonyTools(projectPath: string, projectSlug: string): Re
         'Generate and post a retrospective report to the project timeline. ' +
         'Analyzes what worked well, what did not, and captures action items.',
       inputSchema: z.object({
-        wentWell: z
-          .string()
-          .describe('What went well during this period/milestone (markdown)'),
-        didNotGoWell: z
-          .string()
-          .describe('What did not go well or could be improved (markdown)'),
-        actionItems: z
-          .string()
-          .describe('Concrete action items for the next period (markdown)'),
+        wentWell: z.string().describe('What went well during this period/milestone (markdown)'),
+        didNotGoWell: z.string().describe('What did not go well or could be improved (markdown)'),
+        actionItems: z.string().describe('Concrete action items for the next period (markdown)'),
         milestoneSlug: z
           .string()
           .optional()
@@ -124,9 +116,7 @@ export function buildCeremonyTools(projectPath: string, projectSlug: string): Re
         'Use this to record a snapshot of project health and key developments.',
       inputSchema: z.object({
         summary: z.string().describe('Status update body (markdown)'),
-        health: z
-          .enum(['on-track', 'at-risk', 'off-track'])
-          .describe('Current project health'),
+        health: z.enum(['on-track', 'at-risk', 'off-track']).describe('Current project health'),
       }),
       execute: async ({ summary, health }) => {
         const content = [
@@ -157,10 +147,7 @@ export function buildCeremonyTools(projectPath: string, projectSlug: string): Re
         context: z.string().describe('Background context that drove this decision (markdown)'),
         decision: z.string().describe('The decision that was made (markdown)'),
         rationale: z.string().describe('Why this option was chosen over alternatives (markdown)'),
-        consequences: z
-          .string()
-          .optional()
-          .describe('Known consequences or trade-offs (markdown)'),
+        consequences: z.string().optional().describe('Known consequences or trade-offs (markdown)'),
       }),
       execute: async ({ title, context, decision, rationale, consequences }) => {
         const lines: string[] = [
