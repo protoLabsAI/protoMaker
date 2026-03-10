@@ -38,6 +38,7 @@
     "dev:electron:wsl:gpu": "npm run build:packages && npm run _dev:electron:wsl:gpu",
     "dev:server": "npm run build:packages && npm run _dev:server",
     "dev:headless": "npm run build:server && npm run start:headless --workspace=apps/server",
+    "dev:headless:watch": "bash scripts/infra/dev-server-watcher.sh",
     "preview:web": "npm run build:packages && npm run build --workspace=apps/ui && npm run preview --workspace=apps/ui -- --port 4173",
     "build:electron:legless": "npm run build:packages && npm run build:electron:legless --workspace=apps/ui",
     "build:electron:legless:dir": "npm run build:packages && npm run build:electron:legless:dir --workspace=apps/ui",
