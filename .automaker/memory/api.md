@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 435
-  referenced: 100
-  successfulFeatures: 100
+  loaded: 441
+  referenced: 103
+  successfulFeatures: 103
 ---
 # api
 
@@ -895,3 +895,8 @@ usageStats:
 - **Problem solved:** Building recent URLs history for UI dropdown without unbounded localStorage growth
 - **Why this works:** LIFO because users typically switch back to most recent server. Dedup prevents clutter when same URL added repeatedly (e.g., reconnects). Max size prevents localStorage bloat.
 - **Trade-offs:** Max size 10 means old servers eventually purged (could lose important history). LIFO ordering depends on usage patterns - different users may want different histories.
+
+#### [Pattern] WebSocket reconnection triggered by invalidateHttpClient() which fully clears and recreates the HTTP client, rather than updating URL on existing client or hot-swapping connections (2026-03-10)
+- **Problem solved:** User changes server URL at runtime; all subsequent requests must route to new server
+- **Why this works:** Invalidation ensures clean state: no stale auth tokens, cached routes, or pending requests to old server. Simpler than managing connection migration.
+- **Trade-offs:** Clean state achieved but creates brief unavailability window; any in-flight requests at invalidation moment are lost and must be retried; requires app-level retry logic

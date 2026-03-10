@@ -545,3 +545,29 @@ usageStats:
 - **Rejected:** Separate CORS_ALLOW_ALL env var would split configuration and make it harder to track all hivemind implications
 - **Trade-offs:** Requires config file parsing at startup but configuration stays discoverable and auditable in one place
 - **Breaking if changed:** If CORS config moves to env var, operators must know to set both hivemind.enabled in config AND CORS env var (easy to miss one)
+
+#### [Gotcha] localStorage key namespacing with 'automaker:' prefix prevents collision attacks and unintended overwrites from other scripts (2026-03-10)
+- **Situation:** Uses 'automaker:serverUrlOverride' instead of plain 'serverUrlOverride' in localStorage
+- **Root cause:** localStorage scope is global per origin - any injected script, CDN compromise, or third-party lib can read/write. Prefix creates effective namespace without true isolation
+- **How to avoid:** Prefix adds 11 bytes per key; eliminates collision surface without architectural changes
+
+### CORS allowAllOrigins policy read from runtime hivemind configuration rather than hardcoded or env-based (2026-03-10)
+- **Context:** Server middleware checks if hivemind mesh mode is enabled, then sets allowAllOrigins: true for CORS; single-server mode uses restricted CORS
+- **Why:** Hivemind multi-node mesh topology requires cross-origin requests between nodes; single-server deployment needs origin restriction for security. Runtime config allows same binary to deploy in both modes without rebuild
+- **Rejected:** Environment variable flag (breaks mesh node deployments where nodes don't share env); hardcoded allowAllOrigins: true (fails security in single-server); URL allowlist (fragile when nodes are ephemeral)
+- **Trade-offs:** Runtime config adds observability requirement (must read actual config); alternative env-based flag is simpler but inflexible for heterogeneous deployments
+- **Breaking if changed:** Hardcoding allowAllOrigins would break mesh deployments with CORS errors; removing config read entirely would lose topology flexibility
+
+### CORS allowAllOrigins is conditional: enabled only when hivemind.enabled === true in proto.json. (2026-03-10)
+- **Context:** Hivemind (multi-server mesh) requires flexible CORS, but normal mode should restrict origins.
+- **Why:** Hivemind has multiple origin connections (different server instances), so permissive CORS is necessary. Binding to feature flag prevents accidental open CORS in production or normal mode.
+- **Rejected:** Hard-coded allowAllOrigins: true (always permissive), env var (scattered config), default-deny then override (extra config burden).
+- **Trade-offs:** Fewer config knobs (good), but couples CORS policy to feature flag (tight binding — if hivemind meaning changes, CORS breaks).
+- **Breaking if changed:** Removing this conditional and hard-coding allowAllOrigins: true opens CORS globally (security regression). Removing it entirely breaks hivemind connectivity.
+
+### CORS middleware reads hivemind.enabled from proto config and conditionally opens to allowAllOrigins or restricts to specific origins (2026-03-10)
+- **Context:** Single-tenant vs. multi-tenant (hivemind) deployments have fundamentally different origin trust models
+- **Why:** Hivemind enables runtime server URL overrides, making specific origin allowlisting impossible (users connect to dynamic servers). Trust model: hivemind deployments sit behind auth/firewall; single-tenant gets tighter CORS control.
+- **Rejected:** Static CORS policy for all deployments (breaks either single-tenant security or hivemind flexibility), no CORS validation (adds attack surface)
+- **Trade-offs:** Hivemind users gain server flexibility but must rely entirely on backend auth; single-tenant users get origin-level defense in depth
+- **Breaking if changed:** If proto config changes at runtime without server restart, CORS policy stales; if deployment misses auth layer behind hivemind, origins become untrusted; if proto.enabled flag flips unexpectedly, CORS silently opens/closes

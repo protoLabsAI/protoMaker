@@ -162,3 +162,10 @@ usageStats:
 - **Problem solved:** Need both fast artifact querying (listArtifacts) and durable individual artifact storage
 - **Why this works:** Index enables O(1) listing without filesystem scans. Individual files enable easy backup, version control, and atomic writes per artifact.
 - **Trade-offs:** Gain: fast queries, atomic per-artifact writes, human-readable on-disk format. Lose: index-file consistency requires careful synchronization, dual-write problem.
+
+### Event list persisted as-is (no compaction/archival) rather than maintaining rolling aggregate that's updated in place (2026-03-10)
+- **Context:** Over time, error-budget.json array will grow as more PRs are merged. No cleanup logic removes old events outside the window.
+- **Why:** Immutable log semantics: audit trail intact, window filtering is pure function of current time. Alternative (aggregate update) requires deciding when to purge, handling edge cases around window boundaries.
+- **Rejected:** Maintaining in-place aggregate (compact to {totalLastWeek, failedLastWeek}): loses history, requires scheduled compaction job, complex to get window transitions right.
+- **Trade-offs:** Easier: correctness guaranteed by query logic. Harder: file grows unbounded (mitigated by low event frequency—~handful per day worst case).
+- **Breaking if changed:** If changed to compacting aggregate: history lost, audit trail gone, window boundary logic becomes complex and bug-prone.

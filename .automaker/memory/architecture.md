@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 97
-  referenced: 36
-  successfulFeatures: 36
+  loaded: 102
+  referenced: 39
+  successfulFeatures: 39
 ---
 # architecture
 
@@ -4430,3 +4430,123 @@ usageStats:
 - **Rejected:** Earlier (during setup) would require re-validating if environment changes. Later (during execution) would waste time in waitForCompletion loop.
 - **Trade-offs:** Precise timing reduces waste. Adds step before wait but that wait might have been long anyway.
 - **Breaking if changed:** If moved earlier, would miss environment changes during setup. If moved later, would waste execution loop time on environmental problems already detectable.
+
+### Portfolio gate placed AFTER intent classification but BEFORE feature creation, creating three outcome paths: pass → 'authority:idea-injected' event, block → blocked feature + 'signal:routed' event, defer → internal queue (no feature) (2026-03-10)
+- **Context:** Signal intake pipeline needs to gate ideas before PM pipeline while preserving observability
+- **Why:** Requires classified intent to make gate decisions; blocked/deferred signals must still be trackable; different downstream handlers for each outcome
+- **Rejected:** Gate before classification (loses intent context); gate after feature creation (wastes creation work); single binary gate (loses deferral option)
+- **Trade-offs:** Cleaner decision logic with context vs. code complexity from three branches; no lost signals vs. feature clutter from blocked features; batch-reviewable deferred queue vs. no signal recovery mechanism
+- **Breaking if changed:** If gate is removed, signal routing becomes undifferentiated; if moved before intent classification, gate cannot use intent for budget/complexity decisions; if deferred queue is removed, signals hitting capacity threshold are discarded entirely
+
+#### [Gotcha] Deferred signals added to internal queue do NOT create features. Only pass/block create features. 'getDeferredQueue()' must be explicitly called to surface them. (2026-03-10)
+- **Situation:** Three-outcome gate model requires non-destructive handling of capacity-limited signals
+- **Root cause:** Deferral is explicitly different from blocking: doesn't reject the idea, just delays it. Keeps board uncluttered while preserving signal for batch review.
+- **How to avoid:** Cleaner board state vs. signals invisible unless explicitly queried; prevents decision fatigue vs. risk signals are forgotten in queue
+
+#### [Pattern] Event branching based on gate outcome: blocked signals emit 'signal:routed' with reason 'portfolio-gate:blocked', while passed signals emit 'authority:idea-injected'. Downstream listeners see different event types depending on gate result. (2026-03-10)
+- **Problem solved:** Need to signal both rejection AND passing through same pipeline, with different downstream handlers
+- **Why this works:** EventEmitter model expects different event types for different logical paths; allows subscribers to handle PM pipeline injection separately from blocked/routed signals
+- **Trade-offs:** Clear separation of concerns vs. multiple event types to subscribe to; prevents incorrect PM pipeline execution vs. more complex event wiring
+
+### Similarity threshold for deduplication set at Jaccard ≥ 0.6 (title-only comparison). Threshold stored as tunable constant `PORTFOLIO_GATE_SIMILARITY_THRESHOLD`. (2026-03-10)
+- **Context:** Detect and block duplicate ideas without creating multiple features for same concept
+- **Why:** 0.6 balances false negatives (too strict, miss duplicates) vs. false positives (too lenient, block legitimate different ideas). Title-only avoids description parsing complexity.
+- **Rejected:** Higher threshold 0.8+ (misses subtle duplicates like 'add caching' vs 'implement caching'); lower threshold 0.4 (false positives block different ideas); full-text similarity (computational cost, description noise)
+- **Trade-offs:** Simple title comparison vs. incomplete duplicate detection; fast similarity calc vs. false positive risk on vague titles; tunable constant vs. hardcoded magic number
+- **Breaking if changed:** If Jaccard calculation is removed, duplication detection fails completely. If threshold is raised, duplicates slip through; if lowered, legitimate ideas get blocked.
+
+### Settings integration: `portfolioGate?: boolean` added to `WorkflowSettings` interface, then pulled through `getWorkflowSettings()` deep merge with pattern: `projectSettings.workflow.portfolioGate ?? DEFAULT_WORKFLOW_SETTINGS.portfolioGate` (2026-03-10)
+- **Context:** Feature must be opt-in (default false) while allowing per-project override
+- **Why:** Matches existing pattern for all workflow settings; ensures project-level config takes precedence over defaults; explicit opt-in prevents accidental gate activation
+- **Rejected:** Environment variable only (no per-project override); hardcoded flag (no opt-out); settings without default merge (loses override capability)
+- **Trade-offs:** Consistent with codebase patterns vs. new pattern choice; project-level control vs. global setting simplicity
+- **Breaking if changed:** If `getWorkflowSettings()` merge is forgotten (only add to interface), runtime code will see undefined instead of default. If interface field is not optional, existing projects without this setting break.
+
+#### [Pattern] Ring buffer tracking with `updateRingBufferEntry(bufferEntry.id, 'state', optionalFeatureId)` captures signal lifecycle: 'creating' → 'created' with feature ID. Enables observability of stuck/lost signals. (2026-03-10)
+- **Problem solved:** Signal intake is async and can fail; need to track which signals reached which stage
+- **Why this works:** Decouples observability from feature creation; allows post-mortem analysis of failed signals without modifying feature data
+- **Trade-offs:** Separate concern tracking vs. additional data structure to maintain; queryable history vs. memory overhead of ring buffer
+
+### Portfolio gate setting placed in GlobalSettings (not WorkflowSettings) to match gtmEnabled precedent (2026-03-10)
+- **Context:** Feature description ambiguous about setting location; gtmEnabled already exists in GlobalSettings
+- **Why:** Simpler implementation, consistent pattern, avoids modifying settings-helpers.ts, single global setting vs per-workflow config
+- **Rejected:** WorkflowSettings would allow per-workflow portfolio gate configuration but requires additional infrastructure (settings-helpers migration, per-service config passing)
+- **Trade-offs:** Gained: implementation simplicity. Lost: ability to tune gate per workflow without code redeploy
+- **Breaking if changed:** Moving to WorkflowSettings requires database schema migration, settings service API changes, all SignalIntakeService instantiations must pass workflow config instead of global
+
+### Interrupt signals completely bypass portfolio gate at the routing level, never entering deferred queue or GTM/ops creation pipeline (2026-03-10)
+- **Context:** Production outages (e.g., 'Production is down RIGHT NOW') must not be delayed by portfolio constraints like backlog capacity
+- **Why:** Time-criticality is incompatible with deferred processing; interrupt detection happens before gate evaluation; prevents operationally-blocking delays for incidents
+- **Rejected:** Apply gate to interrupts with lower thresholds (defeats the purpose—still possible to defer); create separate urgent feature bucket (adds complexity to feature model)
+- **Trade-offs:** Gained: guarantees interrupts are never delayed. Lost: no portfolio health visibility for interrupt volume (interrupts can accumulate without triggering gate)
+- **Breaking if changed:** If interrupt detection is removed/broken, critical issues get deferred behind regular backlog capacity; gate assumes interrupt signals are rare and legitimate
+
+#### [Pattern] Three independent gate checks (capacity, duplication, error budget) with distinct application rules create layered portfolio health enforcement (2026-03-10)
+- **Problem solved:** Portfolio health has multiple failure modes: too-full backlog, repeated problems, architectural overcommitment under high block rate
+- **Why this works:** Each check addresses distinct concern: capacity → intake volume control; duplication → prevents issue storms; error budget → prevents arch decisions under stress. Separate logic allows tuning each independently without coupling
+- **Trade-offs:** Gained: flexibility, clarity, independent tunability. Lost: potential for conflicting gate outcomes (e.g., duplication gate blocks but capacity gate allows—current impl picks first match, unclear precedence)
+
+### Portfolio gate thresholds (CAPACITY=50, DUPLICATION=0.6, ERROR_BUDGET=0.3) are compile-time constants, not configurable settings (2026-03-10)
+- **Context:** Could be moved to GlobalSettings or PortfolioGateConfig but started as constants for simplicity
+- **Why:** Defer configuration complexity until tuning need arises; constants are easier to reason about; no runtime config loading overhead; matches how other service constants are handled
+- **Rejected:** Move to GlobalSettings (adds settings ceremony, unused until real tuning needed); hardcode in tests and production (no way to tune without code change)
+- **Trade-offs:** Gained: simplicity, clarity. Lost: zero-downtime threshold tuning (must redeploy to change)
+- **Breaking if changed:** If constants are moved to settings, signal intake must fetch config on each signal (latency + consistency questions); if constants are removed, gate logic breaks entirely
+
+#### [Pattern] Record-per-event with timestamps (array of {timestamp, failed} objects) instead of aggregate counters (totalMerges, failedMerges) (2026-03-10)
+- **Problem solved:** Implementing rolling window budget tracking that correctly filters events by age without requiring separate cleanup/reset jobs
+- **Why this works:** Timestamp-based filtering naturally implements true rolling windows. Counter-based approach would require periodic resets at window boundaries, creating maintenance burden and edge cases around window transitions.
+- **Trade-offs:** Event log approach: slightly larger state file (array vs two numbers) but eliminates need for maintenance windows and makes rolling window logic trivial (filter events.filter(e => now - e.timestamp < windowMs)). Counter approach: smaller state but requires separate orchestration.
+
+#### [Pattern] LeadWorldState.errorBudgetExhausted boolean acts as bridge between service layer (ErrorBudgetService) and pure rule engine (LeadEngineerRule) (2026-03-10)
+- **Problem solved:** LeadEngineerRule contract requires pure functions with no service imports, but rule engine needs access to budget state computed by ErrorBudgetService
+- **Why this works:** Separates concerns: service computes complex state (isExhausted), rule engine evaluates rules against world state snapshot. Avoids embedding service logic in rules while maintaining pure function contract needed for deterministic testing/scheduling.
+- **Trade-offs:** Easier: testing rules in isolation, reasoning about rule evaluation order, caching budget state. Harder: full budget-driven enforcement requires separate scheduler changes (noted as blocker).
+
+#### [Pattern] File-based persistence (.automaker/metrics/error-budget.json) enables multi-instance coordination without database (2026-03-10)
+- **Problem solved:** Tests verify that multiple ErrorBudgetService instances reading same tmpDir can see each other's recorded merges. Production staging has single instance but pattern supports distributed scenarios.
+- **Why this works:** Filesystem as coordination point for state. When svc1 records a merge, svc2 reading the same file immediately sees it. No central database needed, no eventual consistency issues.
+- **Trade-offs:** Easier: zero external dependencies, state survives restart automatically, testing doesn't require mocks. Harder: file I/O is slower than memory, no atomic transactions (though service uses fs.writeFileSync to minimize window).
+
+#### [Pattern] Singleton HTTP client invalidation with reconnection rather than instance replacement when server URL changes (2026-03-10)
+- **Problem solved:** Server URL override triggers invalidateHttpClient() which resets singleton and calls reconnect() on WebSocket, rather than creating new client instance
+- **Why this works:** HTTP client maintains stateful connections (WebSocket subscriptions, message buffers, auth state). Reconnection preserves in-flight messages and existing subscriptions; new instance creation would lose message history and break subscription continuity
+- **Trade-offs:** Reconnection pattern adds complexity but preserves application state; new instance would be cleaner code but requires resubscribing to all channels
+
+### Multi-level fallback chain for getServerUrl(): localStorage override → environment variable → hostname default (2026-03-10)
+- **Context:** Enables different override strategies per deployment without code changes: dev engineers use localStorage override, staging uses VITE_SERVER_URL env var, production uses default
+- **Why:** Preserves flexibility across environments while maintaining clear precedence. Allows runtime override without redeploy (dev experience) while env vars provide immutable config (staging/prod discipline)
+- **Rejected:** Single source (env var only) - breaks developer override workflow; localStorage only - breaks prod env var config
+- **Trade-offs:** Multiple sources add cognitive load and potential confusion about which takes priority; enables each environment its natural override mechanism
+- **Breaking if changed:** Reversing fallback order (env var before localStorage) would make override inaccessible in deployed environments
+
+### localStorage-first ordering in getServerUrl() override chain: checks `automaker:serverUrlOverride` before Electron cache, then env var, then default. (2026-03-10)
+- **Context:** Need runtime server URL switching without rebuilds or env var changes.
+- **Why:** localStorage persists across browser restarts and provides true runtime mutability. Env vars require rebuild; Electron cache is app-specific. This ordering gives override highest priority while maintaining fallbacks.
+- **Rejected:** Direct app-store binding (loses persistence), env var config (requires rebuild), direct URL input without chain (no fallback safety).
+- **Trade-offs:** Extra localStorage lookup on every HTTP call (negligible) vs. ability to switch servers instantly in dev/testing. Wins for DX.
+- **Breaking if changed:** Removing localStorage check breaks the entire runtime override feature. Changing priority order (e.g., env var first) makes overrides unobservable to users.
+
+#### [Pattern] invalidateHttpClient() calls reconnect() on existing singleton BEFORE creating fresh singleton instance. (2026-03-10)
+- **Problem solved:** WebSocket + HTTP client needs clean state when server URL changes.
+- **Why this works:** reconnect() performs graceful cleanup (closes WebSocket, aborts pending requests). Creating fresh singleton after ensures no stale references exist. Order is critical: cleanup first prevents resource leaks.
+- **Trade-offs:** Two-step process is verbose but safe. Direct replacement is simpler but leaks resources on rapid reconnects.
+
+### connectToServer() probes /api/health BEFORE calling setServerUrlOverride(), validating connectivity before persisting. (2026-03-10)
+- **Context:** Prevent users from persisting broken/unreachable server URLs.
+- **Why:** Health check acts as gating function: if server unreachable, abort override and leave current state. Prevents write of invalid config.
+- **Rejected:** Persist immediately and let HTTP calls fail (bad UX, stale override remains), skip health check (allow broken URLs).
+- **Trade-offs:** One extra network request per manual connect, but prevents bad state from persisting. Worth cost.
+- **Breaking if changed:** Removing health check allows invalid URLs to persist; removing override persist after health success leaves user in broken state (connected but not saved).
+
+### Server URL override uses localStorage-first fallback chain (localStorage → Electron IPC → VITE_SERVER_URL → default), making localStorage authoritative and blocking environment variable overrides (2026-03-10)
+- **Context:** Supporting multiple deployment scenarios (browser, Electron, server-side) each with different URL source capabilities
+- **Why:** localStorage persists across SPA navigation and page reloads, enabling dev-time overrides to survive reload cycles. First-in-chain means it wins, providing override capability.
+- **Rejected:** Query parameters (lost on navigation), static config files (immutable), env vars as first in chain (prod deployments can't be overridden by devs)
+- **Trade-offs:** Devs get persistent runtime overrides, but production env vars become dead code if localStorage is ever set; requires localStorage availability (~5-10MB limit); not accessible in strict private browsing
+- **Breaking if changed:** Removing localStorage from chain loses dev override capability; if env var is moved to first in chain, localStorage overrides stop working (order is critical)
+
+#### [Pattern] Prototype config (proto.enabled, proto.config) acts as central feature-gate and deployment-mode decider, wired into middleware setup at server startup, driving CORS, auth, and URL override behavior downstream (2026-03-10)
+- **Problem solved:** Same codebase must support single-tenant and multi-tenant deployments with different security/feature policies
+- **Why this works:** Single config object as source-of-truth reduces conditional logic branches and makes policy derivable from one place. Wired early (startup) ensures all dependent behavior is consistent.
+- **Trade-offs:** Centralized policy but requires early config parsing; if config is invalid/malformed, entire server fails; runtime config changes don't apply without restart

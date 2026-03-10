@@ -1,0 +1,9 @@
+{
+  "phase": "awaiting_kickoff",
+  "projectPath": "/Users/kj/dev/automaker",
+  "projectSlug": "flow-control-system",
+  "lastStandup": "",
+  "lastRetro": "",
+  "standupCadence": "0 9 * * 1",
+  "history": []
+}

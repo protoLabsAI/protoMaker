@@ -286,3 +286,8 @@ usageStats:
 - **Situation:** When URL override is set, reconnect() is called immediately before replacing singleton
 - **Root cause:** Synchronous approach is simpler to reason about—no race where request hits old client before reconnect completes. But synchronicity means UI freezes if reconnect slow
 - **How to avoid:** Easier: simpler control flow. Harder: poor UX if server slow to respond to reconnect
+
+#### [Pattern] Jaccard similarity on normalized word sets (threshold 0.6) chosen for title deduplication over Levenshtein/embedding-based approaches (2026-03-10)
+- **Problem solved:** Need lightweight duplication detection to prevent similar features from duplicating in backlog under capacity pressure
+- **Why this works:** O(n*w) complexity where w is word count (vs O(n²) for edit distance or network latency for embeddings); word-order-invariant (semantically handles paraphrasing); deterministic and debuggable
+- **Trade-offs:** Gained: fast, simple, no external deps. Lost: semantic understanding (doesn't catch 'fix auth bug' vs 'authentication issue' as similar)

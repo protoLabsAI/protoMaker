@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1041
-  referenced: 287
-  successfulFeatures: 287
+  loaded: 1054
+  referenced: 293
+  successfulFeatures: 293
 ---
 # gotchas
 
@@ -695,3 +695,23 @@ usageStats:
 - **Situation:** Drift data structure has optional staleForMs field; value could be missing, zero, or calculated inaccurately from timestamps
 - **Root cause:** Defensive: avoid showing '0 hours' or NaN in comment body; vague message still readable
 - **How to avoid:** User sees less precise info ('some time' vs '72 hours'), but message degrades gracefully instead of erroring or misleading
+
+#### [Gotcha] Deferred signals are stored in-memory in the SignalIntakeService instance and do not persist across server restarts (2026-03-10)
+- **Situation:** getDeferredQueue() returns in-memory array; no database or file persistence implemented
+- **Root cause:** Simpler initial implementation; deferred queue is a temporary holding pattern expected to be processed by human review within a session; external persistence adds DB dependency
+- **How to avoid:** Gained: zero persistence overhead, simple to implement. Lost: queue lost on server crash; no audit trail of deferrals
+
+#### [Gotcha] LeadEngineerRule contract (pure function, no side effects beyond logging) prevents errorBudgetExhausted rule from actually enforcing budget (auto-pause) (2026-03-10)
+- **Situation:** Feature spec includes auto-pause when budget exhausted, but rule can only emit warn log. Full enforcement requires FeatureScheduler integration (separate work outside described scope).
+- **Root cause:** Rule engine designed for simplicity/testability/determinism. Complex enforcement (skipping non-bugfix features) requires scheduler access (scheduler orchestrates feature selection). Rules are evaluation-only.
+- **How to avoid:** Simpler rule engine in exchange for limited rule capabilities. Enforcement requires two-phase architecture: rules report state → scheduler acts on state.
+
+#### [Gotcha] libs/types dist files were stale, causing TypeScript errors. Needed explicit rebuild via `cd libs/types && npm run build` even though monorepo is linked. (2026-03-10)
+- **Situation:** Working in worktree with @protolabsai/types as published package + local libs/types source.
+- **Root cause:** Node module resolution and npm hoisting mean the published .d.ts files in node_modules/@protolabsai/types/dist/ are not auto-synced with source changes. Build step required.
+- **How to avoid:** Explicit rebuild step adds friction but catches type drift. Better than silent type errors.
+
+#### [Gotcha] Recent URLs deduplication uses O(n) .filter() scan on each addition despite only storing max 10 items: [url, ...recent.filter(u => u !== url)].slice(0, 10) (2026-03-10)
+- **Situation:** Maintaining deduplicated recent server URLs list for UI dropdown
+- **Root cause:** Simple, readable code sufficient for 10-item bounded list. Algorithm complexity was sacrificed for maintainability.
+- **How to avoid:** Clear, easy-to-read code vs. technically inefficient algorithm; works fine at 10 items, breaks visibly if list grows to 100s; synchronous localStorage means no async overhead

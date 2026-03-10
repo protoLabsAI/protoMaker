@@ -675,3 +675,13 @@ usageStats:
 - **Problem solved:** Need to show dropdown of previously-used server URLs, with most-recent at top
 - **Why this works:** Prepend ensures MRU ordering; filter deduplicates (selecting existing URL moves it to top); slice(0, 10) caps memory and prevents unbounded growth
 - **Trade-offs:** O(n) filter operation on each add (but n ≤ 10); bounded size prevents memory issues but may discard old URLs
+
+#### [Pattern] Recent server URLs list with deduplication and fixed 10-entry cap (2026-03-10)
+- **Problem solved:** setServerUrlOverride() maintains recentServerUrls array capped at 10 entries, deduplicates repeated URLs before storage
+- **Why this works:** Bounded list prevents dropdown/history UX degradation and reduces localStorage quota consumption; deduplication prevents clutter from repeated connections to same server
+- **Trade-offs:** 10-entry heuristic is somewhat arbitrary - balances history retention against usability; smaller limit loses context, larger limit creates dropdown fatigue
+
+#### [Pattern] recentServerUrls uses move-to-front deduplication: `[url, ...existing.filter(u => u !== url)].slice(0, 10)`, capping at 10 entries. (2026-03-10)
+- **Problem solved:** Track recently connected servers without unbounded localStorage growth.
+- **Why this works:** Move-to-front ensures most recent appears first (good UX for dropdowns); dedup prevents duplicate entries (cleaner list); slice(0, 10) bounds memory. Standard pattern for 'recent items'.
+- **Trade-offs:** Array operations are O(n) but n ≤ 10 so negligible. Move-to-front is intuitive for users.

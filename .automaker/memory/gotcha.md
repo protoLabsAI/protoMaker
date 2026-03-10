@@ -60,3 +60,13 @@ usageStats:
 - **Problem solved:** Two modules need to share server URL override state across page reloads via localStorage
 - **Why this works:** Simple and direct, avoids creating a separate constants module just for one key
 - **Trade-offs:** Saves one import, but creates fragile implicit contract—silent data loss if either module changes the key name or serialization format
+
+#### [Gotcha] Feature creation logic duplicated: blocked features use `status: 'blocked'` + `blockingReason` while passed features use `status: 'backlog'` with no blocking fields. Both branches exist in same method. (2026-03-10)
+- **Situation:** Gate decision requires different feature metadata for blocked vs. passed features
+- **Root cause:** Blocked features need explicit reason tracking; passed features don't. Cannot use single feature constructor.
+- **How to avoid:** Explicit metadata vs. code duplication; easier to understand each path vs. harder to maintain when feature creation logic changes
+
+#### [Gotcha] Error budget check for architectural signals depends on external calculation of `blockedCount / totalCount` ratio. Threshold hardcoded to 0.2 (20%), but 'error budget' definition and measurement method not visible in implementation snippet. (2026-03-10)
+- **Situation:** Gate blocks architectural signals when error budget is low to prevent overcommitting complex work
+- **Root cause:** Portfolio management rule: don't add more complex work when existing work is stuck.
+- **How to avoid:** Prevents overcommitment vs. requires hidden external service/calculation; ratio-based scales to any portfolio size vs. requires accurate blocked count tracking
