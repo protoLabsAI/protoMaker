@@ -99,15 +99,21 @@ const FAILURE_PATTERNS: FailurePattern[] = [
       /rebase.*conflict/i,
     ],
     category: 'merge_conflict',
-    isRetryable: false,
-    suggestedDelay: 0,
-    maxRetries: 0,
-    createRecoveryStrategy: (reason) => ({
-      type: 'escalate_to_user',
-      reason: `Merge conflict requires manual resolution: ${reason.slice(0, 200)}`,
+    isRetryable: true,
+    suggestedDelay: 5000,
+    maxRetries: 1,
+    createRecoveryStrategy: () => ({
+      type: 'retry_with_context',
+      context:
+        'A git merge conflict was detected. Before retrying, rebase your branch onto the latest main: ' +
+        '`git fetch origin && git rebase origin/main`. ' +
+        'If conflicts appear, resolve them then run `git rebase --continue`. ' +
+        'After a clean rebase, push with `git push --force-with-lease`.',
+      delay: 5000,
     }),
     contextToPreserve: ['conflictingFiles', 'branchName', 'baseBranch'],
-    explanation: 'Git merge conflict detected - requires manual resolution',
+    explanation:
+      'Git merge conflict detected - rebasing onto latest main may resolve this automatically',
     confidence: 0.95,
   },
 

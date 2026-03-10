@@ -346,7 +346,10 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       test_failure:
         'When tests fail, read the full test output before making changes. Fix one test at a time. Run the specific failing test file rather than the full suite.',
       merge_conflict:
-        'Before starting work, ensure your branch is rebased on the latest main. Use `git fetch origin && git rebase origin/main` before making changes.',
+        'A merge conflict was detected. Run `git fetch origin && git rebase origin/main` to rebase your branch onto the latest main. ' +
+        'If conflicts appear during rebase, resolve them in each conflicting file, then run `git add <file>` and `git rebase --continue`. ' +
+        'After a clean rebase, push with `git push --force-with-lease`. ' +
+        'To prevent future conflicts, always rebase before starting work on a new feature.',
       dependency:
         'Check that all required packages are installed. Run `npm install` in the worktree before building. Verify import paths match the monorepo package structure.',
       tool_error:
@@ -520,9 +523,20 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
         };
 
       case 'merge_conflict':
+        if (context.retryCount < 1) {
+          return {
+            type: 'retry_with_context',
+            context:
+              'A git merge conflict was detected. Rebase your branch onto the latest main before retrying: ' +
+              '`git fetch origin && git rebase origin/main`. ' +
+              'If conflicts appear, resolve them then run `git rebase --continue`. ' +
+              'After a clean rebase, push with `git push --force-with-lease`.',
+            delay: 5000,
+          };
+        }
         return {
           type: 'escalate_to_user',
-          reason: 'Merge conflict detected. Manual resolution required.',
+          reason: 'Merge conflict persists after rebase attempt. Manual resolution required.',
         };
 
       case 'dependency':
@@ -573,12 +587,7 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
     }
 
     // These categories always need user intervention
-    const nonRetryableCategories: FailureCategory[] = [
-      'quota',
-      'authentication',
-      'merge_conflict',
-      'validation',
-    ];
+    const nonRetryableCategories: FailureCategory[] = ['quota', 'authentication', 'validation'];
 
     return !nonRetryableCategories.includes(category);
   }
@@ -596,10 +605,12 @@ ${this.generateCategoryGuidance(category, successRate, strategies)}
       case 'tool_error':
       case 'dependency':
         return 2;
+      case 'merge_conflict':
+        return 1; // One auto-retry with rebase guidance; escalate if it persists
       case 'unknown':
         return this.config.maxTransientRetries;
       default:
-        return 0; // No retries for quota, auth, merge conflicts, validation
+        return 0; // No retries for quota, auth, validation
     }
   }
 

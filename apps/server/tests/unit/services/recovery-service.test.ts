@@ -165,10 +165,22 @@ describe('recovery-service.ts', () => {
       expect(analysis.isRetryable).toBe(false);
     });
 
-    it('should analyze merge conflicts and escalate', async () => {
+    it('should analyze merge conflicts and retry with rebase context on first occurrence', async () => {
       const error = new Error('merge conflict detected');
       const errorInfo = makeErrorInfo({ message: 'merge conflict detected' });
-      const context = makeContext();
+      const context = makeContext({ retryCount: 0 });
+
+      const analysis = await service.analyzeFailure(error, errorInfo, context);
+
+      expect(analysis.category).toBe('merge_conflict');
+      expect(analysis.recoveryStrategy.type).toBe('retry_with_context');
+      expect(analysis.isRetryable).toBe(true);
+    });
+
+    it('should escalate merge conflicts after one retry', async () => {
+      const error = new Error('merge conflict detected');
+      const errorInfo = makeErrorInfo({ message: 'merge conflict detected' });
+      const context = makeContext({ retryCount: 1 });
 
       const analysis = await service.analyzeFailure(error, errorInfo, context);
 
