@@ -18,8 +18,51 @@ import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { CeremonyAuditLogService } from '../../services/ceremony-audit-service.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import { createLogger } from '@protolabsai/utils';
+import type { Feature } from '@protolabsai/types';
+import type { Project } from '@protolabsai/types';
 
 const logger = createLogger('ceremonies');
+
+interface MilestoneSummary {
+  milestoneTitle: string;
+  featureCount: number;
+  costUsd: number;
+}
+
+interface ProjectStats {
+  totalFeatures: number;
+  totalCostUsd: number;
+  failureCount: number;
+  milestoneSummaries: MilestoneSummary[];
+}
+
+/**
+ * Aggregate ceremony stats across all milestones for a project.
+ */
+function aggregateCeremonyStats(project: Project, allFeatures: Feature[]): ProjectStats {
+  let totalFeatures = 0;
+  let totalCostUsd = 0;
+  let failureCount = 0;
+  const milestoneSummaries: MilestoneSummary[] = [];
+
+  for (const milestone of project.milestones) {
+    const milestoneFeatures = allFeatures.filter((f) =>
+      milestone.phases.some((p) => p.featureId === f.id)
+    );
+    const costUsd = milestoneFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
+    totalFeatures += milestoneFeatures.length;
+    totalCostUsd += costUsd;
+    failureCount += milestoneFeatures.filter((f) => (f.failureCount || 0) > 0).length;
+
+    milestoneSummaries.push({
+      milestoneTitle: milestone.title,
+      featureCount: milestoneFeatures.length,
+      costUsd,
+    });
+  }
+
+  return { totalFeatures, totalCostUsd, failureCount, milestoneSummaries };
+}
 
 type CeremonyType = 'standup' | 'retro' | 'project-retro';
 
@@ -112,30 +155,8 @@ export function createCeremoniesRoutes(
 
         // Aggregate stats and re-emit project:completed
         const allFeatures = await featureLoader.getAll(projectPath);
-        let totalFeatures = 0;
-        let totalCostUsd = 0;
-        let failureCount = 0;
-        const milestoneSummaries: Array<{
-          milestoneTitle: string;
-          featureCount: number;
-          costUsd: number;
-        }> = [];
-
-        for (const milestone of project.milestones) {
-          const milestoneFeatures = allFeatures.filter((f) =>
-            milestone.phases.some((p) => p.featureId === f.id)
-          );
-          const costUsd = milestoneFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
-          totalFeatures += milestoneFeatures.length;
-          totalCostUsd += costUsd;
-          failureCount += milestoneFeatures.filter((f) => (f.failureCount || 0) > 0).length;
-
-          milestoneSummaries.push({
-            milestoneTitle: milestone.title,
-            featureCount: milestoneFeatures.length,
-            costUsd,
-          });
-        }
+        const { totalFeatures, totalCostUsd, failureCount, milestoneSummaries } =
+          aggregateCeremonyStats(project, allFeatures);
 
         events.emit('project:completed', {
           projectPath,
@@ -185,30 +206,8 @@ export function createCeremoniesRoutes(
 
         if (ceremonyType === 'project-retro') {
           // Aggregate project-wide stats and emit project:completed
-          let totalFeatures = 0;
-          let totalCostUsd = 0;
-          let failureCount = 0;
-          const milestoneSummaries: Array<{
-            milestoneTitle: string;
-            featureCount: number;
-            costUsd: number;
-          }> = [];
-
-          for (const milestone of project.milestones) {
-            const milestoneFeatures = allFeatures.filter((f) =>
-              milestone.phases.some((p) => p.featureId === f.id)
-            );
-            const costUsd = milestoneFeatures.reduce((sum, f) => sum + (f.costUsd || 0), 0);
-            totalFeatures += milestoneFeatures.length;
-            totalCostUsd += costUsd;
-            failureCount += milestoneFeatures.filter((f) => (f.failureCount || 0) > 0).length;
-
-            milestoneSummaries.push({
-              milestoneTitle: milestone.title,
-              featureCount: milestoneFeatures.length,
-              costUsd,
-            });
-          }
+          const { totalFeatures, totalCostUsd, failureCount, milestoneSummaries } =
+            aggregateCeremonyStats(project, allFeatures);
 
           events.emit('project:completed', {
             projectPath,

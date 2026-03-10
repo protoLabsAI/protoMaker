@@ -14,6 +14,8 @@ import type { EventEmitter } from '../lib/events.js';
 import type { AgentFactoryService } from './agent-factory-service.js';
 import { DynamicAgentExecutor } from './dynamic-agent-executor.js';
 import type { SPARCPrd } from '@protolabsai/types';
+import type { ReviewResult, ConsolidatedReview, ReviewRequest } from '@protolabsai/types';
+import { extractPRDFromText } from '@protolabsai/types';
 import { AntagonisticReviewAdapter } from './antagonistic-review-adapter.js';
 import { getLangfuseInstance } from '../lib/langfuse-singleton.js';
 import type { SettingsService } from './settings-service.js';
@@ -23,45 +25,6 @@ import { simpleQuery } from '../providers/simple-query-service.js';
 const logger = createLogger('AntagonisticReview');
 
 const REVIEW_TIMEOUT_MS = 180_000; // 3 minutes
-
-/**
- * Review result from a single agent
- */
-export interface ReviewResult {
-  success: boolean;
-  reviewer: string;
-  verdict: string;
-  concerns?: string[];
-  recommendations?: string[];
-  durationMs: number;
-  error?: string;
-}
-
-/**
- * Consolidated review output
- */
-export interface ConsolidatedReview {
-  success: boolean;
-  avaReview: ReviewResult;
-  jonReview: ReviewResult;
-  resolution: string;
-  finalPRD?: SPARCPrd;
-  totalDurationMs: number;
-  totalCost?: number;
-  traceId?: string;
-  threadId?: string;
-  hitlPending?: boolean;
-  error?: string;
-}
-
-/**
- * Review request parameters
- */
-export interface ReviewRequest {
-  prd: SPARCPrd;
-  prdId: string;
-  projectPath: string;
-}
 
 export class AntagonisticReviewService {
   private static instance: AntagonisticReviewService;
@@ -237,7 +200,7 @@ export class AntagonisticReviewService {
           avaReview,
           jonReview,
           resolution: resolution.output,
-          finalPRD: this.extractPRDFromResolution(resolution.output),
+          finalPRD: extractPRDFromText(resolution.output, prd),
           totalDurationMs,
         };
       } finally {
@@ -753,37 +716,6 @@ Minor suggestions don't warrant rejection — only reject for issues that would 
     } catch (err) {
       logger.warn('[verifyPlan] Review failed, approving by default', err);
       return null;
-    }
-  }
-
-  /**
-   * Extract PRD from resolution output
-   */
-  private extractPRDFromResolution(resolution: string): SPARCPrd | undefined {
-    try {
-      // Parse SPARC sections from the resolution
-      const situationMatch = resolution.match(/### Situation\s+([\s\S]*?)(?=###|$)/);
-      const problemMatch = resolution.match(/### Problem\s+([\s\S]*?)(?=###|$)/);
-      const approachMatch = resolution.match(/### Approach\s+([\s\S]*?)(?=###|$)/);
-      const resultsMatch = resolution.match(/### Results\s+([\s\S]*?)(?=###|$)/);
-      const constraintsMatch = resolution.match(/### Constraints\s+([\s\S]*?)(?=###|$)/);
-
-      if (!situationMatch || !problemMatch || !approachMatch || !resultsMatch) {
-        logger.warn('Could not extract complete PRD from resolution');
-        return undefined;
-      }
-
-      return {
-        situation: situationMatch[1].trim(),
-        problem: problemMatch[1].trim(),
-        approach: approachMatch[1].trim(),
-        results: resultsMatch[1].trim(),
-        constraints: constraintsMatch ? constraintsMatch[1].trim() : '',
-        generatedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      logger.error('Failed to extract PRD from resolution:', error);
-      return undefined;
     }
   }
 }

@@ -766,6 +766,10 @@ export type {
 } from './review.js';
 export { DistillationDepth } from './review.js';
 
+// Antagonistic Review service types (ReviewResult, ConsolidatedReview, ReviewRequest)
+export type { ReviewResult, ConsolidatedReview, ReviewRequest } from './antagonistic-review.js';
+export { extractPRDFromText } from './antagonistic-review.js';
+
 // Content generation types
 export { SectionSchema, OutlineSchema } from './content.js';
 export type { ContentType, ContentConfig, Section, Outline, ResearchSummary } from './content.js';

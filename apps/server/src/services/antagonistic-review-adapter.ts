@@ -9,6 +9,8 @@
 import { createLogger } from '@protolabsai/utils';
 import { createAntagonisticReviewGraph } from '@protolabsai/flows';
 import type { SPARCPrd } from '@protolabsai/types';
+import type { ReviewResult, ConsolidatedReview, ReviewRequest } from '@protolabsai/types';
+import { extractPRDFromText } from '@protolabsai/types';
 import { LangfuseClient, calculateCost } from '@protolabsai/observability';
 import { v4 as uuidv4 } from 'uuid';
 import { createFlowModel } from '../lib/flow-model-factory.js';
@@ -31,45 +33,6 @@ interface FlowReviewPerspective {
   }>;
   generalComments?: string[];
   comments?: string[];
-}
-
-/**
- * Review result from a single agent
- */
-export interface ReviewResult {
-  success: boolean;
-  reviewer: string;
-  verdict: string;
-  concerns?: string[];
-  recommendations?: string[];
-  durationMs: number;
-  error?: string;
-}
-
-/**
- * Consolidated review output
- */
-export interface ConsolidatedReview {
-  success: boolean;
-  avaReview: ReviewResult;
-  jonReview: ReviewResult;
-  resolution: string;
-  finalPRD?: SPARCPrd;
-  totalDurationMs: number;
-  totalCost?: number;
-  traceId?: string;
-  threadId?: string;
-  hitlPending?: boolean;
-  error?: string;
-}
-
-/**
- * Review request parameters
- */
-export interface ReviewRequest {
-  prd: SPARCPrd;
-  prdId: string;
-  projectPath: string;
 }
 
 /**
@@ -191,7 +154,7 @@ export class AntagonisticReviewAdapter {
           const jonReview = this.extractJonReview(result);
           const resolution =
             result.finalVerdict || result.consolidatedReview?.synthesizedReview || '';
-          const finalPRD = result.consolidatedPrd || this.extractFinalPRD(resolution, prd);
+          const finalPRD = result.consolidatedPrd || extractPRDFromText(resolution, prd);
 
           logger.info(
             `Review paused for HITL at node(s): ${snapshot.next.join(', ')} (thread: ${threadId})`
@@ -229,7 +192,7 @@ export class AntagonisticReviewAdapter {
       const avaReview = this.extractAvaReview(result);
       const jonReview = this.extractJonReview(result);
       const resolution = result.finalVerdict || result.consolidatedReview?.synthesizedReview || '';
-      const finalPRD = result.consolidatedPrd || this.extractFinalPRD(resolution, prd);
+      const finalPRD = result.consolidatedPrd || extractPRDFromText(resolution, prd);
 
       // Create spans for individual review nodes (retroactive tracking)
       if (result.avaReview) {
@@ -391,7 +354,7 @@ export class AntagonisticReviewAdapter {
       const avaReview = this.extractAvaReview(result);
       const jonReview = this.extractJonReview(result);
       const resolution = result.finalVerdict || result.consolidatedReview?.synthesizedReview || '';
-      const finalPRD = result.consolidatedPrd || this.extractFinalPRD(resolution, prd);
+      const finalPRD = result.consolidatedPrd || extractPRDFromText(resolution, prd);
 
       // Flush Langfuse events
       await this.langfuse?.flush();
@@ -516,37 +479,6 @@ export class AntagonisticReviewAdapter {
       recommendations,
       durationMs: 0,
     };
-  }
-
-  /**
-   * Extract final PRD from resolution text
-   */
-  private extractFinalPRD(resolution: string, originalPrd: SPARCPrd): SPARCPrd | undefined {
-    try {
-      // Try to parse SPARC sections from the resolution
-      const situationMatch = resolution.match(/### Situation\s+([\s\S]*?)(?=###|$)/);
-      const problemMatch = resolution.match(/### Problem\s+([\s\S]*?)(?=###|$)/);
-      const approachMatch = resolution.match(/### Approach\s+([\s\S]*?)(?=###|$)/);
-      const resultsMatch = resolution.match(/### Results\s+([\s\S]*?)(?=###|$)/);
-      const constraintsMatch = resolution.match(/### Constraints\s+([\s\S]*?)(?=###|$)/);
-
-      if (situationMatch || problemMatch || approachMatch || resultsMatch) {
-        return {
-          situation: situationMatch?.[1]?.trim() || originalPrd.situation,
-          problem: problemMatch?.[1]?.trim() || originalPrd.problem,
-          approach: approachMatch?.[1]?.trim() || originalPrd.approach,
-          results: resultsMatch?.[1]?.trim() || originalPrd.results,
-          constraints: constraintsMatch?.[1]?.trim() || originalPrd.constraints,
-          generatedAt: new Date().toISOString(),
-        };
-      }
-
-      // If no SPARC sections found, return original PRD
-      return originalPrd;
-    } catch (error) {
-      logger.error('Failed to extract PRD from resolution:', error);
-      return originalPrd;
-    }
   }
 }
 
