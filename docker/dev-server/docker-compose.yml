@@ -1,0 +1,100 @@
+# Automaker Dev Server - Local Docker Compose
+#
+# Runs the dev-branch server in production mode on localhost:3008.
+# Auto-updates via Watchtower when CI pushes a new image to GHCR on dev pushes.
+#
+# Quick start:
+#   docker compose -f docker/dev-server/docker-compose.yml up -d
+#
+# See docker/dev-server/README.md for full setup instructions.
+
+services:
+  # -------------------------------------------------------------------------
+  # Dev-branch server (production build of the dev branch)
+  # -------------------------------------------------------------------------
+  server:
+    # GHCR image built by CI on every push to dev.
+    # Watchtower automatically pulls new images and restarts the container.
+    image: ghcr.io/protolabsai/automaker-dev-server:latest
+
+    # Also supports local builds:
+    #   docker compose -f docker/dev-server/docker-compose.yml build
+    build:
+      context: ../../
+      dockerfile: docker/dev-server/Dockerfile
+      target: server
+
+    container_name: automaker-dev-server
+    restart: unless-stopped
+    ports:
+      - '3008:3008'
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3008
+      - IS_CONTAINERIZED=true
+      - DATA_DIR=/data
+
+      # Pass secrets from host .env (set these in your shell or in .env at repo root)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AUTOMAKER_API_KEY=${AUTOMAKER_API_KEY:-}
+      - CLAUDE_OAUTH_CREDENTIALS=${CLAUDE_OAUTH_CREDENTIALS:-}
+      - GH_TOKEN=${GH_TOKEN:-}
+      - DISCORD_TOKEN=${DISCORD_TOKEN:-}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3007}
+
+    volumes:
+      # Persistent data (features, projects, state) — survives rebuilds
+      - ../../data:/data
+
+      # .automaker config (agent memory, skills, etc.)
+      - ../../.automaker:/app/.automaker
+
+      # Claude CLI credentials (persists auth across rebuilds)
+      - automaker-dev-claude-config:/home/automaker/.claude
+
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3008/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+    labels:
+      # Watchtower uses this label to identify containers it should watch
+      - 'com.centurylinklabs.watchtower.enable=true'
+
+  # -------------------------------------------------------------------------
+  # Watchtower — auto-pulls new images from GHCR and restarts the server
+  # -------------------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: automaker-dev-watchtower
+    restart: unless-stopped
+
+    volumes:
+      # Watchtower needs Docker socket access to manage containers
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # Mount Docker config so Watchtower can authenticate to GHCR
+      # Run `docker login ghcr.io` once to populate this file
+      - ${HOME}/.docker/config.json:/config.json:ro
+
+    environment:
+      # Poll GHCR every 5 minutes for new images
+      - WATCHTOWER_POLL_INTERVAL=300
+
+      # Remove old images after pulling new ones
+      - WATCHTOWER_CLEANUP=true
+
+      # Only watch containers with the watchtower label
+      - WATCHTOWER_LABEL_ENABLE=true
+
+      # Use the mounted Docker config for GHCR auth
+      - DOCKER_CONFIG=/
+
+volumes:
+  automaker-dev-claude-config:
+    name: automaker-dev-claude-config
