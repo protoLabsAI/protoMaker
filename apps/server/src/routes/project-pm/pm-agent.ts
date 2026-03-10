@@ -146,7 +146,11 @@ export interface QueryPmDeps {
     getOrCreateSession(
       projectPath: string,
       projectSlug: string
-    ): { messages: Array<{ role: string; content: unknown }>; projectSlug: string; createdAt: string };
+    ): {
+      messages: Array<{ role: string; content: unknown }>;
+      projectSlug: string;
+      createdAt: string;
+    };
   };
   events: EventEmitter;
 }
@@ -158,7 +162,11 @@ export interface QueryPmDeps {
  * generateText call (non-streaming) with the full PM tool surface.
  * Returns the PM's text response.
  */
-export async function queryPm(deps: QueryPmDeps, projectSlug: string, question: string): Promise<string> {
+export async function queryPm(
+  deps: QueryPmDeps,
+  projectSlug: string,
+  question: string
+): Promise<string> {
   const { projectPath, projectService, ceremonyService, featureLoader, projectPmService, events } =
     deps;
 
@@ -363,10 +371,7 @@ export async function queryPm(deps: QueryPmDeps, projectSlug: string, question: 
   const result = await generateText({
     model: anthropic(resolvedModelId),
     system: systemPrompt,
-    messages: [
-      ...sessionHistory,
-      { role: 'user', content: question },
-    ],
+    messages: [...sessionHistory, { role: 'user', content: question }],
     tools,
     stopWhen: stepCountIs(5),
     providerOptions: {
