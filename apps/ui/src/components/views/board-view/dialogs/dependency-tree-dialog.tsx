@@ -1,4 +1,3 @@
-// @ts-nocheck -- Feature index signature causes property access type errors
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@protolabsai/ui/atoms';
 import { Feature } from '@/store/types';

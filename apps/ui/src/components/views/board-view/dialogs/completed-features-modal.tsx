@@ -1,4 +1,3 @@
-// @ts-nocheck -- Feature index signature causes property access type errors
 import {
   Dialog,
   DialogContent,

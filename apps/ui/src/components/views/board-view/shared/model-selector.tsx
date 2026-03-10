@@ -1,4 +1,3 @@
-// @ts-nocheck -- model alias union types need refactoring for strict checks
 import { Label } from '@protolabsai/ui/atoms';
 import { Badge } from '@protolabsai/ui/atoms';
 import { Brain, AlertTriangle } from 'lucide-react';
@@ -33,15 +32,15 @@ export function ModelSelector({
     fetchCodexModels,
     disabledProviders,
   } = useAIModelsStore();
-  const { cursorCliStatus, codexCliStatus } = useSetupStore();
+  const { cursorCliStatus, codexCliStatus, codexAuthStatus } = useSetupStore();
 
   const selectedProvider = getModelProvider(selectedModel);
 
   // Check if Cursor CLI is available
   const isCursorAvailable = cursorCliStatus?.installed && cursorCliStatus?.auth?.authenticated;
 
-  // Check if Codex CLI is available
-  const isCodexAvailable = codexCliStatus?.installed && codexCliStatus?.auth?.authenticated;
+  // Check if Codex CLI is available (codexCliStatus is CliStatus without .auth; use codexAuthStatus)
+  const isCodexAvailable = codexCliStatus?.installed && codexAuthStatus?.authenticated;
 
   // Fetch Codex models on mount
   useEffect(() => {

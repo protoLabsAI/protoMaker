@@ -1,4 +1,3 @@
-// @ts-nocheck -- Feature index signature causes property access type errors
 import { useCallback } from 'react';
 import {
   Feature,
@@ -10,7 +9,11 @@ import {
 } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
 import type { ReasoningEffort } from '@protolabsai/types';
-import { FeatureImagePath as DescriptionImagePath } from '@/components/views/board-view/components/description-image-dropzone';
+import {
+  FeatureImagePath as DescriptionImagePath,
+  FeatureTextFilePath as DescriptionTextFilePath,
+} from '@/components/views/board-view/components/description-image-dropzone';
+import type { EnhancementMode } from '@protolabsai/types';
 import { getElectronAPI } from '@/lib/electron';
 import { isConnectionError, handleServerOffline } from '@/lib/http-api-client';
 import { toast } from 'sonner';
@@ -26,7 +29,7 @@ interface UseBoardActionsProps {
   currentProject: { path: string; id: string } | null;
   features: Feature[];
   runningAutoTasks: string[];
-  loadFeatures: () => Promise<void>;
+  loadFeatures: () => Promise<void> | void;
   persistFeatureCreate: (feature: Feature) => Promise<void>;
   persistFeatureUpdate: (
     featureId: string,
@@ -91,8 +94,13 @@ export function useBoardActions({
     enableDependencyBlocking,
     skipVerificationInAutoMode,
   } = useAppStore();
-  const { useWorktrees, isPrimaryWorktreeBranch, getPrimaryWorktreeBranch, getAutoModeState } =
-    useWorktreeStore();
+  const {
+    useWorktrees,
+    isPrimaryWorktreeBranch,
+    getPrimaryWorktreeBranch,
+    getAutoModeState,
+    getWorktrees,
+  } = useWorktreeStore();
   const autoMode = useAutoMode();
 
   // React Query mutations for feature operations
@@ -183,7 +191,7 @@ export function useBoardActions({
       }
 
       // Check if we need to generate a title
-      const needsTitleGeneration = !featureData.title.trim() && featureData.description.trim();
+      const needsTitleGeneration = !!(!featureData.title.trim() && featureData.description.trim());
 
       const newFeatureData = {
         ...featureData,
@@ -192,6 +200,8 @@ export function useBoardActions({
         status: 'backlog' as const,
         branchName: finalBranchName,
         dependencies: featureData.dependencies || [],
+        steps: [] as string[],
+        priority: featureData.priority as 0 | 1 | 2 | 3 | 4,
       };
       const createdFeature = addFeature(newFeatureData);
       // Must await to ensure feature exists on server before user can drag it
@@ -272,8 +282,9 @@ export function useBoardActions({
         thinkingLevel: ThinkingLevel;
         reasoningEffort: ReasoningEffort;
         imagePaths: DescriptionImagePath[];
+        textFilePaths?: DescriptionTextFilePath[];
         branchName: string;
-        priority: number;
+        priority: 0 | 1 | 2 | 3 | 4;
         planningMode?: PlanningMode;
         requirePlanApproval?: boolean;
         workMode?: 'current' | 'auto' | 'custom';
@@ -281,7 +292,7 @@ export function useBoardActions({
         childDependencies?: string[]; // Feature IDs that should depend on this feature
       },
       descriptionHistorySource?: 'enhance' | 'edit',
-      enhancementMode?: 'improve' | 'technical' | 'simplify' | 'acceptance' | 'ux-reviewer',
+      enhancementMode?: EnhancementMode,
       preEnhancementDescription?: string
     ) => {
       const workMode = updates.workMode || 'current';
@@ -783,7 +794,15 @@ export function useBoardActions({
           return;
         }
 
-        const result = await api.worktree.mergeFeature(currentProject.path, feature.id);
+        const branchName = feature.branchName ?? '';
+        const worktrees = getWorktrees(currentProject.path);
+        const worktreePath =
+          worktrees.find((w) => w.branch === branchName)?.path ?? currentProject.path;
+        const result = await api.worktree.mergeFeature(
+          currentProject.path,
+          branchName,
+          worktreePath
+        );
 
         if (result.success) {
           await loadFeatures();
@@ -805,7 +824,7 @@ export function useBoardActions({
         });
       }
     },
-    [currentProject, loadFeatures]
+    [currentProject, loadFeatures, getWorktrees]
   );
 
   const handleCompleteFeature = useCallback(

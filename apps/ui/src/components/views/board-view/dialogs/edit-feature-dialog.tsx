@@ -1,4 +1,3 @@
-// @ts-nocheck -- Feature index signature causes property access type errors
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -58,7 +57,7 @@ interface EditFeatureDialogProps {
       imagePaths: DescriptionImagePath[];
       textFilePaths: DescriptionTextFilePath[];
       branchName: string; // Can be empty string to use current branch
-      priority: number;
+      priority: 0 | 1 | 2 | 3 | 4;
       planningMode: PlanningMode;
       requirePlanApproval: boolean;
       dependencies?: string[];
@@ -233,7 +232,7 @@ export function EditFeatureDialog({
     // Determine if description changed and what source to use
     const descriptionChanged = editingFeature.description !== originalDescription;
     let historySource: 'enhance' | 'edit' | undefined;
-    let historyEnhancementMode: 'improve' | 'technical' | 'simplify' | 'acceptance' | undefined;
+    let historyEnhancementMode: EnhancementMode | undefined;
 
     if (descriptionChanged && descriptionChangeSource) {
       if (descriptionChangeSource === 'edit') {
@@ -553,7 +552,7 @@ export function EditFeatureDialog({
                   onPrioritySelect={(priority) =>
                     setEditingFeature({
                       ...editingFeature,
-                      priority,
+                      priority: priority as 0 | 1 | 2 | 3 | 4,
                     })
                   }
                   testIdPrefix="edit-priority"

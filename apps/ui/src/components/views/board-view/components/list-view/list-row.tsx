@@ -1,6 +1,4 @@
-// TODO: Remove @ts-nocheck after fixing BaseFeature's index signature issue
 // The `[key: string]: unknown` in BaseFeature causes property access type errors
-// @ts-nocheck -- BaseFeature index signature causes property access type errors
 import { memo, useCallback, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';

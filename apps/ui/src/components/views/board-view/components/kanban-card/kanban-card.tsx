@@ -1,4 +1,3 @@
-// @ts-nocheck -- DnD kit type conflicts with Feature index signature
 import React, { memo, useLayoutEffect, useState, useCallback } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';

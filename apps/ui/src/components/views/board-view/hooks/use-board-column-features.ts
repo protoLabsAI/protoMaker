@@ -1,4 +1,3 @@
-// @ts-nocheck -- Feature index signature causes property access type errors
 import { useMemo, useCallback } from 'react';
 import { Feature, useAppStore } from '@/store/app-store';
 import { useWorktreeStore } from '@/store/worktree-store';
@@ -202,7 +201,9 @@ export function useBoardColumnFeatures({
     // This ensures features appear in dependency order (dependencies before dependents)
     // Within the same dependency level, features are sorted by priority
     if (map.backlog.length > 0) {
-      const { orderedFeatures } = resolveDependencies(map.backlog);
+      const { orderedFeatures: _orderedFeatures } = resolveDependencies(map.backlog);
+      // Cast from base Feature type (libs/types) to UI Feature type (store/types)
+      const orderedFeatures = _orderedFeatures as Feature[];
 
       // Get all features to check blocking dependencies against
       const enableDependencyBlocking = useAppStore.getState().enableDependencyBlocking;

@@ -1,9 +1,10 @@
-// @ts-nocheck -- Feature index signature causes property access type errors
 import { memo, useState, useCallback } from 'react';
 import { Bot, ChevronDown, ChevronUp, Check, RefreshCw } from 'lucide-react';
-import { Feature, useAppStore } from '@/store/app-store';
+import { Feature } from '@/store/app-store';
 import { apiPost } from '@/lib/api-fetch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/query-keys';
 
 const ROLE_LABELS: Record<string, string> = {
   'frontend-engineer': 'Frontend',
@@ -40,7 +41,7 @@ export const AgentSuggestion = memo(function AgentSuggestion({
 }: AgentSuggestionProps) {
   const [expanded, setExpanded] = useState(false);
   const [assigning, setAssigning] = useState(false);
-  const refreshFeatures = useAppStore((state) => state.refreshFeatures);
+  const queryClient = useQueryClient();
 
   const suggestion = feature.routingSuggestion;
   if (!suggestion) return null;
@@ -57,14 +58,14 @@ export const AgentSuggestion = memo(function AgentSuggestion({
           featureId: feature.id,
           role: newRole,
         });
-        refreshFeatures?.();
+        queryClient.invalidateQueries({ queryKey: queryKeys.features.all(projectPath) });
       } catch {
         // Silently handle - feature may have been updated
       } finally {
         setAssigning(false);
       }
     },
-    [projectPath, feature.id, refreshFeatures]
+    [projectPath, feature.id, queryClient]
   );
 
   return (

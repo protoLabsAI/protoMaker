@@ -1,4 +1,3 @@
-// @ts-nocheck -- DnD kit type conflicts with Feature index signature
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { createLogger } from '@protolabsai/utils/logger';
 import {
@@ -10,7 +9,6 @@ import {
   useSensors,
   rectIntersection,
   pointerWithin,
-  type PointerEvent as DndPointerEvent,
   type CollisionDetection,
   type Collision,
 } from '@dnd-kit/core';
@@ -20,7 +18,7 @@ class DialogAwarePointerSensor extends PointerSensor {
   static activators = [
     {
       eventName: 'onPointerDown' as const,
-      handler: ({ nativeEvent: event }: { nativeEvent: DndPointerEvent }) => {
+      handler: ({ nativeEvent: event }: { nativeEvent: PointerEvent }) => {
         // Don't start drag if the event originated from inside a dialog
         if ((event.target as Element)?.closest?.('[role="dialog"]')) {
           return false;
@@ -320,7 +318,8 @@ export function BoardView() {
 
     const unsubscribers = [
       // PRD generated - show notification with action to review
-      api['subscribeToEvent']('ideation:prd-generated', (payload: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ideation events not in EventType union yet
+      (api as any).subscribeToEvent('ideation:prd-generated', (payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (p.projectPath !== currentProject.path) return;
 
@@ -344,7 +343,8 @@ export function BoardView() {
       }),
 
       // PRD approved - show success notification
-      api['subscribeToEvent']('ideation:prd-approved', (payload: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ideation events not in EventType union yet
+      (api as any).subscribeToEvent('ideation:prd-approved', (payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (p.projectPath !== currentProject.path) return;
         toast.success('PRD approved - breaking down into epics...');
@@ -352,7 +352,8 @@ export function BoardView() {
       }),
 
       // PRD rejected - show info notification
-      api['subscribeToEvent']('ideation:prd-rejected', (payload: unknown) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ideation events not in EventType union yet
+      (api as any).subscribeToEvent('ideation:prd-rejected', (payload: unknown) => {
         const p = payload as Record<string, unknown>;
         if (p.projectPath !== currentProject.path) return;
         toast.info('PRD rejected');
@@ -523,7 +524,10 @@ export function BoardView() {
 
   // Auto mode hook - pass current worktree to get worktree-specific state
   // Must be after selectedWorktree is defined
-  const autoMode = useAutoMode(selectedWorktree ?? undefined);
+  const autoModeWorktree = selectedWorktree
+    ? { ...selectedWorktree, isCurrent: false, hasWorktree: true }
+    : undefined;
+  const autoMode = useAutoMode(autoModeWorktree);
   // Get runningTasks from the hook (scoped to current project/worktree)
   const runningAutoTasks = autoMode.runningTasks;
   // Get worktree-specific maxConcurrency from the hook
@@ -933,7 +937,7 @@ export function BoardView() {
 
   // Handler called when user confirms the pull & resolve conflicts dialog
   const handleConfirmResolveConflicts = useCallback(
-    async (worktree: WorktreeInfo, remoteBranch: string) => {
+    async (worktree: { branch: string; path: string; isMain: boolean }, remoteBranch: string) => {
       const description = `Pull latest from ${remoteBranch} and resolve conflicts. Merge ${remoteBranch} into the current branch (${worktree.branch}), resolving any merge conflicts that arise. After resolving conflicts, ensure the code compiles and tests pass.`;
 
       // Create the feature
@@ -1047,28 +1051,27 @@ export function BoardView() {
     const api = getElectronAPI();
     if (!api?.backlogPlan) return;
 
-    const unsubscribe = api.backlogPlan.onEvent(
-      (event: { type: string; result?: BacklogPlanResult; error?: string }) => {
-        if (event.type === 'backlog_plan_complete') {
-          setIsGeneratingPlan(false);
-          if (event.result && event.result.changes?.length > 0) {
-            setPendingBacklogPlan(event.result);
-            toast.success('Plan ready! Click to review.', {
-              duration: 10000,
-              action: {
-                label: 'Review',
-                onClick: () => setShowPlanDialog(true),
-              },
-            });
-          } else {
-            toast.info('No changes generated. Try again with a different prompt.');
-          }
-        } else if (event.type === 'backlog_plan_error') {
-          setIsGeneratingPlan(false);
-          toast.error(`Plan generation failed: ${event.error}`);
+    const unsubscribe = api.backlogPlan.onEvent((data: unknown) => {
+      const event = data as { type: string; result?: BacklogPlanResult; error?: string };
+      if (event.type === 'backlog_plan_complete') {
+        setIsGeneratingPlan(false);
+        if (event.result && event.result.changes?.length > 0) {
+          setPendingBacklogPlan(event.result);
+          toast.success('Plan ready! Click to review.', {
+            duration: 10000,
+            action: {
+              label: 'Review',
+              onClick: () => setShowPlanDialog(true),
+            },
+          });
+        } else {
+          toast.info('No changes generated. Try again with a different prompt.');
         }
+      } else if (event.type === 'backlog_plan_error') {
+        setIsGeneratingPlan(false);
+        toast.error(`Plan generation failed: ${event.error}`);
       }
-    );
+    });
 
     return unsubscribe;
   }, []);
@@ -1187,7 +1190,7 @@ export function BoardView() {
   // Build columnFeaturesMap for ListView
   // pipelineConfig is now from usePipelineConfig React Query hook at the top
   const columnFeaturesMap = useMemo(() => {
-    const columns = getColumnsWithPipeline(pipelineConfig);
+    const columns = getColumnsWithPipeline(pipelineConfig ?? null);
     const map: Record<string, typeof hookFeatures> = {};
     for (const column of columns) {
       map[column.id] = getColumnFeatures(column.id as ColumnId);
@@ -1539,7 +1542,7 @@ export function BoardView() {
                 },
               }}
               runningAutoTasks={runningAutoTasks}
-              pipelineConfig={pipelineConfig}
+              pipelineConfig={pipelineConfig ?? null}
               onAddFeature={() => setShowAddDialog(true)}
               isSelectionMode={isSelectionMode}
               selectedFeatureIds={selectedFeatureIds}
@@ -1586,14 +1589,13 @@ export function BoardView() {
               onAddFeature={() => setShowAddDialog(true)}
               onShowCompletedModal={() => setShowCompletedModal(true)}
               completedCount={completedFeatures.length}
-              pipelineConfig={pipelineConfig}
+              pipelineConfig={pipelineConfig ?? null}
               onOpenPipelineSettings={() => setShowPipelineSettings(true)}
               isSelectionMode={isSelectionMode}
               selectionTarget={selectionTarget}
               selectedFeatureIds={selectedFeatureIds}
               onToggleFeatureSelection={toggleFeatureSelection}
               onToggleSelectionMode={toggleSelectionMode}
-              viewMode={viewMode}
               isDragging={activeFeature !== null}
               onAiSuggest={() => setShowPlanDialog(true)}
               className="transition-opacity duration-200"
@@ -1744,7 +1746,7 @@ export function BoardView() {
         open={showPipelineSettings}
         onClose={() => setShowPipelineSettings(false)}
         projectPath={currentProject.path}
-        pipelineConfig={pipelineConfig}
+        pipelineConfig={pipelineConfig ?? null}
         onSave={async (config) => {
           const api = getHttpApiClient();
           const result = await api.pipeline.saveConfig(currentProject.path, config);
