@@ -73,6 +73,42 @@ export class ReviewProcessor implements StateProcessor {
       if (fresh.prNumber) ctx.prNumber = fresh.prNumber;
     }
 
+    // Early exit: feature is already done (PR merged externally or by another path)
+    if (ctx.feature.status === 'done') {
+      logger.info('[REVIEW] Feature already done, skipping REVIEW processing', {
+        featureId: ctx.feature.id,
+      });
+      return {
+        nextState: null,
+        shouldContinue: false,
+        reason: 'Feature already done',
+      };
+    }
+
+    // Check if the feature branch has a merged PR (external merge detection)
+    if (ctx.feature.branchName) {
+      const externallyMerged = await this.checkBranchMerged(ctx);
+      if (externallyMerged) {
+        logger.info('[REVIEW] Externally merged PR detected for branch, transitioning to DONE', {
+          featureId: ctx.feature.id,
+          branchName: ctx.feature.branchName,
+        });
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          status: 'done',
+        });
+        this.serviceContext.events.emit('feature:pr-merged' as EventType, {
+          featureId: ctx.feature.id,
+          prNumber: ctx.prNumber,
+          projectPath: ctx.projectPath,
+        });
+        return {
+          nextState: null,
+          shouldContinue: false,
+          reason: 'PR merged externally via branch detection',
+        };
+      }
+    }
+
     // No PR means something is wrong
     if (!ctx.prNumber) {
       ctx.escalationReason = 'No PR number found after execution';
@@ -308,6 +344,54 @@ export class ReviewProcessor implements StateProcessor {
     if (!this.serviceContext.prFeedbackService) return undefined;
     const prs = this.serviceContext.prFeedbackService.getTrackedPRs();
     return prs.find((pr) => pr.featureId === ctx.feature.id || pr.prNumber === ctx.prNumber);
+  }
+
+  /**
+   * Check if the feature's branch has a merged PR on GitHub.
+   * This catches PRs merged externally (via gh pr merge, auto-merge, or GitHub UI).
+   */
+  private async checkBranchMerged(ctx: StateContext): Promise<boolean> {
+    const branchName = ctx.feature.branchName;
+    if (!branchName) return false;
+
+    // Sanitize branch name to prevent shell injection
+    if (!/^[a-zA-Z0-9._\-/]+$/.test(branchName)) {
+      logger.warn(
+        '[REVIEW] Branch name contains unsafe characters, skipping external merge check',
+        {
+          featureId: ctx.feature.id,
+        }
+      );
+      return false;
+    }
+
+    try {
+      const { stdout } = await execAsync(
+        `gh pr list --head "${branchName}" --state merged --json number,merged --jq '.[0].merged // false'`,
+        { cwd: ctx.projectPath, timeout: 15000 }
+      );
+      const result = stdout.trim();
+      if (result === 'true') {
+        // Also store the PR number if we don't have one yet
+        if (!ctx.prNumber) {
+          try {
+            const { stdout: prNumOut } = await execAsync(
+              `gh pr list --head "${branchName}" --state merged --json number --jq '.[0].number // 0'`,
+              { cwd: ctx.projectPath, timeout: 15000 }
+            );
+            const prNum = parseInt(prNumOut.trim(), 10);
+            if (prNum > 0) ctx.prNumber = prNum;
+          } catch {
+            // Non-critical: we already know it's merged
+          }
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      logger.warn('[REVIEW] External merge check via branch name failed:', err);
+      return false;
+    }
   }
 }
 
