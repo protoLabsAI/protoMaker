@@ -60,7 +60,9 @@ export class ProjectTimelineService {
     await fs.promises.writeFile(tmpFile, JSON.stringify(timeline, null, 2), 'utf-8');
     await fs.promises.rename(tmpFile, timelinePath);
 
-    logger.debug(`Appended timeline entry ${newEntry.id} (type=${newEntry.type}) for project ${slug}`);
+    logger.debug(
+      `Appended timeline entry ${newEntry.id} (type=${newEntry.type}) for project ${slug}`
+    );
     return newEntry;
   }
 
