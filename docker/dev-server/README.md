@@ -75,36 +75,36 @@ docker logs automaker-dev-server --tail 50
 
 ## Daily Usage
 
-| Task | Command |
-|------|---------|
-| Start | `docker compose -f docker/dev-server/docker-compose.yml up -d` |
-| Stop | `docker compose -f docker/dev-server/docker-compose.yml down` |
-| View logs | `docker logs automaker-dev-server -f` |
-| Force rebuild now | `docker compose -f docker/dev-server/docker-compose.yml pull && docker compose -f docker/dev-server/docker-compose.yml up -d` |
+| Task                  | Command                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Start                 | `docker compose -f docker/dev-server/docker-compose.yml up -d`                                                                 |
+| Stop                  | `docker compose -f docker/dev-server/docker-compose.yml down`                                                                  |
+| View logs             | `docker logs automaker-dev-server -f`                                                                                          |
+| Force rebuild now     | `docker compose -f docker/dev-server/docker-compose.yml pull && docker compose -f docker/dev-server/docker-compose.yml up -d`  |
 | Build locally (no CI) | `docker compose -f docker/dev-server/docker-compose.yml build && docker compose -f docker/dev-server/docker-compose.yml up -d` |
-| Health check | `curl http://localhost:3008/api/health` |
+| Health check          | `curl http://localhost:3008/api/health`                                                                                        |
 
 ## Environment Variables
 
 The container inherits variables from the host shell or repo-root `.env`. At minimum you need:
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | ✅ | Claude API key |
-| `AUTOMAKER_API_KEY` | ✅ | Server API key |
-| `DISCORD_TOKEN` | optional | Discord bot token |
-| `GH_TOKEN` | optional | GitHub token (for `gh` CLI in agents) |
+| Variable                   | Required | Description                                          |
+| -------------------------- | -------- | ---------------------------------------------------- |
+| `ANTHROPIC_API_KEY`        | ✅       | Claude API key                                       |
+| `AUTOMAKER_API_KEY`        | ✅       | Server API key                                       |
+| `DISCORD_TOKEN`            | optional | Discord bot token                                    |
+| `GH_TOKEN`                 | optional | GitHub token (for `gh` CLI in agents)                |
 | `CLAUDE_OAUTH_CREDENTIALS` | optional | Claude CLI OAuth (if using OAuth instead of API key) |
 
 The repo-root `.env` is **not** mounted directly (to avoid leaking dev secrets). Variables are passed explicitly via the `environment:` block in `docker-compose.yml`. Make sure your shell has them set, or add them to the repo-root `.env` and they'll be interpolated by Docker Compose automatically.
 
 ## Volumes
 
-| Mount | Purpose |
-|-------|---------|
-| `../../data` → `/data` | Persistent app data (features, projects) |
-| `../../.automaker` → `/app/.automaker` | Agent memory, skills, config |
-| `automaker-dev-claude-config` → `/home/automaker/.claude` | Claude CLI credentials |
+| Mount                                                     | Purpose                                  |
+| --------------------------------------------------------- | ---------------------------------------- |
+| `../../data` → `/data`                                    | Persistent app data (features, projects) |
+| `../../.automaker` → `/app/.automaker`                    | Agent memory, skills, config             |
+| `automaker-dev-claude-config` → `/home/automaker/.claude` | Claude CLI credentials                   |
 
 ## How Auto-Rebuild Works
 
@@ -120,18 +120,22 @@ Build time is typically **5–10 minutes** (layer caching keeps it fast after th
 ## Troubleshooting
 
 **Container not starting after reboot:**
+
 - Verify Docker Desktop is set to auto-start on login
 - Run `docker ps -a` to check container state
 
 **Watchtower not pulling new images:**
+
 - Check `docker logs automaker-dev-watchtower` for auth errors
 - Re-run `docker login ghcr.io` if credentials expired
 
 **Server crashes on start:**
+
 - Check `docker logs automaker-dev-server --tail 100`
 - Verify all required env vars are set
 - Try a local build to reproduce: `docker compose -f docker/dev-server/docker-compose.yml build`
 
 **Port 3008 already in use:**
+
 - Stop the native dev server: kill any `npm run dev:headless` process
 - Or change the port mapping in `docker-compose.yml`: `- '3009:3008'`
