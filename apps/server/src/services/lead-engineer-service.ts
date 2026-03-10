@@ -469,6 +469,19 @@ export class LeadEngineerService {
         outcome,
         success: result.finalState !== 'ESCALATE',
       });
+
+      // Index engineering learnings when feature completes via state machine (DONE)
+      if (result.finalState === 'DONE' && this.knowledgeStoreService) {
+        this.knowledgeStoreService
+          .ingestFeatureCompletionLearnings(projectPath, featureId)
+          .catch((err) =>
+            logger.warn(
+              `[LeadEngineer] Failed to ingest completion learnings for ${featureId} (non-fatal):`,
+              err
+            )
+          );
+      }
+
       return pipelineResult;
     } catch (error: unknown) {
       logger.error(`[LeadEngineer] Feature processing failed`, {
@@ -565,6 +578,18 @@ export class LeadEngineerService {
           prNumber: feature.prNumber,
           projectPath,
         });
+
+        // Index engineering learnings when feature reaches DONE via PR merge
+        if (this.knowledgeStoreService) {
+          this.knowledgeStoreService
+            .ingestFeatureCompletionLearnings(projectPath, feature.id)
+            .catch((err) =>
+              logger.warn(
+                `[PRMergePoller] Failed to ingest learnings for ${feature.id} (non-fatal):`,
+                err
+              )
+            );
+        }
       } catch (err) {
         logger.warn(
           `[PRMergePoller] Failed to check PR #${feature.prNumber} for feature "${feature.id}" (non-fatal):`,

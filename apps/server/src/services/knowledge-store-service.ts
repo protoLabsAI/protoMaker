@@ -586,7 +586,7 @@ export class KnowledgeStoreService {
 
   /**
    * Search for reflections and agent outputs using FTS5.
-   * Convenience method that filters to reflection and agent_output source types.
+   * Filters to reflection and agent_output source types with domain='engineering'.
    *
    * @param projectPath - Project path
    * @param query - Search query (feature title + description works well)
@@ -606,7 +606,28 @@ export class KnowledgeStoreService {
       this.initialize(projectPath);
     }
 
-    return this.searchService.searchReflections(projectPath, query, maxResults);
+    return this.searchService.searchReflections(projectPath, query, maxResults, 'engineering');
+  }
+
+  /**
+   * Ingest engineering learnings when a feature reaches DONE state.
+   * Indexes agent-output.md, reflection.md, and failure classification data
+   * from feature.json. All chunks are tagged with domain='engineering'.
+   *
+   * @param projectPath - Project path
+   * @param featureId - Feature ID that just completed
+   * @returns Number of chunks indexed
+   */
+  async ingestFeatureCompletionLearnings(projectPath: string, featureId: string): Promise<number> {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    return this.ingestionService.ingestFeatureCompletionLearnings(this.db, projectPath, featureId);
   }
 
   /**
