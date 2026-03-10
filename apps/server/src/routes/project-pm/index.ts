@@ -11,6 +11,9 @@
  * GET /api/project-pm/session/:slug — returns session history + ceremony state.
  */
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { Router, type Request, type Response } from 'express';
 import {
   streamText,
@@ -30,10 +33,178 @@ import type { ProjectPMService } from '../../services/project-pm-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
+import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { EventType } from '@protolabsai/types';
 
 const logger = createLogger('ProjectPMRoutes');
+
+/** Approximate token count: ~4 chars per token */
+const MAX_PROMPT_CHARS = 16_000; // ~4k tokens
+
+/** Resolve __dirname in ESM context */
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * PM prompt template — loaded once at startup.
+ * The template's static preamble section drives the agent persona.
+ * Dynamic sections are built programmatically below and appended after
+ * the preamble lines (everything up to and including the first blank line
+ * after the constraints statement).
+ */
+const _PM_PROMPT_PREAMBLE = (() => {
+  const template = readFileSync(path.join(__dirname, 'pm-prompt.md'), 'utf-8');
+  // Extract the static preamble: lines up to and including the constraints line
+  const lines = template.split('\n');
+  const cutoff = lines.findIndex((l) => l.startsWith('You do NOT have access'));
+  return cutoff >= 0 ? lines.slice(0, cutoff + 1).join('\n') : lines.slice(0, 7).join('\n');
+})();
+
+/**
+ * Truncate a string to at most `maxChars`, appending a truncation note if needed.
+ */
+function truncate(value: string, maxChars: number): string {
+  if (value.length <= maxChars) return value;
+  return value.slice(0, maxChars) + ' … [truncated]';
+}
+
+/**
+ * Render the PM system prompt from template + context data.
+ * Uses a lightweight conditional/loop mini-renderer (no external deps).
+ * Enforces MAX_PROMPT_CHARS total budget.
+ */
+function buildPmSystemPrompt(opts: {
+  project: {
+    slug?: string;
+    title?: string;
+    goal?: string;
+    health?: string;
+    status?: string;
+    lead?: string;
+    targetDate?: string;
+    prd?: {
+      situation?: string;
+      problem?: string;
+      approach?: string;
+      results?: string;
+      constraints?: string;
+    };
+    milestones?: Array<{
+      number: number;
+      slug: string;
+      title: string;
+      status: string;
+      targetDate?: string;
+    }>;
+    updates?: Array<{ health: string; body: string; author: string; createdAt: string }>;
+  } | null;
+  ceremonyStatus: {
+    phase?: string;
+    currentMilestone?: string;
+    lastStandup?: string;
+    lastRetro?: string;
+    standupCadence?: string;
+  } | null;
+  activeFeatures: Array<{ title: string; status: string; epicId?: string }>;
+  leadState: {
+    activeCount: number;
+    activeSessions: Array<{ featureId: string; startedAt: string }>;
+  } | null;
+}): string {
+  const { project, ceremonyStatus, activeFeatures, leadState } = opts;
+
+  const parts: string[] = [];
+
+  // ── Static preamble (sourced from pm-prompt.md template) ──────────────────
+  parts.push(_PM_PROMPT_PREAMBLE);
+
+  // ── Project overview ────────────────────────────────────────────────────────
+  if (project) {
+    parts.push('', `## Project: ${project.title ?? 'Unknown'}`);
+    if (project.goal) parts.push(`**Goal:** ${truncate(project.goal, 500)}`);
+    if (project.health) parts.push(`**Health:** ${project.health}`);
+    if (project.status) parts.push(`**Status:** ${project.status}`);
+    if (project.lead) parts.push(`**Lead:** ${project.lead}`);
+    if (project.targetDate) parts.push(`**Target Date:** ${project.targetDate}`);
+
+    // PRD summary
+    if (project.prd) {
+      parts.push('', '### PRD Summary');
+      if (project.prd.situation)
+        parts.push(`**Situation:** ${truncate(project.prd.situation, 400)}`);
+      if (project.prd.problem) parts.push(`**Problem:** ${truncate(project.prd.problem, 400)}`);
+      if (project.prd.approach) parts.push(`**Approach:** ${truncate(project.prd.approach, 400)}`);
+      if (project.prd.results)
+        parts.push(`**Expected Results:** ${truncate(project.prd.results, 300)}`);
+      if (project.prd.constraints)
+        parts.push(`**Constraints:** ${truncate(project.prd.constraints, 300)}`);
+    }
+
+    // Milestones
+    if (project.milestones && project.milestones.length > 0) {
+      parts.push('', '## Milestones');
+      for (const m of project.milestones) {
+        const due = m.targetDate ? ` — due ${m.targetDate}` : '';
+        parts.push(`- **M${m.number}: ${m.title}** (${m.status})${due}`);
+      }
+    }
+
+    // Recent timeline (last 5 updates)
+    if (project.updates && project.updates.length > 0) {
+      const recent = project.updates.slice(-5);
+      parts.push('', '## Recent Timeline');
+      for (const u of recent) {
+        const date = u.createdAt ? u.createdAt.slice(0, 10) : '';
+        parts.push(
+          `- [${u.health}] ${truncate(u.body, 200)} — ${u.author}${date ? `, ${date}` : ''}`
+        );
+      }
+    }
+  }
+
+  // ── Ceremony state ──────────────────────────────────────────────────────────
+  if (ceremonyStatus) {
+    parts.push('', '## Ceremony State');
+    if (ceremonyStatus.phase) parts.push(`**Current Phase:** ${ceremonyStatus.phase}`);
+    if (ceremonyStatus.currentMilestone)
+      parts.push(`**Active Milestone:** ${ceremonyStatus.currentMilestone}`);
+    if (ceremonyStatus.lastStandup) parts.push(`**Last Standup:** ${ceremonyStatus.lastStandup}`);
+    if (ceremonyStatus.lastRetro) parts.push(`**Last Retro:** ${ceremonyStatus.lastRetro}`);
+    if (ceremonyStatus.standupCadence)
+      parts.push(`**Standup Cadence:** ${ceremonyStatus.standupCadence}`);
+  }
+
+  // ── Active features (non-done, capped at 15) ────────────────────────────────
+  if (activeFeatures.length > 0) {
+    parts.push('', '## Active Features');
+    for (const f of activeFeatures.slice(0, 15)) {
+      const epicNote = f.epicId ? ` (epic: ${f.epicId})` : '';
+      parts.push(`- **${f.title}** — ${f.status}${epicNote}`);
+    }
+    if (activeFeatures.length > 15) {
+      parts.push(`… and ${activeFeatures.length - 15} more.`);
+    }
+  }
+
+  // ── Lead Engineer state ─────────────────────────────────────────────────────
+  if (leadState && leadState.activeCount > 0) {
+    parts.push('', '## Lead Engineer State');
+    parts.push(`**Active Sessions:** ${leadState.activeCount}`);
+    for (const s of leadState.activeSessions.slice(0, 5)) {
+      parts.push(`- Feature \`${s.featureId}\` — started ${s.startedAt}`);
+    }
+  }
+
+  const prompt = parts.join('\n');
+
+  // Enforce token budget (~4k tokens ≈ 16k chars)
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    return (
+      prompt.slice(0, MAX_PROMPT_CHARS) + '\n\n… [prompt truncated to stay within token budget]'
+    );
+  }
+  return prompt;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function makeTool<TSchema extends z.ZodType<any>>(config: {
@@ -44,60 +215,13 @@ function makeTool<TSchema extends z.ZodType<any>>(config: {
   return config as unknown as Tool;
 }
 
-function buildPmSystemPrompt(opts: {
-  project: {
-    title?: string;
-    goal?: string;
-    prd?: { situation?: string; problem?: string; approach?: string };
-  } | null;
-  ceremonyStatus: { phase?: string; lastStandup?: string; lastRetro?: string } | null;
-  recentFeatures: Array<{ title: string; status: string }>;
-}): string {
-  const { project, ceremonyStatus, recentFeatures } = opts;
-
-  const parts: string[] = [
-    'You are the Project PM Agent for this software project. Your role is to:',
-    '- Track project health and surface risks',
-    '- Answer questions about project status, features, and ceremonies',
-    '- Create status updates and manage project documentation',
-    '- Coordinate ceremonies (standups, retros) when appropriate',
-    '- Notify the operator about important project events',
-    '',
-    'You do NOT have access to the file system or bash. Use the provided tools to interact with project data.',
-  ];
-
-  if (project) {
-    parts.push('', `## Project: ${project.title ?? 'Unknown'}`, `**Goal:** ${project.goal ?? ''}`);
-    if (project.prd) {
-      if (project.prd.situation) parts.push(`**Situation:** ${project.prd.situation}`);
-      if (project.prd.problem) parts.push(`**Problem:** ${project.prd.problem}`);
-      if (project.prd.approach) parts.push(`**Approach:** ${project.prd.approach}`);
-    }
-  }
-
-  if (ceremonyStatus) {
-    parts.push('', '## Ceremony State');
-    if (ceremonyStatus.phase) parts.push(`**Current Phase:** ${ceremonyStatus.phase}`);
-    if (ceremonyStatus.lastStandup) parts.push(`**Last Standup:** ${ceremonyStatus.lastStandup}`);
-    if (ceremonyStatus.lastRetro) parts.push(`**Last Retro:** ${ceremonyStatus.lastRetro}`);
-  }
-
-  if (recentFeatures.length > 0) {
-    parts.push('', '## Recent Feature Statuses');
-    for (const f of recentFeatures.slice(0, 20)) {
-      parts.push(`- ${f.title} (${f.status})`);
-    }
-  }
-
-  return parts.join('\n');
-}
-
 export function createProjectPmRoutes(
   projectPmService: ProjectPMService,
   projectService: ProjectService,
   ceremonyService: CeremonyService,
   featureLoader: FeatureLoader,
-  events: EventEmitter
+  events: EventEmitter,
+  leadEngineerService?: LeadEngineerService
 ): Router {
   const router = Router();
 
@@ -130,31 +254,80 @@ export function createProjectPmRoutes(
 
       // Load project data for system prompt
       const project = await projectService.getProject(projectPath, projectSlug).catch(() => null);
+
       const ceremonyStatus = await (async () => {
         try {
           const state = await ceremonyService.getCeremonyState(projectPath, projectSlug);
           return {
             phase: state.phase,
+            currentMilestone: state.currentMilestone,
             lastStandup: state.lastStandup || undefined,
             lastRetro: state.lastRetro || undefined,
+            standupCadence: state.standupCadence,
           };
         } catch {
           return null;
         }
       })();
 
-      let recentFeatures: Array<{ title: string; status: string }> = [];
+      let activeFeatures: Array<{ title: string; status: string; epicId?: string }> = [];
       try {
         const features = await featureLoader.getAll(projectPath);
-        recentFeatures = features
-          .filter((f) => f.status !== 'done')
-          .slice(0, 20)
-          .map((f) => ({ title: f.title ?? f.id, status: f.status ?? 'unknown' }));
+        activeFeatures = features
+          .filter((f) => f.status !== 'done' && f.projectSlug === projectSlug)
+          .map((f) => ({
+            title: f.title ?? f.id,
+            status: f.status ?? 'unknown',
+            epicId: f.epicId,
+          }));
       } catch {
         // Non-fatal
       }
 
-      const systemPrompt = buildPmSystemPrompt({ project, ceremonyStatus, recentFeatures });
+      // Lead Engineer state: report how many features are actively in-progress
+      const leadState = (() => {
+        if (!leadEngineerService) return null;
+        if (!leadEngineerService.isManaged(projectPath)) return null;
+        const activeCount = activeFeatures.filter((f) => f.status === 'in_progress').length;
+        return {
+          activeCount,
+          activeSessions: [] as Array<{ featureId: string; startedAt: string }>,
+        };
+      })();
+
+      const systemPrompt = buildPmSystemPrompt({
+        project: project
+          ? {
+              slug: project.slug,
+              title: project.title,
+              goal: project.goal,
+              health: project.health,
+              status: project.status,
+              lead: project.lead,
+              targetDate: project.targetDate,
+              prd: project.prd
+                ? {
+                    situation: project.prd.situation,
+                    problem: project.prd.problem,
+                    approach: project.prd.approach,
+                    results: project.prd.results,
+                    constraints: project.prd.constraints,
+                  }
+                : undefined,
+              milestones: project.milestones?.map((m) => ({
+                number: m.number,
+                slug: m.slug,
+                title: m.title,
+                status: m.status,
+                targetDate: m.targetDate,
+              })),
+              updates: project.updates,
+            }
+          : null,
+        ceremonyStatus,
+        activeFeatures,
+        leadState,
+      });
 
       // PM inline tools (ai v6: use inputSchema not parameters)
       const tools: Record<string, Tool> = {
