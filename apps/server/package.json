@@ -16,6 +16,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
+    "start:headless": "NODE_ENV=production AUTO_MODE=true node dist/index.js",
     "lint": "eslint src/ tests/",
     "test": "vitest",
     "test:ui": "vitest --ui",

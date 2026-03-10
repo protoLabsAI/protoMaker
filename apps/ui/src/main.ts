@@ -228,8 +228,20 @@ let saveWindowBoundsTimeout: ReturnType<typeof setTimeout> | null = null;
 // API key for CSRF protection
 let apiKey: string | null = null;
 
-// Track if we're using an external server (Docker API mode)
+// Track if we're using an external server (Docker API mode or legless build)
 let isExternalServerMode = false;
+
+// Full base URL for the server (set in legless/external mode when server is not localhost)
+let serverBaseUrl: string | null = null;
+
+/**
+ * Returns the base URL for the backend server.
+ * In standard mode: http://localhost:<port>
+ * In legless/external mode with custom URL: the URL chosen at launch
+ */
+function getServerUrl(): string {
+  return serverBaseUrl ?? `http://localhost:${serverPort}`;
+}
 
 /**
  * Get the relative path to API key file within userData
@@ -799,7 +811,7 @@ async function waitForServer(getExitCode?: () => number | null, maxAttempts = 30
 
     try {
       await new Promise<void>((resolve, reject) => {
-        const req = http.get(`http://localhost:${serverPort}/api/health`, (res) => {
+        const req = http.get(`${getServerUrl()}/api/health`, (res) => {
           if (res.statusCode === 200) {
             resolve();
           } else {
@@ -812,7 +824,7 @@ async function waitForServer(getExitCode?: () => number | null, maxAttempts = 30
           reject(new Error('Timeout'));
         });
       });
-      diagLog(`[HEALTH] Server ready after ${i + 1} attempt(s) on port ${serverPort}`);
+      diagLog(`[HEALTH] Server ready after ${i + 1} attempt(s) at ${getServerUrl()}`);
       logger.info('Server is ready');
       return;
     } catch (err) {
@@ -825,7 +837,7 @@ async function waitForServer(getExitCode?: () => number | null, maxAttempts = 30
     }
   }
 
-  diagLog(`[HEALTH] Server failed to start after ${maxAttempts} attempts on port ${serverPort}`);
+  diagLog(`[HEALTH] Server failed to start after ${maxAttempts} attempts at ${getServerUrl()}`);
   throw new Error('Server failed to start');
 }
 
@@ -1193,24 +1205,80 @@ app.whenReady().then(async () => {
   }
 
   try {
-    // Check if we should skip the embedded server (for Docker API mode)
-    const skipEmbeddedServer = process.env.SKIP_EMBEDDED_SERVER === 'true';
+    // Detect legless mode: packaged app where the server bundle was not included.
+    // In a standard build, electron-builder copies the server to process.resourcesPath/server.
+    // In a legless build (build:electron:legless) that directory is absent.
+    const serverBundleInResources = app.isPackaged
+      ? fs.existsSync(path.join(process.resourcesPath, 'server'))
+      : true; // dev — assume bundle would be present; use SKIP_EMBEDDED_SERVER for external mode
+
+    // Skip the embedded server when explicitly requested (Docker/CI) OR when the
+    // server bundle was intentionally omitted from the package (legless build).
+    const skipEmbeddedServer =
+      process.env.SKIP_EMBEDDED_SERVER === 'true' || !serverBundleInResources;
     isExternalServerMode = skipEmbeddedServer;
 
     if (skipEmbeddedServer) {
-      // Use the default server port (Docker container runs on 3008)
-      serverPort = DEFAULT_SERVER_PORT;
-      logger.info('SKIP_EMBEDDED_SERVER=true, using external server at port', serverPort);
+      const isLeglessMode = !serverBundleInResources && app.isPackaged;
+
+      // Determine target server URL — env var takes precedence over default
+      const defaultServerUrl =
+        process.env.AUTOMAKER_SERVER_URL || `http://localhost:${DEFAULT_SERVER_PORT}`;
+      let targetServerUrl = defaultServerUrl;
+
+      if (isLeglessMode) {
+        // Legless build: show a native dialog so the user can confirm (or learn how
+        // to override) the server URL before the app attempts to connect.
+        diagLog(`[LEGLESS] Showing server picker — default: ${defaultServerUrl}`);
+        const { response } = await dialog.showMessageBox({
+          type: 'question',
+          title: 'Connect to Automaker Server',
+          message: 'Server Connection',
+          detail:
+            `This app does not include an embedded server.\n\n` +
+            `It will connect to:\n${defaultServerUrl}\n\n` +
+            `To connect to a different server, quit and relaunch with the ` +
+            `AUTOMAKER_SERVER_URL environment variable set to your server's URL.`,
+          buttons: ['Connect', 'Cancel'],
+          defaultId: 0,
+          cancelId: 1,
+        });
+
+        if (response === 1) {
+          app.quit();
+          return;
+        }
+      }
+
+      // Parse URL to derive port and, for non-localhost servers, the full base URL
+      try {
+        const parsed = new URL(targetServerUrl);
+        serverPort = parseInt(parsed.port || (parsed.protocol === 'https:' ? '443' : '3008'), 10);
+        // Only set serverBaseUrl when the host is not localhost — otherwise
+        // the existing http://localhost:<port> construction works fine.
+        if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+          serverBaseUrl = targetServerUrl.replace(/\/$/, '');
+        }
+      } catch {
+        serverPort = DEFAULT_SERVER_PORT;
+      }
+
+      logger.info(
+        isLeglessMode ? 'Legless mode' : 'SKIP_EMBEDDED_SERVER=true',
+        '— using external server at',
+        getServerUrl()
+      );
+      diagLog(`[EXTERNAL] Resolved server URL: ${getServerUrl()}`);
 
       // Wait for external server to be ready
       logger.info('Waiting for external server...');
-      await waitForServer(undefined, 60); // Give Docker container more time to start
+      await waitForServer(undefined, 60); // Give external server more time to start
       logger.info('External server is ready');
 
       // In external server mode, we don't set an API key here.
       // The renderer will detect external server mode and use session-based
       // auth like web mode, redirecting to /login where the user enters
-      // the API key from the Docker container logs.
+      // the API key from the server logs.
       logger.info('External server mode: using session-based authentication');
     } else {
       // Generate or load API key for CSRF protection (before starting server)
@@ -1548,7 +1616,7 @@ ipcMain.handle('ping', async () => {
 
 // Get server URL for HTTP client
 ipcMain.handle('server:getUrl', async () => {
-  const url = `http://localhost:${serverPort}`;
+  const url = getServerUrl();
   diagLog(`[IPC] server:getUrl → ${url}`);
   return url;
 });
