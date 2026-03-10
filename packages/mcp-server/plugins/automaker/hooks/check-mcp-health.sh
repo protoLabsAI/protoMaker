@@ -51,8 +51,8 @@ if [ ! -f "$MCP_BINARY" ]; then
 fi
 
 # ── Server reachability check ─────────────────────────────────────────────────
-# Default to localhost:3009 (standard dev server)
-API_BASE="${AUTOMAKER_API_URL:-http://localhost:3009}"
+# Default to localhost:3008 (standard dev server)
+API_BASE="${AUTOMAKER_API_URL:-http://localhost:3008}"
 HEALTH_ENDPOINT="${API_BASE}/api/health"
 
 # Try to reach the health endpoint (5 second timeout)

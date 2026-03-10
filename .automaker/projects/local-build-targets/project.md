@@ -1,0 +1,17 @@
+# Local Build Targets
+
+Three new local build/run modes for testing without Docker or cloud deployments:
+
+1. **Headless server** (`dev:headless`) — builds the server and runs it in production mode locally, auto-mode enabled, staging-like behavior. No UI, no Electron. Background-friendly.
+
+2. **Legless Electron prod** (`build:electron:legless:dir` + launcher) — production Electron build without a bundled server. Connects to an external server URL. Useful for testing the desktop client against a local or staging API.
+
+3. **Prod web + PWA preview** (`preview:web`) — builds the UI in production mode and serves it via a local preview server, enabling PWA install/update flows and service worker testing against localhost.
+
+Each gets a matching root-level npm script and appropriate docs update.
+
+**Status:** active
+**Created:** 2026-03-10T08:38:48.076Z
+**Updated:** 2026-03-10T08:45:36.308Z
+
+## Milestones

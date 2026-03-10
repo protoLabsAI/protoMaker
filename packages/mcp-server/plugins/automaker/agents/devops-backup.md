@@ -227,7 +227,7 @@ docker compose ps
 Check the application:
 
 - UI: http://localhost:3007
-- API: http://localhost:3009/api/health
+- API: http://localhost:3008/api/health
 ```
 
 ## Cleanup Old Backups

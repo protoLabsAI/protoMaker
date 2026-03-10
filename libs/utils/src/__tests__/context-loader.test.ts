@@ -81,12 +81,20 @@ describe('shouldIncludeContextFile', () => {
 
 function makeMockFs(
   files: Record<string, string>,
-  metadata?: Record<string, { description: string; domain?: 'engineering' | 'project' | 'all'; isDistilled?: boolean }>
+  metadata?: Record<
+    string,
+    { description: string; domain?: 'engineering' | 'project' | 'all'; isDistilled?: boolean }
+  >
 ): ContextFsModule {
   const metadataJson = JSON.stringify({ files: metadata ?? {} });
   return {
     access: vi.fn(async (p: string) => {
-      if (p.includes('context') && !p.includes('.json') && !p.includes('.md') && !p.includes('.txt')) {
+      if (
+        p.includes('context') &&
+        !p.includes('.json') &&
+        !p.includes('.md') &&
+        !p.includes('.txt')
+      ) {
         // directory access — always succeed for context dir
         return;
       }
@@ -208,7 +216,10 @@ describe('loadContextFiles — role-based filtering', () => {
   it('role-based filtering reduces context for lead-engineer (~40% reduction when half files are project-domain)', async () => {
     // 5 files: 2 engineering, 2 project, 1 all
     const manyFiles: Record<string, string> = {};
-    const manyMeta: Record<string, { description: string; domain: 'engineering' | 'project' | 'all' }> = {};
+    const manyMeta: Record<
+      string,
+      { description: string; domain: 'engineering' | 'project' | 'all' }
+    > = {};
 
     ['arch.md', 'build.md'].forEach((f) => {
       manyFiles[`/fake/project/.automaker/context/${f}`] = `# ${f}`;

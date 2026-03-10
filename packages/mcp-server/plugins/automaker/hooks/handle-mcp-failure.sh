@@ -20,7 +20,7 @@ echo "Tool: $TOOL_NAME"
 echo ""
 
 # Diagnostic: Check if server is reachable
-SERVER_URL="${SERVER_URL:-http://localhost:3009/api/health}"
+SERVER_URL="${SERVER_URL:-http://localhost:3008/api/health}"
 if ! curl -s -f -m 5 "$SERVER_URL" > /dev/null 2>&1; then
   cat <<EOF
 ## Server Unreachable

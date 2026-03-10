@@ -2,7 +2,7 @@
   "slug": "flow-control-system",
   "title": "Flow Control System",
   "goal": "Prevent the system from generating more work than it can safely validate by adding WIP limits at the review layer, PR size enforcement, and an error budget system with auto-pause.",
-  "status": "approved",
+  "status": "active",
   "milestones": [
     {
       "number": 1,
@@ -107,5 +107,5 @@
     "constraints": "Must integrate with existing FeatureScheduler and LeadEngineerRules without breaking current flow. WIP thresholds must be configurable via WorkflowSettings. Error budget window and threshold must be tunable. PR size limits should have override capability for justified large changes."
   },
   "createdAt": "2026-03-10T09:31:16.471Z",
-  "updatedAt": "2026-03-10T22:07:36.734Z"
+  "updatedAt": "2026-03-10T11:23:01.008Z"
 }
