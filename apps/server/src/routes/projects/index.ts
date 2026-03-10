@@ -76,7 +76,7 @@ export function createProjectsRoutes(
     '/create-features',
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
-    createCreateFeaturesHandler(featureLoader, events)
+    createCreateFeaturesHandler(featureLoader, events, projectService)
   );
   router.post(
     '/archive',

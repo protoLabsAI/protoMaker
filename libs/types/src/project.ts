@@ -300,92 +300,6 @@ export interface PRDReviewComment {
 }
 
 /**
- * Result from deep research agent
- */
-export interface DeepResearchResult {
-  /** Topic that was researched */
-  topic: string;
-
-  /** Relevant files identified in the codebase */
-  relevantFiles: Array<{
-    path: string;
-    reason: string;
-    patterns?: string[];
-  }>;
-
-  /** Existing patterns documented */
-  existingPatterns: Array<{
-    name: string;
-    description: string;
-    examples?: string[];
-  }>;
-
-  /** Constraints and gotchas noted */
-  constraints: Array<{
-    description: string;
-    severity: 'info' | 'warning' | 'critical';
-  }>;
-
-  /** Recommended approach areas */
-  recommendations: string[];
-
-  /** Summary for PRD creation */
-  summary: string;
-
-  /** Timestamp */
-  generatedAt: string;
-}
-
-/**
- * Options for creating a project from PRD
- */
-export interface CreateProjectFromPRDOptions {
-  /** Project slug */
-  slug: string;
-
-  /** PRD content */
-  prd: SPARCPrd;
-
-  /** Milestones to create */
-  milestones: Array<{
-    title: string;
-    description: string;
-    phases: Array<{
-      title: string;
-      description: string;
-      filesToModify?: string[];
-      acceptanceCriteria?: string[];
-      complexity?: PhaseComplexity;
-      dependencies?: string[];
-    }>;
-    dependencies?: string[];
-  }>;
-
-  /** Optional research summary */
-  researchSummary?: string;
-}
-
-/**
- * Options for creating features from a project
- */
-export interface CreateFeaturesFromProjectOptions {
-  /** Project path */
-  projectPath: string;
-
-  /** Project slug */
-  projectSlug: string;
-
-  /** Whether to create epic features for milestones */
-  createEpics?: boolean;
-
-  /** Whether to set up dependencies between features */
-  setupDependencies?: boolean;
-
-  /** Initial status for created features */
-  initialStatus?: 'backlog' | 'in-progress';
-}
-
-/**
  * Result from feature factory
  */
 export interface FeatureFactoryResult {
@@ -524,26 +438,6 @@ export interface UpdateProjectInput {
 
   /** Feedback from "request changes" review */
   reviewFeedback?: string;
-}
-
-/**
- * Result from creating features from a project
- */
-export interface CreateFeaturesResult {
-  /** Number of features created */
-  featuresCreated: number;
-
-  /** Number of epics created */
-  epicsCreated: number;
-
-  /** Created feature IDs */
-  featureIds: string[];
-
-  /** Created epic IDs */
-  epicIds: string[];
-
-  /** Any errors encountered */
-  errors?: string[];
 }
 
 /**

@@ -15,7 +15,6 @@ export {
   getAncestors,
   formatAncestorContextForPrompt,
   type DependencyResolutionResult,
-  type DependencySatisfactionOptions,
   type AncestorContext,
   type BlockingInfo,
 } from './resolver.js';

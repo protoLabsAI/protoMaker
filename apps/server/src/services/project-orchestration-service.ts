@@ -455,23 +455,3 @@ export async function orchestrateProjectFeatures(
 
   return result;
 }
-
-/**
- * Load a project from disk
- *
- * @param projectPath - Path to project root
- * @param projectSlug - Project slug
- * @returns Loaded project or null if not found
- */
-export async function loadProject(
-  projectPath: string,
-  projectSlug: string
-): Promise<Project | null> {
-  const jsonPath = getProjectJsonPath(projectPath, projectSlug);
-  try {
-    const jsonContent = (await secureFs.readFile(jsonPath, 'utf-8')) as string;
-    return JSON.parse(jsonContent) as Project;
-  } catch {
-    return null;
-  }
-}

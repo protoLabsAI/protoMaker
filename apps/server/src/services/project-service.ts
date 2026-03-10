@@ -14,8 +14,6 @@ import type {
   Milestone,
   CreateProjectInput,
   UpdateProjectInput,
-  CreateFeaturesFromProjectOptions,
-  CreateFeaturesResult,
   ProjectLink,
   ProjectStatusUpdate,
   ProjectDocument,
@@ -28,8 +26,6 @@ import {
   generateProjectMarkdown,
   generateMilestoneMarkdown,
   generatePhaseMarkdown,
-  phaseToFeatureDescription,
-  phaseToBranchName,
   slugify,
 } from '@protolabsai/utils';
 import { secureFs } from '@protolabsai/platform';
@@ -654,101 +650,6 @@ export class ProjectService {
     const existing = await this.getDeletedProjectStats(projectPath);
     existing.push(stats);
     await secureFs.writeFile(statsPath, JSON.stringify(existing, null, 2));
-  }
-
-  /**
-   * Create features from a project's phases
-   */
-  async createFeaturesFromProject(
-    projectPath: string,
-    projectSlug: string,
-    options?: CreateFeaturesFromProjectOptions
-  ): Promise<CreateFeaturesResult> {
-    const project = await this.getProject(projectPath, projectSlug);
-    if (!project) {
-      throw new Error(`Project "${projectSlug}" not found`);
-    }
-
-    const createEpics = options?.createEpics ?? true;
-    const initialStatus = options?.initialStatus ?? 'backlog';
-    const setupDependencies = options?.setupDependencies ?? true;
-
-    const featureIds: string[] = [];
-    const epicIds: string[] = [];
-
-    // Map to track phase IDs to feature IDs for dependencies
-    const phaseToFeatureMap = new Map<string, string>();
-
-    for (const milestone of project.milestones) {
-      let epicId: string | undefined;
-
-      // Create epic for milestone if enabled
-      if (createEpics) {
-        const epicFeature = await this.featureLoader.create(projectPath, {
-          title: milestone.title,
-          category: 'Epic',
-          description: milestone.description,
-          status: initialStatus,
-          isEpic: true,
-          branchName: `epic/${slugify(milestone.title, 30)}`,
-          projectSlug,
-          milestoneSlug: milestone.slug,
-        });
-        epicId = epicFeature.id;
-        epicIds.push(epicId);
-        milestone.epicId = epicId;
-      }
-
-      // Create features for each phase
-      for (const phase of milestone.phases) {
-        const branchName = phaseToBranchName(projectSlug, milestone.slug, phase.title);
-        const description = phaseToFeatureDescription(phase, milestone);
-
-        // Get dependencies from phase (convert phase IDs to feature IDs)
-        const dependencies = setupDependencies
-          ? (phase.dependencies ?? [])
-              .map((depId) => phaseToFeatureMap.get(depId))
-              .filter((id): id is string => id !== undefined)
-          : undefined;
-
-        const feature = await this.featureLoader.create(projectPath, {
-          title: phase.title,
-          category: milestone.title,
-          description,
-          status: initialStatus,
-          branchName,
-          epicId,
-          dependencies,
-          projectSlug,
-          milestoneSlug: milestone.slug,
-          phaseSlug: phase.name,
-        });
-
-        featureIds.push(feature.id);
-        phaseToFeatureMap.set(phase.name, feature.id);
-        phase.featureId = feature.id;
-      }
-    }
-
-    // Update project with feature/epic IDs
-    await this.updateProject(projectPath, projectSlug, {
-      status: 'active',
-    });
-
-    // Re-save project.json with updated featureIds
-    const jsonPath = getProjectJsonPath(projectPath, projectSlug);
-    await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
-
-    logger.info(
-      `Created ${featureIds.length} features and ${epicIds.length} epics from project ${projectSlug}`
-    );
-
-    return {
-      featuresCreated: featureIds.length,
-      epicsCreated: epicIds.length,
-      featureIds,
-      epicIds,
-    };
   }
 
   // ---------------------------------------------------------------------------

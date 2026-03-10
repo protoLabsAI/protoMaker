@@ -10,10 +10,8 @@
 import type { Request, Response } from 'express';
 import { projectPlanExists } from '@protolabsai/platform';
 import { FeatureLoader } from '../../../services/feature-loader.js';
-import {
-  orchestrateProjectFeatures,
-  loadProject,
-} from '../../../services/project-orchestration-service.js';
+import { orchestrateProjectFeatures } from '../../../services/project-orchestration-service.js';
+import type { ProjectService } from '../../../services/project-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 
@@ -25,7 +23,11 @@ interface CreateFeaturesRequest {
   initialStatus?: 'backlog' | 'in-progress';
 }
 
-export function createCreateFeaturesHandler(featureLoader: FeatureLoader, events: EventEmitter) {
+export function createCreateFeaturesHandler(
+  featureLoader: FeatureLoader,
+  events: EventEmitter,
+  projectService: ProjectService
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const {
@@ -54,7 +56,7 @@ export function createCreateFeaturesHandler(featureLoader: FeatureLoader, events
       }
 
       // Load project
-      const project = await loadProject(projectPath, projectSlug);
+      const project = await projectService.getProject(projectPath, projectSlug);
       if (!project) {
         res.status(500).json({ success: false, error: 'Failed to load project.json' });
         return;

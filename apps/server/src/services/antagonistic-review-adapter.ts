@@ -445,29 +445,6 @@ export class AntagonisticReviewAdapter {
   }
 
   /**
-   * Format PRD into content string for the flow
-   */
-  private formatPRDContent(prd: SPARCPrd): string {
-    return `# PRD Review Request
-
-## Situation
-${prd.situation}
-
-## Problem
-${prd.problem}
-
-## Approach
-${prd.approach}
-
-## Results
-${prd.results}
-
-## Constraints
-${prd.constraints || 'None specified'}
-`;
-  }
-
-  /**
    * Extract Ava's review from flow result
    * Handles both @protolabsai/types ReviewerPerspective (overallVerdict, sections, generalComments)
    * and node-local ReviewerPerspective (verdict, sections, comments)

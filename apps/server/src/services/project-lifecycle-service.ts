@@ -19,7 +19,7 @@ import type { SettingsService } from './settings-service.js';
 import type { ProjectService } from './project-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
-import { orchestrateProjectFeatures, loadProject } from './project-orchestration-service.js';
+import { orchestrateProjectFeatures } from './project-orchestration-service.js';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ProjectLifecycle');
@@ -92,7 +92,7 @@ export class ProjectLifecycleService {
       setupDependencies?: boolean;
     }
   ): Promise<LifecycleApproveResult> {
-    const project = await loadProject(projectPath, projectSlug);
+    const project = await this.projectService.getProject(projectPath, projectSlug);
     if (!project) {
       throw new Error(`Project "${projectSlug}" not found`);
     }

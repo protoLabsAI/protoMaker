@@ -184,11 +184,6 @@ function detectCycles(features: Feature[], featureMap: Map<string, Feature>): st
   return cycles;
 }
 
-export interface DependencySatisfactionOptions {
-  /** If true, only require dependencies to not be 'running' (ignore verification requirement) */
-  skipVerification?: boolean;
-}
-
 /**
  * Checks if a feature's dependencies are satisfied (all complete or verified)
  *
@@ -200,7 +195,7 @@ export interface DependencySatisfactionOptions {
 export function areDependenciesSatisfied(
   feature: Feature,
   allFeatures: Feature[],
-  options?: DependencySatisfactionOptions
+  options?: { skipVerification?: boolean }
 ): boolean {
   if (!feature.dependencies || feature.dependencies.length === 0) {
     return true; // No dependencies = always ready
