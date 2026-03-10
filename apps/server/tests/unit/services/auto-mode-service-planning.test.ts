@@ -265,26 +265,31 @@ describe('auto-mode-service.ts - Planning Mode', () => {
     });
   });
 
-  describe('extractTitleFromDescription', () => {
-    const extractTitle = (svc: any, description: string) => {
-      return svc.extractTitleFromDescription(description);
-    };
+  describe('extractTitleFromDescription (standalone function from git-utils)', () => {
+    // extractTitleFromDescription is a standalone export from @protolabsai/git-utils,
+    // not a service method. Import and test it directly.
+    let extractTitleFromDescription: (desc: string) => string;
+
+    beforeEach(async () => {
+      const gitUtils = await import('@protolabsai/git-utils');
+      extractTitleFromDescription = gitUtils.extractTitleFromDescription;
+    });
 
     it("should return 'Untitled Feature' for empty description", () => {
-      expect(extractTitle(service, '')).toBe('Untitled Feature');
-      expect(extractTitle(service, '   ')).toBe('Untitled Feature');
+      expect(extractTitleFromDescription('')).toBe('Untitled Feature');
+      expect(extractTitleFromDescription('   ')).toBe('Untitled Feature');
     });
 
-    it('should return first line if under 60 characters', () => {
+    it('should return first line if under 72 characters', () => {
       const description = 'Add user login\nWith email validation';
-      expect(extractTitle(service, description)).toBe('Add user login');
+      expect(extractTitleFromDescription(description)).toBe('Add user login');
     });
 
-    it('should truncate long first lines to 60 characters', () => {
+    it('should truncate long first lines to 72 characters', () => {
       const description =
-        'This is a very long feature description that exceeds the sixty character limit significantly';
-      const result = extractTitle(service, description);
-      expect(result.length).toBe(60);
+        'This is a very long feature description that exceeds the seventy-two character limit significantly and keeps going';
+      const result = extractTitleFromDescription(description);
+      expect(result.length).toBe(72);
       expect(result).toContain('...');
     });
   });

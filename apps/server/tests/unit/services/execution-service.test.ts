@@ -27,6 +27,15 @@ vi.mock('@protolabsai/git-utils', async (importOriginal) => {
   return {
     ...actual,
     rebaseWorktreeOnMain: vi.fn(async () => ({ success: true })),
+    extractTitleFromDescription:
+      actual.extractTitleFromDescription ??
+      vi.fn((desc: string) => {
+        if (!desc?.trim()) return 'Untitled Feature';
+        const first = desc.split('\n')[0].trim();
+        return first.length > 72
+          ? first.substring(0, 69) + '...'
+          : first || 'Feature implementation';
+      }),
   };
 });
 
