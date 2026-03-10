@@ -394,7 +394,7 @@ export class SignalIntakeService {
 
     // 1. Capacity check — count active features (backlog + in_progress)
     const activeStatuses = new Set(['backlog', 'in_progress']);
-    const activeCount = features.filter((f) => activeStatuses.has(f.status)).length;
+    const activeCount = features.filter((f) => f.status && activeStatuses.has(f.status)).length;
     if (activeCount >= PORTFOLIO_GATE_CAPACITY_THRESHOLD) {
       return {
         action: 'defer',
@@ -405,7 +405,7 @@ export class SignalIntakeService {
     // 2. Duplication check — Jaccard similarity against existing feature titles
     const incomingWords = this.titleToWordSet(title);
     for (const existing of features) {
-      const existingWords = this.titleToWordSet(existing.title);
+      const existingWords = this.titleToWordSet(existing.title ?? '');
       const similarity = this.jaccardSimilarity(incomingWords, existingWords);
       if (similarity > PORTFOLIO_GATE_DUPLICATION_THRESHOLD) {
         return {
