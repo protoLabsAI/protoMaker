@@ -74,7 +74,6 @@ import { ArchivalService } from '../services/archival-service.js';
 import { KnowledgeStoreService } from '../services/knowledge-store-service.js';
 import { DocsUpdateDetector } from '../services/docs-update-detector.js';
 import { HeadsdownService } from '../services/headsdown-service.js';
-import { PRDService } from '../services/prd-service.js';
 import { AgentDiscordRouter } from '../services/agent-discord-router.js';
 import { FactStoreService } from '../services/fact-store-service.js';
 import { TrajectoryStoreService } from '../services/trajectory-store-service.js';
@@ -101,7 +100,6 @@ import {
   DataIntegrityWatchdogService,
   getDataIntegrityWatchdogService,
 } from '../services/data-integrity-watchdog-service.js';
-import { ProjectPlanningService } from '../services/project-planning-service.js';
 import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
@@ -244,9 +242,6 @@ export interface ServiceContainer {
   // Issue management
   triageService: TriageService;
   issueCreationService: IssueCreationService;
-
-  // Project planning
-  projectPlanningService: ProjectPlanningService | null;
 
   // Project PM Agent
   projectPmService: ProjectPMService;
@@ -429,9 +424,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureLoader,
     roleRegistryService
   );
-
-  // PRDService for SPARC PRD management (side-effect initialization)
-  PRDService.getInstance(events);
 
   // DevServerService with event emitter for real-time log streaming
   const devServerService = getDevServerService();
@@ -655,26 +647,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     enabled: true,
   });
 
-  // Project Planning Service — LangGraph flow for project planning
-  // Wrapped in try-catch: ChatAnthropic throws if ANTHROPIC_API_KEY is missing
-  let projectPlanningService: ProjectPlanningService | null = null;
-  try {
-    const { createLLMProjectPlanningConfig } =
-      await import('../services/project-planning-executors.js');
-    const planningFlowConfig = await createLLMProjectPlanningConfig({ settingsService });
-    projectPlanningService = new ProjectPlanningService(
-      events,
-      repoRoot,
-      planningFlowConfig,
-      settingsService
-    );
-  } catch (err) {
-    logger.warn(
-      'Project planning service unavailable:',
-      err instanceof Error ? err.message : String(err)
-    );
-  }
-
   // Project PM Service — session store for PM Agent chat
   const projectPmService = new ProjectPMService();
 
@@ -766,11 +738,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Issue Management Pipeline initialization
   issueCreationService.initialize();
 
-  // Project Planning Service start (listens for planning events)
-  if (projectPlanningService) {
-    projectPlanningService.start();
-  }
-
   // Wire project-pm module event subscriptions (status sync)
   await projectPmModule.register({ events, projectPmService, projectService });
 
@@ -851,7 +818,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     specGenerationMonitor,
     gitWorkflowService,
     contentFlowService,
-    projectPlanningService,
     projectPmService,
     crdtSyncService,
     todoService,
