@@ -93,9 +93,7 @@ export class MetricsCollectionService {
 
       switch (type) {
         case 'feature:pr-merged':
-          void this.onPrMerged(p).catch((err) =>
-            logger.error('onPrMerged failed:', err)
-          );
+          void this.onPrMerged(p).catch((err) => logger.error('onPrMerged failed:', err));
           break;
 
         case 'pr:ci-failure':
