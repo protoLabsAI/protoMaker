@@ -79,12 +79,15 @@ export {
   loadContextFiles,
   getContextFilesSummary,
   type ContextMetadata,
+  type ContextDomain,
+  type ContextRole,
   type ContextFileInfo,
   type ContextFilesResult,
   type ContextFsModule,
   type LoadContextFilesOptions,
   type MemoryFileInfo,
   type TaskContext,
+  shouldIncludeContextFile,
 } from './context-loader.js';
 
 // Memory loading
