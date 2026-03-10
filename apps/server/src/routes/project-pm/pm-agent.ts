@@ -371,7 +371,13 @@ export async function queryPm(
   const result = await generateText({
     model: anthropic(resolvedModelId),
     system: systemPrompt,
-    messages: [...sessionHistory, { role: 'user', content: question }],
+    messages: [
+      ...sessionHistory.map((m) => ({
+        role: m.role as 'user' | 'assistant' | 'system' | 'tool',
+        content: (m.content as string) ?? '',
+      })),
+      { role: 'user' as const, content: question },
+    ],
     tools,
     stopWhen: stepCountIs(5),
     providerOptions: {
