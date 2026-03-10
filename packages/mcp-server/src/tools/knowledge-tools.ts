@@ -59,7 +59,8 @@ export const knowledgeTools: Tool[] = [
         },
         domain: {
           type: 'string',
-          description: 'Domain tag to categorize this chunk (e.g. "architecture", "decisions", "bugs")',
+          description:
+            'Domain tag to categorize this chunk (e.g. "architecture", "decisions", "bugs")',
         },
         heading: {
           type: 'string',
