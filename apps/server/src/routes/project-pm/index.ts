@@ -54,6 +54,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * after the constraints statement).
  */
 const _PM_PROMPT_PREAMBLE = (() => {
+  // Build step copies .md files from src/ to dist/, so __dirname works everywhere.
   const template = readFileSync(path.join(__dirname, 'pm-prompt.md'), 'utf-8');
   // Extract the static preamble: lines up to and including the constraints line
   const lines = template.split('\n');

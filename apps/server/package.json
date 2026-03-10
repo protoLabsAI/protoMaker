@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=16384' tsx watch --ignore '**/.automaker/**' --ignore '**/.automaker-lock' --ignore '**/.worktrees/**' --ignore '**/dist/**' --ignore '../../libs/**/dist/**' --ignore '../../packages/**/dist/**' --ignore 'data/**' --ignore '**/*.log' src/index.ts",
     "dev:test": "tsx src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node -e \"import{cpSync,mkdirSync}from'fs';import{dirname,join}from'path';import{execSync}from'child_process';const files=execSync('find src -name *.md',{encoding:'utf8'}).trim().split('\\n').filter(Boolean);for(const f of files){const d=f.replace(/^src/,'dist');mkdirSync(dirname(d),{recursive:true});cpSync(f,d)}\" --input-type=module",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js",
     "start:headless": "NODE_ENV=production AUTO_MODE=true node dist/index.js",
