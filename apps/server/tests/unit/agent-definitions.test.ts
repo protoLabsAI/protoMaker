@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createAvaAgent,
-  createPMAgent,
-  createLEAgent,
-} from '@/services/agent-definitions.js';
+import { createAvaAgent, createPMAgent, createLEAgent } from '@/services/agent-definitions.js';
 import type { AgentDefinitionContext } from '@protolabsai/types';
 
 const baseContext: AgentDefinitionContext = {
