@@ -662,6 +662,16 @@ export interface GlobalSettings {
    */
   gtmEnabled?: boolean;
 
+  /**
+   * Enable portfolio gate evaluation before feature creation in signal intake.
+   * When enabled, evaluates ideas against capacity (backlog size < 50),
+   * duplication (Jaccard similarity > 0.6), and error budget (blocks architectural
+   * features when error rate is high). Rejected ideas are blocked with reason.
+   * Deferred ideas enter a queue for batch review.
+   * @default false
+   */
+  portfolioGate?: boolean;
+
   // Hivemind Configuration
   /**
    * Unique identifier for this Automaker instance in a hivemind mesh.
