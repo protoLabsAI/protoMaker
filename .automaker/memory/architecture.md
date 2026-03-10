@@ -5,7 +5,7 @@ relevantTo: [architecture]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 90
+  loaded: 91
   referenced: 33
   successfulFeatures: 33
 ---
@@ -4256,3 +4256,20 @@ usageStats:
 - **Problem solved:** UX pattern: show user a history of servers they've recently switched to, enable quick re-selection without typing.
 - **Why this works:** Small, bounded history prevents unbounded growth while keeping common case (switch between 3-5 servers) instant. Deduplication avoids cluttering the list with repeated entries.
 - **Trade-offs:** Logic is straightforward but order-dependent: deduplication must happen before truncation. If someone adds this pattern elsewhere, they must remember this order.
+
+#### [Pattern] Configuration changes that invalidate connections use two-step pattern: invalidateHttpClient() then reconnect(). Not just reconnect(). (2026-03-10)
+- **Problem solved:** When server URL override is set at runtime, WebSocket connection to old server becomes stale and causes silent failures if not properly cleaned
+- **Why this works:** invalidateHttpClient() removes old client instance from state. Only then does reconnect() create fresh connection. Sequential ensures old connection doesn't persist alongside new one, preventing resource leaks and state inconsistency from conflicting message handlers on both connections.
+- **Trade-offs:** Two-step explicit API is clear but verbose. Synchronous ordering prevents bugs but limits any future parallelization.
+
+### Server URL determination centralized in getServerUrl() function, checks runtime override before returning default. Not scattered at call sites. (2026-03-10)
+- **Context:** Could implement override logic at every location that needs server URL, or create single authoritative function
+- **Why:** Single source of truth: all call sites inherit override behavior automatically. Reduces bug surface from conditional-check misses. New code using getServerUrl() doesn't need knowledge of override mechanism.
+- **Rejected:** Conditional checks at each call site (maintenance burden, easy to forget, inconsistent behavior across codebase)
+- **Trade-offs:** Requires disciplined use of getServerUrl() function. If code caches result at init time, runtime override changes are invisible.
+- **Breaking if changed:** If caller caches getServerUrl() result instead of calling repeatedly, they bypass override mechanism completely.
+
+#### [Pattern] Recent server URLs stored in localStorage with max 10 entries, deduplicated on add (remove old occurrence before prepend), not appended. (2026-03-10)
+- **Problem solved:** User needs quick access to previously-used servers, but localStorage is bounded (5-10MB) and array can grow unbounded
+- **Why this works:** Dedup-on-add (prepend new, remove old occurrence) preserves recency order and prevents duplicates with single O(n) operation (n max 10). Bounded size prevents storage exhaustion.
+- **Trade-offs:** O(n) dedup operation per add, but n capped at 10. List always reflects most-recently-used order.

@@ -519,3 +519,8 @@ usageStats:
 - **Rejected:** Always-open CORS, or removing CORS check—would expose all instances by default. Strict CORS for all—would break hivemind use case.
 - **Trade-offs:** Requires config to be loaded and passed to middleware setup. If config loading fails silently, CORS remains restrictive (safe) but feature doesn't work. Extra layer of indirection (config → option → middleware), but pays off in safety.
 - **Breaking if changed:** If config is loaded after middleware is set up, CORS won't reflect the flag. If config parsing breaks, middleware defaults to restrictive (safe). If someone removes the flag check, all servers become permissive (bad).
+
+#### [Gotcha] CORS allowAllOrigins gated by hivemind feature flag. Server URL override silently fails in production if flag is disabled. (2026-03-10)
+- **Situation:** Clients attempt cross-origin request to overridden server URL. Browser blocks with CORS error only if hijemind flag is false.
+- **Root cause:** Intentional security boundary: permissive CORS is only enabled when override feature is explicitly opted-in. Prevents accidental CORS exposure in environments where override shouldn't be available.
+- **How to avoid:** Single feature flag elegantly gates both capability AND permissions. But coupling is implicit—easy to debug override failures as 'CORS blocked' without realizing hivemind must be enabled.
