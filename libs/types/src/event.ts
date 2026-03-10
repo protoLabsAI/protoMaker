@@ -340,7 +340,10 @@ export type EventType =
   | 'agent:completed'
   | 'pr:merged'
   | 'pr:review-requested'
-  | 'ava-channel:message';
+  | 'ava-channel:message'
+  // Error budget events (burn rate threshold enforcement)
+  | 'error_budget:exhausted'
+  | 'error_budget:recovered';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -547,6 +550,20 @@ export interface EventPayloadMap {
     projectPath: string;
     elapsedMinutes: number;
     capMinutes: number;
+  };
+  'error_budget:exhausted': {
+    projectPath: string;
+    failRate: number;
+    threshold: number;
+    totalMerges: number;
+    failedMerges: number;
+  };
+  'error_budget:recovered': {
+    projectPath: string;
+    failRate: number;
+    threshold: number;
+    totalMerges: number;
+    failedMerges: number;
   };
   'feature:status-changed': {
     featureId: string;

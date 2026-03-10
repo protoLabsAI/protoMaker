@@ -256,6 +256,14 @@ export interface WorkflowSettings {
    * @default 10
    */
   maxInReview?: number;
+  /**
+   * When true, auto-mode pauses new feature pickup when the error budget is exhausted
+   * (burn rate >= exhaustion threshold, default 1.0 = 100% consumed). Pickup resumes
+   * automatically when the budget recovers (burn rate drops below 0.8). Running agents
+   * are NOT affected — only new feature starts are blocked.
+   * @default true
+   */
+  errorBudgetAutoFreeze?: boolean;
 }
 
 /** Default workflow settings */

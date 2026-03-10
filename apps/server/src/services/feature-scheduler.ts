@@ -96,6 +96,11 @@ export interface SchedulerCallbacks {
   /** Memory thresholds */
   HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: number;
   HEAP_USAGE_ABORT_AGENTS_THRESHOLD: number;
+  /**
+   * Optional hook: returns true when new feature pickup should be paused
+   * due to an error budget freeze. Running agents are NOT affected.
+   */
+  isPickupFrozen?(): boolean;
 }
 
 /** Interface for the feature health auditor (optional). */
@@ -312,6 +317,18 @@ export class FeatureScheduler {
               `[AutoLoop] High heap usage (${Math.round(heapUsage * 100)}%), deferring new agent start`
             );
             await this.callbacks.sleep(5000);
+            continue;
+          }
+
+          // Error budget freeze: pause pickup when budget is exhausted
+          if (this.callbacks.isPickupFrozen?.()) {
+            logger.warn(
+              `[AutoLoop] Error budget frozen — pausing new feature pickup for ${worktreeDesc}`
+            );
+            await this.callbacks.sleep(
+              SLEEP_INTERVAL_CAPACITY_MS,
+              projectState.abortController.signal
+            );
             continue;
           }
 
