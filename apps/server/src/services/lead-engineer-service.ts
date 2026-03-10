@@ -181,7 +181,8 @@ export class LeadEngineerService {
       this.events.subscribe((type: EventType, payload: unknown) => {
         if (
           type !== 'project:lifecycle:launched' &&
-          type !== 'lead-engineer:project-completing-requested'
+          type !== 'lead-engineer:project-completing-requested' &&
+          type !== 'lead-engineer:rule-evaluated'
         ) {
           this.onEvent(type, payload);
         }
