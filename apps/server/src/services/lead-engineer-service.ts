@@ -9,6 +9,8 @@
  *   LeadEngineerSessionStore  — session persistence + checkpoint reconciliation
  */
 
+import path from 'path';
+import fs from 'fs';
 import { createLogger } from '@protolabsai/utils';
 import type {
   EventType,
@@ -171,6 +173,19 @@ export class LeadEngineerService {
         ) {
           this.onEvent(type, payload);
         }
+      }),
+      this.events.on('gate:tuning-signal' as EventType, (data) => {
+        this.persistGateTuningSignal(
+          data as {
+            projectPath: string;
+            projectSlug: string;
+            milestoneSlug?: string;
+            retroSource: string;
+            signal: string;
+            originalItem: string;
+            timestamp: string;
+          }
+        );
       })
     );
     await this.sessionStore.restore(async (projectPath, projectSlug, maxConcurrency) => {
@@ -506,6 +521,44 @@ export class LeadEngineerService {
         return;
       }
     }
+  }
+
+  private persistGateTuningSignal(signal: {
+    projectPath: string;
+    projectSlug: string;
+    milestoneSlug?: string;
+    retroSource: string;
+    signal: string;
+    originalItem: string;
+    timestamp: string;
+  }): void {
+    const logPath = path.join(signal.projectPath, '.automaker', 'gate-tuning-log.json');
+    logger.info(
+      `LeadEngineerService: gate:tuning-signal received for ${signal.retroSource}: ${signal.signal}`
+    );
+
+    void (async () => {
+      try {
+        await fs.promises.mkdir(path.dirname(logPath), { recursive: true });
+        let existing: unknown[] = [];
+        try {
+          const raw = await fs.promises.readFile(logPath, 'utf-8');
+          const parsed = JSON.parse(raw) as unknown;
+          if (Array.isArray(parsed)) existing = parsed;
+        } catch {
+          // File does not exist yet — start with empty array
+        }
+        existing.push(signal);
+        await fs.promises.writeFile(logPath, JSON.stringify(existing, null, 2), 'utf-8');
+        logger.info(
+          `LeadEngineerService: persisted gate:tuning-signal to ${logPath} (total: ${existing.length})`
+        );
+      } catch (err) {
+        logger.warn(
+          `LeadEngineerService: failed to persist gate:tuning-signal: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    })();
   }
 
   private async handleProjectCompleting(session: LeadEngineerSession): Promise<void> {
