@@ -116,7 +116,11 @@ function makeServiceContext(
   eventFeatureId = 'feat-001'
 ): {
   ctx: ProcessorServiceContext;
-  featureLoader: { update: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn>; getAll: ReturnType<typeof vi.fn> };
+  featureLoader: {
+    update: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    getAll: ReturnType<typeof vi.fn>;
+  };
   events: ReturnType<typeof makeEvents>;
 } {
   const feature = makeFeature(featureOverrides);
@@ -193,7 +197,10 @@ describe('ExecuteProcessor — cost cap (maxCostUsdPerFeature)', () => {
     expect(featureLoader.update).toHaveBeenCalledWith(
       '/test/project',
       'feat-001',
-      expect.objectContaining({ status: 'blocked', statusChangeReason: expect.stringMatching(/cost cap exceeded/i) })
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: expect.stringMatching(/cost cap exceeded/i),
+      })
     );
 
     expect(events.emit).toHaveBeenCalledWith(
@@ -231,7 +238,9 @@ describe('ExecuteProcessor — cost cap (maxCostUsdPerFeature)', () => {
   it('no-op when maxCostUsdPerFeature is not set (cap off)', async () => {
     // No cap configured. Feature cost: $3 (below internal MAX_BUDGET_USD=$10). Should proceed to REVIEW.
     const { ctx, events } = makeServiceContext(
-      { /* maxCostUsdPerFeature omitted */ },
+      {
+        /* maxCostUsdPerFeature omitted */
+      },
       { costUsd: 3 }
     );
 
@@ -278,7 +287,10 @@ describe('ExecuteProcessor — runtime cap (maxRuntimeMinutesPerFeature)', () =>
     expect(featureLoader.update).toHaveBeenCalledWith(
       '/test/project',
       'feat-001',
-      expect.objectContaining({ status: 'blocked', statusChangeReason: expect.stringMatching(/runtime cap exceeded/i) })
+      expect.objectContaining({
+        status: 'blocked',
+        statusChangeReason: expect.stringMatching(/runtime cap exceeded/i),
+      })
     );
 
     expect(events.emit).toHaveBeenCalledWith(
@@ -307,7 +319,9 @@ describe('ExecuteProcessor — runtime cap (maxRuntimeMinutesPerFeature)', () =>
     // No cap in settings → default 60 min. startedAt: 90 min ago → should block.
     const ninetyMinutesAgo = new Date(Date.now() - 90 * 60_000).toISOString();
     // Omit maxRuntimeMinutesPerFeature from settings
-    const { ctx, events } = makeServiceContext({ /* no maxRuntimeMinutesPerFeature */ });
+    const { ctx, events } = makeServiceContext({
+      /* no maxRuntimeMinutesPerFeature */
+    });
 
     const processor = new ExecuteProcessor(ctx);
     const stateCtx = makeCtx({ startedAt: ninetyMinutesAgo });
