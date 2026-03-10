@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-10T23:27:16.318Z",
+  "entries": [
+    {
+      "timestamp": "2026-03-10T23:27:16.307Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-10"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773184531845-k1iqe3fc8",
+        "featureTitle": "Fix: preFlightChecks missing from settings merge logic",
+        "featureCreatedAt": "2026-03-10T23:15:31.845Z",
+        "prMergedAt": "2026-03-10T23:27:16.307Z",
+        "leadTimeMs": 704462
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    }
+  ]
+}
