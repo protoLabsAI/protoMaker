@@ -128,6 +128,9 @@ export function getClaimablePhases(
 
   for (const milestone of project.milestones) {
     for (const phase of milestone.phases) {
+      // Already materialized into a feature — never re-create
+      if (phase.featureId) continue;
+
       // Already claimed or in progress or done
       const status = phase.executionStatus ?? 'unclaimed';
       if (status !== 'unclaimed') continue;

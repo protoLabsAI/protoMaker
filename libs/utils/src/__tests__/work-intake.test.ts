@@ -216,6 +216,15 @@ describe('getClaimablePhases', () => {
     expect(result).toHaveLength(0);
   });
 
+  it('skips phases that already have a featureId (prevents duplicates)', () => {
+    const p1 = makePhase({ name: 'types', featureId: 'feature-already-exists' });
+    const milestone = makeMilestone({ phases: [p1] });
+    const project = makeProject({ milestones: [milestone] });
+
+    const result = getClaimablePhases(project, 'instance-1', 'fullstack');
+    expect(result).toHaveLength(0);
+  });
+
   it('filters by role affinity', () => {
     const p1 = makePhase({
       name: 'ui-comp',
