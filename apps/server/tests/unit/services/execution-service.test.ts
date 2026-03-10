@@ -22,9 +22,13 @@ vi.mock('@protolabsai/error-tracking', () => ({
   setFeatureContext: vi.fn(),
 }));
 
-vi.mock('@protolabsai/git-utils', () => ({
-  rebaseWorktreeOnMain: vi.fn(async () => ({ success: true })),
-}));
+vi.mock('@protolabsai/git-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@protolabsai/git-utils')>();
+  return {
+    ...actual,
+    rebaseWorktreeOnMain: vi.fn(async () => ({ success: true })),
+  };
+});
 
 vi.mock('@protolabsai/platform', () => ({
   getFeatureDir: vi.fn((_p: string, id: string) => `/tmp/test/.automaker/features/${id}`),
