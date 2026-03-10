@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms';
 import { Clock } from 'lucide-react';
+import { formatDuration } from '@protolabsai/utils';
 
 interface VelocityPanelProps {
   avgCycleTimeMs: number;
@@ -7,16 +8,6 @@ interface VelocityPanelProps {
   avgPrReviewTimeMs: number;
   estimatedBacklogTimeMs: number;
   isLoading: boolean;
-}
-
-function formatDuration(ms: number): string {
-  if (ms === 0) return '0m';
-  const minutes = Math.round(ms / 60_000);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (remainingMinutes === 0) return `${hours}h`;
-  return `${hours}h ${remainingMinutes}m`;
 }
 
 function MetricRow({ label, value }: { label: string; value: string }) {

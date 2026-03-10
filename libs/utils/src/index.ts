@@ -197,3 +197,6 @@ export {
   type SanitizationResult,
   type SanitizationSeverity,
 } from './sanitize.js';
+
+// Time formatting utilities
+export { formatDuration, formatTimestamp, formatElapsed } from './format-time.js';

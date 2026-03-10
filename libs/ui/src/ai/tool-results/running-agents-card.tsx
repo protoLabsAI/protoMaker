@@ -12,6 +12,7 @@
  */
 
 import { Loader2, Bot, Clock, Hash } from 'lucide-react';
+import { formatElapsed } from '@protolabsai/utils';
 import { cn } from '../../lib/utils.js';
 import type { ToolResultRendererProps } from '../tool-result-registry.js';
 
@@ -41,16 +42,6 @@ function extractData(output: unknown): ListRunningAgentsData | null {
   }
   if ('agents' in o) return o as ListRunningAgentsData;
   return null;
-}
-
-/** Format elapsed milliseconds into a human-readable string */
-function formatElapsed(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return rem > 0 ? `${m}m ${rem}s` : `${m}m`;
 }
 
 function resolveIsIdle(status: string | undefined, state: string | undefined): boolean {

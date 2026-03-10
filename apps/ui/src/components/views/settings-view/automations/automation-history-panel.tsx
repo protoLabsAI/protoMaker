@@ -5,33 +5,11 @@ import { CheckCircle2, XCircle, Loader2, ExternalLink } from 'lucide-react';
 import type { AutomationRunRecord, AutomationRunStatus } from '@protolabsai/types';
 import { getAutomationHistory } from '@/lib/api';
 import { getLangfuseTraceUrl } from '@/lib/langfuse-url';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatTimestamp(isoString: string): string {
-  const d = new Date(isoString);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
-
-function formatDuration(startedAt: string, completedAt?: string): string {
-  if (!completedAt) return '—';
-  const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime();
-  if (ms < 0) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  const sec = Math.floor(ms / 1000);
-  if (sec < 60) return `${sec}s`;
-  const min = Math.floor(sec / 60);
-  const remSec = sec % 60;
-  return remSec > 0 ? `${min}m ${remSec}s` : `${min}m`;
-}
 
 function RunStatusBadge({ status }: { status: AutomationRunStatus }) {
   const configs: Record<
@@ -144,7 +122,11 @@ export function AutomationHistoryPanel({ automationId, colSpan }: AutomationHist
                       {formatTimestamp(run.startedAt)}
                     </td>
                     <td className="px-3 py-2 text-muted-foreground tabular-nums whitespace-nowrap">
-                      {formatDuration(run.startedAt, run.completedAt)}
+                      {run.completedAt
+                        ? formatDuration(
+                            new Date(run.completedAt).getTime() - new Date(run.startedAt).getTime()
+                          )
+                        : '—'}
                     </td>
                     <td className="px-3 py-2">
                       <RunStatusBadge status={run.status} />

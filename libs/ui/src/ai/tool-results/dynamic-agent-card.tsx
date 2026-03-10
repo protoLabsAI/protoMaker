@@ -5,6 +5,7 @@
  */
 
 import { Loader2, Bot, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { formatDuration } from '@protolabsai/utils';
 import { cn } from '../../lib/utils.js';
 import type { ToolResultRendererProps } from '../tool-result-registry.js';
 
@@ -24,15 +25,6 @@ function extractData(output: unknown): DynamicAgentData | null {
     return o.data as DynamicAgentData;
   }
   return o as DynamicAgentData;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return rem > 0 ? `${m}m ${rem}s` : `${m}m`;
 }
 
 export function DynamicAgentCard({ output, state }: ToolResultRendererProps) {

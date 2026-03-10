@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils';
 
 // ============================================================================
 // Type Definitions
@@ -275,30 +276,6 @@ export function eventsToActivity(events: EventEntry[] | null | undefined): Activ
 // ============================================================================
 
 /**
- * Formats a timestamp into a short display string
- */
-function formatTimestamp(timestamp: string | number): string {
-  if (!timestamp) return 'N/A';
-
-  try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return 'Invalid';
-
-    // Format as HH:MM or MM/DD depending on context
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-
-    if (isToday) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-  } catch {
-    return 'Invalid';
-  }
-}
-
-/**
  * Formats model names for display
  */
 function formatModelName(name: string): string {
@@ -342,15 +319,7 @@ export function formatPercentage(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-/**
- * Formats durations in milliseconds
- */
-export function formatDuration(ms: number): string {
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  if (ms < 3600000) return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
-  return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
-}
+export { formatDuration } from '@protolabsai/utils';
 
 /**
  * Formats relative time from timestamp

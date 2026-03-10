@@ -79,6 +79,7 @@
     "@protolabsai/dependency-resolver": "^0.41.0",
     "@protolabsai/spec-parser": "^0.41.0",
     "@protolabsai/types": "^0.41.0",
+    "@protolabsai/utils": "^0.41.0",
     "@radix-ui/react-checkbox": "1.3.3",
     "@radix-ui/react-collapsible": "1.1.12",
     "@radix-ui/react-dialog": "1.1.15",

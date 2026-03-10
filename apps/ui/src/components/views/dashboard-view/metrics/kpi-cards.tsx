@@ -4,6 +4,7 @@
 
 import { Card, CardContent } from '@protolabsai/ui/atoms';
 import { DollarSign, Hash, Zap, Clock, GitPullRequest, GitCommit } from 'lucide-react';
+import { formatDuration } from '@protolabsai/utils';
 
 interface KpiCardsProps {
   data?: {
@@ -16,17 +17,6 @@ interface KpiCardsProps {
     commitsPerDay: number;
   };
   isLoading: boolean;
-}
-
-function formatDuration(ms: number): string {
-  if (ms === 0) return '0m';
-  const minutes = Math.floor(ms / 60000);
-  const hours = Math.floor(minutes / 60);
-  if (hours > 0) {
-    const rem = minutes % 60;
-    return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
-  }
-  return `${minutes}m`;
 }
 
 function formatCost(usd: number): string {

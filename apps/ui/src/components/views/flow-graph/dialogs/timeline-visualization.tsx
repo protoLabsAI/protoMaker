@@ -11,6 +11,7 @@
 import { ExternalLink, Clock, AlertCircle } from 'lucide-react';
 import type { PipelinePhase, PhaseTransition } from '@protolabsai/types';
 import { getLangfuseSpanUrl } from '@/lib/langfuse-url';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils';
 
 interface ToolExecution {
   name: string;
@@ -53,27 +54,6 @@ const PHASE_COLORS: Record<PipelinePhase, string> = {
   VERIFY: 'bg-orange-500/30',
   PUBLISH: 'bg-green-500/30',
 };
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return `${hours}h ${remainingMinutes}m`;
-}
-
-function formatTimestamp(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-}
 
 export function TimelineVisualization({
   phaseDurations = {},

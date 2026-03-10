@@ -20,6 +20,7 @@ import {
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { useAppStore } from '@/store/app-store';
 import { cn } from '@/lib/utils';
+import { formatDuration } from '@protolabsai/utils';
 
 interface PipelineAnalyticsData {
   activePipelines: number;
@@ -32,14 +33,6 @@ interface PipelineAnalyticsData {
     successRate: number;
     gateHoldCount: number;
   }>;
-}
-
-function formatDuration(minutes: number): string {
-  if (minutes < 1) return '<1m';
-  if (minutes < 60) return `${Math.round(minutes)}m`;
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.round(minutes % 60);
-  return `${hours}h ${mins}m`;
 }
 
 function StatCard({
@@ -130,7 +123,7 @@ function PipelineAnalyticsComponent() {
                 <StatCard
                   icon={Clock}
                   label="Avg Duration"
-                  value={formatDuration(analytics.avgDurationMinutes)}
+                  value={formatDuration(analytics.avgDurationMinutes * 60_000)}
                 />
                 <StatCard
                   icon={Hand}

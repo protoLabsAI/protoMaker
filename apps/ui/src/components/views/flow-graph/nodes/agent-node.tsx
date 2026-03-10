@@ -10,6 +10,7 @@ import { motion } from 'motion/react';
 import { Bot } from 'lucide-react';
 import type { AgentNodeData, ActiveTool } from '../types';
 import { cn } from '@/lib/utils';
+import { formatDuration } from '@protolabsai/utils';
 
 function getModelBadge(model?: string): { label: string; color: string } {
   if (!model) return { label: 'Agent', color: 'zinc' };
@@ -19,19 +20,9 @@ function getModelBadge(model?: string): { label: string; color: string } {
   return { label: 'Agent', color: 'zinc' };
 }
 
-function formatDuration(startTime: number): string {
-  const seconds = Math.floor((Date.now() - startTime) / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  if (mins < 60) return `${mins}m ${secs}s`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ${mins % 60}m`;
-}
-
 function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
   const badge = getModelBadge(data.model);
-  const [duration, setDuration] = useState(formatDuration(data.startTime));
+  const [duration, setDuration] = useState(formatDuration(Date.now() - data.startTime));
   const [shouldFadeToolBadge, setShouldFadeToolBadge] = useState(false);
   const [lastActiveTool, setLastActiveTool] = useState<ActiveTool | null | undefined>(
     data.activeTool
@@ -39,7 +30,7 @@ function AgentNodeComponent({ data }: NodeProps & { data: AgentNodeData }) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setDuration(formatDuration(data.startTime));
+      setDuration(formatDuration(Date.now() - data.startTime));
     }, 1000);
     return () => clearInterval(interval);
   }, [data.startTime]);

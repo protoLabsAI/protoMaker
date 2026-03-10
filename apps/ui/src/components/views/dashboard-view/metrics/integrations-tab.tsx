@@ -21,6 +21,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDuration, formatTimestamp } from '@protolabsai/utils';
 
 interface IntegrationsTabProps {
   projectPath: string | undefined;
@@ -224,38 +225,6 @@ function AgentSessionCard() {
       </CardContent>
     </Card>
   );
-}
-
-/**
- * Format a timestamp for display
- */
-function formatTimestamp(timestamp: string | Date): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-  return `${Math.floor(diffMins / 1440)}d ago`;
-}
-
-/**
- * Format duration in milliseconds to human-readable string
- */
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`;
-  }
-  if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`;
-  }
-  return `${seconds}s`;
 }
 
 /**

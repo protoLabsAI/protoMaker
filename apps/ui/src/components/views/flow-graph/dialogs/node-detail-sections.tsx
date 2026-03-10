@@ -24,6 +24,7 @@ import { Badge } from '@protolabsai/ui/atoms';
 import { Button } from '@protolabsai/ui/atoms';
 import { scrubPii } from '@/lib/scrub-pii';
 import { formatCostUsd } from '@/lib/format';
+import { formatDuration } from '@protolabsai/utils';
 import { getLangfuseTraceUrl, getLangfuseSpanUrl } from '@/lib/langfuse-url';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
@@ -67,12 +68,6 @@ function TraceLink({ traceId }: { traceId: string }) {
       View Trace
     </a>
   );
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
-  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
-  return `${(ms / 3_600_000).toFixed(1)}h`;
 }
 
 function formatTimeAgo(dateStr: string): string {

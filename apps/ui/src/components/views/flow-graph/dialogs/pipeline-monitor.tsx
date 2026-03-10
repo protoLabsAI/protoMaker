@@ -14,6 +14,7 @@ import { CheckCircle, XCircle, Clock, Shield, AlertTriangle } from 'lucide-react
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { queryKeys } from '@/lib/query-keys';
 import { useAppStore } from '@/store/app-store';
+import { formatTimestamp } from '@protolabsai/utils';
 
 const PIPELINE_STATES = ['INTAKE', 'PLAN', 'EXECUTE', 'REVIEW', 'MERGE', 'DEPLOY', 'DONE'] as const;
 
@@ -23,15 +24,6 @@ const STATE_COLORS: Record<string, string> = {
   upcoming: 'bg-muted-foreground/20',
   escalated: 'bg-red-500',
 };
-
-function formatTimestamp(ts: string): string {
-  const date = new Date(ts);
-  const now = Date.now();
-  const age = now - date.getTime();
-  if (age < 60_000) return 'just now';
-  if (age < 3_600_000) return `${Math.round(age / 60_000)}m ago`;
-  return `${(age / 3_600_000).toFixed(1)}h ago`;
-}
 
 interface PipelineCheckpoint {
   featureId: string;

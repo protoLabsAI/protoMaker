@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Brain, ChevronDown, Loader2, Check } from 'lucide-react';
+import { formatDuration } from '@protolabsai/utils';
 import { cn } from '../lib/utils.js';
 
 export interface ChainOfThoughtProps {
@@ -51,12 +52,6 @@ function parseSteps(text: string): string[] {
     .split(/\n/)
     .map((s) => s.replace(/^\d+\.\s+/, '').trim())
     .filter(Boolean);
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  const seconds = Math.round(ms / 1000);
-  return `${seconds}s`;
 }
 
 export function ChainOfThought({ text, state, className }: ChainOfThoughtProps) {

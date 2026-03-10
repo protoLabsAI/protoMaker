@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms'
 import { useChartColors } from '@/hooks/use-chart-colors';
 import { useBlockedTimeline } from '@/hooks/queries/use-metrics';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { formatDuration } from '@protolabsai/utils';
 
 interface BlockedTimelineProps {
   projectPath: string;
@@ -25,15 +26,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   unclear: 'Unclear',
   other: 'Other',
 };
-
-/** Format milliseconds into a human-readable duration string. */
-function formatDuration(ms: number): string {
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  const remainingHours = hours % 24;
-  return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
-}
 
 interface ChartDatum {
   featureTitle: string;
