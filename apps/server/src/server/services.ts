@@ -82,6 +82,7 @@ import { ChannelRouter } from '../services/channel-router.js';
 import { NotificationRouter } from '../services/notification-router.js';
 import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
+import { MetricsCollectionService } from '../services/metrics-collection-service.js';
 import { FrictionTrackerService } from '../services/friction-tracker-service.js';
 import { FailureClassifierService } from '../services/failure-classifier-service.js';
 import {
@@ -270,6 +271,9 @@ export interface ServiceContainer {
   // DORA metrics (lead time, deployment frequency, change failure rate, recovery time, rework rate)
   doraMetricsService: DoraMetricsService;
 
+  // DORA metrics collection (event-driven time-series collector, persists to .automaker/metrics/dora.json)
+  metricsCollectionService: MetricsCollectionService;
+
   // Friction tracker (self-improvement loop — recurring failure pattern detection)
   frictionTrackerService: FrictionTrackerService;
 
@@ -317,6 +321,10 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const agentService = new AgentService(dataDir, events, settingsService, undefined, featureLoader);
   const metricsService = new MetricsService(featureLoader);
   const doraMetricsService = new DoraMetricsService(featureLoader);
+
+  // DORA Metrics Collection Service — event-driven time-series persistence
+  const metricsCollectionService = new MetricsCollectionService(events, featureLoader, repoRoot);
+  metricsCollectionService.initialize();
 
   // Metrics Ledger & Archival
   const ledgerService = new LedgerService(featureLoader, events);
@@ -823,6 +831,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     todoService,
     avaChannelService,
     doraMetricsService,
+    metricsCollectionService,
     frictionTrackerService,
     reactiveSpawnerService,
     driftCheckInterval: null,

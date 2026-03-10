@@ -785,6 +785,8 @@ export type {
   CycleTimeBucket,
   TimeSeriesMetric,
   TimeGroupBy,
+  DoraTimeSeriesEntry,
+  DoraTimeSeriesDocument,
 } from './metrics.js';
 
 // Lead Engineer types (production-phase nerve center)

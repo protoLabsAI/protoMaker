@@ -178,3 +178,86 @@ export type TimeSeriesMetric =
  * Time range grouping options
  */
 export type TimeGroupBy = 'day' | 'week' | 'month';
+
+// ---------------------------------------------------------------------------
+// DORA Metrics Time-Series Persistence
+// ---------------------------------------------------------------------------
+
+/**
+ * A single DORA metrics snapshot — one entry per collection event.
+ * Persisted to `.automaker/metrics/dora.json` as an array of entries.
+ */
+export interface DoraTimeSeriesEntry {
+  /** ISO 8601 timestamp when this entry was recorded */
+  timestamp: string;
+
+  /**
+   * Deployment Frequency: count of PRs merged to dev per day.
+   * Derived from feature:pr-merged events.
+   */
+  deploymentFrequency: {
+    /** Total merges recorded in the current day bucket */
+    mergesPerDay: number;
+    /** Total merges recorded in the current week bucket */
+    mergesPerWeek: number;
+    /** Date bucket (YYYY-MM-DD) */
+    dayBucket: string;
+  };
+
+  /**
+   * Change Lead Time: time from feature creation to PR merge (in ms).
+   * Derived from feature:pr-merged events by looking up feature.createdAt.
+   */
+  changeLeadTime: {
+    /** Feature ID */
+    featureId: string;
+    /** Title of the feature */
+    featureTitle?: string;
+    /** ISO timestamp when the feature was created */
+    featureCreatedAt: string;
+    /** ISO timestamp when the PR was merged */
+    prMergedAt: string;
+    /** Lead time in milliseconds */
+    leadTimeMs: number;
+  } | null;
+
+  /**
+   * Change Fail Rate: snapshot of failure ratio at collection time.
+   * Derived from pr:ci-failure, feature:error, and feature:pr-merged events.
+   */
+  changeFailRate: {
+    /** Total merges seen (cumulative) */
+    totalMerges: number;
+    /** Total failures seen (CI failures + post-merge remediations) (cumulative) */
+    totalFailures: number;
+    /** Current ratio (totalFailures / totalMerges), or 0 if no merges */
+    ratio: number;
+  };
+
+  /**
+   * Recovery Time: time from failure detection to fix merge (in ms).
+   * Derived from pr:ci-failure -> feature:pr-merged events for the same feature.
+   */
+  recoveryTime: {
+    /** Feature ID of the recovered feature */
+    featureId: string;
+    /** ISO timestamp when failure was detected */
+    failureDetectedAt: string;
+    /** ISO timestamp when the fix was merged */
+    fixMergedAt: string;
+    /** Recovery time in milliseconds */
+    recoveryTimeMs: number;
+  } | null;
+}
+
+/**
+ * The full DORA time-series document persisted to disk.
+ */
+export interface DoraTimeSeriesDocument {
+  /** Schema version for forward compatibility */
+  version: 1;
+  /** ISO timestamp of last write */
+  updatedAt: string;
+  /** Ordered list of snapshot entries (newest last) */
+  entries: DoraTimeSeriesEntry[];
+}
