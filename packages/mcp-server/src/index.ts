@@ -1361,6 +1361,31 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         projectSlug: args.projectSlug,
       });
 
+    // Project Assignment
+    case 'assign_project':
+      return apiCall('/projects/assignment/assign', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+        assignedTo: args.assignedTo,
+        assignedBy: args.assignedBy,
+      });
+
+    case 'unassign_project':
+      return apiCall('/projects/assignment/unassign', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
+
+    case 'list_project_assignments':
+      return apiCall('/projects/assignment/list-assignments', {
+        projectPath: args.projectPath,
+      });
+
+    case 'reassign_orphaned_projects':
+      return apiCall('/projects/assignment/reassign-orphaned', {
+        projectPath: args.projectPath,
+      });
+
     // Lead Engineer (Production Phase)
     case 'start_lead_engineer':
       return apiCall('/lead-engineer/start', {

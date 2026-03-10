@@ -129,6 +129,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     briefingCursorService,
     projectService,
     projectLifecycleService,
+    projectAssignmentService,
     automationService,
     avaGatewayService,
     discordBotService,
@@ -354,7 +355,14 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   );
   app.use(
     '/api/projects',
-    createProjectsRoutes(featureLoader, events, projectService, projectLifecycleService)
+    createProjectsRoutes(
+      featureLoader,
+      events,
+      projectService,
+      projectLifecycleService,
+      undefined,
+      projectAssignmentService
+    )
   );
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));

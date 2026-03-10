@@ -31,13 +31,16 @@ import { createLifecycleRoutes } from './lifecycle/index.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 import type { EventLedgerService } from '../../services/event-ledger-service.js';
+import { createAssignmentRoutes } from './assignment.js';
+import type { ProjectAssignmentService } from '../../services/project-assignment-service.js';
 
 export function createProjectsRoutes(
   featureLoader: FeatureLoader,
   events: EventEmitter,
   projectService: ProjectService,
   lifecycleService?: ProjectLifecycleService,
-  eventLedgerService?: EventLedgerService
+  eventLedgerService?: EventLedgerService,
+  projectAssignmentService?: ProjectAssignmentService
 ): Router {
   const router = Router();
 
@@ -94,6 +97,11 @@ export function createProjectsRoutes(
   // Mount lifecycle routes if service is available
   if (lifecycleService) {
     router.use('/lifecycle', createLifecycleRoutes(lifecycleService, projectService, events));
+  }
+
+  // Mount assignment routes if service is available
+  if (projectAssignmentService) {
+    router.use('/assignment', createAssignmentRoutes(projectAssignmentService));
   }
 
   // Mount shared project tools via Express adapter (links, updates, docs, features)
