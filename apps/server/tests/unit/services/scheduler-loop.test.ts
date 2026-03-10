@@ -622,3 +622,153 @@ describe('AutoModeService - concurrency and race prevention', () => {
     expect(count >= maxConcurrency).toBe(true);
   });
 });
+
+// ─── FeatureScheduler - project affinity filtering ───────────────────────────
+
+describe('FeatureScheduler - project affinity filtering', () => {
+  let scheduler: FeatureScheduler;
+  const mockFeatureLoader = {
+    update: vi.fn().mockResolvedValue(undefined),
+    get: vi.fn(),
+    getAll: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  };
+  const mockEvents = {
+    subscribe: vi.fn(),
+    emit: vi.fn(),
+    on: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    broadcast: vi.fn(),
+  };
+  const mockRunner: PipelineRunner = { run: vi.fn() };
+  const mockCallbacks: SchedulerCallbacks = {
+    getRunningCountForWorktree: vi.fn().mockResolvedValue(0),
+    hasInProgressFeatures: vi.fn().mockResolvedValue(false),
+    isFeatureRunning: vi.fn().mockReturnValue(false),
+    isFeatureFinished: vi.fn().mockReturnValue(false),
+    emitAutoModeEvent: vi.fn(),
+    getHeapUsagePercent: vi.fn().mockReturnValue(0),
+    getMostRecentRunningFeature: vi.fn().mockReturnValue(null),
+    recordSuccessForProject: vi.fn(),
+    trackFailureAndCheckPauseForProject: vi.fn().mockReturnValue(false),
+    signalShouldPauseForProject: vi.fn(),
+    sleep: vi.fn().mockResolvedValue(undefined),
+    HEAP_USAGE_STOP_NEW_AGENTS_THRESHOLD: 85,
+    HEAP_USAGE_ABORT_AGENTS_THRESHOLD: 92,
+  };
+
+  const INSTANCE_ID = 'instance-alpha';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetFeaturesDir.mockReturnValue('/fake/project/.automaker/features');
+    mockEvents.on.mockReturnValue({ unsubscribe: vi.fn() });
+    mockFeatureLoader.update.mockResolvedValue(undefined);
+    scheduler = new FeatureScheduler({
+      featureLoader: mockFeatureLoader as never,
+      settingsService: null,
+      events: mockEvents as never,
+      runner: mockRunner,
+      callbacks: mockCallbacks,
+    });
+  });
+
+  const setupSchedulerWithAffinity = (assignedSlugs: string[], overflowEnabled = true) => {
+    const getAssignedProjectSlugs = vi.fn().mockResolvedValue(new Set(assignedSlugs));
+    scheduler.setProjectAffinity(INSTANCE_ID, getAssignedProjectSlugs, overflowEnabled);
+    return getAssignedProjectSlugs;
+  };
+
+  it('single-instance: no affinity set → all eligible features returned', async () => {
+    // No setProjectAffinity call = single-instance mode
+    const f1 = makeFeature({ id: 'feat-001', projectSlug: 'project-a' });
+    const f2 = makeFeature({ id: 'feat-002', projectSlug: 'project-b' });
+    const f3 = makeFeature({ id: 'feat-003' }); // no projectSlug
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([f1, f2, f3]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).toContain('feat-001');
+    expect(ids).toContain('feat-002');
+    expect(ids).toContain('feat-003');
+  });
+
+  it('assigned project filter: feature with matching projectSlug is included', async () => {
+    setupSchedulerWithAffinity(['project-a']);
+    const f1 = makeFeature({ id: 'feat-001', projectSlug: 'project-a' });
+    const f2 = makeFeature({ id: 'feat-002', projectSlug: 'project-b' });
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([f1, f2]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).toContain('feat-001');
+    // project-b is overflow — included by default (overflowEnabled=true)
+    expect(ids).toContain('feat-002');
+  });
+
+  it('own unassigned filter: feature with no projectSlug and createdByInstance matches is included', async () => {
+    setupSchedulerWithAffinity([]);
+    const f1 = makeFeature({ id: 'feat-own', createdByInstance: INSTANCE_ID }); // own unassigned
+    const f2 = makeFeature({ id: 'feat-other', createdByInstance: 'instance-beta' }); // another instance's
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([f1, f2]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).toContain('feat-own');
+    // feat-other is overflow — included by default (overflowEnabled=true)
+    expect(ids).toContain('feat-other');
+  });
+
+  it('overflow disabled: only assigned + own unassigned features are returned', async () => {
+    setupSchedulerWithAffinity(['project-a'], false); // overflow disabled
+    const assigned = makeFeature({ id: 'feat-assigned', projectSlug: 'project-a' });
+    const ownUnassigned = makeFeature({ id: 'feat-own', createdByInstance: INSTANCE_ID });
+    const overflow = makeFeature({ id: 'feat-overflow', projectSlug: 'project-other' });
+    const overflow2 = makeFeature({ id: 'feat-overflow2', createdByInstance: 'instance-beta' });
+
+    setupDefaultExecMocks();
+    setupFeaturesOnDisk([assigned, ownUnassigned, overflow, overflow2]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    expect(ids).toContain('feat-assigned');
+    expect(ids).toContain('feat-own');
+    expect(ids).not.toContain('feat-overflow');
+    expect(ids).not.toContain('feat-overflow2');
+  });
+
+  it('sort order: assigned (tier 0) before own unassigned (tier 1) before overflow (tier 2)', async () => {
+    setupSchedulerWithAffinity(['project-a'], true);
+    const overflow = makeFeature({ id: 'feat-overflow', projectSlug: 'project-other' });
+    const ownUnassigned = makeFeature({ id: 'feat-own', createdByInstance: INSTANCE_ID });
+    const assigned = makeFeature({ id: 'feat-assigned', projectSlug: 'project-a' });
+
+    setupDefaultExecMocks();
+    // Push in reverse order to confirm sorting changes their position
+    setupFeaturesOnDisk([overflow, ownUnassigned, assigned]);
+
+    const result = await scheduler.loadPendingFeatures('/fake/project');
+    const ids = result.map((f) => f.id);
+
+    const assignedIdx = ids.indexOf('feat-assigned');
+    const ownIdx = ids.indexOf('feat-own');
+    const overflowIdx = ids.indexOf('feat-overflow');
+
+    expect(assignedIdx).toBeGreaterThanOrEqual(0);
+    expect(ownIdx).toBeGreaterThanOrEqual(0);
+    expect(overflowIdx).toBeGreaterThanOrEqual(0);
+
+    expect(assignedIdx).toBeLessThan(ownIdx);
+    expect(ownIdx).toBeLessThan(overflowIdx);
+  });
+});

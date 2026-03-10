@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { createLogger } from '@protolabsai/utils';
+import { loadProtoConfig } from '@protolabsai/platform';
 import { createEventEmitter, type EventEmitter } from '../lib/events.js';
 
 import { AgentService } from '../services/agent-service.js';
@@ -745,6 +746,32 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
   leadEngineerService.setHITLFormService(hitlFormService);
   await leadEngineerService.initialize();
+
+  // Wire project-affinity filtering into auto-mode when projectPreferences are configured.
+  // This enables multi-instance deployments to scope feature pickup to assigned projects.
+  // Single-instance setups (no proto.config.yaml projectPreferences) are unaffected.
+  try {
+    const protoConfig = await loadProtoConfig(repoRoot);
+    const projectPreferences = protoConfig?.['projectPreferences'] as
+      | { preferredProjects?: string[]; overflowEnabled?: boolean }
+      | undefined;
+    const hasPreferredProjects =
+      Array.isArray(projectPreferences?.preferredProjects) &&
+      projectPreferences.preferredProjects.length > 0;
+    if (hasPreferredProjects) {
+      const overflowEnabled = projectPreferences?.overflowEnabled ?? true;
+      autoModeService.setProjectAssignmentService(
+        crdtSyncService.getInstanceId(),
+        projectAssignmentService,
+        overflowEnabled
+      );
+      logger.info(
+        `[Affinity] Project-affinity filtering enabled (instanceId=${crdtSyncService.getInstanceId()}, preferredProjects=${projectPreferences?.preferredProjects?.join(',') ?? ''}, overflow=${overflowEnabled})`
+      );
+    }
+  } catch (err) {
+    logger.warn('[Affinity] Failed to load project preferences — affinity filtering skipped:', err);
+  }
 
   // Wire pipelineOrchestrator processors
   pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });

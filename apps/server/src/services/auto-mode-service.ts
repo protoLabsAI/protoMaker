@@ -392,6 +392,36 @@ export class AutoModeService {
     this.workIntakeService = service;
   }
 
+  /**
+   * Wire up project-affinity filtering for multi-instance deployments.
+   *
+   * When set, the scheduler will filter pending features by project ownership and sort them
+   * (assigned projects first, then own unassigned, then overflow). The featureLoader will
+   * also stamp createdByInstance on newly created features.
+   *
+   * Not required for single-instance setups — omitting this call preserves the existing
+   * behavior (all eligible features are candidates, sorted only by priority).
+   *
+   * @param instanceId - This instance's identity string (from CrdtSyncService.getInstanceId())
+   * @param projectAssignmentService - Service that tracks project-to-instance assignments
+   * @param overflowEnabled - Whether this instance accepts features from non-assigned projects
+   */
+  setProjectAssignmentService(
+    instanceId: string,
+    projectAssignmentService: import('./project-assignment-service.js').ProjectAssignmentService,
+    overflowEnabled = true
+  ): void {
+    // Stamp instance ID on newly created features
+    this.featureLoader.setInstanceId(instanceId);
+
+    // Wire project affinity into the scheduler
+    const getAssignedProjectSlugs = async (projectPath: string): Promise<Set<string>> => {
+      const projects = await projectAssignmentService.getMyAssignedProjects(projectPath);
+      return new Set(projects.map((p) => p.slug));
+    };
+    this.scheduler.setProjectAffinity(instanceId, getAssignedProjectSlugs, overflowEnabled);
+  }
+
   /** Total number of currently running agent features across all projects. */
   getRunningAgentCount(): number {
     return this.runningFeatures.size;

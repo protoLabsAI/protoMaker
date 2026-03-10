@@ -319,6 +319,40 @@ describe('feature-loader.ts', () => {
 
       expect(result.category).toBe('Uncategorized');
     });
+
+    it('stamps createdByInstance when instanceId is set via setInstanceId()', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      loader.setInstanceId('instance-alpha');
+      const result = await loader.create(testProjectPath, { description: 'Test' });
+
+      expect(result.createdByInstance).toBe('instance-alpha');
+    });
+
+    it('does NOT stamp createdByInstance when no instanceId is configured (single-instance)', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      // No setInstanceId call → single-instance mode
+      const result = await loader.create(testProjectPath, { description: 'Test' });
+
+      expect(result.createdByInstance).toBeUndefined();
+    });
+
+    it('caller-supplied createdByInstance takes precedence over instanceId', async () => {
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      loader.setInstanceId('instance-alpha');
+      const result = await loader.create(testProjectPath, {
+        description: 'Synced from peer',
+        createdByInstance: 'instance-beta',
+      });
+
+      // The caller (e.g. CRDT sync) explicitly set createdByInstance — must not be overwritten
+      expect(result.createdByInstance).toBe('instance-beta');
+    });
   });
 
   describe('update', () => {
