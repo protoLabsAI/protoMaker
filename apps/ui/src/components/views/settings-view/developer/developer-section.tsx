@@ -281,8 +281,8 @@ export function DeveloperSection() {
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Connect to a different Automaker server at runtime. Leave blank to use the default
-            server.
+            Switch which Automaker server this app connects to. Enter a URL below or select from
+            recent connections. Leave blank to use the default server.
           </p>
 
           {/* URL input + Connect button */}
