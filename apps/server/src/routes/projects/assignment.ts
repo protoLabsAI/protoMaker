@@ -13,9 +13,7 @@ import type { Request, Response } from 'express';
 import type { ProjectAssignmentService } from '../../services/project-assignment-service.js';
 import { getErrorMessage, logError } from './common.js';
 
-export function createAssignmentRoutes(
-  projectAssignmentService: ProjectAssignmentService
-): Router {
+export function createAssignmentRoutes(projectAssignmentService: ProjectAssignmentService): Router {
   const router = Router();
 
   // POST /assign — assign a project to an instance
