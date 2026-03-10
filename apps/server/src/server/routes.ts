@@ -155,7 +155,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     gtmAgent,
     completionDetectorService,
     antagonisticReviewService,
-    projectPlanningService,
     contentFlowService,
     repoRoot,
     sensorRegistryService,
@@ -400,10 +399,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     )
   );
   app.use('/api/langfuse', createLangfuseRoutes());
-  app.use(
-    '/api/flows',
-    createFlowsRoutes(antagonisticReviewService, projectPlanningService ?? undefined)
-  );
+  app.use('/api/flows', createFlowsRoutes(antagonisticReviewService));
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/codex', createCodexRoutes());
   app.use('/api/ai', createAIRoutes());

@@ -10,7 +10,6 @@ import { validatePathParams, validateSlugs } from '../../../middleware/validate-
 import type { ProjectLifecycleService } from '../../../services/project-lifecycle-service.js';
 import type { ProjectService } from '../../../services/project-service.js';
 import { createInitiateHandler } from './initiate.js';
-import { createGeneratePrdHandler } from './generate-prd.js';
 import { createApprovePrdHandler } from './approve-prd.js';
 import { createLaunchHandler } from './launch.js';
 import { createStatusHandler } from './status.js';
@@ -29,13 +28,6 @@ export function createLifecycleRoutes(
     '/initiate',
     validatePathParams('projectPath'),
     createInitiateHandler(lifecycleService)
-  );
-
-  router.post(
-    '/generate-prd',
-    validatePathParams('projectPath'),
-    validateSlugs('projectSlug'),
-    createGeneratePrdHandler(projectService)
   );
 
   router.post(
