@@ -234,6 +234,10 @@ function getBaseOptions(): Partial<Options> {
   return {
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
+    pathToClaudeCodeExecutable: path.resolve(
+      process.cwd(),
+      'node_modules/@anthropic-ai/claude-agent-sdk/cli.js'
+    ),
   };
 }
 
