@@ -28,8 +28,9 @@ export function createStatsHandler(knowledgeStoreService: KnowledgeStoreService)
       knowledgeStoreService.initialize(projectPath);
 
       const stats = knowledgeStoreService.getStats();
+      const domainBreakdown = knowledgeStoreService.getStatsByDomain(projectPath);
 
-      res.json({ success: true, stats });
+      res.json({ success: true, stats, domainBreakdown });
     } catch (error) {
       logger.error('Get stats failed:', error);
       res.status(500).json({

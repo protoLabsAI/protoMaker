@@ -140,4 +140,7 @@ export interface KnowledgeSearchOptions {
 
   /** Filter by source types (default: 'all') */
   sourceTypes?: KnowledgeSourceType[] | 'all';
+
+  /** Filter by domain tag (optional) */
+  domain?: string;
 }
