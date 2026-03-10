@@ -47,17 +47,26 @@ export class WorldStateBuilder {
   ): Promise<LeadWorldState> {
     const features = await this.deps.featureLoader.getAll(projectPath);
 
-    // Board counts
+    // Terminal statuses — features in these states need no further processing
+    const TERMINAL_STATUSES = new Set(['done', 'completed', 'verified']);
+
+    // Board counts (all features, including terminal)
     const boardCounts: Record<string, number> = {};
     for (const f of features) {
       const status = f.status || 'backlog';
       boardCounts[status] = (boardCounts[status] || 0) + 1;
     }
 
-    // Feature snapshots
+    // Feature snapshots — only non-terminal features enter world state
+    // so the state machine and rules never process features that are already done
     const featureMap: Record<string, LeadFeatureSnapshot> = {};
+    // All-features lookup used for milestone completion checks (done features must be visible there)
+    const allFeaturesById: Record<string, Feature> = {};
     for (const f of features) {
-      featureMap[f.id] = this.featureToSnapshot(f);
+      allFeaturesById[f.id] = f;
+      if (!TERMINAL_STATUSES.has(f.status as string)) {
+        featureMap[f.id] = this.featureToSnapshot(f);
+      }
     }
 
     // Running agents
@@ -112,7 +121,7 @@ export class WorldStateBuilder {
           const completedPhases =
             ms.phases?.filter((p) => {
               if (!p.featureId) return false;
-              const f = featureMap[p.featureId];
+              const f = allFeaturesById[p.featureId];
               return f && (f.status === 'done' || f.status === 'verified');
             }).length || 0;
           milestones.push({
