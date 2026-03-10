@@ -17,6 +17,36 @@ import type { SettingsService } from './settings-service.js';
 
 const logger = createLogger('SignalIntake');
 
+// ---------------------------------------------------------------------------
+// Portfolio Gate
+// ---------------------------------------------------------------------------
+
+export interface DeferredSignal {
+  id: string;
+  title: string;
+  description: string;
+  source: string;
+  reason: string;
+  deferredAt: string;
+}
+
+const PORTFOLIO_GATE_CAPACITY_THRESHOLD = 50;
+const PORTFOLIO_GATE_DUPLICATION_THRESHOLD = 0.6;
+const PORTFOLIO_GATE_ERROR_BUDGET_THRESHOLD = 0.3;
+const ARCHITECTURAL_KEYWORDS = [
+  'architecture',
+  'infrastructure',
+  'migration',
+  'refactor',
+  'platform',
+  'framework',
+];
+
+type PortfolioGateOutcome =
+  | { action: 'allow' }
+  | { action: 'block'; reason: string }
+  | { action: 'defer'; reason: string };
+
 /** Minimal interface for HITL form creation (avoids tight coupling to HITLFormService) */
 interface HITLFormCreator {
   create(input: HITLFormRequestInput): { id: string };
@@ -81,6 +111,7 @@ export class SignalIntakeService {
   private lastSignalAt: string | null = null;
   private hitlFormService: HITLFormCreator | null = null;
   private recentSignals: RecentSignal[] = [];
+  private deferredQueue: DeferredSignal[] = [];
 
   constructor(
     private events: EventEmitter,
@@ -320,6 +351,104 @@ export class SignalIntakeService {
     return 'work_order';
   }
 
+  /**
+   * Return the current deferred signal queue.
+   */
+  public getDeferredQueue(): DeferredSignal[] {
+    return [...this.deferredQueue];
+  }
+
+  // -------------------------------------------------------------------------
+  // Portfolio Gate helpers
+  // -------------------------------------------------------------------------
+
+  private titleToWordSet(title: string): Set<string> {
+    return new Set(
+      title
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 0)
+    );
+  }
+
+  private jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+    if (a.size === 0 && b.size === 0) return 1;
+    let intersection = 0;
+    for (const word of a) {
+      if (b.has(word)) intersection++;
+    }
+    const union = a.size + b.size - intersection;
+    return union === 0 ? 0 : intersection / union;
+  }
+
+  private isArchitecturalSignal(content: string): boolean {
+    const lower = content.toLowerCase();
+    return ARCHITECTURAL_KEYWORDS.some((kw) => lower.includes(kw));
+  }
+
+  private async evaluatePortfolioGate(
+    title: string,
+    projectPath: string
+  ): Promise<PortfolioGateOutcome> {
+    const features = await this.featureLoader.getAll(projectPath);
+
+    // 1. Capacity check — count active features (backlog + in_progress)
+    const activeStatuses = new Set(['backlog', 'in_progress']);
+    const activeCount = features.filter((f) => f.status && activeStatuses.has(f.status)).length;
+    if (activeCount >= PORTFOLIO_GATE_CAPACITY_THRESHOLD) {
+      return {
+        action: 'defer',
+        reason: `Capacity exceeded: ${activeCount} active features (threshold: ${PORTFOLIO_GATE_CAPACITY_THRESHOLD})`,
+      };
+    }
+
+    // 2. Duplication check — Jaccard similarity against existing feature titles
+    const incomingWords = this.titleToWordSet(title);
+    for (const existing of features) {
+      const existingWords = this.titleToWordSet(existing.title ?? '');
+      const similarity = this.jaccardSimilarity(incomingWords, existingWords);
+      if (similarity > PORTFOLIO_GATE_DUPLICATION_THRESHOLD) {
+        return {
+          action: 'block',
+          reason: `Duplicate of: ${existing.title}`,
+        };
+      }
+    }
+
+    // 3. Error budget check — block architectural signals when failure rate is high
+    if (this.isArchitecturalSignal(title)) {
+      const recentFeatures = features.filter((f) => f.failureCount !== undefined);
+      if (recentFeatures.length > 0) {
+        const failedCount = recentFeatures.filter((f) => (f.failureCount ?? 0) > 0).length;
+        const failureRate = failedCount / recentFeatures.length;
+        if (failureRate > PORTFOLIO_GATE_ERROR_BUDGET_THRESHOLD) {
+          return {
+            action: 'defer',
+            reason: `Error budget exceeded: ${Math.round(failureRate * 100)}% failure rate blocks architectural features`,
+          };
+        }
+      }
+    }
+
+    return { action: 'allow' };
+  }
+
+  private addToDeferredQueue(
+    signal: SignalPayload,
+    title: string,
+    description: string,
+    reason: string
+  ): void {
+    this.deferredQueue.push({
+      id: uuidv4(),
+      title,
+      description,
+      source: signal.source,
+      reason,
+      deferredAt: new Date().toISOString(),
+    });
+  }
+
   private async handleSignal(signal: SignalPayload): Promise<void> {
     // Deduplicate by source + unique identifier.
     // For integration sources (GitHub), use author.id which is the issue/event ID.
@@ -426,6 +555,60 @@ export class SignalIntakeService {
           hitlFormId,
         });
         return;
+      }
+
+      // Portfolio gate: evaluate capacity, duplication, and error budget
+      if (this.settingsService) {
+        const settings = await this.settingsService.getGlobalSettings();
+        if (settings.portfolioGate) {
+          const gateOutcome = await this.evaluatePortfolioGate(title, projectPath as string);
+
+          if (gateOutcome.action === 'block') {
+            logger.info(`Portfolio gate blocked signal: "${title}" — ${gateOutcome.reason}`);
+            this.updateRingBufferEntry(bufferEntry.id, 'creating');
+            const blockedFeature = await this.featureLoader.create(projectPath as string, {
+              title: `[${signal.source}] ${title}`,
+              description,
+              status: 'blocked',
+              statusChangeReason: gateOutcome.reason,
+              category: 'Signal Intake',
+              complexity: 'medium',
+              workItemState: 'idea',
+              sourceChannel: sourceToChannel(signal.source),
+            });
+            this.updateRingBufferEntry(bufferEntry.id, 'created', blockedFeature.id);
+            this.events.emit('signal:routed', {
+              projectPath,
+              featureId: blockedFeature.id,
+              title,
+              description,
+              category: classification.category,
+              reason: gateOutcome.reason,
+              source: signal.source,
+              timestamp: signal.timestamp,
+              intent,
+            });
+            return;
+          }
+
+          if (gateOutcome.action === 'defer') {
+            logger.info(`Portfolio gate deferred signal: "${title}" — ${gateOutcome.reason}`);
+            this.addToDeferredQueue(signal, title, description, gateOutcome.reason);
+            this.updateRingBufferEntry(bufferEntry.id, 'dismissed');
+            this.events.emit('signal:routed', {
+              projectPath,
+              featureId: undefined,
+              title,
+              description,
+              category: classification.category,
+              reason: gateOutcome.reason,
+              source: signal.source,
+              timestamp: signal.timestamp,
+              intent,
+            });
+            return;
+          }
+        }
       }
 
       // GTM signals: route to GTM Authority Agent for content creation

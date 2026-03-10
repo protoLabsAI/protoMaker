@@ -714,6 +714,312 @@ describe('SignalIntakeService', () => {
     });
   });
 
+  describe('portfolio gate', () => {
+    beforeEach(() => {
+      // Fresh emitter to avoid double-subscribe from outer beforeEach
+      mockEmitter = createMockEventEmitter() as unknown as EventEmitter;
+      vi.clearAllMocks();
+    });
+
+    it('should pass signals through when gate is disabled (default)', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: false,
+      });
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-1', name: 'Dev' },
+        content: 'New feature idea',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
+      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
+    });
+
+    it('should pass signals through when gate is enabled and under capacity', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      // Return only a few features (under threshold of 50)
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        { id: 'f1', title: 'Existing feature', status: 'backlog' },
+        { id: 'f2', title: 'Another feature', status: 'done' },
+      ] as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-2', name: 'Dev' },
+        content: 'Completely unique idea',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
+      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
+    });
+
+    it('should defer signals when gate is enabled and over capacity', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      // Generate 50 active features to exceed threshold
+      const activeFeatures = Array.from({ length: 50 }, (_, i) => ({
+        id: `f-${i}`,
+        title: `Feature ${i}`,
+        status: i % 2 === 0 ? 'backlog' : 'in_progress',
+      }));
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue(activeFeatures as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-3', name: 'Dev' },
+        content: 'New signal over capacity',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should NOT create a feature (deferred)
+      expect(mockFeatureLoader.create).not.toHaveBeenCalled();
+
+      // Should be in deferred queue
+      const deferred = signalIntakeService.getDeferredQueue();
+      expect(deferred).toHaveLength(1);
+      expect(deferred[0].reason).toContain('Capacity exceeded');
+    });
+
+    it('should block duplicate signals when gate is enabled', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        { id: 'f-existing', title: 'Add user authentication', status: 'backlog' },
+      ] as any);
+
+      const blockedFeature = {
+        id: 'blocked-feat-1',
+        title: '[github] Add user authentication',
+        status: 'blocked',
+        statusChangeReason: 'Duplicate of: Add user authentication',
+      };
+      vi.mocked(mockFeatureLoader.create).mockResolvedValue(blockedFeature as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-4', name: 'Dev' },
+        content: 'Add user authentication',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should create a blocked feature
+      expect(mockFeatureLoader.create).toHaveBeenCalledWith(
+        '/test/path',
+        expect.objectContaining({
+          status: 'blocked',
+          statusChangeReason: expect.stringContaining('Duplicate of:'),
+        })
+      );
+    });
+
+    it('should defer architectural signals when error budget is exceeded', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      // Create features with high failure rate (> 30%)
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        { id: 'f1', title: 'Feature A', status: 'done', failureCount: 2 },
+        { id: 'f2', title: 'Feature B', status: 'done', failureCount: 1 },
+        { id: 'f3', title: 'Feature C', status: 'done', failureCount: 0 },
+      ] as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-5', name: 'Dev' },
+        content: 'Infrastructure migration needed',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Should NOT create a feature (deferred due to error budget)
+      expect(mockFeatureLoader.create).not.toHaveBeenCalled();
+
+      const deferred = signalIntakeService.getDeferredQueue();
+      expect(deferred).toHaveLength(1);
+      expect(deferred[0].reason).toContain('Error budget exceeded');
+    });
+
+    it('should bypass gate for interrupt signals even when enabled', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      // Over capacity
+      const activeFeatures = Array.from({ length: 60 }, (_, i) => ({
+        id: `f-${i}`,
+        title: `Feature ${i}`,
+        status: 'backlog',
+      }));
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue(activeFeatures as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'discord',
+        author: { id: 'disc-gate-1', name: 'Ops' },
+        content: 'URGENT: system outage',
+        channelContext: { channelName: 'incidents-urgent' },
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Interrupt should bypass gate entirely
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        'signal:routed',
+        expect.objectContaining({
+          reason: 'interrupt intent bypasses PM pipeline',
+        })
+      );
+      // Should NOT be deferred
+      expect(signalIntakeService.getDeferredQueue()).toHaveLength(0);
+    });
+
+    it('should return deferred signals via getDeferredQueue', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      const activeFeatures = Array.from({ length: 50 }, (_, i) => ({
+        id: `f-${i}`,
+        title: `Feature ${i}`,
+        status: 'backlog',
+      }));
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue(activeFeatures as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal1 = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-6', name: 'Dev' },
+        content: 'First deferred signal',
+      });
+      const signal2 = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-7', name: 'Dev' },
+        content: 'Second deferred signal',
+      });
+
+      mockEmitter.emit('signal:received', signal1);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      mockEmitter.emit('signal:received', signal2);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const deferred = signalIntakeService.getDeferredQueue();
+      expect(deferred).toHaveLength(2);
+      expect(deferred[0].title).toBe('First deferred signal');
+      expect(deferred[1].title).toBe('Second deferred signal');
+    });
+
+    it('should set statusChangeReason on blocked features', async () => {
+      vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
+        gtmEnabled: false,
+        portfolioGate: true,
+      });
+      vi.mocked(mockFeatureLoader.getAll).mockResolvedValue([
+        { id: 'f-dup', title: 'Fix login page', status: 'in_progress' },
+      ] as any);
+
+      const blockedFeature = {
+        id: 'blocked-feat-2',
+        title: '[github] Fix login page',
+        status: 'blocked',
+        statusChangeReason: 'Duplicate of: Fix login page',
+      };
+      vi.mocked(mockFeatureLoader.create).mockResolvedValue(blockedFeature as any);
+
+      signalIntakeService = new SignalIntakeService(
+        mockEmitter,
+        mockFeatureLoader,
+        '/test/path',
+        mockSettingsService
+      );
+
+      const signal = createTestSignal({
+        source: 'github',
+        author: { id: 'gh-gate-8', name: 'Dev' },
+        content: 'Fix login page',
+      });
+
+      mockEmitter.emit('signal:received', signal);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFeatureLoader.create).toHaveBeenCalledWith(
+        '/test/path',
+        expect.objectContaining({
+          status: 'blocked',
+          statusChangeReason: 'Duplicate of: Fix login page',
+        })
+      );
+    });
+  });
+
   describe('submitSignal public API', () => {
     it('should allow manual signal submission via public API', () => {
       const emitSpy = vi.spyOn(mockEmitter, 'emit');
