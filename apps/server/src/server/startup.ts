@@ -39,6 +39,7 @@ export async function runStartup(
     agentService,
     knowledgeStoreService,
     crdtSyncService,
+    projectAssignmentService,
     dataDir,
     repoRoot,
   } = services;
@@ -81,6 +82,18 @@ export async function runStartup(
     logger.info('[CRDT] Sync service started');
   } catch (err) {
     logger.warn('[CRDT] Sync service failed to start (single-instance mode):', err);
+  }
+
+  // Claim preferred projects at boot (reads projectPreferences from proto.config.yaml)
+  try {
+    const claimed = await projectAssignmentService.claimPreferredProjects(repoRoot);
+    if (claimed.length > 0) {
+      logger.info(
+        `[ASSIGN] Claimed ${claimed.length} preferred project(s) at boot: ${claimed.join(', ')}`
+      );
+    }
+  } catch (err) {
+    logger.warn('[ASSIGN] Failed to claim preferred projects at boot:', err);
   }
 
   // Initialize CRDT document store and inject into services

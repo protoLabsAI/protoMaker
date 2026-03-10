@@ -459,6 +459,15 @@ export interface UpdateProjectInput {
 
   /** Feedback from "request changes" review */
   reviewFeedback?: string;
+
+  /** Instance ID or agent name to assign this project to */
+  assignedTo?: string;
+
+  /** ISO 8601 timestamp when the project was assigned */
+  assignedAt?: string;
+
+  /** Who performed the assignment (agent ID, instance name, or 'user') */
+  assignedBy?: string;
 }
 
 /**

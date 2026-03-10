@@ -106,6 +106,7 @@ import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
+import { ProjectAssignmentService } from '../services/project-assignment-service.js';
 import { AvaChannelService } from '../services/ava-channel-service.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
@@ -223,6 +224,7 @@ export interface ServiceContainer {
   projectService: ProjectService;
   projectLifecycleService: ProjectLifecycleService;
   completionDetectorService: CompletionDetectorService;
+  projectAssignmentService: ProjectAssignmentService;
 
   // Ceremonies
   ceremonyAuditLog: CeremonyAuditLogService;
@@ -683,6 +685,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // CRDT Sync Service — multi-instance coordination via WebSocket sync server
   const crdtSyncService = new CrdtSyncService();
 
+  // Project Assignment Service — manages project-to-instance assignment
+  const projectAssignmentService = new ProjectAssignmentService(projectService, crdtSyncService);
+
   // Ava Channel Service — private multi-instance Ava communication channel
   const avaChannelService = new AvaChannelService(join(dataDir, 'ava-channel-archive'), {
     instanceId: crdtSyncService.getInstanceId(),
@@ -831,6 +836,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectService,
     projectLifecycleService,
     completionDetectorService,
+    projectAssignmentService,
     ceremonyAuditLog,
     ceremonyService,
     leadEngineerService,
