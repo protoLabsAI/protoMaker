@@ -163,6 +163,11 @@ export interface AppState {
   // Server URL runtime override
   serverUrlOverride: string | null; // Runtime server URL override (null = use env var / default)
   recentServerUrls: string[]; // Recently used server URLs, max 10, persisted in localStorage
+
+  // Server connection state
+  serverStatus: 'connected' | 'disconnected' | 'connecting'; // Current connection status
+  serverInfo: { version: string; status: string; timestamp: string } | null; // Info from /api/health
+  recentConnections: Array<{ url: string; lastConnected: string }>; // Recent connections with timestamps
 }
 
 export interface AppActions {
@@ -330,6 +335,10 @@ export interface AppActions {
   // Server URL runtime override actions
   setServerUrlOverride: (url: string | null) => void;
 
+  // Server connection actions
+  connectToServer: (url: string) => Promise<void>;
+  removeRecentConnection: (url: string) => void;
+
   // Reset
   reset: () => void;
 }
@@ -420,6 +429,17 @@ const initialState: AppState = {
     try {
       const stored = localStorage.getItem('automaker:recentServerUrls');
       return stored ? (JSON.parse(stored) as string[]) : [];
+    } catch {
+      return [];
+    }
+  })(),
+  // Server connection state
+  serverStatus: 'disconnected' as 'connected' | 'disconnected' | 'connecting',
+  serverInfo: null,
+  recentConnections: (() => {
+    try {
+      const stored = localStorage.getItem('automaker:recentConnections');
+      return stored ? (JSON.parse(stored) as Array<{ url: string; lastConnected: string }>) : [];
     } catch {
       return [];
     }
@@ -1329,6 +1349,66 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
 
     // Invalidate cached HTTP client and trigger WebSocket reconnection
     invalidateHttpClient();
+  },
+
+  // Server connection actions
+  connectToServer: async (url) => {
+    set({ serverStatus: 'connecting', serverInfo: null });
+    try {
+      const response = await fetch(`${url}/api/health`, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) {
+        set({ serverStatus: 'disconnected' });
+        return;
+      }
+      const data = (await response.json()) as {
+        version?: string;
+        status?: string;
+        timestamp?: string;
+      };
+      const serverInfo = {
+        version: data.version ?? 'unknown',
+        status: data.status ?? 'ok',
+        timestamp: data.timestamp ?? new Date().toISOString(),
+      };
+
+      // Update recent connections (deduplicated, max 10)
+      const lastConnected = new Date().toISOString();
+      const existing = get().recentConnections.filter((c) => c.url !== url);
+      const recentConnections = [{ url, lastConnected }, ...existing].slice(0, 10);
+      try {
+        localStorage.setItem('automaker:recentConnections', JSON.stringify(recentConnections));
+      } catch {
+        // localStorage might be disabled
+      }
+
+      set({ serverStatus: 'connected', serverInfo, recentConnections });
+
+      // Apply the URL override so all subsequent API calls use the new server
+      get().setServerUrlOverride(url);
+    } catch {
+      set({ serverStatus: 'disconnected' });
+    }
+  },
+
+  removeRecentConnection: (url) => {
+    const recentConnections = get().recentConnections.filter((c) => c.url !== url);
+    try {
+      localStorage.setItem('automaker:recentConnections', JSON.stringify(recentConnections));
+    } catch {
+      // localStorage might be disabled
+    }
+    // Also remove from legacy recentServerUrls list for consistency
+    const recentServerUrls = get().recentServerUrls.filter((u) => u !== url);
+    try {
+      localStorage.setItem('automaker:recentServerUrls', JSON.stringify(recentServerUrls));
+    } catch {
+      // localStorage might be disabled
+    }
+    set({ recentConnections, recentServerUrls });
   },
 
   // Reset
