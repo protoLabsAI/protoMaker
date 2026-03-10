@@ -228,6 +228,22 @@ export interface WorkflowSettings {
    * @default false
    */
   authorityEnforcement?: boolean;
+  /**
+   * Maximum cost in USD allowed per feature execution. If the feature's costUsd
+   * reaches or exceeds this value after agent execution, the agent is killed and the
+   * feature is moved to blocked with a statusChangeReason explaining the cap was hit.
+   * A `cost:exceeded` event is emitted.
+   * @default undefined (off — no cost cap enforced)
+   */
+  maxCostUsdPerFeature?: number;
+  /**
+   * Maximum wall-clock runtime in minutes allowed per feature execution. Measured from
+   * the feature's startedAt timestamp. If elapsed minutes >= this value after agent
+   * execution, the feature is moved to blocked with a statusChangeReason explaining the
+   * cap was hit. A `runtime:exceeded` event is emitted.
+   * @default 60
+   */
+  maxRuntimeMinutesPerFeature?: number;
 }
 
 /** Default workflow settings */

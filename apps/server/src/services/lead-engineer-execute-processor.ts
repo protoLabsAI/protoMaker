@@ -57,6 +57,49 @@ export class ExecuteProcessor implements StateProcessor {
   }
 
   /**
+   * Resolve the effective cost cap (maxCostUsdPerFeature) for this project.
+   * Returns undefined when not configured (cap is off).
+   */
+  private async resolveMaxCostUsdPerFeature(projectPath: string): Promise<number | undefined> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = (
+          settings.workflow as typeof settings.workflow & { maxCostUsdPerFeature?: number }
+        )?.maxCostUsdPerFeature;
+        if (typeof configured === 'number' && configured > 0) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — cap is off */
+    }
+    return undefined;
+  }
+
+  /**
+   * Resolve the effective runtime cap (maxRuntimeMinutesPerFeature) for this project.
+   * Returns the configured value, defaulting to 60 minutes.
+   */
+  private async resolveMaxRuntimeMinutesPerFeature(projectPath: string): Promise<number> {
+    const DEFAULT_RUNTIME_MINUTES = 60;
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = (
+          settings.workflow as typeof settings.workflow & { maxRuntimeMinutesPerFeature?: number }
+        )?.maxRuntimeMinutesPerFeature;
+        if (typeof configured === 'number' && configured > 0) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — fall back to default */
+    }
+    return DEFAULT_RUNTIME_MINUTES;
+  }
+
+  /**
    * Resolve the effective max infra retries for this project.
    * Reads from project workflow settings when the settings service is available,
    * falling back to the module-level constant so behaviour is unchanged for
@@ -583,6 +626,65 @@ export class ExecuteProcessor implements StateProcessor {
     if (updated) {
       ctx.feature = updated;
       if (updated.prNumber) ctx.prNumber = updated.prNumber;
+    }
+
+    // ── Kill criteria: cost cap ───────────────────────────────────────────────
+    const maxCostUsd = await this.resolveMaxCostUsdPerFeature(ctx.projectPath);
+    if (maxCostUsd !== undefined) {
+      const currentCost = ctx.feature.costUsd ?? 0;
+      if (currentCost >= maxCostUsd) {
+        const reason = `Cost cap exceeded: $${currentCost.toFixed(2)} >= cap $${maxCostUsd.toFixed(2)}`;
+        logger.warn('[EXECUTE] Cost cap exceeded — blocking feature', {
+          featureId: ctx.feature.id,
+          costUsd: currentCost,
+          capUsd: maxCostUsd,
+        });
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          status: 'blocked',
+          statusChangeReason: reason,
+        });
+        this.serviceContext.events.emit('cost:exceeded' as EventType, {
+          featureId: ctx.feature.id,
+          projectPath: ctx.projectPath,
+          costUsd: currentCost,
+          capUsd: maxCostUsd,
+        });
+        return {
+          nextState: null,
+          shouldContinue: false,
+          reason,
+        };
+      }
+    }
+
+    // ── Kill criteria: runtime cap ────────────────────────────────────────────
+    const maxRuntimeMinutes = await this.resolveMaxRuntimeMinutesPerFeature(ctx.projectPath);
+    if (ctx.startedAt) {
+      const elapsedMs = Date.now() - new Date(ctx.startedAt).getTime();
+      const elapsedMinutes = elapsedMs / 60_000;
+      if (elapsedMinutes >= maxRuntimeMinutes) {
+        const reason = `Runtime cap exceeded: ${elapsedMinutes.toFixed(1)} min >= cap ${maxRuntimeMinutes} min`;
+        logger.warn('[EXECUTE] Runtime cap exceeded — blocking feature', {
+          featureId: ctx.feature.id,
+          elapsedMinutes,
+          capMinutes: maxRuntimeMinutes,
+        });
+        await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+          status: 'blocked',
+          statusChangeReason: reason,
+        });
+        this.serviceContext.events.emit('runtime:exceeded' as EventType, {
+          featureId: ctx.feature.id,
+          projectPath: ctx.projectPath,
+          elapsedMinutes,
+          capMinutes: maxRuntimeMinutes,
+        });
+        return {
+          nextState: null,
+          shouldContinue: false,
+          reason,
+        };
+      }
     }
 
     // Save EXECUTE handoff — parse modified files and questions from agent output

@@ -33,6 +33,8 @@ export type EventType =
   | 'feature:verify-pending'
   | 'feature:blocked'
   | 'feature:unblocked'
+  | 'cost:exceeded'
+  | 'runtime:exceeded'
   | 'project:analysis-started'
   | 'project:analysis-progress'
   | 'project:analysis-completed'
@@ -533,6 +535,18 @@ export interface EventPayloadMap {
   'feature:verify-pending': {
     featureId: string;
     projectPath: string;
+  };
+  'cost:exceeded': {
+    featureId: string;
+    projectPath: string;
+    costUsd: number;
+    capUsd: number;
+  };
+  'runtime:exceeded': {
+    featureId: string;
+    projectPath: string;
+    elapsedMinutes: number;
+    capMinutes: number;
   };
   'feature:status-changed': {
     featureId: string;
