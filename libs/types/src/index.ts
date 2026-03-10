@@ -3,6 +3,9 @@
  * Shared type definitions for AutoMaker
  */
 
+// Agent definition factory context types
+export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
+
 // Ava Channel types — private multi-instance communication channel
 export type {
   AvaChannelContext,
