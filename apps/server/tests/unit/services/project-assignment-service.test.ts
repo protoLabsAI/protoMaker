@@ -2,7 +2,7 @@
  * Unit tests for ProjectAssignmentService
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProjectAssignmentService } from '@/services/project-assignment-service.js';
 
 // Mock loadProtoConfig from @protolabsai/platform
@@ -46,6 +46,14 @@ const makeCrdtSyncService = (instanceId = 'instance-alpha') => ({
   getPeers: vi.fn().mockReturnValue([]),
 });
 
+const makeEventEmitter = () => ({
+  emit: vi.fn(),
+  broadcast: vi.fn(),
+  subscribe: vi.fn(),
+  on: vi.fn(),
+  setRemoteBroadcaster: vi.fn(),
+});
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('ProjectAssignmentService', () => {
@@ -55,16 +63,24 @@ describe('ProjectAssignmentService', () => {
 
   let projectService: ReturnType<typeof makeProjectService>;
   let crdtSyncService: ReturnType<typeof makeCrdtSyncService>;
+  let eventEmitter: ReturnType<typeof makeEventEmitter>;
   let service: ProjectAssignmentService;
 
   beforeEach(() => {
     vi.clearAllMocks();
     projectService = makeProjectService();
     crdtSyncService = makeCrdtSyncService(INSTANCE_ID);
+    eventEmitter = makeEventEmitter();
     service = new ProjectAssignmentService(
       projectService as unknown as import('@/services/project-service.js').ProjectService,
-      crdtSyncService as unknown as import('@/services/crdt-sync-service.js').CrdtSyncService
+      crdtSyncService as unknown as import('@/services/crdt-sync-service.js').CrdtSyncService,
+      eventEmitter as unknown as import('@/lib/events.js').EventEmitter
     );
+  });
+
+  afterEach(() => {
+    // Ensure any running intervals are cleaned up between tests
+    service.stopPeriodicFailoverCheck();
   });
 
   // ─── assignProject ─────────────────────────────────────────────────────────
@@ -253,6 +269,48 @@ describe('ProjectAssignmentService', () => {
       expect((updates as Record<string, string>).assignedTo).toBe(INSTANCE_ID);
     });
 
+    it('uses "auto-failover" as assignedBy when claiming orphans', async () => {
+      const staleTimestamp = new Date(Date.now() - 200_000).toISOString();
+      crdtSyncService.getPeers.mockReturnValue([
+        { identity: { instanceId: 'stale-peer' }, lastSeen: staleTimestamp },
+      ]);
+      projectService.listProjects.mockResolvedValue(['orphan-proj']);
+      projectService.getProject.mockResolvedValue(
+        makeProject({ slug: 'orphan-proj', assignedTo: 'stale-peer' })
+      );
+
+      await service.reassignOrphanedProjects(PROJECT_PATH);
+
+      const [, , updates] = projectService.updateProject.mock.calls[0];
+      expect((updates as Record<string, string>).assignedBy).toBe('auto-failover');
+    });
+
+    it('emits "project:failover" event for each orphan claimed', async () => {
+      const staleTimestamp = new Date(Date.now() - 200_000).toISOString();
+      crdtSyncService.getPeers.mockReturnValue([
+        { identity: { instanceId: 'stale-peer' }, lastSeen: staleTimestamp },
+      ]);
+      projectService.listProjects.mockResolvedValue(['orphan-proj']);
+      projectService.getProject.mockResolvedValue(
+        makeProject({ slug: 'orphan-proj', assignedTo: 'stale-peer' })
+      );
+
+      await service.reassignOrphanedProjects(PROJECT_PATH);
+
+      expect(eventEmitter.emit).toHaveBeenCalledOnce();
+      const [eventType, payload] = eventEmitter.emit.mock.calls[0];
+      expect(eventType).toBe('project:failover');
+      expect(payload).toMatchObject({
+        projectSlug: 'orphan-proj',
+        projectPath: PROJECT_PATH,
+        previousOwner: 'stale-peer',
+        newOwner: INSTANCE_ID,
+      });
+      expect(typeof (payload as Record<string, unknown>).stalenessMs).toBe('number');
+      expect((payload as Record<string, unknown>).stalenessMs).toBeGreaterThan(120_000);
+      expect(typeof (payload as Record<string, unknown>).timestamp).toBe('string');
+    });
+
     it('does not claim projects from peers with fresh heartbeats', async () => {
       const freshTimestamp = new Date(Date.now() - 30_000).toISOString(); // 30s ago < 120s TTL
       crdtSyncService.getPeers.mockReturnValue([
@@ -296,6 +354,93 @@ describe('ProjectAssignmentService', () => {
 
       const reassigned = await service.reassignOrphanedProjects(PROJECT_PATH);
       expect(reassigned).toHaveLength(0);
+    });
+
+    it('does not emit events when no orphans are claimed', async () => {
+      crdtSyncService.getPeers.mockReturnValue([]);
+      await service.reassignOrphanedProjects(PROJECT_PATH);
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── startPeriodicFailoverCheck / stopPeriodicFailoverCheck ───────────────
+
+  describe('startPeriodicFailoverCheck()', () => {
+    it('calls reassignOrphanedProjects on each tick', async () => {
+      vi.useFakeTimers();
+
+      crdtSyncService.getPeers.mockReturnValue([]);
+
+      service.startPeriodicFailoverCheck(PROJECT_PATH);
+
+      // Advance timer by 60s — should trigger one check
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(projectService.listProjects).not.toHaveBeenCalled(); // no stale peers, exits early
+
+      vi.useRealTimers();
+    });
+
+    it('triggers failover when an orphaned project is detected on tick', async () => {
+      vi.useFakeTimers();
+
+      const staleTimestamp = new Date(Date.now() - 200_000).toISOString();
+      crdtSyncService.getPeers.mockReturnValue([
+        { identity: { instanceId: 'stale-peer' }, lastSeen: staleTimestamp },
+      ]);
+      projectService.listProjects.mockResolvedValue(['orphan-proj']);
+      projectService.getProject.mockResolvedValue(
+        makeProject({ slug: 'orphan-proj', assignedTo: 'stale-peer' })
+      );
+
+      service.startPeriodicFailoverCheck(PROJECT_PATH);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(projectService.updateProject).toHaveBeenCalledOnce();
+      const [, slug, updates] = projectService.updateProject.mock.calls[0];
+      expect(slug).toBe('orphan-proj');
+      expect((updates as Record<string, string>).assignedBy).toBe('auto-failover');
+      expect(eventEmitter.emit).toHaveBeenCalledWith('project:failover', expect.any(Object));
+
+      vi.useRealTimers();
+    });
+
+    it('replaces any existing interval when called twice', async () => {
+      vi.useFakeTimers();
+
+      crdtSyncService.getPeers.mockReturnValue([]);
+
+      service.startPeriodicFailoverCheck(PROJECT_PATH);
+      service.startPeriodicFailoverCheck(PROJECT_PATH); // second call should clear the first
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      // Should still work — only one interval active
+      expect(crdtSyncService.getPeers).toHaveBeenCalledOnce();
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('stopPeriodicFailoverCheck()', () => {
+    it('stops the periodic check', async () => {
+      vi.useFakeTimers();
+
+      crdtSyncService.getPeers.mockReturnValue([]);
+
+      service.startPeriodicFailoverCheck(PROJECT_PATH);
+      service.stopPeriodicFailoverCheck();
+
+      await vi.advanceTimersByTimeAsync(120_000); // advance 2 ticks
+
+      expect(crdtSyncService.getPeers).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('is safe to call before start', () => {
+      expect(() => service.stopPeriodicFailoverCheck()).not.toThrow();
     });
   });
 });

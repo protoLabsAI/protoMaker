@@ -2,12 +2,14 @@
  * ProjectAssignmentService — manages project-to-instance assignment.
  *
  * Methods:
- *   assignProject         — write assignedTo/assignedAt/assignedBy to project
- *   unassignProject       — clear assignment fields
- *   getAssignments        — list all project assignments for a projectPath
- *   getMyAssignedProjects — list projects assigned to this instance
- *   claimPreferredProjects — boot-time: claim unassigned preferred projects from proto.config.yaml
- *   reassignOrphanedProjects — detect stale heartbeats (>120s) and auto-claim orphans
+ *   assignProject               — write assignedTo/assignedAt/assignedBy to project
+ *   unassignProject             — clear assignment fields
+ *   getAssignments              — list all project assignments for a projectPath
+ *   getMyAssignedProjects       — list projects assigned to this instance
+ *   claimPreferredProjects      — boot-time: claim unassigned preferred projects from proto.config.yaml
+ *   reassignOrphanedProjects    — detect stale heartbeats (>120s) and auto-claim orphans
+ *   startPeriodicFailoverCheck  — start a 60s interval that auto-claims orphaned projects
+ *   stopPeriodicFailoverCheck   — stop the periodic failover check
  */
 
 import { createLogger } from '@protolabsai/utils';
@@ -15,11 +17,15 @@ import { loadProtoConfig } from '@protolabsai/platform';
 import type { Project, UpdateProjectInput } from '@protolabsai/types';
 import type { ProjectService } from './project-service.js';
 import type { CrdtSyncService } from './crdt-sync-service.js';
+import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ProjectAssignmentService');
 
 /** TTL threshold in milliseconds for considering a peer's heartbeat stale */
 const ORPHAN_TTL_MS = 120_000;
+
+/** Interval in milliseconds for the periodic failover check */
+const FAILOVER_CHECK_INTERVAL_MS = 60_000;
 
 export interface ProjectAssignment {
   projectSlug: string;
@@ -29,9 +35,13 @@ export interface ProjectAssignment {
 }
 
 export class ProjectAssignmentService {
+  private failoverCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private failoverProjectPath: string | null = null;
+
   constructor(
     private readonly projectService: ProjectService,
-    private readonly crdtSyncService: CrdtSyncService
+    private readonly crdtSyncService: CrdtSyncService,
+    private readonly eventEmitter?: EventEmitter
   ) {}
 
   // ─── Core Assignment Operations ─────────────────────────────────────────
@@ -174,26 +184,31 @@ export class ProjectAssignmentService {
 
   /**
    * Detect projects assigned to peers with stale heartbeats (>120s) and claim
-   * them for this instance.
+   * them for this instance. Uses 'auto-failover' as the assignedBy value so
+   * the source of the claim is distinguishable from manual assignments.
+   *
+   * NOTE: When the original instance recovers, it will NOT auto-reclaim its
+   * old projects — a human operator or Ava must explicitly reassign.
    */
   async reassignOrphanedProjects(projectPath: string): Promise<string[]> {
     const instanceId = this.crdtSyncService.getInstanceId();
     const peers = this.crdtSyncService.getPeers();
     const now = Date.now();
 
-    // Collect instance IDs with stale heartbeats
-    const stalePeerIds = new Set<string>();
+    // Collect instance IDs with stale heartbeats, along with their staleness
+    const stalePeers = new Map<string, number>(); // instanceId → stalenessMs
     for (const peer of peers) {
       const lastSeen = new Date(peer.lastSeen).getTime();
-      if (now - lastSeen > ORPHAN_TTL_MS) {
-        stalePeerIds.add(peer.identity.instanceId);
+      const stalenessMs = now - lastSeen;
+      if (stalenessMs > ORPHAN_TTL_MS) {
+        stalePeers.set(peer.identity.instanceId, stalenessMs);
         logger.warn(
-          `[ASSIGN] Peer "${peer.identity.instanceId}" heartbeat stale (${now - lastSeen}ms ago) — marking as orphan candidate`
+          `[ASSIGN] Peer "${peer.identity.instanceId}" heartbeat stale (${stalenessMs}ms ago) — marking as orphan candidate`
         );
       }
     }
 
-    if (stalePeerIds.size === 0) {
+    if (stalePeers.size === 0) {
       return [];
     }
 
@@ -205,18 +220,68 @@ export class ProjectAssignmentService {
         const project = await this.projectService.getProject(projectPath, slug);
         if (!project?.assignedTo) continue;
         if (project.assignedTo === instanceId) continue;
-        if (!stalePeerIds.has(project.assignedTo)) continue;
+        if (!stalePeers.has(project.assignedTo)) continue;
 
-        await this.assignProject(projectPath, slug, instanceId, instanceId);
+        const previousOwner = project.assignedTo;
+        const stalenessMs = stalePeers.get(previousOwner)!;
+
+        await this.assignProject(projectPath, slug, instanceId, 'auto-failover');
         reassigned.push(slug);
+
         logger.info(
-          `[ASSIGN] Reassigned orphaned project "${slug}" from "${project.assignedTo}" to "${instanceId}"`
+          `[ASSIGN] Failover: claimed orphaned project "${slug}" from "${previousOwner}" (stale ${stalenessMs}ms) to "${instanceId}"`
         );
+
+        // Emit observability event
+        this.eventEmitter?.emit('project:failover', {
+          projectSlug: slug,
+          projectPath,
+          previousOwner,
+          newOwner: instanceId,
+          stalenessMs,
+          timestamp: new Date().toISOString(),
+        });
       } catch (err) {
         logger.warn(`[ASSIGN] Failed to reassign orphaned project "${slug}":`, err);
       }
     }
 
     return reassigned;
+  }
+
+  // ─── Periodic failover check ─────────────────────────────────────────────
+
+  /**
+   * Start a periodic check (every 60s) that detects and auto-claims orphaned
+   * projects. Safe to call multiple times — clears any existing interval first.
+   *
+   * @param projectPath The project root path to scan for orphaned assignments.
+   */
+  startPeriodicFailoverCheck(projectPath: string): void {
+    this.stopPeriodicFailoverCheck();
+
+    this.failoverProjectPath = projectPath;
+    this.failoverCheckInterval = setInterval(() => {
+      this.reassignOrphanedProjects(projectPath).catch((err) => {
+        logger.error('[ASSIGN] Periodic failover check failed:', err);
+      });
+    }, FAILOVER_CHECK_INTERVAL_MS);
+
+    logger.info(
+      `[ASSIGN] Periodic failover check started (interval=${FAILOVER_CHECK_INTERVAL_MS}ms, projectPath="${projectPath}")`
+    );
+  }
+
+  /**
+   * Stop the periodic failover check started by startPeriodicFailoverCheck().
+   * Safe to call even if the check was never started.
+   */
+  stopPeriodicFailoverCheck(): void {
+    if (this.failoverCheckInterval !== null) {
+      clearInterval(this.failoverCheckInterval);
+      this.failoverCheckInterval = null;
+      logger.info('[ASSIGN] Periodic failover check stopped');
+    }
+    this.failoverProjectPath = null;
   }
 }

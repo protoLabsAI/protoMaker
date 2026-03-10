@@ -343,7 +343,9 @@ export type EventType =
   | 'ava-channel:message'
   // Error budget events (burn rate threshold enforcement)
   | 'error_budget:exhausted'
-  | 'error_budget:recovered';
+  | 'error_budget:recovered'
+  // Project failover events (auto-claim of orphaned projects)
+  | 'project:failover';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
@@ -602,6 +604,18 @@ export interface EventPayloadMap {
     projectSlug: string;
     projectPath: string;
     feedback: string;
+  };
+  // Project failover event (auto-claim of orphaned project)
+  'project:failover': {
+    projectSlug: string;
+    projectPath: string;
+    /** Instance ID that previously owned the project (now stale) */
+    previousOwner: string;
+    /** Instance ID that claimed the project */
+    newOwner: string;
+    /** Milliseconds since the previous owner's last heartbeat */
+    stalenessMs: number;
+    timestamp: string;
   };
 
   // Lead Engineer events
