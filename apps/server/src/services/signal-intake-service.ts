@@ -419,9 +419,7 @@ export class SignalIntakeService {
     if (this.isArchitecturalSignal(title)) {
       const recentFeatures = features.filter((f) => f.failureCount !== undefined);
       if (recentFeatures.length > 0) {
-        const failedCount = recentFeatures.filter(
-          (f) => (f.failureCount ?? 0) > 0
-        ).length;
+        const failedCount = recentFeatures.filter((f) => (f.failureCount ?? 0) > 0).length;
         const failureRate = failedCount / recentFeatures.length;
         if (failureRate > PORTFOLIO_GATE_ERROR_BUDGET_THRESHOLD) {
           return {

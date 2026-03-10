@@ -715,6 +715,12 @@ describe('SignalIntakeService', () => {
   });
 
   describe('portfolio gate', () => {
+    beforeEach(() => {
+      // Fresh emitter to avoid double-subscribe from outer beforeEach
+      mockEmitter = createMockEventEmitter() as unknown as EventEmitter;
+      vi.clearAllMocks();
+    });
+
     it('should pass signals through when gate is disabled (default)', async () => {
       vi.mocked(mockSettingsService.getGlobalSettings).mockResolvedValue({
         gtmEnabled: false,
@@ -738,10 +744,7 @@ describe('SignalIntakeService', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:idea-injected',
-        expect.any(Object)
-      );
+      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
     });
 
     it('should pass signals through when gate is enabled and under capacity', async () => {
@@ -772,10 +775,7 @@ describe('SignalIntakeService', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mockFeatureLoader.create).toHaveBeenCalledTimes(1);
-      expect(mockEmitter.emit).toHaveBeenCalledWith(
-        'authority:idea-injected',
-        expect.any(Object)
-      );
+      expect(mockEmitter.emit).toHaveBeenCalledWith('authority:idea-injected', expect.any(Object));
     });
 
     it('should defer signals when gate is enabled and over capacity', async () => {
