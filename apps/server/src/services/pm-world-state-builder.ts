@@ -39,6 +39,41 @@ export interface PMWorldStateBuilderConfig {
   knowledgeProjectPath?: string;
 }
 
+// ────────────────────────── Bidirectional Integration Types ──────────────────────────
+
+/**
+ * Execution status summary returned by the Lead Engineer layer.
+ * Defined here so PMWorldStateBuilder can consume it without importing from LE.
+ */
+export interface LEExecutionStatusSummary {
+  activeProjectCount: number;
+  activeFeaturesCount: number;
+  projectStatuses: Array<{
+    projectPath: string;
+    projectSlug: string;
+    flowState: string;
+  }>;
+}
+
+/**
+ * Interface the Lead Engineer layer must implement to provide execution status to PM.
+ * Injected via setLeadEngineerStatusProvider() to avoid circular dependencies.
+ */
+export interface ILeadEngineerStatusProvider {
+  getExecutionStatusSummary(): LEExecutionStatusSummary;
+}
+
+/**
+ * Next assignable phase as determined by the PM layer.
+ * Returned by getNextAssignablePhase() for LE to consume.
+ */
+export interface PMNextAssignablePhase {
+  milestoneSlug: string;
+  milestoneTitle: string;
+  remainingPhases: number;
+  dueAt?: string;
+}
+
 /**
  * Builds and incrementally refreshes PMWorldState from disk.
  */
@@ -48,6 +83,7 @@ export class PMWorldStateBuilder {
   private readonly projectRoot: string;
   private readonly knowledgeIngestor: PMKnowledgeIngestor | undefined;
   private readonly knowledgeProjectPath: string;
+  private leStatusProvider?: ILeadEngineerStatusProvider;
 
   constructor(config: PMWorldStateBuilderConfig = {}) {
     this.projectRoot = config.projectRoot ?? process.cwd();
@@ -158,6 +194,44 @@ export class PMWorldStateBuilder {
     }
 
     return lines.join('\n');
+  }
+
+  // ────────────────────────── Bidirectional Integration ──────────────────────────
+
+  /**
+   * Inject a Lead Engineer status provider so PM can query LE execution state.
+   * Use this pattern (vs. direct import) to avoid circular module dependencies.
+   */
+  setLeadEngineerStatusProvider(provider: ILeadEngineerStatusProvider): void {
+    this.leStatusProvider = provider;
+  }
+
+  /**
+   * Query the Lead Engineer layer for current execution status.
+   * Returns null when no provider has been injected.
+   */
+  queryLEExecutionStatus(): LEExecutionStatusSummary | null {
+    return this.leStatusProvider?.getExecutionStatusSummary() ?? null;
+  }
+
+  /**
+   * Return the first milestone with remaining (incomplete) phases.
+   * Called by the Lead Engineer layer to discover what PM considers next-up.
+   * Returns null when all milestones are complete or no milestones exist.
+   */
+  getNextAssignablePhase(): PMNextAssignablePhase | null {
+    for (const [slug, ms] of Object.entries(this.state.milestones)) {
+      const remaining = ms.totalPhases - ms.completedPhases;
+      if (remaining > 0) {
+        return {
+          milestoneSlug: slug,
+          milestoneTitle: ms.title,
+          remainingPhases: remaining,
+          dueAt: ms.dueAt,
+        };
+      }
+    }
+    return null;
   }
 
   // ────────────────────────── State Building ──────────────────────────
