@@ -1,5 +1,9 @@
 # Automaker Agent Guide
 
+> **Note:** This file contains agent-specific and worktree-specific guidance.
+> For monorepo structure, git workflow, architecture, commands, import conventions,
+> environment variables, and MCP tools — see the root `CLAUDE.md`.
+
 ## CRITICAL: Session Resume — Check State Before Starting
 
 Before creating any todo list or writing any code, ALWAYS audit your worktree to understand what was already done:
@@ -41,63 +45,9 @@ You have limited turns. Do NOT spend more than 20% exploring.
 - If you're still reading files after turn 8, you're behind schedule
 - Do NOT try to understand the entire codebase. Focus ONLY on files directly relevant to your task.
 
-## Monorepo Structure
-
-```
-automaker/
-├── apps/
-│   ├── ui/           # React + Vite frontend (port 3007)
-│   └── server/       # Express + WebSocket backend (port 3008)
-└── libs/             # Shared packages (@protolabsai/*)
-    ├── types/        # Core TypeScript definitions (NO dependencies)
-    ├── utils/        # Logging, errors, image processing
-    ├── prompts/      # AI prompt templates
-    ├── platform/     # Path management, security
-    ├── model-resolver/    # Model alias resolution
-    ├── dependency-resolver/  # Feature dependency ordering
-    ├── policy-engine/     # Trust-based policy checking
-    ├── spec-parser/       # XML/markdown spec parsing
-    ├── git-utils/    # Git operations & worktree management
-    └── ui/           # Shared UI components (atoms, molecules, theme)
-```
-
-## Package Dependency Chain (top = no deps)
-
-```
-@protolabsai/types
-    ↓
-@protolabsai/utils, prompts, platform, model-resolver, dependency-resolver, policy-engine, spec-parser
-    ↓
-@protolabsai/git-utils
-    ↓
-apps/server, apps/ui
-```
-
-## CRITICAL: Build Order
-
-If you modify ANY file in `libs/`:
-
-1. `npm run build:packages` FIRST
-2. Then `npm run build:server`
-
-Packages compile to `dist/`. Other packages import from `dist/`, NOT source.
-Stale `dist/` = wrong types = wasted work.
-
-## Import Conventions
-
-```typescript
-// ALWAYS import from packages
-import type { Feature, ExecutionRecord } from '@protolabsai/types';
-import { createLogger } from '@protolabsai/utils';
-import { resolveModelString } from '@protolabsai/model-resolver';
-
-// NEVER import from relative paths to other packages
-// ❌ import { Feature } from '../services/feature-loader';
-```
-
 ## Frontend UI Standards
 
-For all frontend work, follow the UI standards in `ui-standards.md`. Always use shared components from `@protolabsai/ui` -- never bare HTML elements (`<button>`, `<input>`, `<select>`, `<textarea>`, `<label>`). Never hardcode color classes (`bg-gray-*`, `text-blue-*`); always use semantic tokens (`bg-card`, `text-foreground`, `border-border`).
+For all frontend work, follow the UI standards in `ui-standards.md`. Always use shared components from `@protolabsai/ui` — never bare HTML elements (`<button>`, `<input>`, `<select>`, `<textarea>`, `<label>`). Never hardcode color classes (`bg-gray-*`, `text-blue-*`); always use semantic tokens (`bg-card`, `text-foreground`, `border-border`).
 
 ## Before Creating New Types
 
@@ -109,8 +59,8 @@ If a type exists, import it from `@protolabsai/types`. Do NOT recreate it.
 - `Feature`, `FeatureStatus`, `ExecutionRecord`, `StatusTransition` — feature.ts
 - `CeremonySettings`, `CeremonyType` — ceremony.ts, settings.ts
 - `GitWorkflowSettings`, `GitWorkflowResult` — settings.ts
-- `ProjectMetrics`, `CapacityMetrics` — (if they exist, check first)
 - `EventType`, `EventCallback` — event.ts
+- `Project`, `Milestone`, `Phase`, `SPARCPrd` — project.ts
 
 ## Server Service Pattern
 
@@ -132,17 +82,6 @@ export class MyService {
 }
 ```
 
-## Common Commands
-
-```bash
-npm run build:packages      # Build shared packages (MUST run first)
-npm run build:server        # Build server
-npm run test:server         # Server unit tests (Vitest)
-npm run test:packages       # Package tests
-npm run format              # Prettier write
-npm run format:check        # Prettier check
-```
-
 ## Feature Data Fields (Feature interface)
 
 Key fields available on every feature:
@@ -155,38 +94,17 @@ Key fields available on every feature:
 - `failureCount?, retryCount?` — failure tracking
 - `complexity?: 'small' | 'medium' | 'large' | 'architectural'`
 
-## Git Workflow — Three-Branch Strategy
-
-All agent PRs target **`dev`** by default. The promotion flow is:
-
-```text
-feature/* ──▶ dev ──▶ staging ──▶ main
-```
-
-- **`dev`**: Active development. All agent-generated PRs land here.
-- **`staging`**: Integration / QA environment. Promoted from `dev` via PR. Auto-deploys.
-- **`main`**: Stable release only. PRs to `main` **must** come from `staging` — enforced by CI (`promotion-check`). Any PR to `main` from another branch will fail the `source-branch` required check.
-
-**Never open a PR directly from a feature branch to `main`.** If you need to create a PR manually, target `dev`:
-
-```bash
-gh pr create --base dev --head feature/your-branch --title "..." --body "..."
-```
-
-The `gitWorkflow.prBaseBranch` setting is `"dev"` — auto-mode and the git workflow service read this automatically.
-
 ## CRITICAL: File Edit Path Discipline
 
 You work in a git worktree at a path like `/home/josh/dev/ava/.worktrees/<branch>/`. ALL file edits MUST use the worktree path. NEVER use the main repo path `/home/josh/dev/ava/` for edits.
 
-**Why this matters:** Git worktrees share the same `.git` directory but have SEPARATE working directories. The Edit tool applies to whatever absolute path you give it — it cannot tell which worktree "owns" a file. If you edit `/home/josh/dev/ava/apps/server/src/server/routes.ts` instead of `/home/josh/dev/ava/.worktrees/<branch>/apps/server/src/server/routes.ts`, you corrupt the main working tree.
+**Why this matters:** Git worktrees share the same `.git` directory but have SEPARATE working directories. If you edit `/home/josh/dev/ava/apps/server/src/server/routes.ts` instead of `/home/josh/dev/ava/.worktrees/<branch>/apps/server/src/server/routes.ts`, you corrupt the main working tree.
 
 **The only time to use the main repo path is for `bash` build/test commands:**
 ```bash
 # CORRECT — run builds from main root (node_modules lives there)
 cd /home/josh/dev/ava && npm run build:packages
 cd /home/josh/dev/ava && npm run build:server
-cd /home/josh/dev/ava && npm run test:server
 
 # CORRECT — all file edits use the worktree path
 edit("/home/josh/dev/ava/.worktrees/<branch>/apps/server/src/server/routes.ts", ...)
@@ -218,8 +136,6 @@ This is appended automatically by `create-pr.ts` via `buildPROwnershipWatermark(
 3. Commit with `HUSKY=0`
 4. Push and create a PR
 
-If recovery fails, the feature is marked `blocked` with a `statusChangeReason`. The Lead Engineer will escalate rather than retry — retrying the agent won't resolve a git or network failure.
-
 **Implication**: Commit your work before exiting. The recovery service is a safety net, not a substitute for proper commits.
 
 ## Agent Memory Files
@@ -240,61 +156,12 @@ Prettier formatting in worktrees is handled automatically by the server's git-wo
 
 Every agent **must** run `npm run typecheck` before considering work complete. TypeScript type checking is enforced in CI — PRs with type errors will be rejected.
 
-**Before committing, run:**
-
-```bash
-npm run typecheck
-```
-
-This runs `tsc --noEmit` on the UI and server. If there are errors in files you modified, fix them. If errors exist in files you did NOT modify, note them in your agent output but do not block on them.
-
 **Common patterns that introduce type errors:**
 
 - Adding a property to a type but not updating all consumers
 - Importing a type that was renamed or moved
 - Passing `null` where `undefined` is expected (use `?? undefined`)
 - Missing type annotations on callback parameters in `.find()`, `.map()`, `.filter()`
-
-## Verdict System (All Feature Agents)
-
-All feature agents (kai, matt, sam, frank, and any future agents) **must** follow the Verdict System pattern when surfacing findings from analysis, review, or audit tasks.
-
-### Confidence Threshold
-
-Only surface findings with **>80% certainty**. If you cannot confirm an issue with high confidence, omit it or note it as "unverified — needs further investigation."
-
-### Consolidation Rule
-
-Consolidate similar findings into a single item. Do not list the same class of problem multiple times.
-
-> Example: Instead of listing 3 separate "missing error handling" findings, report: `3 files missing error handling` as one item.
-
-### Verdict Block Format
-
-End **every response** that includes findings with a structured verdict block:
-
-```
----
-VERDICT: [APPROVE|WARN|BLOCK]
-Issues: [count]
-[CRITICAL|HIGH|MEDIUM|LOW]: [brief description]
----
-```
-
-**Verdict definitions:**
-
-- **APPROVE** — No critical or high issues found. Safe to proceed.
-- **WARN** — Only medium or low issues found. Proceed with caution; remediation recommended but not blocking.
-- **BLOCK** — One or more critical issues present. Remediation required before proceeding.
-
-**Severity definitions:**
-
-- **CRITICAL** — System failure, data loss, security breach, or major regression likely
-- **HIGH** — Major functional breakage or significant risk
-- **MEDIUM** — Degraded experience or moderate risk
-- **LOW** — Minor issue, style, or technical debt
-
-If no issues are found, emit: `VERDICT: APPROVE` with `Issues: 0`.
 
 ## Skill System
 
@@ -309,15 +176,7 @@ When available skills exist for this project, you will see an `<available_skills
    ```
 3. Follow the instructions in the skill file — they encode proven patterns for this project
 
-**When a skill applies:**
-
-- The skill name or description relates to what you are implementing
-- You are about to do something the skill explicitly covers (e.g., build order, PR creation, testing)
-- Following the skill avoids a known class of mistakes
-
-**Do NOT load all skills.** Only read the skill file when the task clearly matches. Skills are metadata-only in the prompt to minimize token usage — content is fetched on demand.
-
-**Skill location:** `.automaker/skills/{name}.md`
+**Do NOT load all skills.** Only read the skill file when the task clearly matches.
 
 ## Verdict System
 
@@ -337,3 +196,9 @@ Issues: [count]
 - **APPROVE** — No critical or high issues. Work is solid.
 - **WARN** — Medium/low issues only. Proceed with caution.
 - **BLOCK** — Critical issues present. Remediation required before PR.
+
+**Severity definitions:**
+- **CRITICAL** — System failure, data loss, security breach, or major regression likely
+- **HIGH** — Major functional breakage or significant risk
+- **MEDIUM** — Degraded experience or moderate risk
+- **LOW** — Minor issue, style, or technical debt

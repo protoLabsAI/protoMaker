@@ -9,6 +9,8 @@ usageStats:
   referenced: 0
   successfulFeatures: 0
 ---
+<!-- domain: Database & Persistence | Data storage patterns, query optimization, schema decisions -->
+
 # database
 
 #### [Pattern] Compute derived fields (prReviewDurationMs) at write-time rather than query-time (2026-02-11)

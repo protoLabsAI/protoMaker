@@ -9,6 +9,8 @@ usageStats:
   referenced: 59
   successfulFeatures: 59
 ---
+<!-- domain: GTM Signal Intelligence | Go-to-market signal processing and routing -->
+
 # GTM Signal Intelligence & Content Operations
 
 ## Status: ACTIVE — Linear project created, content pipeline running

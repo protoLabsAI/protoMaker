@@ -9,6 +9,8 @@ usageStats:
   referenced: 22
   successfulFeatures: 22
 ---
+<!-- domain: Authentication & Authorization | OAuth, token management, access control -->
+
 # auth
 
 #### [Gotcha] OAuth token stored as nested path in settings (integrations.linear.agentToken) requires specific path string, not object traversal (2026-02-12)

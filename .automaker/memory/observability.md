@@ -9,6 +9,8 @@ usageStats:
   referenced: 3
   successfulFeatures: 3
 ---
+<!-- domain: Observability & Tracing | Langfuse tracing, cost tracking, performance measurement -->
+
 # observability
 
 ### Failure-path metric instrumentation: Incrementing agent_cost_usd_total, execution duration, and token counters on BOTH success and failure execution paths (2026-02-25)

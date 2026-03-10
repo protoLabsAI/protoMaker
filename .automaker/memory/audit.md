@@ -9,6 +9,8 @@ usageStats:
   referenced: 1
   successfulFeatures: 1
 ---
+<!-- domain: Audit & Compliance | Audit trail patterns, decision logging, compliance tracking -->
+
 # audit
 
 #### [Pattern] Uses event emission (authority:approved, authority:rejected) for audit trail rather than direct logging (2026-03-10)

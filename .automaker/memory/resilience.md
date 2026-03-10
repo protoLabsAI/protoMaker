@@ -9,6 +9,8 @@ usageStats:
   referenced: 1
   successfulFeatures: 1
 ---
+<!-- domain: Resilience & Error Handling | Fault tolerance, graceful degradation, error classification -->
+
 # resilience
 
 #### [Gotcha] Monitor orchestrator uses hard-coded threshold of 10 consecutive errors to auto-disable a monitor, with no rationale or configuration option. (2026-02-22)

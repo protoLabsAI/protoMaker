@@ -9,6 +9,8 @@ usageStats:
   referenced: 11
   successfulFeatures: 11
 ---
+<!-- domain: Content Pipeline | Validation patterns for content processing pipelines -->
+
 # Content Pipeline Validation Report
 
 **Date**: 2026-02-24

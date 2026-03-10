@@ -9,6 +9,8 @@ usageStats:
   referenced: 13
   successfulFeatures: 13
 ---
+<!-- domain: Performance Optimization | Rendering, caching, latency reduction patterns -->
+
 # performance
 
 #### [Pattern] 30-minute maintenance task frequency for stale PR detection (2026-02-11)

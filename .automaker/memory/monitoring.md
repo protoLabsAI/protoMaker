@@ -9,6 +9,8 @@ usageStats:
   referenced: 2
   successfulFeatures: 2
 ---
+<!-- domain: Monitoring & Health | Health checks, breach detection, alert thresholds -->
+
 # monitoring
 
 #### [Pattern] Gauge state synchronization: Added syncMetrics() method to reset and rebuild features_by_status gauge from authoritative database source (2026-02-25)

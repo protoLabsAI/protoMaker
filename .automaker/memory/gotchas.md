@@ -9,6 +9,8 @@ usageStats:
   referenced: 308
   successfulFeatures: 308
 ---
+<!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
+
 # gotchas
 
 #### [Gotcha] .gitignore negative patterns require parent directory to be unignored first, or the negative rule is ineffective (2026-02-10)
@@ -725,3 +727,42 @@ usageStats:
 - **Situation:** SignalIntakeService defers incoming signals to `deferredQueue` when capacity or error-budget checks fail. Queue is not persisted to disk or database.
 - **Root cause:** Simpler initial implementation; can optimize based on observed deferral patterns before adding persistence layer. Assumption is that deferred signals are low-priority and will be re-submitted by users if important.
 - **How to avoid:** Simpler code and faster iteration on gate thresholds now, but users must re-submit deferred signals after server restart. Loss is acceptable for non-critical signals.
+#### [Gotcha] Features in 'review' status must have prNumber field populated; no validation of this invariant in task (2026-02-10)
+- **Situation:** Task assumes feature.prNumber exists if feature.status === 'review'. No defensive checks.
+- **Root cause:** Assumed board-health system maintains this invariant (features only marked 'review' after PR created). Defensive checks add noise.
+- **How to avoid:** Trust the invariant vs defensive programming. Silence if invariant breaks (prNumber undefined = skipped feature, hard to debug). Documented in notes to avoid later confusion.
+
+#### [Gotcha] npm install failed with 'node-pty rebuild requiring Python' when installing dagre dependencies. Required --ignore-scripts --legacy-peer-deps flags. (2026-02-19)
+- **Situation:** Adding dagre and @types/dagre to package.json triggered post-install build scripts that needed Python toolchain.
+- **Root cause:** node-pty is a transitive dependency of some package that requires native compilation. The --ignore-scripts flag skips post-install scripts, --legacy-peer-deps allows peer dependency resolution.
+- **How to avoid:** Use --ignore-scripts --legacy-peer-deps for deps with native transitive dependencies.
+
+#### [Gotcha] Build failures don't necessarily indicate code correctness — distinguish environment issue (missing p-limit in node_modules) from actual code problems by verifying only changed files' errors. (2026-02-21)
+- **Situation:** Build failed during verification but all feature changes were isolated to apps/ui; libs/platform/secure-fs.ts error indicated upstream dependency problem.
+- **Root cause:** Dependency resolution failures occur independently of code changes; git diff provides objective proof of which files changed vs where errors occur.
+- **How to avoid:** If error file wasn't modified, it's likely environmental — check git diff before attributing blame.
+
+#### [Gotcha] OG meta tags must use absolute URLs, not relative URLs, because social media crawlers are external services without context to resolve relative URLs. (2026-02-24)
+- **Situation:** Implementing og:image meta tags for social sharing across landing pages.
+- **Root cause:** Social platforms crawl pages from their own servers and cannot resolve relative URLs the way a browser would.
+- **How to avoid:** Absolute URLs required for external crawlers; hardcode domain or use environment variable for base URL.
+
+#### [Gotcha] Same satisfiedStatuses list appears in 3+ separate functions within single resolver.ts file. Each function keeps this in sync independently. (2026-02-24)
+- **Situation:** Three functions (areDependenciesSatisfied, getBlockingDependencies, getBlockingDependenciesFromMap) each had their own copy of which statuses count as 'satisfied'.
+- **Root cause:** Each function evolved independently. Extracting to constant seemed premature until a change revealed the cost.
+- **How to avoid:** DRY principle violation — maintain single STATUS_SATISFIED constant.
+
+#### [Gotcha] ProjectSettingsPanel and ProjectSettingsView are separate components on different routes, risking duplication of webhook settings UI logic. (2026-03-07)
+- **Situation:** /project-settings uses ProjectSettingsView with ProjectWebhooksSection; new ProjectSettingsPanel is milestone component with same webhook validation.
+- **Root cause:** Feature built incrementally; ProjectSettingsPanel is new milestone piece for future Project Page Hub; old route unchanged.
+- **How to avoid:** Incrementally ship without touching stable routes, but document the duplication risk.
+
+#### [Gotcha] Feature creation logic duplicated: blocked features use `status: 'blocked'` + `blockingReason` while passed features use `status: 'backlog'` with no blocking fields. Both branches exist in same method. (2026-03-10)
+- **Situation:** Gate decision requires different feature metadata for blocked vs. passed features.
+- **Root cause:** Blocked features need explicit reason tracking; passed features don't. Cannot use single feature constructor.
+- **How to avoid:** Explicit metadata per path vs. code duplication; easier to understand each path vs. harder to maintain when feature creation logic changes.
+
+#### [Gotcha] Portfolio gate's deferredQueue is in-memory only — deferred signals are lost on server restart. (2026-03-10)
+- **Situation:** SignalIntakeService defers incoming signals to deferredQueue when capacity or error-budget checks fail. Queue is not persisted.
+- **Root cause:** Simpler initial implementation; assumption is that deferred signals are low-priority and will be re-submitted by users if important.
+- **How to avoid:** Users must re-submit deferred signals after server restart. Add persistence if deferral rate increases.

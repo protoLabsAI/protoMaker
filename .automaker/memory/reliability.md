@@ -9,6 +9,8 @@ usageStats:
   referenced: 3
   successfulFeatures: 3
 ---
+<!-- domain: Reliability | Retry logic, error recovery, resilience patterns -->
+
 # reliability
 
 #### [Pattern] Individual checkpoint deletion errors are caught and logged as warnings without stopping overall reconciliation; errors do not propagate to halt the process (2026-02-24)

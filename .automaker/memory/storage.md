@@ -9,6 +9,8 @@ usageStats:
   referenced: 5
   successfulFeatures: 5
 ---
+<!-- domain: Storage Architecture | Feature storage, backup systems, data layout -->
+
 # storage
 
 #### [Pattern] Uses atomicWriteJson and readJsonWithRecovery utilities instead of direct fs operations for trajectory persistence (2026-02-24)

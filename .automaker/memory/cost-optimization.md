@@ -9,6 +9,8 @@ usageStats:
   referenced: 12
   successfulFeatures: 12
 ---
+<!-- domain: Cost Optimization | Token usage, API cost reduction, model selection efficiency -->
+
 # cost-optimization
 
 ### Use Anthropic Haiku model (cheapest tier) for knowledge summarization instead of Claude 3.5 Sonnet or other capable models (2026-02-24)

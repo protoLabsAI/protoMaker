@@ -9,6 +9,8 @@ usageStats:
   referenced: 1
   successfulFeatures: 1
 ---
+<!-- domain: SEO & Meta Tags | Open Graph, meta tag patterns, social sharing -->
+
 # seo
 
 ### Use JSON-LD structured data format over microdata or RDFa for schema markup (2026-02-25)

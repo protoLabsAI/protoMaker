@@ -9,6 +9,8 @@ usageStats:
   referenced: 66
   successfulFeatures: 66
 ---
+<!-- domain: Documentation | Docs standards, structure, maintenance patterns -->
+
 # documentation
 
 #### [Pattern] API reference uses method signatures with actual TypeScript types rather than prose descriptions (2026-02-13)

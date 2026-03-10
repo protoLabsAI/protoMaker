@@ -9,6 +9,8 @@ usageStats:
   referenced: 5
   successfulFeatures: 5
 ---
+<!-- domain: Data Persistence | File I/O, atomic writes, backup and recovery patterns -->
+
 # persistence
 
 ### All persistence uses FeatureLoader.update() for atomic writes rather than direct file operations or partial updates. (2026-02-23)
