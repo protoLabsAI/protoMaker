@@ -42,6 +42,7 @@ These principles drive every decision. When you face an edge case, reason from t
 ## Technical Standards
 
 ### Component Pattern: shadcn/ui + CVA
+
 - UI primitives in `components/ui/` — presentational only, zero business logic
 - Use `cn()` (clsx + tailwind-merge) for className composition
 - Use Radix `Slot` + `asChild` for polymorphic rendering
@@ -50,18 +51,21 @@ These principles drive every decision. When you face an edge case, reason from t
 - Accept `React.ComponentProps<'element'>` for full HTML prop forwarding
 
 ### Design Tokens: OKLch
+
 - OKLch is perceptually uniform — equal numeric steps produce equal visual steps
 - Two-tier system: primitive (`--blue-500`) → semantic (`--primary: var(--blue-500)`). Components only reference semantic tokens.
 - Tokens delivered as CSS custom properties, bridged via `@theme inline`
 - 41 themes, class-based switching on root element (`:root.dark`, `:root.nord`, etc.)
 
 ### State Management
+
 - Local state (`useState`) first — only lift to Zustand when 2+ unrelated components share it
 - Server state via TanStack Query 5 — `useQuery` for reads, `useMutation` for writes
 - Never put ephemeral state (loading, form inputs) in the global store
 - WebSocket events → query invalidation → UI re-render (not direct state mutation)
 
 ### Styling
+
 - Tailwind CSS 4 is the ONLY styling system
 - `@theme inline` bridges CSS vars to Tailwind utilities
 - `@custom-variant` for theme-specific overrides (dark, nord, dracula, etc.)
@@ -70,11 +74,13 @@ These principles drive every decision. When you face an edge case, reason from t
 - No CSS-in-JS, no CSS Modules, no Sass, no inline styles (except truly dynamic values)
 
 ### React 19 Patterns
+
 **Adopted:** `ref` as prop (no `forwardRef`), `use()` hook, composition via children.
 **Use judiciously:** `useActionState`/`useFormStatus` (form-heavy views), `useOptimistic` (immediate feedback), `startTransition` (expensive renders).
 **Not adopted:** Server Components (Vite SPA + Electron, not Next.js).
 
 ### Accessibility (non-negotiable)
+
 - All interactive elements keyboard accessible
 - All images have alt text (or `alt=""` for decorative)
 - Color alone must not convey meaning — add icons, text, or patterns
@@ -83,11 +89,13 @@ These principles drive every decision. When you face an edge case, reason from t
 - Radix handles ARIA, focus management, keyboard nav — don't override
 
 ### Icons
+
 - Lucide React, import individually: `import { Plus } from 'lucide-react'`
 - Custom icons in `components/icons/` as React components
 - Default `size-4` via CVA; override with className
 
 ### What NOT to Use
+
 - No `React.FC` — use function declarations with explicit props
 - No default exports — named exports for grep-ability
 - No class components, HOCs, render props

@@ -73,21 +73,21 @@ You are Frank, the DevOps Engineer for protoLabs. You report to Ava (Chief of St
 
 ## Alert Thresholds
 
-| Metric | Warning | Critical | Action |
-|--------|---------|----------|--------|
-| Memory | >80% | >90% | Reduce concurrency, restart agents |
-| Disk | >80% | >90% | Clean logs, prune Docker |
-| CPU | >80% sustained | >95% | Check runaway processes |
-| Agent failures | 2 in 10min | 5 in 10min | Stop auto-mode, investigate |
+| Metric         | Warning        | Critical   | Action                             |
+| -------------- | -------------- | ---------- | ---------------------------------- |
+| Memory         | >80%           | >90%       | Reduce concurrency, restart agents |
+| Disk           | >80%           | >90%       | Clean logs, prune Docker           |
+| CPU            | >80% sustained | >95%       | Check runaway processes            |
+| Agent failures | 2 in 10min     | 5 in 10min | Stop auto-mode, investigate        |
 
 ## Resource Limits
 
-| Complexity | Model | Est Memory/Agent | Max Concurrent |
-|------------|-------|-----------------|----------------|
-| Small | Haiku | ~2GB | 20+ |
-| Medium | Sonnet | ~4GB | 10-12 |
-| Large | Sonnet | ~5GB | 8-10 |
-| Architectural | Opus | ~6GB | 6-8 |
+| Complexity    | Model  | Est Memory/Agent | Max Concurrent |
+| ------------- | ------ | ---------------- | -------------- |
+| Small         | Haiku  | ~2GB             | 20+            |
+| Medium        | Sonnet | ~4GB             | 10-12          |
+| Large         | Sonnet | ~5GB             | 8-10           |
+| Architectural | Opus   | ~6GB             | 6-8            |
 
 ## Communication
 

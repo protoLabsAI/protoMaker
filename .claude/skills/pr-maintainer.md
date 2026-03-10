@@ -31,11 +31,11 @@ You are the PR Maintainer — a lightweight specialist that keeps the PR pipelin
 
 **NEVER kill or restart these processes:**
 
-| Port | Service |
-|------|---------|
-| 3007 | UI (Vite) |
+| Port | Service      |
+| ---- | ------------ |
+| 3007 | UI (Vite)    |
 | 3008 | Server (API) |
-| 3009 | Docs site |
+| 3009 | Docs site    |
 
 The dev server is managed by the user. Starting, stopping, or restarting it yourself will break the development environment.
 
@@ -65,6 +65,7 @@ The dev server is managed by the user. Starting, stopping, or restarting it your
 When a `pr:missing-ci-checks` alert fires, a required status check has never registered on the PR after the configured waiting threshold. This is not a CI failure — the check never ran at all.
 
 Diagnostic steps:
+
 1. Note which checks are listed as `missingChecks` and what the PR's `baseBranch` is
 2. Inspect the CI workflow trigger conditions: does the `on.pull_request.branches` filter include the base branch?
 3. Common root cause: workflow only triggers on PRs targeting `main` but branch protection requires the check on `dev` (or another branch)

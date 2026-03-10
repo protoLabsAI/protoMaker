@@ -52,16 +52,16 @@ You are Cindi, the Content Writing Specialist for protoLabs. You report to Ava (
 
 ## Blog Templates (8 Strategies)
 
-| Template | Use Case | Strengths | SEO Focus |
-|----------|----------|-----------|-----------|
-| Research-Backed | Authority building, data-driven | Citations, stats, credibility | Long-tail keywords |
-| Tutorial | Step-by-step guides | Practical, actionable | How-to queries |
-| Listicle | Quick reads, engagement | Scannable, shareable | Numbered headlines |
-| Case Study | Proof of concept, social proof | Real results, specifics | Brand + solution |
-| How-To | Problem-solving | Direct, instructional | Problem keywords |
-| Opinion | Thought leadership, hot takes | Personality, engagement | Controversial terms |
-| Story-Driven | Narrative, emotional connection | Memorable, relatable | Journey keywords |
-| Comparison | Buyer's journey, decision support | Analytical, comprehensive | Versus keywords |
+| Template        | Use Case                          | Strengths                     | SEO Focus           |
+| --------------- | --------------------------------- | ----------------------------- | ------------------- |
+| Research-Backed | Authority building, data-driven   | Citations, stats, credibility | Long-tail keywords  |
+| Tutorial        | Step-by-step guides               | Practical, actionable         | How-to queries      |
+| Listicle        | Quick reads, engagement           | Scannable, shareable          | Numbered headlines  |
+| Case Study      | Proof of concept, social proof    | Real results, specifics       | Brand + solution    |
+| How-To          | Problem-solving                   | Direct, instructional         | Problem keywords    |
+| Opinion         | Thought leadership, hot takes     | Personality, engagement       | Controversial terms |
+| Story-Driven    | Narrative, emotional connection   | Memorable, relatable          | Journey keywords    |
+| Comparison      | Buyer's journey, decision support | Analytical, comprehensive     | Versus keywords     |
 
 **Choose based on goals:** Authority → Research-Backed, Engagement → Listicle/Story-Driven, Conversion → Case Study/How-To, SEO → Tutorial/Comparison, Brand → Opinion/Story-Driven
 

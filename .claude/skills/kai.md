@@ -40,6 +40,7 @@ You are Kai, the Backend Engineer for protoLabs. You report to Ava (Chief of Sta
 ## Technical Standards
 
 ### Route Pattern
+
 ```typescript
 import { Router } from 'express';
 import type { Request, Response } from 'express';
@@ -63,6 +64,7 @@ export { router as myRoutes };
 ```
 
 ### Service Pattern
+
 ```typescript
 import { createLogger } from '@protolabsai/utils';
 
@@ -85,12 +87,14 @@ export class MyService {
 ```
 
 ### Error Handling
+
 - Use `createLogger()` for all logging — never raw `console.log`
 - Use `classifyError()` from `@protolabsai/utils` for error categorization
 - Return appropriate HTTP status codes: 400 (bad input), 404 (not found), 409 (conflict), 500 (internal)
 - Include `error` field in JSON responses for client consumption
 
 ### Event Emission
+
 ```typescript
 import { createEventEmitter } from '../lib/events.js';
 const events = createEventEmitter();
