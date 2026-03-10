@@ -240,6 +240,9 @@ export interface Project {
 
   /** Feedback from last "request changes" review */
   reviewFeedback?: string;
+
+  /** Ceremony cadence configuration */
+  cadence?: CadenceConfig;
 }
 
 /**
@@ -770,6 +773,23 @@ export interface TimelineEntry {
 export interface ProjectTimelineFile {
   version: 1;
   entries: TimelineEntry[];
+}
+
+/**
+ * Cadence configuration for project ceremonies
+ */
+export interface CadenceConfig {
+  /** How often standups occur (default: 'daily') */
+  standupFrequency: 'daily' | 'weekly' | 'never';
+
+  /** How often retros occur (default: 'per-milestone') */
+  retroFrequency: 'per-milestone' | 'weekly' | 'monthly' | 'never';
+
+  /** ISO date of last standup */
+  lastStandupAt?: string;
+
+  /** ISO date of last retro */
+  lastRetroAt?: string;
 }
 
 /**
