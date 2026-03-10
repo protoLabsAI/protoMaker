@@ -271,3 +271,13 @@ usageStats:
 - **Problem solved:** Dev servers (e.g., `npm run dev` on apps/server, apps/ui) must stay running and restart on file changes. If cached, turbo would mark task as done and not re-run on changes.
 - **Why this works:** Dev servers are stateful, long-lived processes. Caching is designed for deterministic, repeatable tasks (build, test). Persistent flag tells turbo to ignore task completion and let the server manage its own lifecycle.
 - **Trade-offs:** Dev UX is preserved (+) but dev servers bypass cache infrastructure (slower feedback than cached tasks, but acceptable for iteration).
+
+#### [Pattern] Error deduplication uses hash-based Set with 1-hour TTL instead of permanent dedup or no dedup (2026-03-09)
+- **Problem solved:** Reactive spawner logs errors when workflows fail; needs to avoid log spam while still detecting recurring issues
+- **Why this works:** Hash prevents identical error spam (same message = same hash = skip log), 1-hour TTL allows same error to be logged again if it recurs later (user knows issue persists). Balances observability vs noise.
+- **Trade-offs:** Added memory for Set tracking, 1h cleanup logic, but much cleaner logs in failure scenarios
+
+#### [Pattern] React memoization (useMemo, stable dependency arrays) already handles the optimization that dangerouslySetInnerHTML was attempting to provide, making the security/maintainability trade-off unnecessary (2026-03-09)
+- **Problem solved:** The processedContent useMemo and stable remarkPlugins/rehypePlugins arrays ensure ReactMarkdown only re-renders when content actually changes. The old code assumed dangerouslySetInnerHTML was needed to prevent re-renders, but the memoization layer was already preventing them
+- **Why this works:** Once processedContent changes are memoized and plugin arrays are stable, React only reconciles when necessary. Adding dangerouslySetInnerHTML to avoid reconciliation becomes a second-order optimization that adds complexity for minimal gain
+- **Trade-offs:** Simpler mental model (one render path) vs. false sense of control from explicit dangerouslySetInnerHTML. The memoization is less obvious in the code but actually more reliable because it's maintained by React's dependency system

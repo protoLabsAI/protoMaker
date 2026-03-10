@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 934
-  referenced: 262
-  successfulFeatures: 262
+  loaded: 976
+  referenced: 272
+  successfulFeatures: 272
 ---
 # gotchas
 
@@ -615,3 +615,53 @@ usageStats:
 - **Situation:** Code block receives streaming tokens character-by-character; the `code` dependency genuinely changes on each token, triggering effects.
 - **Root cause:** Root cause: useEffect correctly identifies `code` as a dependency that changed. The gotcha is that streaming creates high-frequency changes, not low-frequency initialization.
 - **How to avoid:** Understanding: recognize that streaming is high-frequency state change, not initialization. Solution complexity: requires `isStreaming` flag to distinguish initialization from streaming completion.
+
+#### [Gotcha] Category names use spaces in string literals ('Work Steal', not 'WorkSteal') in TypeScript union type (2026-03-09)
+- **Situation:** CATEGORY_TAG_MAP and ProtocolCategory type definition use space-containing strings like 'Work Steal' as enum-like values
+- **Root cause:** Display names come from product spec (human-readable UI labels) rather than code identifiers. Reusing display names as type keys avoided separate mapping layer.
+- **How to avoid:** One source of truth for category names reduces sync bugs. However, space-in-identifiers violates JavaScript naming conventions and breaks developer mental models (unusual in codebases).
+
+#### [Gotcha] Feature description referenced files at 'apps/server/src/server/services/' but actual implementation lives at 'apps/server/src/services/' (2026-03-09)
+- **Situation:** Audit followed documented paths and couldn't find files initially, wasted time searching worktree
+- **Root cause:** Likely a refactoring moved services up one level in directory hierarchy, but feature description wasn't updated
+- **How to avoid:** Extra path searches cost time, but revealed documentation drift
+
+#### [Gotcha] WorkIntakeService phase claims require a 200ms settle delay then a verify read — skipping the verify causes false positive claims where two instances both believe they own the phase (2026-03-09)
+- **Situation:** Automerge CRDT merges are eventually consistent. After writing a claim, another instance may have simultaneously written its own claim. Without reading back after a brief settle, the instance proceeds as though it won the claim even when Automerge resolved to a different winner.
+- **Root cause:** CRDT last-writer-wins semantics means two simultaneous claims resolve to one, but neither writer knows which won until they re-read. The 200ms delay (`CLAIM_VERIFY_DELAY_MS`) gives the WebSocket sync round-trip time to complete before the verify read.
+- **How to avoid:** Always use the full `claimAndMaterialize` flow: write claim → wait 200ms → read back → check `holdsClaim(phase, instanceId)`. Never skip the verify step, even in tests or one-off scripts.
+
+#### [Gotcha] WorkIntakeService features are LOCAL only — phases are the cross-instance coordination unit, NOT features (2026-03-09)
+- **Situation:** It's tempting to sync features via CRDT like other entities. The pull-based model deliberately does NOT do this. Each instance creates its own local feature from a claimed phase and never broadcasts that feature to peers.
+- **Root cause:** Features are execution artifacts specific to one instance. Syncing them would cause every instance to see (and potentially try to execute) every other instance's work. Phases, by contrast, are coordination primitives shared via project CRDT documents.
+- **How to avoid:** If you see a feature appearing on multiple instances unexpectedly, check whether CRDT feature sync was accidentally re-enabled. The rule: projects (and their phases) cross the wire, features never do.
+
+#### [Gotcha] WorkIntakeService stale claim recovery silently skips everything if getPeerStatus() returns an empty map (2026-03-09)
+- **Situation:** `reclaimStalePhases()` calls `isReclaimable(phase, peerStatus, claimTimeoutMs)`. The `peerStatus` map is used to check whether the claiming instance is still online. If the map is empty (e.g., CrdtSyncService not connected), no stale claims are ever reclaimed regardless of timeout.
+- **Root cause:** The design is conservative: don't reclaim if you can't verify the peer is truly offline. An empty peer map means "we don't know who's online" not "everyone is offline."
+- **How to avoid:** If stale claims are piling up in the project doc, first check whether CrdtSyncService is connected and peers are being tracked. `workIntakeService` reclaim only activates once peer presence data is available.
+
+#### [Gotcha] Performance narrative (React 'never re-reconciles' static HTML) was masking a hidden feature regression (loss of custom component renderers in completed messages) (2026-03-09)
+- **Situation:** The original code included a comment justifying dangerouslySetInnerHTML with 'React never re-reconciles this' — treating it as an optimization feature. This framing normalized accepting limited rendering capability (no CodeBlock, table, or citation components) in completed messages
+- **Root cause:** The optimization comment was technically true but created false justification for code that actually broke feature parity. Developers reading the code would see 'optimization' and assume the limitation was worth it, without questioning whether the trade-off was necessary
+- **How to avoid:** Gained code clarity and unified features; lost a narrow optimization that wasn't delivering value. The narrative loss is the real cost — developers in future codebases may keep similar 'optimized' dual paths without questioning them
+
+#### [Gotcha] Type assertion evolution: code initially used `as any` for form steps (step={firstStep as any}), then refined to `as HITLFormStep`. Indicates type wasn't imported or understood during initial implementation. (2026-03-09)
+- **Situation:** Implementing form rendering component without full type information available or imported.
+- **Root cause:** Rapid iteration. Start with loose types to unblock implementation, tighten as you understand the data shape. `as any` is a common escape hatch when types aren't available.
+- **How to avoid:** Fast iteration vs. type safety. Loose types hide errors but allow development to proceed. Type refinement happens naturally once types are discovered.
+
+#### [Gotcha] The `includeProtocol: true` flag on `avaChannel.getMessages()` is REQUIRED to surface backchannel messages in results (2026-03-09)
+- **Situation:** Polling for responses in the response-waiting loop relies on protocol messages appearing in getMessages results
+- **Root cause:** By default getMessages filters out protocol/backchannel messages. Flag was discovered via debugging.
+- **How to avoid:** Flag inclusion adds clarity but is non-obvious API design. Without it, feature silently fails (polls timeout with no responses found).
+
+#### [Gotcha] Infrastructure partially existed before plumbing completed: PRWatcherService already had sessionId on WatchEntry and emitted it in events, but HTTP/tool layers weren't connected (2026-03-09)
+- **Situation:** Feature required only connecting layers, not building storage mechanism. Developers found sessionId already in wire format but not flowing through buildAvaTools → watch_pr tool.
+- **Root cause:** Suggests sessionId was added to PRWatcherService separately (possibly for future use or incomplete PR). Missing connection prevented feature activation.
+- **How to avoid:** Partial implementations can silently exist (feature half-works). Good: saves rework. Bad: obscures incomplete features, makes it unclear who 'owns' finishing them.
+
+#### [Gotcha] Build + lint verification was done before committing changes; without this step, TypeScript errors or prettier/eslint violations would not surface until CI (2026-03-10)
+- **Situation:** Committed 4 files with ~1000 LOC of new code; build passed cleanly
+- **Root cause:** Worktree isolation means local environment might diverge from CI—pre-commit build verification catches issues before push and avoids CI loop delay
+- **How to avoid:** Adds ~2min overhead locally to catch issues immediately vs 5-10min waiting for CI to run; prevents broken commits on branch

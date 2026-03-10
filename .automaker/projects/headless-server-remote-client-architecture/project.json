@@ -1,0 +1,139 @@
+{
+  "slug": "headless-server-remote-client-architecture",
+  "title": "Headless Server + Remote Client Architecture",
+  "goal": "Split Automaker into headless server instances and lightweight \"legless\" clients (Electron + web) that connect to any server in the hive.\n\n**Three deployment modes:**\n1. **Headless server** — runs backend only, no UI, configured for 2-agent team via proto.config.yaml\n2. **Legless Electron** — desktop app without bundled server, connects to remote server URL\n3. **Legless web app** — same UI served statically, connects to configurable server\n\n**Key feature: Server URL switching in Developer Settings**\n- Input field + dropdown in developer section to change the connected server URL at runtime\n- Auto-discovers instances from the hivemind mesh (peers broadcast identity with url, name, role, capacity)\n- Remembers recent connections (localStorage) for quick switching between dev/staging/etc.\n- Shows instance health indicators (online/offline, agent count, capacity)\n\n**Why:** Josh needs to toggle between staging and dev views from one client, see what each instance sees, and have a lightweight Mac client that doesn't run its own server. Dev can tap into any instance in the hive when needed.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "server-url-runtime-switching",
+      "title": "Server URL Runtime Switching",
+      "description": "Add runtime server URL override to auth layer and a Server Connection section in Developer Settings with recent connection history.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "auth-layer-url-override",
+          "title": "Server URL override in auth layer + app store",
+          "description": "Modify getServerUrl() in apps/ui/src/lib/clients/auth.ts to check a runtime override stored in app-store before falling back to env vars. Add serverUrlOverride state + setServerUrlOverride action to app-store. Add recentServerUrls array (max 10) persisted via localStorage. When override changes, invalidate cached HTTP client and WebSocket connection, trigger reconnection. Add CORS middleware on server to accept requests from any origin when hivemind is enabled.",
+          "filesToModify": [
+            "apps/ui/src/lib/clients/auth.ts",
+            "apps/ui/src/store/app-store.ts",
+            "apps/ui/src/lib/http-api-client.ts",
+            "apps/ui/src/lib/clients/base-http-client.ts",
+            "apps/server/src/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "getServerUrl() returns override when set, env var when not",
+            "setServerUrlOverride() triggers WebSocket reconnection",
+            "Recent URLs persisted and deduplicated in localStorage",
+            "Server accepts CORS requests when hivemind enabled",
+            "Build passes, no type errors"
+          ],
+          "complexity": "medium",
+          "claimedBy": "mac-dev",
+          "claimedAt": "2026-03-10T02:15:55.724Z",
+          "executionStatus": "in_progress"
+        },
+        {
+          "number": 2,
+          "name": "server-connection-settings-ui",
+          "title": "Server Connection section in Developer Settings",
+          "description": "Add a Server Connection section to developer-section.tsx with: (1) text input for server URL with a Connect button, (2) dropdown/list of recent connections showing URL + last-connected timestamp, (3) connection status indicator (connected/disconnected/connecting), (4) current server info display (instance name, role, version from /api/health). Clicking a recent connection auto-fills and connects. Clear button to remove from history.",
+          "filesToModify": [
+            "apps/ui/src/components/views/settings-view/developer/developer-section.tsx",
+            "apps/ui/src/store/app-store.ts"
+          ],
+          "acceptanceCriteria": [
+            "Can enter a server URL and connect to it",
+            "Recent connections shown with timestamps",
+            "Connection status indicator updates in real-time",
+            "Shows connected server instance name and role",
+            "Clearing a recent URL removes it from history",
+            "Switching servers re-authenticates properly"
+          ],
+          "complexity": "medium",
+          "dependencies": [
+            "auth-layer-url-override"
+          ]
+        },
+        {
+          "number": 3,
+          "name": "instance-name-bottom-panel",
+          "title": "Instance name indicator + quick toggle in bottom panel",
+          "description": "Add the connected instance name (from /api/health response) to the BottomPanel status bar in apps/ui/src/components/layout/bottom-panel/bottom-panel.tsx. Display it as a clickable badge next to the system health indicator showing the instance name (e.g. 'Dev Server', 'Staging'). Clicking it opens a quick-switch dropdown listing recent connections and online hivemind peers. The dropdown allows one-click server switching without navigating to settings. If no instance name is available, show the server URL hostname. Use the Server lucide icon. Tooltip shows full URL, instance role, and connection status.",
+          "filesToModify": [
+            "apps/ui/src/components/layout/bottom-panel/bottom-panel.tsx",
+            "apps/ui/src/store/app-store.ts"
+          ],
+          "acceptanceCriteria": [
+            "Instance name shown in bottom panel status bar",
+            "Clicking opens quick-switch dropdown with recent connections",
+            "Dropdown shows online hivemind peers when available",
+            "Selecting an entry switches server connection",
+            "Falls back to hostname when no instance name configured",
+            "Tooltip shows full URL, role, and status"
+          ],
+          "complexity": "medium",
+          "dependencies": [
+            "auth-layer-url-override"
+          ]
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "slug": "instance-picker-and-build-targets",
+      "title": "Hivemind Instance Picker + Build Targets",
+      "description": "Auto-discover hive instances for the server picker, add legless Electron and web build scripts, and headless server config.",
+      "dependencies": [
+        "server-url-runtime-switching"
+      ],
+      "phases": [
+        {
+          "number": 1,
+          "name": "hivemind-instance-picker",
+          "title": "Hivemind instance auto-discovery in server picker",
+          "description": "When connected to any server, fetch the peer list from /api/health (which already includes onlinePeers with full InstanceIdentity). Display peers in the Server Connection section as clickable cards showing: instance name, role badge, running agents count, capacity bar, online/offline status. Clicking a peer sets its identity.url as the server URL override and connects. Add a refresh button to re-fetch peers. Handle the case where peers don't advertise a URL (show as 'no direct access').",
+          "filesToModify": [
+            "apps/ui/src/components/views/settings-view/developer/developer-section.tsx",
+            "apps/ui/src/store/app-store.ts"
+          ],
+          "acceptanceCriteria": [
+            "Online peers displayed with name, role, capacity, status",
+            "Clicking a peer connects to its URL",
+            "Peers without URLs shown but not clickable",
+            "Refresh button fetches updated peer list",
+            "Works when hivemind is disabled (shows empty state)"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 2,
+          "name": "legless-builds-headless-config",
+          "title": "Legless Electron build + headless server config",
+          "description": "Add npm run build:electron:legless script that builds Electron without the server bundle — skips prepare-server.mjs and removes server extraResources from electron-builder config. The legless build sets SKIP_EMBEDDED_SERVER=true by default and shows the server connection picker on first launch instead of trying to connect to localhost:3008. Add npm run start:headless script that runs the server with NODE_ENV=production, auto-mode enabled, and no UI dependencies. Add a headless example section to proto.config.yaml docs with 2-agent defaults.",
+          "filesToModify": [
+            "apps/ui/package.json",
+            "apps/ui/scripts/prepare-server.mjs",
+            "apps/ui/src/main.ts",
+            "apps/server/package.json",
+            "docs/dev/deployment-modes.md"
+          ],
+          "acceptanceCriteria": [
+            "npm run build:electron:legless produces working Electron app without server",
+            "Legless Electron shows server picker on first launch",
+            "npm run start:headless starts server-only with production defaults",
+            "Existing npm run build:electron still bundles server (no regression)",
+            "Documentation covers all three deployment modes"
+          ],
+          "complexity": "medium",
+          "dependencies": [
+            "hivemind-instance-picker"
+          ]
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-03-10T01:41:48.204Z",
+  "updatedAt": "2026-03-10T02:15:55.925Z"
+}

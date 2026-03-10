@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 389
-  referenced: 90
-  successfulFeatures: 90
+  loaded: 422
+  referenced: 96
+  successfulFeatures: 96
 ---
 # api
 
@@ -858,3 +858,23 @@ usageStats:
 - **Problem solved:** Real-time message updates from hivemind instances arrive via WebSocket handlers
 - **Why this works:** Action layer enables validation, transformation, and logging before state mutation. Separates network concerns from state concerns
 - **Trade-offs:** Extra indirection, but provides hook points for message validation, deduplication, and analytics
+
+
+### Tool input piping: renderer interface extended with `input` prop to pass raw tool input (JSON schema, initial values, metadata) directly to the renderer component. (2026-03-09)
+- **Context:** The form renderer (AskUserFormCard) needs access to the JSON schema and other data from the ask_user tool call to render and validate the form.
+- **Why:** Explicit data flow. Input is passed as a prop through the normal React tree, avoiding context/global state indirection. Renderer can access everything it needs without side-effects or hidden dependencies.
+- **Rejected:** Storing input in a context or Redux store (adds indirection, harder to trace). Parsing input from tool result JSON (duplicates parsing logic). Embedding schema in the renderer definition (not flexible).
+- **Trade-offs:** Simpler data flow vs. prop drilling if many intermediate components need access. Renderer has all data it needs vs. potential over-passing of props.
+- **Breaking if changed:** Removing the `input` prop from renderer interface means renderers can't access the schema and can't render forms—form rendering becomes impossible.
+
+#### [Pattern] Backwards-compatible event filtering: allows events without sessionId (legacy) to pass through, filters only if sessionId exists AND doesn't match current session (2026-03-09)
+- **Problem solved:** Client-side: `if (event.sessionId && event.sessionId !== currentSessionId) return;` — this permits mixed old/new event formats simultaneously.
+- **Why this works:** Enables staged rollout: old server versions emit events without sessionId, new client still works. Prevents breaking during deploy sequences.
+- **Trade-offs:** Allows version skew but creates ambiguity: legacy events with no sessionId get delivered to all sessions (broadcast behavior). Requires eventual consistency.
+
+### All 39 PM tools scoped to projectSlug as primary filter—no cross-project tool surface, tool availability is per-project (2026-03-10)
+- **Context:** PM tools access board state, agent state, PR status, all of which are project-local; route itself is at /api/projects/:projectSlug/pm/...
+- **Why:** Project isolation is fundamental to the architecture; tools need project context (board features, project config, agents running on that project) to function. Scoping at projectSlug enforces this contract
+- **Rejected:** Could have global PM tools that operate across all projects (would require cross-project filtering logic), could have user-level PM tools (would lose project context)
+- **Trade-offs:** Simple contract (projectSlug is always available), but means PM is inherently project-bound—can't build tools that compare across projects or manage multiple projects atomically
+- **Breaking if changed:** If a tool is added that needs to cross projects (e.g., dependency_graph across multiple projects), the projectSlug-everywhere assumption breaks; refactor would touch all 39 tools

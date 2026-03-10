@@ -592,3 +592,76 @@ usageStats:
 - **Why this works:** `output: unknown` forces cards to use optional chaining and fallback rendering. Pattern: cast output to expected shape, check key fields, render skeleton/fallback when fields are missing. State enum (`input-streaming | input-available | approval-requested | output-available | output-error | output-denied`) drives card display mode.
 - **Trade-offs:** More defensive code per card, but prevents runtime crashes and lets cards gracefully handle loading/error states without upstream changes.
 - **Breaking if changed:** If `output` type changes to `any`, type safety disappears and cards stop being forced to validate their input.
+
+
+### MessageBranches component returns null when branchCount <= 1; branch navigation UI only renders when there are multiple branches. (2026-03-09)
+- **Context:** Avoid cluttering the UI with 'Branch 1 of 1' or disabled navigation arrows when only one response exists.
+- **Why:** UX principle: show controls only when they're actionable. Reduces visual noise when no branching exists.
+- **Rejected:** Always rendering the navigator (disabled when count=1) would add persistent UI elements that aren't interactive.
+- **Trade-offs:** Clean UI vs dynamic appearance of controls (navigator appears when new branch generated). Users must notice it appeared.
+- **Breaking if changed:** Always rendering creates visual clutter; removing the conditional doesn't add functionality but increases complexity.
+
+#### [Pattern] ShimmerLoader component displays during regeneration, showing a placeholder skeleton instead of spinner, toast, or button disabling. (2026-03-09)
+- **Problem solved:** User experience while waiting for a regenerated response to arrive.
+- **Why this works:** Shimmer provides visual continuity (placeholder matches incoming message shape), doesn't block interaction, and indicates progress more intuitively than a spinner.
+- **Trade-offs:** Requires ShimmerLoader component (more complex) vs simple spinner. Shiimmers feel faster perceptually even at same latency.
+
+#### [Gotcha] Approval cards are overlay/modal-only (Electron), not accessible in web mode; web tests should auto-skip rather than fail (2026-03-09)
+- **Situation:** Test tried to click 'Ava tab' trigger in web environment where overlay is not implemented, causing test hang-and-skip
+- **Root cause:** Feature is deliberately platform-specific; skipping is correct behavior because feature doesn't exist in test environment
+- **How to avoid:** Reduced test coverage of actual approval card rendering/interaction, but avoids flaky false negatives
+
+#### [Pattern] WaitingTimer component counts up from receivedAt ISO timestamp, updating every second in local state (2026-03-09)
+- **Problem solved:** Need to show user elapsed time since approval was requested, making wait time visible and tangible
+- **Why this works:** Timestamp from server is immutable ground truth; local timer tick doesn't need server round-trip; simple setInterval pattern
+- **Trade-offs:** Client clock skew can cause timer to drift vs actual server elapsed time; gains: visual feedback without server overhead
+
+### Truncate tool input preview to 200 chars in approval card instead of expanding card height or providing modal drill-down (2026-03-09)
+- **Context:** Need to show user what tool is being requested without card layout breaking on large JSON payloads
+- **Why:** Fixed truncation keeps card height predictable and stackable; 200 chars is readable summary; balances context vs layout stability
+- **Rejected:** Modal dialog on card click for full payload (adds interaction layer, complexity); responsive card height (stacked cards become hard to scan visually)
+- **Trade-offs:** Important tool params beyond 200 chars become invisible; user may approve/deny without seeing complete context
+- **Breaking if changed:** If truncation point is removed, large payloads cause approval card area to become unscrollable or break layout
+
+#### [Gotcha] Approval cards are removed from local state immediately on approve/deny, before server response, creating optimistic update pattern (2026-03-09)
+- **Situation:** Button click triggers approval action; user expects card to disappear on action but server response is async and could fail
+- **Root cause:** Removes card immediately = fast perceived feedback; prevents double-click since card vanishes; feels responsive
+- **How to avoid:** If POST fails (network error, server error), card is already gone and user doesn't know request failed; gains instant feedback
+
+### Feature parity across message states (streaming and completed) is more valuable than narrow performance optimizations that compromise rendering capability (2026-03-09)
+- **Context:** The completed message path (dangerouslySetInnerHTML) could not support CodeBlock with copy button, customized link targets, styled tables, or inline citation components. Streaming messages got all of these. This created a split experience based on message completion state
+- **Why:** User-facing features (copy code buttons, styled tables, citation links) are more important than a performance optimization that doesn't actually move the needle. Unifying the experience reduces bugs and user confusion
+- **Rejected:** Accepting feature degradation in completed messages as the price of a performance 'optimization'. This optimizes for an unmeasured problem at the expense of measured, user-visible features
+- **Trade-offs:** Gained consistency and all custom renderers everywhere; lost a narrow optimization that memoization already provides. The benefit (consistency, features) is visible; the cost (one reconciliation) is invisible
+- **Breaking if changed:** Removing this principle would require sacrificing CodeBlock copy buttons, custom link styling, table components, or citations in some message states to preserve a performance optimization
+
+### Selected semantic token `status-warning` over generic tokens like `status-primary` for amber-colored UI elements in subagent approvals and operator panels (2026-03-09)
+- **Context:** Audit required replacing hardcoded `text-amber-*`, `bg-amber-*`, `border-amber-*` classes across chat overlay components
+- **Why:** Elements carry semantic 'warning' meaning (approval states, token thresholds, operator actions) — color should reflect intent, not just be an arbitrary substitute
+- **Rejected:** Could use generic `status-primary` or `bg-neutral-*` tokens, but would lose semantic meaning and make code harder to understand
+- **Trade-offs:** Easier to understand component intent but creates coupling to design system having correct semantic token definitions. If token is updated, all dependent UI updates automatically (good) but also unexpectedly (risky).
+- **Breaking if changed:** If `status-warning` token is deleted or its semantics change in design system, component appearance breaks globally
+
+#### [Gotcha] Removed explicit dark mode variants (`dark:hover:bg-amber-950/20`) assuming semantic tokens handle dark mode internally (2026-03-09)
+- **Situation:** Replaced detailed dark-mode-aware color classes with `hover:bg-status-warning/10`
+- **Root cause:** Mature design systems abstract dark mode handling into token definitions to reduce per-component dark mode logic
+- **How to avoid:** Cleaner component code but components become fragile — if tokens lack dark mode variants, components break in dark mode with no per-component fallback
+
+### Used Tailwind arbitrary opacity syntax (`status-warning/5`, `status-warning/10`, `status-warning/20`) for tint/wash backgrounds (2026-03-09)
+- **Context:** Needed multiple opacity levels for visual hierarchy (border hints, light backgrounds, hover states)
+- **Why:** Arbitrary opacity allows fine-grained color tinting without defining every opacity variant in the design token system
+- **Rejected:** Could define explicit token variants like `status-warning-5`, `status-warning-10`, etc. in token system
+- **Trade-offs:** Flexible but fragile — assumes Tailwind is configured to support arbitrary opacity on custom colors and semantic tokens. If config changes, all these classes break.
+- **Breaking if changed:** If `tailwind.config.js` disables arbitrary values or limits opacity only to specific scale values, all `/N` opacity variants fail silently or produce no styles
+
+#### [Pattern] Submission ref pattern: parent component holds a ref to child form's internal submit function and calls it via ref (submitRef.current?.()) instead of handling submission async in the parent. (2026-03-09)
+- **Problem solved:** Need to trigger form validation and submission from the parent (chat overlay) when user clicks 'Send', but validation logic lives in RJSF child component.
+- **Why this works:** Separation of concerns. Form component owns validation and submission semantics. Parent only orchestrates the flow ('when user clicks send, trigger form validation'). Avoids parent needing to understand RJSF's internals.
+- **Trade-offs:** Simpler parent code vs. ref dependency and assumption that ref is properly initialized. Less direct control vs. clean boundaries.
+
+### Form locking post-submission: after form is submitted and response sent, form transitions to 'submitted' state where input is disabled. Prevents edits and resubmission. (2026-03-09)
+- **Context:** Once user submits an ask_user form, that response is sent to the AI/server. Allowing retroactive edits would create confusion and data integrity issues.
+- **Why:** Safety and UX clarity. Form submission is a semantic boundary—once crossed, the response is committed. Locking signals to the user 'this is done, you can't change it now'.
+- **Rejected:** Keeping form editable after submission (allows resubmission, creates ambiguity about which response is the real one). Removing the form entirely (loses context of what was asked).
+- **Trade-offs:** Clear UX vs. no recovery if submission had side effects the user wants to undo. Form stays visible vs. could hide/archive it.
+- **Breaking if changed:** Removing the lock allows users to resubmit the form multiple times, which could trigger multiple tool executions and confused state.

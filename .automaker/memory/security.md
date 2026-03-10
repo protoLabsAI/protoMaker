@@ -488,3 +488,8 @@ usageStats:
 - **Rejected:** Hiding in .automaker/ would protect from accidental edits but reduce discoverability and obscure project intent docs
 - **Trade-offs:** High visibility and accessibility, but creates maintenance question: if research re-runs and user edited spec.md, changes are NOT reflected (non-overwrite guard prevents it). Users must manually merge.
 - **Breaking if changed:** If moved to .automaker/, spec.md becomes harder to find and edit; requires explicit CI/CD step to surface it. If overwrite behavior changes, user edits silently lost.
+
+#### [Gotcha] Response matching relies on `reply.content.includes(correlationId:...)` string predicate with no format validation (2026-03-09)
+- **Situation:** Tool must identify correct response from potentially multiple backchannel messages from target instance
+- **Root cause:** String-based matching is simple, works with current message format conventions
+- **How to avoid:** Convention-based matching avoids schema enforcement but is fragile. Different instances could format responses differently, breaking correlation.

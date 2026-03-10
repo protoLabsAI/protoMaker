@@ -1178,3 +1178,35 @@ usageStats:
 - **Problem solved:** dispatchResponse is private because it's an implementation detail of how messages are routed internally. But the dispatch mechanism is critical to service correctness and must be tested.
 - **Why this works:** Balances two competing goals: keep implementation details private (dispatchResponse is not part of the public contract) while testing critical internal behavior. The cost of dispatch bugs in production justifies coupled tests.
 - **Trade-offs:** Tests are tightly coupled to implementation (refactoring dispatchResponse breaks tests), but this coupling is intentional and forces awareness of changes to critical internal behavior.
+
+#### [Pattern] Verification test uses source code string matching (checks for 'RefreshCw', 'onRegenerate', etc. in file contents) via Playwright, not integration tests or running a dev server. (2026-03-09)
+- **Problem solved:** Need to verify that regenerate button and branch navigator are wired correctly without spinning up a full dev environment.
+- **Why this works:** Lightweight verification; checks that wiring exists without integration complexity. Can run in CI without server or build artifacts.
+- **Trade-offs:** Brittle (depends on exact string literals in source) vs robust integration test. Fast and cheap vs comprehensive.
+
+#### [Pattern] Bundle content string inspection as verification strategy instead of full end-to-end render tests (2026-03-09)
+- **Problem solved:** Feature is modal/overlay-only and inaccessible in headless web test environment; traditional E2E tests auto-skip making assertion of implementation uncertain
+- **Why this works:** Verifies feature code survived the entire build pipeline (transpilation, bundling, minification) without testing environment-specific UI infrastructure; provides reliable signal with minimal setup
+- **Trade-offs:** Catches build breakage but not rendering bugs; doesn't verify event subscription or approval flow UI, only that code compiled successfully
+
+#### [Pattern] TEST_REUSE_SERVER=true flag reuses running dev server across test runs instead of spawning fresh server per test suite (2026-03-09)
+- **Problem solved:** Playwright test execution was slow due to server startup overhead (visible in test run logs showing long waits)
+- **Why this works:** Dev server startup (npm run build + server init) takes 5-10 seconds; reusing across tests saves that overhead on every run; acceptable since tests are verification-only
+- **Trade-offs:** Server state can leak between test runs if not careful (e.g., cache pollution); gains: 5-10s faster iteration per test run
+
+#### [Pattern] Created temporary Playwright test (`verify-chat-tokens.spec.ts`) with regex patterns to detect hardcoded color classes, then deleted after verification passed (2026-03-09)
+- **Problem solved:** Standard build verification doesn't catch hardcoded Tailwind color classes; needed point-in-time audit of 4 specific files
+- **Why this works:** Regex verification is fast and catches Tailwind-specific patterns (e.g., `\btext-amber-\d+\b`); test is disposable because it's a one-time audit, not ongoing compliance
+- **Trade-offs:** Requires discipline to delete test afterward and document which files were audited. If forgotten, becomes false security (test exists but files may have regressed).
+
+#### [Pattern] Smoke test approach: minimal tests verify registry API surface (registerFullCard, getFullCard, hasFullCard exist and work) and bundle loads without JS errors. Does not test full form rendering or submission flow. (2026-03-09)
+- **Problem solved:** Need lightweight verification that the new registration mechanism works and doesn't break the app build.
+- **Why this works:** Smoke tests catch integration issues (bundle errors, missing exports, runtime registration failures) without testing the full feature. Fast and catches 80% of problems (missing exports, import errors).
+- **Trade-offs:** Quick feedback on bundle/registration health vs. no coverage of actual form rendering or submission. Catches early-stage issues vs. misses deep functional bugs.
+
+### Client-side event filtering as verification layer, separate from server-side scoping (watch_pr tool stores sessionId with watch entry) (2026-03-09)
+- **Context:** Both layers check sessionId: server stores it with watch, client filters incoming events. Neither layer alone is sufficient.
+- **Why:** Defense-in-depth: even if server incorrectly broadcasts sessionId-less events, client still filters. And if client filtering broken, server scoping still prevents wrong session from triggering watch.
+- **Rejected:** Server-side only: client has no way to verify events weren't leaked. Client-only: server broadcasts events regardless, data exposure in logs/observability.
+- **Trade-offs:** Duplicate session-checking logic. Better: UX (client sees immediate filtering) and observability (errors caught at boundary, not buried in event loop).
+- **Breaking if changed:** If client filtering removed: cross-session PR events become visible (wrong session sees another's watch notifications). If server scoping removed: client alone can't prevent leaks on unstable/malicious servers.

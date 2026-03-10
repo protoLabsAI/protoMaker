@@ -2,9 +2,9 @@
 
 Bring the Ask Ava / Ava Anywhere chat overlay to production quality across four areas: message regeneration UI, tool approval visual feedback, protocol message filtering UX, and dispatchResponse wiring.
 
-**Status:** active
+**Status:** completed
 **Created:** 2026-03-09T15:47:21.685Z
-**Updated:** 2026-03-09T17:09:40.751Z
+**Updated:** 2026-03-10T00:47:56.503Z
 
 ## PRD
 
@@ -64,7 +64,7 @@ Improve the Ava Channel (#backchannel) filter bar with category-based filter chi
 
 Audit whether ReactiveSpawnerService is fully wired into the service container and passed to AvaChannelReactorService. Fix any gaps so dispatchResponse correctly spawns Claude sessions for request-type backchannel messages.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 

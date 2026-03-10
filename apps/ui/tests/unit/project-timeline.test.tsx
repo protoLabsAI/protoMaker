@@ -52,10 +52,10 @@ describe('getEventDisplayConfig', () => {
     expect(config.iconName).toBe('CheckCircle');
   });
 
-  it('milestone:completed has Flag icon and Milestone Completed label', () => {
+  it('milestone:completed has Trophy icon and Milestone label', () => {
     const config = getEventDisplayConfig('milestone:completed');
-    expect(config.label).toBe('Milestone Completed');
-    expect(config.iconName).toBe('Flag');
+    expect(config.label).toBe('Milestone');
+    expect(config.iconName).toBe('Trophy');
   });
 
   it('ceremony:fired has PartyPopper icon and label including Ceremony', () => {

@@ -4023,3 +4023,146 @@ usageStats:
 - **Situation:** Investigation revealed `turbo.json` already existed with all pipelines configured. No need to build from scratch.
 - **Root cause:** Real-world projects evolve incrementally. Infrastructure tooling (turbo) was added in earlier sprint; root scripts were overlooked in the final delegation step.
 - **How to avoid:** Small, focused change (+) but required understanding existing state first (-). Reduced risk of breaking working config (++).
+
+#### [Pattern] Message regeneration state tracked by pendingBranchOrigId (the original message ID being regenerated), not a boolean isRegenerating flag. Shimmer/loading state is per-message, not global. (2026-03-09)
+- **Problem solved:** Chat UI needs to handle multiple messages in a conversation, each potentially having regeneration in flight.
+- **Why this works:** Allows per-message regeneration tracking; multiple messages can be in different states (one regenerating, others showing results, etc.). Enables shimmer loader to appear at the correct message position.
+- **Trade-offs:** Requires managing message ID → regeneration state mapping; more complex state shape vs simpler boolean. Pays off when handling multi-message conversations.
+
+#### [Pattern] Branch state (branchMap, currentBranchIndex) lifted to ChatOverlayContent level (5 layers above ChatMessage), not stored locally in ChatMessage. (2026-03-09)
+- **Problem solved:** Need to persist user's branch selection and handle multiple regenerations across a conversation without losing navigation context on re-renders.
+- **Why this works:** ChatMessage and ChatMessageList can re-render without losing branch selection state. Conversation-level state enables consistent navigation across all messages. Avoids state thrashing when new branches arrive.
+- **Trade-offs:** Requires prop drilling 5 layers deep vs using Context API. More verbose but explicit data flow; easier to trace dependencies.
+
+#### [Pattern] Prop drilling pattern: callbacks and state passed through 5 layers (ChatOverlayContent → AskAvaTab → ChatMessageList → ChatMessage → MessageActions/MessageBranches) instead of Context API. (2026-03-09)
+- **Problem solved:** Data and callbacks need to reach deeply nested UI components from the state holder.
+- **Why this works:** Explicit, traceable data flow. Every prop dependency is visible in the component signature. Code review can see exactly what data each component needs.
+- **Trade-offs:** Verbose (boilerplate in intermediate components) vs cleaner prop lists. Adding a new prop requires updating all 5 layers. Trade-off favors transparency over conciseness.
+
+### WebSocket event subscription (`subagent:tool-approval-request`) drives approval state rather than polling or direct endpoint calls (2026-03-09)
+- **Context:** Need to reflect server approval requests in real-time on client without user refresh or action
+- **Why:** Event-driven keeps UI reactive to server state changes with zero polling overhead; events are already part of chat infrastructure
+- **Rejected:** Polling /api/chat/pending-approvals every N seconds (resource waste, latency spike on approval); manual refresh button (requires user action, defeats real-time purpose)
+- **Trade-offs:** Requires WebSocket connection to stay open; if event stream disconnects, new approvals won't arrive until reconnect; gains: instant updates, no polling overhead
+- **Breaking if changed:** If WebSocket is closed/disabled, approval requests will never appear client-side even though they exist server-side
+
+### selectedCategories uses Set<ProtocolCategory> instead of Array or object map (2026-03-09)
+- **Context:** Filtering protocol messages by category during render loop (potentially hundreds of messages)
+- **Why:** Set provides O(1) membership checks ('set.has(category)') in filter predicate vs O(n) array.includes(). In tight render loops with many messages, this scales better.
+- **Rejected:** Array<string> or Record<string, boolean> map - both require linear search or object property access overhead
+- **Trade-offs:** Set is unfamiliar to some developers (less common pattern in React components). Slightly more cognitive load vs simple boolean flags.
+- **Breaking if changed:** If changed to Array or plain object, filtering performance degrades linearly as category count grows. At 5+ categories with high message volume, perceptible slowdown possible.
+
+### Filter state stored locally in component (useState) rather than global store or URL params (2026-03-09)
+- **Context:** selectedCategories managed only in ava-channel-tab.tsx component, no Redux/Zustand/URL state
+- **Why:** Filter state is view-scoped (never needed outside this component). Local state reduces boilerplate, avoids unnecessary coupling to global store, simpler to reason about.
+- **Rejected:** Redux store (overkill for local state, adds middleware/action complexity) | URL params (lose filter on navigation, not product requirement)
+- **Trade-offs:** Simpler code and faster development. Cannot persist across page reloads or share state with other components. If product later needs 'save my filter preferences', requires migration to store + persistence layer.
+- **Breaking if changed:** If feature expands to show user's filter preferences across sessions, or other components need to read/set filters, entire state architecture must move to global store.
+
+#### [Pattern] Service wiring uses dedicated module file (ava-channel-reactor.module.ts) instead of flat instantiation in services.ts (2026-03-09)
+- **Problem solved:** ReactiveSpawnerService must be instantiated and injected into AvaChannelReactorService with complex initialization logic
+- **Why this works:** Module pattern encapsulates initialization complexity, enables reusability, improves testability via isolated module tests, and maintains single responsibility
+- **Trade-offs:** One additional file to navigate, but clearer separation of concerns and module can be tested independently
+
+#### [Pattern] Two-layer resilience: per-category circuit breaker (3 failures + 5min cooldown) PLUS hourly quota (max 3 sessions/hour with reset) (2026-03-09)
+- **Problem solved:** Service spawns reactive workflows; needs protection against both immediate cascading failures AND gradual resource exhaustion
+- **Why this works:** Circuit breaker catches failure bursts in the moment (per category acknowledges different failure patterns per message type); hourly quota prevents slow resource drain over time. Together they handle both temporal dimensions of failure.
+- **Trade-offs:** More complex configuration and mental model, but resilience against distinct failure modes is clearer
+
+### WorkIntakeService uses pull-based phase claiming — phases are the coordination unit, features are local execution artifacts (2026-03-09)
+- **Context:** Multi-instance setups need to divide work without cross-instance feature conflicts. Previous approach synced features via CRDT, which caused every instance to see every other instance's work.
+- **Why:** Pull model: each instance reads shared project docs (via Automerge), claims phases by writing to the shared doc, then creates LOCAL features. Features never leave the instance. The CRDT resolves simultaneous claims via last-writer-wins + 200ms verify read pattern. Stale claims (from crashed instances) are reclaimed via peer presence tracking.
+- **Rejected:** Feature CRDT sync — caused cross-project contamination, foreign features, and cascade conflicts when multiple projects shared the same sync server. Pull model eliminates the problem at the source.
+- **Trade-offs:** Pull model requires tick-based polling (default 30s) instead of push events, adding up to 30s latency before an instance picks up newly available phases. Acceptable trade-off for conflict-free coordination.
+- **Breaking if changed:** If feature sync is re-enabled alongside work intake, instances will see each other's features and may try to claim/execute the same phases twice. Guard: features should never enter the CRDT sync event list.
+
+
+### Unified rendering path (ReactMarkdown) instead of dual paths (marked+DOMPurify for completed, ReactMarkdown for streaming) (2026-03-09)
+- **Context:** ChatMessageMarkdown had two separate render branches: streaming messages used ReactMarkdown with custom components; completed messages used marked.parse() + DOMPurify.sanitize() + dangerouslySetInnerHTML, bypassing all custom renderers
+- **Why:** Single render path eliminates maintenance burden of dual logic, ensures feature parity (CodeBlock copy button, link styling, table components, citations) across all message states, and reduces test surface area
+- **Rejected:** Keeping dual paths for perceived performance benefit of avoiding React reconciliation on completed messages. This optimization proved unnecessary because useMemo(processedContent) + stable plugin arrays already prevent re-renders
+- **Trade-offs:** Simpler codebase and unified behavior vs. one additional React reconciliation on message completion (unmeasurable perf impact in practice due to memoization)
+- **Breaking if changed:** Removing this unification would require re-implementing custom renderers (CodeBlock, link, table, citation handlers) for the static HTML path or accepting feature degradation in completed messages
+
+#### [Gotcha] Only 2 of 4 target files needed changes; other 2 (`chat-message-markdown.tsx`, `code-block.tsx`) were already using semantic tokens (2026-03-09)
+- **Situation:** Feature titled 'Markdown Styling Audit' but chat-message-markdown was already compliant, suggesting either: (a) incomplete initial scope analysis, or (b) selective component maturity
+- **Root cause:** Different parts of codebase are at different design system adoption levels; some components migrated previously, others not
+- **How to avoid:** Efficient (avoids rework) but creates maintenance burden — no central record of which components are semantic-token compliant vs hardcoded. Risk of re-auditing same files.
+
+#### [Pattern] Side-effect module registration: inline-form-card is imported in ask-ava-tab.tsx purely to trigger registration of the AskUserFormCard as a full-card renderer. Registration happens on import, not on demand. (2026-03-09)
+- **Problem solved:** Need to register custom renderer for request_user_input tool without hard-coding it in core tool-invocation-part.tsx
+- **Why this works:** Modular design: each feature self-registers, avoiding centralized tool-specific imports. Enables extensibility—new tools add custom rendering by just importing their card component.
+- **Trade-offs:** Clean separation of concerns vs. implicit coupling via import statements. If the import is removed, rendering silently degrades to default (no error). Discovery requires reading ask-ava-tab.tsx imports.
+
+### Full-card renderer registry override mechanism: registerFullCard(toolName, Component) allows any tool to opt-in to custom full-screen rendering, checked before standard collapsible card path in tool-invocation-part.tsx. (2026-03-09)
+- **Context:** Ask_user needs custom form rendering that doesn't fit the standard collapsible card pattern; this needs to work without modifying the core tool coordinator.
+- **Why:** Extensibility via registry pattern. Avoids tool-specific conditionals in shared coordinator code. New tools can provide full-card rendering without core changes. Clear API contract: if a tool registers a full-card renderer, it owns the entire rendering.
+- **Rejected:** Adding tool-specific if/else in tool-invocation-part.tsx (poor separation, scales poorly). Using a context or global state for full-card rendering (less explicit, harder to trace data flow).
+- **Trade-offs:** More infrastructure code (registerFullCard, getFullCard, hasFullCard methods) but infinite extensibility. Renderers are optional—tools fall back to default if not registered.
+- **Breaking if changed:** Removing the full-card registry check causes all custom full-card renderers to fall back to collapsible cards. If ask_user is registered as full-card but the registry check is gone, forms render incorrectly.
+
+### Polling-based response matching (2s intervals) chosen over event-driven subscription for inter-instance messaging (2026-03-09)
+- **Context:** Tool needs to wait for response from another Ava instance and return it to caller
+- **Why:** Simpler implementation, avoids WebSocket complexity, matches existing codebase patterns for tool design
+- **Rejected:** Real-time event subscription / WebSocket listener approach — would require new pub/sub infrastructure
+- **Trade-offs:** Polling is less efficient and reactive (2s latency floor, constant checking overhead) but avoids infrastructure complexity. Resource cost vs architectural simplicity.
+- **Breaking if changed:** Switching to event-driven requires refactoring poll loop to listener registration, risking tool cancellation/cleanup race conditions
+
+#### [Pattern] Out-of-band UUID correlation IDs embedded in message content strings for distributed request-response matching (2026-03-09)
+- **Problem solved:** Need to match asynchronous responses from unknown instances back to specific tool invocations across the network
+- **Why this works:** Simple, requires no central ID registry or broker. Leverages existing string-based message format. Each invocation gets unique ID.
+- **Trade-offs:** String-based matching in content is duck-typed (convention-over-schema). Fragile if target instance formats response differently or omits correlation ID. No validation.
+
+#### [Pattern] Deadline-based timeout calculation (`deadline = sentAt.getTime() + timeoutMs`) vs counter/iteration-based limits (2026-03-09)
+- **Problem solved:** Tool must timeout after configurable duration while polling in loop
+- **Why this works:** Deadline is invariant to poll frequency — ensures timeout is measured from request creation, not from first poll. Robust against timing skew.
+- **Trade-offs:** Deadline requires Date math but is decoupled from loop implementation. More robust, slightly more overhead.
+
+### Tool registered inside `if (config.avaChannel && services.avaChannelService)` guard block, giving it closure access to avaChannel (2026-03-09)
+- **Context:** Tool requires avaChannel APIs to function; must not be exposed when avaChannel is unavailable
+- **Why:** Conditional registration ensures tool only exists when dependencies are present. No null-checks needed inside tool. Avoids runtime errors.
+- **Rejected:** Registering unconditionally + null-checking inside tool — would create unusable tool in disabled avaChannel configs
+- **Trade-offs:** Closure-based access is convenient but creates tight implicit coupling. Tool is not self-documenting about its dependency.
+- **Breaking if changed:** If guard is removed or condition changes, tool execution fails immediately with undefined access errors
+
+#### [Pattern] Timestamp-based ordering (`new Date(m.timestamp).getTime() > sentAt.getTime()`) to ensure response is newer than request (2026-03-09)
+- **Problem solved:** Polling may receive multiple messages; must distinguish new responses from old cached/replayed messages
+- **Why this works:** Temporal ordering prevents false positives from old messages. Ensures causality: response must come after request.
+- **Trade-offs:** Requires accurate server timestamps. Clock skew or out-of-order delivery could cause valid responses to be rejected.
+
+### Intent metadata (`intent: 'request', expectsResponse: true`) passed to `postMessage()` to signal RPC-style interaction pattern (2026-03-09)
+- **Context:** Tool sends structured backchannel message; receiver must know it should respond
+- **Why:** Metadata makes intent explicit. Allows receiver to distinguish one-way messages from RPC-style request-response. Enables routing logic.
+- **Rejected:** Convention-based routing on message format (e.g., [message_instance] prefix) — less flexible, harder to extend to other RPC patterns
+- **Trade-offs:** Metadata adds clarity but requires receiver implementation to check `expectsResponse` flag and respond accordingly. Convention is implicit.
+- **Breaking if changed:** If metadata is ignored by receiver, no response is sent and tool always times out
+
+#### [Pattern] Request-scoped data (sessionId) threaded through function parameter chain rather than stored in service closure or middleware context (2026-03-09)
+- **Problem solved:** chatSessionId flows: HTTP request → buildAvaTools(sessionId) → watch_pr tool → PRWatcherService.addWatch(sessionId). Could have been stored in services object or middleware.
+- **Why this works:** Explicit parameter passing makes dependencies visible and testable. Tools can be inspected/tested without reverse-engineering where sessionId originated.
+- **Trade-offs:** More plumbing code, but tool contracts self-document required context. Easier to test in isolation.
+
+### Service dependencies (agentService, leadEngineerService, autoModeService) threaded through route factory function rather than accessed globally or via context (2026-03-10)
+- **Context:** routes.ts needed to pass 3 service instances into createProjectPmRoutes() to support PM tool implementations
+- **Why:** Explicit dependency injection enables testability, makes dependency graph visible, prevents service singletons from becoming hidden globals that are hard to mock
+- **Rejected:** Could have exported services globally or stored in app.locals context, but that would make test isolation harder and hide coupling
+- **Trade-offs:** Requires all callers of createProjectPmRoutes() to know about these services (more explicit), but gains dependency clarity and test isolation
+- **Breaking if changed:** Adding a new PM tool that needs a service but the route factory wasn't passed that service will fail silently until runtime; refactoring the factory signature becomes a contract breach
+
+#### [Pattern] PM config structure mirrors ava-config pattern: per-group enable/disable toggles stored at {projectPath}/.automaker/pm-config.json with DEFAULT_PM_CONFIG providing defaults (2026-03-10)
+- **Problem solved:** 39 PM tools organized into 8 groups; needed way to selectively enable/disable tool categories per-project without code changes
+- **Why this works:** Mirrors existing ava-config pattern establishes consistency across platform. Per-group toggles (not per-tool) reduce config surface area while still giving users meaningful control. Filesystem storage at .automaker/ makes config project-local and git-trackable
+- **Trade-offs:** Per-group toggles are coarse-grained (can't disable individual tools), but that's likely intentional—tool groups are usable units. Filesystem storage is simple but requires explicit load/save calls
+
+#### [Pattern] Tool grouping strategy: 8 groups (boardRead, boardWrite, agentControl, prWorkflow, orchestration, contextFiles, leadEngineer, projectMgmt) with per-group enable/disable, not individual tool toggles (2026-03-10)
+- **Problem solved:** 39 tools needed organization for discoverability and selective activation
+- **Why this works:** Groups are semantic units that represent capabilities (board operations, agent control, etc.). Per-group toggles reduce cognitive load on users—'disable agent control' is simpler than disabling 5 individual agent tools. Mirrors the structure of PM workflows
+- **Trade-offs:** Coarse toggles mean you can't use some tools from a group while disabling others. But groups map to user mental models (agent operations are distinct from board operations)
+
+### PM tools use projectSlug from route params, not from authenticated user context or session—tool actions are project-scoped, not user-scoped (2026-03-10)
+- **Context:** Tool implementations like get_board_summary, create_feature all use projectSlug; no user-specific filtering on top of project scope
+- **Why:** Project is the boundary of authority for PM tools. User authentication ensures they have access to /api/projects/:projectSlug, but once authenticated, all PM tools operate on that project. Simpler mental model than layering user permissions on top
+- **Rejected:** Could have user roles + per-tool permission checks (more granular, but complex), could scope tools to user's assigned features (loses board-wide visibility)
+- **Trade-offs:** Simpler authorization (project access = all PM tool access), but means no per-tool permissions within a project. All-or-nothing project access
+- **Breaking if changed:** If per-tool permissions are added later (e.g., only some users can delete features), entire tool surface needs a permission layer; if user context becomes required for auditing, tool signatures change
