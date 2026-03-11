@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1139
-  referenced: 315
-  successfulFeatures: 315
+  loaded: 1141
+  referenced: 317
+  successfulFeatures: 317
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -809,3 +809,8 @@ usageStats:
 - **Situation:** User experience feature: remember recent servers for quick switching. Constraint of max 10 prevents unbounded growth.
 - **Root cause:** Implementation: [newUrl, ...stored.filter(u => u !== newUrl)].slice(0, 10). Deduplication moves matching URL to front, then slice enforces max. But if someone manually edits localStorage to add 11+ URLs, constraint isn't enforced until next state update.
 - **How to avoid:** Simple implementation (one-liner filter+slice) vs. reactive enforcement. Edge case only occurs if localStorage is manually edited (rare) or if feature is scripted externally.
+
+#### [Gotcha] WebSocket connections must be explicitly closed before creating new client pointing to different URL (2026-03-11)
+- **Situation:** If you recreate HTTP client without closing previous WebSocket, stale connections persist and can interfere with routing
+- **Root cause:** WebSocket close is not automatic on object destruction; browser keeps connection alive until explicitly terminated
+- **How to avoid:** Gained: clean connection lifecycle; lost: ability to assume cleanup on object disposal
