@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/spec-parser",
-  "version": "0.44.1",
+  "version": "0.45.0",
   "type": "module",
   "description": "XML spec parser for AutoMaker - parses and generates app_spec.txt XML",
   "main": "dist/index.js",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.44.1",
+    "@protolabsai/types": "^0.45.0",
     "fast-xml-parser": "^5.3.7"
   },
   "devDependencies": {

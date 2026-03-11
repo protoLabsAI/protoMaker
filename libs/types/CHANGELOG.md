@@ -1,5 +1,21 @@
 # @protolabsai/types
 
+## 0.45.0
+
+### Minor Changes
+
+- ### Features
+  - replace inline project form with dialog including color and priority
+  - replace inline project form with dialog including color and priority
+
+  ### Bug Fixes
+  - split server tsconfig for tsx dev vs tsc build
+  - split server tsconfig for tsx dev vs tsc build
+
+  ### Refactors
+  - slash command dropdown with category grouping
+  - slash command dropdown with category grouping
+
 ## 0.44.1
 
 ### Patch Changes
