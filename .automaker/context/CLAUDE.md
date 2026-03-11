@@ -96,24 +96,24 @@ Key fields available on every feature:
 
 ## CRITICAL: File Edit Path Discipline
 
-You work in a git worktree at a path like `/home/josh/dev/ava/.worktrees/<branch>/`. ALL file edits MUST use the worktree path. NEVER use the main repo path `/home/josh/dev/ava/` for edits.
+You work in a git worktree at a path like `<repo_root>/.worktrees/<branch>/`. ALL file edits MUST use the worktree path. NEVER use the main repo path for edits. To find the repo root, use `git rev-parse --show-toplevel` or check the `projectPath` from your feature context.
 
-**Why this matters:** Git worktrees share the same `.git` directory but have SEPARATE working directories. If you edit `/home/josh/dev/ava/apps/server/src/server/routes.ts` instead of `/home/josh/dev/ava/.worktrees/<branch>/apps/server/src/server/routes.ts`, you corrupt the main working tree.
+**Why this matters:** Git worktrees share the same `.git` directory but have SEPARATE working directories. If you edit `<repo_root>/apps/server/src/server/routes.ts` instead of `<repo_root>/.worktrees/<branch>/apps/server/src/server/routes.ts`, you corrupt the main working tree.
 
 **The only time to use the main repo path is for `bash` build/test commands:**
 ```bash
 # CORRECT — run builds from main root (node_modules lives there)
-cd /home/josh/dev/ava && npm run build:packages
-cd /home/josh/dev/ava && npm run build:server
+cd <repo_root> && npm run build:packages
+cd <repo_root> && npm run build:server
 
 # CORRECT — all file edits use the worktree path
-edit("/home/josh/dev/ava/.worktrees/<branch>/apps/server/src/server/routes.ts", ...)
+edit("<repo_root>/.worktrees/<branch>/apps/server/src/server/routes.ts", ...)
 
 # WRONG — edits using the main repo path corrupt the main working tree
-edit("/home/josh/dev/ava/apps/server/src/server/routes.ts", ...)
+edit("<repo_root>/apps/server/src/server/routes.ts", ...)
 ```
 
-**Finding your worktree path:** The feature description and system prompt contain your worktree path. It is always `/home/josh/dev/ava/.worktrees/<your-branch-name>/`.
+**Finding your worktree path:** The feature description and system prompt contain your worktree path. It is always `<repo_root>/.worktrees/<your-branch-name>/`.
 
 ## Dev Server
 
