@@ -29,3 +29,10 @@ usageStats:
 - **Problem solved:** User sets server URL at runtime via UI; must survive reload and not require env var re-injection.
 - **Why this works:** localStorage provides client-side persistence; namespace prevents collisions with other apps. Enables 'set once, forget' UX without rebuild/redeploy cycle.
 - **Trade-offs:** Pro: simple, no server required. Con: cleared if user clears browser cache; namespace is convention not enforced.
+
+### recentServerUrls persisted via browser localStorage (per-origin key-value) rather than IndexedDB or server-side user preferences (2026-03-11)
+- **Context:** UI needs quick access to recent server URLs for dropdown, but doesn't require cross-device sync or complex queries
+- **Why:** localStorage is synchronous, no async overhead, no server round-trip. Meets UX requirement of instant dropdown population. Scoped to origin (secure by design).
+- **Rejected:** IndexedDB: over-engineered for simple key-value. Server storage: unnecessary latency for UI dropdowns, requires auth/sync logic.
+- **Trade-offs:** Lost on browser clear/incognito. Per-origin isolation (https://localhost:3000 and :3001 have separate histories). Survives only within same origin.
+- **Breaking if changed:** If persisted to server instead, need auth integration and sync strategy. If cleared, user loses context but app still works.

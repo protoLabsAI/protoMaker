@@ -120,3 +120,8 @@ usageStats:
 - **Situation:** Spec requires 'case-insensitive substring match' but naive implementation would use case-sensitive includes()
 - **Root cause:** JavaScript's includes() is case-sensitive; case-insensitive search requires normalizing both sides to same case
 - **How to avoid:** toLowerCase() on every filter call is cheap; adds minimal complexity; regex alternative more powerful but harder to read and maintain
+
+#### [Pattern] getServerUrl() uses explicit precedence chain: override → env var → window.location.origin, not boolean flags or computed defaults (2026-03-11)
+- **Problem solved:** Multiple sources of server URL truth: user selection (override), deployment config (env), browser location. Need predictable resolution.
+- **Why this works:** Explicit chain makes precedence obvious and testable. User's explicit choice wins, deployment config is fallback, browser is last resort.
+- **Trade-offs:** Flat chain is less DRY than config object, but more readable and harder to get wrong

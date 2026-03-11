@@ -161,3 +161,17 @@ usageStats:
 - **Situation:** Server URL override enables multi-origin scenarios (single app, multiple servers). CORS config must match architecture.
 - **Root cause:** hivemindEnabled implies distributed multi-origin setup where CORS must be open. Without hivemind flag, app is single-origin and should restrict CORS. Coupling to proto.config.yaml makes this implicit.
 - **How to avoid:** Feature-flag gating hides the CORS decision in config—easy to miss when reviewing middleware code. Prevents accidental open CORS in single-origin deployments.
+
+### CORS wildcard (Access-Control-Allow-Origin: *) gated by process.env.HIVEMIND_ENABLED flag, not enabled by default (2026-03-11)
+- **Context:** Headless server needs to accept cross-origin requests from remote clients, but wildcard CORS is a security risk in normal operation
+- **Why:** HIVEMIND_ENABLED is an operational mode flag. Wildcard CORS only enabled when system is explicitly configured for it. Prevents accidental exposure.
+- **Rejected:** Always enable CORS, or require explicit CORS_ORIGIN config per client - too risky or inflexible
+- **Trade-offs:** Env flag coupling (operational mode affects security policy). Simple implementation but creates implicit coupling between features.
+- **Breaking if changed:** Removing the flag check exposes API to any origin indefinitely. Leaving flag false when hivemind needed breaks remote client connectivity.
+
+### CORS `allowAllOrigins` feature gated behind `hivemind.enabled` config flag, not hardcoded or always-on (2026-03-11)
+- **Context:** Server requires permissive CORS for certain features, but should not expose all origins by default
+- **Why:** Ties security-relevant setting to product feature lifecycle. When hivemind is disabled, CORS restrictions apply automatically.
+- **Rejected:** Hardcoded allowAllOrigins=true (security risk); environment variable (harder to audit feature dependencies)
+- **Trade-offs:** Gained: security boundary tied to product feature; lost: flexibility if CORS needed independent of hivemind
+- **Breaking if changed:** Removing feature flag coupling means CORS config must be maintained separately, risking desync where feature is enabled but CORS isn't
