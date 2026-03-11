@@ -6,6 +6,9 @@
 // Agent definition factory context types
 export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
 
+// Chat / slash command types
+export type { SlashCommand, SlashCommandSource } from './chat.js';
+
 // Ava Channel types — private multi-instance communication channel
 export type {
   AvaChannelContext,
