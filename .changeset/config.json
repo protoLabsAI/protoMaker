@@ -21,7 +21,7 @@
   ],
   "linked": [],
   "access": "public",
-  "baseBranch": "main",
+  "baseBranch": "staging",
   "updateInternalDependencies": "patch",
   "ignore": ["@protolabsai/server", "@protolabsai/app"]
 }

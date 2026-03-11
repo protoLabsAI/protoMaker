@@ -1,0 +1,147 @@
+# SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
+name: Prepare Release
+
+# Bumps version on the staging branch BEFORE promotion to main.
+# This eliminates the sync-back problem: the version bump flows naturally
+# through the staging->main merge, so main/staging/dev never diverge.
+#
+# Run this workflow before creating the staging->main promotion PR.
+# After it completes, create the promotion PR as usual.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — show what would be bumped without pushing'
+        type: boolean
+        default: false
+      sync_dev:
+        description: 'Sync version bump to dev branch'
+        type: boolean
+        default: true
+
+permissions: read-all
+
+jobs:
+  prepare:
+    runs-on: self-hosted
+    if: github.repository == 'protoLabsAI/protoMaker'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      DISCORD_ALERTS_WEBHOOK: ${{ secrets.DISCORD_ALERTS_WEBHOOK }}
+
+    steps:
+      - name: Checkout staging
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: staging
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          skip-native-rebuild: 'true'
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Clean stale changesets
+        run: find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -delete
+
+      - name: Generate changeset
+        run: npm run release:prepare
+
+      - name: Apply version bump
+        run: |
+          npm run changeset:version
+          LIB_VERSION=$(node -p "require('./libs/types/package.json').version")
+          npm version "$LIB_VERSION" --no-git-tag-version --allow-same-version
+          npm version "$LIB_VERSION" -w apps/server --no-git-tag-version --allow-same-version
+          npm version "$LIB_VERSION" -w apps/ui --no-git-tag-version --allow-same-version
+          node -e "const f='packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json';const p=JSON.parse(require('fs').readFileSync(f));p.version='$LIB_VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
+
+      - name: Get new version
+        id: version
+        run: echo "version=$(node -p "require('./libs/types/package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No version changes detected. Already up to date."
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Version bump: v${{ steps.version.outputs.version }}"
+          fi
+
+      - name: Commit version bump to staging
+        if: steps.changes.outputs.has_changes == 'true' && inputs.dry_run != true
+        run: |
+          git add -A
+          git commit -m "chore: release v${{ steps.version.outputs.version }}"
+          git push origin staging
+
+      - name: Dry run summary
+        if: inputs.dry_run == true
+        run: |
+          echo "DRY RUN — would have committed:"
+          git diff --stat
+          echo ""
+          echo "Version: v${{ steps.version.outputs.version }}"
+
+      - name: Sync version bump to dev
+        if: steps.changes.outputs.has_changes == 'true' && inputs.dry_run != true && inputs.sync_dev == true
+        run: |
+          VERSION="v${{ steps.version.outputs.version }}"
+
+          # Create staging->dev sync PR. This direction never conflicts
+          # because dev is always a superset of staging.
+          PR_URL=$(gh pr create \
+            --title "chore: sync ${VERSION} version bump to dev" \
+            --body "Auto-sync of ${VERSION} version bump from staging to dev." \
+            --base dev \
+            --head staging 2>&1) || true
+
+          if echo "$PR_URL" | grep -q "already exists"; then
+            echo "Sync PR already exists, skipping"
+          elif echo "$PR_URL" | grep -q "/pull/"; then
+            echo "Created: $PR_URL"
+            PR_NUM=$(echo "$PR_URL" | grep -oP '(?<=/pull/)\d+' | head -1)
+            if [ -n "$PR_NUM" ]; then
+              gh pr merge "$PR_NUM" --merge --auto || true
+              echo "Enabled auto-merge for #${PR_NUM}"
+            fi
+          else
+            echo "Note: Could not create sync PR: $PR_URL"
+            echo "Dev branch may need manual sync."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          VERSION="v${{ steps.version.outputs.version }}"
+          if [ "${{ steps.changes.outputs.has_changes }}" = "true" ]; then
+            echo "Release ${VERSION} prepared on staging."
+            echo "Next step: create staging->main promotion PR."
+          else
+            echo "No changes to release."
+          fi
+
+      - name: Alert on failure
+        if: failure()
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG="ALERT: prepare-release FAILED. Version bump on staging may be incomplete. ${RUN_URL}"
+          if [ -n "${DISCORD_ALERTS_WEBHOOK:-}" ]; then
+            curl -sf -H "Content-Type: application/json" \
+              -d "{\"content\": \"${MSG}\"}" \
+              "$DISCORD_ALERTS_WEBHOOK" || true
+          fi
