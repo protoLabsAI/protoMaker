@@ -1027,15 +1027,62 @@ export class ExecuteProcessor implements StateProcessor {
           `[EXECUTE][pre-flight] Worktree is ${behind} commits behind origin/${baseBranch}, rebasing`,
           { featureId: feature.id }
         );
+        // Stash any unstaged changes before rebasing to prevent
+        // "cannot rebase: You have unstaged changes" errors.
+        // Mirrors the same fix applied in execution-service.ts.
+        let stashed = false;
+        try {
+          const { stdout: remainingStatus } = await execAsync('git status --porcelain', {
+            cwd: workDir,
+            timeout: 10_000,
+          });
+          if (remainingStatus.trim().length > 0) {
+            logger.info('[EXECUTE][pre-flight] Stashing unstaged changes before rebase', {
+              featureId: feature.id,
+            });
+            await execAsync('git stash --include-untracked', { cwd: workDir, timeout: 15_000 });
+            stashed = true;
+          }
+        } catch (stashErr) {
+          const stashMsg = stashErr instanceof Error ? stashErr.message : String(stashErr);
+          logger.warn('[EXECUTE][pre-flight] Pre-rebase stash failed (non-fatal)', {
+            msg: stashMsg,
+          });
+        }
+
         try {
           await execAsync(`git rebase origin/${baseBranch}`, { cwd: workDir, timeout: 60_000 });
           logger.info('[EXECUTE][pre-flight] Rebase succeeded', { featureId: feature.id });
+
+          // Restore stashed changes after a successful rebase
+          if (stashed) {
+            try {
+              await execAsync('git stash pop', { cwd: workDir, timeout: 15_000 });
+              logger.info('[EXECUTE][pre-flight] Stash popped after rebase', {
+                featureId: feature.id,
+              });
+            } catch (popErr) {
+              const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
+              logger.warn(
+                '[EXECUTE][pre-flight] Stash pop had conflicts after rebase (non-fatal, continuing)',
+                { msg: popMsg }
+              );
+            }
+          }
         } catch (rebaseErr) {
           // Abort the rebase to leave the worktree clean
           try {
             await execAsync('git rebase --abort', { cwd: workDir, timeout: 10_000 });
           } catch {
             /* best-effort */
+          }
+          // Restore stash even on failure so the worktree is not left empty
+          if (stashed) {
+            try {
+              await execAsync('git stash pop', { cwd: workDir, timeout: 15_000 });
+            } catch {
+              /* best-effort */
+            }
           }
           const rebaseMsg = rebaseErr instanceof Error ? rebaseErr.message : String(rebaseErr);
           return {
