@@ -1,12 +1,12 @@
 # Failure Lessons: unknown
 
-> Auto-generated from 449 recovery attempts. Updated 2026-03-11T15:49:29.292Z.
+> Auto-generated from 464 recovery attempts. Updated 2026-03-11T15:51:49.556Z.
 
 ## Statistics
 
-- **Total attempts**: 449
-- **Successes**: 445 (99%)
-- **Failures**: 4
+- **Total attempts**: 464
+- **Successes**: 458 (99%)
+- **Failures**: 6
 - **Strategies tried**: retry_with_context, escalate_to_user
 
 ## Common Error Patterns
