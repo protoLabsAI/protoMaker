@@ -20,6 +20,7 @@
  *   so the client can render inline badges and a sources section.
  */
 
+import { randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import {
   streamText,
@@ -51,6 +52,7 @@ import { compactToolResult } from './tool-compaction.js';
 import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
 import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
+import type { CheckpointService } from '../../services/checkpoint-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventType, SubagentProgress, SubagentStatus } from '@protolabsai/types';
 
@@ -257,6 +259,51 @@ function applyToolCompaction(tools: Record<string, unknown>): Record<string, unk
   return wrapped;
 }
 
+// ── Checkpoint tool wrapping ──────────────────────────────────────────────────
+
+/**
+ * Tool names that modify files on disk.
+ * These are the Agent SDK built-in names forwarded through the Ava tool layer.
+ */
+const FILE_MODIFYING_TOOLS = new Set(['Write', 'Edit']);
+
+/**
+ * Wrap Write and Edit tools so their file state is captured before execution.
+ * Other tools are passed through unchanged.
+ *
+ * The capture step is idempotent — if the same file is touched multiple times
+ * within the same checkpoint, only the first (pre-modification) state is stored.
+ */
+function applyCheckpointing(
+  tools: Record<string, unknown>,
+  checkpointService: CheckpointService,
+  sessionId: string,
+  checkpointId: string
+): Record<string, unknown> {
+  const wrapped: Record<string, unknown> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    const t = tool as Record<string, unknown>;
+    if (FILE_MODIFYING_TOOLS.has(name) && typeof t['execute'] === 'function') {
+      const originalExecute = t['execute'] as (...args: unknown[]) => Promise<unknown>;
+      wrapped[name] = {
+        ...t,
+        execute: async (...args: unknown[]) => {
+          // Capture file state BEFORE the tool modifies it
+          const input = args[0] as Record<string, unknown> | undefined;
+          const filePath = input?.['file_path'] as string | undefined;
+          if (filePath) {
+            await checkpointService.captureFileState(sessionId, checkpointId, filePath);
+          }
+          return originalExecute(...args);
+        },
+      };
+    } else {
+      wrapped[name] = tool;
+    }
+  }
+  return wrapped;
+}
+
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createChatRoutes(services: ServiceContainer): Router {
@@ -292,6 +339,17 @@ export function createChatRoutes(services: ServiceContainer): Router {
         res.status(400).json({ error: 'messages array is required' });
         return;
       }
+
+      // Establish session identity for checkpointing.
+      // Clients should send a stable x-session-id header across turns in the same
+      // chat; if absent a per-request UUID is used (rewind still works within the
+      // same request, and the client can opt-in to cross-turn rewind via the header).
+      const sessionId = (req.headers['x-session-id'] as string | undefined) || randomUUID();
+      const lastUserMessage = [...rawMessages].reverse().find((m) => m.role === 'user');
+      const messageId = lastUserMessage?.id ?? randomUUID();
+
+      // Create a checkpoint for this message turn before any tools execute.
+      const checkpointId = services.checkpointService.createCheckpoint(sessionId, messageId);
 
       // Load AvaConfig when a projectPath is available; fall back to defaults
       const avaConfig: AvaConfig = projectPath
@@ -407,7 +465,15 @@ export function createChatRoutes(services: ServiceContainer): Router {
             avaMcpServers.length > 0 ? avaMcpServers : undefined
           )
         : {};
-      const tools = applyToolCompaction(rawTools) as typeof rawTools;
+      // Apply checkpointing first (captures file state before execution),
+      // then compaction (compacts tool results after execution).
+      const withCheckpoints = applyCheckpointing(
+        rawTools,
+        services.checkpointService,
+        sessionId,
+        checkpointId
+      );
+      const tools = applyToolCompaction(withCheckpoints) as typeof rawTools;
 
       // Enable extended thinking for models that support it (opus / sonnet).
       // The thinking budget caps how many tokens the model may use for internal
