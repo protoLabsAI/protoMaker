@@ -51,10 +51,7 @@ export function CheckpointMarker({ checkpoint, onRewind, className }: Checkpoint
   return (
     <div
       data-slot="checkpoint-marker"
-      className={cn(
-        'my-1 rounded-md border border-amber-500/30 bg-amber-500/5 text-xs',
-        className
-      )}
+      className={cn('my-1 rounded-md border border-amber-500/30 bg-amber-500/5 text-xs', className)}
     >
       {/* Header row */}
       <div className="flex items-center gap-2 px-2.5 py-1.5">
@@ -72,9 +69,7 @@ export function CheckpointMarker({ checkpoint, onRewind, className }: Checkpoint
           aria-expanded={isOpen}
           aria-label="Toggle file list"
         >
-          <ChevronDown
-            className={cn('size-3 transition-transform', isOpen && 'rotate-180')}
-          />
+          <ChevronDown className={cn('size-3 transition-transform', isOpen && 'rotate-180')} />
         </button>
 
         {/* Rewind button */}
