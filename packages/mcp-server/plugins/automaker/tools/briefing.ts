@@ -72,9 +72,7 @@ export async function buildLayeredBriefing(
   }
 
   // Expose the aggregated markdown as the Ava layer (AvaWorldStateBuilder covers all 3)
-  const layers: BriefingLayer[] = [
-    { name: 'ava', summary: markdown },
-  ];
+  const layers: BriefingLayer[] = [{ name: 'ava', summary: markdown }];
 
   return { markdown, layers, generatedAt };
 }

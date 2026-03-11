@@ -26,9 +26,11 @@ import { WorldStateDomain } from '@protolabsai/types';
 
 // ─── Shared test fixtures ─────────────────────────────────────────────────────
 
-const PM_SUMMARY = '_Last refreshed: 2026-01-01T00:00:00.000Z_\n\n## Project Status\n- **automaker**: active / production (3/5 milestones)\n\n## Milestone Progress\n- **Integration Wiring** `integration-wiring`: 2/4 phases (50%)\n\n## Upcoming Items\n- 2026-03-15 — Demo _(automaker)_';
+const PM_SUMMARY =
+  '_Last refreshed: 2026-01-01T00:00:00.000Z_\n\n## Project Status\n- **automaker**: active / production (3/5 milestones)\n\n## Milestone Progress\n- **Integration Wiring** `integration-wiring`: 2/4 phases (50%)\n\n## Upcoming Items\n- 2026-03-15 — Demo _(automaker)_';
 
-const LE_SUMMARY = '**Engineering Execution**\n- Active projects: 1\n- Active features: 2\n- automaker: production / features in progress';
+const LE_SUMMARY =
+  '**Engineering Execution**\n- Active projects: 1\n- Active features: 2\n- automaker: production / features in progress';
 
 function makePMBuilder(override?: Partial<PMWorldStateBuilder>): PMWorldStateBuilder {
   const pmState: PMWorldState = {
@@ -66,7 +68,9 @@ function makePMBuilder(override?: Partial<PMWorldStateBuilder>): PMWorldStateBui
   } as unknown as PMWorldStateBuilder;
 }
 
-function makeLEProvider(override?: Partial<LeadEngineerWorldStateProvider>): LeadEngineerWorldStateProvider {
+function makeLEProvider(
+  override?: Partial<LeadEngineerWorldStateProvider>
+): LeadEngineerWorldStateProvider {
   return {
     getWorldStateSummary: () => LE_SUMMARY,
     ...override,
