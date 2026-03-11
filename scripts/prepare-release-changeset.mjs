@@ -68,9 +68,7 @@ function getCommitsSince(ref) {
         .filter((l) => l.startsWith('parent '))
         .map((l) => l.slice(7));
       if (parents.length >= 2) {
-        const mergedLog = run(
-          `git log ${parents[0]}..${parents[1]} --pretty=format:"%s"`
-        );
+        const mergedLog = run(`git log ${parents[0]}..${parents[1]} --pretty=format:"%s"`);
         if (mergedLog) {
           for (const ml of mergedLog.split('\n')) {
             subjects.push(ml.replace(/^"|"$/g, ''));
