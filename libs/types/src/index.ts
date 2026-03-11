@@ -7,7 +7,7 @@
 export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
 
 // Chat / slash command types
-export type { SlashCommand, SlashCommandSource } from './chat.js';
+export type { SlashCommand, SlashCommandSource, SlashCommandSummary } from './chat.js';
 
 // Ava Channel types — private multi-instance communication channel
 export type {

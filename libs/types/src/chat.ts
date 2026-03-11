@@ -49,3 +49,9 @@ export interface SlashCommand {
   /** Full markdown body of the command file (undefined for built-in commands) */
   body?: string;
 }
+
+/**
+ * A lightweight summary of a slash command for the ChatInput autocomplete dropdown.
+ * Omits the `body` field to keep API payloads small.
+ */
+export type SlashCommandSummary = Omit<SlashCommand, 'body'>;
