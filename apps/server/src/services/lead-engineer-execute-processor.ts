@@ -1068,11 +1068,19 @@ export class ExecuteProcessor implements StateProcessor {
       const libsChanged = changedFiles.split('\n').some((f) => f.trim().startsWith('libs/'));
 
       if (libsChanged) {
+        // When running in a worktree, build packages from the worktree's source so that
+        // the worktree's dist/ contains any new exports added by the agent. Without this,
+        // `build:packages` would run against the main repo's source (which lacks the new
+        // export), and TypeScript compilation would fail even though tsconfig paths resolve
+        // @protolabsai/* from source for the type-checker.
+        const buildCwd = workDir;
         logger.info('[EXECUTE][pre-flight] libs/ files changed — running npm run build:packages', {
           featureId: feature.id,
+          buildCwd,
+          isWorktree: workDir !== projectPath,
         });
         try {
-          await execAsync('npm run build:packages', { cwd: projectPath, timeout: 120_000 });
+          await execAsync('npm run build:packages', { cwd: buildCwd, timeout: 120_000 });
           logger.info('[EXECUTE][pre-flight] Package build succeeded', { featureId: feature.id });
         } catch (buildErr) {
           const buildMsg = buildErr instanceof Error ? buildErr.message : String(buildErr);

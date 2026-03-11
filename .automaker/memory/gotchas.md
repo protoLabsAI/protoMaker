@@ -13,6 +13,33 @@ usageStats:
 
 # gotchas
 
+#### [Gotcha] Worktree node_modules/@protolabsai/* symlinks resolve to MAIN repo, not worktree (2026-03-10)
+
+- **Situation:** When working in a git worktree and adding new exports to a shared package (e.g. `@protolabsai/types`), `npm run build:server` fails with "cannot find module" or "export not found" even though you just added it.
+- **Root cause:** Git worktrees share the parent repo's `node_modules/` via Node.js directory traversal (Node walks up from `.worktrees/feature-xxx/` to `/automaker/node_modules/`). The symlink `node_modules/@protolabsai/types → /automaker/libs/types/dist/` points to the MAIN REPO's dist, not the worktree's. New exports in the worktree's `libs/types/src/` are invisible at compile time.
+- **What the system does automatically:** The Lead Engineer pre-flight re-links `@protolabsai/*` symlinks in the worktree's `node_modules/` when it detects `libs/` changes. This happens on agent retry. If you're working manually, see the fix below.
+- **How to fix manually (if stuck):** Run from the worktree root:
+  ```bash
+  # Re-link all @protolabsai/* packages to this worktree's libs/
+  node -e "
+    const fs = require('fs'); const path = require('path');
+    const libs = fs.readdirSync('libs').filter(d => fs.statSync('libs/'+d).isDirectory());
+    for (const lib of libs) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync('libs/'+lib+'/package.json','utf8'));
+        const [scope, name] = pkg.name.slice(1).split('/');
+        fs.mkdirSync('node_modules/@'+scope, {recursive:true});
+        try { fs.unlinkSync('node_modules/@'+scope+'/'+name); } catch {}
+        fs.symlinkSync('../../libs/'+lib, 'node_modules/@'+scope+'/'+name);
+        console.log('Linked', pkg.name);
+      } catch(e) { console.warn('Skip', lib, e.message); }
+    }
+  "
+  npm run build:packages   # Build packages in the WORKTREE
+  npm run build:server     # Now resolves from worktree's libs/
+  ```
+- **How to avoid:** Never run `npm run build:packages` from the main repo path when in a worktree — always run it from the worktree root. The automated pre-flight handles this on retry.
+
 #### [Gotcha] .gitignore negative patterns require parent directory to be unignored first, or the negative rule is ineffective (2026-02-10)
 
 - **Situation:** When adding `!.automaker/features/**/feature.json` to gitignore, if `.automaker/` or `.automaker/features/` is already ignored by a parent rule, the negative pattern won't work because git stops traversing ignored directories
