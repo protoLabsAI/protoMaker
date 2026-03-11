@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 54
-  referenced: 22
-  successfulFeatures: 22
+  loaded: 55
+  referenced: 23
+  successfulFeatures: 23
 ---
 <!-- domain: Authentication & Authorization | OAuth, token management, access control -->
 
@@ -82,3 +82,8 @@ usageStats:
 - **Rejected:** Backend persistence would require bootstrapping with a default server URL, creating initialization ordering issues
 - **Trade-offs:** Simpler, faster, works offline, but configuration doesn't sync across devices or persist after localStorage clear
 - **Breaking if changed:** Moving to backend storage requires solving initialization sequence (how to know server URL before connecting); removing localStorage loses offline capability
+
+#### [Pattern] Server URL discovery layered: localStorage override → Electron cached URL → environment var → default hardcoded URL. Fallback chain with increasing specificity. (2026-03-11)
+- **Problem solved:** Need to support: user runtime override, Electron preload injection, deployment env config, and fallback default.
+- **Why this works:** Each layer represents a different source of truth with different scope (user session > app launch > deployment > code). Layering respects precedence.
+- **Trade-offs:** Flexible layering vs. multiple places to debug; explicit fallback chain vs. implicit magic
