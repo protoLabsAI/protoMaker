@@ -265,6 +265,44 @@ export function useChatSession({
     [addToolApprovalResponse]
   );
 
+  // ── Rewind action ──────────────────────────────────────────────────────────
+
+  /**
+   * Rewind the session to a checkpoint.
+   *
+   * Posts to POST /api/chat/rewind with an optional checkpointId (defaults to
+   * most recent). Returns the list of restored files on success, or throws with
+   * a human-readable message when no checkpoints exist.
+   *
+   * Also handles the /rewind built-in slash command:
+   *   /rewind            → rewind to most recent checkpoint
+   *   /rewind <id>       → rewind to the specified checkpoint
+   */
+  const rewindToCheckpoint = useCallback(
+    async (checkpointId?: string): Promise<{ restoredFiles: string[]; checkpointId: string }> => {
+      const response = await fetch(`${getServerUrlSync()}/api/chat/rewind`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...(checkpointId !== undefined && { checkpointId }),
+          ...(currentSessionId !== undefined && { sessionId: currentSessionId }),
+        }),
+      });
+
+      const data = (await response.json()) as
+        | { ok: true; restoredFiles: string[]; checkpointId: string }
+        | { ok: false; message: string };
+
+      if (!data.ok) {
+        throw new Error(data.message);
+      }
+
+      return { restoredFiles: data.restoredFiles, checkpointId: data.checkpointId };
+    },
+    [currentSessionId]
+  );
+
   // Ensure there's always a session (scoped to project when projectId provided)
   useEffect(() => {
     if (!currentSessionId || !visibleSessions.find((s) => s.id === currentSessionId)) {
@@ -288,6 +326,9 @@ export function useChatSession({
     // HITL (native AI SDK approval for Ava tools)
     approveToolAction,
     rejectToolAction,
+
+    // Checkpoint rewind
+    rewindToCheckpoint,
 
     // Subagent approval (gated trust model)
     pendingSubagentApprovals,

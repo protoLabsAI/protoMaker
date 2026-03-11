@@ -26,6 +26,7 @@ import {
   generatePrdFile,
 } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
+import type { ProjectService } from '../../../services/project-service.js';
 
 interface CreateProjectRequest {
   projectPath: string;
@@ -49,7 +50,7 @@ interface CreateProjectRequest {
   }>;
 }
 
-export function createCreateHandler() {
+export function createCreateHandler(projectService: ProjectService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const {
@@ -201,6 +202,10 @@ export function createCreateHandler() {
         const researchFilePath = getResearchFilePath(projectPath, projectSlug);
         await secureFs.writeFile(researchFilePath, researchSummary, 'utf-8');
       }
+
+      // Sync the new project into the CRDT doc so getProject() returns it
+      // immediately without requiring a server restart
+      await projectService.syncProjectToCrdt(projectPath, project, 'project:created');
 
       res.json({ success: true, project });
     } catch (error) {

@@ -58,13 +58,13 @@ export function createProjectsRoutes(
     '/create',
     validatePathParams('projectPath'),
     validateSlugs('slug?'), // slug is optional, derived from title if not provided
-    createCreateHandler()
+    createCreateHandler(projectService)
   );
   router.post(
     '/update',
     validatePathParams('projectPath'),
     validateSlugs('projectSlug'),
-    createUpdateHandler()
+    createUpdateHandler(projectService)
   );
   router.post(
     '/delete',

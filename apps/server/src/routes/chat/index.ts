@@ -20,6 +20,7 @@
  *   so the client can render inline badges and a sources section.
  */
 
+import { randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import {
   streamText,
@@ -51,12 +52,31 @@ import { compactToolResult } from './tool-compaction.js';
 import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
 import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
+import type { CheckpointService } from '../../services/checkpoint-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
-import type { EventType } from '@protolabsai/types';
+import type { EventType, SubagentProgress, SubagentStatus } from '@protolabsai/types';
+import { parseSlashCommand, expandCommandBody } from '../../services/command-expansion-service.js';
 
 export type { AvaConfig };
 
 const logger = createLogger('ChatRoutes');
+
+// ── Slash command helpers ─────────────────────────────────────────────────────
+
+/**
+ * Extract the plain text content from a UIMessage.
+ * Handles both the parts-based format (AI SDK v4+) and legacy content string.
+ */
+function extractMessageText(message: UIMessage): string {
+  if (Array.isArray(message.parts)) {
+    return message.parts
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+  }
+  const content = (message as unknown as Record<string, unknown>)['content'];
+  return typeof content === 'string' ? content : '';
+}
 
 /**
  * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
@@ -257,6 +277,51 @@ function applyToolCompaction(tools: Record<string, unknown>): Record<string, unk
   return wrapped;
 }
 
+// ── Checkpoint tool wrapping ──────────────────────────────────────────────────
+
+/**
+ * Tool names that modify files on disk.
+ * These are the Agent SDK built-in names forwarded through the Ava tool layer.
+ */
+const FILE_MODIFYING_TOOLS = new Set(['Write', 'Edit']);
+
+/**
+ * Wrap Write and Edit tools so their file state is captured before execution.
+ * Other tools are passed through unchanged.
+ *
+ * The capture step is idempotent — if the same file is touched multiple times
+ * within the same checkpoint, only the first (pre-modification) state is stored.
+ */
+function applyCheckpointing(
+  tools: Record<string, unknown>,
+  checkpointService: CheckpointService,
+  sessionId: string,
+  checkpointId: string
+): Record<string, unknown> {
+  const wrapped: Record<string, unknown> = {};
+  for (const [name, tool] of Object.entries(tools)) {
+    const t = tool as Record<string, unknown>;
+    if (FILE_MODIFYING_TOOLS.has(name) && typeof t['execute'] === 'function') {
+      const originalExecute = t['execute'] as (...args: unknown[]) => Promise<unknown>;
+      wrapped[name] = {
+        ...t,
+        execute: async (...args: unknown[]) => {
+          // Capture file state BEFORE the tool modifies it
+          const input = args[0] as Record<string, unknown> | undefined;
+          const filePath = input?.['file_path'] as string | undefined;
+          if (filePath) {
+            await checkpointService.captureFileState(sessionId, checkpointId, filePath);
+          }
+          return originalExecute(...args);
+        },
+      };
+    } else {
+      wrapped[name] = tool;
+    }
+  }
+  return wrapped;
+}
+
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createChatRoutes(services: ServiceContainer): Router {
@@ -292,6 +357,17 @@ export function createChatRoutes(services: ServiceContainer): Router {
         res.status(400).json({ error: 'messages array is required' });
         return;
       }
+
+      // Establish session identity for checkpointing.
+      // Clients should send a stable x-session-id header across turns in the same
+      // chat; if absent a per-request UUID is used (rewind still works within the
+      // same request, and the client can opt-in to cross-turn rewind via the header).
+      const sessionId = (req.headers['x-session-id'] as string | undefined) || randomUUID();
+      const lastUserMessage = [...rawMessages].reverse().find((m) => m.role === 'user');
+      const messageId = lastUserMessage?.id ?? randomUUID();
+
+      // Create a checkpoint for this message turn before any tools execute.
+      const checkpointId = services.checkpointService.createCheckpoint(sessionId, messageId);
 
       // Load AvaConfig when a projectPath is available; fall back to defaults
       const avaConfig: AvaConfig = projectPath
@@ -407,8 +483,68 @@ export function createChatRoutes(services: ServiceContainer): Router {
             avaMcpServers.length > 0 ? avaMcpServers : undefined
           )
         : {};
-      const tools = applyToolCompaction(rawTools) as typeof rawTools;
+      // Apply checkpointing first (captures file state before execution),
+      // then compaction (compacts tool results after execution).
+      const withCheckpoints = applyCheckpointing(
+        rawTools,
+        services.checkpointService,
+        sessionId,
+        checkpointId
+      );
+      const tools = applyToolCompaction(withCheckpoints) as typeof rawTools;
 
+      // ── Slash command expansion ─────────────────────────────────────────────
+      // If the last user message starts with a slash command, intercept it:
+      //   1. Look up the command body from CommandRegistryService
+      //   2. Expand placeholders ($ARGUMENTS, $1/$2, @file, `!cmd`)
+      //   3. Prepend the expanded body to the system prompt for this turn
+      //   4. Restrict tools to the command's allowed-tools (if specified)
+      // Unknown slash commands pass through as normal messages (no-op).
+
+      let commandSystemPrefix: string | undefined;
+      // Start with the full tool set; may be narrowed by command frontmatter
+      let activeTools: typeof tools = tools;
+
+      if (lastUserMessage) {
+        const lastText = extractMessageText(lastUserMessage);
+        const parsed = parseSlashCommand(lastText);
+
+        if (parsed) {
+          const command = services.commandRegistryService?.get(parsed.name);
+
+          if (command?.body) {
+            try {
+              commandSystemPrefix = await expandCommandBody(command.body, {
+                argumentString: parsed.argumentString,
+                positionalArgs: parsed.positionalArgs,
+                projectPath: projectPath,
+              });
+              logger.info(
+                `Slash command /${parsed.name} expanded (${commandSystemPrefix?.length} chars)`
+              );
+            } catch (err) {
+              logger.warn(`Command expansion failed for /${parsed.name}:`, err);
+            }
+
+            // Apply tool restrictions from command frontmatter
+            if (command.allowedTools && command.allowedTools.length > 0) {
+              const allowedSet = new Set(command.allowedTools);
+              activeTools = Object.fromEntries(
+                Object.entries(tools).filter(([name]) => allowedSet.has(name))
+              ) as typeof tools;
+              logger.info(
+                `Tool set restricted to [${[...allowedSet].join(', ')}] for /${parsed.name}`
+              );
+            }
+          }
+          // If command not found or has no body, pass through as a normal message
+        }
+      }
+
+      // Prepend the expanded command body to the system prompt for this turn
+      const finalSystemPrompt = commandSystemPrefix
+        ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
+        : systemPrompt;
       // Enable extended thinking for models that support it (opus / sonnet).
       // The thinking budget caps how many tokens the model may use for internal
       // reasoning before producing its visible response.
@@ -503,6 +639,62 @@ export function createChatRoutes(services: ServiceContainer): Router {
         execute: async ({ writer }) => {
           // Forward the main AI response stream to the client
           writer.merge(result.toUIMessageStream());
+
+          // Detect Agent tool_use blocks and emit data-subagent progress chunks.
+          // result.fullStream is a separate tee of the underlying model stream so
+          // it can be consumed independently of result.toUIMessageStream() above.
+          // We track tool-call → tool-result pairs by toolCallId to correlate
+          // spawning events with their final done/failed status.
+          try {
+            const pendingSubagents = new Map<
+              string,
+              { subagentType: string; description: string }
+            >();
+            for await (const part of result.fullStream) {
+              const p = part as unknown as Record<string, unknown>;
+              if (p['type'] === 'tool-call' && p['toolName'] === 'Agent') {
+                const args = (p['args'] ?? {}) as Record<string, unknown>;
+                const subagentType = String(args['subagent_type'] ?? 'unknown');
+                const description = String(args['description'] ?? '');
+                pendingSubagents.set(String(p['toolCallId'] ?? ''), {
+                  subagentType,
+                  description,
+                });
+                writer.write({
+                  type: 'data-subagent',
+                  data: {
+                    subagentType,
+                    status: 'spawning' as SubagentStatus,
+                    description,
+                    resultSummary: null,
+                  } satisfies SubagentProgress,
+                } as UIMessageChunk);
+              } else if (p['type'] === 'tool-result' && p['toolName'] === 'Agent') {
+                const toolCallId = String(p['toolCallId'] ?? '');
+                const pending = pendingSubagents.get(toolCallId);
+                const status: SubagentStatus = p['isError'] === true ? 'failed' : 'done';
+                const rawResult = p['result'];
+                const resultText =
+                  typeof rawResult === 'string'
+                    ? rawResult
+                    : rawResult != null
+                      ? JSON.stringify(rawResult)
+                      : '';
+                writer.write({
+                  type: 'data-subagent',
+                  data: {
+                    subagentType: pending?.subagentType ?? 'unknown',
+                    status,
+                    description: pending?.description ?? '',
+                    resultSummary: resultText.slice(0, 500) || null,
+                  } satisfies SubagentProgress,
+                } as UIMessageChunk);
+                pendingSubagents.delete(toolCallId);
+              }
+            }
+          } catch (err) {
+            logger.warn('Subagent progress stream processing failed:', err);
+          }
 
           // Await the full text (separate internal stream tee in streamText)
           const fullText = await result.text;
@@ -639,6 +831,89 @@ export function createChatRoutes(services: ServiceContainer): Router {
     logger.info(`Tool approval response emitted: approvalId=${approvalId}, approved=${approved}`);
 
     res.json({ ok: true });
+  });
+
+  /**
+   * GET /api/chat/commands
+   *
+   * Returns the registered slash command registry as a typed array for the
+   * ChatInput autocomplete dropdown. Each entry includes name, description,
+   * argumentHint, and source. The body field is excluded to keep payloads small.
+   *
+   * Response: SlashCommandSummary[]
+   */
+  router.get('/commands', (_req: Request, res: Response) => {
+    const commands = services.commandRegistryService
+      .getAll()
+      .map(({ body: _body, ...summary }) => summary);
+    res.json(commands);
+  });
+
+  /**
+   * POST /api/chat/rewind
+   *
+   * Rewinds the chat session to a previous checkpoint, restoring file state
+   * as it was when that checkpoint was created.
+   *
+   * Body: { checkpointId?: string, sessionId?: string }
+   *   - checkpointId: optional — if omitted, rewinds to the most recent checkpoint
+   *   - sessionId: optional — identifies the chat session to rewind
+   *
+   * Response: { ok: true, restoredFiles: string[], checkpointId: string }
+   *         | { ok: false, message: string }
+   */
+  router.post('/rewind', async (req: Request, res: Response) => {
+    const { checkpointId, sessionId } = req.body as {
+      checkpointId?: string;
+      sessionId?: string;
+    };
+
+    logger.info(
+      `Rewind requested: checkpointId=${checkpointId ?? 'most-recent'}, sessionId=${sessionId ?? 'none'}`
+    );
+
+    try {
+      // Delegate to CheckpointService when available on the service container.
+      // The service exposes a rewind(checkpointId?) method that restores files
+      // and returns the list of restored paths.
+      const checkpointService = (services as unknown as Record<string, unknown>)[
+        'checkpointService'
+      ];
+
+      if (
+        checkpointService &&
+        typeof (checkpointService as Record<string, unknown>)['rewind'] === 'function'
+      ) {
+        const rewindFn = (checkpointService as Record<string, unknown>)['rewind'] as (
+          checkpointId?: string,
+          sessionId?: string
+        ) => Promise<{ restoredFiles: string[]; checkpointId: string } | null>;
+
+        const result = await rewindFn(checkpointId, sessionId);
+
+        if (!result) {
+          res.json({ ok: false, message: 'No checkpoints exist to rewind to.' });
+          return;
+        }
+
+        logger.info(
+          `Rewind complete: checkpointId=${result.checkpointId}, restoredFiles=${result.restoredFiles.length}`
+        );
+        res.json({
+          ok: true,
+          restoredFiles: result.restoredFiles,
+          checkpointId: result.checkpointId,
+        });
+      } else {
+        // CheckpointService not yet wired — return graceful message
+        logger.warn('CheckpointService not available on service container');
+        res.json({ ok: false, message: 'No checkpoints exist to rewind to.' });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Rewind failed';
+      logger.error('Rewind error:', err);
+      res.status(500).json({ ok: false, message });
+    }
   });
 
   return router;

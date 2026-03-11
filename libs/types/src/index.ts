@@ -6,6 +6,9 @@
 // Agent definition factory context types
 export type { AgentDefinitionContext, WorldStateSlice } from './agent.js';
 
+// Chat / slash command types
+export type { SlashCommand, SlashCommandSource, SlashCommandSummary } from './chat.js';
+
 // Ava Channel types — private multi-instance communication channel
 export type {
   AvaChannelContext,
@@ -972,6 +975,9 @@ export type {
   SpawnResult,
   HealingBudget,
 } from './reactive-spawner.js';
+
+// Chat stream part types (SubagentProgress, SubagentStatus)
+export type { SubagentProgress, SubagentStatus } from './chat.js';
 
 // PenFile types (vector graphics format v2.8)
 export type {

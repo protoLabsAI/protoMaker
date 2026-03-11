@@ -110,6 +110,8 @@ import { AvaChannelService } from '../services/ava-channel-service.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
 import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
+import { CommandRegistryService } from '../services/command-registry-service.js';
+import { CheckpointService } from '../services/checkpoint-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -281,6 +283,12 @@ export interface ServiceContainer {
 
   // Reactive spawner (trigger-based agent spawning with rate limiting and circuit breaking)
   reactiveSpawnerService: ReactiveSpawnerService;
+
+  // Command registry (slash command discovery from built-ins + filesystem sources)
+  commandRegistryService: CommandRegistryService;
+
+  // Chat checkpoint service (intercepts Write/Edit tools to enable per-session rewind)
+  checkpointService: CheckpointService;
 
   // CRDT document store (set by crdt-store.module, used by dependent modules)
   _crdtStore?: import('@protolabsai/crdt').CRDTStore;
@@ -706,6 +714,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking
   const reactiveSpawnerService = getReactiveSpawnerService(repoRoot);
 
+  // Command Registry Service — slash command discovery from built-ins + filesystem sources
+  const commandRegistryService = new CommandRegistryService(repoRoot);
+  commandRegistryService.initialize();
+
+  // Chat Checkpoint Service — intercepts Write/Edit tool calls to enable per-session rewind
+  const checkpointService = new CheckpointService();
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -901,6 +916,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     errorBudgetService,
     frictionTrackerService,
     reactiveSpawnerService,
+    commandRegistryService,
+    checkpointService,
     driftCheckInterval: null,
   };
 }
