@@ -113,9 +113,7 @@ export async function expandCommandBody(body: string, ctx: ExpansionContext): Pr
       continue;
     }
 
-    const absPath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(ctx.projectPath, filePath);
+    const absPath = path.isAbsolute(filePath) ? filePath : path.join(ctx.projectPath, filePath);
 
     try {
       const content = await fs.readFile(absPath, 'utf-8');
