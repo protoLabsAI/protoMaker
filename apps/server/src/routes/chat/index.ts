@@ -55,10 +55,28 @@ import type { ServiceContainer } from '../../server/services.js';
 import type { CheckpointService } from '../../services/checkpoint-service.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventType, SubagentProgress, SubagentStatus } from '@protolabsai/types';
+import { parseSlashCommand, expandCommandBody } from '../../services/command-expansion-service.js';
 
 export type { AvaConfig };
 
 const logger = createLogger('ChatRoutes');
+
+// ── Slash command helpers ─────────────────────────────────────────────────────
+
+/**
+ * Extract the plain text content from a UIMessage.
+ * Handles both the parts-based format (AI SDK v4+) and legacy content string.
+ */
+function extractMessageText(message: UIMessage): string {
+  if (Array.isArray(message.parts)) {
+    return message.parts
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+  }
+  const content = (message as unknown as Record<string, unknown>)['content'];
+  return typeof content === 'string' ? content : '';
+}
 
 /**
  * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
@@ -502,7 +520,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
                 projectPath: projectPath,
               });
               logger.info(
-                `Slash command /${parsed.name} expanded (${commandSystemPrefix.length} chars)`
+                `Slash command /${parsed.name} expanded (${commandSystemPrefix?.length} chars)`
               );
             } catch (err) {
               logger.warn(`Command expansion failed for /${parsed.name}:`, err);
