@@ -1,5 +1,28 @@
 # @protolabsai/dependency-resolver
 
+## 0.46.0
+
+### Minor Changes
+
+- ### Features
+  - replace inline project form with dialog including color and priority
+  - replace inline project form with dialog including color and priority
+
+  ### Bug Fixes
+  - remove PORT=3009 override from \_dev:server script
+  - remove PORT=3009 override from \_dev:server script
+  - split server tsconfig for tsx dev vs tsc build
+  - split server tsconfig for tsx dev vs tsc build
+
+  ### Refactors
+  - slash command dropdown with category grouping
+  - slash command dropdown with category grouping
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.46.0
+
 ## 0.45.0
 
 ### Minor Changes
