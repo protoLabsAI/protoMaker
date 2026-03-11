@@ -125,6 +125,12 @@ export class JobExecutorService {
       jobStatus: 'running',
     });
 
+    this.calendarService.emitReminder({
+      title: job.title,
+      description: job.description ?? `Job started: ${job.title}`,
+      event: job,
+    });
+
     this.events.emit('job:started', {
       jobId: job.id,
       projectPath,
@@ -140,6 +146,12 @@ export class JobExecutorService {
       await this.calendarService.updateEvent(projectPath, job.id, {
         jobStatus: 'completed',
         jobResult: { startedAt, completedAt, durationMs },
+      });
+
+      this.calendarService.emitReminder({
+        title: job.title,
+        description: `Job completed: ${job.title}`,
+        event: job,
       });
 
       this.events.emit('job:completed', {
@@ -158,6 +170,12 @@ export class JobExecutorService {
       await this.calendarService.updateEvent(projectPath, job.id, {
         jobStatus: 'failed',
         jobResult: { startedAt, completedAt, durationMs, error: errorMessage },
+      });
+
+      this.calendarService.emitReminder({
+        title: job.title,
+        description: `Job failed: ${job.title} — ${errorMessage}`,
+        event: job,
       });
 
       this.events.emit('job:failed', {
