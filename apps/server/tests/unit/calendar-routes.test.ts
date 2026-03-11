@@ -57,7 +57,10 @@ function makeRes() {
     status: vi.fn(),
   };
   res.status.mockReturnValue(res);
-  return res as unknown as Response & { json: ReturnType<typeof vi.fn>; status: ReturnType<typeof vi.fn> };
+  return res as unknown as Response & {
+    json: ReturnType<typeof vi.fn>;
+    status: ReturnType<typeof vi.fn>;
+  };
 }
 
 /**
