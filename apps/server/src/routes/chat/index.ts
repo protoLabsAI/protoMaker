@@ -52,29 +52,11 @@ import { buildCanUseToolCallback } from '../../lib/agent-trust.js';
 import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
-import type { EventType } from '@protolabsai/types';
-import { parseSlashCommand, expandCommandBody } from '../../services/command-expansion-service.js';
+import type { EventType, SubagentProgress, SubagentStatus } from '@protolabsai/types';
 
 export type { AvaConfig };
 
 const logger = createLogger('ChatRoutes');
-
-// ── Slash command helpers ─────────────────────────────────────────────────────
-
-/**
- * Extract the plain text content from a UIMessage.
- * Handles both the parts-based format (AI SDK v4+) and legacy content string.
- */
-function extractMessageText(message: UIMessage): string {
-  if (Array.isArray(message.parts)) {
-    return message.parts
-      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
-      .map((p) => p.text)
-      .join('');
-  }
-  const content = (message as unknown as Record<string, unknown>)['content'];
-  return typeof content === 'string' ? content : '';
-}
 
 /**
  * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
@@ -427,60 +409,6 @@ export function createChatRoutes(services: ServiceContainer): Router {
         : {};
       const tools = applyToolCompaction(rawTools) as typeof rawTools;
 
-      // ── Slash command expansion ─────────────────────────────────────────────
-      // If the last user message starts with a slash command, intercept it:
-      //   1. Look up the command body from CommandRegistryService
-      //   2. Expand placeholders ($ARGUMENTS, $1/$2, @file, `!cmd`)
-      //   3. Prepend the expanded body to the system prompt for this turn
-      //   4. Restrict tools to the command's allowed-tools (if specified)
-      // Unknown slash commands pass through as normal messages (no-op).
-
-      let commandSystemPrefix: string | undefined;
-      // Start with the full tool set; may be narrowed by command frontmatter
-      let activeTools: typeof tools = tools;
-
-      const lastUserMessage = [...rawMessages].reverse().find((m) => m.role === 'user');
-      if (lastUserMessage) {
-        const lastText = extractMessageText(lastUserMessage);
-        const parsed = parseSlashCommand(lastText);
-
-        if (parsed) {
-          const command = services.commandRegistryService?.get(parsed.name);
-
-          if (command?.body) {
-            try {
-              commandSystemPrefix = await expandCommandBody(command.body, {
-                argumentString: parsed.argumentString,
-                positionalArgs: parsed.positionalArgs,
-                projectPath: projectPath,
-              });
-              logger.info(
-                `Slash command /${parsed.name} expanded (${commandSystemPrefix.length} chars)`
-              );
-            } catch (err) {
-              logger.warn(`Command expansion failed for /${parsed.name}:`, err);
-            }
-
-            // Apply tool restrictions from command frontmatter
-            if (command.allowedTools && command.allowedTools.length > 0) {
-              const allowedSet = new Set(command.allowedTools);
-              activeTools = Object.fromEntries(
-                Object.entries(tools).filter(([name]) => allowedSet.has(name))
-              ) as typeof tools;
-              logger.info(
-                `Tool set restricted to [${[...allowedSet].join(', ')}] for /${parsed.name}`
-              );
-            }
-          }
-          // If command not found or has no body, pass through as a normal message
-        }
-      }
-
-      // Prepend the expanded command body to the system prompt for this turn
-      const finalSystemPrompt = commandSystemPrefix
-        ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
-        : systemPrompt;
-
       // Enable extended thinking for models that support it (opus / sonnet).
       // The thinking budget caps how many tokens the model may use for internal
       // reasoning before producing its visible response.
@@ -524,8 +452,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const result = streamText({
         model: aiModel,
         messages,
-        system: finalSystemPrompt,
-        tools: activeTools,
+        system: systemPrompt,
+        tools,
         stopWhen: stepCountIs(10),
         providerOptions: {
           anthropic: {
@@ -575,6 +503,62 @@ export function createChatRoutes(services: ServiceContainer): Router {
         execute: async ({ writer }) => {
           // Forward the main AI response stream to the client
           writer.merge(result.toUIMessageStream());
+
+          // Detect Agent tool_use blocks and emit data-subagent progress chunks.
+          // result.fullStream is a separate tee of the underlying model stream so
+          // it can be consumed independently of result.toUIMessageStream() above.
+          // We track tool-call → tool-result pairs by toolCallId to correlate
+          // spawning events with their final done/failed status.
+          try {
+            const pendingSubagents = new Map<
+              string,
+              { subagentType: string; description: string }
+            >();
+            for await (const part of result.fullStream) {
+              const p = part as unknown as Record<string, unknown>;
+              if (p['type'] === 'tool-call' && p['toolName'] === 'Agent') {
+                const args = (p['args'] ?? {}) as Record<string, unknown>;
+                const subagentType = String(args['subagent_type'] ?? 'unknown');
+                const description = String(args['description'] ?? '');
+                pendingSubagents.set(String(p['toolCallId'] ?? ''), {
+                  subagentType,
+                  description,
+                });
+                writer.write({
+                  type: 'data-subagent',
+                  data: {
+                    subagentType,
+                    status: 'spawning' as SubagentStatus,
+                    description,
+                    resultSummary: null,
+                  } satisfies SubagentProgress,
+                } as UIMessageChunk);
+              } else if (p['type'] === 'tool-result' && p['toolName'] === 'Agent') {
+                const toolCallId = String(p['toolCallId'] ?? '');
+                const pending = pendingSubagents.get(toolCallId);
+                const status: SubagentStatus = p['isError'] === true ? 'failed' : 'done';
+                const rawResult = p['result'];
+                const resultText =
+                  typeof rawResult === 'string'
+                    ? rawResult
+                    : rawResult != null
+                      ? JSON.stringify(rawResult)
+                      : '';
+                writer.write({
+                  type: 'data-subagent',
+                  data: {
+                    subagentType: pending?.subagentType ?? 'unknown',
+                    status,
+                    description: pending?.description ?? '',
+                    resultSummary: resultText.slice(0, 500) || null,
+                  } satisfies SubagentProgress,
+                } as UIMessageChunk);
+                pendingSubagents.delete(toolCallId);
+              }
+            }
+          } catch (err) {
+            logger.warn('Subagent progress stream processing failed:', err);
+          }
 
           // Await the full text (separate internal stream tee in streamText)
           const fullText = await result.text;
