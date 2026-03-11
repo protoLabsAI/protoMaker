@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@protolabsai/crdt": ["../../libs/crdt/dist/index.d.ts"],
+      "@protolabsai/dependency-resolver": ["../../libs/dependency-resolver/dist/index.d.ts"],
+      "@protolabsai/error-tracking": ["../../libs/error-tracking/dist/index.d.ts"],
+      "@protolabsai/flows": ["../../libs/flows/dist/index.d.ts"],
+      "@protolabsai/git-utils": ["../../libs/git-utils/dist/index.d.ts"],
+      "@protolabsai/model-resolver": ["../../libs/model-resolver/dist/index.d.ts"],
+      "@protolabsai/observability": ["../../libs/observability/dist/index.d.ts"],
+      "@protolabsai/platform": ["../../libs/platform/dist/index.d.ts"],
+      "@protolabsai/prompts": ["../../libs/prompts/dist/index.d.ts"],
+      "@protolabsai/tools": ["../../libs/tools/dist/index.d.ts"],
+      "@protolabsai/types": ["../../libs/types/dist/index.d.ts"],
+      "@protolabsai/utils": ["../../libs/utils/dist/index.d.ts"]
+    }
+  }
+}
