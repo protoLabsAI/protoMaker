@@ -31,7 +31,7 @@
           ],
           "complexity": "medium",
           "claimedBy": "mac-dev",
-          "claimedAt": "2026-03-11T00:08:20.322Z",
+          "claimedAt": "2026-03-11T00:54:18.588Z",
           "executionStatus": "in_progress",
           "lastError": "Reclaimed from offline instance mac-dev"
         },
@@ -136,5 +136,5 @@
     }
   ],
   "createdAt": "2026-03-10T01:41:48.204Z",
-  "updatedAt": "2026-03-11T00:08:20.525Z"
+  "updatedAt": "2026-03-11T00:54:18.789Z"
 }

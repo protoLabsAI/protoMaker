@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T00:18:03.489Z",
+  "updatedAt": "2026-03-11T00:57:32.880Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -123,6 +123,27 @@
       },
       "changeFailRate": {
         "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T00:57:32.850Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889376-gbnwhlidl",
+        "featureTitle": "Wire emitReminder() into JobExecutorService",
+        "featureCreatedAt": "2026-03-10T22:48:09.376Z",
+        "prMergedAt": "2026-03-11T00:57:32.850Z",
+        "leadTimeMs": 7763474
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
         "totalFailures": 0,
         "ratio": 0
       },
