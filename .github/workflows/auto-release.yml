@@ -1,8 +1,11 @@
 # SECURITY: This workflow is hardened against fork PR attacks. See docs/security/ci-hardening.md
 name: Auto Release
 
-# Fires when a staging→main PR is merged. Cuts a version bump commit, pushes a
-# v* tag, and creates a GitHub Release. The tag push triggers build-electron.yml.
+# Fires when a staging→main PR is merged. Creates a git tag and GitHub Release
+# from the version already bumped on staging by prepare-release.yml.
+#
+# Flow: prepare-release.yml bumps version on staging → staging→main PR merges
+# → this workflow tags main and creates the GitHub Release.
 #
 # NOTE: To allow the v* tag push to trigger build-electron.yml, this workflow
 # must use a PAT (stored as GH_PAT secret) rather than the default GITHUB_TOKEN.
@@ -27,7 +30,7 @@ jobs:
       (github.event.pull_request.merged == true &&
        github.event.pull_request.head.ref == 'staging' &&
        github.repository == 'protoLabsAI/protoMaker')
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
@@ -51,9 +54,6 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
-          # Use a PAT so that the v* tag push triggers build-electron.yml.
-          # Falls back to GITHUB_TOKEN if GH_PAT is not configured (tag push
-          # will succeed but won't trigger downstream workflows).
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Setup project
@@ -66,45 +66,32 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Clean stale changesets
-        # Remove any leftover changeset files that reference renamed/deleted packages,
-        # which would cause changeset:version to fail.
-        run: find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' -delete
-
-      - name: Generate changeset
-        # Analyzes conventional commits since the last tag and writes
-        # .changeset/release-{id}.md with the bump type and summary.
-        run: npm run release:prepare
-
-      - name: Apply version bump
-        # Bumps all @protolabsai/* packages in lockstep and writes CHANGELOG.md.
-        # Then syncs workspace root, server, and ui to the same version so the
-        # git tag always reflects the product version (not a stale 0.x.0 root).
-        run: |
-          npm run changeset:version
-          LIB_VERSION=$(node -p "require('./libs/types/package.json').version")
-          npm version "$LIB_VERSION" --no-git-tag-version --allow-same-version
-          npm version "$LIB_VERSION" -w apps/server --no-git-tag-version --allow-same-version
-          npm version "$LIB_VERSION" -w apps/ui --no-git-tag-version --allow-same-version
-          node -e "const f='packages/mcp-server/plugins/automaker/.claude-plugin/plugin.json';const p=JSON.parse(require('fs').readFileSync(f));p.version='$LIB_VERSION';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"
-
-      - name: Get new version
+      - name: Get version
         id: version
-        # Read from a changeset-managed lib so the tag tracks the lib version.
-        run: echo "version=$(node -p "require('./libs/types/package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Commit version bump
+        # Version was already bumped on staging by prepare-release.yml.
+        # Read it from the merged content on main.
         run: |
-          git add -A
-          git commit -m "chore: release v${{ steps.version.outputs.version }}"
+          VERSION=$(node -p "require('./libs/types/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: v${VERSION}"
 
-      - name: Push commit and tag
+          # Verify this version isn't already tagged
+          if git tag -l "v${VERSION}" | grep -q "v${VERSION}"; then
+            echo "already_tagged=true" >> $GITHUB_OUTPUT
+            echo "WARNING: v${VERSION} is already tagged. Skipping."
+          else
+            echo "already_tagged=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tag
+        if: steps.version.outputs.already_tagged != 'true'
         run: |
-          git push origin main
-          git tag -a "v${{ steps.version.outputs.version }}" -m "v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+          VERSION="v${{ steps.version.outputs.version }}"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
 
       - name: Create GitHub Release
+        if: steps.version.outputs.already_tagged != 'true'
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
 
@@ -130,85 +117,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync version bump back to staging and dev
-        # The version bump commit lands on main. Sync it back so staging and dev
-        # stay consistent. Opens PRs main→staging and main→dev and auto-merges them.
-        # Uses GH_PAT so the merge push triggers deploy-staging.yml (GITHUB_TOKEN
-        # pushes are suppressed by GitHub's anti-recursion guard).
-        # Both PRs use --merge to preserve the DAG (same rule as promotion PRs).
-        run: |
-          VERSION="v${{ steps.version.outputs.version }}"
-
-          sync_branch() {
-            local TARGET="$1"
-            echo "--- Syncing main → ${TARGET} ---"
-
-            PR_URL=$(gh pr create \
-              --title "chore: sync ${VERSION} version bump → ${TARGET}" \
-              --body "Auto-sync of ${VERSION} release commit from main → ${TARGET}." \
-              --base "${TARGET}" \
-              --head main 2>&1)
-            CREATE_EXIT=$?
-
-            if [ $CREATE_EXIT -ne 0 ]; then
-              # PR already exists is OK, anything else is a real error
-              if echo "$PR_URL" | grep -q "already exists"; then
-                echo "PR already exists for main → ${TARGET}, skipping"
-                return 0
-              fi
-              echo "ERROR: Failed to create sync PR for ${TARGET}:"
-              echo "$PR_URL"
-              return 1
-            fi
-
-            echo "Created: $PR_URL"
-            PR_NUM=$(echo "$PR_URL" | grep -oP '(?<=/pull/)\d+' | head -1)
-            if [ -n "$PR_NUM" ]; then
-              gh pr merge "$PR_NUM" --merge --auto || true
-              echo "Enabled auto-merge for #${PR_NUM}"
-            fi
-          }
-
-          sync_branch "staging"
-          sync_branch "dev"
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
-      - name: Wait for sync PRs to merge
-        # The sync PRs must land before the next promotion or version conflicts
-        # will block staging→main and dev→staging PRs. Wait up to 5 minutes.
-        run: |
-          for TARGET in staging dev; do
-            PR_NUM=$(gh pr list --base "$TARGET" --head main --state open \
-              --json number --jq '.[0].number' 2>/dev/null || echo "")
-            if [ -z "$PR_NUM" ]; then
-              echo "No open sync PR for main → ${TARGET}, skipping"
-              continue
-            fi
-            echo "Waiting for sync PR #${PR_NUM} (main → ${TARGET}) to merge..."
-            for i in $(seq 1 30); do
-              STATE=$(gh pr view "$PR_NUM" --json state --jq '.state' 2>/dev/null || echo "UNKNOWN")
-              if [ "$STATE" = "MERGED" ]; then
-                echo "PR #${PR_NUM} merged."
-                break
-              fi
-              if [ "$STATE" = "CLOSED" ]; then
-                echo "PR #${PR_NUM} was closed without merge — manual sync needed."
-                break
-              fi
-              echo "  Attempt ${i}/30 — state: ${STATE}, waiting 10s..."
-              sleep 10
-            done
-            if [ "$STATE" != "MERGED" ] && [ "$STATE" != "CLOSED" ]; then
-              echo "WARNING: Sync PR #${PR_NUM} did not merge within 5 minutes."
-              echo "The next promotion may hit version conflicts."
-            fi
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
       - name: Rewrite and post release notes to Discord
-        if: ${{ env.DISCORD_DEV_WEBHOOK != '' }}
+        if: steps.version.outputs.already_tagged != 'true' && env.DISCORD_DEV_WEBHOOK != ''
         continue-on-error: true
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
@@ -221,7 +131,7 @@ jobs:
         if: failure()
         run: |
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG="ALERT: Auto-release FAILED. Version bump or tag push may be incomplete. ${RUN_URL}"
+          MSG="ALERT: Auto-release FAILED. Tag or GitHub Release may be incomplete. ${RUN_URL}"
           if [ -n "${DISCORD_ALERTS_WEBHOOK:-}" ]; then
             curl -sf -H "Content-Type: application/json" \
               -d "{\"content\": \"${MSG}\"}" \

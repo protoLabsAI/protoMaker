@@ -1,5 +1,467 @@
 # @protolabsai/git-utils
 
+## 0.43.0
+
+### Minor Changes
+
+- ### Features
+  - expose epicId on update_feature MCP tool
+  - expose epicId on update_feature MCP tool
+  - le pre-flight commits .automaker/ drift before worktree rebase
+  - le pre-flight commits .automaker/ drift before worktree rebase
+  - fix AI credential resolution, wire project timeline, add cancelled status
+  - fix AI credential resolution, wire project timeline, add cancelled status
+  - implement PMWorldStateBuilder with layered world state (#2199)
+  - implement PMWorldStateBuilder with layered world state (#2199)
+  - add project assignment types and createdByInstance field (#2178)
+  - add project assignment types and createdByInstance field (#2178)
+  - add lazy feature lookup to world state event handler (#2176)
+  - add PR merge poller to Lead Engineer service
+  - persist prMergedAt and completedAt in MergeProcessor (#2170) (#2172)
+  - wire AuthorityService.executeAction() into lead-engineer action execution path (#2165)
+  - add lazy feature lookup to world state event handler (#2176)
+  - add PR merge poller to Lead Engineer service
+  - add PR merge poller to Lead Engineer service
+  - persist prMergedAt and completedAt in MergeProcessor (#2170) (#2172)
+  - wire AuthorityService.executeAction() into lead-engineer action execution path (#2165)
+  - implement authority enforcement with audit trail
+  - add execution gate to ExecuteProcessor with review/error/CI checks (#2158)
+  - implement portfolio gate for signal intake evaluation (#2156)
+  - implement authority enforcement with audit trail
+  - implement authority enforcement with audit trail
+  - add execution gate to ExecuteProcessor with review/error/CI checks (#2158)
+  - implement portfolio gate for signal intake evaluation (#2156)
+  - implement Error Budget System with rolling window tracking (#2150)
+  - implement Error Budget System with rolling window tracking (#2150)
+  - implement reconciliation service actuators (#2133)
+  - implement reconciliation service actuators (#2133)
+  - add local build target scripts (dev:headless, legless:dir, preview:web)
+  - add local build target scripts (dev:headless, legless:dir, preview:web)
+  - add instance name indicator + quick-switch dropdown to bottom panel
+  - add instance name indicator + quick-switch dropdown to bottom panel
+  - add instance name indicator + quick-switch dropdown to bottom panel
+  - update Ava system prompt for delegation model (#2112)
+  - slim Ava default tool groups for delegation model (#2111)
+  - update Ava system prompt for delegation model (#2112)
+  - slim Ava default tool groups for delegation model (#2111)
+  - pm chat in ava overlay + markdown spacing polish
+  - convert changelog Discord output to rich embeds
+  - convert changelog Discord output to rich embeds
+  - pm chat in ava overlay + markdown spacing polish
+  - wire WorkIntakeService into auto-mode lifecycle (#2090)
+  - wire WorkIntakeService into auto-mode lifecycle (#2089)
+  - wire WorkIntakeService into auto-mode lifecycle (#2088)
+  - wire WorkIntakeService into auto-mode lifecycle (#2087)
+  - wire WorkIntakeService into auto-mode lifecycle (#2090)
+  - wire WorkIntakeService into auto-mode lifecycle (#2089)
+  - wire WorkIntakeService into auto-mode lifecycle (#2088)
+  - wire WorkIntakeService into auto-mode lifecycle (#2087)
+  - wire WorkIntakeService into auto-mode lifecycle
+  - wire WorkIntakeService into auto-mode lifecycle
+  - discord embeds for notifications + ava channel intent/expectsResponse
+  - discord embeds for notifications + ava channel intent/expectsResponse
+  - add SitrepCard and HealthCheckCard tool result renderers
+  - add project status dropdown and fix update route (#2066)
+  - add project status dropdown and fix update route
+  - add SitrepCard and HealthCheckCard tool result renderers
+  - add project status dropdown and fix update route (#2066)
+  - add project status dropdown and fix update route
+  - convert changelog Discord output to rich embeds
+  - convert changelog Discord output to rich embeds
+  - convert changelog Discord output to rich embeds
+  - cascade rebase open PRs after merge to prevent conflicts
+  - cascade rebase open PRs after merge to prevent conflicts
+  - add ceremony action executor for retro-to-action processing (#2050)
+  - add cumulative flow diagram and WIP trends to dashboard (#2049)
+  - add approval queue consumer and trust enforcement (#2048)
+  - add scheduled Ava sessions and calendar bridge (#2047)
+  - add stage duration API and cycle time breakdown chart (#2046)
+  - add protocol message filtering for Ava channel (#2045)
+  - add rollback_feature MCP tool and rollbackTriggered circuit breaker (#2044)
+  - add DORA trends dashboard with time-bucketed history endpoint (#2043)
+  - add ReactiveSpawnerService with budget controls and circuit breakers (#2039)
+  - add DORA KPI cards and useDora React Query hook (#2037)
+  - add success criteria, kill conditions, hypothesis, and customer context to Feature type (#2035)
+  - add 5 new Ava chat tool groups (#2030)
+  - add missing tools to Ava chat - foundation & existing group completions (#2029)
+  - add ceremony action executor for retro-to-action processing (#2050)
+  - add cumulative flow diagram and WIP trends to dashboard (#2049)
+  - add approval queue consumer and trust enforcement (#2048)
+  - add scheduled Ava sessions and calendar bridge (#2047)
+  - add stage duration API and cycle time breakdown chart (#2046)
+  - add protocol message filtering for Ava channel (#2045)
+  - add rollback_feature MCP tool and rollbackTriggered circuit breaker (#2044)
+  - add DORA trends dashboard with time-bucketed history endpoint (#2043)
+  - add ReactiveSpawnerService with budget controls and circuit breakers (#2039)
+  - add DORA KPI cards and useDora React Query hook (#2037)
+  - add success criteria, kill conditions, hypothesis, and customer context to Feature type (#2035)
+  - add 5 new Ava chat tool groups (#2030)
+  - rename Ava Channel tab to #backchannel
+  - add missing tools to Ava chat - foundation & existing group completions (#2029)
+  - capacity advertising and work-steal protocol (#2020)
+  - capacity advertising and work-steal protocol (#2020)
+  - rename Ava Channel tab to #backchannel
+  - unify CRDT sync across all domains — wire CRDTStore into server lifecycle (#2017)
+  - unify CRDT sync across all domains — wire CRDTStore into server lifecycle (#2017)
+  - add friction tracking for reactor self-improvement (#2008)
+  - add response handlers for Ava channel reactor (#2007)
+  - add AvaChannelReactorService — core orchestrator for reactive channel (#2006)
+  - add rule-based message classifier chain for Ava channel reactor (#2005)
+  - extend AvaChatMessage with reactive protocol fields
+  - add friction tracking for reactor self-improvement (#2008)
+  - add response handlers for Ava channel reactor (#2007)
+  - add AvaChannelReactorService — core orchestrator for reactive channel (#2006)
+  - add rule-based message classifier chain for Ava channel reactor (#2005)
+  - add friction tracking for reactor self-improvement (#2008)
+  - add response handlers for Ava channel reactor (#2007)
+  - add AvaChannelReactorService — core orchestrator for reactive channel (#2006)
+  - add rule-based message classifier chain for Ava channel reactor (#2005)
+  - extend AvaChatMessage with reactive protocol fields
+  - extend AvaChatMessage with reactive protocol fields
+  - wire Ava Channel CRDT sync for cross-instance coordination (#2004)
+  - add DORA metrics collection and API (#2003)
+  - update Ava skill for channel awareness (#2001)
+  - auto-create System Improvements project on startup (#2002)
+  - wire EventBus into Ava Channel auto-posts (#2000)
+  - wire Ava Channel CRDT sync for cross-instance coordination (#2004)
+  - add DORA metrics collection and API (#2003)
+  - update Ava skill for channel awareness (#2001)
+  - auto-create System Improvements project on startup (#2002)
+  - wire EventBus into Ava Channel auto-posts (#2000)
+  - live UI updates for CRDT mesh feature sync (#1999)
+  - live UI updates for CRDT mesh feature sync (#1999)
+  - add Discord channel message MCP tools
+  - add Discord channel message MCP tools
+  - add Discord channel message MCP tools
+  - add Discord channel message MCP tools
+  - add Discord channel message MCP tools
+  - add private Ava channel MCP tools and server routes (#1990)
+  - cross-instance assignment - board instance badges and peers panel (#1984)
+  - add private Ava channel MCP tools and server routes (#1990)
+  - cross-instance assignment - board instance badges and peers panel (#1984)
+  - add AvaChannelService and types for multi-instance communication
+  - add AvaChannelService and types for multi-instance communication
+  - activate CRDT sync infrastructure and wire work-stealing
+  - activate CRDT sync infrastructure and wire work-stealing
+  - worktree git exclude for .automaker/features/
+  - Project Sync — CRDT-backed ProjectService (#1967)
+  - per-project Discord webhook settings UI (#1966)
+  - Project Sync — CRDT-backed ProjectService (#1967)
+  - per-project Discord webhook settings UI (#1966)
+  - AutomergeFeatureStore — in-memory CRDT-backed feature store (#1961)
+  - extract scripts from research for proto.config.yaml generation
+
+  ### Bug Fixes
+  - resolve Claude CLI OAuth for @ai-sdk/anthropic chat routes
+  - resolve Claude CLI OAuth for @ai-sdk/anthropic chat routes
+  - restore lockfile with cross-platform esbuild metadata
+  - regenerate lockfile with turbo platform metadata
+  - release script now inspects merge commits for feat: prefixes
+  - restore lockfile with cross-platform esbuild metadata
+  - regenerate lockfile with turbo platform metadata
+  - release script now inspects merge commits for feat: prefixes
+  - replace hardcoded paths in agent context with repo-agnostic placeholders
+  - resolve AgentDefinition model aliases via SDK-native alias pattern (#2213)
+  - replace hardcoded paths in agent context with repo-agnostic placeholders
+  - resolve AgentDefinition model aliases via SDK-native alias pattern (#2213)
+  - resolve agent model aliases before SDK calls (#2209)
+  - resolve agent model aliases before SDK calls (#2209)
+  - stabilize flaky auto-mode error handling test
+  - update timeline test for TimelineEvent response format
+  - auto-stash unstaged changes before worktree rebase + memory updates
+  - stabilize flaky auto-mode error handling test
+  - update timeline test for TimelineEvent response format
+  - auto-stash unstaged changes before worktree rebase + memory updates
+  - exclude lead-engineer:rule-evaluated from onEvent subscriber to prevent stack overflow (#2194)
+  - exclude lead-engineer:rule-evaluated from onEvent subscriber to prevent stack overflow (#2194)
+  - add worktree write guard + fix flaky CI tests
+  - allow create_project to overwrite stub projects from initiate_project
+  - add external merge detection to Lead Engineer REVIEW state
+  - add worktree write guard + fix flaky CI tests
+  - allow create_project to overwrite stub projects from initiate_project
+  - add external merge detection to Lead Engineer REVIEW state
+  - add external merge detection to Lead Engineer REVIEW state
+  - repair extractTitleFromDescription test failures
+  - use importOriginal in execution-service test git-utils mock
+  - add format-time subpath export to avoid Vite fs/promises bundling error
+  - resolve 3 typecheck errors blocking CI
+  - explicitly set pathToClaudeCodeExecutable in SDK options
+  - correct HITLFormStep schema in reconciliation service
+  - delete orphaned project-planning test file from dev
+  - repair extractTitleFromDescription test failures
+  - use importOriginal in execution-service test git-utils mock
+  - add format-time subpath export to avoid Vite fs/promises bundling error
+  - resolve 3 typecheck errors blocking CI
+  - explicitly set pathToClaudeCodeExecutable in SDK options
+  - correct HITLFormStep schema in reconciliation service
+  - delete orphaned project-planning test file from dev
+  - test cooldown awareness and prettier formatting for ci
+  - address CodeRabbit review findings
+  - prevent ECONNREFUSED crash during CRDT shutdown
+  - add missing getPickupCooldownMs method for auto-mode creation cooldown
+  - resolve 7 bugs — HITL fixes, CRDT flaky test, stale resume trap, false auto-verify
+  - broadcast chat:user-input-request event to reach WebSocket clients (#2125)
+  - test cooldown awareness and prettier formatting for ci
+  - address CodeRabbit review findings
+  - prevent ECONNREFUSED crash during CRDT shutdown
+  - add missing getPickupCooldownMs method for auto-mode creation cooldown
+  - resolve 7 bugs — HITL fixes, CRDT flaky test, stale resume trap, false auto-verify
+  - broadcast chat:user-input-request event to reach WebSocket clients (#2125)
+  - copy .md assets to dist/ during server build to prevent staging crash
+  - copy .md assets to dist/ during server build to prevent staging crash
+  - make worktree fallback fatal instead of silent
+  - make worktree fallback fatal instead of silent
+  - prevent WorkIntakeService from creating duplicate features
+  - align timeline test with implementation — Trophy icon, Milestone label
+  - prevent WorkIntakeService from creating duplicate features
+  - align timeline test with implementation — Trophy icon, Milestone label
+  - add auth headers to chat transports and wire codex models endpoint
+  - add auth headers to chat transports and wire codex models endpoint
+  - render Ava Channel messages with markdown for clickable links
+  - render Ava Channel messages with markdown for clickable links
+  - update reactive-spawner test to match current log format
+  - update reactive-spawner test to match current log format
+  - remove foreign-feature check from Lead Engineer IntakeProcessor
+  - scope CRDT feature sync by project name to prevent cross-project contamination
+  - remove foreign-feature check from Lead Engineer IntakeProcessor
+  - scope CRDT feature sync by project name to prevent cross-project contamination
+  - update classifier tests for PeerAvaMessageRule and scope audit to production deps
+  - update classifier tests for PeerAvaMessageRule and scope audit to production deps
+  - reduce Discord #dev noise — suppress per-feature and duplicate milestone notifications
+  - reduce Discord #dev noise — suppress per-feature and duplicate milestone notifications
+  - project features tab — fix Zod Symbol key validation and add expandable detail rows
+  - project features tab — fix Zod Symbol key validation and add expandable detail rows
+  - gate CodeBlock syntax highlighting behind isStreaming + project cleanup
+  - gate CodeBlock syntax highlighting behind isStreaming + project cleanup
+  - add auth headers to chat transports and wire codex models endpoint
+  - suppress async WebSocket error during CRDT store shutdown
+  - exclude epics from work-stealing and fleet scheduling (#2031)
+  - add role=tab to chat overlay tab buttons for a11y (#2028)
+  - suppress async WebSocket error during CRDT store shutdown
+  - exclude epics from work-stealing and fleet scheduling (#2031)
+  - add registry sync to resolve CRDTStore split-brain across instances
+  - replace deprecated docSync() with doc() across entire codebase
+  - restore date field on AvaChannelDocument and Array.isArray guard
+  - add role=tab to chat overlay tab buttons for a11y (#2028)
+  - add registry sync to resolve CRDTStore split-brain across instances
+  - replace deprecated docSync() with doc() across entire codebase
+  - use millisecond arithmetic for stale validation tests
+  - use millisecond arithmetic for stale validation tests
+  - use millisecond arithmetic for stale validation tests
+  - filter stub directories in listProjectPlans
+  - filter stub directories in listProjectPlans
+  - filter stub directories in listProjectPlans
+  - restore Calendar and Todos CRDT document definitions dropped by PR #1995
+  - restore date field on AvaChannelDocument and Array.isArray guard
+  - restore Calendar and Todos CRDT document definitions dropped by PR #1995
+  - register hivemind routes and update mesh docs
+  - pass crdtSyncService to detailed health handler
+  - pass crdtSyncService to detailed health handler
+  - update AvaChannelService test constructor calls to match new signature (#1989)
+  - update AvaChannelService test constructor calls to match new signature (#1989)
+  - remove dead AvaChatMessage import from crdt-sync-service
+  - remove merge conflict markers from 17 archived feature.json files
+  - remove dead AvaChatMessage import from crdt-sync-service
+  - remap remote projectPath to local repoRoot in CRDT sync receiver
+  - remap remote projectPath to local repoRoot in CRDT sync receiver
+  - remap remote projectPath to local repoRoot in CRDT sync receiver
+  - remove merge conflict markers from 17 archived feature.json files
+  - remap remote projectPath to local repoRoot in CRDT sync receiver
+  - remap remote projectPath to local repoRoot in CRDT sync receiver
+  - add WorkStealingService to ServiceContainer interface
+  - align report UI types and test mocks with broadcast() migration
+  - backport CRDT mesh event sync from staging
+  - align Studio Mesh config key and fix report UI type mismatch
+  - add WorkStealingService to ServiceContainer interface
+  - align report UI types and test mocks with broadcast() migration
+  - wire CRDT mesh event sync for cross-instance feature propagation
+  - backport CRDT mesh event sync from staging
+  - wire CRDT mesh event sync for cross-instance feature propagation
+  - align Studio Mesh config key and fix report UI type mismatch
+  - align changelog-artifact test assertions with service implementation
+  - remove stale settingsService arg from completion-detector tests
+  - align changelog-artifact test assertions with service implementation
+  - remove stale settingsService arg from completion-detector tests
+  - changelog-artifact tests match staging API
+  - use poll-based assertions for async cascade tests
+  - ci failures for formatting and test stability
+  - use poll-based assertions for async cascade tests
+  - ci failures for formatting and test stability
+  - increase completion-detector test timeouts for CI stability
+
+  ### Refactors
+  - move version bump to staging branch (eliminate sync-back conflicts)
+  - move version bump to staging branch (eliminate sync-back conflicts)
+  - Unit tests for CalendarService and JobExecutorService (#2226)
+  - Rewrite calendar-assistant skill for SDK-native patterns (#2224)
+  - Google Calendar cancelled event cleanup and periodic sync (#2223)
+  - Ceremony-to-calendar integration (#2222)
+  - WebSocket broadcast for calendar mutations and job lifecycle (#2221)
+  - Wire emitReminder() into JobExecutorService (#2219)
+  - Bug: Agents skip prettier formatting before commit (#2218)
+  - Server URL override in auth layer + app store (#2217)
+  - Fix shell injection in run-command job actions (#2216)
+  - Fix CRDT project scoping for calendar documents (#2215)
+  - Improve: chunk ID uniqueness and input validation in knowledge store (#2214)
+  - Fix MCP enum mismatch and ID prefix inconsistency (#2212)
+  - Fix: preFlightChecks missing from settings merge logic (#2208)
+  - LE Knowledge Indexing (#2207)
+  - Unit tests for CalendarService and JobExecutorService (#2226)
+  - Rewrite calendar-assistant skill for SDK-native patterns (#2224)
+  - Google Calendar cancelled event cleanup and periodic sync (#2223)
+  - Ceremony-to-calendar integration (#2222)
+  - WebSocket broadcast for calendar mutations and job lifecycle (#2221)
+  - Wire emitReminder() into JobExecutorService (#2219)
+  - Bug: Agents skip prettier formatting before commit (#2218)
+  - Server URL override in auth layer + app store (#2217)
+  - Fix shell injection in run-command job actions (#2216)
+  - Fix CRDT project scoping for calendar documents (#2215)
+  - Improve: chunk ID uniqueness and input validation in knowledge store (#2214)
+  - Fix MCP enum mismatch and ID prefix inconsistency (#2212)
+  - Fix: preFlightChecks missing from settings merge logic (#2208)
+  - LE Knowledge Indexing (#2207)
+  - System Improvement: recurring merge_conflict failures (#2204)
+  - System Improvement: recurring merge_conflict failures (#2204)
+  - Ava World State Builder (#2201)
+  - Replace DynamicAgentExecutor with SDK query() (#2200)
+  - Change dev server default port to avoid collision with Docker container (#2197)
+  - Three-Layer World State Types (#2193)
+  - Simplify escalation to project-level (#2192)
+  - Auto-rebuild headless server on dev branch changes (#2191)
+  - Bug: Multiple agents writing to main repo despite worktree isolation (P1 (#2190)
+  - Add auto-failover timer to ProjectAssignmentService (#2184)
+  - Ava World State Builder (#2201)
+  - Replace DynamicAgentExecutor with SDK query() (#2200)
+  - Change dev server default port to avoid collision with Docker container (#2197)
+  - Three-Layer World State Types (#2193)
+  - Simplify escalation to project-level (#2192)
+  - Auto-rebuild headless server on dev branch changes (#2191)
+  - Bug: Multiple agents writing to main repo despite worktree isolation (P1 (#2190)
+  - Add auto-failover timer to ProjectAssignmentService (#2184)
+  - Update feature selection to be project-scoped (#2182)
+  - Remove FleetSchedulerService and work-stealing (#2181)
+  - restrict Ava/headsdown to monitor-only — no code editing
+  - Update feature selection to be project-scoped (#2182)
+  - Remove FleetSchedulerService and work-stealing (#2181)
+  - restrict Ava/headsdown to monitor-only — no code editing
+  - Polish server URL section in Developer Settings (#2174)
+  - Convert bottom-panel ticker to hover popover with network stats (#2171)
+  - Add error budget auto-freeze to AutoModeService (#2169)
+  - Remove PeersPanel and All/Mine tabs from board view (#2168)
+  - Polish server URL section in Developer Settings (#2174)
+  - Convert bottom-panel ticker to hover popover with network stats (#2171)
+  - Add error budget auto-freeze to AutoModeService (#2169)
+  - Remove PeersPanel and All/Mine tabs from board view (#2168)
+  - Server URL override in auth layer + app store (#2157)
+  - Aggregate milestone-level facts on milestone completion (#2155)
+  - Server URL override in auth layer + app store (#2157)
+  - Aggregate milestone-level facts on milestone completion (#2155)
+  - Add agentic metrics to collection service (#2149)
+  - Add PR size check to git-workflow-service (#2148)
+  - Clean up dead events and EventType gaps (#2147)
+  - Add review queue depth tracking and auto-pause rule (#2146)
+  - Add agentic metrics to collection service (#2149)
+  - Add PR size check to git-workflow-service (#2148)
+  - Clean up dead events and EventType gaps (#2147)
+  - Add review queue depth tracking and auto-pause rule (#2146)
+  - Remove @ts-nocheck from board view files (#2144)
+  - Remove research flow stubs and clean up console.log (#2141)
+  - Consolidate formatDuration, formatTimestamp, and formatElapsed (#2139)
+  - Add pre-flight checklist to ExecuteProcessor (#2137)
+  - Deduplicate antagonistic review interfaces and inline logic (#2136)
+  - Extract shared git exec environment and extractTitleFromDescription (#2135)
+  - Remove dead feature creation path and unused types (#2134)
+  - Add post-merge verification step to DeployProcessor (#2132)
+  - Wire ceremony retro outputs to board and rules engine (#2131)
+  - Remove dead PRDService and LangGraph planning flow (#2130)
+  - Remove @ts-nocheck from board view files (#2144)
+  - Remove research flow stubs and clean up console.log (#2141)
+  - Consolidate formatDuration, formatTimestamp, and formatElapsed (#2139)
+  - Add pre-flight checklist to ExecuteProcessor (#2137)
+  - Deduplicate antagonistic review interfaces and inline logic (#2136)
+  - Extract shared git exec environment and extractTitleFromDescription (#2135)
+  - Remove dead feature creation path and unused types (#2134)
+  - Add post-merge verification step to DeployProcessor (#2132)
+  - Wire ceremony retro outputs to board and rules engine (#2131)
+  - Remove dead PRDService and LangGraph planning flow (#2130)
+  - route failure bugs to in-app board instead of GitHub Issues
+  - route failure bugs to in-app board instead of GitHub Issues
+  - Server URL override in auth layer + app store (#2122)
+  - Server URL override in auth layer + app store (#2122)
+  - Hivemind instance auto-discovery in server picker (#2118)
+  - Instance name indicator + quick toggle in bottom panel
+  - Server Connection section in Developer Settings (#2116)
+  - Instance name indicator + quick toggle in bottom panel
+  - Hivemind instance auto-discovery in server picker (#2118)
+  - Instance name indicator + quick toggle in bottom panel
+  - Server Connection section in Developer Settings (#2116)
+  - Timeline UI in project detail (#2109)
+  - Server URL override in auth layer + app store (#2108)
+  - PM model upgrade to Sonnet (#2104)
+  - Bug: Lead Engineer REVIEW loop on done features (#2103)
+  - Timeline UI in project detail (#2109)
+  - Server URL override in auth layer + app store (#2108)
+  - PM model upgrade to Sonnet (#2104)
+  - Bug: Lead Engineer REVIEW loop on done features (#2103)
+  - ask_user Inline Form Tool — Server Side (#2096)
+  - Auto-Expand Tool Result Cards on Completion (#2095)
+  - ask_user Inline Form Tool — Server Side (#2096)
+  - Auto-Expand Tool Result Cards on Completion (#2095)
+  - replace feature CRDT sync with pull-based work intake model
+  - replace feature CRDT sync with pull-based work intake model
+  - Update docs after: Ava Anywhere Chat Overlay Polish (#2081)
+  - Update docs after: Ava Anywhere Chat Overlay Polish (#2081)
+  - CodeRabbit config (#2077)
+  - GitHub Actions: security audit workflow (#2076)
+  - GitHub Actions: lint + format check workflow (#2074)
+  - Update docs after: Chat Render Pipeline — Rich Tool Result Cards (#2072)
+  - Wire ReactiveSpawnerService into Service Container (#2073)
+  - CodeRabbit config (#2077)
+  - GitHub Actions: security audit workflow (#2076)
+  - GitHub Actions: lint + format check workflow (#2074)
+  - Update docs after: Chat Render Pipeline — Rich Tool Result Cards (#2072)
+  - Wire ReactiveSpawnerService into Service Container (#2073)
+  - Update docs after: Ava Anywhere Chat Overlay Polish (#2069)
+  - Update docs after: Ava Anywhere Chat Overlay Polish (#2069)
+  - Regenerate Button and Branch Navigator (#2061)
+  - Regenerate Button and Branch Navigator (#2061)
+  - Update docs after: Idea-to-Outcome Pipeline Hardening (#2054)
+  - Update docs after: Reactive Nervous System (#2052)
+  - System Improvement: recurring unknown failures (#2034)
+  - Rewrite ava-prompt.md with Complete Tool Coverage and Domain Knowledge (#2033)
+  - Update docs after: Idea-to-Outcome Pipeline Hardening (#2054)
+  - Update docs after: Reactive Nervous System (#2052)
+  - System Improvement: recurring unknown failures (#2034)
+  - Rewrite ava-prompt.md with Complete Tool Coverage and Domain Knowledge (#2033)
+  - Reactor Module + ServiceContainer Integration (#2018)
+  - Reactor Module + ServiceContainer Integration (#2018)
+  - Ava Channel CRDT Document and Service (rebased on dev) (#1995)
+  - Ava Channel Tab in Ava Anywhere (#1996)
+  - Ava Channel CRDT Document and Service (rebased on dev) (#1995)
+  - Ava Channel Tab in Ava Anywhere (#1996)
+  - Wire AvaChannelService into service container and startup (#1988)
+  - Wire AvaChannelService into service container and startup (#1988)
+  - harden SetupLab gap analysis to two-tier severity
+  - consolidate project flows + rename update-plugin
+  - compact briefing digest to minimize token usage
+  - Instance Capacity Advertising (#1974)
+  - harden SetupLab gap analysis to two-tier severity
+  - consolidate project flows + rename update-plugin
+  - compact briefing digest to minimize token usage
+  - Instance Capacity Advertising (#1974)
+  - Shared Settings Sync (#1970)
+  - Shared Settings Sync (#1970)
+  - EventBus CRDT Bridge (#1962)
+  - Changelog persistence + escalation artifact recording (#1955)
+  - proto.config Loader (#1954)
+  - Add promotion-check-staging.yml CI workflow (#1947)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.43.0
+  - @protolabsai/utils@0.43.0
+
 ## 0.42.1
 
 ### Patch Changes
