@@ -69,16 +69,6 @@ function buildSummary(toolName: string, input: unknown): string {
     }
     case 'promote_to_staging':
       return 'Promote dev to staging';
-    case 'execute_dynamic_agent': {
-      const agentRole = args.role as string | undefined;
-      const agentPrompt = args.prompt as string | undefined;
-      const snippet = agentPrompt
-        ? `"${agentPrompt.slice(0, 60)}${agentPrompt.length > 60 ? '...' : ''}"`
-        : '';
-      return agentRole
-        ? `Execute ${agentRole} agent${snippet ? `: ${snippet}` : ''}`
-        : 'Execute agent';
-    }
     default:
       return formatToolName(toolName);
   }

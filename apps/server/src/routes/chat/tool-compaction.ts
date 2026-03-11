@@ -71,28 +71,6 @@ function truncateTextField(result: unknown, field: string): unknown {
   return result;
 }
 
-function compactListAgentTemplates(result: unknown): unknown {
-  if (!Array.isArray(result)) return result;
-  return result.map((t: Record<string, unknown>) => ({
-    id: t['id'],
-    name: t['name'],
-    role: t['role'],
-  }));
-}
-
-function compactExecuteDynamicAgent(result: unknown): unknown {
-  if (result && typeof result === 'object' && !Array.isArray(result)) {
-    const r = result as Record<string, unknown>;
-    const output = typeof r['output'] === 'string' ? r['output'] : '';
-    const truncated =
-      output.length > AGENT_OUTPUT_MAX_CHARS * 2
-        ? output.slice(-AGENT_OUTPUT_MAX_CHARS * 2)
-        : output;
-    return { ...r, output: truncated };
-  }
-  return result;
-}
-
 function compactListRunningAgents(result: unknown): unknown {
   if (!Array.isArray(result)) return result;
   return result.map((a: Record<string, unknown>) => ({
@@ -230,12 +208,6 @@ export function compactToolResult(toolName: string, result: unknown): unknown {
       return compactBySize(result);
     case 'set_feature_dependencies':
       return result;
-
-    // agentTemplates
-    case 'list_agent_templates':
-      return compactListAgentTemplates(result);
-    case 'execute_dynamic_agent':
-      return compactExecuteDynamicAgent(result);
 
     // notes
     case 'list_note_tabs':

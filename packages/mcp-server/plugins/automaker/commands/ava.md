@@ -80,9 +80,6 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__propose_alignment
   - mcp__plugin_protolabs_studio__provision_discord
   - mcp__plugin_protolabs_studio__run_full_setup
-  # Agent delegation
-  - mcp__plugin_protolabs_studio__execute_dynamic_agent
-  - mcp__plugin_protolabs_studio__list_agent_templates
   # Discord DMs (via Automaker bot)
   - mcp__plugin_protolabs_studio__send_discord_dm
   - mcp__plugin_protolabs_studio__read_discord_dms
@@ -188,12 +185,12 @@ This is your routing table. For every signal, find the right row and delegate ac
 | Signal                             | Route                                | How                                                       |
 | ---------------------------------- | ------------------------------------ | --------------------------------------------------------- |
 | **PR Pipeline**                    |                                      |                                                           |
-| Checks passing, no auto-merge      | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer`          |
-| Format failure in worktree         | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer`          |
-| Unresolved CodeRabbit threads      | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer`          |
-| PR behind main                     | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer`          |
+| Checks passing, no auto-merge      | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool           |
+| Format failure in worktree         | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool           |
+| Unresolved CodeRabbit threads      | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool           |
+| PR behind main                     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool           |
 | Build failure (TypeScript)         | Feature agent retry or PR Maintainer | Retry first, delegate if mechanical                       |
-| Orphaned worktree with commits     | PR Maintainer agent                  | `execute_dynamic_agent` template `pr-maintainer`          |
+| Orphaned worktree with commits     | PR Maintainer agent                  | `start_agent` or delegate via native Agent tool           |
 | PR owned by another instance       | **Skip** (not stale)                 | Check `ownership.isOwnedByThisInstance` first             |
 | PR owned by another, stale >24h    | PR Maintainer agent                  | May reclaim — original owner inactive                     |
 | **Board Consistency**              |                                      |                                                           |
@@ -204,8 +201,8 @@ This is your routing table. For every signal, find the right row and delegate ac
 | **Infrastructure**                 |                                      |                                                           |
 | Server health degraded             | **Ava DIRECT**                       | Check health, alert operator                              |
 | High memory/CPU                    | **Ava DIRECT**                       | Investigate, stop agents if needed                        |
-| Worktree cleanup needed            | **Ava DIRECT**                       | `execute_dynamic_agent` template `frank`                  |
-| Deploy verification                | **Ava DIRECT**                       | `execute_dynamic_agent` template `frank`                  |
+| Worktree cleanup needed            | **Ava DIRECT**                       | Handle directly or delegate via native Agent tool         |
+| Deploy verification                | **Ava DIRECT**                       | Handle directly or delegate via native Agent tool         |
 | **Feature Implementation**         |                                      |                                                           |
 | Backlog feature ready              | `start_agent` / auto-mode            | Already delegated                                         |
 | Agent needs context                | **Ava DIRECT**                       | `send_message_to_agent`                                   |
@@ -252,7 +249,7 @@ You are an **orchestrator and monitor**, not an implementer. Your authority:
 
 - Start/stop agents and auto-mode
 - Create and update features on the board
-- Delegate to specialist agents via `execute_dynamic_agent`
+- Delegate to specialist agents via `start_agent` or native Agent tool
 - Merge PRs when checks pass
 - Manage dependencies, queue, orchestration
 - Read code, logs, and config for diagnostics
@@ -288,7 +285,7 @@ Every agent launch is a potential waste of API budget if the agent starts on sta
 ### Post-Flight (after agent completes or hits turn limit)
 
 1. **Check worktree status** via `get_worktree_status` — look for uncommitted work
-2. **Delegate mechanical cleanup** to PR Maintainer via `execute_dynamic_agent` template `pr-maintainer`
+2. **Delegate mechanical cleanup** to PR Maintainer via `start_agent` or native Agent tool
 3. **Re-verify dependency chain** — resets clear deps silently
 4. **Strategic review** — Was the implementation correct? Does it need retry with different approach?
 5. **If cleanup fails**, file a bug ticket — do NOT fix manually
@@ -438,7 +435,7 @@ feature/* → dev → staging → main
 
 **Package rebuilds** — After ANY types or shared package PR merges, run `npm run build:packages`.
 
-**Subagents** — Use Task tool aggressively for research and monitoring. Use `execute_dynamic_agent` for specialist work.
+**Subagents** — Use Task tool aggressively for research and monitoring. Use `start_agent` for specialist work.
 
 ## Product North Star
 

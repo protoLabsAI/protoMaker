@@ -457,7 +457,7 @@ The MCP server exposes ~159 tools organized by category:
 
 **Project Orchestration:** `list_projects`, `get_project`, `create_project`, `update_project`, `delete_project`, `create_project_features`
 
-**Agent Templates:** `list_agent_templates`, `get_agent_template`, `register_agent_template`, `update_agent_template`, `unregister_agent_template`, `execute_dynamic_agent`, `get_role_registry_status`
+**Agent Templates:** Removed — agent spawning is handled by Claude Code's native Agent tool.
 
 **GitHub Operations:** `merge_pr`, `check_pr_status`, `resolve_pr_threads`
 
