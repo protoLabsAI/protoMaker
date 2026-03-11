@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T07:30:26.241Z",
+  "updatedAt": "2026-03-11T07:42:56.195Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -249,6 +249,27 @@
       },
       "changeFailRate": {
         "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:42:56.184Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 3,
+        "mergesPerWeek": 3,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773210730351-n9791j6ru",
+        "featureTitle": "Bug: Worktree symlinks resolve @protolabsai packages to main repo dist",
+        "featureCreatedAt": "2026-03-11T06:32:10.351Z",
+        "prMergedAt": "2026-03-11T07:42:56.184Z",
+        "leadTimeMs": 4245833
+      },
+      "changeFailRate": {
+        "totalMerges": 3,
         "totalFailures": 0,
         "ratio": 0
       },
