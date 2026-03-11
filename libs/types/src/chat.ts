@@ -55,3 +55,14 @@ export interface SlashCommand {
  * Omits the `body` field to keep API payloads small.
  */
 export type SlashCommandSummary = Omit<SlashCommand, 'body'>;
+
+/** Lifecycle status of a subagent spawned via the Agent tool */
+export type SubagentStatus = 'spawning' | 'running' | 'done' | 'failed';
+
+/** Progress data emitted as a data-subagent chunk in the chat stream */
+export interface SubagentProgress {
+  subagentType: string;
+  status: SubagentStatus;
+  description: string;
+  resultSummary: string | null;
+}

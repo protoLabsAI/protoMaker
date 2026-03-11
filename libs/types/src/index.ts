@@ -976,6 +976,9 @@ export type {
   HealingBudget,
 } from './reactive-spawner.js';
 
+// Chat stream part types (SubagentProgress, SubagentStatus)
+export type { SubagentProgress, SubagentStatus } from './chat.js';
+
 // PenFile types (vector graphics format v2.8)
 export type {
   PenColor,
