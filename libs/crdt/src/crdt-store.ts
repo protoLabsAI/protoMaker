@@ -313,7 +313,7 @@ export class CRDTStore extends EventEmitter {
     for (const adapter of this.networkAdapters) {
       try {
         // Suppress error events that fire asynchronously from ws.close()
-        const ws = (adapter as Record<string, unknown>).socket as
+        const ws = (adapter as unknown as Record<string, unknown>).socket as
           | { removeAllListeners?: (e: string) => void }
           | undefined;
         ws?.removeAllListeners?.('error');
