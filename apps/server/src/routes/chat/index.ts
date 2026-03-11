@@ -53,10 +53,28 @@ import type { ToolApprovalResponse } from '../../lib/agent-trust.js';
 import type { ServiceContainer } from '../../server/services.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { EventType } from '@protolabsai/types';
+import { parseSlashCommand, expandCommandBody } from '../../services/command-expansion-service.js';
 
 export type { AvaConfig };
 
 const logger = createLogger('ChatRoutes');
+
+// ── Slash command helpers ─────────────────────────────────────────────────────
+
+/**
+ * Extract the plain text content from a UIMessage.
+ * Handles both the parts-based format (AI SDK v4+) and legacy content string.
+ */
+function extractMessageText(message: UIMessage): string {
+  if (Array.isArray(message.parts)) {
+    return message.parts
+      .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+  }
+  const content = (message as unknown as Record<string, unknown>)['content'];
+  return typeof content === 'string' ? content : '';
+}
 
 /**
  * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
@@ -409,6 +427,60 @@ export function createChatRoutes(services: ServiceContainer): Router {
         : {};
       const tools = applyToolCompaction(rawTools) as typeof rawTools;
 
+      // ── Slash command expansion ─────────────────────────────────────────────
+      // If the last user message starts with a slash command, intercept it:
+      //   1. Look up the command body from CommandRegistryService
+      //   2. Expand placeholders ($ARGUMENTS, $1/$2, @file, `!cmd`)
+      //   3. Prepend the expanded body to the system prompt for this turn
+      //   4. Restrict tools to the command's allowed-tools (if specified)
+      // Unknown slash commands pass through as normal messages (no-op).
+
+      let commandSystemPrefix: string | undefined;
+      // Start with the full tool set; may be narrowed by command frontmatter
+      let activeTools: typeof tools = tools;
+
+      const lastUserMessage = [...rawMessages].reverse().find((m) => m.role === 'user');
+      if (lastUserMessage) {
+        const lastText = extractMessageText(lastUserMessage);
+        const parsed = parseSlashCommand(lastText);
+
+        if (parsed) {
+          const command = services.commandRegistryService?.get(parsed.name);
+
+          if (command?.body) {
+            try {
+              commandSystemPrefix = await expandCommandBody(command.body, {
+                argumentString: parsed.argumentString,
+                positionalArgs: parsed.positionalArgs,
+                projectPath: projectPath,
+              });
+              logger.info(
+                `Slash command /${parsed.name} expanded (${commandSystemPrefix.length} chars)`
+              );
+            } catch (err) {
+              logger.warn(`Command expansion failed for /${parsed.name}:`, err);
+            }
+
+            // Apply tool restrictions from command frontmatter
+            if (command.allowedTools && command.allowedTools.length > 0) {
+              const allowedSet = new Set(command.allowedTools);
+              activeTools = Object.fromEntries(
+                Object.entries(tools).filter(([name]) => allowedSet.has(name))
+              ) as typeof tools;
+              logger.info(
+                `Tool set restricted to [${[...allowedSet].join(', ')}] for /${parsed.name}`
+              );
+            }
+          }
+          // If command not found or has no body, pass through as a normal message
+        }
+      }
+
+      // Prepend the expanded command body to the system prompt for this turn
+      const finalSystemPrompt = commandSystemPrefix
+        ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
+        : systemPrompt;
+
       // Enable extended thinking for models that support it (opus / sonnet).
       // The thinking budget caps how many tokens the model may use for internal
       // reasoning before producing its visible response.
@@ -452,8 +524,8 @@ export function createChatRoutes(services: ServiceContainer): Router {
       const result = streamText({
         model: aiModel,
         messages,
-        system: systemPrompt,
-        tools,
+        system: finalSystemPrompt,
+        tools: activeTools,
         stopWhen: stepCountIs(10),
         providerOptions: {
           anthropic: {
