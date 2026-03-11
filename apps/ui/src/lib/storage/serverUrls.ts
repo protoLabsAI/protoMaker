@@ -13,7 +13,7 @@ export function getRecentServerUrls(): string[] {
 export function addRecentServerUrl(url: string): void {
   try {
     const existing = getRecentServerUrls();
-    const deduped = [url, ...existing.filter(u => u !== url)].slice(0, MAX_RECENT);
+    const deduped = [url, ...existing.filter((u) => u !== url)].slice(0, MAX_RECENT);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(deduped));
   } catch {
     // Gracefully handle localStorage quota exceeded
