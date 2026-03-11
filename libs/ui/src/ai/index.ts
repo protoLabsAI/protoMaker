@@ -76,6 +76,13 @@ export {
 
 export { ShimmerLoader, type ShimmerLoaderProps } from './shimmer.js';
 
+export {
+  SubagentBlock,
+  SubagentBlockRenderer,
+  type SubagentBlockProps,
+  type SubagentStatus,
+} from './subagent-block.js';
+
 export { BoardSummaryCard } from './tool-results/board-summary-card.js';
 export { FeatureListCard } from './tool-results/feature-list-card.js';
 export { FeatureDetailCard } from './tool-results/feature-detail-card.js';
