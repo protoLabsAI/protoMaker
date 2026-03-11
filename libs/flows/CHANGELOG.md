@@ -1,5 +1,60 @@
 # @protolabsai/flows
 
+## 0.44.0
+
+### Minor Changes
+
+- ### Features
+  - redesign Ava chat footer + add thinking effort toggle
+  - wire SlashCommandDropdown into ChatInput with command mode visual indicator (#2268)
+  - add SubagentBlock component for subagent visibility in chat (#2256)
+  - redesign Ava chat footer + add thinking effort toggle
+  - redesign Ava chat footer + add thinking effort toggle
+  - wire SlashCommandDropdown into ChatInput with command mode visual indicator (#2268)
+  - wire SlashCommandDropdown into ChatInput with command mode visual indicator (#2268)
+  - add SubagentBlock component for subagent visibility in chat (#2256)
+  - add SubagentBlock component for subagent visibility in chat (#2256)
+
+  ### Bug Fixes
+  - resolve TypeScript DTS build error in CRDT store
+  - prevent CRDT store crash on headless server shutdown
+  - resolve TypeScript DTS build error in CRDT store
+  - prevent CRDT store crash on headless server shutdown
+  - resolve TypeScript DTS build error in CRDT store
+  - respect user scroll position when streaming ends
+  - pm chat opens to correct project instead of first in list
+  - close slash command dropdown after selection
+  - restore vite proxy target to localhost:3008
+  - prevent CRDT store crash on headless server shutdown
+  - respect user scroll position when streaming ends
+  - pm chat opens to correct project instead of first in list
+  - respect user scroll position when streaming ends
+  - pm chat opens to correct project instead of first in list
+  - close slash command dropdown after selection
+  - close slash command dropdown after selection
+  - restore vite proxy target to localhost:3008
+  - restore vite proxy target to localhost:3008
+
+  ### Refactors
+  - System Improvement: recurring merge_conflict failures (#2262)
+  - Command Discovery API Endpoint (#2254)
+  - Bug: Project create route bypasses CRDT, causes getProject to return nul (#2250)
+  - System Improvement: recurring merge_conflict failures (#2262)
+  - System Improvement: recurring merge_conflict failures (#2262)
+  - Command Discovery API Endpoint (#2254)
+  - Bug: Project create route bypasses CRDT, causes getProject to return nul (#2250)
+  - Command Discovery API Endpoint (#2254)
+  - Bug: Project create route bypasses CRDT, causes getProject to return nul (#2250)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.44.0
+  - @protolabsai/utils@0.44.0
+  - @protolabsai/prompts@0.44.0
+  - @protolabsai/model-resolver@0.44.0
+  - @protolabsai/observability@0.44.0
+
 ## 0.43.0
 
 ### Minor Changes
