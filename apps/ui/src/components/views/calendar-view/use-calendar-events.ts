@@ -4,11 +4,17 @@
  * Fetches calendar events for a given month/year from the backend API.
  * Provides mutation functions for creating, updating, and deleting events.
  * Uses the apiFetch pattern consistent with the rest of the codebase.
+ *
+ * Also subscribes to WebSocket events (calendar:event:created/updated/deleted,
+ * job:started/job:completed/job:failed) and triggers a refetch when events
+ * arrive for the currently-active project path.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiPost } from '@/lib/api-fetch';
+import { getHttpApiClient } from '@/lib/http-api-client';
 import type { CalendarEvent, CalendarEventType, JobAction } from '@protolabsai/types';
+import type { EventType } from '@protolabsai/types';
 
 interface CalendarListResponse {
   success: boolean;
@@ -92,9 +98,21 @@ function getMonthDateRange(month: number, year: number): { startDate: string; en
   return { startDate, endDate };
 }
 
+/** WebSocket event types that should trigger a calendar refetch */
+const CALENDAR_WS_EVENT_TYPES: EventType[] = [
+  'calendar:event:created',
+  'calendar:event:updated',
+  'calendar:event:deleted',
+  'job:started',
+  'job:completed',
+  'job:failed',
+];
+
 /**
  * Fetch calendar events for a given month from the backend.
  * Provides CRUD mutation functions that automatically refetch after success.
+ * Subscribes to WebSocket calendar/job events to keep the view in sync
+ * when changes originate from other clients or server-side processes.
  */
 export function useCalendarEvents({
   projectPath,
@@ -152,6 +170,28 @@ export function useCalendarEvents({
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // Subscribe to WebSocket calendar and job events to refetch when the server
+  // signals a state change for the currently-active project.
+  useEffect(() => {
+    if (!projectPath) return;
+
+    const api = getHttpApiClient();
+
+    const unsubscribe = api.subscribeToEvents((type: EventType, payload: unknown) => {
+      if (!CALENDAR_WS_EVENT_TYPES.includes(type)) return;
+
+      // Only refetch if the event belongs to the current project
+      const p = payload as Record<string, unknown> | null;
+      if (p && p['projectPath'] && p['projectPath'] !== projectPath) return;
+
+      void fetchEvents();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [projectPath, fetchEvents]);
 
   const createEvent = useCallback(
     async (input: CreateEventInput): Promise<CalendarEvent | null> => {

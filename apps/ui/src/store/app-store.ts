@@ -338,7 +338,9 @@ export interface AppActions {
 
   // Server URL runtime override actions
   setServerUrlOverride: (url: string | null) => void;
+  clearServerUrlOverride: () => void; // Clears the server URL override (alias for setServerUrlOverride(null))
   addRecentServerUrl: (url: string) => void; // Adds to recentServerUrls (max 10, deduplicated)
+  removeRecentServerUrl: (url: string) => void; // Removes a URL from recentServerUrls
 
   // Server connection actions
   connectToServer: (url: string) => Promise<void>;
@@ -1360,8 +1362,22 @@ export const useAppStore = create<AppState & AppActions>()((set, get) => ({
     invalidateHttpClient();
   },
 
+  clearServerUrlOverride: () => {
+    get().setServerUrlOverride(null);
+  },
+
   addRecentServerUrl: (url) => {
     const recentServerUrls = [url, ...get().recentServerUrls.filter((u) => u !== url)].slice(0, 10);
+    try {
+      localStorage.setItem('automaker:recentServerUrls', JSON.stringify(recentServerUrls));
+    } catch {
+      // localStorage might be disabled
+    }
+    set({ recentServerUrls });
+  },
+
+  removeRecentServerUrl: (url) => {
+    const recentServerUrls = get().recentServerUrls.filter((u) => u !== url);
     try {
       localStorage.setItem('automaker:recentServerUrls', JSON.stringify(recentServerUrls));
     } catch {

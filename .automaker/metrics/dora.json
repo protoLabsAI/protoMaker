@@ -1,0 +1,195 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-11T01:32:07.882Z",
+  "entries": [
+    {
+      "timestamp": "2026-03-10T23:27:16.307Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-10"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773184531845-k1iqe3fc8",
+        "featureTitle": "Fix: preFlightChecks missing from settings merge logic",
+        "featureCreatedAt": "2026-03-10T23:15:31.845Z",
+        "prMergedAt": "2026-03-10T23:27:16.307Z",
+        "leadTimeMs": 704462
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-10T23:45:59.607Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-10"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889372-f7cuqoda4",
+        "featureTitle": "Fix MCP enum mismatch and ID prefix inconsistency",
+        "featureCreatedAt": "2026-03-10T22:48:09.372Z",
+        "prMergedAt": "2026-03-10T23:45:59.607Z",
+        "leadTimeMs": 3470235
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-10T23:48:39.192Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-10"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773170748190-au64ffsgq",
+        "featureTitle": "PM Knowledge Indexing & Cross-Layer Queries",
+        "featureCreatedAt": "2026-03-10T19:25:48.192Z",
+        "prMergedAt": "2026-03-10T23:48:39.192Z",
+        "leadTimeMs": 15771000
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-10T23:48:40.156Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 2,
+        "mergesPerWeek": 2,
+        "dayBucket": "2026-03-10"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773184528261-6azg6wzgp",
+        "featureTitle": "Improve: chunk ID uniqueness and input validation in knowledge store",
+        "featureCreatedAt": "2026-03-10T23:15:28.261Z",
+        "prMergedAt": "2026-03-10T23:48:40.156Z",
+        "leadTimeMs": 1991895
+      },
+      "changeFailRate": {
+        "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T00:18:03.039Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889373-tk032c59v",
+        "featureTitle": "Fix shell injection in run-command job actions",
+        "featureCreatedAt": "2026-03-10T22:48:09.373Z",
+        "prMergedAt": "2026-03-11T00:18:03.039Z",
+        "leadTimeMs": 5393666
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T00:18:03.478Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 2,
+        "mergesPerWeek": 2,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773184807748-9zxaqipbf",
+        "featureTitle": "Server URL override in auth layer + app store",
+        "featureCreatedAt": "2026-03-10T23:20:07.748Z",
+        "prMergedAt": "2026-03-11T00:18:03.478Z",
+        "leadTimeMs": 3475730
+      },
+      "changeFailRate": {
+        "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T00:57:32.850Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889376-gbnwhlidl",
+        "featureTitle": "Wire emitReminder() into JobExecutorService",
+        "featureCreatedAt": "2026-03-10T22:48:09.376Z",
+        "prMergedAt": "2026-03-11T00:57:32.850Z",
+        "leadTimeMs": 7763474
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T01:16:11.783Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889379-bgtpd0n85",
+        "featureTitle": "Ceremony-to-calendar integration",
+        "featureCreatedAt": "2026-03-10T22:48:09.380Z",
+        "prMergedAt": "2026-03-11T01:16:11.783Z",
+        "leadTimeMs": 8882403
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T01:32:07.868Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889383-jrsoc1uc3",
+        "featureTitle": "Rewrite calendar-assistant skill for SDK-native patterns",
+        "featureCreatedAt": "2026-03-10T22:48:09.383Z",
+        "prMergedAt": "2026-03-11T01:32:07.868Z",
+        "leadTimeMs": 9838485
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    }
+  ]
+}

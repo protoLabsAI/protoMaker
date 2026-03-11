@@ -102,3 +102,9 @@ usageStats:
 - **Situation:** After adding @/ path alias to tsconfig, tests importing @/lib/foo failed at runtime despite TypeScript compiling cleanly.
 - **Root cause:** Vitest uses its own module resolver that doesn't read tsconfig.paths by default. Both must be configured independently.
 - **How to avoid:** When adding path aliases to tsconfig, immediately add matching entry to vitest.config.ts resolve.alias.
+
+
+#### [Pattern] Inline object stubs (not vi.mock) for interface-driven test coverage: Tests create inline implementations of BriefingWorldStateProvider, PMWorldStateBuilder, LeadEngineerWorldStateProvider to avoid mock complexity and preserve interface contract visibility. (2026-03-11)
+- **Problem solved:** Integration tests verify data flow through three layers with failure scenarios. Code is heavily interface-driven with multiple collaboration points.
+- **Why this works:** Inline stubs make interface contracts explicit in test code and provide fine-grained control over each layer's behavior independently. Mock libraries abstract away the contract.
+- **Trade-offs:** More test setup boilerplate but better visibility. Easier to debug stub behavior. Less 'magic' in test infrastructure.

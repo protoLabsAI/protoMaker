@@ -189,6 +189,11 @@ export const featureTools: Tool[] = [
           description:
             'Priority level: 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low. Pass null to clear.',
         },
+        epicId: {
+          type: ['string', 'null'],
+          description:
+            'ID of parent epic to group this feature under. Pass null to remove from epic.',
+        },
         isFoundation: {
           type: 'boolean',
           description:

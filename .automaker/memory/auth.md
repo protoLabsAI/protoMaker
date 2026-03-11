@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 53
-  referenced: 22
-  successfulFeatures: 22
+  loaded: 57
+  referenced: 24
+  successfulFeatures: 24
 ---
 <!-- domain: Authentication & Authorization | OAuth, token management, access control -->
 
@@ -82,3 +82,13 @@ usageStats:
 - **Rejected:** Backend persistence would require bootstrapping with a default server URL, creating initialization ordering issues
 - **Trade-offs:** Simpler, faster, works offline, but configuration doesn't sync across devices or persist after localStorage clear
 - **Breaking if changed:** Moving to backend storage requires solving initialization sequence (how to know server URL before connecting); removing localStorage loses offline capability
+
+#### [Pattern] Server URL discovery layered: localStorage override → Electron cached URL → environment var → default hardcoded URL. Fallback chain with increasing specificity. (2026-03-11)
+- **Problem solved:** Need to support: user runtime override, Electron preload injection, deployment env config, and fallback default.
+- **Why this works:** Each layer represents a different source of truth with different scope (user session > app launch > deployment > code). Layering respects precedence.
+- **Trade-offs:** Flexible layering vs. multiple places to debug; explicit fallback chain vs. implicit magic
+
+#### [Pattern] Server URL override is persisted to localStorage ('automaker:serverUrlOverride') in parallel with React state, making persistence explicit but requiring manual sync between storage and state. (2026-03-11)
+- **Problem solved:** Runtime server URL switching for development/hivemind testing
+- **Why this works:** localStorage persistence survives page reloads without server round-trip; React state provides immediate reactivity; dual sync avoids redundant reads on every render
+- **Trade-offs:** Gained: Survival across restarts without server cost. Lost: Must manage sync between two sources of truth; synchronous localStorage blocks if data is large

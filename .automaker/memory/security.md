@@ -5,7 +5,7 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 73
+  loaded: 77
   referenced: 21
   successfulFeatures: 21
 ---
@@ -104,3 +104,14 @@ usageStats:
 - **Problem solved:** CSRF attacks on OAuth redirect can trick users into authorizing attacker's client. State parameter prevents this.
 - **Why this works:** State parameter is OAuth 2.0 standard (RFC 6749). In-memory Map is simplest implementation for single instance. 10-minute window is long enough for OAuth flow but short enough to prevent state reuse.
 - **Trade-offs:** In-memory state is fast and simple but loses state across process restarts and doesn't scale to multiple servers.
+
+
+#### [Pattern] CORS policy controlled by runtime config flag 'hivemindEnabled'. When true, middleware sets Access-Control-Allow-Origin: *. When false, restrictive CORS (same-origin only). (2026-03-11)
+- **Problem solved:** Default: app runs single-origin. Hivemind mode: same app instance accessed from multiple origins (multi-client scenario).
+- **Why this works:** Standard single-origin CORS sufficient for normal use. Hivemind requires cross-origin access; feature gate prevents accidental exposure.
+- **Trade-offs:** Runtime flexibility + explicit feature gate vs. security gap risk if flag accidentally enabled without understanding implications
+
+#### [Pattern] CORS allowAllOrigins flag is conditional on hivemind.enabled, creating a dev-only CORS policy. Production never enables permissive CORS unless hivemind feature is active. (2026-03-11)
+- **Problem solved:** Balancing developer convenience in local testing with production security lockdown
+- **Why this works:** hivemind is explicit development feature; tying CORS to it ensures CORS exposure is never accidental in production. Fail-secure default.
+- **Trade-offs:** Gained: Impossible to accidentally expose permissive CORS in production. Lost: CORS availability is implicit in feature flag, adds discovery burden

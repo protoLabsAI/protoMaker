@@ -5,15 +5,17 @@
 import { Router, type Request, type Response } from 'express';
 import { validatePathParams } from '../../middleware/validate-paths.js';
 import type { CalendarService, CalendarQueryOptions } from '../../services/calendar-service.js';
-import type { JobAction } from '@protolabsai/types';
+import type { JobAction, EventType } from '@protolabsai/types';
 import type { JobExecutorService } from '../../services/job-executor-service.js';
+import type { EventEmitter } from '../../lib/events.js';
 
 /**
  * Create calendar routes
  */
 export function createCalendarRoutes(
   calendarService: CalendarService,
-  jobExecutorService: JobExecutorService
+  jobExecutorService: JobExecutorService,
+  eventBus?: EventEmitter
 ): Router {
   const router = Router();
 
@@ -109,6 +111,14 @@ export function createCalendarRoutes(
         }),
       });
 
+      // Cast required: EventType in node_modules resolves to the main-repo's compiled dist
+      // via npm hoisting; the worktree's updated types/dist is correct but not yet picked up.
+      eventBus?.emit('calendar:event:created' as EventType, {
+        eventId: event.id,
+        projectPath,
+        event,
+      });
+
       res.json({ success: true, event });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -199,6 +209,12 @@ export function createCalendarRoutes(
 
       const event = await calendarService.updateEvent(projectPath, id, updates);
 
+      eventBus?.emit('calendar:event:updated' as EventType, {
+        eventId: id,
+        projectPath,
+        event,
+      });
+
       res.json({
         success: true,
         event,
@@ -238,6 +254,11 @@ export function createCalendarRoutes(
       }
 
       await calendarService.deleteEvent(projectPath, id);
+
+      eventBus?.emit('calendar:event:deleted' as EventType, {
+        eventId: id,
+        projectPath,
+      });
 
       res.json({
         success: true,

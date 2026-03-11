@@ -7,6 +7,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import * as BetterSqlite3 from 'better-sqlite3';
 import { createLogger } from '@protolabsai/utils';
 import type {
@@ -504,8 +505,35 @@ export class KnowledgeStoreService {
       this.initialize(projectPath);
     }
 
+    // Input validation
+    if (!domain || typeof domain !== 'string' || domain.trim().length === 0) {
+      throw new Error('Invalid domain: must be a non-empty string');
+    }
+    if (domain.length > 256) {
+      throw new Error('Invalid domain: must not exceed 256 characters');
+    }
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      throw new Error('Invalid content: must be a non-empty string');
+    }
+    const MAX_CONTENT_LENGTH = 100_000;
+    if (content.length > MAX_CONTENT_LENGTH) {
+      throw new Error(
+        `Invalid content: exceeds maximum length of ${MAX_CONTENT_LENGTH} characters`
+      );
+    }
+
+    if (heading !== undefined && heading !== null) {
+      if (typeof heading !== 'string' || heading.trim().length === 0) {
+        throw new Error('Invalid heading: must be a non-empty string if provided');
+      }
+      if (heading.length > 512) {
+        throw new Error('Invalid heading: must not exceed 512 characters');
+      }
+    }
+
     const timestamp = new Date().toISOString();
-    const chunkId = `manual-${domain}-${Date.now()}`;
+    const chunkId = `manual-${domain}-${randomUUID()}`;
     const tags = JSON.stringify([domain]);
 
     this.db

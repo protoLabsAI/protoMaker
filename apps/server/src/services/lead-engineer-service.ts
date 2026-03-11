@@ -57,6 +57,41 @@ export type { FeatureProcessingState, StateContext };
 export type { ProcessorServiceContext } from './lead-engineer-types.js';
 export { FeatureStateMachine } from './lead-engineer-state-machine.js';
 
+// ────────────────────────── Bidirectional Integration Types ──────────────────────────
+
+/**
+ * Execution status summary that LE exposes to the PM layer.
+ * Defined here so LeadEngineerService can produce it without importing from PM.
+ */
+export interface LEExecutionStatusSummary {
+  activeProjectCount: number;
+  activeFeaturesCount: number;
+  projectStatuses: Array<{
+    projectPath: string;
+    projectSlug: string;
+    flowState: string;
+  }>;
+}
+
+/**
+ * Next assignable phase as returned by the PM layer.
+ * Defined here so LeadEngineerService can consume it without importing from PM.
+ */
+export interface PMNextAssignablePhase {
+  milestoneSlug: string;
+  milestoneTitle: string;
+  remainingPhases: number;
+  dueAt?: string;
+}
+
+/**
+ * Interface the PM layer must implement to provide next-phase data to LE.
+ * Injected via setPMWorldStateProvider() to avoid circular dependencies.
+ */
+export interface IPMWorldStateProvider {
+  getNextAssignablePhase(): PMNextAssignablePhase | null;
+}
+
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
 const WORLD_STATE_REFRESH_MS = 5 * 60 * 1000;
@@ -91,6 +126,7 @@ export class LeadEngineerService {
 
   private worldStateBuilder: WorldStateBuilder;
   private sessionStore: LeadEngineerSessionStore;
+  private pmWorldStateProvider?: IPMWorldStateProvider;
 
   constructor(
     private events: EventEmitter,
@@ -146,6 +182,41 @@ export class LeadEngineerService {
   }
   setAuthorityService(s: AuthorityService): void {
     this.authorityService = s;
+  }
+
+  // ────────────────────────── Bidirectional Integration ──────────────────────────
+
+  /**
+   * Inject a PM world-state provider so LE can query PM for next-phase assignments.
+   * Use this pattern (vs. direct import) to avoid circular module dependencies.
+   */
+  setPMWorldStateProvider(provider: IPMWorldStateProvider): void {
+    this.pmWorldStateProvider = provider;
+  }
+
+  /**
+   * Query the PM layer for the next phase LE should work on.
+   * Returns null when no provider has been injected or PM has no pending phases.
+   */
+  queryPMNextAssignment(): PMNextAssignablePhase | null {
+    return this.pmWorldStateProvider?.getNextAssignablePhase() ?? null;
+  }
+
+  /**
+   * Return a concise snapshot of LE's current execution state.
+   * Called by the PM layer via ILeadEngineerStatusProvider.
+   */
+  getExecutionStatusSummary(): LEExecutionStatusSummary {
+    const sessions = this.getAllSessions();
+    return {
+      activeProjectCount: sessions.filter((s) => s.flowState === 'running').length,
+      activeFeaturesCount: this.activeFeatures.size,
+      projectStatuses: sessions.map((s) => ({
+        projectPath: s.projectPath,
+        projectSlug: s.projectSlug,
+        flowState: s.flowState,
+      })),
+    };
   }
 
   /**

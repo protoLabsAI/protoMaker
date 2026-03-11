@@ -305,3 +305,8 @@ usageStats:
 - **Rejected:** Always running merge detection regardless of current status — wastes gh CLI calls on features that are already done
 - **Trade-offs:** Extra feature reload on every REVIEW.process() call, but saves many gh CLI calls. Reload is cached/fast; gh calls are not.
 - **Breaking if changed:** If early status check is removed, forces unnecessary gh CLI calls on every loop iteration, increasing latency and GitHub API quota usage
+
+#### [Gotcha] Recent server URLs are deduplicated and trimmed to 10 on every add operation via .filter() + .slice(), making each add O(n) in array size. (2026-03-11)
+- **Situation:** Preventing duplicate URLs from bloating recent history
+- **Root cause:** Write-time deduplication keeps localStorage small and getRecentUrls() reads fast; alternative (read-time dedup) would add latency to every access; unbounded lists eventually degrade
+- **How to avoid:** Gained: Fast reads, clean state. Lost: O(n) cost per add (acceptable since adds are infrequent, but non-obvious)

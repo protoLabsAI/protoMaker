@@ -16,9 +16,62 @@ const logger = createLogger('PMWorldStateBuilder');
 
 const REFRESH_INTERVAL_MS = 60_000;
 
+/**
+ * Minimal interface for knowledge ingestion of PM project state.
+ * Implemented by any service that can persist PM state changes to the knowledge store.
+ */
+export interface PMKnowledgeIngestor {
+  ingestProjectStateChanges(projectPath: string, state: PMWorldState): Promise<number>;
+}
+
 export interface PMWorldStateBuilderConfig {
   /** Root directory to scan for project files (.automaker/projects/) */
   projectRoot?: string;
+  /**
+   * Optional knowledge ingestor for indexing PM state changes with domain='project'.
+   * When provided, state changes are written to the knowledge store on every refresh.
+   */
+  knowledgeIngestor?: PMKnowledgeIngestor;
+  /**
+   * Project path passed to the knowledge ingestor.
+   * Defaults to projectRoot if not set.
+   */
+  knowledgeProjectPath?: string;
+}
+
+// ────────────────────────── Bidirectional Integration Types ──────────────────────────
+
+/**
+ * Execution status summary returned by the Lead Engineer layer.
+ * Defined here so PMWorldStateBuilder can consume it without importing from LE.
+ */
+export interface LEExecutionStatusSummary {
+  activeProjectCount: number;
+  activeFeaturesCount: number;
+  projectStatuses: Array<{
+    projectPath: string;
+    projectSlug: string;
+    flowState: string;
+  }>;
+}
+
+/**
+ * Interface the Lead Engineer layer must implement to provide execution status to PM.
+ * Injected via setLeadEngineerStatusProvider() to avoid circular dependencies.
+ */
+export interface ILeadEngineerStatusProvider {
+  getExecutionStatusSummary(): LEExecutionStatusSummary;
+}
+
+/**
+ * Next assignable phase as determined by the PM layer.
+ * Returned by getNextAssignablePhase() for LE to consume.
+ */
+export interface PMNextAssignablePhase {
+  milestoneSlug: string;
+  milestoneTitle: string;
+  remainingPhases: number;
+  dueAt?: string;
 }
 
 /**
@@ -28,9 +81,14 @@ export class PMWorldStateBuilder {
   private state: PMWorldState;
   private refreshTimer: NodeJS.Timeout | null = null;
   private readonly projectRoot: string;
+  private readonly knowledgeIngestor: PMKnowledgeIngestor | undefined;
+  private readonly knowledgeProjectPath: string;
+  private leStatusProvider?: ILeadEngineerStatusProvider;
 
   constructor(config: PMWorldStateBuilderConfig = {}) {
     this.projectRoot = config.projectRoot ?? process.cwd();
+    this.knowledgeIngestor = config.knowledgeIngestor;
+    this.knowledgeProjectPath = config.knowledgeProjectPath ?? this.projectRoot;
     this.state = this.emptyState();
   }
 
@@ -138,11 +196,52 @@ export class PMWorldStateBuilder {
     return lines.join('\n');
   }
 
+  // ────────────────────────── Bidirectional Integration ──────────────────────────
+
+  /**
+   * Inject a Lead Engineer status provider so PM can query LE execution state.
+   * Use this pattern (vs. direct import) to avoid circular module dependencies.
+   */
+  setLeadEngineerStatusProvider(provider: ILeadEngineerStatusProvider): void {
+    this.leStatusProvider = provider;
+  }
+
+  /**
+   * Query the Lead Engineer layer for current execution status.
+   * Returns null when no provider has been injected.
+   */
+  queryLEExecutionStatus(): LEExecutionStatusSummary | null {
+    return this.leStatusProvider?.getExecutionStatusSummary() ?? null;
+  }
+
+  /**
+   * Return the first milestone with remaining (incomplete) phases.
+   * Called by the Lead Engineer layer to discover what PM considers next-up.
+   * Returns null when all milestones are complete or no milestones exist.
+   */
+  getNextAssignablePhase(): PMNextAssignablePhase | null {
+    for (const [slug, ms] of Object.entries(this.state.milestones)) {
+      const remaining = ms.totalPhases - ms.completedPhases;
+      if (remaining > 0) {
+        return {
+          milestoneSlug: slug,
+          milestoneTitle: ms.title,
+          remainingPhases: remaining,
+          dueAt: ms.dueAt,
+        };
+      }
+    }
+    return null;
+  }
+
   // ────────────────────────── State Building ──────────────────────────
 
   /**
    * Read project data from disk and rebuild the PMWorldState.
    * Gracefully handles missing directories or malformed files.
+   *
+   * After a successful refresh, indexes the new state into the knowledge store
+   * (if a knowledgeIngestor was provided) with domain='project'.
    */
   async buildState(): Promise<void> {
     try {
@@ -156,6 +255,19 @@ export class PMWorldStateBuilder {
       this.state = next;
 
       logger.debug(`PMWorldState refreshed — ${Object.keys(next.projects).length} projects`);
+
+      // Index PM state changes into the knowledge store (domain='project')
+      if (this.knowledgeIngestor) {
+        try {
+          const count = await this.knowledgeIngestor.ingestProjectStateChanges(
+            this.knowledgeProjectPath,
+            next
+          );
+          logger.debug(`PM knowledge ingestion complete: ${count} chunks indexed`);
+        } catch (err) {
+          logger.warn('PM knowledge ingestion failed (non-fatal):', err);
+        }
+      }
     } catch (err) {
       logger.warn('PMWorldStateBuilder.buildState() failed, retaining previous state:', err);
     }

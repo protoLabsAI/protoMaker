@@ -3,6 +3,7 @@
  *
  * Handles file ingestion operations for the knowledge store:
  * - File ingestion (reflections, agent outputs)
+ * - Project state change indexing (milestones, ceremonies, timelines)
  * - Category compaction
  */
 
@@ -11,6 +12,7 @@ import * as fs from 'node:fs';
 import * as BetterSqlite3 from 'better-sqlite3';
 import Anthropic from '@anthropic-ai/sdk';
 import { createLogger } from '@protolabsai/utils';
+import type { PMWorldState } from '@protolabsai/types';
 import { KnowledgeEmbeddingOrchestrator } from './knowledge-embedding-orchestrator.js';
 
 const logger = createLogger('KnowledgeIngestionService');
@@ -419,6 +421,145 @@ Output the compressed memory file:`;
     if (indexedCount > 0) {
       this.rebuildIndex(db, projectPath);
       logger.info(`Indexed ${indexedCount} completion learnings for feature ${featureId}`);
+    }
+
+    return indexedCount;
+  }
+
+  /**
+   * Ingest PM project state changes into the knowledge store with domain='project'.
+   *
+   * Creates or updates four snapshot chunks:
+   * - project-overview-snapshot: high-level project status
+   * - project-milestones-snapshot: milestone completion progress
+   * - project-ceremonies-snapshot: upcoming ceremony dates
+   * - project-timeline-snapshot: upcoming deadline entries
+   *
+   * All chunks are tagged with ['project', ...] so they are retrievable
+   * via domain='project' queries.
+   *
+   * @param db - Database instance
+   * @param projectPath - Project path (used as source_file prefix)
+   * @param state - Current PMWorldState snapshot
+   * @returns Number of chunks indexed (0–4)
+   */
+  async ingestProjectStateChanges(
+    db: BetterSqlite3.Database,
+    projectPath: string,
+    state: PMWorldState
+  ): Promise<number> {
+    const timestamp = new Date().toISOString();
+    let indexedCount = 0;
+
+    // ── 1. Project Overview ──────────────────────────────────────────
+    const projectEntries = Object.entries(state.projects);
+    if (projectEntries.length > 0) {
+      const lines: string[] = [`# Project Overview`, `_Updated: ${state.updatedAt}_`, ''];
+      for (const [slug, p] of projectEntries) {
+        lines.push(
+          `- **${slug}**: ${p.status} / ${p.phase} (${p.completedMilestones}/${p.milestoneCount} milestones)`
+        );
+      }
+      this.upsertChunk(db, {
+        chunkId: 'project-overview-snapshot',
+        sourceType: 'reflection',
+        sourceFile: '.automaker/projects/overview',
+        projectPath,
+        heading: 'Project Overview',
+        content: lines.join('\n'),
+        tags: JSON.stringify(['project', 'overview']),
+        importance: 0.8,
+        timestamp,
+      });
+      indexedCount++;
+    }
+
+    // ── 2. Milestone Progress ─────────────────────────────────────────
+    const milestoneEntries = Object.entries(state.milestones);
+    if (milestoneEntries.length > 0) {
+      const lines: string[] = [`# Milestone Progress`, `_Updated: ${state.updatedAt}_`, ''];
+      for (const [slug, ms] of milestoneEntries) {
+        const pct =
+          ms.totalPhases > 0 ? Math.round((ms.completedPhases / ms.totalPhases) * 100) : 0;
+        const due = ms.dueAt ? ` (due ${ms.dueAt.slice(0, 10)})` : '';
+        const status = ms.completedPhases === ms.totalPhases && ms.totalPhases > 0 ? ' ✅' : '';
+        lines.push(
+          `- **${ms.title}** \`${slug}\`: ${ms.completedPhases}/${ms.totalPhases} phases (${pct}%)${due}${status}`
+        );
+      }
+      this.upsertChunk(db, {
+        chunkId: 'project-milestones-snapshot',
+        sourceType: 'reflection',
+        sourceFile: '.automaker/projects/milestones',
+        projectPath,
+        heading: 'Milestone Progress',
+        content: lines.join('\n'),
+        tags: JSON.stringify(['project', 'milestone']),
+        importance: 0.85,
+        timestamp,
+      });
+      indexedCount++;
+    }
+
+    // ── 3. Upcoming Ceremonies ────────────────────────────────────────
+    const ceremonyEntries = Object.entries(state.ceremonies);
+    if (ceremonyEntries.length > 0) {
+      const lines: string[] = [`# Upcoming Ceremonies`, `_Updated: ${state.updatedAt}_`, ''];
+      const now = new Date().toISOString();
+      const upcoming = ceremonyEntries
+        .filter(([, iso]) => iso >= now)
+        .sort(([, a], [, b]) => a.localeCompare(b));
+      if (upcoming.length === 0) {
+        lines.push('_No upcoming ceremonies_');
+      } else {
+        for (const [type, iso] of upcoming) {
+          lines.push(`- **${type}**: ${iso.slice(0, 10)}`);
+        }
+      }
+      this.upsertChunk(db, {
+        chunkId: 'project-ceremonies-snapshot',
+        sourceType: 'reflection',
+        sourceFile: '.automaker/ceremony-state.json',
+        projectPath,
+        heading: 'Upcoming Ceremonies',
+        content: lines.join('\n'),
+        tags: JSON.stringify(['project', 'ceremony']),
+        importance: 0.7,
+        timestamp,
+      });
+      indexedCount++;
+    }
+
+    // ── 4. Timeline Deadlines ─────────────────────────────────────────
+    if (state.upcomingDeadlines.length > 0) {
+      const now = new Date().toISOString();
+      const future = state.upcomingDeadlines
+        .filter((d) => d.dueAt >= now)
+        .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+
+      if (future.length > 0) {
+        const lines: string[] = [`# Timeline Deadlines`, `_Updated: ${state.updatedAt}_`, ''];
+        for (const d of future.slice(0, 20)) {
+          lines.push(`- ${d.dueAt.slice(0, 10)} — **${d.label}** _(${d.projectSlug})_`);
+        }
+        this.upsertChunk(db, {
+          chunkId: 'project-timeline-snapshot',
+          sourceType: 'reflection',
+          sourceFile: '.automaker/timeline.json',
+          projectPath,
+          heading: 'Timeline Deadlines',
+          content: lines.join('\n'),
+          tags: JSON.stringify(['project', 'timeline']),
+          importance: 0.75,
+          timestamp,
+        });
+        indexedCount++;
+      }
+    }
+
+    if (indexedCount > 0) {
+      this.rebuildIndex(db, projectPath);
+      logger.info(`Indexed ${indexedCount} project state chunks for ${projectPath}`);
     }
 
     return indexedCount;

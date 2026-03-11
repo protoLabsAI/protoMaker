@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 454
-  referenced: 107
-  successfulFeatures: 107
+  loaded: 474
+  referenced: 108
+  successfulFeatures: 108
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -104,3 +104,9 @@ usageStats:
 - **Situation:** GraphQL query fetches review threads with `first: 100`. PRs with >100 threads lose threads beyond the page limit.
 - **Root cause:** GitHub GraphQL requires explicit cursor-based pagination. There's no way to fetch all items without implementing pagination loop.
 - **How to avoid:** For most PRs, 100 threads is sufficient. Add `pageInfo { hasNextPage, endCursor }` to query and implement pagination loop if thread count regularly exceeds 100.
+
+
+#### [Pattern] getServerUrl() implements strict precedence: localStorage override > cached value > environment variable. The precedence order is non-configurable and critical. (2026-03-11)
+- **Problem solved:** Resolving multiple server URL sources with different specificity levels
+- **Why this works:** Precedence chain implements proper specificity: user intent (override) > transient state (cache) > static config (env). Prevents static config from shadowing user choice.
+- **Trade-offs:** Gained: Clean override semantics without code changes. Lost: Hidden state machine - source of truth is precedence-dependent, complicates debugging
