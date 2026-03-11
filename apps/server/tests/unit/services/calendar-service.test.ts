@@ -470,4 +470,261 @@ describe('calendar-service.ts', () => {
       );
     });
   });
+
+  describe('getDueJobs', () => {
+    function makeJobEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+      return {
+        id: 'job-1',
+        title: 'Test Job',
+        date: '2026-03-10',
+        time: '09:00',
+        type: 'job',
+        jobStatus: 'pending',
+        jobAction: { type: 'start-agent', featureId: 'feature-123' },
+        projectPath,
+        createdAt: '2026-03-01T00:00:00Z',
+        updatedAt: '2026-03-01T00:00:00Z',
+        ...overrides,
+      };
+    }
+
+    it('should return pending job events that are due', async () => {
+      // Create a "now" that is definitely after the job's scheduled time
+      // Parse date+time the same way as the service: new Date(`${date}T${time}:00`)
+      // Then set now to be 1 hour after that
+      const jobDt = new Date('2026-03-10T09:00:00');
+      const now = new Date(jobDt.getTime() + 60 * 60 * 1000); // 1hr later
+      const dueJob = makeJobEvent({ date: '2026-03-10', time: '09:00' });
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [dueJob],
+        recovered: false,
+        source: 'main',
+      });
+
+      const jobs = await service.getDueJobs(projectPath, now);
+
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].id).toBe('job-1');
+    });
+
+    it('should exclude job events with time in the future', async () => {
+      // now is before the job's scheduled time
+      const jobDt = new Date('2026-03-10T09:00:00');
+      const now = new Date(jobDt.getTime() - 60 * 60 * 1000); // 1hr before
+      const futureJob = makeJobEvent({ date: '2026-03-10', time: '09:00' });
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [futureJob],
+        recovered: false,
+        source: 'main',
+      });
+
+      const jobs = await service.getDueJobs(projectPath, now);
+
+      expect(jobs).toHaveLength(0);
+    });
+
+    it('should exclude non-job type events', async () => {
+      const jobDt = new Date('2026-03-10T09:00:00');
+      const now = new Date(jobDt.getTime() + 60 * 60 * 1000);
+      const customEvent = makeJobEvent({ type: 'custom' });
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [customEvent],
+        recovered: false,
+        source: 'main',
+      });
+
+      const jobs = await service.getDueJobs(projectPath, now);
+
+      expect(jobs).toHaveLength(0);
+    });
+
+    it('should exclude job events with non-pending status', async () => {
+      const jobDt = new Date('2026-03-10T09:00:00');
+      const now = new Date(jobDt.getTime() + 60 * 60 * 1000);
+      const runningJob = makeJobEvent({ id: 'job-running', jobStatus: 'running' });
+      const completedJob = makeJobEvent({ id: 'job-completed', jobStatus: 'completed' });
+      const failedJob = makeJobEvent({ id: 'job-failed', jobStatus: 'failed' });
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [runningJob, completedJob, failedJob],
+        recovered: false,
+        source: 'main',
+      });
+
+      const jobs = await service.getDueJobs(projectPath, now);
+
+      expect(jobs).toHaveLength(0);
+    });
+
+    it('should exclude job events without a time field', async () => {
+      const now = new Date('2026-03-10T10:00:00');
+      const noTimeJob = makeJobEvent({ time: undefined });
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [noTimeJob],
+        recovered: false,
+        source: 'main',
+      });
+
+      const jobs = await service.getDueJobs(projectPath, now);
+
+      expect(jobs).toHaveLength(0);
+    });
+
+    it('should return only due jobs when mixed events are present', async () => {
+      const jobDt = new Date('2026-03-10T09:00:00');
+      const now = new Date(jobDt.getTime() + 30 * 60 * 1000); // 09:30 — after 09:00, before 11:00
+      const dueJob = makeJobEvent({ id: 'job-due', date: '2026-03-10', time: '09:00' });
+      const futureJob = makeJobEvent({ id: 'job-future', date: '2026-03-10', time: '11:00' });
+      const customEvent = makeJobEvent({ id: 'custom-1', type: 'custom' });
+      const completedJob = makeJobEvent({ id: 'job-done', jobStatus: 'completed' });
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: [dueJob, futureJob, customEvent, completedJob],
+        recovered: false,
+        source: 'main',
+      });
+
+      const jobs = await service.getDueJobs(projectPath, now);
+
+      expect(jobs).toHaveLength(1);
+      expect(jobs[0].id).toBe('job-due');
+    });
+  });
+
+  describe('isDateInRange (via listEvents)', () => {
+    it('should include all events when no date range is specified', async () => {
+      const events: CalendarEvent[] = [
+        {
+          id: 'event-past',
+          title: 'Past',
+          date: '2020-01-01',
+          type: 'custom',
+          projectPath,
+          createdAt: '2020-01-01T00:00:00Z',
+          updatedAt: '2020-01-01T00:00:00Z',
+        },
+        {
+          id: 'event-future',
+          title: 'Future',
+          date: '2030-01-01',
+          type: 'custom',
+          projectPath,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: events,
+        recovered: false,
+        source: 'main',
+      });
+
+      const result = await service.listEvents(projectPath, {});
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should include event exactly on startDate boundary', async () => {
+      const events: CalendarEvent[] = [
+        {
+          id: 'event-boundary',
+          title: 'Boundary',
+          date: '2026-03-01',
+          type: 'custom',
+          projectPath,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: events,
+        recovered: false,
+        source: 'main',
+      });
+
+      const result = await service.listEvents(projectPath, { startDate: '2026-03-01' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('event-boundary');
+    });
+
+    it('should include event exactly on endDate boundary', async () => {
+      const events: CalendarEvent[] = [
+        {
+          id: 'event-end',
+          title: 'End',
+          date: '2026-03-31',
+          type: 'custom',
+          projectPath,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: events,
+        recovered: false,
+        source: 'main',
+      });
+
+      const result = await service.listEvents(projectPath, { endDate: '2026-03-31' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('event-end');
+    });
+
+    it('should exclude event strictly before startDate', async () => {
+      const events: CalendarEvent[] = [
+        {
+          id: 'event-before',
+          title: 'Before',
+          date: '2026-02-28',
+          type: 'custom',
+          projectPath,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: events,
+        recovered: false,
+        source: 'main',
+      });
+
+      const result = await service.listEvents(projectPath, { startDate: '2026-03-01' });
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should exclude event strictly after endDate', async () => {
+      const events: CalendarEvent[] = [
+        {
+          id: 'event-after',
+          title: 'After',
+          date: '2026-04-01',
+          type: 'custom',
+          projectPath,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ];
+      vi.mocked(secureFs.access).mockResolvedValue(undefined);
+      vi.mocked(readJsonWithRecovery).mockResolvedValue({
+        data: events,
+        recovered: false,
+        source: 'main',
+      });
+
+      const result = await service.listEvents(projectPath, { endDate: '2026-03-31' });
+
+      expect(result).toHaveLength(0);
+    });
+  });
 });
