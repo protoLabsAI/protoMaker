@@ -184,7 +184,7 @@ Review body
       // Only built-ins should be registered
       service.initialize();
       const all = service.getAll();
-      expect(all.length).toBe(3); // compact, clear, new
+      expect(all.length).toBe(4); // compact, clear, new, rewind
     });
   });
 
