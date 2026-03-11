@@ -22,9 +22,8 @@ Agent Execution in Worktree
 
 **AgentService** - Session management, message history, WebSocket streaming
 **ProviderFactory** - Multi-provider abstraction (Claude, OpenAI, custom)
-**RoleRegistryService** - Dynamic agent template storage and retrieval
-**AgentFactoryService** - Agent instantiation from templates with context injection
-**DynamicAgentExecutor** - Worktree-isolated execution with Claude SDK
+**AutoModeService** - Autonomous feature execution orchestration
+**LeadEngineerService** - Feature lifecycle state machine
 
 ## Provider Architecture
 
@@ -553,7 +552,6 @@ const chatOptions = createChatOptions({
 ## Learn More
 
 - [Agent Architecture](./architecture.md) - Deep dive into agent system design
-- [Dynamic Role Registry](./dynamic-role-registry.md) - Creating agent templates
 - [MCP Integration](./mcp-integration.md) - Advanced MCP server usage
 - [Prompt Engineering](./prompt-engineering.md) - Writing effective agent prompts
 - [Monorepo Architecture](../dev/monorepo-architecture.md) - Package structure

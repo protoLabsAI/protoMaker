@@ -5,7 +5,7 @@
  * processes them via simpleQuery, and sends responses back to Discord. Handles message
  * splitting for long responses and thread creation for extended conversations.
  *
- * Uses RoleRegistryService for template-based role resolution with fallback to
+ * Uses hardcoded prompts for role resolution with fallback to
  * hardcoded prompts for backward compatibility.
  */
 
@@ -24,7 +24,6 @@ import {
   getQAEngineerPrompt,
   getDocsEngineerPrompt,
 } from '@protolabsai/prompts';
-import type { RoleRegistryService } from './role-registry-service.js';
 
 const logger = createLogger('AgentDiscordRouter');
 
@@ -52,15 +51,11 @@ interface ConversationTracker {
 export class AgentDiscordRouter {
   private conversations = new Map<string, ConversationTracker>();
   private unsubscribe?: () => void;
-  private roleRegistry?: RoleRegistryService;
 
   constructor(
     private events: EventEmitter,
-    private discordBot: DiscordBotService,
-    roleRegistry?: RoleRegistryService
-  ) {
-    this.roleRegistry = roleRegistry;
-  }
+    private discordBot: DiscordBotService
+  ) {}
 
   /**
    * Start listening for routed Discord messages
@@ -94,24 +89,10 @@ export class AgentDiscordRouter {
 
   /**
    * Get the appropriate system prompt for a given agent.
-   * Checks registry by name, then by role, then hardcoded prompts.
-   * Throws if no prompt can be resolved — never returns a generic fallback.
+   * Resolves prompts for known roles. Throws if no prompt can be resolved.
    */
   private getRolePrompt(agentName: string, _username: string): string {
     const projectPath = process.cwd();
-
-    // Try registry first — resolve by name or role
-    if (this.roleRegistry) {
-      const template = this.roleRegistry.resolve(agentName);
-      if (template?.systemPrompt) {
-        logger.debug(
-          `Using registry template prompt for "${agentName}" (template: ${template.name})`
-        );
-        return template.systemPrompt;
-      }
-    }
-
-    // Fall back to hardcoded prompts for known roles
     switch (agentName) {
       case 'product-manager':
         return getProductManagerPrompt({ projectPath, discordChannels: [], contextFiles: [] });
@@ -136,31 +117,12 @@ export class AgentDiscordRouter {
 
   /**
    * Get the allowed tools for a given agent.
-   * Checks registry by name, then by role, then ROLE_CAPABILITIES.
-   * Throws if no tools can be resolved — never defaults to unrestricted access.
+   * Resolves from ROLE_CAPABILITIES. Throws if no tools can be resolved.
    */
   private getRoleTools(agentName: string): string[] {
-    // Try registry first — resolve by name or role
-    const template = this.roleRegistry?.resolve(agentName);
-    if (template?.tools) {
-      logger.debug(`Using registry template tools for "${agentName}" (template: ${template.name})`);
-      return template.tools;
-    }
-    // Template found but no explicit tools — use ROLE_CAPABILITIES by template's role
-    if (template) {
-      const capabilities = ROLE_CAPABILITIES[template.role as AgentRole];
-      if (capabilities) {
-        logger.debug(`Using ROLE_CAPABILITIES for "${agentName}" via role "${template.role}"`);
-        return capabilities.tools;
-      }
-    }
-
-    // Only try ROLE_CAPABILITIES directly when no template was found
-    if (!template) {
-      const capabilities = ROLE_CAPABILITIES[agentName as AgentRole];
-      if (capabilities) {
-        return capabilities.tools;
-      }
+    const capabilities = ROLE_CAPABILITIES[agentName as AgentRole];
+    if (capabilities) {
+      return capabilities.tools;
     }
 
     throw new Error(

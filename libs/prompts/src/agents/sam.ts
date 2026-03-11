@@ -2,7 +2,7 @@
  * Sam — AI Agent Engineer prompt
  *
  * Personified prompt for the Sam agent template.
- * Used by built-in-templates.ts via @protolabsai/prompts.
+ * Used by agent prompt resolution via @protolabsai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';

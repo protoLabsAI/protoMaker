@@ -48,17 +48,14 @@ resolveModelString(null); // → 'claude-sonnet-4-6'
 
 ```typescript
 import { resolveModelString } from '@protolabsai/model-resolver';
-import type { AgentTemplate } from '@protolabsai/types';
 
-const agentTemplate: AgentTemplate = {
-  role: 'backend-engineer',
-  identity: { name: 'Backend Engineer', description: '...' },
-  capabilities: {
-    canImplementFeatures: true,
-    canReviewCode: true,
-  },
-  defaultModel: resolveModelString('sonnet'), // Uses claude-sonnet-4-6
-  securityLevel: 'standard',
+// Use in agent configuration
+const model = resolveModelString('sonnet'); // Returns 'claude-sonnet-4-6'
+
+// Use in auto-mode settings
+const config = {
+  defaultModel: resolveModelString('sonnet'),
+  escalationModel: resolveModelString('opus'),
 };
 ```
 

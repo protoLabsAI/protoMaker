@@ -2,7 +2,7 @@
  * Frank — DevOps Engineer prompt
  *
  * Personified prompt for the Frank agent template.
- * Used by built-in-templates.ts via @protolabsai/prompts.
+ * Used by agent prompt resolution via @protolabsai/prompts.
  */
 
 import type { PromptConfig } from '../types.js';

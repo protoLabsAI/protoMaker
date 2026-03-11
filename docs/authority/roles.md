@@ -1,6 +1,6 @@
 # Team Roles
 
-> Auto-generated from `built-in-templates.ts`. Run `npx tsx scripts/generate-org-docs.ts` to update.
+> Canonical agent roster for protoLabs Studio.
 >
 > Last generated: 2026-02-21
 
@@ -268,6 +268,6 @@ These templates exist in the registry but are not placed in the org hierarchy:
 
 1. Create a prompt file in `libs/prompts/src/agents/<name>.ts`
 2. Register the prompt in `libs/prompts/src/prompt-registry.ts`
-3. Add the template to `apps/server/src/services/built-in-templates.ts`
-4. Add the agent to the `ORG_HIERARCHY` in `scripts/generate-org-docs.ts`
-5. Run `npx tsx scripts/generate-org-docs.ts` to regenerate this document
+3. Create a CLI skill file in `.claude/commands/<name>.md`
+4. Add the agent to the org hierarchy in `scripts/generate-org-docs.ts`
+5. See `docs/agents/adding-team-members.md` for the full guide

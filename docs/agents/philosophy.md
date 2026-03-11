@@ -60,13 +60,11 @@ When auto-mode picks up a frontend feature, it gets the same frontend agent temp
 
 ### Why this matters
 
-The `RoleRegistryService` and `AgentFactoryService` serve both surfaces. A template defines: persona identity, model tier, tool access, domain boundaries. The _execution path_ determines interactive vs autonomous — not the template. This means:
+Agent roles are defined with persona identity, model tier, tool access, and domain boundaries. The _execution path_ determines interactive vs autonomous — not the role definition. This means:
 
 1. **Consistent behavior** — A domain agent gives the same quality advice whether you're chatting or auto-mode is running
 2. **Single source of truth** — prompt improvements benefit both surfaces immediately
 3. **No divergence** — there's no "interactive" and "pipeline" version of the same agent drifting apart over time
-
-See [Dynamic Role Registry](./dynamic-role-registry.md) for the template system implementation.
 
 ## Delegation decision tree
 
