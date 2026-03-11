@@ -85,11 +85,7 @@ export class CheckpointService {
    * Idempotent: if the same filePath has already been captured within the given
    * checkpoint, the call is a no-op.
    */
-  async captureFileState(
-    sessionId: string,
-    checkpointId: string,
-    filePath: string
-  ): Promise<void> {
+  async captureFileState(sessionId: string, checkpointId: string, filePath: string): Promise<void> {
     const checkpoints = this.sessions.get(sessionId);
     if (!checkpoints) return;
 

@@ -475,6 +475,58 @@ export function createChatRoutes(services: ServiceContainer): Router {
       );
       const tools = applyToolCompaction(withCheckpoints) as typeof rawTools;
 
+      // ── Slash command expansion ─────────────────────────────────────────────
+      // If the last user message starts with a slash command, intercept it:
+      //   1. Look up the command body from CommandRegistryService
+      //   2. Expand placeholders ($ARGUMENTS, $1/$2, @file, `!cmd`)
+      //   3. Prepend the expanded body to the system prompt for this turn
+      //   4. Restrict tools to the command's allowed-tools (if specified)
+      // Unknown slash commands pass through as normal messages (no-op).
+
+      let commandSystemPrefix: string | undefined;
+      // Start with the full tool set; may be narrowed by command frontmatter
+      let activeTools: typeof tools = tools;
+
+      if (lastUserMessage) {
+        const lastText = extractMessageText(lastUserMessage);
+        const parsed = parseSlashCommand(lastText);
+
+        if (parsed) {
+          const command = services.commandRegistryService?.get(parsed.name);
+
+          if (command?.body) {
+            try {
+              commandSystemPrefix = await expandCommandBody(command.body, {
+                argumentString: parsed.argumentString,
+                positionalArgs: parsed.positionalArgs,
+                projectPath: projectPath,
+              });
+              logger.info(
+                `Slash command /${parsed.name} expanded (${commandSystemPrefix.length} chars)`
+              );
+            } catch (err) {
+              logger.warn(`Command expansion failed for /${parsed.name}:`, err);
+            }
+
+            // Apply tool restrictions from command frontmatter
+            if (command.allowedTools && command.allowedTools.length > 0) {
+              const allowedSet = new Set(command.allowedTools);
+              activeTools = Object.fromEntries(
+                Object.entries(tools).filter(([name]) => allowedSet.has(name))
+              ) as typeof tools;
+              logger.info(
+                `Tool set restricted to [${[...allowedSet].join(', ')}] for /${parsed.name}`
+              );
+            }
+          }
+          // If command not found or has no body, pass through as a normal message
+        }
+      }
+
+      // Prepend the expanded command body to the system prompt for this turn
+      const finalSystemPrompt = commandSystemPrefix
+        ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
+        : systemPrompt;
       // Enable extended thinking for models that support it (opus / sonnet).
       // The thinking budget caps how many tokens the model may use for internal
       // reasoning before producing its visible response.
