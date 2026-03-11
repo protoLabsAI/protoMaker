@@ -21,11 +21,7 @@ import { createLogger } from '@protolabsai/utils';
 // Re-export the canonical types from @protolabsai/types (defined in libs/types/src/chat.ts).
 // We re-declare here as type aliases so the server can compile even when the worktree
 // resolves @protolabsai/types to the main-repo dist (known P3 worktree symlink limitation).
-export type SlashCommandSource =
-  | 'built-in'
-  | 'mcp-plugin'
-  | 'learned-skill'
-  | 'project-skill';
+export type SlashCommandSource = 'built-in' | 'mcp-plugin' | 'learned-skill' | 'project-skill';
 
 export interface SlashCommand {
   name: string;
@@ -88,7 +84,10 @@ function parseFrontmatter(content: string): { fm: ParsedFrontmatter; body: strin
       i++;
       while (i < lines.length && /^\s+-\s/.test(lines[i])) {
         // Strip comment after the value (e.g. "  - Read  # reason")
-        const raw = lines[i].replace(/^\s+-\s+/, '').replace(/#.*$/, '').trim();
+        const raw = lines[i]
+          .replace(/^\s+-\s+/, '')
+          .replace(/#.*$/, '')
+          .trim();
         if (raw) items.push(raw);
         i++;
       }
@@ -141,10 +140,7 @@ export class CommandRegistryService {
 
   constructor(repoRoot: string) {
     this.repoRoot = repoRoot;
-    this.mcpPluginCommandsDir = resolve(
-      repoRoot,
-      'packages/mcp-server/plugins/automaker/commands'
-    );
+    this.mcpPluginCommandsDir = resolve(repoRoot, 'packages/mcp-server/plugins/automaker/commands');
   }
 
   /**
