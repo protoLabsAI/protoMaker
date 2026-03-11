@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.44.1
+
+### Patch Changes
+
+- ### Refactors
+  - slash command dropdown with category grouping
+  - slash command dropdown with category grouping
+
 ## 0.44.0
 
 ### Minor Changes

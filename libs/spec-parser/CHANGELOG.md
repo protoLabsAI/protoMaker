@@ -1,5 +1,15 @@
 # @protolabsai/spec-parser
 
+## 0.44.1
+
+### Patch Changes
+
+- ### Refactors
+  - slash command dropdown with category grouping
+  - slash command dropdown with category grouping
+- Updated dependencies
+  - @protolabsai/types@0.44.1
+
 ## 0.44.0
 
 ### Minor Changes
