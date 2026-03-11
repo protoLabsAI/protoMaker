@@ -17,11 +17,48 @@ export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 /**
  * Job action types
+ *
+ * ### `run-command` format
+ *
+ * The `command` field must be a **single, simple shell command** with no shell
+ * metacharacters. The executor enforces the following constraints at runtime:
+ *
+ * - Maximum length: 1024 characters
+ * - Disallowed (unescaped): `;`  `&&`  `||`  `|`  `>`  `<`  `$`  `` ` ``
+ *
+ * If a special character is required literally, prefix it with a backslash
+ * (e.g. `\$`). Shell features such as piping, redirection, variable expansion,
+ * and command chaining are **not** supported and will cause the job to fail.
+ *
+ * **Valid examples:**
+ * ```
+ * npm run build
+ * python3 scripts/migrate.py
+ * ./bin/run-task.sh --env production
+ * ```
+ *
+ * **Invalid examples (will be rejected):**
+ * ```
+ * npm run build && npm test   // && not allowed
+ * echo $HOME                  // $ not allowed
+ * cat file.txt | grep error   // | not allowed
+ * ```
  */
 export type JobAction =
   | { type: 'start-agent'; featureId: string }
   | { type: 'run-automation'; automationId: string }
-  | { type: 'run-command'; command: string; cwd?: string };
+  | {
+      type: 'run-command';
+      /**
+       * The shell command to execute.
+       * Must be a single command with no shell metacharacters.
+       * Maximum length: 1024 characters.
+       * @see {JobAction} for full format rules and examples.
+       */
+      command: string;
+      /** Optional working directory for the command */
+      cwd?: string;
+    };
 
 /**
  * Result of a job execution
