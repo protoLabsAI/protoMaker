@@ -233,12 +233,12 @@ export function ProjectsTab() {
     }
   }, [pendingProjectSlug, activeProjects, setPendingProjectSlug]);
 
-  // Auto-select first project when list loads
+  // Auto-select first project when list loads (skip if a pending slug is waiting)
   useEffect(() => {
-    if (!selectedSlug && activeProjects.length > 0) {
+    if (!selectedSlug && !pendingProjectSlug && activeProjects.length > 0) {
       setSelectedSlug(activeProjects[0].slug);
     }
-  }, [activeProjects, selectedSlug]);
+  }, [activeProjects, selectedSlug, pendingProjectSlug]);
 
   const selectedProject = activeProjects.find((p) => p.slug === selectedSlug);
 
