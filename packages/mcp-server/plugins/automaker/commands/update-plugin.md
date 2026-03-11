@@ -1,6 +1,7 @@
 ---
 name: update-plugin
 description: Update the protoLabs Claude Code plugin to the current version. Handles uninstall, reinstall, env migration, and verification.
+category: setup
 argument-hint: (no arguments)
 temporary: true
 temporary-reason: Early tester onboarding — remove once all testers are on v0.15.x+

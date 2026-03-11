@@ -2,7 +2,7 @@
  * SlashCommandDropdown — floating command palette rendered above ChatInput.
  *
  * Rendered when useSlashCommands.isActive is true.
- * Shows filtered commands with name, description, source badge, and argument hint.
+ * Commands are grouped by category with section headers.
  * Supports keyboard navigation (ArrowUp / ArrowDown / Enter / Escape).
  * Positioned anchored above the input; viewport overflow is prevented via
  * `max-h` + overflow-y scroll.
@@ -16,7 +16,7 @@
  *   </div>
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { cn } from '../lib/utils.js';
 
 // ---------------------------------------------------------------------------
@@ -28,8 +28,10 @@ export interface SlashCommand {
   name: string;
   /** Short description shown below the name. */
   description: string;
-  /** Badge label indicating the command source (e.g. "built-in", "plugin"). */
+  /** Badge label indicating the command source (e.g. "plugin", "project-skill"). */
   source: string;
+  /** Category for grouping in the dropdown. */
+  category?: string;
   /** Optional argument hint shown after the command, e.g. "[query]". */
   argHint?: string;
 }
@@ -54,6 +56,28 @@ export interface UseSlashCommandsResult {
 }
 
 // ---------------------------------------------------------------------------
+// Category display order and labels
+// ---------------------------------------------------------------------------
+
+const CATEGORY_ORDER = ['operations', 'engineering', 'team', 'planning', 'setup'] as const;
+
+const CATEGORY_LABELS: Record<string, string> = {
+  operations: 'Operations',
+  engineering: 'Engineering',
+  team: 'Team',
+  planning: 'Planning',
+  setup: 'Setup',
+};
+
+interface CategoryGroup {
+  category: string;
+  label: string;
+  commands: SlashCommand[];
+  /** Starting flat index for this group's first command. */
+  startIndex: number;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -68,14 +92,49 @@ export function SlashCommandDropdown({ slashCommands, className }: SlashCommandD
   const listRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
 
+  // Group commands by category, preserving flat index for keyboard navigation.
+  const groups = useMemo<CategoryGroup[]>(() => {
+    const byCategory = new Map<string, SlashCommand[]>();
+    for (const cmd of commands) {
+      const cat = cmd.category || 'other';
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat)!.push(cmd);
+    }
+
+    // Order by CATEGORY_ORDER, then uncategorized at the end.
+    const ordered: CategoryGroup[] = [];
+    let flatIdx = 0;
+    for (const cat of CATEGORY_ORDER) {
+      const cmds = byCategory.get(cat);
+      if (!cmds) continue;
+      ordered.push({
+        category: cat,
+        label: CATEGORY_LABELS[cat] || cat,
+        commands: cmds,
+        startIndex: flatIdx,
+      });
+      flatIdx += cmds.length;
+      byCategory.delete(cat);
+    }
+    // Remaining uncategorized
+    for (const [cat, cmds] of byCategory) {
+      ordered.push({
+        category: cat,
+        label: CATEGORY_LABELS[cat] || cat,
+        commands: cmds,
+        startIndex: flatIdx,
+      });
+      flatIdx += cmds.length;
+    }
+    return ordered;
+  }, [commands]);
+
   // Scroll the highlighted item into view whenever selectedIndex changes.
   useEffect(() => {
     selectedRef.current?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 
   // Keyboard navigation handler — consumers forward keyboard events to this.
-  // Attach it to a keydown listener on the associated textarea, e.g.:
-  //   onKeyDown={(e) => dropdownRef.current?.handleKeyDown(e)}
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent | KeyboardEvent) => {
       switch (e.key) {
@@ -141,45 +200,46 @@ export function SlashCommandDropdown({ slashCommands, className }: SlashCommandD
         className
       )}
     >
-      {commands.map((cmd, index) => {
-        const isSelected = index === selectedIndex;
-        return (
-          <button
-            key={cmd.name}
-            ref={isSelected ? selectedRef : undefined}
-            role="option"
-            aria-selected={isSelected}
-            onClick={() => onSelect(cmd)}
-            className={cn(
-              'flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors',
-              isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent/50'
-            )}
-          >
-            {/* Command name + arg hint */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-1.5">
-                <span className="truncate font-medium">{cmd.name}</span>
-                {cmd.argHint && (
-                  <span className="shrink-0 text-xs text-muted-foreground">{cmd.argHint}</span>
-                )}
-              </div>
-              {cmd.description && (
-                <div className="truncate text-xs text-muted-foreground">{cmd.description}</div>
-              )}
+      {groups.map((group) => (
+        <div key={group.category}>
+          {groups.length > 1 && (
+            <div className="px-2 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground first:pt-0.5">
+              {group.label}
             </div>
-
-            {/* Source badge */}
-            <span
-              className={cn(
-                'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium',
-                'bg-muted text-muted-foreground'
-              )}
-            >
-              {cmd.source}
-            </span>
-          </button>
-        );
-      })}
+          )}
+          {group.commands.map((cmd, i) => {
+            const flatIndex = group.startIndex + i;
+            const isSelected = flatIndex === selectedIndex;
+            return (
+              <button
+                key={cmd.name}
+                ref={isSelected ? selectedRef : undefined}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => onSelect(cmd)}
+                className={cn(
+                  'flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors',
+                  isSelected
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-foreground hover:bg-accent/50'
+                )}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="truncate font-medium">{cmd.name}</span>
+                    {cmd.argHint && (
+                      <span className="shrink-0 text-xs text-muted-foreground">{cmd.argHint}</span>
+                    )}
+                  </div>
+                  {cmd.description && (
+                    <div className="truncate text-xs text-muted-foreground">{cmd.description}</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }

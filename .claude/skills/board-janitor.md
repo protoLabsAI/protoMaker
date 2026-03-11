@@ -1,6 +1,7 @@
 ---
 name: board-janitor
 description: Activates the Board Janitor — a lightweight specialist for Kanban board hygiene. Use for moving merged-PR features to done, resetting stale in-progress features, and repairing broken dependency chains.
+category: team
 argument-hint: [project path]
 allowed-tools:
   - mcp__plugin_protolabs_studio__list_features

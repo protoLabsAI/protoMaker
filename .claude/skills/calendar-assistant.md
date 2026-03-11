@@ -1,6 +1,7 @@
 ---
 name: calendar-assistant
 description: Activates the Calendar Assistant — manages all calendar operations for the project. Use for scheduling events, checking deadlines, creating/updating/deleting calendar events, and temporal data queries. Other agents delegate calendar operations here.
+category: team
 argument-hint: [calendar task or query]
 allowed-tools:
   - mcp__plugin_protolabs_studio__list_calendar_events

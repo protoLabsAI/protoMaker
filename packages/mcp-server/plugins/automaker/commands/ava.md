@@ -1,6 +1,7 @@
 ---
 name: ava
 description: Activates AVA, your Autonomous Virtual Agency. Autonomous operator — identifies friction, ships fixes, keeps work flowing. Use for product direction, operational leadership, or when things need to get done.
+category: operations
 argument-hint: [project-path]
 allowed-tools:
   # Core (read-only — Ava monitors, reports, and escalates; never edits code directly)

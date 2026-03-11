@@ -1,6 +1,7 @@
 ---
 name: deep-research
 description: Research codebase before planning a feature. Gathers context, identifies patterns, and documents constraints.
+category: engineering
 argument-hint: <topic to research>
 allowed-tools:
   - Read

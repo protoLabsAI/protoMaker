@@ -1,5 +1,6 @@
 ---
 description: Promote code through the release pipeline (dev->staging->main). Handles version bumps automatically.
+category: engineering
 argument-hint: [dev-to-staging | staging-to-main]
 allowed-tools:
   - Bash

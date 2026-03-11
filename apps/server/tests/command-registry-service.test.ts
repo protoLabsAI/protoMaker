@@ -35,32 +35,6 @@ describe('CommandRegistryService', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Built-in commands
-  // -------------------------------------------------------------------------
-
-  describe('built-in commands', () => {
-    it('registers compact, clear, and new without filesystem', () => {
-      service.initialize();
-      const all = service.getAll();
-      const names = all.map((c) => c.name);
-      expect(names).toContain('compact');
-      expect(names).toContain('clear');
-      expect(names).toContain('new');
-    });
-
-    it('marks built-ins with source=built-in', () => {
-      service.initialize();
-      const compact = service.get('compact');
-      expect(compact?.source).toBe('built-in');
-    });
-
-    it('built-in commands have no body', () => {
-      service.initialize();
-      expect(service.get('compact')?.body).toBeUndefined();
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // MCP plugin commands
   // -------------------------------------------------------------------------
 
@@ -73,6 +47,7 @@ describe('CommandRegistryService', () => {
         `---
 name: ava
 description: Activates AVA
+category: operations
 argument-hint: [project-path]
 allowed-tools:
   - Read
@@ -90,6 +65,7 @@ model: claude-opus-4-6
       expect(cmd).toBeDefined();
       expect(cmd?.source).toBe('mcp-plugin');
       expect(cmd?.description).toBe('Activates AVA');
+      expect(cmd?.category).toBe('operations');
       expect(cmd?.argumentHint).toBe('[project-path]');
       expect(cmd?.allowedTools).toEqual(['Read', 'Glob']);
       expect(cmd?.model).toBe('claude-opus-4-6');
@@ -123,33 +99,6 @@ body here
   });
 
   // -------------------------------------------------------------------------
-  // Learned skills
-  // -------------------------------------------------------------------------
-
-  describe('learned skills', () => {
-    it('discovers commands from .automaker/skills/', () => {
-      const skillDir = join(repoRoot, '.automaker/skills');
-      writeCommandFile(
-        skillDir,
-        'commit.md',
-        `---
-name: commit
-description: Create a git commit
----
-Commit skill body
-`
-      );
-
-      service.initialize();
-
-      const cmd = service.get('commit');
-      expect(cmd).toBeDefined();
-      expect(cmd?.source).toBe('learned-skill');
-      expect(cmd?.description).toBe('Create a git commit');
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // Project skills
   // -------------------------------------------------------------------------
 
@@ -162,6 +111,7 @@ Commit skill body
         `---
 name: review-pr
 description: Review a pull request
+category: engineering
 ---
 Review body
 `
@@ -172,6 +122,7 @@ Review body
       const cmd = service.get('review-pr');
       expect(cmd).toBeDefined();
       expect(cmd?.source).toBe('project-skill');
+      expect(cmd?.category).toBe('engineering');
     });
   });
 
@@ -181,10 +132,54 @@ Review body
 
   describe('missing directories', () => {
     it('initializes successfully when all skill directories are absent', () => {
-      // Only built-ins should be registered
       service.initialize();
       const all = service.getAll();
-      expect(all.length).toBe(4); // compact, clear, new, rewind
+      expect(all.length).toBe(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Category handling
+  // -------------------------------------------------------------------------
+
+  describe('category handling', () => {
+    it('ignores invalid category values', () => {
+      const cmdDir = join(repoRoot, 'packages/mcp-server/plugins/automaker/commands');
+      writeCommandFile(
+        cmdDir,
+        'bad-cat.md',
+        `---
+name: bad-cat
+description: Has invalid category
+category: nonsense
+---
+body
+`
+      );
+
+      service.initialize();
+      const cmd = service.get('bad-cat');
+      expect(cmd).toBeDefined();
+      expect(cmd?.category).toBeUndefined();
+    });
+
+    it('omits category when not specified in frontmatter', () => {
+      const cmdDir = join(repoRoot, 'packages/mcp-server/plugins/automaker/commands');
+      writeCommandFile(
+        cmdDir,
+        'no-cat.md',
+        `---
+name: no-cat
+description: No category
+---
+body
+`
+      );
+
+      service.initialize();
+      const cmd = service.get('no-cat');
+      expect(cmd).toBeDefined();
+      expect(cmd?.category).toBeUndefined();
     });
   });
 
@@ -223,6 +218,29 @@ body
       const cmd = service.get('bare');
       expect(cmd).toBeDefined();
       expect(cmd?.name).toBe('bare');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Does not scan .automaker/skills/ (agent context, not user-facing)
+  // -------------------------------------------------------------------------
+
+  describe('learned skills excluded', () => {
+    it('does not discover commands from .automaker/skills/', () => {
+      const skillDir = join(repoRoot, '.automaker/skills');
+      writeCommandFile(
+        skillDir,
+        'internal.md',
+        `---
+name: internal
+description: Internal agent skill
+---
+body
+`
+      );
+
+      service.initialize();
+      expect(service.get('internal')).toBeUndefined();
     });
   });
 });

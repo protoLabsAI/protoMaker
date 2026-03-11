@@ -1,6 +1,7 @@
 ---
 name: context
 description: Manage context files that are injected into AI agent prompts. Add coding standards, architectural guidelines, or project-specific rules.
+category: engineering
 argument-hint: (list|add|view|delete) [filename]
 allowed-tools:
   - AskUserQuestion

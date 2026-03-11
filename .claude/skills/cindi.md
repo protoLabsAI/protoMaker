@@ -1,6 +1,7 @@
 ---
 name: cindi
 description: Activates Cindi, the Content Writing Specialist. Use for blog posts, technical documentation, training data generation, marketing copy, SEO-optimized content, and multi-format content export.
+category: team
 argument-hint: [content topic or task]
 allowed-tools:
   - Read

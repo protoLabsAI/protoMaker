@@ -1,6 +1,7 @@
 ---
 name: due-diligence
 description: Validate approaches and question architectures with evidence-based research. Use when evaluating a technology choice, validating an approach, comparing solutions, or questioning an architectural decision.
+category: planning
 argument-hint: <approach, technology, or decision to validate>
 allowed-tools:
   - Read

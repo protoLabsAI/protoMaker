@@ -2,13 +2,11 @@
  * CommandRegistryService — discovers and caches slash commands from multiple sources.
  *
  * Sources:
- *   1. Built-in commands (compact, clear, new) — registered without filesystem
- *   2. MCP plugin commands — packages/mcp-server/plugins/automaker/commands/*.md
- *   3. Learned skills — .automaker/skills/*.md  (relative to repoRoot)
- *   4. Project skills — .claude/skills/*.md      (relative to repoRoot)
+ *   1. MCP plugin commands — packages/mcp-server/plugins/automaker/commands/*.md
+ *   2. Project skills — .claude/skills/*.md      (relative to repoRoot)
  *
  * Each file-backed command is parsed for YAML frontmatter fields:
- *   name, description, argument-hint, allowed-tools, model
+ *   name, description, category, argument-hint, allowed-tools, model
  *
  * The cache is invalidated via fs.watch on each scanned directory.
  * Watchers are cleaned up when destroy() is called.
@@ -21,11 +19,14 @@ import { createLogger } from '@protolabsai/utils';
 // Re-export the canonical types from @protolabsai/types (defined in libs/types/src/chat.ts).
 // We re-declare here as type aliases so the server can compile even when the worktree
 // resolves @protolabsai/types to the main-repo dist (known P3 worktree symlink limitation).
-export type SlashCommandSource = 'built-in' | 'mcp-plugin' | 'learned-skill' | 'project-skill';
+export type SlashCommandSource = 'mcp-plugin' | 'project-skill';
+
+export type SlashCommandCategory = 'operations' | 'engineering' | 'team' | 'planning' | 'setup';
 
 export interface SlashCommand {
   name: string;
   description: string;
+  category?: SlashCommandCategory;
   argumentHint?: string;
   allowedTools?: string[];
   model?: string;
@@ -44,6 +45,7 @@ const logger = createLogger('CommandRegistry');
 interface ParsedFrontmatter {
   name?: string;
   description?: string;
+  category?: string;
   'argument-hint'?: string;
   'allowed-tools'?: string[];
   model?: string;
@@ -106,33 +108,13 @@ function parseFrontmatter(content: string): { fm: ParsedFrontmatter; body: strin
   return { fm, body };
 }
 
-// ---------------------------------------------------------------------------
-// Built-in command definitions
-// ---------------------------------------------------------------------------
-
-const BUILT_IN_COMMANDS: SlashCommand[] = [
-  {
-    name: 'compact',
-    description: 'Compact the conversation to reduce context size',
-    source: 'built-in',
-  },
-  {
-    name: 'clear',
-    description: 'Clear the current conversation',
-    source: 'built-in',
-  },
-  {
-    name: 'new',
-    description: 'Start a new conversation',
-    source: 'built-in',
-  },
-  {
-    name: 'rewind',
-    description: 'Rewind the session to a checkpoint (most recent by default)',
-    argumentHint: '[checkpoint-id]',
-    source: 'built-in',
-  },
-];
+const VALID_CATEGORIES = new Set<SlashCommandCategory>([
+  'operations',
+  'engineering',
+  'team',
+  'planning',
+  'setup',
+]);
 
 // ---------------------------------------------------------------------------
 // Service
@@ -150,23 +132,16 @@ export class CommandRegistryService {
   }
 
   /**
-   * Initialize the service: register built-ins, scan all directories,
-   * and start filesystem watchers for cache invalidation.
+   * Initialize the service: scan command directories and start filesystem
+   * watchers for cache invalidation.
    */
   initialize(): void {
-    // Register built-in commands (no filesystem)
-    for (const cmd of BUILT_IN_COMMANDS) {
-      this.cache.set(cmd.name, cmd);
-    }
-
     // Scan each file-backed source
     this.scanDirectory(this.mcpPluginCommandsDir, 'mcp-plugin');
-    this.scanDirectory(join(this.repoRoot, '.automaker/skills'), 'learned-skill');
     this.scanDirectory(join(this.repoRoot, '.claude/skills'), 'project-skill');
 
     // Set up watchers for cache invalidation
     this.watchDirectory(this.mcpPluginCommandsDir, 'mcp-plugin');
-    this.watchDirectory(join(this.repoRoot, '.automaker/skills'), 'learned-skill');
     this.watchDirectory(join(this.repoRoot, '.claude/skills'), 'project-skill');
 
     logger.info(`CommandRegistry initialized with ${this.cache.size} commands`);
@@ -261,6 +236,9 @@ export class CommandRegistryService {
       body: body || undefined,
     };
 
+    if (fm.category && VALID_CATEGORIES.has(fm.category as SlashCommandCategory)) {
+      cmd.category = fm.category as SlashCommandCategory;
+    }
     if (fm['argument-hint']) cmd.argumentHint = fm['argument-hint'];
     if (Array.isArray(fm['allowed-tools']) && fm['allowed-tools'].length > 0) {
       cmd.allowedTools = fm['allowed-tools'];

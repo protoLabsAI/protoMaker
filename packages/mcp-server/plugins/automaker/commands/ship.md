@@ -1,6 +1,7 @@
 ---
 name: ship
 description: Ship current changes — stage, commit, push, create PR, enable auto-merge. Handles conflicts automatically.
+category: engineering
 argument-hint: (optional commit message or description)
 allowed-tools:
   - Bash

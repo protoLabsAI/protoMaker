@@ -1,6 +1,7 @@
 ---
 name: plan-project
 description: Full project lifecycle — research, PRD, milestones, feature creation, and launch.
+category: planning
 argument-hint: <project idea or title>
 allowed-tools:
   - Read

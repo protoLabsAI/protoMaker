@@ -1,6 +1,7 @@
 ---
 name: jon
 description: Activates Jon, the GTM Specialist. Use for content strategy, brand positioning, social media (Twitter/X), competitive research, launch coordination, and go-to-market execution.
+category: team
 argument-hint: [GTM task or content request]
 allowed-tools:
   - Read

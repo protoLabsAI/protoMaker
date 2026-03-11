@@ -1,6 +1,7 @@
 ---
 name: sparc-prd
 description: Create a SPARC-style Product Requirements Document for a feature or project.
+category: planning
 argument-hint: <feature name or description>
 allowed-tools:
   - Read

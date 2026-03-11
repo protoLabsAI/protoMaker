@@ -1,6 +1,7 @@
 ---
 name: headsdown
 description: Deep work mode - autonomously process features, merge PRs, groom the board, and stay productive until the system is void of work.
+category: operations
 argument-hint: [project-path]
 allowed-tools:
   # Read-only — headsdown monitors, reports, and escalates; never edits code directly

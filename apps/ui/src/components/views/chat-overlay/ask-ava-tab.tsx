@@ -108,6 +108,7 @@ function ChatInputWithSlashCommands({
       name: c.name,
       description: c.description,
       source: c.source,
+      category: c.category,
       argHint: c.argumentHint,
     })),
     selectedIndex: normalizedIndex,

@@ -1,6 +1,7 @@
 ---
 name: calendar-assistant
 description: Activates the Calendar Assistant. Manages all calendar operations including event creation, updates, scheduling, and deadline tracking. Use when you need to work with calendar data or schedule events.
+category: setup
 allowed-tools:
   # Core
   - AskUserQuestion

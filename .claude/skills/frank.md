@@ -1,6 +1,7 @@
 ---
 name: frank
 description: Activates Frank, the DevOps Engineer. Use for CI/CD pipelines, Docker, deployments, infrastructure monitoring, server health diagnosis, and system reliability tasks.
+category: team
 argument-hint: [task description]
 allowed-tools:
   - Read

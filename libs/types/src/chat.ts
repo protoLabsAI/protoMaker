@@ -7,21 +7,22 @@
 
 /** Where the command was discovered from */
 export type SlashCommandSource =
-  | 'built-in' // Hardcoded commands (compact, clear, new)
   | 'mcp-plugin' // packages/mcp-server/plugins/automaker/commands/*.md
-  | 'learned-skill' // .automaker/skills/*.md
   | 'project-skill'; // .claude/skills/*.md
+
+/** Category for grouping commands in the dropdown */
+export type SlashCommandCategory = 'operations' | 'engineering' | 'team' | 'planning' | 'setup';
 
 /**
  * A slash command that can be invoked from the chat interface.
  *
- * Built-in commands (compact, clear, new) are registered without filesystem backing.
  * File-backed commands are parsed from markdown files with YAML frontmatter:
  *
  * ```markdown
  * ---
  * name: ava
  * description: Activates AVA, your Autonomous Virtual Agency.
+ * category: operations
  * argument-hint: [project-path]
  * allowed-tools:
  *   - Read
@@ -38,6 +39,8 @@ export interface SlashCommand {
   name: string;
   /** Human-readable description shown in the command picker */
   description: string;
+  /** Category for grouping in the command picker */
+  category?: SlashCommandCategory;
   /** Optional hint for the argument that follows the command name */
   argumentHint?: string;
   /** List of tool names this command is allowed to use */
@@ -46,7 +49,7 @@ export interface SlashCommand {
   model?: string;
   /** Where the command was discovered from */
   source: SlashCommandSource;
-  /** Full markdown body of the command file (undefined for built-in commands) */
+  /** Full markdown body of the command file */
   body?: string;
 }
 

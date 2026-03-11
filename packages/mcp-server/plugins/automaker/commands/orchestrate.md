@@ -1,6 +1,7 @@
 ---
 name: orchestrate
 description: Manage feature dependencies and execution order. Set up which features must complete before others can start.
+category: operations
 argument-hint: (optional feature-id or action)
 allowed-tools:
   - AskUserQuestion

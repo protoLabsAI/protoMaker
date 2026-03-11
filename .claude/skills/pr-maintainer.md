@@ -1,6 +1,7 @@
 ---
 name: pr-maintainer
 description: Activates the PR Maintainer — a lightweight specialist for keeping the PR pipeline flowing. Use for enabling auto-merge, resolving CodeRabbit threads, fixing format violations, rebasing branches, and creating PRs from orphaned worktrees.
+category: team
 argument-hint: [PR number or task description]
 allowed-tools:
   - Read

@@ -1,6 +1,7 @@
 ---
 name: kai
 description: Activates Kai, the Backend Engineer. Use for Express routes, service layer design, API contracts, error handling, WebSocket integration, and server-side feature implementation.
+category: team
 argument-hint: [task description]
 allowed-tools:
   - Read

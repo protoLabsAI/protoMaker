@@ -281,7 +281,7 @@ export interface ServiceContainer {
   // Reactive spawner (trigger-based agent spawning with rate limiting and circuit breaking)
   reactiveSpawnerService: ReactiveSpawnerService;
 
-  // Command registry (slash command discovery from built-ins + filesystem sources)
+  // Command registry (slash command discovery from filesystem sources)
   commandRegistryService: CommandRegistryService;
 
   // Chat checkpoint service (intercepts Write/Edit tools to enable per-session rewind)
@@ -691,7 +691,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking
   const reactiveSpawnerService = getReactiveSpawnerService(repoRoot);
 
-  // Command Registry Service — slash command discovery from built-ins + filesystem sources
+  // Command Registry Service — slash command discovery from filesystem sources
   const commandRegistryService = new CommandRegistryService(repoRoot);
   commandRegistryService.initialize();
 

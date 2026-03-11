@@ -1,6 +1,7 @@
 ---
 name: board
 description: View and manage the protoLabs Studio Kanban board. List features, check status, create new features, or review agent output.
+category: operations
 argument-hint: (optional project path or action)
 allowed-tools:
   - AskUserQuestion

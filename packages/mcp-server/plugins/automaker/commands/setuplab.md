@@ -1,6 +1,7 @@
 ---
 name: setuplab
 description: Point at any repo — scan it, measure the gap against our gold standard, initialize automation, and create alignment work. The entry point for onboarding projects to protoLabs Studio. Accepts either a git URL or a local path.
+category: setup
 argument-hint: <git URL or project path>
 allowed-tools:
   - AskUserQuestion

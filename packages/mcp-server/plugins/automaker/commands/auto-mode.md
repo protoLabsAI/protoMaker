@@ -1,6 +1,7 @@
 ---
 name: auto-mode
 description: Start or stop protoLabs Studio auto-mode for autonomous feature processing. Agents automatically pick up backlog features respecting dependencies.
+category: operations
 argument-hint: (start|stop|status) [project-path]
 allowed-tools:
   - AskUserQuestion

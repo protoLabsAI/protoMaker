@@ -1,6 +1,7 @@
 ---
 name: improve-prompts
 description: Analyze, critique, and improve prompts for LLM agents — system prompts, templates, or any instruction set.
+category: engineering
 argument-hint: [prompt-file-or-text]
 ---
 

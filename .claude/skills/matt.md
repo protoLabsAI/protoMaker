@@ -1,6 +1,7 @@
 ---
 name: matt
 description: Activates Matt, the Frontend Engineering Specialist. Use for React components, UI architecture, design system work, Tailwind CSS, Storybook, and all frontend implementation tasks.
+category: team
 argument-hint: [task description]
 allowed-tools:
   - Read

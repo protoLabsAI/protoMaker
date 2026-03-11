@@ -1,6 +1,7 @@
 ---
 name: welcome
 description: User onboarding — detect setup state, collect identity, orient to the board, create a first feature, and print a command reference card.
+category: setup
 model: sonnet
 allowed-tools:
   - AskUserQuestion
