@@ -5,7 +5,7 @@
  * Contains: queue panel, conversation history panel, settings panel, chat area.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { UIMessage } from 'ai';
 import {
   ChatMessageList,
@@ -13,7 +13,10 @@ import {
   SuggestionList,
   PromptInputProvider,
   QueueView,
+  usePromptInput,
   type BranchInfo,
+  type UseSlashCommandsResult,
+  type SlashCommand,
 } from '@protolabsai/ui/ai';
 import { cn } from '@/lib/utils';
 import { ChatModelSelect } from '@/components/views/chat/components/chat-model-select';
@@ -24,6 +27,7 @@ import { AvaSettingsPanel } from './ava-settings-panel';
 import type { ChatSession } from '@/store/chat-store';
 import type { SuggestionItem } from '@protolabsai/ui/ai';
 import type { PendingSubagentApproval } from '@/hooks/use-chat-session';
+import { useSlashCommands } from '@/hooks/use-slash-commands';
 
 /** Displays a live "Waiting Xs" counter from a receivedAt ISO timestamp. */
 function WaitingTimer({ receivedAt }: { receivedAt: string }) {
@@ -37,6 +41,120 @@ function WaitingTimer({ receivedAt }: { receivedAt: string }) {
     return () => clearInterval(id);
   }, [receivedAt]);
   return <span className="text-xs text-status-warning/80">Waiting {seconds}s</span>;
+}
+
+/**
+ * Inner component that lives inside PromptInputProvider so it can read the
+ * current input value and wire it into useSlashCommands.
+ */
+function ChatInputWithSlashCommands({
+  onSubmit,
+  onStop,
+  isStreaming,
+  modelAlias,
+  tokenUsage,
+  shortcutHint,
+  onModelChange,
+}: {
+  onSubmit: (text: string) => void;
+  onStop: () => void;
+  isStreaming: boolean;
+  modelAlias: string;
+  tokenUsage: { total: number; input: number; output: number; estimated: boolean };
+  shortcutHint: string;
+  onModelChange: (alias: string) => void;
+}) {
+  const { value, setValue } = usePromptInput();
+  const hookResult = useSlashCommands(value);
+
+  // Build the navigate handler: moves selectedIndex up/down with wrap-around.
+  const navigate = useCallback(
+    (direction: 'up' | 'down') => {
+      const count = hookResult.commands.length;
+      if (count === 0) return;
+      hookResult.select(
+        direction === 'up'
+          ? (hookResult.selectedIndex - 1 + count) % count
+          : (hookResult.selectedIndex + 1) % count
+      );
+    },
+    [hookResult]
+  );
+
+  // Build the close handler: reset selection index (isActive derives from input value).
+  const close = useCallback(() => {
+    hookResult.select(-1);
+  }, [hookResult]);
+
+  // Build the select handler: inserts the selected command name into the input,
+  // leaving a trailing space so the user can type arguments immediately.
+  const handleSelect = useCallback(
+    (cmd: SlashCommand) => {
+      setValue(`/${cmd.name} `);
+      hookResult.select(-1);
+    },
+    [setValue, hookResult]
+  );
+
+  // Normalise selectedIndex: clamp to 0 when active and no explicit selection.
+  const normalizedIndex =
+    hookResult.isActive && hookResult.selectedIndex === -1 ? 0 : hookResult.selectedIndex;
+
+  const slashCommands: UseSlashCommandsResult = {
+    isActive: hookResult.isActive,
+    commands: hookResult.commands.map((c) => ({
+      name: c.name,
+      description: c.description,
+      source: c.source,
+      argHint: c.argumentHint,
+    })),
+    selectedIndex: normalizedIndex,
+    onSelect: handleSelect,
+    onClose: close,
+    onNavigate: navigate,
+  };
+
+  return (
+    <ChatInput
+      onSubmit={onSubmit}
+      onStop={onStop}
+      isStreaming={isStreaming}
+      placeholder="Ask Ava..."
+      autoFocus
+      slashCommands={slashCommands}
+      actions={
+        <>
+          <ChatModelSelect value={modelAlias} onValueChange={onModelChange} />
+          {tokenUsage.total > 0 && (
+            <span
+              className={cn(
+                'text-xs tabular-nums',
+                tokenUsage.total > 100_000
+                  ? 'text-destructive font-medium'
+                  : tokenUsage.total > 50_000
+                    ? 'text-status-warning'
+                    : 'text-muted-foreground'
+              )}
+              title={
+                tokenUsage.estimated
+                  ? `~${tokenUsage.total.toLocaleString()} estimated context size`
+                  : `Context: ${tokenUsage.input.toLocaleString()} tokens (last response: ${tokenUsage.output.toLocaleString()} output)`
+              }
+            >
+              {tokenUsage.estimated && '~'}
+              {tokenUsage.total >= 1000
+                ? `${(tokenUsage.total / 1000).toFixed(1)}k`
+                : tokenUsage.total}{' '}
+              tokens
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground">
+            {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
+          </span>
+        </>
+      }
+    />
+  );
 }
 
 export interface AskAvaTabProps {
@@ -224,43 +342,14 @@ export function AskAvaTab({
 
         {/* PromptInputProvider scopes input state to this chat area */}
         <PromptInputProvider>
-          <ChatInput
+          <ChatInputWithSlashCommands
             onSubmit={onSubmit}
             onStop={onStop}
             isStreaming={isStreaming}
-            placeholder="Ask Ava..."
-            autoFocus
-            actions={
-              <>
-                <ChatModelSelect value={modelAlias} onValueChange={onModelChange} />
-                {tokenUsage.total > 0 && (
-                  <span
-                    className={cn(
-                      'text-xs tabular-nums',
-                      tokenUsage.total > 100_000
-                        ? 'text-destructive font-medium'
-                        : tokenUsage.total > 50_000
-                          ? 'text-status-warning'
-                          : 'text-muted-foreground'
-                    )}
-                    title={
-                      tokenUsage.estimated
-                        ? `~${tokenUsage.total.toLocaleString()} estimated context size`
-                        : `Context: ${tokenUsage.input.toLocaleString()} tokens (last response: ${tokenUsage.output.toLocaleString()} output)`
-                    }
-                  >
-                    {tokenUsage.estimated && '~'}
-                    {tokenUsage.total >= 1000
-                      ? `${(tokenUsage.total / 1000).toFixed(1)}k`
-                      : tokenUsage.total}{' '}
-                    tokens
-                  </span>
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
-                </span>
-              </>
-            }
+            modelAlias={modelAlias}
+            tokenUsage={tokenUsage}
+            shortcutHint={shortcutHint}
+            onModelChange={onModelChange}
           />
         </PromptInputProvider>
       </div>

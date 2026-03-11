@@ -113,6 +113,6 @@ export {
 export {
   SlashCommandDropdown,
   type SlashCommand,
-  type UseSlashCommandsResult,
   type SlashCommandDropdownProps,
+  type UseSlashCommandsResult,
 } from './slash-command-dropdown.js';
