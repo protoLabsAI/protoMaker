@@ -14,10 +14,13 @@ import type { UIMessage } from 'ai';
 // Types
 // ============================================================================
 
+export type ChatEffortLevel = 'low' | 'medium' | 'high';
+
 export interface ChatSession {
   id: string;
   title: string;
   modelAlias: string;
+  effortLevel: ChatEffortLevel;
   projectId: string;
   messages: UIMessage[];
   createdAt: number; // epoch ms (serializable)
@@ -42,6 +45,7 @@ interface ChatActions {
   saveMessages: (id: string, messages: UIMessage[]) => void;
   updateTitle: (id: string, title: string) => void;
   updateModel: (id: string, modelAlias: string) => void;
+  updateEffort: (id: string, effortLevel: ChatEffortLevel) => void;
   setHistoryOpen: (open: boolean) => void;
   toggleHistory: () => void;
   setChatModalOpen: (open: boolean) => void;
@@ -91,6 +95,7 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
           id: generateId(),
           title: 'New chat',
           modelAlias,
+          effortLevel: 'medium',
           projectId,
           messages: [],
           createdAt: now,
@@ -144,6 +149,13 @@ export const useChatStore = create<ChatStoreState & ChatActions>()(
       updateModel: (id, modelAlias) => {
         const sessions = get().sessions.map((s) =>
           s.id === id ? { ...s, modelAlias, updatedAt: Date.now() } : s
+        );
+        set({ sessions });
+      },
+
+      updateEffort: (id, effortLevel) => {
+        const sessions = get().sessions.map((s) =>
+          s.id === id ? { ...s, effortLevel, updatedAt: Date.now() } : s
         );
         set({ sessions });
       },

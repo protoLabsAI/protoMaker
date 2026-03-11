@@ -27,7 +27,9 @@ import { AvaSettingsPanel } from './ava-settings-panel';
 import type { ChatSession } from '@/store/chat-store';
 import type { SuggestionItem } from '@protolabsai/ui/ai';
 import type { PendingSubagentApproval } from '@/hooks/use-chat-session';
+import type { ChatEffortLevel } from '@/store/chat-store';
 import { useSlashCommands } from '@/hooks/use-slash-commands';
+import { ChatStatusBar } from './chat-status-bar';
 
 /** Displays a live "Waiting Xs" counter from a receivedAt ISO timestamp. */
 function WaitingTimer({ receivedAt }: { receivedAt: string }) {
@@ -52,17 +54,17 @@ function ChatInputWithSlashCommands({
   onStop,
   isStreaming,
   modelAlias,
-  tokenUsage,
-  shortcutHint,
+  effortLevel,
   onModelChange,
+  onEffortChange,
 }: {
   onSubmit: (text: string) => void;
   onStop: () => void;
   isStreaming: boolean;
   modelAlias: string;
-  tokenUsage: { total: number; input: number; output: number; estimated: boolean };
-  shortcutHint: string;
+  effortLevel: ChatEffortLevel;
   onModelChange: (alias: string) => void;
+  onEffortChange: (effort: ChatEffortLevel) => void;
 }) {
   const { value, setValue } = usePromptInput();
   const hookResult = useSlashCommands(value);
@@ -123,35 +125,12 @@ function ChatInputWithSlashCommands({
       autoFocus
       slashCommands={slashCommands}
       actions={
-        <>
-          <ChatModelSelect value={modelAlias} onValueChange={onModelChange} />
-          {tokenUsage.total > 0 && (
-            <span
-              className={cn(
-                'text-xs tabular-nums',
-                tokenUsage.total > 100_000
-                  ? 'text-destructive font-medium'
-                  : tokenUsage.total > 50_000
-                    ? 'text-status-warning'
-                    : 'text-muted-foreground'
-              )}
-              title={
-                tokenUsage.estimated
-                  ? `~${tokenUsage.total.toLocaleString()} estimated context size`
-                  : `Context: ${tokenUsage.input.toLocaleString()} tokens (last response: ${tokenUsage.output.toLocaleString()} output)`
-              }
-            >
-              {tokenUsage.estimated && '~'}
-              {tokenUsage.total >= 1000
-                ? `${(tokenUsage.total / 1000).toFixed(1)}k`
-                : tokenUsage.total}{' '}
-              tokens
-            </span>
-          )}
-          <span className="text-xs text-muted-foreground">
-            {isStreaming ? 'Streaming...' : `Enter to send \u00B7 ${shortcutHint}`}
-          </span>
-        </>
+        <ChatModelSelect
+          value={modelAlias}
+          onValueChange={onModelChange}
+          effortLevel={effortLevel}
+          onEffortChange={onEffortChange}
+        />
       }
     />
   );
@@ -178,7 +157,9 @@ export interface AskAvaTabProps {
   queueOpen: boolean;
   queuePaused: boolean;
   projectPath?: string;
-  shortcutHint: string;
+  toolProgressLabel?: string;
+  stepCount: number;
+  effortLevel: ChatEffortLevel;
 
   onSubmit: (text: string) => void;
   onStop: () => void;
@@ -196,6 +177,7 @@ export interface AskAvaTabProps {
   onCloseHistory: () => void;
   onToggleQueuePause: () => void;
   onModelChange: (alias: string) => void;
+  onEffortChange: (effort: ChatEffortLevel) => void;
   getToolProgressLabel: (toolCallId: string) => string | undefined;
 
   /** Pending subagent tool approval requests */
@@ -219,7 +201,9 @@ export function AskAvaTab({
   queueOpen,
   queuePaused,
   projectPath,
-  shortcutHint,
+  toolProgressLabel,
+  stepCount,
+  effortLevel,
   onSubmit,
   onStop,
   onSuggestionSelect,
@@ -236,6 +220,7 @@ export function AskAvaTab({
   onCloseHistory,
   onToggleQueuePause,
   onModelChange,
+  onEffortChange,
   getToolProgressLabel,
   pendingSubagentApprovals,
   approveSubagentTool,
@@ -347,11 +332,19 @@ export function AskAvaTab({
             onStop={onStop}
             isStreaming={isStreaming}
             modelAlias={modelAlias}
-            tokenUsage={tokenUsage}
-            shortcutHint={shortcutHint}
+            effortLevel={effortLevel}
             onModelChange={onModelChange}
+            onEffortChange={onEffortChange}
           />
         </PromptInputProvider>
+
+        {/* Full-width footer: tokens + board stats + step progress */}
+        <ChatStatusBar
+          toolProgressLabel={toolProgressLabel}
+          isStreaming={isStreaming}
+          stepCount={stepCount}
+          tokenUsage={tokenUsage}
+        />
       </div>
     </div>
   );

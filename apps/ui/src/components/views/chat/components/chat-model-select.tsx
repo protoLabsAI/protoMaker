@@ -15,6 +15,14 @@ import { Command } from 'cmdk';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { Cpu, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ChatEffortLevel } from '@/store/chat-store';
+
+// ---------------------------------------------------------------------------
+// Effort levels
+// ---------------------------------------------------------------------------
+
+const EFFORT_LEVELS: ChatEffortLevel[] = ['low', 'medium', 'high'];
+const EFFORT_LABELS: Record<ChatEffortLevel, string> = { low: 'Lo', medium: 'Med', high: 'Hi' };
 
 // ---------------------------------------------------------------------------
 // Model definitions
@@ -83,10 +91,14 @@ const TIER_BADGE_CLASSES: Record<TierColor, string> = {
 export function ChatModelSelect({
   value,
   onValueChange,
+  effortLevel = 'medium',
+  onEffortChange,
   className,
 }: {
   value: string;
   onValueChange: (value: string) => void;
+  effortLevel?: ChatEffortLevel;
+  onEffortChange?: (effort: ChatEffortLevel) => void;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -146,6 +158,11 @@ export function ChatModelSelect({
             aria-hidden="true"
           />
           <span className="font-medium">{currentModel.label}</span>
+          {effortLevel !== 'high' && (
+            <span className="text-[10px] text-muted-foreground/60">
+              {EFFORT_LABELS[effortLevel]}
+            </span>
+          )}
         </button>
       </PopoverPrimitive.Trigger>
 
@@ -232,6 +249,34 @@ export function ChatModelSelect({
               })}
             </Command.List>
           </Command>
+
+          {/* Effort toggle */}
+          {onEffortChange && (
+            <div className="border-t border-border px-2 py-2">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                Thinking Effort
+              </div>
+              <div className="inline-flex h-7 w-full items-center rounded-md border border-border">
+                {EFFORT_LEVELS.map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => onEffortChange(level)}
+                    className={cn(
+                      'flex-1 h-full text-xs transition-colors',
+                      effortLevel === level
+                        ? 'bg-accent text-accent-foreground font-medium'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+                      level === 'low' && 'rounded-l-[5px]',
+                      level === 'high' && 'rounded-r-[5px]'
+                    )}
+                  >
+                    {EFFORT_LABELS[level]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>

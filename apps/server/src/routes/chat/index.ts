@@ -79,12 +79,6 @@ function extractMessageText(message: UIMessage): string {
 }
 
 /**
- * Budget tokens for extended thinking (Anthropic "extended thinking" feature).
- * Chosen to allow meaningful multi-step reasoning without excessive cost.
- */
-const THINKING_BUDGET_TOKENS = 10_000;
-
-/**
  * Load Ava-level context: project root CLAUDE.md + Ava skill prompt body.
  *
  * Unlike dev agents (which load .automaker/context/ + .automaker/memory/),
@@ -385,6 +379,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
       // The inline ChatModelSelect sends x-model-alias; config model is the fallback for new chats.
       const modelAlias =
         (req.headers['x-model-alias'] as string) || bodyModel || avaConfig.model || 'sonnet';
+      const effortLevel = (req.headers['x-effort-level'] as string) || 'medium';
 
       const resolvedModelId = resolveModelString(modelAlias, 'sonnet');
       const aiModel = await getAnthropicModel(resolvedModelId);
@@ -545,9 +540,11 @@ export function createChatRoutes(services: ServiceContainer): Router {
         ? `${commandSystemPrefix}\n\n---\n\n${systemPrompt}`
         : systemPrompt;
       // Enable extended thinking for models that support it (opus / sonnet).
-      // The thinking budget caps how many tokens the model may use for internal
-      // reasoning before producing its visible response.
+      // Uses adaptive thinking with effort level from the client UI.
       const extendedThinking = modelSupportsExtendedThinking(resolvedModelId);
+      const validEffort = ['low', 'medium', 'high'].includes(effortLevel)
+        ? (effortLevel as 'low' | 'medium' | 'high')
+        : 'medium';
 
       // Convert UIMessages (with tool-invocation, reasoning, approval parts) to
       // ModelMessages that streamText understands. This preserves tool call/result
@@ -575,7 +572,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
       logger.info(
         `Chat request: ${messages.length} messages, model=${modelAlias}, ~${estimatedInputTokens} est. input tokens, ` +
           `systemPrompt=${(systemPromptChars / 1024).toFixed(1)}KB, messages=${(messagesChars / 1024).toFixed(1)}KB, ` +
-          `projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}, extendedThinking=${extendedThinking}`
+          `projectPath=${projectPath ?? 'none'}, contextInjection=${avaConfig.contextInjection}, sitrepInjection=${avaConfig.sitrepInjection}, extendedThinking=${extendedThinking}, effort=${validEffort}`
       );
 
       if (estimatedInputTokens > 150_000) {
@@ -593,8 +590,9 @@ export function createChatRoutes(services: ServiceContainer): Router {
         providerOptions: {
           anthropic: {
             ...(extendedThinking && {
-              thinking: { type: 'enabled', budgetTokens: THINKING_BUDGET_TOKENS },
+              thinking: { type: 'adaptive' },
             }),
+            outputConfig: { effort: validEffort },
             contextManagement: {
               edits: [
                 {
