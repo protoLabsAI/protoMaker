@@ -1087,59 +1087,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         limit: args.limit || 10,
       });
 
-    // Agent Management
-    case 'list_agent_templates':
-      return apiCall('/agents/templates/list', {
-        role: args.role,
-      });
-
-    case 'get_agent_template':
-      return apiCall('/agents/templates/get', {
-        name: args.name,
-      });
-
-    case 'register_agent_template':
-      return apiCall('/agents/templates/register', {
-        template: args.template,
-      });
-
-    case 'update_agent_template':
-      return apiCall('/agents/templates/update', {
-        name: args.name,
-        updates: args.updates,
-      });
-
-    case 'unregister_agent_template':
-      return apiCall('/agents/templates/unregister', {
-        name: args.name,
-      });
-
-    case 'execute_dynamic_agent':
-      return apiCall('/agents/execute', {
-        templateName: args.templateName,
-        projectPath: args.projectPath,
-        prompt: args.prompt,
-        overrides: args.overrides,
-        additionalSystemPrompt: args.additionalSystemPrompt,
-      });
-
-    case 'get_role_registry_status': {
-      // List all templates to build status overview
-      const templatesResult = (await apiCall('/agents/templates/list', {})) as {
-        templates?: Array<{ name: string; role: string; tier: number }>;
-        count?: number;
-      };
-      return {
-        success: true,
-        totalTemplates: templatesResult.count || 0,
-        templates: (templatesResult.templates || []).map((t) => ({
-          name: t.name,
-          role: t.role,
-          tier: t.tier,
-        })),
-      };
-    }
-
     // Setup Pipeline
     case 'research_repo':
       return apiCall('/setup/research', {

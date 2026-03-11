@@ -437,7 +437,7 @@ export function createChatRoutes(services: ServiceContainer): Router {
       }
       // Convert ava-specific mcpServers to the agent SDK format and merge with
       // project-level MCP servers configured in global settings.  The converted
-      // list is passed down to execute_dynamic_agent so inner agents delegated
+      // list is passed down to tools so inner agents delegated
       // from Ava chat can access the same additional MCP servers.
       const avaMcpServers = (avaConfig.mcpServers ?? [])
         .filter((s) => s.enabled !== false)
@@ -459,7 +459,6 @@ export function createChatRoutes(services: ServiceContainer): Router {
               autoModeService: services.autoModeService,
               leadEngineerService: services.leadEngineerService,
               agentService: services.agentService,
-              roleRegistryService: services.roleRegistryService,
               metricsService: services.metricsService,
               settingsService: services.settingsService,
               projectService: services.projectService,

@@ -29,7 +29,6 @@ import { ArtifactCard } from './tool-results/artifact-card.js';
 import { ImageCard } from './tool-results/image-card.js';
 import { WebPreviewCard } from './tool-results/web-preview-card.js';
 import { PlanPartToolRenderer } from './plan-part.js';
-import { DynamicAgentCard } from './tool-results/dynamic-agent-card.js';
 import { MetricsCard } from './tool-results/metrics-card.js';
 import { BriefingCard } from './tool-results/briefing-card.js';
 import { PromotionCandidatesCard } from './tool-results/promotion-candidates-card.js';
@@ -76,9 +75,6 @@ toolResultRegistry.register('generate_html', WebPreviewCard);
 
 // Register custom renderer for the planning tool
 toolResultRegistry.register('create_plan', PlanPartToolRenderer);
-
-// Register custom renderers for the agentDelegation tool group
-toolResultRegistry.register('execute_dynamic_agent', DynamicAgentCard);
 
 // Register custom renderers for the metrics tool group
 toolResultRegistry.register('get_project_metrics', MetricsCard);

@@ -196,7 +196,7 @@ mcp__plugin_protolabs_studio__list_running_agents()
 1. **Monitor Progress** - Check agent output periodically
 2. **Review Completed Work** - When agent finishes, review the output
 3. **Post-Flight Delegation** - Delegate mechanical cleanup to specialists:
-   - PR creation, formatting, CodeRabbit -> `execute_dynamic_agent` with template `pr-maintainer`
+   - PR creation, formatting, CodeRabbit -> `start_agent` or delegate via native Agent tool
    - Board state fixes -> handle directly or via specialist agent
 4. **Handle Failures** - If agent fails, analyze error and decide:
    - Retry with more context

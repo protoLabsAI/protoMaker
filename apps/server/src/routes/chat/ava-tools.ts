@@ -29,10 +29,6 @@ import type { AutoModeService } from '../../services/auto-mode-service.js';
 import type { LeadEngineerService } from '../../services/lead-engineer-service.js';
 import type { AgentService } from '../../services/agent-service.js';
 import type { SensorRegistryService } from '../../services/sensor-registry-service.js';
-import type { RoleRegistryService } from '../../services/role-registry-service.js';
-import { simpleQuery } from '../../providers/simple-query-service.js';
-import { getPromptForRole, hasPrompt } from '@protolabsai/prompts';
-import { resolveModelString } from '@protolabsai/model-resolver';
 import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
@@ -43,7 +39,6 @@ import type { CalendarService } from '../../services/calendar-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
 import type { ToolProgressEmitter } from './tool-progress.js';
-import { buildProgressHooks } from '../../lib/agent-hooks.js';
 import { githubMergeService } from '../../services/github-merge-service.js';
 import { getPRWatcherService } from '../../services/pr-watcher-service.js';
 import { getEventHistoryService } from '../../services/event-history-service.js';
@@ -81,8 +76,6 @@ export interface AvaToolsServices {
   events?: EventEmitter;
   /** Optional sensor registry — required for get_presence_state tool */
   sensorRegistryService?: SensorRegistryService;
-  /** Agent template registry — required for agentDelegation tools */
-  roleRegistryService?: RoleRegistryService;
   /** Metrics service — required for metrics tools */
   metricsService?: MetricsService;
   /** Settings service — used for global settings access */
@@ -135,7 +128,7 @@ export interface AvaToolsConfig {
   projectMgmt?: boolean;
   /** Enable orchestration tools (get_execution_order, set_feature_dependencies) */
   orchestration?: boolean;
-  /** Enable agent delegation tools (execute_dynamic_agent, list_agent_templates) */
+  /** @deprecated Agent delegation tools removed — use native Agent tool instead */
   agentDelegation?: boolean;
   /** Enable notes tools (list_note_tabs, read_note_tab, write_note_tab) */
   notes?: boolean;
@@ -737,109 +730,6 @@ export function buildAvaTools(
           dependencies,
         });
         return { featureId, dependencies: feature.dependencies ?? [] };
-      },
-    });
-  }
-
-  // -----------------------------------------------------------------------
-  // agentDelegation – delegate work to dynamic agents
-  // -----------------------------------------------------------------------
-  if (config.agentDelegation) {
-    tools['list_agent_templates'] = makeTool({
-      description: 'List all registered agent templates (roles) available for delegation.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        if (!services.roleRegistryService) {
-          return { error: 'Role registry service not available' };
-        }
-        const templates = services.roleRegistryService.list();
-        return templates.map((t) => ({
-          name: t.name,
-          role: t.role,
-          description: t.description,
-          model: t.model,
-        }));
-      },
-    });
-
-    tools['execute_dynamic_agent'] = makeTool({
-      description:
-        'Execute a dynamic agent with a specific role and prompt. The agent runs in the project worktree and returns its output. Use for delegating specialized tasks to domain-expert agents.',
-      inputSchema: z.object({
-        role: z
-          .string()
-          .describe('Agent role/template name. Use list_agent_templates to see available roles.'),
-        prompt: z.string().describe('Task prompt for the agent'),
-        model: z
-          .string()
-          .optional()
-          .describe('Model override (haiku, sonnet, opus). Defaults to template setting.'),
-      }),
-      execute: async ({ role, prompt, model }, { toolCallId }) => {
-        if (!services.roleRegistryService) {
-          return { error: 'Agent delegation services not available' };
-        }
-        const template = services.roleRegistryService.resolve(role);
-        if (!template) {
-          return { error: `No agent template found for role "${role}"` };
-        }
-
-        // Resolve system prompt: template inline → prompt registry → undefined
-        const parts: string[] = [];
-        if (template.systemPrompt) {
-          parts.push(template.systemPrompt);
-        } else {
-          const lookupKey = hasPrompt(template.name) ? template.name : template.role;
-          if (hasPrompt(lookupKey)) {
-            parts.push(getPromptForRole(lookupKey, { projectPath }));
-          }
-        }
-        const systemPrompt = parts.length > 0 ? parts.join('\n\n') : undefined;
-
-        const modelAlias = model ?? template.model ?? 'sonnet';
-        const resolvedModel = resolveModelString(modelAlias);
-
-        // Wire tool progress emitter — stream inner-agent activity to the chat UI
-        const emitter = services.toolProgressEmitter;
-        const agentLabel = role;
-
-        // Build PostToolUse progress hooks to replace manual onToolUse progress emission.
-        const progressHooks =
-          emitter && toolCallId
-            ? { PostToolUse: buildProgressHooks({ emitter, toolCallId, agentLabel }) }
-            : undefined;
-
-        const startTime = Date.now();
-
-        try {
-          const result = await simpleQuery({
-            prompt,
-            model: resolvedModel,
-            cwd: projectPath,
-            systemPrompt,
-            maxTurns: template.maxTurns ?? 100,
-            allowedTools: template.tools ?? [],
-            disallowedTools: template.disallowedTools ?? [],
-            hooks: progressHooks,
-            canUseTool: services.canUseTool,
-            traceContext: { agentRole: role },
-          });
-
-          // Cleanup rate-limit tracking
-          if (emitter && toolCallId) emitter.clear(toolCallId);
-
-          return {
-            success: true,
-            output: result.text,
-            durationMs: Date.now() - startTime,
-            templateName: template.name,
-            model: modelAlias,
-          };
-        } catch (err) {
-          if (emitter && toolCallId) emitter.clear(toolCallId);
-          const error = err instanceof Error ? err.message : String(err);
-          return { success: false, output: '', error, durationMs: Date.now() - startTime };
-        }
       },
     });
   }

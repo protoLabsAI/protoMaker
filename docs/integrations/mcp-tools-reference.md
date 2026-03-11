@@ -197,17 +197,9 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 | `get_lead_engineer_status` | Get lead engineer running status     |
 | `get_feature_handoff`      | Get phase handoff data for a feature |
 
-## Agent Templates (7 tools)
+## Agent Templates (removed)
 
-| Tool                        | Description                         |
-| --------------------------- | ----------------------------------- |
-| `list_agent_templates`      | List all registered agent templates |
-| `get_agent_template`        | Get a specific template by name     |
-| `register_agent_template`   | Register a new agent template       |
-| `update_agent_template`     | Update an existing template         |
-| `unregister_agent_template` | Remove a template                   |
-| `execute_dynamic_agent`     | Execute an agent from a template    |
-| `get_role_registry_status`  | Get template registry statistics    |
+> Agent template CRUD and `execute_dynamic_agent` tools have been removed. Agent spawning is handled by Claude Code's native Agent tool.
 
 ## HITL / Forms (5 tools)
 
