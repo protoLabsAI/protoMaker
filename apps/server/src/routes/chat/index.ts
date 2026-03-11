@@ -641,5 +641,21 @@ export function createChatRoutes(services: ServiceContainer): Router {
     res.json({ ok: true });
   });
 
+  /**
+   * GET /api/chat/commands
+   *
+   * Returns the registered slash command registry as a typed array for the
+   * ChatInput autocomplete dropdown. Each entry includes name, description,
+   * argumentHint, and source. The body field is excluded to keep payloads small.
+   *
+   * Response: SlashCommandSummary[]
+   */
+  router.get('/commands', (_req: Request, res: Response) => {
+    const commands = services.commandRegistryService
+      .getAll()
+      .map(({ body: _body, ...summary }) => summary);
+    res.json(commands);
+  });
+
   return router;
 }
