@@ -103,3 +103,9 @@ export {
   type QueueItemStatus,
   type QueueItemComplexity,
 } from './queue-view.js';
+
+export {
+  CheckpointMarker,
+  type CheckpointMarkerProps,
+  type CheckpointInfo,
+} from './checkpoint-marker.js';
