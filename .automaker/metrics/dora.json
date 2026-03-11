@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T07:10:01.002Z",
+  "updatedAt": "2026-03-11T07:20:25.957Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -204,6 +204,27 @@
         "featureCreatedAt": "2026-03-11T06:17:37.102Z",
         "prMergedAt": "2026-03-11T07:10:00.990Z",
         "leadTimeMs": 3143888
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:20:25.944Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773209861196-czy74schi",
+        "featureTitle": "Command Expansion Engine",
+        "featureCreatedAt": "2026-03-11T06:17:41.196Z",
+        "prMergedAt": "2026-03-11T07:20:25.944Z",
+        "leadTimeMs": 3764748
       },
       "changeFailRate": {
         "totalMerges": 1,
