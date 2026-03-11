@@ -46,9 +46,43 @@ function getLastTag() {
 }
 
 function getCommitsSince(ref) {
-  const log = run(`git log ${ref}..HEAD --pretty=format:"%s"`);
+  // Use --first-parent to walk the main branch, then for each merge commit,
+  // also inspect the merged branch's commits. This ensures feat: commits
+  // inside promotion merges (staging → main) are counted for version bumps.
+  const log = run(`git log ${ref}..HEAD --pretty=format:"%H %s"`);
   if (!log) return [];
-  return log.split('\n').map((line) => line.replace(/^"|"$/g, ''));
+
+  const subjects = [];
+  for (const line of log.split('\n')) {
+    const raw = line.replace(/^"|"$/g, '');
+    const spaceIdx = raw.indexOf(' ');
+    if (spaceIdx === -1) continue;
+    const hash = raw.slice(0, spaceIdx);
+    const subject = raw.slice(spaceIdx + 1);
+    subjects.push(subject);
+
+    // If this is a merge commit, also collect subjects from the merged branch
+    try {
+      const parents = run(`git cat-file -p ${hash}`)
+        .split('\n')
+        .filter((l) => l.startsWith('parent '))
+        .map((l) => l.slice(7));
+      if (parents.length >= 2) {
+        const mergedLog = run(
+          `git log ${parents[0]}..${parents[1]} --pretty=format:"%s"`
+        );
+        if (mergedLog) {
+          for (const ml of mergedLog.split('\n')) {
+            subjects.push(ml.replace(/^"|"$/g, ''));
+          }
+        }
+      }
+    } catch {
+      // Not a merge commit or can't read parents — skip
+    }
+  }
+
+  return subjects;
 }
 
 function classifyBump(commits) {
