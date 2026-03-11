@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T01:32:07.882Z",
+  "updatedAt": "2026-03-11T16:41:30.767Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -186,6 +186,174 @@
       },
       "changeFailRate": {
         "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:10:00.990Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773209857101-lvyib3ju3",
+        "featureTitle": "Command Discovery API Endpoint",
+        "featureCreatedAt": "2026-03-11T06:17:37.102Z",
+        "prMergedAt": "2026-03-11T07:10:00.990Z",
+        "leadTimeMs": 3143888
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:20:25.944Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773209861196-czy74schi",
+        "featureTitle": "Command Expansion Engine",
+        "featureCreatedAt": "2026-03-11T06:17:41.196Z",
+        "prMergedAt": "2026-03-11T07:20:25.944Z",
+        "leadTimeMs": 3764748
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:30:26.227Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 2,
+        "mergesPerWeek": 2,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773209893334-1vpe8yx5c",
+        "featureTitle": "Subagent Message Part Type",
+        "featureCreatedAt": "2026-03-11T06:18:13.334Z",
+        "prMergedAt": "2026-03-11T07:30:26.227Z",
+        "leadTimeMs": 4332893
+      },
+      "changeFailRate": {
+        "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T07:42:56.184Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 3,
+        "mergesPerWeek": 3,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773210730351-n9791j6ru",
+        "featureTitle": "Bug: Worktree symlinks resolve @protolabsai packages to main repo dist",
+        "featureCreatedAt": "2026-03-11T06:32:10.351Z",
+        "prMergedAt": "2026-03-11T07:42:56.184Z",
+        "leadTimeMs": 4245833
+      },
+      "changeFailRate": {
+        "totalMerges": 3,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T16:22:56.175Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 4,
+        "mergesPerWeek": 4,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773209883601-sxbd2paal",
+        "featureTitle": "Slash Command Dropdown Component",
+        "featureCreatedAt": "2026-03-11T06:18:03.601Z",
+        "prMergedAt": "2026-03-11T16:22:56.175Z",
+        "leadTimeMs": 36292574
+      },
+      "changeFailRate": {
+        "totalMerges": 4,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T16:41:16.826Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773245314376-46dvi8fqf",
+        "featureTitle": "[Auto] Recovery escalated: [Auto] Recovery escalated: Remove execute_dynamic_agent MCP tool and agent template tools",
+        "featureCreatedAt": "2026-03-11T16:08:34.377Z",
+        "prMergedAt": "2026-03-11T16:41:16.826Z",
+        "leadTimeMs": 1962449
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T16:41:23.419Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 2,
+        "mergesPerWeek": 2,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773245314376-46dvi8fqf",
+        "featureTitle": "[Auto] Recovery escalated: [Auto] Recovery escalated: Remove execute_dynamic_agent MCP tool and agent template tools",
+        "featureCreatedAt": "2026-03-11T16:08:34.377Z",
+        "prMergedAt": "2026-03-11T16:41:23.419Z",
+        "leadTimeMs": 1969042
+      },
+      "changeFailRate": {
+        "totalMerges": 2,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T16:41:30.740Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 3,
+        "mergesPerWeek": 3,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773244558438-nn5il6op0",
+        "featureTitle": "[Auto] Recovery escalated: Remove execute_dynamic_agent MCP tool and agent template tools",
+        "featureCreatedAt": "2026-03-11T15:55:58.439Z",
+        "prMergedAt": "2026-03-11T16:41:30.740Z",
+        "leadTimeMs": 2732301
+      },
+      "changeFailRate": {
+        "totalMerges": 3,
         "totalFailures": 0,
         "ratio": 0
       },

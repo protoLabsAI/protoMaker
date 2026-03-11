@@ -1,0 +1,246 @@
+{
+  "slug": "native-claude-code-experience-in-ava-chat",
+  "title": "Native Claude Code Experience in Ava Chat",
+  "goal": "Bring slash commands, subagent visibility, and file checkpointing from the Claude Code CLI experience into the Ava chat UI, making all 18 MCP commands and 27+ skills discoverable and invocable directly from the chat input.",
+  "status": "approved",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-command-registry-and-discovery",
+      "title": "Command Registry and Discovery",
+      "description": "Server-side command registry that discovers, parses, and serves slash commands from multiple sources. This is the foundation — no UI yet, just the data pipeline.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "command-registry-service",
+          "title": "Command Registry Service",
+          "description": "Create CommandRegistryService that scans filesystem for commands: built-in commands (compact, clear, new), MCP plugin commands from packages/mcp-server/plugins/automaker/commands/*.md, learned skills from .automaker/skills/*.md, and project skills from .claude/skills/*.md. Parse YAML frontmatter (name, description, argument-hint, allowed-tools, model). Cache results with file-watch invalidation. Register as a service in the ServiceContainer.",
+          "filesToModify": [
+            "apps/server/src/services/command-registry-service.ts",
+            "apps/server/src/server/services.ts"
+          ],
+          "acceptanceCriteria": [
+            "Service discovers commands from all 4 sources",
+            "Frontmatter parsed correctly (name, description, argument-hint, allowed-tools)",
+            "Built-in commands (compact, clear, new) registered without filesystem",
+            "Cache invalidates when command files change",
+            "Service registered in ServiceContainer"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 2,
+          "name": "command-discovery-api-endpoint",
+          "title": "Command Discovery API Endpoint",
+          "description": "Create GET /api/chat/commands endpoint that returns the command registry as a typed array. Each entry includes: name, description, argumentHint, source (builtin/plugin/skill/project). Endpoint used by the ChatInput autocomplete dropdown.",
+          "filesToModify": [
+            "apps/server/src/routes/chat/index.ts",
+            "libs/types/src/chat.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET /api/chat/commands returns array of SlashCommand objects",
+            "Each command has name, description, argumentHint, source fields",
+            "Types exported from @protolabsai/types",
+            "Endpoint tested with curl"
+          ],
+          "complexity": "small"
+        },
+        {
+          "number": 3,
+          "name": "command-expansion-engine",
+          "title": "Command Expansion Engine",
+          "description": "When a user message starts with /, the server loads the command body, expands placeholders ($ARGUMENTS, $1, $2), resolves @file references (reads file content inline), executes !backtick bash snippets (captures output inline), and injects the expanded text as a system context prefix for that turn. Respect allowed-tools from frontmatter to restrict the tool set.",
+          "filesToModify": [
+            "apps/server/src/services/command-expansion-service.ts",
+            "apps/server/src/routes/chat/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "$ARGUMENTS expands to full argument string after command name",
+            "$1, $2 etc expand to positional arguments",
+            "@file references replaced with file contents",
+            "!backtick bash commands executed and output inlined",
+            "allowed-tools from frontmatter restricts tool set for that turn",
+            "Graceful fallback when file not found or command fails"
+          ],
+          "complexity": "medium"
+        }
+      ],
+      "status": "pending"
+    },
+    {
+      "number": 2,
+      "slug": "02-slash-command-ui",
+      "title": "Slash Command UI",
+      "description": "ChatInput enhancement with slash command detection, autocomplete dropdown, and command execution feedback.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "command-autocomplete-hook",
+          "title": "Command Autocomplete Hook",
+          "description": "Create useSlashCommands hook that: fetches command list from GET /api/chat/commands on mount (with SWR/stale-while-revalidate), tracks whether the current input starts with / and extracts the query string, filters commands by query match (name + description), exposes filtered list + active state + keyboard selection index. This is the data layer for the autocomplete UI.",
+          "filesToModify": [
+            "apps/ui/src/hooks/use-slash-commands.ts",
+            "apps/ui/src/lib/clients/ava-client.ts"
+          ],
+          "acceptanceCriteria": [
+            "Hook fetches commands on mount",
+            "Detects / prefix in input and activates autocomplete mode",
+            "Filters commands by name and description substring match",
+            "Exposes: commands, isActive, query, selectedIndex, select()",
+            "Deactivates when / is removed or space follows a non-matching prefix"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 2,
+          "name": "slash-command-dropdown-component",
+          "title": "Slash Command Dropdown Component",
+          "description": "Create SlashCommandDropdown component rendered above the ChatInput when useSlashCommands.isActive is true. Shows filtered command list with name, description, source badge, and argument hint. Keyboard navigation (up/down/enter/escape). Selecting a command inserts the command name into the input. Positioned using the textarea caret position or anchored to the input bottom.",
+          "filesToModify": [
+            "libs/ui/src/ai/slash-command-dropdown.tsx",
+            "libs/ui/src/ai/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Dropdown appears when typing / in ChatInput",
+            "Shows filtered commands with name, description, source badge",
+            "Keyboard navigation: arrow keys, enter to select, escape to close",
+            "Selecting inserts /command-name into input",
+            "Positioned above ChatInput, does not overflow viewport",
+            "Accessible: proper ARIA roles and keyboard handling"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 3,
+          "name": "chatinput-integration",
+          "title": "ChatInput Integration",
+          "description": "Wire the SlashCommandDropdown into ChatInput. Pass the current input value to useSlashCommands, render the dropdown when active, handle selection by updating the prompt input value. On submit, if text starts with /, send it through normally — the server handles expansion. Add visual indicator (different input border color or icon) when in command mode.",
+          "filesToModify": [
+            "libs/ui/src/ai/chat-input.tsx",
+            "apps/ui/src/components/views/chat-overlay/ask-ava-tab.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Typing / in ChatInput shows command dropdown",
+            "Tab/Enter selects command and inserts into input",
+            "User can continue typing arguments after command name",
+            "Submit sends /command text to server as normal message",
+            "Visual indicator shows command mode is active",
+            "No regression: normal text input works unchanged"
+          ],
+          "complexity": "medium"
+        }
+      ],
+      "status": "pending"
+    },
+    {
+      "number": 3,
+      "slug": "03-subagent-visibility",
+      "title": "Subagent Visibility",
+      "description": "Surface Agent tool invocations as rich, collapsible UI blocks instead of opaque tool results.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "subagent-message-part-type",
+          "title": "Subagent Message Part Type",
+          "description": "Add a subagent-progress data part type to the message stream. When the server detects an Agent tool_use block in the streamed response, emit a data-subagent chunk with: subagentType, status (spawning/running/done/failed), description, and result summary. Define the SubagentProgress type in @protolabsai/types.",
+          "filesToModify": [
+            "libs/types/src/chat.ts",
+            "apps/server/src/routes/chat/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "SubagentProgress type defined with subagentType, status, description, resultSummary",
+            "Server emits data-subagent UIMessageChunk when Agent tool detected",
+            "Chunk includes parsed subagent metadata from tool input",
+            "Works with existing streamText pipeline"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 2,
+          "name": "subagent-block-component",
+          "title": "Subagent Block Component",
+          "description": "Create SubagentBlock component in libs/ui that renders subagent-progress parts as collapsible cards. Shows: subagent type badge, status indicator (spinner/checkmark/x), description, and collapsed result summary that expands on click. Register in the tool-result-registry so ChatMessageList renders it automatically for Agent tool results.",
+          "filesToModify": [
+            "libs/ui/src/ai/subagent-block.tsx",
+            "libs/ui/src/ai/index.ts",
+            "apps/ui/src/components/views/chat-overlay/tool-result-registry.ts"
+          ],
+          "acceptanceCriteria": [
+            "SubagentBlock renders for Agent tool results",
+            "Shows subagent type, status badge, description",
+            "Result summary collapsible (collapsed by default)",
+            "Spinner while running, checkmark when done, x on failure",
+            "Registered in tool-result-registry for automatic rendering"
+          ],
+          "complexity": "medium"
+        }
+      ],
+      "status": "pending"
+    },
+    {
+      "number": 4,
+      "slug": "04-file-checkpointing",
+      "title": "File Checkpointing",
+      "description": "Track file modifications made through Ava chat and enable rewind to previous states.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "checkpoint-tracking-service",
+          "title": "Checkpoint Tracking Service",
+          "description": "Create CheckpointService that intercepts Write/Edit tool results in the chat pipeline. Before each file modification, store the original file content. Maintain a per-session checkpoint map: sessionId -> [{ checkpointId (UUID), messageId, filePath, originalContent, timestamp }]. Expose rewind(sessionId, checkpointId) that restores all files modified after the checkpoint to their state at that point. Files created after checkpoint are deleted on rewind.",
+          "filesToModify": [
+            "apps/server/src/services/checkpoint-service.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/src/routes/chat/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "Service tracks file state before Write/Edit tool execution",
+            "Checkpoint created per user message turn",
+            "rewind() restores files to checkpoint state",
+            "Created files deleted on rewind",
+            "Checkpoint data persisted per session",
+            "Service registered in ServiceContainer"
+          ],
+          "complexity": "medium"
+        },
+        {
+          "number": 2,
+          "name": "checkpoint-ui-and-rewind-command",
+          "title": "Checkpoint UI and Rewind Command",
+          "description": "Add checkpoint markers to the message timeline — small indicators on messages where file changes occurred. Add a Rewind to here button on each checkpoint marker. Create /rewind built-in slash command that accepts an optional checkpoint ID (defaults to most recent). Wire rewind action to POST /api/chat/rewind endpoint that calls CheckpointService.rewind().",
+          "filesToModify": [
+            "libs/ui/src/ai/checkpoint-marker.tsx",
+            "libs/ui/src/ai/index.ts",
+            "apps/server/src/routes/chat/index.ts",
+            "apps/ui/src/hooks/use-chat-session.ts"
+          ],
+          "acceptanceCriteria": [
+            "Checkpoint markers visible on messages with file changes",
+            "Rewind to here button on each marker",
+            "POST /api/chat/rewind endpoint triggers restore",
+            "/rewind command works as built-in slash command",
+            "UI confirms rewind with list of restored files",
+            "No rewind if no checkpoints exist (graceful message)"
+          ],
+          "complexity": "medium"
+        }
+      ],
+      "status": "pending"
+    }
+  ],
+  "prd": {
+    "situation": "The Ava chat interface already has streaming SSE via Vercel AI SDK, tool execution with 14 tool groups, extended thinking, server-side context management with compaction, subagent trust (full/gated) with approval cards, session persistence via Zustand, model selection, citation extraction, and plan block extraction.",
+    "problem": "1. No slash commands — users must remember and type full instructions. The ~18 MCP plugin commands and 27+ learned skills are invisible in the chat UI. No /compact, /clear, or way to invoke a skill by name. 2. Subagent calls are opaque — when Ava delegates via the Agent tool, users see a tool call/result pair but not what the subagent did. No progress, no nested visibility. 3. No file checkpointing — Ava can modify files via tools but there is no undo/rewind capability. 4. Effort level not exposed — model selection exists but effort (low/medium/high/max) is not surfaced. 5. Session context is client-only — session resume is just replaying stored messages, no server-side continuity.",
+    "approach": "Three phases: Phase 1 (Slash Commands) — CommandRegistry service discovers commands from built-ins, MCP plugin commands, .automaker/skills, .claude/skills. ChatInput detects / prefix and shows filterable autocomplete dropdown. Server expands $ARGUMENTS/$1, @file refs, !bash snippets, injects as system context. Phase 2 (Subagent Visibility) — Detect Agent tool_use blocks in message stream, render as collapsible nested blocks with status and result summary. Phase 3 (File Checkpointing) — Use Agent SDK native enableFileCheckpointing + rewindFiles() API, capture UserMessage.uuid as checkpoint markers, add rewind UI and /rewind command.",
+    "results": "Users can type / and discover + invoke all MCP commands and skills without leaving chat. Ava chat feels like native Claude Code. File changes are reversible. Subagent work is transparent and inspectable.",
+    "constraints": [
+      "No dev server management — all changes must be hot-reloadable",
+      "Phase 1 must not break existing chat (backward compatible input path)",
+      "Commands loaded from filesystem — no code changes to add new commands",
+      "allowed-tools frontmatter must be respected per-command",
+      "ChatInput is a textarea not TipTap — slash command UI must be built for textarea context"
+    ]
+  },
+  "createdAt": "2026-03-11T06:14:47.142Z",
+  "updatedAt": "2026-03-11T06:14:47.142Z"
+}

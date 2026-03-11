@@ -131,6 +131,12 @@ proto.config.yaml
 # TypeScript
 *.tsbuildinfo
 
+# Build artifacts from libs (TypeScript compilation output)
+libs/**/*.d.ts
+libs/**/*.d.ts.map
+libs/**/*.js
+libs/**/*.js.map
+
 # Misc
 *.pem
 

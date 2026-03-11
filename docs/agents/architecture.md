@@ -53,13 +53,6 @@ protoLabs's agent system is built on three key concepts from Claude's agent ecos
 └──────────────────────┬──────────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────────┐
-│  Dynamic Role Registry                                      │
-│  - RoleRegistryService (template storage + validation)     │
-│  - AgentFactoryService (config creation from templates)    │
-│  - DynamicAgentExecutor (execute with tool/prompt assembly)│
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
 │  Provider Layer                                             │
 │  - ProviderFactory (routes model → provider)               │
 │  - ClaudeProvider (native SDK)                             │
@@ -215,7 +208,6 @@ const contextResult = await loadContextFiles({
 
 ## Related Documentation
 
-- **[Dynamic Role Registry](./dynamic-role-registry.md)** - Template-based agent creation, factory, and execution
 - **[Adding Agent Teammates](./adding-teammates.md)** - How to create new authority agents (PM, EM, Designer, QA)
 - **[Creating Agent Teams](./creating-agent-teams.md)** - Building multi-agent coordination systems
 - **[MCP Integration](./mcp-integration.md)** - How MCP tools interact with agents

@@ -788,44 +788,6 @@ export interface ElectronAPI {
       error?: string;
     }>;
   };
-  agentTemplates: {
-    list: (role?: string) => Promise<{
-      success: boolean;
-      templates: Array<{
-        name: string;
-        displayName: string;
-        description: string;
-        role: string;
-        tier: number;
-        model?: string;
-        tags?: string[];
-      }>;
-      count: number;
-      error?: string;
-    }>;
-    get: (name: string) => Promise<{
-      success: boolean;
-      template?: Record<string, unknown>;
-      error?: string;
-    }>;
-    register: (template: Record<string, unknown>) => Promise<{
-      success: boolean;
-      template?: Record<string, unknown>;
-      error?: string;
-    }>;
-    update: (
-      name: string,
-      updates: Record<string, unknown>
-    ) => Promise<{
-      success: boolean;
-      template?: Record<string, unknown>;
-      error?: string;
-    }>;
-    unregister: (name: string) => Promise<{
-      success: boolean;
-      error?: string;
-    }>;
-  };
   sessions: {
     list: (includeArchived?: boolean) => Promise<{
       success: boolean;

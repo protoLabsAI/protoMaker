@@ -61,7 +61,6 @@ import { createDashboardRoutes } from '../routes/dashboard.js';
 import { createAuthorityRoutes } from '../routes/authority/index.js';
 import { createCosRoutes } from '../routes/cos/index.js';
 import { createCeremoniesRoutes } from '../routes/ceremonies/index.js';
-import { createAgentManagementRoutes } from '../routes/agents/index.js';
 import { createWebhooksRoutes } from '../routes/webhooks/index.js';
 import { createDiscordRoutes } from '../routes/discord/index.js';
 import { createAvaRoutes } from '../routes/ava/index.js';
@@ -133,7 +132,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     automationService,
     avaGatewayService,
     discordBotService,
-    roleRegistryService,
     ceremonyService,
     ceremonyAuditLog,
     escalationRouter,
@@ -229,13 +227,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.get('/api/health/quick', createQuickHandler());
   app.get(
     '/api/health/standard',
-    createStandardHandler(
-      agentService,
-      featureLoader,
-      autoModeService,
-      roleRegistryService,
-      repoRoot
-    )
+    createStandardHandler(agentService, featureLoader, autoModeService, repoRoot)
   );
   app.get(
     '/api/health/deep',
@@ -253,8 +245,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       settingsService,
       events,
       authorityService,
-      featureHealthService,
-      roleRegistryService
+      featureHealthService
     )
   );
   app.use(
@@ -365,7 +356,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/automations', createAutomationsRoutes(automationService));
   app.use('/api/ava', createAvaRoutes(services));
   app.use('/api/discord', createDiscordRoutes(discordBotService));
-  app.use('/api/agents', createAgentManagementRoutes(roleRegistryService));
   app.use(
     '/api/ceremonies',
     createCeremoniesRoutes(events, featureLoader, projectService, ceremonyService, ceremonyAuditLog)

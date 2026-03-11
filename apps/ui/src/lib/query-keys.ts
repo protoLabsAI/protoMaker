@@ -322,14 +322,6 @@ export const queryKeys = {
   },
 
   // ============================================
-  // Agent Templates
-  // ============================================
-  agentTemplates: {
-    /** All registered agent templates */
-    all: (role?: string) => ['agentTemplates', role] as const,
-  },
-
-  // ============================================
   // Engine Status
   // ============================================
   engine: {

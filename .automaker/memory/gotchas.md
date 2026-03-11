@@ -5,13 +5,40 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1107
-  referenced: 311
-  successfulFeatures: 311
+  loaded: 1384
+  referenced: 318
+  successfulFeatures: 318
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
+
+#### [Gotcha] Worktree node_modules/@protolabsai/* symlinks resolve to MAIN repo, not worktree (2026-03-10)
+
+- **Situation:** When working in a git worktree and adding new exports to a shared package (e.g. `@protolabsai/types`), `npm run build:server` fails with "cannot find module" or "export not found" even though you just added it.
+- **Root cause:** Git worktrees share the parent repo's `node_modules/` via Node.js directory traversal (Node walks up from `.worktrees/feature-xxx/` to `/automaker/node_modules/`). The symlink `node_modules/@protolabsai/types → /automaker/libs/types/dist/` points to the MAIN REPO's dist, not the worktree's. New exports in the worktree's `libs/types/src/` are invisible at compile time.
+- **What the system does automatically:** The Lead Engineer pre-flight re-links `@protolabsai/*` symlinks in the worktree's `node_modules/` when it detects `libs/` changes. This happens on agent retry. If you're working manually, see the fix below.
+- **How to fix manually (if stuck):** Run from the worktree root:
+  ```bash
+  # Re-link all @protolabsai/* packages to this worktree's libs/
+  node -e "
+    const fs = require('fs'); const path = require('path');
+    const libs = fs.readdirSync('libs').filter(d => fs.statSync('libs/'+d).isDirectory());
+    for (const lib of libs) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync('libs/'+lib+'/package.json','utf8'));
+        const [scope, name] = pkg.name.slice(1).split('/');
+        fs.mkdirSync('node_modules/@'+scope, {recursive:true});
+        try { fs.unlinkSync('node_modules/@'+scope+'/'+name); } catch {}
+        fs.symlinkSync('../../libs/'+lib, 'node_modules/@'+scope+'/'+name);
+        console.log('Linked', pkg.name);
+      } catch(e) { console.warn('Skip', lib, e.message); }
+    }
+  "
+  npm run build:packages   # Build packages in the WORKTREE
+  npm run build:server     # Now resolves from worktree's libs/
+  ```
+- **How to avoid:** Never run `npm run build:packages` from the main repo path when in a worktree — always run it from the worktree root. The automated pre-flight handles this on retry.
 
 #### [Gotcha] .gitignore negative patterns require parent directory to be unignored first, or the negative rule is ineffective (2026-02-10)
 
@@ -766,3 +793,24 @@ usageStats:
 - **Situation:** SignalIntakeService defers incoming signals to deferredQueue when capacity or error-budget checks fail. Queue is not persisted.
 - **Root cause:** Simpler initial implementation; assumption is that deferred signals are low-priority and will be re-submitted by users if important.
 - **How to avoid:** Users must re-submit deferred signals after server restart. Add persistence if deferral rate increases.
+
+
+#### [Gotcha] recentServerUrls deduplication on add: if user re-selects same server URL, old entry is removed and new one appended (maintains insertion order, prevents duplicates) (2026-03-11)
+- **Situation:** Maintaining recent server history without duplicates. User might frequently switch between 2-3 servers.
+- **Root cause:** Prevents cluttering the dropdown with repeated URLs. Moving to end of list (LRU-like behavior) makes recently-used servers more discoverable.
+- **How to avoid:** More intuitive UX (recent = at bottom) but requires O(n) search to find and remove existing entry before append. For max-10 list, negligible.
+
+#### [Gotcha] setServerUrlOverride() must call invalidateHttpClient() to reconnect WebSocket to new server (2026-03-11)
+- **Situation:** Multiple transport layers exist (HTTP client, WebSocket). Changing server URL in state doesn't auto-update live connections.
+- **Root cause:** WebSocket client holds a reference to the old server URL. If only localStorage/state changes, WebSocket silently continues connecting to old server. invalidateHttpClient() closes old connection and creates new singleton, forcing reconnection.
+- **How to avoid:** Coupling setServerUrlOverride() to HTTP client layer (tight dependency), but ensures correctness. Forgetting this call causes silent data loss—app stops receiving updates without error.
+
+#### [Gotcha] Recent URLs deduplication (max 10 limit) is only applied when setServerUrlOverride() is called; manual localStorage edits bypass it (2026-03-11)
+- **Situation:** User experience feature: remember recent servers for quick switching. Constraint of max 10 prevents unbounded growth.
+- **Root cause:** Implementation: [newUrl, ...stored.filter(u => u !== newUrl)].slice(0, 10). Deduplication moves matching URL to front, then slice enforces max. But if someone manually edits localStorage to add 11+ URLs, constraint isn't enforced until next state update.
+- **How to avoid:** Simple implementation (one-liner filter+slice) vs. reactive enforcement. Edge case only occurs if localStorage is manually edited (rare) or if feature is scripted externally.
+
+#### [Gotcha] WebSocket connections must be explicitly closed before creating new client pointing to different URL (2026-03-11)
+- **Situation:** If you recreate HTTP client without closing previous WebSocket, stale connections persist and can interfere with routing
+- **Root cause:** WebSocket close is not automatic on object destruction; browser keeps connection alive until explicitly terminated
+- **How to avoid:** Gained: clean connection lifecycle; lost: ability to assume cleanup on object disposal

@@ -5,9 +5,9 @@ relevantTo: [auth]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 57
-  referenced: 24
-  successfulFeatures: 24
+  loaded: 94
+  referenced: 28
+  successfulFeatures: 28
 ---
 <!-- domain: Authentication & Authorization | OAuth, token management, access control -->
 
@@ -92,3 +92,8 @@ usageStats:
 - **Problem solved:** Runtime server URL switching for development/hivemind testing
 - **Why this works:** localStorage persistence survives page reloads without server round-trip; React state provides immediate reactivity; dual sync avoids redundant reads on every render
 - **Trade-offs:** Gained: Survival across restarts without server cost. Lost: Must manage sync between two sources of truth; synchronous localStorage blocks if data is large
+
+#### [Pattern] localStorage key namespacing with colon prefix (`automaker:serverUrlOverride`) isolates feature data from global scope (2026-03-11)
+- **Problem solved:** Avoid collisions with other localStorage keys in shared browser environment (esp. with iframes or multiple tabs)
+- **Why this works:** Prevents accidental overwrites from other scripts; makes feature keys searchable and auditable in DevTools
+- **Trade-offs:** Gained: namespace isolation and discoverability; lost: shorter keys

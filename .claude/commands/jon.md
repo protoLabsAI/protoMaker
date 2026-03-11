@@ -21,7 +21,6 @@ allowed-tools:
   - mcp__plugin_protolabs_studio__get_feature
   - mcp__plugin_protolabs_studio__get_project_metrics
   - mcp__plugin_protolabs_studio__get_project_spec
-  - mcp__plugin_protolabs_studio__list_agent_templates
   # Project pipeline (understand what's being built)
   - mcp__plugin_protolabs_studio__list_projects
   - mcp__plugin_protolabs_studio__get_project

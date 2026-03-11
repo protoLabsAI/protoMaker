@@ -50,7 +50,6 @@ interface AvaConfig {
     autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
     projectMgmt: boolean; // get_project_spec, update_project_spec, update_project
     orchestration: boolean; // get_execution_order, set_feature_dependencies
-    agentDelegation: boolean; // execute_dynamic_agent, list_agent_templates
     notes: boolean; // list_note_tabs, read_note_tab, write_note_tab
     metrics: boolean; // get_project_metrics, get_capacity_metrics
     prWorkflow: boolean; // check_pr_status, get_pr_feedback, merge_pr
@@ -133,18 +132,6 @@ Sessions are stored in Zustand (`chat-store.ts`) keyed by `projectId`. Switching
 
 The gear icon in the chat header opens `AvaSettingsPanel`, which loads config via `GET /api/ava/config/get` and saves via `POST /api/ava/config/update`. Changes take effect on the next chat request — no server restart required.
 
-## SDK Hooks
-
-When Ava delegates to an inner agent via `execute_dynamic_agent`, the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) is invoked through `DynamicAgentExecutor`. Three hook types are wired in:
-
-| Hook           | Trigger                                          | Effect                                                      |
-| -------------- | ------------------------------------------------ | ----------------------------------------------------------- |
-| `PostToolUse`  | After every tool execution in inner agent        | Accumulates cost, emits `agent:tool-result` WebSocket event |
-| `Notification` | SDK informational events (context compact, etc.) | Surfaces warnings in the agent output log                   |
-| `SubagentStop` | Inner agent session ends                         | Marks sub-run complete, aggregates cost to parent           |
-
-Hooks are configured in `DynamicAgentExecutor` before calling `query()`. They are not exposed to the outer Ava loop — Ava only sees the final tool result from `execute_dynamic_agent`.
-
 ## Custom MCP Servers
 
 `AvaConfig.mcpServers` lets projects supply additional MCP server definitions that are forwarded to delegated agents:
@@ -176,22 +163,7 @@ Trust is enforced via the `canUseTool` callback built by `buildCanUseToolCallbac
 
 Omitting `subagentTrust` from `ava-config.json` defaults to `'full'`.
 
-## Tool Progress WebSocket Events
-
-During agent delegation, `DynamicAgentExecutor` emits progress events over the WebSocket connection (keyed by `agentRunId`). The chat UI subscribes to these via `AgentOutputCard`:
-
-| Event type          | Payload                                     | Rendered by                   |
-| ------------------- | ------------------------------------------- | ----------------------------- |
-| `agent:text`        | `{ text }` — streamed text from inner agent | `AgentOutputCard` text stream |
-| `agent:tool-use`    | `{ toolName, input }` — inner tool call     | Tool invocation row           |
-| `agent:tool-result` | `{ toolName, result }` — inner tool result  | Collapsible result            |
-| `agent:complete`    | `{ cost, stepCount }` — final summary       | Completion chip               |
-| `agent:error`       | `{ message }` — agent error                 | Error callout                 |
-
-These events are only emitted for delegated agents — Ava's own tool calls stream through the SSE channel, not WebSocket.
-
 ## See Also
 
 - [Ava Chat System — Architecture Pipeline](../dev/ava-chat-system.md#architecture-pipeline) — full end-to-end request flow diagram
-- [Ava Delegation Flow](../agents/ava-delegation.md) — how `execute_dynamic_agent` routes to `DynamicAgentExecutor`
 - [SDK Integration](../agents/sdk-integration.md) — Claude Agent SDK query options and session management

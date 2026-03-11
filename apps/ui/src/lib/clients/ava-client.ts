@@ -1,10 +1,10 @@
 /**
  * Ava domain mixin for the HTTP API client.
  *
- * Provides: ava (getConfig, updateConfig)
+ * Provides: ava (getConfig, updateConfig), chat (fetchCommands)
  */
 import { BaseHttpClient, type Constructor } from './base-http-client';
-import type { MCPServerConfig } from '@protolabsai/types';
+import type { MCPServerConfig, SlashCommandSummary } from '@protolabsai/types';
 
 export type { MCPServerConfig };
 
@@ -63,5 +63,14 @@ export const withAvaClient = <TBase extends Constructor<BaseHttpClient>>(Base: T
         config?: AvaConfig;
         error?: string;
       }> => this.post('/api/ava/config/update', { projectPath, config }),
+    };
+
+    // Chat commands API
+    chat = {
+      /**
+       * Fetch the list of registered slash commands for the autocomplete dropdown.
+       * Returns SlashCommandSummary[] (body field excluded for payload efficiency).
+       */
+      fetchCommands: (): Promise<SlashCommandSummary[]> => this.get('/api/chat/commands'),
     };
   };

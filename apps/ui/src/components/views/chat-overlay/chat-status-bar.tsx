@@ -1,30 +1,38 @@
 /**
- * ChatStatusBar — Persistent status ticker for the Ava chat overlay.
+ * ChatStatusBar — Compact footer bar for the Ava chat overlay.
  *
- * Sits between the header and the message list. Shows:
- *  1. Ava's current tool execution progress (moved from inline AILoader)
- *  2. Project event tickers from auto-mode and agent streams
- *
- * Events fade out after a short TTL so the bar auto-collapses when idle.
+ * Mirrors the main bottom panel pattern: icon+count stats on the left,
+ * step progress message on the right. Sits inside the ChatInput actions
+ * slot so it doesn't shift content above.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Zap, GitBranch, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  Loader2,
+  Zap,
+  GitBranch,
+  AlertTriangle,
+  CheckCircle2,
+  Bot,
+  ListTodo,
+  Activity,
+  GitPullRequest,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getHttpApiClient } from '@/lib/http-api-client';
+import { useProjectHealth } from '@/hooks/use-project-health';
+import { useAppStore } from '@/store/app-store';
 import type { EventType } from '@/lib/clients/base-http-client';
 
 interface TickerItem {
-  id: string;
   icon: 'loader' | 'zap' | 'git' | 'error' | 'check';
   message: string;
   timestamp: number;
 }
 
 const TICKER_TTL_MS = 15_000;
-const MAX_TICKER_ITEMS = 3;
 
-const ICON_MAP = {
+const TICKER_ICON_MAP = {
   loader: Loader2,
   zap: Zap,
   git: GitBranch,
@@ -33,15 +41,12 @@ const ICON_MAP = {
 } as const;
 
 interface ChatStatusBarProps {
-  /** Current tool progress label from useToolProgress (Ava's active tool) */
   toolProgressLabel?: string;
-  /** Whether Ava is currently streaming a response */
   isStreaming: boolean;
-  /** Current agentic step count */
   stepCount: number;
+  tokenUsage?: { total: number; input: number; output: number; estimated: boolean };
 }
 
-/** Map auto-mode event types to ticker items */
 function parseAutoModeEvent(payload: Record<string, unknown>): TickerItem | null {
   const type = payload.type as string | undefined;
   const featureTitle = (payload.title as string) || (payload.featureId as string) || '';
@@ -49,166 +54,174 @@ function parseAutoModeEvent(payload: Record<string, unknown>): TickerItem | null
 
   switch (type) {
     case 'auto_mode_feature_start':
-      return {
-        id: `am-${Date.now()}`,
-        icon: 'zap',
-        message: `Starting: ${featureTitle}`,
-        timestamp: Date.now(),
-      };
+      return { icon: 'zap', message: `Starting: ${featureTitle}`, timestamp: Date.now() };
     case 'auto_mode_feature_complete':
-      return {
-        id: `am-${Date.now()}`,
-        icon: 'check',
-        message: `Completed: ${featureTitle}`,
-        timestamp: Date.now(),
-      };
+      return { icon: 'check', message: `Completed: ${featureTitle}`, timestamp: Date.now() };
     case 'auto_mode_error':
-      return {
-        id: `am-${Date.now()}`,
-        icon: 'error',
-        message: `Error: ${message || featureTitle}`,
-        timestamp: Date.now(),
-      };
+      return { icon: 'error', message: `Error: ${message || featureTitle}`, timestamp: Date.now() };
     case 'auto_mode_git_workflow':
-      return {
-        id: `am-${Date.now()}`,
-        icon: 'git',
-        message: `Git: ${message || 'workflow step'}`,
-        timestamp: Date.now(),
-      };
+      return { icon: 'git', message: `Git: ${message || 'workflow step'}`, timestamp: Date.now() };
     case 'auto_mode_progress':
       return {
-        id: `am-${Date.now()}`,
         icon: 'loader',
         message: message || `Working on ${featureTitle}`,
         timestamp: Date.now(),
       };
     case 'planning_started':
-      return {
-        id: `am-${Date.now()}`,
-        icon: 'loader',
-        message: `Planning: ${featureTitle}`,
-        timestamp: Date.now(),
-      };
+      return { icon: 'loader', message: `Planning: ${featureTitle}`, timestamp: Date.now() };
     case 'pipeline_step_started':
       return {
-        id: `am-${Date.now()}`,
         icon: 'loader',
         message: `${(payload.step as string) || 'Pipeline'}: ${featureTitle}`,
         timestamp: Date.now(),
       };
     case 'pipeline_step_complete':
       return {
-        id: `am-${Date.now()}`,
         icon: 'check',
         message: `${(payload.step as string) || 'Step'} done: ${featureTitle}`,
         timestamp: Date.now(),
       };
     case 'auto_mode_idle':
-      return {
-        id: `am-${Date.now()}`,
-        icon: 'check',
-        message: 'Auto-mode idle — no pending features',
-        timestamp: Date.now(),
-      };
+      return { icon: 'check', message: 'Auto-mode idle', timestamp: Date.now() };
     default:
-      if (message) {
-        return {
-          id: `am-${Date.now()}`,
-          icon: 'loader',
-          message,
-          timestamp: Date.now(),
-        };
-      }
+      if (message) return { icon: 'loader', message, timestamp: Date.now() };
       return null;
   }
 }
 
-export function ChatStatusBar({ toolProgressLabel, isStreaming, stepCount }: ChatStatusBarProps) {
-  const [tickers, setTickers] = useState<TickerItem[]>([]);
-  const tickerRef = useRef(tickers);
-  tickerRef.current = tickers;
+export function ChatStatusBar({
+  toolProgressLabel,
+  isStreaming,
+  stepCount,
+  tokenUsage,
+}: ChatStatusBarProps) {
+  const [ticker, setTicker] = useState<TickerItem | null>(null);
+  const lastMessageRef = useRef<string>('');
 
-  // Subscribe to project events
+  const projectPath = useAppStore((s) => s.currentProject?.path);
+  const { boardCounts, runningAgentsCount } = useProjectHealth(projectPath);
+
+  const addTicker = useCallback((item: TickerItem) => {
+    if (item.message === lastMessageRef.current) return;
+    lastMessageRef.current = item.message;
+    setTicker(item);
+  }, []);
+
   useEffect(() => {
     const api = getHttpApiClient();
     const unsubscribe = api.subscribeToEvents((type: EventType, payload: unknown) => {
       if (type === 'auto-mode:event') {
         const item = parseAutoModeEvent(payload as Record<string, unknown>);
-        if (item) {
-          setTickers((prev) => [item, ...prev].slice(0, MAX_TICKER_ITEMS));
-        }
+        if (item) addTicker(item);
       }
       if (type === 'agent:stream') {
         const p = payload as Record<string, unknown>;
         const msg = (p.message as string) || (p.type as string);
-        if (msg) {
-          setTickers((prev) =>
-            [
-              {
-                id: `ag-${Date.now()}`,
-                icon: 'loader' as const,
-                message: msg,
-                timestamp: Date.now(),
-              },
-              ...prev,
-            ].slice(0, MAX_TICKER_ITEMS)
-          );
-        }
+        if (msg) addTicker({ icon: 'loader', message: msg, timestamp: Date.now() });
       }
     });
     return unsubscribe;
-  }, []);
+  }, [addTicker]);
 
-  // Prune expired ticker items
+  // Prune expired ticker
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = Date.now();
-      setTickers((prev) => {
-        const filtered = prev.filter((t) => now - t.timestamp < TICKER_TTL_MS);
-        return filtered.length === prev.length ? prev : filtered;
+      setTicker((prev) => {
+        if (!prev) return prev;
+        return Date.now() - prev.timestamp < TICKER_TTL_MS ? prev : null;
       });
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  // Determine what to show in the primary status slot
+  // Step progress takes priority over event ticker
   const hasToolProgress = isStreaming && (toolProgressLabel || stepCount >= 1);
-  const hasTickers = tickers.length > 0;
+  const statusMessage = hasToolProgress
+    ? toolProgressLabel || `Step ${stepCount}`
+    : ticker?.message;
+  const statusIcon = hasToolProgress ? 'loader' : ticker?.icon;
 
-  // Nothing to show — collapse entirely
-  if (!hasToolProgress && !hasTickers) return null;
+  const { backlog, inProgress, review, done } = boardCounts;
+
+  const tokenLabel =
+    tokenUsage && tokenUsage.total > 0
+      ? tokenUsage.total >= 1000
+        ? `${(tokenUsage.total / 1000).toFixed(1)}k`
+        : String(tokenUsage.total)
+      : null;
 
   return (
-    <div
-      data-slot="chat-status-bar"
-      className="shrink-0 border-b border-border/50 bg-muted/20 px-3 py-1 text-[11px] text-muted-foreground"
-    >
-      {/* Primary: Ava tool progress */}
-      {hasToolProgress && (
-        <div className="flex items-center gap-2">
-          <Loader2 className="size-3 animate-spin text-primary" />
-          <span className="truncate">{toolProgressLabel || `Step ${stepCount}`}</span>
-        </div>
+    <div className="flex items-center gap-3 border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+      {/* Token usage */}
+      {tokenLabel && (
+        <span
+          className={cn(
+            'tabular-nums',
+            tokenUsage!.total > 100_000
+              ? 'text-destructive font-medium'
+              : tokenUsage!.total > 50_000
+                ? 'text-status-warning'
+                : ''
+          )}
+          title={
+            tokenUsage!.estimated
+              ? `~${tokenUsage!.total.toLocaleString()} estimated context size`
+              : `Context: ${tokenUsage!.input.toLocaleString()} in / ${tokenUsage!.output.toLocaleString()} out`
+          }
+        >
+          {tokenUsage!.estimated && '~'}
+          {tokenLabel} tokens
+        </span>
       )}
 
-      {/* Secondary: Project event tickers */}
-      {tickers.map((item) => {
-        const Icon = ICON_MAP[item.icon];
-        return (
-          <div
-            key={item.id}
-            className={cn(
-              'flex items-center gap-2 py-0.5',
-              item.icon === 'error' && 'text-destructive',
-              item.icon === 'check' && 'text-green-500'
-            )}
-          >
-            <Icon className={cn('size-3 shrink-0', item.icon === 'loader' && 'animate-spin')} />
-            <span className="truncate">{item.message}</span>
-          </div>
-        );
-      })}
+      {/* Board stats — mirrors bottom panel */}
+      <div className="flex items-center gap-2">
+        <span className="flex items-center gap-0.5" title={`${runningAgentsCount} agents`}>
+          <Bot className="size-3" />
+          {runningAgentsCount}
+        </span>
+        <span className="flex items-center gap-0.5" title={`${backlog} backlog`}>
+          <ListTodo className="size-3" />
+          {backlog}
+        </span>
+        <span
+          className={cn('flex items-center gap-0.5', inProgress > 0 && 'text-green-500')}
+          title={`${inProgress} in progress`}
+        >
+          <Activity className="size-3" />
+          {inProgress}
+        </span>
+        <span
+          className={cn('flex items-center gap-0.5', review > 0 && 'text-purple-500')}
+          title={`${review} in review`}
+        >
+          <GitPullRequest className="size-3" />
+          {review}
+        </span>
+        <span className="flex items-center gap-0.5" title={`${done} done`}>
+          <CheckCircle2 className="size-3" />
+          {done}
+        </span>
+      </div>
+
+      {/* Step progress / event ticker — pushed to the right */}
+      {statusMessage && (
+        <div
+          className={cn(
+            'ml-auto flex items-center gap-1 min-w-0',
+            statusIcon === 'error' && 'text-destructive',
+            statusIcon === 'check' && 'text-green-500'
+          )}
+        >
+          {statusIcon && <TickerIconEl icon={statusIcon} />}
+          <span className="truncate">{statusMessage}</span>
+        </div>
+      )}
     </div>
   );
+}
+
+function TickerIconEl({ icon }: { icon: TickerItem['icon'] }) {
+  const Icon = TICKER_ICON_MAP[icon];
+  return <Icon className={cn('size-3 shrink-0', icon === 'loader' && 'animate-spin')} />;
 }

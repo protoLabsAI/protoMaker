@@ -192,10 +192,10 @@ export function ChatMessageList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
-  // Force-scroll to bottom on stream completion regardless of lock state.
+  // Scroll to bottom on stream completion only if the user hasn't scrolled away.
   const prevIsStreamingRef = useRef(isStreaming);
   useLayoutEffect(() => {
-    if (prevIsStreamingRef.current && !isStreaming) {
+    if (prevIsStreamingRef.current && !isStreaming && !userScrolledRef.current) {
       scrollToBottom('instant');
     }
     prevIsStreamingRef.current = isStreaming;

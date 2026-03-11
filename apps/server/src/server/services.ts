@@ -43,7 +43,6 @@ import { AuditService } from '../services/audit-service.js';
 import { PRFeedbackService } from '../services/pr-feedback-service.js';
 import { WorktreeLifecycleService } from '../services/worktree-lifecycle-service.js';
 import { DiscordBotService } from '../services/discord-bot-service.js';
-import { RoleRegistryService } from '../services/role-registry-service.js';
 import { SensorRegistryService } from '../services/sensor-registry-service.js';
 import { ContextAggregator } from '../services/context-aggregator.js';
 import { IntegrationRegistryService } from '../services/integration-registry-service.js';
@@ -51,7 +50,6 @@ import {
   registerBuiltInIntegrations,
   wireHealthChecks,
 } from '../services/built-in-integrations.js';
-import { registerBuiltInTemplates } from '../services/built-in-templates.js';
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
 import { PipelineCheckpointService } from '../services/pipeline-checkpoint-service.js';
@@ -110,6 +108,8 @@ import { AvaChannelService } from '../services/ava-channel-service.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
 import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
+import { CommandRegistryService } from '../services/command-registry-service.js';
+import { CheckpointService } from '../services/checkpoint-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -135,7 +135,6 @@ export interface ServiceContainer {
 
   // Agent infrastructure
   agentService: AgentService;
-  roleRegistryService: RoleRegistryService;
 
   // Sensor registry
   sensorRegistryService: SensorRegistryService;
@@ -282,6 +281,12 @@ export interface ServiceContainer {
   // Reactive spawner (trigger-based agent spawning with rate limiting and circuit breaking)
   reactiveSpawnerService: ReactiveSpawnerService;
 
+  // Command registry (slash command discovery from built-ins + filesystem sources)
+  commandRegistryService: CommandRegistryService;
+
+  // Chat checkpoint service (intercepts Write/Edit tools to enable per-session rewind)
+  checkpointService: CheckpointService;
+
   // CRDT document store (set by crdt-store.module, used by dependent modules)
   _crdtStore?: import('@protolabsai/crdt').CRDTStore;
 
@@ -317,7 +322,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Trust Tier Service for quarantine pipeline
   const trustTierService = new TrustTierService(dataDir);
-  const agentService = new AgentService(dataDir, events, settingsService, undefined, featureLoader);
+  const agentService = new AgentService(dataDir, events, settingsService, featureLoader);
   const metricsService = new MetricsService(featureLoader);
   const doraMetricsService = new DoraMetricsService(featureLoader);
 
@@ -400,21 +405,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Context Aggregator (reads sensor readings → unified UserPresenceState)
   const contextAggregator = new ContextAggregator(sensorRegistryService);
 
-  // Role Registry (shared agent template registry)
-  const roleRegistryService = new RoleRegistryService(events);
-  try {
-    const globalSettings = await settingsService.getGlobalSettings();
-    const registeredCount = registerBuiltInTemplates(
-      roleRegistryService,
-      globalSettings.userProfile,
-      globalSettings.personaOverrides
-    );
-    events.emit('authority:registry-ready', { templateCount: roleRegistryService.size });
-    logger.info(`Role registry ready with ${registeredCount} built-in templates`);
-  } catch (error) {
-    logger.error('Failed to register built-in templates — registry will be empty:', error);
-  }
-
   // Integration Registry (unified external connection management)
   const integrationRegistryService = new IntegrationRegistryService(events);
   try {
@@ -432,12 +422,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   new AgentScoringService(events, featureLoader);
 
   // HeadsdownService for autonomous agent management
-  const headsdownService = HeadsdownService.getInstance(
-    events,
-    settingsService,
-    featureLoader,
-    roleRegistryService
-  );
+  const headsdownService = HeadsdownService.getInstance(events, settingsService, featureLoader);
 
   // DevServerService with event emitter for real-time log streaming
   const devServerService = getDevServerService();
@@ -637,7 +622,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
 
   // Agent Discord Router for agent-to-Discord message routing
-  const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService, roleRegistryService);
+  const agentDiscordRouter = new AgentDiscordRouter(events, discordBotService);
 
   // Scheduler Service with event emitter and data directory
   const schedulerService = getSchedulerService();
@@ -705,6 +690,13 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking
   const reactiveSpawnerService = getReactiveSpawnerService(repoRoot);
+
+  // Command Registry Service — slash command discovery from built-ins + filesystem sources
+  const commandRegistryService = new CommandRegistryService(repoRoot);
+  commandRegistryService.initialize();
+
+  // Chat Checkpoint Service — intercepts Write/Edit tool calls to enable per-session rewind
+  const checkpointService = new CheckpointService();
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
@@ -825,7 +817,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     featureLoader,
     trustTierService,
     agentService,
-    roleRegistryService,
     headsdownService,
     metricsService,
     ledgerService,
@@ -901,6 +892,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     errorBudgetService,
     frictionTrackerService,
     reactiveSpawnerService,
+    commandRegistryService,
+    checkpointService,
     driftCheckInterval: null,
   };
 }

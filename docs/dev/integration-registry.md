@@ -8,7 +8,7 @@ The integration registry provides a single source of truth for all external conn
 
 ## Architecture
 
-Follows the `RoleRegistryService` pattern: in-memory Map, Zod validation, tier 0/1 protection, event emission.
+Uses an in-memory Map with Zod validation, tier 0/1 protection, and event emission.
 
 ### Key Files
 

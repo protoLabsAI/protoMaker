@@ -24,7 +24,6 @@ import { useChatSession } from '@/hooks/use-chat-session';
 import { useAppStore } from '@/store/app-store';
 import { useContextualSuggestions } from '@/hooks/use-contextual-suggestions';
 import { useToolProgress } from '@/hooks/use-tool-progress';
-import { ChatStatusBar } from './chat-status-bar';
 import { getOverlayAPI } from '@/lib/electron';
 import { AskAvaTab } from './ask-ava-tab';
 import { AvaChannelTab } from './ava-channel-tab';
@@ -61,6 +60,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     handleSwitchSession,
     handleDeleteSession,
     handleModelChange,
+    effortLevel,
+    handleEffortChange,
     approveToolAction,
     rejectToolAction,
     pendingSubagentApprovals,
@@ -310,8 +311,6 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
     // Negative feedback placeholder
   }, []);
 
-  const shortcutHint = isModal ? '\u2318K to close' : 'Esc to hide';
-
   // Escape key: close history panel if open, otherwise hide the overlay
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -336,9 +335,9 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           !isModal && 'titlebar-drag-region'
         )}
       >
-        <div className={cn('flex items-center gap-2', !isModal && 'pointer-events-none')}>
-          <div className="size-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-sm font-medium text-foreground">Ava</span>
+        <div className={cn('flex items-center gap-2 min-w-0', !isModal && 'pointer-events-none')}>
+          <div className="size-2 shrink-0 rounded-full bg-primary animate-pulse" />
+          <span className="shrink-0 text-sm font-medium text-foreground">Ava</span>
         </div>
         <div className={cn('flex items-center gap-1', !isModal && 'pointer-events-auto')}>
           {activeTab === 'ask-ava' && (
@@ -418,14 +417,7 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
         </div>
       )}
 
-      {/* Status bar — tool progress + project event tickers */}
-      {activeTab === 'ask-ava' && (
-        <ChatStatusBar
-          toolProgressLabel={activeToolLabel}
-          isStreaming={isStreaming}
-          stepCount={stepCount}
-        />
-      )}
+      {/* Status bar moved into ChatInput actions slot — no longer renders here */}
 
       {/* Tab bar */}
       <div className="flex items-center border-b border-border px-2" role="tablist">
@@ -492,7 +484,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           queueOpen={queueOpen}
           queuePaused={queuePaused}
           projectPath={currentProject?.path}
-          shortcutHint={shortcutHint}
+          toolProgressLabel={activeToolLabel}
+          stepCount={stepCount}
           onSubmit={handleSubmit}
           onStop={stop}
           onSuggestionSelect={handleSuggestionSelect}
@@ -509,6 +502,8 @@ export function ChatOverlayContent({ onHide, isModal = false }: ChatOverlayConte
           onCloseHistory={() => setHistoryOpen(false)}
           onToggleQueuePause={() => setQueuePaused((v) => !v)}
           onModelChange={handleModelChange}
+          effortLevel={effortLevel}
+          onEffortChange={handleEffortChange}
           getToolProgressLabel={getProgressLabel}
           pendingSubagentApprovals={pendingSubagentApprovals}
           approveSubagentTool={approveSubagentTool}

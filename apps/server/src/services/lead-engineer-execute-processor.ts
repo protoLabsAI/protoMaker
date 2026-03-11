@@ -1027,15 +1027,62 @@ export class ExecuteProcessor implements StateProcessor {
           `[EXECUTE][pre-flight] Worktree is ${behind} commits behind origin/${baseBranch}, rebasing`,
           { featureId: feature.id }
         );
+        // Stash any unstaged changes before rebasing to prevent
+        // "cannot rebase: You have unstaged changes" errors.
+        // Mirrors the same fix applied in execution-service.ts.
+        let stashed = false;
+        try {
+          const { stdout: remainingStatus } = await execAsync('git status --porcelain', {
+            cwd: workDir,
+            timeout: 10_000,
+          });
+          if (remainingStatus.trim().length > 0) {
+            logger.info('[EXECUTE][pre-flight] Stashing unstaged changes before rebase', {
+              featureId: feature.id,
+            });
+            await execAsync('git stash --include-untracked', { cwd: workDir, timeout: 15_000 });
+            stashed = true;
+          }
+        } catch (stashErr) {
+          const stashMsg = stashErr instanceof Error ? stashErr.message : String(stashErr);
+          logger.warn('[EXECUTE][pre-flight] Pre-rebase stash failed (non-fatal)', {
+            msg: stashMsg,
+          });
+        }
+
         try {
           await execAsync(`git rebase origin/${baseBranch}`, { cwd: workDir, timeout: 60_000 });
           logger.info('[EXECUTE][pre-flight] Rebase succeeded', { featureId: feature.id });
+
+          // Restore stashed changes after a successful rebase
+          if (stashed) {
+            try {
+              await execAsync('git stash pop', { cwd: workDir, timeout: 15_000 });
+              logger.info('[EXECUTE][pre-flight] Stash popped after rebase', {
+                featureId: feature.id,
+              });
+            } catch (popErr) {
+              const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
+              logger.warn(
+                '[EXECUTE][pre-flight] Stash pop had conflicts after rebase (non-fatal, continuing)',
+                { msg: popMsg }
+              );
+            }
+          }
         } catch (rebaseErr) {
           // Abort the rebase to leave the worktree clean
           try {
             await execAsync('git rebase --abort', { cwd: workDir, timeout: 10_000 });
           } catch {
             /* best-effort */
+          }
+          // Restore stash even on failure so the worktree is not left empty
+          if (stashed) {
+            try {
+              await execAsync('git stash pop', { cwd: workDir, timeout: 15_000 });
+            } catch {
+              /* best-effort */
+            }
           }
           const rebaseMsg = rebaseErr instanceof Error ? rebaseErr.message : String(rebaseErr);
           return {
@@ -1068,11 +1115,19 @@ export class ExecuteProcessor implements StateProcessor {
       const libsChanged = changedFiles.split('\n').some((f) => f.trim().startsWith('libs/'));
 
       if (libsChanged) {
+        // When running in a worktree, build packages from the worktree's source so that
+        // the worktree's dist/ contains any new exports added by the agent. Without this,
+        // `build:packages` would run against the main repo's source (which lacks the new
+        // export), and TypeScript compilation would fail even though tsconfig paths resolve
+        // @protolabsai/* from source for the type-checker.
+        const buildCwd = workDir;
         logger.info('[EXECUTE][pre-flight] libs/ files changed — running npm run build:packages', {
           featureId: feature.id,
+          buildCwd,
+          isWorktree: workDir !== projectPath,
         });
         try {
-          await execAsync('npm run build:packages', { cwd: projectPath, timeout: 120_000 });
+          await execAsync('npm run build:packages', { cwd: buildCwd, timeout: 120_000 });
           logger.info('[EXECUTE][pre-flight] Package build succeeded', { featureId: feature.id });
         } catch (buildErr) {
           const buildMsg = buildErr instanceof Error ? buildErr.message : String(buildErr);

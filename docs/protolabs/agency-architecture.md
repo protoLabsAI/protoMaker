@@ -151,8 +151,6 @@ Ava is the hub. All strategic decisions flow through her. Communication channels
 | **SPARC PRD skill**             | `plugins/automaker/commands/sparc-prd.md`                   | Interactive PRD creation                                |
 | **ProjM deep research**         | `apps/server/src/services/authority-agents/`                | Milestone/phase decomposition                           |
 | **Auto-mode execution**         | `apps/server/src/services/auto-mode-service.ts`             | Dependency-aware, model escalation                      |
-| **Agent factory + registry**    | `apps/server/src/services/agent-factory-service.ts`         | Template-based agent creation                           |
-| **Dynamic agent executor**      | `apps/server/src/services/dynamic-agent-executor.ts`        | Runs agents in worktrees via Claude Agent SDK           |
 | **Worktree isolation**          | `apps/server/src/services/agent-service.ts`                 | Per-feature branches                                    |
 | **PR pipeline**                 | `apps/server/src/services/git-workflow-service.ts`          | Create, push, merge                                     |
 | **CodeRabbit integration**      | Branch protection + `resolve_review_threads`                | Required check                                          |
@@ -178,7 +176,7 @@ Every PRD passes through a 3-stage sequential review before approval:
 2. **Jon (market value)** — Customer impact, ROI, positioning, priority. Sees Ava's critique.
 3. **Resolution (Ava as CoS)** — Merges both verdicts into consolidated PRD with final decision
 
-Uses LangGraph flows with Langfuse tracing. 3-minute timeout for the entire pipeline. Fallback to DynamicAgentExecutor if graph flows are disabled.
+Uses LangGraph flows with Langfuse tracing. 3-minute timeout for the entire pipeline.
 
 ### 2. HITL Gates
 

@@ -10,7 +10,7 @@ Dual-perspective PRD review pipeline that stress-tests product decisions through
 2. **Jon reviews** for market value — customer impact, ROI, strategic positioning
 3. **Resolution** — Ava as Chief of Staff synthesizes both verdicts into a consolidated PRD
 
-When the `useGraphFlows` feature flag is enabled (default: `true`), execution is delegated to `AntagonisticReviewAdapter` which runs the review as a LangGraph state machine. The legacy `DynamicAgentExecutor` path remains as a fallback.
+When the `useGraphFlows` feature flag is enabled (default: `true`), execution is delegated to `AntagonisticReviewAdapter` which runs the review as a LangGraph state machine.
 
 Reviews must complete within **3 minutes** (`REVIEW_TIMEOUT_MS = 180_000`).
 
@@ -18,9 +18,8 @@ Reviews must complete within **3 minutes** (`REVIEW_TIMEOUT_MS = 180_000`).
 
 ```text
 AntagonisticReviewService
-  ├── Feature flag: useGraphFlows
-  │     ├── true  → AntagonisticReviewAdapter (LangGraph flow)
-  │     └── false → DynamicAgentExecutor (legacy)
+  ├── Feature flag: useGraphFlows (default: true)
+  │     └── true  → AntagonisticReviewAdapter (LangGraph flow)
   └── AntagonisticReviewAdapter
         ├── createAntagonisticReviewGraph()   — LangGraph state machine
         ├── createFlowModel()                 — settings-aware LLM factory

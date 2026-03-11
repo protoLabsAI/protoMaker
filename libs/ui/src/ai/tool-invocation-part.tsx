@@ -29,7 +29,6 @@ import { ArtifactCard } from './tool-results/artifact-card.js';
 import { ImageCard } from './tool-results/image-card.js';
 import { WebPreviewCard } from './tool-results/web-preview-card.js';
 import { PlanPartToolRenderer } from './plan-part.js';
-import { DynamicAgentCard } from './tool-results/dynamic-agent-card.js';
 import { MetricsCard } from './tool-results/metrics-card.js';
 import { BriefingCard } from './tool-results/briefing-card.js';
 import { PromotionCandidatesCard } from './tool-results/promotion-candidates-card.js';
@@ -41,6 +40,7 @@ import { ProjectListCard } from './tool-results/project-list-card.js';
 import { ProjectDetailCard } from './tool-results/project-detail-card.js';
 import { SitrepCard } from './tool-results/sitrep-card.js';
 import { HealthCheckCard } from './tool-results/health-check-card.js';
+import { SubagentBlockRenderer } from './subagent-block.js';
 
 // Register custom renderers for the boardRead tool group
 toolResultRegistry.register('get_board_summary', BoardSummaryCard);
@@ -76,9 +76,6 @@ toolResultRegistry.register('generate_html', WebPreviewCard);
 // Register custom renderer for the planning tool
 toolResultRegistry.register('create_plan', PlanPartToolRenderer);
 
-// Register custom renderers for the agentDelegation tool group
-toolResultRegistry.register('execute_dynamic_agent', DynamicAgentCard);
-
 // Register custom renderers for the metrics tool group
 toolResultRegistry.register('get_project_metrics', MetricsCard);
 toolResultRegistry.register('get_capacity_metrics', MetricsCard);
@@ -105,6 +102,9 @@ toolResultRegistry.register('get_project', ProjectDetailCard);
 // Register custom renderers for the sitrep and health tool group
 toolResultRegistry.register('get_sitrep', SitrepCard);
 toolResultRegistry.register('health_check', HealthCheckCard);
+
+// Register custom renderer for Agent tool (subagent invocations)
+toolResultRegistry.register('Agent', SubagentBlockRenderer);
 
 type ToolState =
   | 'input-streaming'

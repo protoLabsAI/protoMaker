@@ -27,7 +27,7 @@ Project Owner (CEO, Human)
 └── Jon, Sonnet, Trust=1 — Go-to-Market
 ```
 
-> **Source of truth:** `docs/authority/roles.md` is auto-generated from `built-in-templates.ts` via `scripts/generate-org-docs.ts`. This org chart should match that file. Run `npx tsx scripts/generate-org-docs.ts` to regenerate roles.md.
+> **Source of truth:** `docs/authority/roles.md` defines the canonical agent roster. This org chart should match that file.
 
 **Notes:**
 

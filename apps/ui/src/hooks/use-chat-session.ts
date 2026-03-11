@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useChatStore } from '@/store/chat-store';
+import { useChatStore, type ChatEffortLevel } from '@/store/chat-store';
 import { getHttpApiClient, getServerUrlSync } from '@/lib/http-api-client';
 import { getAuthHeaders } from '@/lib/api-fetch';
 
@@ -47,6 +47,7 @@ export function useChatSession({
     switchSession,
     saveMessages,
     updateModel,
+    updateEffort,
     getCurrentSession,
     getSessionsForProject,
     historyOpen,
@@ -56,6 +57,7 @@ export function useChatSession({
 
   const currentSession = getCurrentSession();
   const modelAlias = currentSession?.modelAlias ?? defaultModel;
+  const effortLevel: ChatEffortLevel = currentSession?.effortLevel ?? 'medium';
 
   // Filter sessions by projectId when provided
   const visibleSessions = useMemo(
@@ -80,11 +82,15 @@ export function useChatSession({
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        headers: { ...getAuthHeaders(), 'x-model-alias': modelAlias },
+        headers: {
+          ...getAuthHeaders(),
+          'x-model-alias': modelAlias,
+          'x-effort-level': effortLevel,
+        },
         body: transportBody,
         credentials: 'include',
       }),
-    [modelAlias, transportBody]
+    [modelAlias, effortLevel, transportBody]
   );
 
   const { messages, sendMessage, stop, status, setMessages, error, addToolApprovalResponse } =
@@ -247,6 +253,15 @@ export function useChatSession({
     [currentSessionId, updateModel]
   );
 
+  const handleEffortChange = useCallback(
+    (effort: ChatEffortLevel) => {
+      if (currentSessionId) {
+        updateEffort(currentSessionId, effort);
+      }
+    },
+    [currentSessionId, updateEffort]
+  );
+
   // HITL: approve a destructive tool call via native AI SDK approval flow.
   // The SDK pauses tool execution and the client renders a confirmation card.
   // Calling addToolApprovalResponse resumes execution in the same bubble.
@@ -263,6 +278,44 @@ export function useChatSession({
       addToolApprovalResponse({ id: approvalId, approved: false, reason: 'User rejected' });
     },
     [addToolApprovalResponse]
+  );
+
+  // ── Rewind action ──────────────────────────────────────────────────────────
+
+  /**
+   * Rewind the session to a checkpoint.
+   *
+   * Posts to POST /api/chat/rewind with an optional checkpointId (defaults to
+   * most recent). Returns the list of restored files on success, or throws with
+   * a human-readable message when no checkpoints exist.
+   *
+   * Also handles the /rewind built-in slash command:
+   *   /rewind            → rewind to most recent checkpoint
+   *   /rewind <id>       → rewind to the specified checkpoint
+   */
+  const rewindToCheckpoint = useCallback(
+    async (checkpointId?: string): Promise<{ restoredFiles: string[]; checkpointId: string }> => {
+      const response = await fetch(`${getServerUrlSync()}/api/chat/rewind`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...(checkpointId !== undefined && { checkpointId }),
+          ...(currentSessionId !== undefined && { sessionId: currentSessionId }),
+        }),
+      });
+
+      const data = (await response.json()) as
+        | { ok: true; restoredFiles: string[]; checkpointId: string }
+        | { ok: false; message: string };
+
+      if (!data.ok) {
+        throw new Error(data.message);
+      }
+
+      return { restoredFiles: data.restoredFiles, checkpointId: data.checkpointId };
+    },
+    [currentSessionId]
   );
 
   // Ensure there's always a session (scoped to project when projectId provided)
@@ -289,6 +342,9 @@ export function useChatSession({
     approveToolAction,
     rejectToolAction,
 
+    // Checkpoint rewind
+    rewindToCheckpoint,
+
     // Subagent approval (gated trust model)
     pendingSubagentApprovals,
     approveSubagentTool,
@@ -299,10 +355,12 @@ export function useChatSession({
     currentSessionId,
     currentSession,
     modelAlias,
+    effortLevel,
     handleNewChat,
     handleSwitchSession,
     handleDeleteSession,
     handleModelChange,
+    handleEffortChange,
 
     // History panel
     historyOpen,

@@ -238,6 +238,35 @@ export class ProjectService {
   // ─── Public API ────────────────────────────────────────────────────────────
 
   /**
+   * Sync a pre-built Project into the CRDT doc and emit an event.
+   *
+   * Use this when code outside of ProjectService (e.g. the create/update route
+   * handlers) has already written project.json to disk and just needs the
+   * in-memory Automerge doc to reflect that change. Calling this ensures
+   * getProject() returns the project immediately, without a server restart.
+   *
+   * No-ops when CRDT is not enabled for the given projectPath.
+   */
+  async syncProjectToCrdt(
+    projectPath: string,
+    project: Project,
+    eventType: 'project:created' | 'project:updated' = 'project:updated'
+  ): Promise<void> {
+    if (!this._isCrdtEnabled(projectPath)) return;
+    const doc = await this._ensureDoc(projectPath);
+    const newDoc = Automerge.change(doc, (d) => {
+      (d.projects as Record<string, unknown>)[project.slug] = this._toAutomergeValue(project);
+    });
+    this._docs.set(projectPath, newDoc);
+    this._crdtEvents?.emit(eventType, {
+      projectSlug: project.slug,
+      projectPath,
+      project,
+    });
+    logger.debug(`[CRDT] Synced project ${project.slug} into doc (${eventType})`);
+  }
+
+  /**
    * List all projects in a project path
    */
   async listProjects(projectPath: string): Promise<string[]> {
