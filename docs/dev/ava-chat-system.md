@@ -54,7 +54,6 @@ POST /api/chat
   │     + systemPromptExtension       (user custom text)
   ├── buildAvaTools(projectPath, services, config)
   │     → tool set gated by config.toolGroups flags
-  │     → execute_dynamic_agent tool  [if agentDelegation enabled]
   └── streamText({ tools, maxSteps: 10 })
         │
         ├── [text chunk]  → SSE text delta → ChatMessageMarkdown
@@ -67,44 +66,6 @@ POST /api/chat
         ├── [step-start]  → groupByStep() splits into separate bubbles
         └── [done]        → extractCitations() → data-citations chunk
 ```
-
-### Ava Tool Delegation
-
-When Ava invokes `execute_dynamic_agent`, the call passes through the full agent stack:
-
-```
-streamText tool call: execute_dynamic_agent
-  │  { role, feature_id?, prompt, trust? }
-  ▼
-ava-tools.ts: execute_dynamic_agent handler
-  ├── RoleRegistryService.get(role)        → AgentTemplate
-  ├── AgentFactoryService.createFromTemplate(role, projectPath)
-  │     → AgentConfig (resolved capabilities, tools, system prompt)
-  └── DynamicAgentExecutor.execute(config, options)
-        ├── Builds system prompt with capability constraints
-        ├── Filters disallowed tools per template
-        ├── ClaudeProvider.executeQuery()
-        │     → @anthropic-ai/claude-agent-sdk query()
-        │           Cost tracking, session resume, context compaction
-        └── Streams progress events via WebSocket → AgentOutputCard
-              { type: 'agent:text' | 'agent:tool-use' | 'agent:complete' }
-```
-
-The inner agent runs in a worktree-isolated environment with its own tool set (defined by the role template) and cannot exceed the capabilities granted by `subagentTrust`.
-
-### SDK Integration Points
-
-The Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`) exposes three hook types that protoLabs wires into `DynamicAgentExecutor`:
-
-| Hook           | Trigger                                 | protoLabs Use                                      |
-| -------------- | --------------------------------------- | -------------------------------------------------- |
-| `PostToolUse`  | After every tool execution              | Log cost accumulation, emit `agent:tool-result` WS |
-| `Notification` | SDK informational events (context, etc) | Surface warnings in agent output log               |
-| `SubagentStop` | Inner agent session ends                | Mark sub-run complete, aggregate cost into parent  |
-
-**`canUseTool` gate:** When `subagentTrust` is set below the tool's required trust level, the SDK's `canUseTool` callback returns `false`, preventing the inner agent from calling that tool. This is how Ava enforces that delegated agents cannot exceed their granted permissions.
-
-**Custom MCP servers:** If `AvaConfig.mcpServers` lists server entries, they are passed to the SDK via `createChatOptions({ mcpServers })` before the inner agent runs. This lets Ava-delegated agents access project-specific MCP tools (e.g., GitHub, filesystem) without exposing them to the outer Ava loop.
 
 ### Prompt Chain
 
@@ -157,7 +118,6 @@ interface AvaConfig {
     autoMode: boolean; // get_auto_mode_status, start_auto_mode, stop_auto_mode
     projectMgmt: boolean; // get_project_spec, update_project_spec
     orchestration: boolean; // get_execution_order, set_feature_dependencies
-    agentDelegation: boolean; // execute_dynamic_agent tool
     notes: boolean; // notes read/write tools
     metrics: boolean; // metrics and DORA tools
     prWorkflow: boolean; // PR workflow tools
@@ -224,27 +184,26 @@ Stored at `{projectPath}/.automaker/ava-config.json`. See the [AvaConfig Referen
 
 ## Tool Groups
 
-| Group           | Representative Tools                                                   | Custom Card                                                |
-| --------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
-| boardRead       | `get_board_summary`, `list_features`, `get_feature`                    | `BoardSummaryCard`, `FeatureListCard`, `FeatureDetailCard` |
-| boardWrite      | `create_feature`, `update_feature`, `move_feature`, `delete_feature`   | `FeatureCreatedCard`, `FeatureUpdatedCard`, HITL           |
-| agentControl    | `start_agent`, `stop_agent`, `list_running_agents`, `get_agent_output` | `AgentStatusCard`, `AgentOutputCard`                       |
-| autoMode        | `get_auto_mode_status`, `start_auto_mode`, `stop_auto_mode`            | `AutoModeStatusCard`                                       |
-| projectMgmt     | `get_project_spec`, `update_project_spec`                              | HITL for write ops                                         |
-| orchestration   | `get_execution_order`, `set_feature_dependencies`                      | `ExecutionOrderCard`                                       |
-| agentDelegation | `execute_dynamic_agent`                                                | `AgentOutputCard`                                          |
-| notes           | notes read/write tools                                                 | (JSON fallback)                                            |
-| metrics         | metrics and DORA tools                                                 | (JSON fallback)                                            |
-| prWorkflow      | PR workflow tools                                                      | (JSON fallback)                                            |
-| promotion       | release/promotion tools                                                | (JSON fallback)                                            |
-| contextFiles    | context file management tools                                          | (JSON fallback)                                            |
-| projects        | project management tools                                               | (JSON fallback)                                            |
-| briefing        | `get_briefing`                                                         | (JSON fallback)                                            |
-| avaChannel      | Ava Channel read/write tools                                           | (JSON fallback)                                            |
-| discord         | Discord message tools                                                  | (JSON fallback)                                            |
-| calendar        | calendar event tools                                                   | (JSON fallback)                                            |
-| health          | health status tools                                                    | (JSON fallback)                                            |
-| settings        | settings read/write tools                                              | (JSON fallback)                                            |
+| Group         | Representative Tools                                                   | Custom Card                                                |
+| ------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
+| boardRead     | `get_board_summary`, `list_features`, `get_feature`                    | `BoardSummaryCard`, `FeatureListCard`, `FeatureDetailCard` |
+| boardWrite    | `create_feature`, `update_feature`, `move_feature`, `delete_feature`   | `FeatureCreatedCard`, `FeatureUpdatedCard`, HITL           |
+| agentControl  | `start_agent`, `stop_agent`, `list_running_agents`, `get_agent_output` | `AgentStatusCard`, `AgentOutputCard`                       |
+| autoMode      | `get_auto_mode_status`, `start_auto_mode`, `stop_auto_mode`            | `AutoModeStatusCard`                                       |
+| projectMgmt   | `get_project_spec`, `update_project_spec`                              | HITL for write ops                                         |
+| orchestration | `get_execution_order`, `set_feature_dependencies`                      | `ExecutionOrderCard`                                       |
+| notes         | notes read/write tools                                                 | (JSON fallback)                                            |
+| metrics       | metrics and DORA tools                                                 | (JSON fallback)                                            |
+| prWorkflow    | PR workflow tools                                                      | (JSON fallback)                                            |
+| promotion     | release/promotion tools                                                | (JSON fallback)                                            |
+| contextFiles  | context file management tools                                          | (JSON fallback)                                            |
+| projects      | project management tools                                               | (JSON fallback)                                            |
+| briefing      | `get_briefing`                                                         | (JSON fallback)                                            |
+| avaChannel    | Ava Channel read/write tools                                           | (JSON fallback)                                            |
+| discord       | Discord message tools                                                  | (JSON fallback)                                            |
+| calendar      | calendar event tools                                                   | (JSON fallback)                                            |
+| health        | health status tools                                                    | (JSON fallback)                                            |
+| settings      | settings read/write tools                                              | (JSON fallback)                                            |
 
 ## HITL Confirmation Flow
 
@@ -506,7 +465,5 @@ apps/ui/src/components/views/chat-overlay/
 
 ## See Also
 
-- [Ava Chat Server API](../server/ava-chat.md) — SDK hooks, MCP server config, trust model, tool progress WebSocket events
-- [Ava Delegation Flow](../agents/ava-delegation.md) — how `execute_dynamic_agent` routes through role registry and `DynamicAgentExecutor`
-- [Dynamic Role Registry](../agents/dynamic-role-registry.md) — agent template schema and registration
+- [Ava Chat Server API](../server/ava-chat.md) — MCP server config, trust model
 - [SDK Integration](../agents/sdk-integration.md) — Claude Agent SDK query options and session management

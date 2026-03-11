@@ -8,7 +8,7 @@
  * Health check functions are registered separately since async functions
  * are not serializable in descriptors.
  *
- * Pattern mirrors RoleRegistryService exactly.
+ * Pattern uses an in-memory registry with Zod schema validation.
  */
 
 import {

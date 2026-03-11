@@ -12,7 +12,7 @@
  *   filesystem-client.ts — ping, openDirectory, readFile, writeFile, etc.
  *   setup-client.ts     — model, setup, setupLab
  *   features-client.ts  — features, autoMode, enhancePrompt, suggestions, specRegeneration, backlogPlan
- *   agent-client.ts     — runningAgents, github, workspace, agent, templates, agentTemplates
+ *   agent-client.ts     — runningAgents, github, workspace, agent, templates
  *   git-client.ts       — worktree, git
  *   settings-client.ts  — settings, sessions, claude, codex, context
  *   content-client.ts   — notes, ai, contentPipeline, authorityPipeline

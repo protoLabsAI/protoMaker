@@ -30,21 +30,6 @@ Covers:
 
 ### Agent Development
 
-#### [Dynamic Role Registry](./dynamic-role-registry.md)
-
-**Template-based agent creation and execution**
-
-Covers:
-
-- Agent Template Schema (Zod-validated)
-- RoleRegistryService (in-memory template storage with tier enforcement)
-- AgentFactoryService (create configs from templates with overrides/inheritance)
-- DynamicAgentExecutor (execute with system prompt assembly and tool filtering)
-- Assignment routing (Discord, GitHub)
-- End-to-end flow
-
-**Read this if:** You want to create custom agent types, understand how agents are configured at runtime, or build on the template system.
-
 #### [Adding Agent Teammates](./adding-teammates.md)
 
 **How to add new authority agents (PM, EM, Designer, etc.)**
@@ -219,10 +204,6 @@ Covers:
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│  Registry Layer: RoleRegistry, AgentFactory, Executor       │
-└────────────────────────┬────────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────────┐
 │  Provider Layer: ProviderFactory, ClaudeProvider, etc.      │
 └────────────────────────┬────────────────────────────────────┘
                          │
@@ -245,7 +226,7 @@ The full agent roster (names, models, domains, trust levels) is auto-generated i
 | Content agent        | Blog posts, docs, SEO              | Sonnet | CLI, Discord, Auto-mode  |
 | GTM agent            | Brand, content strategy            | Sonnet | CLI, Discord             |
 
-**Utility agents** (Haiku): PR Maintainer, Board Janitor — invoked on-demand via `execute_dynamic_agent`.
+**Utility agents** (Haiku): PR Maintainer, Board Janitor — invoked on-demand via CLI skills.
 
 **Authority agents** (pipeline steps): PM, ProjM, EM — event-driven, manage the pre-execution pipeline. See [Idea to Production](../dev/idea-to-production.md).
 

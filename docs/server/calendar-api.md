@@ -179,7 +179,7 @@ Four MCP tools provide programmatic access for agents:
 | `update_calendar_event` | Update an existing event                      |
 | `delete_calendar_event` | Delete an event                               |
 
-The calendar assistant agent (`/calendar-assistant`) has exclusive write access to these tools. Other agents delegate calendar operations via `execute_dynamic_agent` with `templateName: 'calendar-assistant'`.
+The calendar assistant agent (`/calendar-assistant`) has exclusive write access to these tools. Other agents delegate calendar operations via the `/calendar-assistant` CLI skill.
 
 ## Storage
 

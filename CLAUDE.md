@@ -204,13 +204,7 @@ The server (`apps/server/src/`) follows a modular pattern:
 
 ### Multi-Agent Architecture
 
-Automaker uses a dynamic role registry and factory pattern for agents:
-
-- **Role Registry** (`RoleRegistryService`) — Stores agent templates (role, system prompt, tools, model). Built-in templates registered at startup.
-- **Agent Factory** (`AgentFactoryService`) — Creates agent instances from templates. Resolves models, injects context.
-- **Dynamic Executor** (`DynamicAgentExecutor`) — Runs agents in worktrees with the Claude Agent SDK.
-
-Agent roles are defined as templates with a schema validated by Zod. New agent types can be added via the REST API (`/api/agents`) or MCP tools without code changes.
+Automaker uses CLI skills and the native Claude Code Agent tool for agent spawning. Agent roles are defined as CLI command files in `.claude/commands/` with system prompts, tool restrictions, and model selection. Feature execution agents run in isolated git worktrees via the Lead Engineer pipeline.
 
 ### Frontend Architecture
 

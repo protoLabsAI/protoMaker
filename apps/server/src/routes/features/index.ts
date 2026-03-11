@@ -22,7 +22,6 @@ import { createAssignAgentHandler } from './routes/assign-agent.js';
 import { createSummaryHandler } from './routes/summary.js';
 import { createRollbackHandler } from './routes/rollback.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
-import type { RoleRegistryService } from '../../services/role-registry-service.js';
 import type { TrustTierService } from '../../services/trust-tier-service.js';
 
 export function createFeaturesRoutes(
@@ -31,8 +30,7 @@ export function createFeaturesRoutes(
   settingsService?: SettingsService,
   events?: EventEmitter,
   authorityService?: AuthorityService,
-  healthService?: FeatureHealthService,
-  roleRegistry?: RoleRegistryService
+  healthService?: FeatureHealthService
 ): Router {
   const router = Router();
 
@@ -74,7 +72,7 @@ export function createFeaturesRoutes(
   router.post(
     '/assign-agent',
     validatePathParams('projectPath'),
-    createAssignAgentHandler(featureLoader, roleRegistry, events)
+    createAssignAgentHandler(featureLoader, events)
   );
 
   if (healthService) {

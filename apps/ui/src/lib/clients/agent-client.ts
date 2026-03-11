@@ -1,7 +1,7 @@
 /**
  * Agent domain mixin for the HTTP API client.
  *
- * Provides: runningAgents, github, workspace, agent, templates, agentTemplates
+ * Provides: runningAgents, github, workspace, agent, templates
  */
 import type { GitHubAPI, IssueValidationInput, IssueValidationEvent } from '../electron';
 import type { Message } from '@/types/electron';
@@ -205,57 +205,5 @@ export const withAgentClient = <TBase extends Constructor<BaseHttpClient>>(Base:
         projectName?: string;
         error?: string;
       }> => this.post('/api/templates/clone', { repoUrl, projectName, parentDir }),
-    };
-
-    // Agent Templates API
-    agentTemplates = {
-      list: (
-        role?: string
-      ): Promise<{
-        success: boolean;
-        templates: Array<{
-          name: string;
-          displayName: string;
-          description: string;
-          role: string;
-          tier: number;
-          model?: string;
-          tags?: string[];
-        }>;
-        count: number;
-        error?: string;
-      }> => this.post('/api/agents/templates/list', { role }),
-
-      get: (
-        name: string
-      ): Promise<{
-        success: boolean;
-        template?: Record<string, unknown>;
-        error?: string;
-      }> => this.post('/api/agents/templates/get', { name }),
-
-      register: (
-        template: Record<string, unknown>
-      ): Promise<{
-        success: boolean;
-        template?: Record<string, unknown>;
-        error?: string;
-      }> => this.post('/api/agents/templates/register', template),
-
-      update: (
-        name: string,
-        updates: Record<string, unknown>
-      ): Promise<{
-        success: boolean;
-        template?: Record<string, unknown>;
-        error?: string;
-      }> => this.post('/api/agents/templates/update', { name, ...updates }),
-
-      unregister: (
-        name: string
-      ): Promise<{
-        success: boolean;
-        error?: string;
-      }> => this.post('/api/agents/templates/unregister', { name }),
     };
   };

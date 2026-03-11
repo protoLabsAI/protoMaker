@@ -17,7 +17,7 @@ export { getQAEngineerPrompt } from './qa-engineer-prompt.js';
 export { getDocsEngineerPrompt } from './docs-engineer-prompt.js';
 export { getGTMSpecialistPrompt } from './gtm-specialist-prompt.js';
 
-// Personified agent prompts (used by built-in-templates for named agents)
+// Personified agent prompts (used by agent prompt resolution for named agents)
 export { getAvaPrompt } from './ava.js';
 export { getMattPrompt } from './matt.js';
 export { getSamPrompt } from './sam.js';

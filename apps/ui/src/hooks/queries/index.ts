@@ -101,9 +101,5 @@ export {
   useActivityFeed,
 } from './use-metrics';
 
-// Agent Templates
-export { useAgentTemplates } from './use-agent-templates';
-export type { AgentTemplateMetadata } from './use-agent-templates';
-
 // Signal Channels
 export { useSignalChannels, useUpdateSignalChannels } from './use-signal-channels';

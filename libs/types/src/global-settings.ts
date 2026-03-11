@@ -651,7 +651,7 @@ export interface GlobalSettings {
   };
 
   /**
-   * Use LangGraph-based flows for antagonistic reviews instead of legacy DynamicAgentExecutor.
+   * Use LangGraph-based flows for antagonistic reviews.
    * @default true
    */
   useGraphFlows?: boolean;

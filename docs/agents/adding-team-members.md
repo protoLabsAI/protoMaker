@@ -1,50 +1,8 @@
 # Adding New Team Members
 
-How to add a new agent role to protoLabs's multi-agent system. There are two approaches:
+How to add a new agent role to protoLabs's multi-agent system.
 
-1. **Dynamic (recommended)** — Register a template at runtime via API/MCP. No code changes needed. See [Dynamic Role Registry](/agents/dynamic-role-registry).
-2. **Static** — Add to the type system, create a prompt, wire Discord routing. Requires code changes and a deploy.
-
-Use the **dynamic** approach for custom roles, experiments, and project-specific agents. Use the **static** approach when adding a new built-in role that should be available to all projects permanently.
-
-## Dynamic Approach (No Code Changes)
-
-Register a template via MCP:
-
-```typescript
-mcp__plugin_protolabs_studio__register_agent_template({
-  template: {
-    name: 'my-custom-agent',
-    displayName: 'My Custom Agent',
-    description: 'Does a specific thing',
-    role: 'backend-engineer', // Base role for capabilities
-    tier: 1,
-    model: 'sonnet',
-    maxTurns: 100,
-    canUseBash: true,
-    canModifyFiles: true,
-    tags: ['custom'],
-  },
-});
-```
-
-Then execute it:
-
-```typescript
-mcp__plugin_protolabs_studio__execute_dynamic_agent({
-  templateName: 'my-custom-agent',
-  projectPath: '/path/to/project',
-  prompt: 'Do the thing',
-});
-```
-
-For full details, see [Dynamic Role Registry](/agents/dynamic-role-registry).
-
----
-
-## Static Approach (Code Changes)
-
-For adding permanent built-in roles to the type system.
+Agent roles are defined in the type system with capabilities, prompts, and routing. Adding a new role requires code changes across the shared packages and server.
 
 ## Quick Reference
 

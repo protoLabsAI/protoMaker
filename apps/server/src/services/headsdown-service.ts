@@ -20,7 +20,6 @@ import type {
 } from '@protolabsai/types';
 import { DEFAULT_HEADSDOWN_CONFIGS } from '@protolabsai/types';
 import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsai/utils';
-import type { RoleRegistryService } from './role-registry-service.js';
 
 /** Goal type for work evaluation */
 interface WorkGoal {
@@ -88,16 +87,11 @@ export class HeadsdownService {
   /** GitHub monitor for detecting PRs needing review */
   private githubMonitor: GitHubMonitor;
 
-  /** Optional role registry for dynamic role resolution + desired state */
-  private roleRegistry?: RoleRegistryService;
-
   constructor(
     private events: EventEmitter,
     private settingsService: SettingsService,
-    private featureLoader: FeatureLoader,
-    roleRegistry?: RoleRegistryService
+    private featureLoader: FeatureLoader
   ) {
-    this.roleRegistry = roleRegistry;
     this.discordMonitor = new DiscordMonitor(events);
     this.githubMonitor = new GitHubMonitor(events);
 
@@ -127,16 +121,10 @@ export class HeadsdownService {
   static getInstance(
     events: EventEmitter,
     settingsService: SettingsService,
-    featureLoader: FeatureLoader,
-    roleRegistry?: RoleRegistryService
+    featureLoader: FeatureLoader
   ): HeadsdownService {
     if (!HeadsdownService.instance) {
-      HeadsdownService.instance = new HeadsdownService(
-        events,
-        settingsService,
-        featureLoader,
-        roleRegistry
-      );
+      HeadsdownService.instance = new HeadsdownService(events, settingsService, featureLoader);
     }
     return HeadsdownService.instance;
   }
@@ -454,48 +442,10 @@ export class HeadsdownService {
   /**
    * Evaluate desired state conditions against current world state.
    * Returns divergences — conditions where reality doesn't match the desired state.
+   * Currently returns empty since desired state definitions were part of the removed template system.
    */
-  evaluateDesiredState(role: AgentRole, worldState: WorldState): StateDivergence[] {
-    if (!this.roleRegistry) return [];
-
-    const template = this.roleRegistry.get(role);
-    if (!template?.desiredState || template.desiredState.length === 0) return [];
-
-    const divergences: StateDivergence[] = [];
-
-    for (const condition of template.desiredState) {
-      // Skip conditions that require a monitor that isn't active
-      if (condition.requiresMonitor) {
-        const monitorActive = worldState[`${condition.requiresMonitor}_monitoring_active`];
-        if (!monitorActive) continue;
-      }
-
-      const actual = worldState[condition.key];
-
-      // If the key doesn't exist in world state, we can't evaluate
-      if (actual === undefined) {
-        logger.debug(`World state key "${condition.key}" not available, skipping condition`);
-        continue;
-      }
-
-      const satisfied = this.evaluateCondition(actual, condition.operator, condition.value);
-
-      if (!satisfied) {
-        const desc =
-          condition.description ?? `${condition.key} ${condition.operator} ${condition.value}`;
-        divergences.push({
-          condition,
-          actualValue: actual,
-          summary: `State divergence: ${desc} (expected ${condition.operator} ${condition.value}, got ${actual})`,
-        });
-
-        logger.info(
-          `Desired state diverged for ${role}: ${condition.key}=${actual} (want ${condition.operator} ${condition.value})`
-        );
-      }
-    }
-
-    return divergences;
+  evaluateDesiredState(_role: AgentRole, _worldState: WorldState): StateDivergence[] {
+    return [];
   }
 
   /**
@@ -605,43 +555,12 @@ export class HeadsdownService {
 
   /**
    * Get relevant goals for agent role.
-   * Checks registry for template-defined idle tasks first, falls back to hardcoded goals.
+   * Returns hardcoded goals based on known role definitions.
    */
   private getGoalsForRole(role: AgentRole): WorkGoal[] {
     const goals: WorkGoal[] = [];
 
-    // Try registry first — if a template exists with headsdown config, derive goals from it
-    if (this.roleRegistry) {
-      const template = this.roleRegistry.get(role);
-      if (template?.headsdownConfig) {
-        logger.debug(`Using registry headsdown config for role "${role}"`);
-        const hdc = template.headsdownConfig;
-
-        // Generate a primary work goal based on role description
-        goals.push({
-          id: `${role}_primary_work`,
-          name: `${template.displayName} Primary Work`,
-          conditions: [{ key: 'primary_work_completed', value: true }],
-          priority: 7,
-        });
-
-        // Generate idle task goals from template config
-        if (hdc.idleTasks?.enabled && hdc.idleTasks.tasks.length > 0) {
-          for (const task of hdc.idleTasks.tasks) {
-            goals.push({
-              id: `idle_${task}`,
-              name: `Idle: ${task}`,
-              conditions: [{ key: `${task}_completed`, value: true }],
-              priority: 3,
-            });
-          }
-        }
-
-        return goals;
-      }
-    }
-
-    // Fall back to hardcoded goals for known roles
+    // Goals for known roles
     switch (role) {
       case 'product-manager':
         goals.push(
@@ -708,32 +627,9 @@ export class HeadsdownService {
 
   /**
    * Get headsdown config for a role.
-   * Checks registry template first, falls back to DEFAULT_HEADSDOWN_CONFIGS.
+   * Returns static defaults from DEFAULT_HEADSDOWN_CONFIGS.
    */
   getConfigForRole(role: AgentRole): Partial<HeadsdownConfig> {
-    // Try registry first
-    if (this.roleRegistry) {
-      const template = this.roleRegistry.get(role);
-      if (template?.headsdownConfig) {
-        logger.debug(`Using registry headsdown config for role "${role}"`);
-        return {
-          model: template.headsdownConfig.model ?? template.model ?? 'sonnet',
-          maxTurns: template.headsdownConfig.maxTurns ?? template.maxTurns ?? 100,
-          loop: template.headsdownConfig.loop ?? {
-            enabled: true,
-            checkInterval: 30000,
-            maxConsecutiveErrors: 5,
-            workTimeout: 7200000,
-          },
-          idleTasks: template.headsdownConfig.idleTasks ?? {
-            enabled: false,
-            tasks: [],
-          },
-        } as Partial<HeadsdownConfig>;
-      }
-    }
-
-    // Fall back to static defaults
     return DEFAULT_HEADSDOWN_CONFIGS[role] ?? {};
   }
 
@@ -879,49 +775,14 @@ export class HeadsdownService {
   }
 
   /**
-   * Perform idle work
+   * Perform idle work.
+   * Currently no idle task sources are configured, so this emits an idle event.
    */
   private async performIdleWork(agent: AgentInstance): Promise<void> {
-    // Check if agent has idle tasks configured
-    if (!this.roleRegistry) {
-      this.events.emit('headsdown:agent:idle', {
-        agentId: agent.id,
-        reason: 'no_work_available',
-      });
-      return;
-    }
-
-    const template = this.roleRegistry.get(agent.role);
-    if (
-      !template?.headsdownConfig?.idleTasks?.enabled ||
-      !template.headsdownConfig.idleTasks.tasks.length
-    ) {
-      this.events.emit('headsdown:agent:idle', {
-        agentId: agent.id,
-        reason: 'no_idle_tasks_configured',
-      });
-      return;
-    }
-
-    // Pick first idle task (could be randomized or prioritized)
-    const idleTaskType = template.headsdownConfig.idleTasks.tasks[0];
-
-    // Create work item for idle task
-    const workItem: WorkItem = {
-      id: `idle:${uuidv4()}`,
-      type: 'idle_task',
-      description: `Perform idle task: ${idleTaskType}`,
-      priority: 10, // Low priority
-      source: 'idle',
-      metadata: {
-        type: idleTaskType,
-      },
-    };
-
-    logger.info(`Agent ${agent.id} performing idle work: ${idleTaskType}`);
-
-    // Execute idle task
-    await this.claimAndExecute(agent, workItem);
+    this.events.emit('headsdown:agent:idle', {
+      agentId: agent.id,
+      reason: 'no_work_available',
+    });
   }
 
   /**
