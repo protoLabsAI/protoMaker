@@ -1,5 +1,11 @@
 # @protolabsai/types
 
+## 0.42.1
+
+### Patch Changes
+
+- Maintenance release.
+
 ## 0.41.1
 
 ### Patch Changes
