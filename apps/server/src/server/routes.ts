@@ -294,7 +294,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/context', createContextRoutes(settingsService));
   app.use('/api/content', createContentRoutes(settingsService));
   app.use('/api/backlog-plan', createBacklogPlanRoutes(events, settingsService));
-  app.use('/api/calendar', createCalendarRoutes(calendarService, jobExecutorService));
+  app.use('/api/calendar', createCalendarRoutes(calendarService, jobExecutorService, events));
   app.use('/api/mcp', createMCPRoutes(mcpTestService));
   app.use(
     '/api/integrations',

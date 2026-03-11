@@ -716,6 +716,39 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
       .catch((err) => logger.warn('[CalendarReminder] spawnForCron failed:', err));
   });
 
+  // Relay job lifecycle events to remote peers in hivemind mode.
+  // JobExecutorService calls events.emit() (local only); the subscriptions below
+  // ensure job state changes are also forwarded via the remote broadcaster when one
+  // is registered (e.g. CRDT sync). A broadcasting flag prevents re-entrancy.
+  let broadcastingJob = false;
+  events.on('job:started', (payload) => {
+    if (broadcastingJob) return;
+    broadcastingJob = true;
+    try {
+      events.broadcast('job:started', payload);
+    } finally {
+      broadcastingJob = false;
+    }
+  });
+  events.on('job:completed', (payload) => {
+    if (broadcastingJob) return;
+    broadcastingJob = true;
+    try {
+      events.broadcast('job:completed', payload);
+    } finally {
+      broadcastingJob = false;
+    }
+  });
+  events.on('job:failed', (payload) => {
+    if (broadcastingJob) return;
+    broadcastingJob = true;
+    try {
+      events.broadcast('job:failed', payload);
+    } finally {
+      broadcastingJob = false;
+    }
+  });
+
   // Wire integrations health checks (requires integrationService + integrationRegistryService)
   integrationService.initialize(events, settingsService, featureLoader);
   wireHealthChecks(integrationRegistryService);
