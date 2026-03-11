@@ -91,9 +91,7 @@ export function useSlashCommands(input: string): UseSlashCommandsReturn {
 
     const lower = query.toLowerCase();
     return allCommands.filter(
-      (c) =>
-        c.name.toLowerCase().includes(lower) ||
-        c.description.toLowerCase().includes(lower)
+      (c) => c.name.toLowerCase().includes(lower) || c.description.toLowerCase().includes(lower)
     );
   }, [isActive, query, allCommands]);
 

@@ -71,7 +71,6 @@ export const withAvaClient = <TBase extends Constructor<BaseHttpClient>>(Base: T
        * Fetch the list of registered slash commands for the autocomplete dropdown.
        * Returns SlashCommandSummary[] (body field excluded for payload efficiency).
        */
-      fetchCommands: (): Promise<SlashCommandSummary[]> =>
-        this.get('/api/chat/commands'),
+      fetchCommands: (): Promise<SlashCommandSummary[]> => this.get('/api/chat/commands'),
     };
   };
