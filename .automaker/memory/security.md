@@ -110,3 +110,8 @@ usageStats:
 - **Problem solved:** Default: app runs single-origin. Hivemind mode: same app instance accessed from multiple origins (multi-client scenario).
 - **Why this works:** Standard single-origin CORS sufficient for normal use. Hivemind requires cross-origin access; feature gate prevents accidental exposure.
 - **Trade-offs:** Runtime flexibility + explicit feature gate vs. security gap risk if flag accidentally enabled without understanding implications
+
+#### [Pattern] CORS allowAllOrigins flag is conditional on hivemind.enabled, creating a dev-only CORS policy. Production never enables permissive CORS unless hivemind feature is active. (2026-03-11)
+- **Problem solved:** Balancing developer convenience in local testing with production security lockdown
+- **Why this works:** hivemind is explicit development feature; tying CORS to it ensures CORS exposure is never accidental in production. Fail-secure default.
+- **Trade-offs:** Gained: Impossible to accidentally expose permissive CORS in production. Lost: CORS availability is implicit in feature flag, adds discovery burden

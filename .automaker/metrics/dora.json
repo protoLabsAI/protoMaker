@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-11T01:16:11.794Z",
+  "updatedAt": "2026-03-11T01:32:07.882Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -162,6 +162,27 @@
         "featureCreatedAt": "2026-03-10T22:48:09.380Z",
         "prMergedAt": "2026-03-11T01:16:11.783Z",
         "leadTimeMs": 8882403
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-11T01:32:07.868Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-11"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773182889383-jrsoc1uc3",
+        "featureTitle": "Rewrite calendar-assistant skill for SDK-native patterns",
+        "featureCreatedAt": "2026-03-10T22:48:09.383Z",
+        "prMergedAt": "2026-03-11T01:32:07.868Z",
+        "leadTimeMs": 9838485
       },
       "changeFailRate": {
         "totalMerges": 1,
