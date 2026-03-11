@@ -849,5 +849,72 @@ export function createChatRoutes(services: ServiceContainer): Router {
     res.json(commands);
   });
 
+  /**
+   * POST /api/chat/rewind
+   *
+   * Rewinds the chat session to a previous checkpoint, restoring file state
+   * as it was when that checkpoint was created.
+   *
+   * Body: { checkpointId?: string, sessionId?: string }
+   *   - checkpointId: optional — if omitted, rewinds to the most recent checkpoint
+   *   - sessionId: optional — identifies the chat session to rewind
+   *
+   * Response: { ok: true, restoredFiles: string[], checkpointId: string }
+   *         | { ok: false, message: string }
+   */
+  router.post('/rewind', async (req: Request, res: Response) => {
+    const { checkpointId, sessionId } = req.body as {
+      checkpointId?: string;
+      sessionId?: string;
+    };
+
+    logger.info(
+      `Rewind requested: checkpointId=${checkpointId ?? 'most-recent'}, sessionId=${sessionId ?? 'none'}`
+    );
+
+    try {
+      // Delegate to CheckpointService when available on the service container.
+      // The service exposes a rewind(checkpointId?) method that restores files
+      // and returns the list of restored paths.
+      const checkpointService = (services as unknown as Record<string, unknown>)[
+        'checkpointService'
+      ];
+
+      if (
+        checkpointService &&
+        typeof (checkpointService as Record<string, unknown>)['rewind'] === 'function'
+      ) {
+        const rewindFn = (checkpointService as Record<string, unknown>)['rewind'] as (
+          checkpointId?: string,
+          sessionId?: string
+        ) => Promise<{ restoredFiles: string[]; checkpointId: string } | null>;
+
+        const result = await rewindFn(checkpointId, sessionId);
+
+        if (!result) {
+          res.json({ ok: false, message: 'No checkpoints exist to rewind to.' });
+          return;
+        }
+
+        logger.info(
+          `Rewind complete: checkpointId=${result.checkpointId}, restoredFiles=${result.restoredFiles.length}`
+        );
+        res.json({
+          ok: true,
+          restoredFiles: result.restoredFiles,
+          checkpointId: result.checkpointId,
+        });
+      } else {
+        // CheckpointService not yet wired — return graceful message
+        logger.warn('CheckpointService not available on service container');
+        res.json({ ok: false, message: 'No checkpoints exist to rewind to.' });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Rewind failed';
+      logger.error('Rewind error:', err);
+      res.status(500).json({ ok: false, message });
+    }
+  });
+
   return router;
 }

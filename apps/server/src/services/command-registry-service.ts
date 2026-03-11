@@ -126,6 +126,12 @@ const BUILT_IN_COMMANDS: SlashCommand[] = [
     description: 'Start a new conversation',
     source: 'built-in',
   },
+  {
+    name: 'rewind',
+    description: 'Rewind the session to a checkpoint (most recent by default)',
+    argumentHint: '[checkpoint-id]',
+    source: 'built-in',
+  },
 ];
 
 // ---------------------------------------------------------------------------
