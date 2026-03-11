@@ -62,10 +62,7 @@ export interface SlashCommandDropdownProps {
   className?: string;
 }
 
-export function SlashCommandDropdown({
-  slashCommands,
-  className,
-}: SlashCommandDropdownProps) {
+export function SlashCommandDropdown({ slashCommands, className }: SlashCommandDropdownProps) {
   const { commands, selectedIndex, onSelect, onClose, onNavigate } = slashCommands;
 
   const listRef = useRef<HTMLDivElement>(null);
@@ -109,8 +106,7 @@ export function SlashCommandDropdown({
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    (el as HTMLDivElement & { handleKeyDown?: typeof handleKeyDown }).handleKeyDown =
-      handleKeyDown;
+    (el as HTMLDivElement & { handleKeyDown?: typeof handleKeyDown }).handleKeyDown = handleKeyDown;
   }, [handleKeyDown]);
 
   if (commands.length === 0) {
@@ -156,9 +152,7 @@ export function SlashCommandDropdown({
             onClick={() => onSelect(cmd)}
             className={cn(
               'flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors',
-              isSelected
-                ? 'bg-accent text-accent-foreground'
-                : 'text-foreground hover:bg-accent/50'
+              isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent/50'
             )}
           >
             {/* Command name + arg hint */}
