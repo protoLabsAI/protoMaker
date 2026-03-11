@@ -109,3 +109,10 @@ export {
   type CheckpointMarkerProps,
   type CheckpointInfo,
 } from './checkpoint-marker.js';
+
+export {
+  SlashCommandDropdown,
+  type SlashCommand,
+  type UseSlashCommandsResult,
+  type SlashCommandDropdownProps,
+} from './slash-command-dropdown.js';
