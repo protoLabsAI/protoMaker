@@ -25,9 +25,31 @@ export interface LeadEngineerWorldStateProvider {
   getWorldStateSummary(): string;
 }
 
+/**
+ * Minimal search interface for knowledge store queries.
+ * Compatible with KnowledgeStoreService.search() and KnowledgeSearchService.search().
+ */
+export interface KnowledgeSearchProvider {
+  search(
+    projectPath: string,
+    query: string,
+    opts?: { domain?: string; maxResults?: number; maxTokens?: number }
+  ): Promise<{ results: Array<{ chunk: { content: string; heading?: string } }> }>;
+}
+
 export interface AvaWorldStateBuilderConfig {
   /** Optional strategic directives or brand context to surface in briefing */
   strategicContext?: string;
+  /**
+   * Optional knowledge store search provider for querying both 'project' and
+   * 'engineering' domains to enrich the Ava briefing with distilled insights.
+   */
+  knowledgeSearch?: KnowledgeSearchProvider;
+  /**
+   * Project path to use when querying the knowledge store.
+   * Required when knowledgeSearch is provided.
+   */
+  knowledgeProjectPath?: string;
 }
 
 // ────────────────────────── Class ──────────────────────────
@@ -48,8 +70,9 @@ export class AvaWorldStateBuilder {
    * - PM world state (projects, milestones, upcoming items)
    * - LE world state (features, agents, PR status)
    * - Strategic context (team health, cross-project deps, brand/content)
+   * - Knowledge store insights (cross-domain query results from 'project' + 'engineering')
    */
-  getFullBriefing(): string {
+  async getFullBriefing(): Promise<string> {
     const lines: string[] = [];
     const now = new Date().toISOString();
 
@@ -80,6 +103,18 @@ export class AvaWorldStateBuilder {
       lines.push('_Engineering summary unavailable_');
     }
     lines.push('');
+
+    // ── Knowledge Insights ───────────────────────────────────────────
+    if (this.config.knowledgeSearch && this.config.knowledgeProjectPath) {
+      lines.push('## Knowledge Insights');
+      lines.push('');
+      const insights = await this.getKnowledgeInsights(
+        this.config.knowledgeSearch,
+        this.config.knowledgeProjectPath
+      );
+      lines.push(insights);
+      lines.push('');
+    }
 
     // ── Strategic Context ───────────────────────────────────────────
     lines.push('## Strategic Context');
@@ -133,6 +168,87 @@ export class AvaWorldStateBuilder {
   }
 
   // ────────────────────────── Private Helpers ──────────────────────────
+
+  /**
+   * Query the knowledge store across both 'project' and 'engineering' domains
+   * and return a distilled markdown summary of the top results.
+   *
+   * Uses a broad status query that surfaces milestone completions, ceremony outcomes,
+   * and recent engineering learnings.
+   */
+  private async getKnowledgeInsights(
+    search: KnowledgeSearchProvider,
+    projectPath: string
+  ): Promise<string> {
+    const sections: string[] = [];
+
+    // Query project domain — milestone completions, ceremonies, timeline
+    try {
+      const { results: projectResults } = await search.search(
+        projectPath,
+        'milestone progress ceremony timeline deadline',
+        { domain: 'project', maxResults: 5, maxTokens: 2000 }
+      );
+
+      if (projectResults.length > 0) {
+        sections.push('### Project Knowledge');
+        for (const r of projectResults) {
+          const heading = r.chunk.heading ? `**${r.chunk.heading}**` : '_chunk_';
+          // Trim content to first 300 chars for briefing
+          const preview =
+            r.chunk.content.length > 300
+              ? r.chunk.content.slice(0, 300).trimEnd() + '…'
+              : r.chunk.content;
+          sections.push(`#### ${heading}`);
+          sections.push(preview);
+          sections.push('');
+        }
+      } else {
+        sections.push('### Project Knowledge');
+        sections.push('_No project knowledge chunks indexed yet_');
+        sections.push('');
+      }
+    } catch (err) {
+      this.log.warn('Knowledge search (domain=project) failed:', err);
+      sections.push('### Project Knowledge');
+      sections.push('_Project knowledge unavailable_');
+      sections.push('');
+    }
+
+    // Query engineering domain — reflections, agent outputs, failure patterns
+    try {
+      const { results: engResults } = await search.search(
+        projectPath,
+        'engineering reflection learning failure pattern',
+        { domain: 'engineering', maxResults: 5, maxTokens: 2000 }
+      );
+
+      if (engResults.length > 0) {
+        sections.push('### Engineering Knowledge');
+        for (const r of engResults) {
+          const heading = r.chunk.heading ? `**${r.chunk.heading}**` : '_chunk_';
+          const preview =
+            r.chunk.content.length > 300
+              ? r.chunk.content.slice(0, 300).trimEnd() + '…'
+              : r.chunk.content;
+          sections.push(`#### ${heading}`);
+          sections.push(preview);
+          sections.push('');
+        }
+      } else {
+        sections.push('### Engineering Knowledge');
+        sections.push('_No engineering knowledge chunks indexed yet_');
+        sections.push('');
+      }
+    } catch (err) {
+      this.log.warn('Knowledge search (domain=engineering) failed:', err);
+      sections.push('### Engineering Knowledge');
+      sections.push('_Engineering knowledge unavailable_');
+      sections.push('');
+    }
+
+    return sections.join('\n');
+  }
 
   /** Format team health as a markdown bullet list */
   private getTeamHealthSummary(): string {

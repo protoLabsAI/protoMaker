@@ -987,6 +987,35 @@ export class ExecuteProcessor implements StateProcessor {
       /* no upstream set — use default */
     }
 
+    // ── Commit .automaker/ drift before rebasing ──────────────────────────────
+    // Services write to .automaker/ (ledger, metrics, sessions, features) without
+    // committing. This drift causes "cannot rebase: You have unstaged changes".
+    // The LE owns committing this drift as part of its pre-flight responsibility.
+    try {
+      const { stdout: driftStatus } = await execAsync(
+        'git status --porcelain .automaker/ apps/server/.automaker/',
+        { cwd: workDir, timeout: 10_000 }
+      );
+      if (driftStatus.trim().length > 0) {
+        logger.info('[EXECUTE][pre-flight] Committing .automaker/ drift before rebase', {
+          featureId: feature.id,
+          files: driftStatus.trim().split('\n').length,
+        });
+        await execAsync('git add .automaker/ apps/server/.automaker/', {
+          cwd: workDir,
+          timeout: 10_000,
+        });
+        await execAsync('git commit --no-verify -m "chore: commit automaker drift before rebase"', {
+          cwd: workDir,
+          timeout: 15_000,
+        });
+        logger.info('[EXECUTE][pre-flight] Drift committed successfully');
+      }
+    } catch (driftErr) {
+      const driftMsg = driftErr instanceof Error ? driftErr.message : String(driftErr);
+      logger.warn('[EXECUTE][pre-flight] Drift commit failed (non-fatal)', { msg: driftMsg });
+    }
+
     try {
       const { stdout: revList } = await execAsync(
         `git rev-list --count HEAD..origin/${baseBranch}`,

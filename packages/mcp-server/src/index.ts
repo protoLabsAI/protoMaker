@@ -9,7 +9,7 @@
  *   npx @protolabsai/mcp-server
  *
  * Environment variables:
- *   AUTOMAKER_API_URL - API base URL (default: http://localhost:3009)
+ *   AUTOMAKER_API_URL - API base URL (default: http://localhost:3008)
  *   AUTOMAKER_API_KEY - API key for authentication
  */
 
@@ -23,7 +23,7 @@ import {
 import { toMCPTool } from '@protolabsai/tools';
 
 // Configuration
-const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3009';
+const API_URL = process.env.AUTOMAKER_API_URL || 'http://localhost:3008';
 
 if (!process.env.AUTOMAKER_API_KEY) {
   console.error(

@@ -315,6 +315,10 @@ export type EventType =
   // Sensor registry events (core sensor framework)
   | 'sensor:registered'
   | 'sensor:data-received'
+  // Calendar CRUD events (emitted by calendar routes after successful create/update/delete)
+  | 'calendar:event:created'
+  | 'calendar:event:updated'
+  | 'calendar:event:deleted'
   // Calendar job events (one-time scheduled actions)
   | 'job:started'
   | 'job:completed'

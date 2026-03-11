@@ -27,6 +27,7 @@ import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 import type { SchedulerService } from './scheduler-service.js';
 import { transition } from './ceremony-state-machine.js';
 import { projectArtifactService } from './project-artifact-service.js';
+import type { CalendarService } from './calendar-service.js';
 
 const logger = createLogger('CeremonyService');
 
@@ -138,6 +139,7 @@ export class CeremonyService {
   private projectService: ProjectService | null = null;
   private auditLog: CeremonyAuditLogService | null = null;
   private schedulerService: SchedulerService | null = null;
+  private calendarService: CalendarService | null = null;
   private unsubscribe: (() => void) | null = null;
 
   // Observability counters (same shape as old CeremonyBase.ceremonyCounts)
@@ -301,6 +303,10 @@ export class CeremonyService {
     this.schedulerService = schedulerService;
   }
 
+  setCalendarService(calendarService: CalendarService): void {
+    this.calendarService = calendarService;
+  }
+
   destroy(): void {
     if (this.unsubscribe) {
       this.unsubscribe();
@@ -405,6 +411,60 @@ export class CeremonyService {
   }
 
   // ---------------------------------------------------------------------------
+  // Calendar integration helpers
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Upsert a 'ceremony' type CalendarEvent for a given project.
+   * Uses projectSlug as the stable sourceId for deduplication.
+   */
+  private async upsertCeremonyCalendarEvent(
+    projectPath: string,
+    projectSlug: string,
+    projectTitle: string
+  ): Promise<void> {
+    if (!this.calendarService) return;
+    const sourceId = `ceremony:${projectSlug}`;
+    try {
+      await this.calendarService.upsertBySourceId(projectPath, sourceId, {
+        title: `Ceremonies: ${projectTitle}`,
+        date: new Date().toISOString().slice(0, 10),
+        type: 'ceremony',
+        description: `Recurring standup and retro ceremonies for project ${projectTitle}`,
+      });
+      logger.debug(`Upserted ceremony calendar event for ${projectSlug}`);
+    } catch (err) {
+      logger.warn(
+        `Failed to upsert ceremony calendar event for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  /**
+   * Delete the 'ceremony' type CalendarEvent for a given project.
+   * Looks up the event by sourceId and deletes it.
+   */
+  private async deleteCeremonyCalendarEvent(
+    projectPath: string,
+    projectSlug: string
+  ): Promise<void> {
+    if (!this.calendarService) return;
+    const sourceId = `ceremony:${projectSlug}`;
+    try {
+      const events = await this.calendarService.listEvents(projectPath, { types: ['ceremony'] });
+      const event = events.find((e) => e.sourceId === sourceId);
+      if (event) {
+        await this.calendarService.deleteEvent(projectPath, event.id);
+        logger.debug(`Deleted ceremony calendar event for ${projectSlug}`);
+      }
+    } catch (err) {
+      logger.warn(
+        `Failed to delete ceremony calendar event for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Private event handlers — delegate to LangGraph flows
   // ---------------------------------------------------------------------------
 
@@ -427,6 +487,9 @@ export class CeremonyService {
 
     // Transition state machine: awaiting_kickoff → milestone_active
     await this.applyTransition(projectPath, projectSlug, 'project:lifecycle:launched', payload);
+
+    // Upsert a ceremony calendar event so ceremonies appear in the calendar UI
+    await this.upsertCeremonyCalendarEvent(projectPath, projectSlug, projectSlug);
 
     // Register standup scheduler task
     if (this.schedulerService) {
@@ -779,6 +842,9 @@ export class CeremonyService {
         logger.info(`Unregistered standup task ${taskId} on project completion`);
       }
     }
+
+    // Remove the ceremony calendar event now that the project is complete
+    await this.deleteCeremonyCalendarEvent(projectPath, projectSlug);
 
     const dedupeKey = `${projectPath}:${projectSlug}`;
     if (this.processedProjects.has(dedupeKey)) {

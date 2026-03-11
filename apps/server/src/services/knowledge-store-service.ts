@@ -7,6 +7,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import * as BetterSqlite3 from 'better-sqlite3';
 import { createLogger } from '@protolabsai/utils';
 import type {
@@ -504,8 +505,35 @@ export class KnowledgeStoreService {
       this.initialize(projectPath);
     }
 
+    // Input validation
+    if (!domain || typeof domain !== 'string' || domain.trim().length === 0) {
+      throw new Error('Invalid domain: must be a non-empty string');
+    }
+    if (domain.length > 256) {
+      throw new Error('Invalid domain: must not exceed 256 characters');
+    }
+
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      throw new Error('Invalid content: must be a non-empty string');
+    }
+    const MAX_CONTENT_LENGTH = 100_000;
+    if (content.length > MAX_CONTENT_LENGTH) {
+      throw new Error(
+        `Invalid content: exceeds maximum length of ${MAX_CONTENT_LENGTH} characters`
+      );
+    }
+
+    if (heading !== undefined && heading !== null) {
+      if (typeof heading !== 'string' || heading.trim().length === 0) {
+        throw new Error('Invalid heading: must be a non-empty string if provided');
+      }
+      if (heading.length > 512) {
+        throw new Error('Invalid heading: must not exceed 512 characters');
+      }
+    }
+
     const timestamp = new Date().toISOString();
-    const chunkId = `manual-${domain}-${Date.now()}`;
+    const chunkId = `manual-${domain}-${randomUUID()}`;
     const tags = JSON.stringify([domain]);
 
     this.db
@@ -586,7 +614,7 @@ export class KnowledgeStoreService {
 
   /**
    * Search for reflections and agent outputs using FTS5.
-   * Convenience method that filters to reflection and agent_output source types.
+   * Filters to reflection and agent_output source types with domain='engineering'.
    *
    * @param projectPath - Project path
    * @param query - Search query (feature title + description works well)
@@ -606,7 +634,28 @@ export class KnowledgeStoreService {
       this.initialize(projectPath);
     }
 
-    return this.searchService.searchReflections(projectPath, query, maxResults);
+    return this.searchService.searchReflections(projectPath, query, maxResults, 'engineering');
+  }
+
+  /**
+   * Ingest engineering learnings when a feature reaches DONE state.
+   * Indexes agent-output.md, reflection.md, and failure classification data
+   * from feature.json. All chunks are tagged with domain='engineering'.
+   *
+   * @param projectPath - Project path
+   * @param featureId - Feature ID that just completed
+   * @returns Number of chunks indexed
+   */
+  async ingestFeatureCompletionLearnings(projectPath: string, featureId: string): Promise<number> {
+    if (!this.db || !this.projectPath) {
+      throw new Error('Knowledge store not initialized');
+    }
+
+    if (this.projectPath !== projectPath) {
+      this.initialize(projectPath);
+    }
+
+    return this.ingestionService.ingestFeatureCompletionLearnings(this.db, projectPath, featureId);
   }
 
   /**

@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 124
-  referenced: 51
-  successfulFeatures: 51
+  loaded: 116
+  referenced: 50
+  successfulFeatures: 50
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -120,33 +120,3 @@ usageStats:
 - **Context:** Providing audit trail and UI feedback for autonomous cleanup operations.
 - **Why:** Dual-event approach enables (1) real-time UI updates via individual events and (2) health monitoring via completion event with aggregate counts.
 - **Breaking if changed:** Removing individual events loses real-time UI feedback. Removing completion event loses health/monitoring signal. Both matter for different consumers.
-
-
-#### [Pattern] Graceful degradation on all I/O: missing directories and malformed JSON yield empty defaults, never throwing. Enables server resilience; prevents file system transients from cascading. (2026-03-10)
-- **Problem solved:** PMWorldStateBuilder reads from multiple optional files (.automaker/projects/*/project.json, ceremony-state.json, timeline.json). Any could be missing, corrupted, or stale during concurrent updates.
-- **Why this works:** Alternative (throw on missing/malformed) would require upstream error handling and could crash the server on transient FS issues. Graceful defaults allow the service to continue operating with degraded but valid data.
-- **Trade-offs:** Better availability vs. risk of masking misconfiguration; no alert if critical files are permanently missing.
-
-### Output capping: getDistilledSummary() limits upcoming items to 10 and excludes past deadlines. Keeps summaries concise for frequent polling (60s intervals). (2026-03-10)
-- **Context:** A distilled summary regenerated every 60s risks growing unbounded if timelines accumulate. Consumers (Discord, UI) expect cognitive-load-friendly output.
-- **Why:** Frequent updates + unbounded data = poor UX and higher bandwidth. Capping forces intentional prioritization (top 10 upcoming items matter most).
-- **Rejected:** Return all timeline items and let consumers filter — moves responsibility upstream and risks consumers displaying stale cutoffs.
-- **Trade-offs:** Simpler consumption vs. potential loss of visibility into tail items; reduces wire size.
-- **Breaking if changed:** Any consumer coded to 'next item is at index 11' would fail silently. Index-based consumers are fragile.
-
-#### [Pattern] Idempotent start() / stop() with guard: start() checks if interval already exists and skips recreation. Prevents accidental duplicate timers. (2026-03-10)
-- **Problem solved:** Lifecycle pattern exposed to application code; developers often call start() multiple times (defensive coding, retry logic) without thinking.
-- **Why this works:** Idempotency is a guardrail against common mistakes. Without it, multiple start() calls create multiple 60s timers and multiple buildState() invocations.
-- **Trade-offs:** More defensive code at the API level prevents misuse vs. simpler implementation that trusts callers.
-
-### Separation of buildState() (the business logic) from start()/stop() (the lifecycle). Enables independent testing and future worker-thread migration. (2026-03-10)
-- **Context:** PMWorldStateBuilder composes state from 4 independent sources and regenerates on interval. Both I/O logic and orchestration could be complex.
-- **Why:** Allows testing state composition without mocking timers. Allows future refactoring (move buildState to a worker) without touching lifecycle API.
-- **Rejected:** Monolithic start() that does everything: couples state logic to interval logic; makes unit testing require full timer mocking.
-- **Trade-offs:** More methods and surface area vs. cleaner separation and easier future migration.
-- **Breaking if changed:** If buildState() is made private or removed, any consumer that relied on calling it directly would break. Currently it's tested as a seam.
-
-#### [Gotcha] Multi-source composition (project.json + ceremony-state.json + timeline.json) without a unified schema version. Fragile to schema drift. (2026-03-10)
-- **Situation:** PMWorldStateBuilder reads 3+ independent files. Each could evolve schema independently. No version field or migration logic.
-- **Root cause:** Simpler to implement initially; loose coupling between domain modules. However, creates a hidden contract: all sources must evolve carefully together.
-- **How to avoid:** Flexibility + simplicity vs. brittleness; no early detection of incompatible schema changes across files.

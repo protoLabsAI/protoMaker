@@ -81,7 +81,7 @@ fi
 
 # Fallback to env vars
 API_KEY="${API_KEY:-$AUTOMAKER_API_KEY}"
-API_URL="${API_URL:-${AUTOMAKER_API_URL:-http://localhost:3009}}"
+API_URL="${API_URL:-${AUTOMAKER_API_URL:-http://localhost:3008}}"
 
 if [[ -z "$API_KEY" ]]; then
   echo "Auto-start skipped: no AUTOMAKER_API_KEY available"

@@ -465,7 +465,8 @@ export class KnowledgeSearchService {
   async searchReflections(
     projectPath: string,
     query: string,
-    maxResults: number = 5
+    maxResults: number = 5,
+    domain?: string
   ): Promise<KnowledgeSearchResult[]> {
     // Sanitize for FTS5 — strip operators that break MATCH syntax, then quote
     // each token individually so FTS5 never treats a word as a column filter.
@@ -487,6 +488,7 @@ export class KnowledgeSearchService {
       sourceTypes: ['reflection', 'agent_output'],
       maxResults,
       maxTokens: 3000,
+      domain,
     });
 
     return results;

@@ -102,9 +102,3 @@ usageStats:
 - **Situation:** After adding @/ path alias to tsconfig, tests importing @/lib/foo failed at runtime despite TypeScript compiling cleanly.
 - **Root cause:** Vitest uses its own module resolver that doesn't read tsconfig.paths by default. Both must be configured independently.
 - **How to avoid:** When adding path aliases to tsconfig, immediately add matching entry to vitest.config.ts resolve.alias.
-
-
-#### [Gotcha] Vitest's vi.runAllTilesAsync() does not reliably flush mocked async function calls. Switching to simple await Promise.resolve() + .mockResolvedValue() eliminates flakiness. (2026-03-10)
-- **Situation:** Initial tests used vi.runAllTilesAsync() to flush async buildState() calls, but tests remained unreliable. Root cause: mocked functions need explicit mock resolution behavior; vi.runAllTilesAsync() does not guarantee this ordering.
-- **Root cause:** Promise.resolve() + .mockResolvedValue() creates a direct, synchronous verification path that doesn't depend on timer utility internals.
-- **How to avoid:** Simpler, more reliable tests vs. less reliance on vitest's timer semantics; makes tests more portable to other test frameworks.

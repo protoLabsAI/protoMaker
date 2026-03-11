@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getMCPServersFromSettings } from '@/lib/settings-helpers.js';
+import { getMCPServersFromSettings, getWorkflowSettings } from '@/lib/settings-helpers.js';
 import type { SettingsService } from '@/services/settings-service.js';
+import { DEFAULT_WORKFLOW_SETTINGS } from '@protolabsai/types';
 
 // Mock the logger
 vi.mock('@protolabsai/utils', async () => {
@@ -302,6 +303,90 @@ describe('settings-helpers.ts', () => {
         args: undefined,
         env: undefined,
       });
+    });
+  });
+
+  describe('getWorkflowSettings', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+    });
+
+    it('should return DEFAULT_WORKFLOW_SETTINGS when settingsService is null', async () => {
+      const result = await getWorkflowSettings('/some/path', null);
+      expect(result).toEqual(DEFAULT_WORKFLOW_SETTINGS);
+    });
+
+    it('should return DEFAULT_WORKFLOW_SETTINGS when no workflow settings configured', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({}),
+      } as unknown as SettingsService;
+
+      const result = await getWorkflowSettings('/some/path', mockSettingsService);
+      expect(result).toEqual(DEFAULT_WORKFLOW_SETTINGS);
+    });
+
+    it('should preserve preFlightChecks=true through merge when set explicitly', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({
+          workflow: { preFlightChecks: true },
+        }),
+      } as unknown as SettingsService;
+
+      const result = await getWorkflowSettings('/some/path', mockSettingsService);
+      expect(result.preFlightChecks).toBe(true);
+    });
+
+    it('should preserve preFlightChecks=false through merge when set explicitly', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({
+          workflow: { preFlightChecks: false },
+        }),
+      } as unknown as SettingsService;
+
+      const result = await getWorkflowSettings('/some/path', mockSettingsService);
+      expect(result.preFlightChecks).toBe(false);
+    });
+
+    it('should default preFlightChecks to true when field is missing from workflow settings', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({
+          workflow: {
+            // preFlightChecks intentionally omitted — should default to true
+            postMergeVerification: false,
+          },
+        }),
+      } as unknown as SettingsService;
+
+      const result = await getWorkflowSettings('/some/path', mockSettingsService);
+      expect(result.preFlightChecks).toBe(true);
+    });
+
+    it('should return DEFAULT_WORKFLOW_SETTINGS on error', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockRejectedValue(new Error('Settings read error')),
+      } as unknown as SettingsService;
+
+      const result = await getWorkflowSettings('/some/path', mockSettingsService);
+      expect(result).toEqual(DEFAULT_WORKFLOW_SETTINGS);
+    });
+
+    it('should merge other workflow fields alongside preFlightChecks', async () => {
+      const mockSettingsService = {
+        getProjectSettings: vi.fn().mockResolvedValue({
+          workflow: {
+            preFlightChecks: false,
+            postMergeVerification: false,
+            pipeline: { goalGatesEnabled: false },
+          },
+        }),
+      } as unknown as SettingsService;
+
+      const result = await getWorkflowSettings('/some/path', mockSettingsService);
+      expect(result.preFlightChecks).toBe(false);
+      expect(result.postMergeVerification).toBe(false);
+      // Other pipeline defaults should be preserved
+      expect(result.pipeline.checkpointEnabled).toBe(true);
+      expect(result.pipeline.goalGatesEnabled).toBe(false);
     });
   });
 });

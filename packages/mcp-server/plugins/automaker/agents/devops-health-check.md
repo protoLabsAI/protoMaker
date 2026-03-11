@@ -71,10 +71,10 @@ Test API health:
 
 ```bash
 # Health endpoint
-curl -s -w "\nHTTP Status: %{http_code}\n" http://localhost:3009/api/health
+curl -s -w "\nHTTP Status: %{http_code}\n" http://localhost:3008/api/health
 
 # Response time
-curl -s -o /dev/null -w "Response time: %{time_total}s\n" http://localhost:3009/api/health
+curl -s -o /dev/null -w "Response time: %{time_total}s\n" http://localhost:3008/api/health
 ```
 
 ### Step 5: Network Connectivity

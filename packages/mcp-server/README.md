@@ -32,7 +32,7 @@ Or add manually to `~/.claude/claude_desktop_config.json`:
       "command": "bash",
       "args": ["/path/to/automaker/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"],
       "env": {
-        "AUTOMAKER_API_URL": "http://localhost:3009",
+        "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "your-api-key",
         "GH_TOKEN": "${GH_TOKEN}",
         "ENABLE_TOOL_SEARCH": "auto:10"
@@ -46,7 +46,7 @@ Or add manually to `~/.claude/claude_desktop_config.json`:
 
 | Variable             | Description                | Default                 |
 | -------------------- | -------------------------- | ----------------------- |
-| `AUTOMAKER_API_URL`  | Automaker API base URL     | `http://localhost:3009` |
+| `AUTOMAKER_API_URL`  | Automaker API base URL     | `http://localhost:3008` |
 | `AUTOMAKER_API_KEY`  | API key for authentication | (required)              |
 | `GH_TOKEN`           | GitHub token for PR ops    | (optional)              |
 | `ENABLE_TOOL_SEARCH` | Tool search mode           | `auto:10`               |

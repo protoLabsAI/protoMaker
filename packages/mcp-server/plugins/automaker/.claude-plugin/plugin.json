@@ -13,7 +13,7 @@
         "${AUTOMAKER_ROOT}/packages/mcp-server/plugins/automaker/hooks/start-mcp.sh"
       ],
       "env": {
-        "AUTOMAKER_API_URL": "http://localhost:3009",
+        "AUTOMAKER_API_URL": "http://localhost:3008",
         "AUTOMAKER_API_KEY": "${AUTOMAKER_API_KEY}",
         "GH_TOKEN": "${GH_TOKEN}",
         "ENABLE_TOOL_SEARCH": "auto:10"

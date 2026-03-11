@@ -115,7 +115,7 @@ The plugin connects to Automaker via `start-mcp.sh`. Configure in the plugin `.e
 | -------------------- | -------------------------------------- | -------- |
 | `AUTOMAKER_ROOT`     | Absolute path to your repo clone       | Yes      |
 | `AUTOMAKER_API_KEY`  | API key matching the server            | Yes      |
-| `AUTOMAKER_API_URL`  | API base URL (default: localhost:3009) | No       |
+| `AUTOMAKER_API_URL`  | API base URL (default: localhost:3008) | No       |
 | `GH_TOKEN`           | GitHub token for PR operations         | No       |
 | `DISCORD_BOT_TOKEN`  | Discord bot token                      | No       |
 | `CONTEXT7_API_KEY`   | Context7 API key                       | No       |

@@ -191,21 +191,71 @@ export class GoogleCalendarSyncService {
    * Fetches events for a 90-day window (30 days back, 60 days forward) and
    * upserts them as 'google' type CalendarEvent records keyed by sourceId.
    *
-   * Returns the count of events synced (created + updated).
+   * Also deletes local Google events that have been cancelled upstream or are
+   * no longer present in the sync window (stale events deleted from Google).
+   *
+   * Returns the count of events synced (created + updated) and deleted.
    */
-  async syncFromGoogle(projectPath: string): Promise<{ synced: number; created: number }> {
+  async syncFromGoogle(
+    projectPath: string
+  ): Promise<{ synced: number; created: number; deleted: number }> {
     const now = new Date();
-    const timeMin = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const timeMax = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString();
+    const timeMinDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const timeMaxDate = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const timeMin = timeMinDate.toISOString();
+    const timeMax = timeMaxDate.toISOString();
+    const windowStart = timeMin.substring(0, 10);
+    const windowEnd = timeMax.substring(0, 10);
 
     logger.info('Starting Google Calendar sync', { projectPath, timeMin, timeMax });
 
     const googleEvents = await this.listGoogleEvents(projectPath, timeMin, timeMax);
+
+    // Build sets of all Google sourceIds and cancelled sourceIds from this sync response
+    const allGoogleSourceIds = new Set<string>(googleEvents.map((e) => e.id));
+    const cancelledSourceIds = new Set<string>(
+      googleEvents.filter((e) => e.status === 'cancelled').map((e) => e.id)
+    );
+
+    // Read all existing local Google events to detect stale / cancelled ones
+    const localGoogleEvents = await this.calendarService.listEvents(projectPath, {
+      types: ['google'],
+    });
+
     let synced = 0;
     let created = 0;
+    let deleted = 0;
 
+    // Delete local events that have been cancelled or are absent from the sync window
+    for (const localEvent of localGoogleEvents) {
+      if (!localEvent.sourceId) continue;
+
+      const isCancelled = cancelledSourceIds.has(localEvent.sourceId);
+      const isWithinWindow = localEvent.date >= windowStart && localEvent.date <= windowEnd;
+      const isAbsent = !allGoogleSourceIds.has(localEvent.sourceId);
+
+      if (isCancelled || (isWithinWindow && isAbsent)) {
+        try {
+          await this.calendarService.deleteEvent(projectPath, localEvent.id);
+          deleted++;
+          logger.info('Deleted stale/cancelled Google Calendar event', {
+            id: localEvent.id,
+            sourceId: localEvent.sourceId,
+            reason: isCancelled ? 'cancelled' : 'absent-from-sync',
+          });
+        } catch (err) {
+          logger.warn('Failed to delete stale Google Calendar event', {
+            id: localEvent.id,
+            sourceId: localEvent.sourceId,
+            err,
+          });
+        }
+      }
+    }
+
+    // Upsert active (non-cancelled) events
     for (const gEvent of googleEvents) {
-      // Skip cancelled events
+      // Skip cancelled events — already handled above
       if (gEvent.status === 'cancelled') {
         continue;
       }
@@ -251,8 +301,9 @@ export class GoogleCalendarSyncService {
       synced,
       created,
       updated: synced - created,
+      deleted,
     });
 
-    return { synced, created };
+    return { synced, created, deleted };
   }
 }
