@@ -307,9 +307,16 @@ export class CRDTStore extends EventEmitter {
       clearInterval(this.compactTimer);
       this.compactTimer = null;
     }
-    // Disconnect all network adapters to close WebSocket connections
+    // Disconnect all network adapters to close WebSocket connections.
+    // The WebSocketClientAdapter may throw or emit errors if the socket
+    // is still in CONNECTING state. Suppress both sync and async errors.
     for (const adapter of this.networkAdapters) {
       try {
+        // Suppress error events that fire asynchronously from ws.close()
+        const ws = (adapter as Record<string, unknown>).socket as
+          | { removeAllListeners?: (e: string) => void }
+          | undefined;
+        ws?.removeAllListeners?.('error');
         adapter.disconnect();
       } catch {
         // ignore disconnect errors
