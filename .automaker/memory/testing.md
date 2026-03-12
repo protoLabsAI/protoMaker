@@ -127,3 +127,15 @@ usageStats:
 - **Problem solved:** Original bug was invisible during normal use (tool still returned _a_ log file, just wrong one); test plan called out 'lines from currently-running server's log (last-modified seconds ago, not 12 hours ago)'
 - **Why this works:** Stale data bugs can masquerade as working if you only test for 'file exists' or 'can parse content'; explicit freshness check catches the actual problem being fixed
 - **Trade-offs:** Requires more context-aware testing (know what freshness should be), but catches the real bug instead of false positives
+
+#### [Pattern] Integration tests disable CRDT (no proto.config.yaml) to keep state on disk rather than in Automerge docs. This sidesteps the inconsistency where updatePhaseClaim writes to disk but getProject reads from doc. (2026-03-12)
+
+- **Problem solved:** Services can write to disk (updatePhaseClaim) or read from doc (getProject), causing test flakiness if both operate on different state stores
+- **Why this works:** Automerge document sync between instances adds complexity; disk-only state is deterministic for testing. Core CRDT logic is still tested via event propagation simulation.
+- **Trade-offs:** Simpler, faster tests vs. not testing actual Automerge document consistency. Compensated by testing event wiring (EventBus → persistRemoteProject) which is the sync mechanism.
+
+#### [Pattern] Unit tests verified broadcast() calls using Jest mocks and actual Express server on ephemeral port (2026-03-12)
+
+- **Problem solved:** Route code needed verification that categories:updated events are broadcast correctly and files persist
+- **Why this works:** Mock events.broadcast() to verify correct event signatures; real Express server to verify HTTP behavior and file I/O together without stubbing filesystem
+- **Trade-offs:** Gained confidence in integration between routes and events; test setup more complex than pure unit tests

@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 480
-  referenced: 112
-  successfulFeatures: 112
+  loaded: 484
+  referenced: 115
+  successfulFeatures: 115
 ---
 
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
@@ -161,3 +161,15 @@ usageStats:
 - **Rejected:** Could create separate /api/unauth/ prefix (less semantic, splits system concerns); could require auth (defeats purpose of log-reading tool for debugging)
 - **Trade-offs:** Unauthenticated endpoints expand attack surface slightly, but gain is significant (self-diagnostics always work); middleware ordering becomes important implementation detail
 - **Breaking if changed:** If someone adds auth middleware before health route registration, tool breaks even when server is up
+
+#### [Gotcha] Must use events.broadcast() not events.emit() to trigger remote sync via event bridge (2026-03-12)
+
+- **Situation:** Categories route broadcasts 'categories:updated' to trigger local file write AND cross-instance propagation
+- **Root cause:** setRemoteBroadcaster only intercepts broadcast() calls; emit() would only trigger local listeners and skip remote forwarding
+- **How to avoid:** broadcast() adds indirection/naming confusion; gained deterministic remote propagation without explicit socket code
+
+#### [Pattern] Callback injection pattern: functions accept optional callback types (MemoryStatsCrdtWriter, MemoryStatsAggregateReader) instead of requiring CRDT store injection. Existing callers work unchanged; new callers opt-in. (2026-03-12)
+
+- **Problem solved:** Adding CRDT tracking to memory-loader utilities without breaking existing code paths. Need backwards compatibility in monorepo with many call sites.
+- **Why this works:** Gradual adoption: callers like auto-mode-service can pass callbacks when available; other callers (existing, or those without CRDT context) don't pass them. No big-bang refactoring.
+- **Trade-offs:** Optional callbacks: low friction adoption vs caller must know to pass them to get CRDT benefit. Type-safe callback params vs implicit dependency.

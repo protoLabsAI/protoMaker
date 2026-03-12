@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1393
-  referenced: 323
-  successfulFeatures: 323
+  loaded: 1399
+  referenced: 327
+  successfulFeatures: 327
 ---
 
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
@@ -877,3 +877,15 @@ usageStats:
 - **Situation:** Converting from prd: string to prd: SPARCPrd object during normalization
 - **Root cause:** String doesn't indicate which SPARC field it belongs to; safer to put it in approach (closest to 'explanation') than guess; allows document to normalize without data loss
 - **How to avoid:** No data loss (string is preserved) but structure is lost (can't tell if string was a situation, problem analysis, or results summary); downstream tools must assume approach-only SPARCPrd from legacy docs
+
+#### [Gotcha] Turbo incremental build cache served stale dist for @protolabsai/crdt. Tests failed until running npm run build --workspace=libs/crdt instead of aggregate build command. (2026-03-12)
+
+- **Situation:** Tests calling normalizeProjectDocument() from stale dist received old schema (no milestones array property)
+- **Root cause:** Turbo caches based on package fingerprints. If a package's source changes but no other workspace references change, Turbo may skip rebuilding dependent packages' dist.
+- **How to avoid:** Workspace-specific builds force rebuild but require knowing which package to rebuild. Aggregate builds are faster but can miss stale dist.
+
+#### [Gotcha] Timestamp conversion assumes disk format uses milliseconds (createdAtMs) but converts to ISO strings. Assumption is implicit in variable naming. (2026-03-12)
+
+- **Situation:** diskTab.metadata?.createdAt is numeric; mapped to Date constructor which expects milliseconds, then .toISOString()
+- **Root cause:** Likely historical: disk format designed separately, ISO strings are standard in CRDT/JSON contexts
+- **How to avoid:** Human-readable ISO strings in logs vs. precision loss if disk format ever changes to seconds or different epoch
