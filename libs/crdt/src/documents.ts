@@ -458,6 +458,89 @@ export const normalizeMetricsDocument: SchemaNormalizer<MetricsDocument> = (raw)
 };
 
 // ---------------------------------------------------------------------------
+// Notes domain — shared notes workspace
+// ---------------------------------------------------------------------------
+
+/**
+ * NoteTab represents a single tab in the notes workspace.
+ * Content is HTML produced by TipTap.
+ */
+export interface NoteTab {
+  id: string;
+  name: string;
+  /** HTML content from TipTap editor */
+  content: string;
+  permissions: {
+    agentRead: boolean;
+    agentWrite: boolean;
+  };
+  /** ISO 8601 timestamp */
+  createdAt: string;
+  /** ISO 8601 timestamp */
+  updatedAt: string;
+  wordCount: number;
+  characterCount: number;
+}
+
+/**
+ * NotesWorkspaceDocument stores the shared notes workspace in a single CRDT document.
+ * Schema mirrors the existing disk format at .automaker/notes/workspace.json.
+ *
+ * Use domain='notes', document id='workspace' for the single shared workspace.
+ * Full document key: doc:notes/workspace
+ */
+export interface NotesWorkspaceDocument extends CRDTDocumentRoot {
+  schemaVersion: 1;
+  /** All note tabs keyed by tab ID */
+  tabs: Record<string, NoteTab>;
+  /** Ordered array of tab IDs */
+  tabOrder: string[];
+  /** Currently active tab ID, or null if none */
+  activeTabId: string | null;
+  /** ISO timestamp of last update to this document */
+  updatedAt: string;
+}
+
+export const normalizeNotesWorkspace: SchemaNormalizer<NotesWorkspaceDocument> = (raw) => {
+  const doc = raw as Partial<NotesWorkspaceDocument>;
+
+  const _meta = doc._meta ?? {
+    instanceId: 'unknown',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  // Normalize tabs — ensure each tab has all required fields
+  const rawTabs = doc.tabs ?? {};
+  const tabs: Record<string, NoteTab> = {};
+  for (const [id, tab] of Object.entries(rawTabs)) {
+    if (!tab) continue;
+    tabs[id] = {
+      id: tab.id ?? id,
+      name: tab.name ?? '',
+      content: tab.content ?? '',
+      permissions: {
+        agentRead: tab.permissions?.agentRead ?? true,
+        agentWrite: tab.permissions?.agentWrite ?? false,
+      },
+      createdAt: tab.createdAt ?? _meta.createdAt,
+      updatedAt: tab.updatedAt ?? _meta.updatedAt,
+      wordCount: tab.wordCount ?? 0,
+      characterCount: tab.characterCount ?? 0,
+    };
+  }
+
+  return {
+    schemaVersion: 1,
+    _meta,
+    tabs,
+    tabOrder: Array.isArray(doc.tabOrder) ? doc.tabOrder : Object.keys(tabs),
+    activeTabId: doc.activeTabId !== undefined ? doc.activeTabId : null,
+    updatedAt: doc.updatedAt ?? _meta.updatedAt,
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Normalizer registry
 // ---------------------------------------------------------------------------
 
@@ -468,7 +551,8 @@ type AnyDocument =
   | AvaChannelDocument
   | CalendarDocument
   | TodosDocument
-  | MetricsDocument;
+  | MetricsDocument
+  | NotesWorkspaceDocument;
 
 const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   projects: normalizeProjectDocument as SchemaNormalizer<AnyDocument>,
@@ -478,6 +562,7 @@ const NORMALIZERS: Record<string, SchemaNormalizer<AnyDocument>> = {
   calendar: normalizeCalendarDocument as SchemaNormalizer<AnyDocument>,
   todos: normalizeTodosDocument as SchemaNormalizer<AnyDocument>,
   metrics: normalizeMetricsDocument as SchemaNormalizer<AnyDocument>,
+  notes: normalizeNotesWorkspace as SchemaNormalizer<AnyDocument>,
 };
 
 /**
