@@ -316,14 +316,6 @@ Manages calendar events across custom, feature, milestone, and Google sources. T
 | `provision_discord` | Provision Discord server for a project |
 | `trigger_ceremony`  | Trigger an agile ceremony via Discord  |
 
-## Integration (4 tools)
-
-| Tool                      | Description                              |
-| ------------------------- | ---------------------------------------- |
-| `twitch_list_suggestions` | List Twitch chat suggestions             |
-| `twitch_build_suggestion` | Build a feature from a Twitch suggestion |
-| `twitch_create_poll`      | Create a Twitch poll                     |
-
 ## Settings & Health (4 tools)
 
 | Tool                  | Description                        |

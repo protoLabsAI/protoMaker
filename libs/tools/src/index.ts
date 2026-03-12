@@ -14,7 +14,6 @@ export { toExpressRouter, type ExpressAdapterOptions } from './adapters/index.js
 
 // Domain-specific tools
 export * from './domains/features/index.js';
-export * from './domains/twitch/index.js';
 export * from './domains/hitl/index.js';
 
 // DynamicStructuredTool factory families

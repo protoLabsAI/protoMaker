@@ -284,8 +284,7 @@ This is NOT a human org. AI agents generate, schedule, and distribute content at
 ### Platform Priorities
 
 1. **Twitter/X** — Primary. Show the work, insights, threads, engagement.
-2. **Twitch** — Live building sessions when it makes sense. Not a fixed schedule.
-3. **YouTube** — VODs from Twitch streams, edited tutorials.
+2. **YouTube** — Edited tutorials, architecture walkthroughs.
 
 ### What to Avoid
 
@@ -451,7 +450,6 @@ WebSearch("[competitor name] features pricing 2026")
 ### Post-Launch (week 2+)
 
 - GitHub repo prep for public access
-- Twitch stream: live building session
 - YouTube: edited highlight reel
 - Blog post: "How I Replaced My Dev Team with AI Agents"
 - Discord community opening
@@ -481,8 +479,7 @@ When planning content, use this structure:
 
 - Twitter: 1-2 posts/day during launch, 3-5/week ongoing
 - Blog: 1/week (generated via content pipeline)
-- Twitch: When the operator has bandwidth (not scheduled)
-- YouTube: After each Twitch stream
+- YouTube: 1/week (edited tutorials)
 
 ## Coordination
 

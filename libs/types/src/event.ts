@@ -287,11 +287,6 @@ export type EventType =
   | 'notes:tab-renamed'
   | 'notes:tab-updated'
   | 'notes:tab-permissions-changed'
-  // Twitch integration events
-  | 'twitch:connection'
-  | 'twitch:suggestion:updated'
-  | 'twitch:suggestion:built'
-  | 'twitch:poll:created'
   // Pipeline state machine events (goal gates, checkpoints, loop detection, supervisor)
   | 'pipeline:state-entered'
   | 'pipeline:goal-gate-evaluated'

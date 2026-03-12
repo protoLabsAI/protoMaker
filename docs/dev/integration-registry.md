@@ -1,6 +1,6 @@
 # Integration Registry
 
-Unified registry for external integrations (Discord, GitHub, Twitch, etc.).
+Unified registry for external integrations (Discord, GitHub, etc.).
 
 ## Overview
 
@@ -26,7 +26,7 @@ Uses an in-memory Map with Zod validation, tier 0/1 protection, and event emissi
 | ---------------- | ---------------------- | -------------------- |
 | `communication`  | Chat and notifications | Discord              |
 | `source-control` | Git and CI             | GitHub               |
-| `streaming`      | Live coding            | Twitch               |
+| `streaming`      | Live coding            | —                    |
 | `ai-provider`    | LLM providers          | Phase 2              |
 | `tooling`        | MCP servers            | Phase 2              |
 | `observability`  | Tracing/metrics        | Phase 2              |

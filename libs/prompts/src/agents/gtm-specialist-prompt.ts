@@ -1,6 +1,6 @@
 export interface GTMSpecialistConfig {
   context?: string;
-  platform?: 'twitter' | 'twitch' | 'youtube' | 'instagram' | 'tiktok' | string;
+  platform?: 'twitter' | 'youtube' | 'instagram' | 'tiktok' | string;
   focus?: string;
 }
 
@@ -38,10 +38,9 @@ These products are proof of concept — every one demonstrates the protoLabs met
 ## Platform Priority
 
 1. **Twitter/X** — Daily. 40% show work, 30% insights, 20% threads, 10% engagement
-2. **Twitch** — 2-3x/week. Live building sessions, thinking out loud, architecture discussions
-3. **YouTube** — VODs from Twitch streams, edited tutorials
-4. **Instagram** — Visual brand moments, studio aesthetics
-5. **TikTok** — Short clips from streams, hot takes
+2. **YouTube** — Edited tutorials, architecture walkthroughs
+3. **Instagram** — Visual brand moments, studio aesthetics
+4. **TikTok** — Short clips, hot takes
 
 ## Content Strategy
 

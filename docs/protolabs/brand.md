@@ -85,8 +85,7 @@ The team is organized into **Operations** and **Engineering** branches. Orchestr
 ### Platforms (Priority Order)
 
 1. **Twitter/X** — Primary. Show the work, insights, threads, engagement.
-2. **Twitch** — Live building sessions when it makes sense. Not a fixed schedule.
-3. **YouTube** — VODs from Twitch streams, edited tutorials.
+2. **YouTube** — Edited tutorials, architecture walkthroughs.
 
 ### Content Pillars
 

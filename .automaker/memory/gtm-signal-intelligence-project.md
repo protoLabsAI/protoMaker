@@ -35,18 +35,17 @@ usageStats:
 ## Research Completed
 
 - Codebase deep-research: Full audit of content pipeline, signal intake, monitors, event bus, MCP patterns, OAuth flows
-- External due diligence: Social media APIs, Twitch→YouTube tools, Google Workspace, analytics, competitive landscape
+- External due diligence: Social media APIs, Google Workspace, analytics, competitive landscape
 
 ## Vision
 
-Build signal monitoring and content operations infrastructure. Listen before we speak. Monitor incoming engagement across Twitter/X, YouTube, Substack, Twitch. Route signals through existing event bus and GTM pipeline. Establish Twitch→YouTube content pipeline for Mon/Wed/Fri streams.
+Build signal monitoring and content operations infrastructure. Listen before we speak. Monitor incoming engagement across Twitter/X, YouTube, Substack. Route signals through existing event bus and GTM pipeline.
 
 ## What Already Exists (Codebase)
 
 - **Content creation pipeline**: 7-phase LangGraph flow, 3 antagonistic review gates, HITL, multi-format output
 - **Signal intake service**: Rule-based classifier, ops vs gtm routing, generic SignalPayload interface — EXTENSIBLE
 - **Monitor service pattern**: Discord, GitHub, Linear monitors all follow same polling pattern — TEMPLATE for social monitors
-- **Twitch integration**: MVP shipped (PRs #703-705). !idea command, suggestions, polls, overlay
 - **Discord as aggregation layer**: 20+ MCP tools, keyword detection, channel routing
 - **Event bus**: 347+ event types, GTM events already typed
 - **OAuth pattern**: Linear reference implementation — template for Google Workspace
@@ -67,26 +66,17 @@ Build signal monitoring and content operations infrastructure. Listen before we 
 - Twitter/X: TwitterAPI.io (~$5/mo pay-as-you-go)
 - YouTube: Data API v3 (free, 10K units/day)
 - Substack: RSS feed polling (free)
-- Wire Twitch into SignalIntakeService (currently siloed)
 - n8n self-hosted on staging for signal aggregation
 - All signals → signal:received → SignalIntakeService → GTM Agent
 
-### 2. Twitch → YouTube Content Pipeline
-
-- Mon/Wed/Fri 1hr live coding streams
-- OBS → MKV local recording
-- OpusClip for AI clip detection (free 60 min/mo)
-- Gling ($10/mo) for filler word cleanup
-- YouTube Studio / TubeBuddy for scheduling Shorts
-
-### 3. Google Workspace Integration
+### 2. Google Workspace Integration
 
 - Install taylorwilsdon/google_workspace_mcp (100+ tools, OAuth 2.1)
 - Calendar for scheduling
 - Gmail for email I/O with HITL approval gates
 - Calendar webhooks → Discord reminders
 
-### 4. Content Production
+### 3. Content Production
 
 - Personal blog: "Everywhere all at once: the age of invisible machines"
 - Glyphkit Storybook release (MythXEngine design system)
@@ -96,7 +86,7 @@ Build signal monitoring and content operations infrastructure. Listen before we 
 
 - Umami self-hosted on staging ($0)
 - UTM parameter system
-- YouTube Studio + Twitch native analytics
+- YouTube Studio native analytics
 
 ### 6. Infrastructure Hardening
 
@@ -124,7 +114,7 @@ Build signal monitoring and content operations infrastructure. Listen before we 
 Twitter mentions (TwitterAPI.io) ──┐
 YouTube comments (Data API poll) ──┤── SocialMonitor / n8n ──> signal:received
 Substack comments (RSS + poll)   ──┤                           │
-Twitch suggestions (existing)    ──┘                           ▼
+                                  ──┘                           ▼
                                                         SignalIntakeService
                                                          (classify: gtm)
                                                               │
@@ -146,8 +136,7 @@ Twitch suggestions (existing)    ──┘                           ▼
 
 ## Josh's Content Plans
 
-- Twitch: Mon/Wed/Fri 1hr live coding + Q&A
-- YouTube: Cut streams into scheduled Shorts
+- YouTube: Scheduled Shorts and tutorials
 - Blog: "Everywhere all at once: the age of invisible machines" (personal)
 - Glyphkit: Release Storybook for MythXEngine design system
 - Google Workspace: Calendar + email with HITL
@@ -157,5 +146,4 @@ Twitch suggestions (existing)    ──┘                           ▼
 - Google Workspace account setup
 - Twitter/X account access for monitoring API
 - YouTube channel configured
-- Twitch streaming setup (OBS, scenes, overlays)
 - n8n deployment on staging
