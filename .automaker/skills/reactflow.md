@@ -1,7 +1,7 @@
 ---
 name: reactflow
 emoji: 🔀
-description: "React Flow (@xyflow/react) expert — custom nodes, edges, computing flows, layout, theming, and advanced patterns for building interactive node-based UIs."
+description: React Flow (@xyflow/react) expert for building node-based UIs. Use when implementing flow diagrams, custom nodes/edges, or interactive graph layouts. Trigger on "React Flow", "node graph", "flow diagram", "custom node", "edge routing", or "xyflow".
 metadata:
   author: agent
   created: 2026-02-18T00:43:04.059Z
@@ -79,19 +79,19 @@ function FlowGraph() {
 
 ### Key Props (ReactFlow)
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `nodes` | `Node[]` | `[]` | Node array |
-| `edges` | `Edge[]` | `[]` | Edge array |
-| `nodeTypes` | `Record<string, ComponentType>` | built-ins | Custom node components |
-| `edgeTypes` | `Record<string, ComponentType>` | built-ins | Custom edge components |
-| `fitView` | `boolean` | `false` | Auto-fit on load |
-| `minZoom` / `maxZoom` | `number` | `0.5` / `2` | Zoom limits |
-| `defaultViewport` | `{x, y, zoom}` | `{0, 0, 1}` | Initial viewport |
-| `snapToGrid` | `boolean` | `false` | Snap dragging |
-| `snapGrid` | `[number, number]` | `[15, 15]` | Grid spacing |
-| `connectionMode` | `'strict' \| 'loose'` | `'strict'` | Connection validation |
-| `nodeOrigin` | `[number, number]` | `[0, 0]` | Node anchor point |
+| Prop                  | Type                            | Default     | Description            |
+| --------------------- | ------------------------------- | ----------- | ---------------------- |
+| `nodes`               | `Node[]`                        | `[]`        | Node array             |
+| `edges`               | `Edge[]`                        | `[]`        | Edge array             |
+| `nodeTypes`           | `Record<string, ComponentType>` | built-ins   | Custom node components |
+| `edgeTypes`           | `Record<string, ComponentType>` | built-ins   | Custom edge components |
+| `fitView`             | `boolean`                       | `false`     | Auto-fit on load       |
+| `minZoom` / `maxZoom` | `number`                        | `0.5` / `2` | Zoom limits            |
+| `defaultViewport`     | `{x, y, zoom}`                  | `{0, 0, 1}` | Initial viewport       |
+| `snapToGrid`          | `boolean`                       | `false`     | Snap dragging          |
+| `snapGrid`            | `[number, number]`              | `[15, 15]`  | Grid spacing           |
+| `connectionMode`      | `'strict' \| 'loose'`           | `'strict'`  | Connection validation  |
+| `nodeOrigin`          | `[number, number]`              | `[0, 0]`    | Node anchor point      |
 
 ### Event Handlers
 
@@ -169,7 +169,10 @@ import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 
 function AnimatedEdge({ id, sourceX, sourceY, targetX, targetY, ...props }: EdgeProps) {
   const [edgePath] = getSmoothStepPath({
-    sourceX, sourceY, targetX, targetY,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
   });
 
   return (
@@ -205,7 +208,7 @@ import { useReactFlow, useNodeConnections, useNodesData } from '@xyflow/react';
 function ProcessorNode({ id, data }: NodeProps) {
   const { updateNodeData } = useReactFlow();
   const connections = useNodeConnections({ type: 'target' });
-  const sourceData = useNodesData(connections.map(c => c.source));
+  const sourceData = useNodesData(connections.map((c) => c.source));
 
   useEffect(() => {
     // Process input data and update this node's output
@@ -221,23 +224,24 @@ function ProcessorNode({ id, data }: NodeProps) {
 
 ## Hooks Reference
 
-| Hook | Purpose |
-|------|---------|
-| `useReactFlow()` | Access instance methods (fitView, getNodes, updateNodeData, etc.) |
-| `useNodesState()` | Managed nodes state with change handler |
-| `useEdgesState()` | Managed edges state with change handler |
-| `useNodeConnections()` | Get connections for a node's handles |
-| `useNodesData()` | Get data from specific nodes by ID |
-| `useOnSelectionChange()` | Track selection changes |
-| `useStore()` | Access internal Zustand store |
-| `useKeyPress()` | Keyboard shortcut detection |
-| `useViewport()` | Current viewport {x, y, zoom} |
+| Hook                     | Purpose                                                           |
+| ------------------------ | ----------------------------------------------------------------- |
+| `useReactFlow()`         | Access instance methods (fitView, getNodes, updateNodeData, etc.) |
+| `useNodesState()`        | Managed nodes state with change handler                           |
+| `useEdgesState()`        | Managed edges state with change handler                           |
+| `useNodeConnections()`   | Get connections for a node's handles                              |
+| `useNodesData()`         | Get data from specific nodes by ID                                |
+| `useOnSelectionChange()` | Track selection changes                                           |
+| `useStore()`             | Access internal Zustand store                                     |
+| `useKeyPress()`          | Keyboard shortcut detection                                       |
+| `useViewport()`          | Current viewport {x, y, zoom}                                     |
 
 ## Layout Patterns
 
 React Flow doesn't include auto-layout. Use external libraries:
 
 ### Dagre (hierarchical)
+
 ```tsx
 import dagre from 'dagre-d3';
 
@@ -245,12 +249,13 @@ const dagreGraph = new dagre.graphlib.Graph();
 dagreGraph.setDefaultEdgeLabel(() => ({}));
 dagreGraph.setGraph({ rankdir: 'LR' }); // Left-to-right
 
-nodes.forEach(node => dagreGraph.setNode(node.id, { width: 200, height: 80 }));
-edges.forEach(edge => dagreGraph.setEdge(edge.source, edge.target));
+nodes.forEach((node) => dagreGraph.setNode(node.id, { width: 200, height: 80 }));
+edges.forEach((edge) => dagreGraph.setEdge(edge.source, edge.target));
 dagre.layout(dagreGraph);
 ```
 
 ### ELK (advanced)
+
 ```tsx
 import ELK from 'elkjs';
 const elk = new ELK();
@@ -287,23 +292,28 @@ React Flow exposes CSS variables for theming:
 For server-rendered flows, nodes need explicit dimensions:
 
 ```tsx
-const nodes = [{
-  id: '1',
-  position: { x: 0, y: 0 },
-  data: { label: 'Node' },
-  width: 200,   // Required for SSR
-  height: 80,   // Required for SSR
-  handles: [    // Required for edge rendering
-    { type: 'target', position: Position.Left, x: 0, y: 40 },
-    { type: 'source', position: Position.Right, x: 200, y: 40 },
-  ],
-}];
+const nodes = [
+  {
+    id: '1',
+    position: { x: 0, y: 0 },
+    data: { label: 'Node' },
+    width: 200, // Required for SSR
+    height: 80, // Required for SSR
+    handles: [
+      // Required for edge rendering
+      { type: 'target', position: Position.Left, x: 0, y: 40 },
+      { type: 'source', position: Position.Right, x: 200, y: 40 },
+    ],
+  },
+];
 ```
 
 ## Automaker-Specific Patterns
 
 ### Existing Flow Graph
+
 Located at `apps/ui/src/components/views/flow-graph/`. Uses:
+
 - Custom node types for system components (crew, agents, services)
 - Dagre layout for hierarchical positioning
 - Dialog system for node details
@@ -311,6 +321,7 @@ Located at `apps/ui/src/components/views/flow-graph/`. Uses:
 - Tailwind CSS theming via semantic tokens
 
 ### File Structure Convention
+
 ```
 components/views/{view-name}/
   {view-name}.tsx          # Main view
@@ -327,6 +338,7 @@ components/views/{view-name}/
 ```
 
 ### Integration with Design System
+
 - Use `cn()` for className composition
 - Use CVA variants for node status styling
 - Use Radix Dialog for node detail panels

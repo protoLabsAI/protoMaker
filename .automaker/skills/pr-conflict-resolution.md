@@ -1,7 +1,7 @@
 ---
 name: pr-conflict-resolution
 emoji: 🔧
-description: Rebase workflow when PRs conflict after other merges. Safe conflict resolution without data loss.
+description: Rebase workflow when PRs conflict after other merges. Use when a PR shows conflicts after another feature merged, or when cherry-picks fail. Trigger on "PR conflict", "merge conflict", "rebase needed", "conflicting PR", or "cherry-pick failed".
 metadata:
   author: agent
   created: 2026-02-12T02:12:04.529Z
@@ -64,12 +64,12 @@ send_message_to_agent(featureId, `
 
 ## Common Conflict Sources
 
-| File | Why | Resolution |
-|------|-----|------------|
-| `libs/types/src/index.ts` | Multiple features add exports | Keep all exports, sort alphabetically |
-| `packages/mcp-server/src/index.ts` | Multiple features add MCP tools | Keep all tools |
-| `apps/server/src/index.ts` | Multiple features register routes | Keep all registrations |
-| `package.json` / `package-lock.json` | Dependency changes | Accept incoming, `npm install` |
+| File                                 | Why                               | Resolution                            |
+| ------------------------------------ | --------------------------------- | ------------------------------------- |
+| `libs/types/src/index.ts`            | Multiple features add exports     | Keep all exports, sort alphabetically |
+| `packages/mcp-server/src/index.ts`   | Multiple features add MCP tools   | Keep all tools                        |
+| `apps/server/src/index.ts`           | Multiple features register routes | Keep all registrations                |
+| `package.json` / `package-lock.json` | Dependency changes                | Accept incoming, `npm install`        |
 
 ## Safety Rules
 

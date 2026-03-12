@@ -1,7 +1,7 @@
 ---
 name: worktree-patterns
 emoji: 🌳
-description: Safe patterns for git worktrees — NEVER cd into worktrees, prettier fix, pre-flight rebase, stale detection and recovery.
+description: Safe patterns for git worktrees in the Automaker project. Use when working with feature worktrees, fixing prettier in worktrees, or recovering stale worktrees. Trigger on "worktree", "cd into worktree", "stale worktree", "worktree rebase", or "prettier in worktree".
 metadata:
   author: agent
   created: 2026-02-25T00:00:00.000Z

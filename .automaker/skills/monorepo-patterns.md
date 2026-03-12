@@ -1,7 +1,7 @@
 ---
 name: monorepo-patterns
 emoji: 🏗️
-description: Comprehensive monorepo patterns for the Automaker project — build order, import conventions, package dependency chain, and adding new packages.
+description: Comprehensive monorepo patterns for the Automaker project. Use when adding new packages, debugging build order issues, or following import conventions. Trigger on "new package", "build order", "import path", "workspace package", "monorepo", or "package dependency".
 metadata:
   author: agent
   created: 2026-02-25T00:00:00.000Z

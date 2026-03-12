@@ -1,7 +1,7 @@
 ---
 name: session-continuity
 emoji: 🔄
-description: Maintaining operational context across long sessions — compaction recovery, idle prevention, memory updates, and session handoff.
+description: Maintaining operational context across long sessions. Use when recovering from context compaction, preventing idle timeouts, or handing off session state. Trigger on "context compaction", "session lost", "idle timeout", "long session", "session handoff", or "memory update".
 metadata:
   author: agent
   created: 2026-02-12T16:56:31.627Z
@@ -22,6 +22,7 @@ Claude Code automatically compresses prior messages as the conversation approach
 ### Compaction Recovery Hook
 
 The `SessionStart` hook with `compact` matcher re-injects:
+
 - Ava identity and operational role
 - Headsdown workflow loop
 - Project path and board state
@@ -47,6 +48,7 @@ This fires automatically — no manual intervention needed.
 ## Auto-Mode Idle Prevention
 
 When the board is empty, auto-mode can spam events due to circuit breaker auto-resume:
+
 - Circuit breaker creates fresh state every 5 minutes
 - Fresh state resets `hasEmittedIdleEvent: false`
 - Result: 190+ duplicate `auto_mode_complete` events
@@ -56,6 +58,7 @@ When the board is empty, auto-mode can spam events due to circuit breaker auto-r
 ## Memory Updates (Pre-Backoff Responsibility)
 
 Before entering exponential backoff or signing off:
+
 1. Update `MEMORY.md` with completed work
 2. Note any in-flight PRs or pending CI
 3. Record new operational lessons
@@ -66,6 +69,7 @@ Before entering exponential backoff or signing off:
 ## Session Handoff
 
 When context runs out mid-task, the session continuation summary should include:
+
 1. What was being worked on
 2. Exact file paths and line numbers of changes
 3. Build/test status
