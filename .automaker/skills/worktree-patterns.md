@@ -131,6 +131,7 @@ git worktree prune --dry-run
 ```
 
 Output showing `prunable` means the worktree is stale:
+
 ```
 Removing worktrees/my-old-branch: gitdir file points to non-existent location
 ```
@@ -220,10 +221,10 @@ done
 
 **Decision matrix before removing:**
 
-| State | Action |
-|---|---|
-| 0 uncommitted, 0 ahead | Safe to remove — clean slate |
-| 0 uncommitted, N ahead | Has commits but likely partial; safe to remove. Auto-mode recreates fresh. |
+| State                  | Action                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| 0 uncommitted, 0 ahead | Safe to remove — clean slate                                                   |
+| 0 uncommitted, N ahead | Has commits but likely partial; safe to remove. Auto-mode recreates fresh.     |
 | N uncommitted, 0 ahead | Agent hit turn limit. Review diff. Commit/push/PR before removing if valuable. |
 
 **Safe cleanup procedure:**
@@ -250,6 +251,7 @@ On Feb 10, 2026, ALL 141 feature.json files were recursively deleted during a 9+
 2. **`git add -A` in worktree commits** — Captures stale feature.json state. When merged, deletes features from main because the branch snapshot didn't include them
 
 **Hard rules (reinforced):**
+
 - Never `git checkout` branches in the main repo — always use worktrees
 - Never `git add -A` or `git add .` — always stage specific files or use `git add -A -- ':!.automaker/'`
 - Always ensure features have `branchName` set before starting agents
@@ -260,12 +262,12 @@ On Feb 10, 2026, ALL 141 feature.json files were recursively deleted during a 9+
 
 ## Anti-Patterns Summary
 
-| Anti-Pattern | Consequence | Fix |
-|---|---|---|
-| `cd .worktrees/my-branch` | Breaks Bash permanently if worktree removed | Use `git -C <path>` or absolute paths |
-| `npx prettier --write .` from worktree dir | Wrong ignore paths; `npx` fails silently (no node_modules) | Server handles this automatically now; manual: `npx prettier --write <file> --ignore-path /dev/null` |
-| Starting agent without rebase | Mid-feature merge conflicts, wasted work | Always `fetch` + `rebase origin/dev` first |
-| `git worktree remove` with uncommitted work | Data loss | Check `git status --short` first |
-| `git checkout <branch>` in main repo | Modifies `.automaker/features/` on disk → data loss | Use worktrees or `git -C <wt> checkout` |
-| `git add -A` in main repo | Captures runtime files (.automaker/) | Use `git add <specific-files>` |
-| Not `cd`-ing back after worktree commands | Next Bash call starts in wrong directory | Always return: `&& cd /Users/kj/dev/automaker` |
+| Anti-Pattern                                | Consequence                                                | Fix                                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `cd .worktrees/my-branch`                   | Breaks Bash permanently if worktree removed                | Use `git -C <path>` or absolute paths                                                                |
+| `npx prettier --write .` from worktree dir  | Wrong ignore paths; `npx` fails silently (no node_modules) | Server handles this automatically now; manual: `npx prettier --write <file> --ignore-path /dev/null` |
+| Starting agent without rebase               | Mid-feature merge conflicts, wasted work                   | Always `fetch` + `rebase origin/dev` first                                                           |
+| `git worktree remove` with uncommitted work | Data loss                                                  | Check `git status --short` first                                                                     |
+| `git checkout <branch>` in main repo        | Modifies `.automaker/features/` on disk → data loss        | Use worktrees or `git -C <wt> checkout`                                                              |
+| `git add -A` in main repo                   | Captures runtime files (.automaker/)                       | Use `git add <specific-files>`                                                                       |
+| Not `cd`-ing back after worktree commands   | Next Bash call starts in wrong directory                   | Always return: `&& cd /Users/kj/dev/automaker`                                                       |

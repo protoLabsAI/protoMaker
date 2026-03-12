@@ -60,14 +60,14 @@ npm run build
 
 ### When to Rebuild
 
-| Trigger | Required Action |
-|---------|----------------|
-| Modified any file in `libs/*` | `npm run build:packages` |
-| Modified `packages/mcp-server` | `npm run build:packages` |
-| Added/changed MCP tools | `npm run build:packages` |
-| Types PR merged | `npm run build:packages` immediately |
-| Agent reports wrong method signatures | Rebuild packages (stale dist) |
-| Before starting an agent | `npm run build:packages` (if packages changed recently) |
+| Trigger                               | Required Action                                         |
+| ------------------------------------- | ------------------------------------------------------- |
+| Modified any file in `libs/*`         | `npm run build:packages`                                |
+| Modified `packages/mcp-server`        | `npm run build:packages`                                |
+| Added/changed MCP tools               | `npm run build:packages`                                |
+| Types PR merged                       | `npm run build:packages` immediately                    |
+| Agent reports wrong method signatures | Rebuild packages (stale dist)                           |
+| Before starting an agent              | `npm run build:packages` (if packages changed recently) |
 
 ---
 
@@ -116,6 +116,7 @@ import type { Feature } from '/Users/kj/dev/automaker/libs/types/src/types';
 ## TypeScript Workspace Resolution
 
 The monorepo uses TypeScript project references (`tsconfig.json` with `composite: true`). This enables:
+
 - Incremental builds
 - Cross-package type checking
 - Go-to-definition across packages
@@ -173,6 +174,7 @@ Extend `../../tsconfig.base.json` with `composite: true`, `declarationMap: true`
 ### Step 4 — Register in Root
 
 In root `package.json`:
+
 1. Add `"libs/my-package"` to the `workspaces` array
 2. Add `npm run build -w @protolabsai/my-package` to `build:packages` **after** its dependencies
 
@@ -187,12 +189,12 @@ npm run build:packages   # verify it builds
 
 ## Anti-Patterns Summary
 
-| Anti-Pattern | Why It Fails | Fix |
-|---|---|---|
-| `build:server` without `build:packages` first | Stale types from old dist | Always run `build:packages` first |
-| Relative imports across package boundaries | Breaks when packages move; no workspace resolution | Use `@protolabsai/*` imports |
-| Adding `@protolabsai/server` dep to a lib | Circular dependency | Only depend on packages higher in the chain |
-| Forgetting `composite: true` in tsconfig | Project references break | Always add it to lib tsconfigs |
-| Not running `npm install` after adding package | Workspace symlink missing | Run `npm install` from root after adding a package |
-| `process.env` at module level in shared packages | Crashes browser (no `process` in browser) | Guard with `typeof process !== 'undefined'` |
+| Anti-Pattern                                            | Why It Fails                                                                                     | Fix                                                                               |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `build:server` without `build:packages` first           | Stale types from old dist                                                                        | Always run `build:packages` first                                                 |
+| Relative imports across package boundaries              | Breaks when packages move; no workspace resolution                                               | Use `@protolabsai/*` imports                                                      |
+| Adding `@protolabsai/server` dep to a lib               | Circular dependency                                                                              | Only depend on packages higher in the chain                                       |
+| Forgetting `composite: true` in tsconfig                | Project references break                                                                         | Always add it to lib tsconfigs                                                    |
+| Not running `npm install` after adding package          | Workspace symlink missing                                                                        | Run `npm install` from root after adding a package                                |
+| `process.env` at module level in shared packages        | Crashes browser (no `process` in browser)                                                        | Guard with `typeof process !== 'undefined'`                                       |
 | Modifying shared types in a worktree without rebuilding | npm workspace hoisting resolves `@protolabsai/types` to the main repo's copy, not the worktree's | Run `npm run build:packages` from within the worktree after changing shared types |
