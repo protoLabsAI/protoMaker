@@ -282,6 +282,14 @@ export interface ExecuteOptions {
    * When a profile/provider has apiKeySource='credentials', the Anthropic key from this object is used.
    */
   credentials?: Credentials;
+  /**
+   * Model temperature for response generation (0–1).
+   * Lower values (e.g., 0) produce deterministic, focused output.
+   * Higher values (e.g., 1.0) produce more creative, varied output.
+   * When undefined, the provider uses its default temperature.
+   * Applies to providers that support temperature configuration.
+   */
+  temperature?: number;
 }
 
 /**

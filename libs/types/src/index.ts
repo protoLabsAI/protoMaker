@@ -375,6 +375,7 @@ export type {
   ClaudeApiProfileTemplate,
   // Workflow settings types
   WorkflowSettings,
+  PhaseTemperaturesConfig,
   // Ava Channel reactor settings
   AvaChannelReactorSettings,
   SchedulerSettings,
@@ -407,6 +408,7 @@ export {
   DEFAULT_TRUST_BOUNDARY_CONFIG,
   // Workflow settings defaults
   DEFAULT_WORKFLOW_SETTINGS,
+  DEFAULT_PHASE_TEMPERATURES,
   // Ava Channel reactor settings defaults
   DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS,
   DEFAULT_SCHEDULER_SETTINGS,

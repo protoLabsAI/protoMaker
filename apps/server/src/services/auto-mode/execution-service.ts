@@ -41,7 +41,12 @@ import {
   type DedupChecker,
   type IndexRebuilder,
 } from '@protolabsai/utils';
-import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@protolabsai/model-resolver';
+import {
+  resolveModelString,
+  resolvePhaseModel,
+  resolvePhaseTemperature,
+  DEFAULT_MODELS,
+} from '@protolabsai/model-resolver';
 import { getFeatureDir } from '@protolabsai/platform';
 import { rebaseWorktreeOnMain, extractTitleFromDescription } from '@protolabsai/git-utils';
 import { exec } from 'child_process';
@@ -784,6 +789,7 @@ export class ExecutionService {
           maxTurns,
           resume: resumeSessionId,
           providerId: modelResult.providerId,
+          phase: 'EXECUTE', // Apply EXECUTE phase temperature (deterministic implementation)
         }
       );
 
@@ -1695,6 +1701,7 @@ export class ExecutionService {
         autoLoadClaudeMd,
         thinkingLevel: feature.thinkingLevel,
         providerId: modelResult.providerId,
+        phase: 'REVIEW', // Apply REVIEW phase temperature (balanced evaluation)
       }
     );
 
@@ -1813,6 +1820,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
       resume?: string;
       /** Provider ID from PhaseModelEntry for explicit provider lookup */
       providerId?: string;
+      /**
+       * Pipeline phase for temperature resolution.
+       * PLAN=1.0 (creative), EXECUTE=0 (deterministic), REVIEW=0.5 (balanced).
+       * When provided, the phase temperature from WorkflowSettings.phaseTemperatures is applied.
+       */
+      phase?: 'PLAN' | 'EXECUTE' | 'REVIEW';
       /**
        * Middleware hook called immediately before the model call.
        * Return a non-null string to inject additional context into the prompt.
@@ -2014,6 +2027,27 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       ? stripProviderPrefix(providerResolvedModel)
       : bareModel;
 
+    // Resolve phase temperature from workflow settings when a phase is specified.
+    // This applies per-phase temperature config (PLAN=1.0, EXECUTE=0, REVIEW=0.5) to control
+    // model creativity vs determinism. Falls back to provider default when no phase or config.
+    let phaseTemperature: number | undefined;
+    if (options?.phase) {
+      const wfSettingsForTemp = await getWorkflowSettings(
+        finalProjectPath,
+        this.settingsService,
+        '[AutoMode]'
+      );
+      phaseTemperature = resolvePhaseTemperature(
+        options.phase,
+        wfSettingsForTemp.phaseTemperatures
+      );
+      if (phaseTemperature !== undefined) {
+        logger.info(
+          `[AutoMode] Phase temperature for ${options.phase}: ${phaseTemperature} (feature ${featureId})`
+        );
+      }
+    }
+
     const executeOptions: ExecuteOptions = {
       prompt: promptContent,
       model: effectiveBareModel,
@@ -2029,6 +2063,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
       sdkSessionId: options?.resume, // Forward resume session ID for session continuity
       hooks: sdkOptions.hooks as ExecuteOptions['hooks'], // Worktree write guard
+      ...(phaseTemperature !== undefined && { temperature: phaseTemperature }), // Phase temperature
     };
 
     // Middleware hook point: allow callers to inject additional context before the model call.
