@@ -1,7 +1,7 @@
 ---
 name: server-limits
 emoji: 🖥️
-description: Server resource limits and safety rules. Heap sizes, concurrent agent caps, and crash prevention.
+description: Server resource limits and safety rules. Use when tuning heap sizes, adjusting concurrent agent caps, or diagnosing OOM crashes. Trigger on "server crash", "out of memory", "heap size", "concurrent agents", "server limit", or "resource cap".
 metadata:
   author: agent
   created: 2026-02-11T23:24:50.086Z
@@ -17,10 +17,10 @@ Hard-learned limits that prevent crashes, OOM kills, and infinite restart loops.
 
 ## Heap Memory
 
-| Environment | Heap Size | Max Concurrent Agents |
-|-------------|-----------|----------------------|
-| Dev (local) | 8GB (`--max-old-space-size=8192`) | 2-3 |
-| Staging | 32GB | 6-10 |
+| Environment | Heap Size                         | Max Concurrent Agents |
+| ----------- | --------------------------------- | --------------------- |
+| Dev (local) | 8GB (`--max-old-space-size=8192`) | 2-3                   |
+| Staging     | 32GB                              | 6-10                  |
 
 - **4GB heap = instant OOM** with even one Sonnet agent (~4-5GB per agent)
 - Configurable via `HEAP_STOP_THRESHOLD` / `HEAP_ABORT_THRESHOLD` env vars
@@ -41,6 +41,7 @@ This is Josh's explicit rule. Ask him to manage it. Server restart kills running
 ## Zombie Agent Restart Loop
 
 When `stop_agent` is called, THREE independent retry mechanisms can resurrect it:
+
 1. Max-turns retry (30s exponential backoff) in auto-mode-service
 2. Health monitor (every 30s) detects "stuck" in_progress features → resets them
 3. Circuit breaker (5-min cooldown) auto-resumes auto-mode

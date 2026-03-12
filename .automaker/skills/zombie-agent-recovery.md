@@ -1,7 +1,7 @@
 ---
 name: zombie-agent-recovery
 emoji: 🧟
-description: How to handle zombie agents stuck in restart loops. Covers the three independent retry mechanisms and why force-stopping makes it worse.
+description: How to handle zombie agents stuck in restart loops. Use when an agent keeps restarting, auto-mode cycles a failed feature repeatedly, or force-stopping makes it worse. Trigger on "zombie agent", "stuck in loop", "restart loop", "agent won't stop", or "auto-mode cycling".
 metadata:
   author: agent
   created: 2026-02-12T16:55:24.040Z
@@ -42,12 +42,14 @@ If the feature's work is already on main (PR merged), the agent will verify and 
 ### If Agent Has Uncommitted Work
 
 Check the worktree first:
+
 ```bash
 git -C <worktree-path> status --short
 git -C <worktree-path> diff --stat
 ```
 
 If valuable work exists, commit and push it manually before letting the feature complete:
+
 ```bash
 git -C <worktree-path> add <specific-files>
 git -C <worktree-path> commit -m "WIP: agent turn-limit recovery"

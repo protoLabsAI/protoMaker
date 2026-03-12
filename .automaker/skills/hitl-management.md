@@ -1,7 +1,7 @@
 ---
 name: hitl-management
 emoji: 🔔
-description: Ava's operational workflow for managing pending HITL forms and actionable items. Use these tools to address blocked agents, answer pending input requests, and clear the forms inbox during headsdown.
+description: Ava's operational workflow for managing pending HITL forms. Use when forms are pending, agents are blocked waiting for input, or clearing the forms inbox during headsdown. Trigger on "pending forms", "HITL", "blocked waiting for input", "forms inbox", or "user input request".
 metadata:
   author: ava
   created: 2026-02-27T00:00:00.000Z
@@ -54,6 +54,7 @@ submit_form_response({
 ```
 
 **When to use:**
+
 - ESCALATE forms where the resolution is clear (retry a transient failure, skip an already-done feature)
 - Forms that have been pending past their TTL/2 reminder and the answer is obvious from context
 
@@ -102,6 +103,7 @@ act_on_actionable_item({
 ```
 
 **When to use:**
+
 - `acted` — after submitting the corresponding form or resolving the gate
 - `dismissed` — stale notification that no longer requires action
 - `snoozed` — defer a low-priority item until a specific time (e.g., snooze a non-critical escalation until after current sprint)
@@ -112,12 +114,12 @@ act_on_actionable_item({
 
 When a feature is blocked and auto-retry does not fire, the system creates a structured HITL form with four options:
 
-| Option | Value | When to use |
-|--------|-------|-------------|
-| Retry | `retry` | Transient failure, environment issue, or agent timeout |
-| Provide context | `provide_context` | Agent was missing information — provide it as follow-up text |
-| Skip | `skip` | Feature is already done, duplicate, or out of scope |
-| Close as blocked | `close` | Requires Josh's attention — route to Discord instead |
+| Option           | Value             | When to use                                                  |
+| ---------------- | ----------------- | ------------------------------------------------------------ |
+| Retry            | `retry`           | Transient failure, environment issue, or agent timeout       |
+| Provide context  | `provide_context` | Agent was missing information — provide it as follow-up text |
+| Skip             | `skip`            | Feature is already done, duplicate, or out of scope          |
+| Close as blocked | `close`           | Requires Josh's attention — route to Discord instead         |
 
 For `provide_context`, the form has a second step — submit a follow-up `submit_form_response` call with `stepIndex: 1` and the context text.
 

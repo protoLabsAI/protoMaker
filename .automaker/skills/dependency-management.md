@@ -1,7 +1,7 @@
 ---
 name: dependency-management
 emoji: 🔗
-description: Feature dependency rules and gotchas. Disappearing deps, timing issues, auto-mode interaction.
+description: Feature dependency rules and gotchas. Use when features run out of order, dependencies disappear after resets, or auto-mode starts blocked features too early. Trigger on "dependencies", "feature order", "deps disappearing", "wrong execution order", or "dependency issue".
 metadata:
   author: agent
   created: 2026-02-11T23:25:03.035Z
@@ -27,6 +27,7 @@ Dependencies in Automaker are powerful but have critical edge cases that cause c
 When auto-mode resets a failed feature to backlog, dependencies get cleared — BOTH on the reset feature AND on downstream features in the chain.
 
 **Example cascade observed:**
+
 1. DM types feature fails → reset to backlog → deps cleared
 2. handleMessage (depends on DM types) → dep cleared → auto-mode starts it early
 3. handleMessage fails (missing DM types) → reset → context gathering dep cleared
@@ -43,6 +44,7 @@ Auto-mode's first tick runs immediately and caches feature state. If you set dep
 ## Out-of-Order Agent Recovery
 
 When an agent starts on a feature with unsatisfied deps (due to the reset bug), send it context about what exists on main via `send_message_to_agent`:
+
 - What types/services already exist
 - Correct import paths
 - What to reuse vs. recreate

@@ -1,7 +1,7 @@
 ---
 name: plugin-management
 emoji: 🔌
-description: Claude Code plugin lifecycle — installation, updates, hooks format, and troubleshooting multiple versions.
+description: Claude Code plugin lifecycle management. Use when installing, updating, or troubleshooting the Automaker plugin in Claude Code. Trigger on "install plugin", "update plugin", "plugin not working", "Claude Code plugin", "plugin version", or "hooks format".
 metadata:
   author: agent
   created: 2026-02-12T16:55:39.543Z
@@ -50,13 +50,13 @@ Use `${CLAUDE_PLUGIN_ROOT}` for paths to hook scripts within the plugin director
 
 ## When to Reinstall vs Update
 
-| Change | Action |
-|--------|--------|
-| New MCP tool added | `claude plugin update protolabs` |
-| Tool schema changed | `claude plugin update protolabs` |
-| hooks.json modified | Full reinstall (uninstall + install) |
-| New command/skill added | `claude plugin update protolabs` |
-| Plugin .env changed | Restart Claude Code session |
+| Change                  | Action                               |
+| ----------------------- | ------------------------------------ |
+| New MCP tool added      | `claude plugin update protolabs`     |
+| Tool schema changed     | `claude plugin update protolabs`     |
+| hooks.json modified     | Full reinstall (uninstall + install) |
+| New command/skill added | `claude plugin update protolabs`     |
+| Plugin .env changed     | Restart Claude Code session          |
 
 **`update` alone doesn't pick up hooks changes.** Always do full reinstall for hooks.
 
@@ -65,11 +65,13 @@ Use `${CLAUDE_PLUGIN_ROOT}` for paths to hook scripts within the plugin director
 Having multiple plugin versions installed causes MCP tool failures (tools route to wrong version).
 
 **Diagnosis:**
+
 ```bash
 claude plugin list
 ```
 
 If you see multiple automaker entries, uninstall all, then install latest:
+
 ```bash
 claude plugin uninstall protolabs  # repeat if multiple
 claude plugin install protolabs
@@ -78,11 +80,13 @@ claude plugin install protolabs
 ## After Adding MCP Tools
 
 The MCP server must be built for new tools to work:
+
 ```bash
 npm run build:packages  # includes tsc for packages/mcp-server
 ```
 
 Verify tools exist in `dist/`:
+
 ```bash
 grep "tool_name" packages/mcp-server/dist/index.js
 ```
@@ -90,6 +94,7 @@ grep "tool_name" packages/mcp-server/dist/index.js
 ## Plugin .env
 
 `packages/mcp-server/plugins/automaker/.env` — MCP plugin env vars:
+
 - `AUTOMAKER_ROOT` — absolute path to the automaker repo clone (required, used by start-mcp.sh to locate the MCP server binary)
 - `AUTOMAKER_API_KEY` — server auth key (must match the server's key)
 - `AUTOMAKER_API_URL` — API base URL (default: `http://localhost:3008`)

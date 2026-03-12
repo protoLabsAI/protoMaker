@@ -1,7 +1,7 @@
 ---
 name: auto-mode-troubleshooting
 emoji: 🔧
-description: Diagnose why auto-mode isn't picking up features. Covers stale worktrees, circuit breaker, dependency filtering, and branchName issues.
+description: Diagnose why auto-mode is not picking up features. Use when auto-mode is running but features stay in backlog, or specific features are skipped. Trigger on "auto-mode not working", "features not picked up", "circuit breaker", "stuck in backlog", or "auto-mode ignoring".
 metadata:
   author: ava
   created: 2026-02-11T21:00:00.000Z
@@ -22,6 +22,7 @@ When `isAutoLoopRunning: true` but `runningFeatures: []` — the loop is alive b
 **Root cause:** Features have `branchName` set from previous failed agent runs, AND worktrees exist for those branches. `loadPendingFeatures` filters out features that "belong" to a specific worktree when running for the main worktree (`branchName: null`).
 
 **Diagnosis:**
+
 ```
 # Check if backlog features have branchNames
 mcp__plugin_protolabs_studio__list_features({ projectPath })
@@ -32,6 +33,7 @@ git worktree list
 ```
 
 **Fix:**
+
 ```bash
 # Remove all stale worktrees (auto-mode will recreate fresh ones)
 for wt in .worktrees/*/; do
@@ -62,6 +64,7 @@ Features become "orphaned" (branchName set but no worktree) = eligible for main 
 **Root cause:** `resolveDependencies()` runs on pending features. Features whose deps are unsatisfied (dep feature not in `done`/`review`/`verified`) are excluded from execution order.
 
 **Diagnosis:**
+
 ```
 mcp__plugin_protolabs_studio__list_features({ projectPath })
 # Check: Do all chain-starter features (no deps) exist and have status=backlog?

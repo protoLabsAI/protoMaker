@@ -1,7 +1,7 @@
 ---
 name: agent-preflight
 emoji: 🛫
-description: Pre-flight checklist before launching any agent. Prevents stale worktrees, missing types, and wasted API budget.
+description: Pre-flight checklist before launching any agent. Use before starting an agent, enabling auto-mode, or retrying a failed feature. Trigger on "starting agent", "running auto-mode", "about to launch", "agent is failing", or any agent invocation.
 metadata:
   author: agent
   created: 2026-02-11T23:23:41.859Z
@@ -45,6 +45,7 @@ Use `get_execution_order` MCP tool. Re-set any missing deps before starting auto
 ## 4. Check Existing Code on Main
 
 Read the feature description. Identify what types, services, or utilities already exist on main. Prepare a `send_message_to_agent` with:
+
 - Correct import paths and type names
 - Method signatures that exist on main
 - Settings access patterns
