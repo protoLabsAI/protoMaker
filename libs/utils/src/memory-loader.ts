@@ -36,6 +36,26 @@ export interface UsageStats {
 }
 
 /**
+ * Callback for writing a single stat increment to the CRDT Metrics document.
+ * The callee writes to memoryStats[instanceId][filename][stat]++.
+ *
+ * @param filename - Basename of the memory file (e.g. "gotchas.md")
+ * @param stat     - Which counter to increment
+ */
+export type MemoryStatsCrdtWriter = (filename: string, stat: keyof UsageStats) => Promise<void>;
+
+/**
+ * Callback for reading aggregated usage stats for a file from the CRDT
+ * Metrics document.  Aggregates across ALL instanceId keys so callers see
+ * the combined count from every instance in the hivemind.
+ *
+ * Returns null when CRDT is unavailable or the file has no recorded stats yet.
+ *
+ * @param filename - Basename of the memory file (e.g. "gotchas.md")
+ */
+export type MemoryStatsAggregateReader = (filename: string) => Promise<UsageStats | null>;
+
+/**
  * Metadata stored in YAML frontmatter of memory files
  */
 export interface MemoryMetadata {
@@ -345,16 +365,22 @@ export function calculateUsageScore(stats: UsageStats): number {
  * - Tag matching with feature keywords (weight: 3)
  * - RelevantTo matching (weight: 2)
  * - Summary matching (weight: 1)
- * - Usage score (multiplier)
+ * - Usage score (multiplier) — reads from CRDT when crdtReader is provided,
+ *   otherwise falls back to YAML frontmatter stats
  * - Importance (multiplier)
  *
  * Always includes gotchas.md
+ *
+ * @param crdtReader - Optional callback to read aggregated CRDT usage stats.
+ *   When provided, CRDT stats replace the per-file YAML frontmatter stats for
+ *   scoring so that hivemind-wide usage signal is used instead of local-only stats.
  */
 export async function loadRelevantMemory(
   projectPath: string,
   featureTitle: string,
   featureDescription: string,
-  fsModule: MemoryFsModule
+  fsModule: MemoryFsModule,
+  crdtReader?: MemoryStatsAggregateReader
 ): Promise<MemoryLoadResult> {
   const memoryDir = getMemoryDir(projectPath);
 
@@ -386,8 +412,16 @@ export async function loadRelevantMemory(
       const summaryTerms = extractTerms(metadata.summary);
       const summaryScore = countMatches(summaryTerms, featureTerms);
 
-      // Usage-based scoring
-      const usageScore = calculateUsageScore(metadata.usageStats);
+      // Usage-based scoring — prefer aggregated CRDT stats when available so
+      // hivemind-wide signal (all instances combined) is used for ranking.
+      let statsForScoring = metadata.usageStats;
+      if (crdtReader) {
+        const crdtStats = await crdtReader(file).catch(() => null);
+        if (crdtStats !== null) {
+          statsForScoring = crdtStats;
+        }
+      }
+      const usageScore = calculateUsageScore(statsForScoring);
 
       // Combined score
       const score = (tagScore + relevantToScore + summaryScore) * metadata.importance * usageScore;
@@ -461,14 +495,24 @@ ${sections.join('\n\n---\n\n')}
 }
 
 /**
- * Increment a usage stat in a memory file
- * Uses file locking to prevent race conditions from concurrent updates
+ * Increment a usage stat in a memory file.
+ *
+ * Always updates the YAML frontmatter on disk for backwards compatibility.
+ * When crdtWriter is provided, also increments the stat in the shared CRDT
+ * Metrics document under the local instanceId key.
+ *
+ * @param filePath   - Absolute path to the memory file
+ * @param stat       - Which counter to increment
+ * @param fsModule   - File system abstraction
+ * @param crdtWriter - Optional callback to write the increment to CRDT
  */
 export async function incrementUsageStat(
   filePath: string,
   stat: keyof UsageStats,
-  fsModule: MemoryFsModule
+  fsModule: MemoryFsModule,
+  crdtWriter?: MemoryStatsCrdtWriter
 ): Promise<void> {
+  // Update YAML frontmatter on disk (backwards compat / graceful degradation)
   await withFileLock(filePath, async () => {
     try {
       const content = (await fsModule.readFile(filePath, 'utf-8')) as string;
@@ -483,6 +527,14 @@ export async function incrementUsageStat(
       // File doesn't exist or can't be updated - that's fine
     }
   });
+
+  // Also write to CRDT when available (fire-and-forget, best-effort)
+  if (crdtWriter) {
+    const filename = path.basename(filePath);
+    crdtWriter(filename, stat).catch((err) => {
+      logger.warn(`CRDT memory stat write failed for ${filename}.${stat}:`, err);
+    });
+  }
 }
 
 /**
@@ -494,15 +546,21 @@ export interface SimpleMemoryFile {
 }
 
 /**
- * Record memory usage after feature completion
- * Updates usage stats based on what was actually referenced
+ * Record memory usage after feature completion.
+ * Updates usage stats based on what was actually referenced.
+ *
+ * Writes to both disk YAML frontmatter (backwards compat) and, when
+ * crdtWriter is provided, to the shared CRDT Metrics document.
+ *
+ * @param crdtWriter - Optional callback to write stat increments to CRDT
  */
 export async function recordMemoryUsage(
   projectPath: string,
   loadedFiles: SimpleMemoryFile[],
   agentOutput: string,
   success: boolean,
-  fsModule: MemoryFsModule
+  fsModule: MemoryFsModule,
+  crdtWriter?: MemoryStatsCrdtWriter
 ): Promise<void> {
   const memoryDir = getMemoryDir(projectPath);
 
@@ -516,9 +574,9 @@ export async function recordMemoryUsage(
     const wasReferenced = countMatches(fileTerms, outputTerms) >= 3;
 
     if (wasReferenced) {
-      await incrementUsageStat(filePath, 'referenced', fsModule);
+      await incrementUsageStat(filePath, 'referenced', fsModule, crdtWriter);
       if (success) {
-        await incrementUsageStat(filePath, 'successfulFeatures', fsModule);
+        await incrementUsageStat(filePath, 'successfulFeatures', fsModule, crdtWriter);
       }
     }
   }
