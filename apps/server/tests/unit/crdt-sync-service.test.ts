@@ -352,7 +352,7 @@ describe('CrdtSyncService', () => {
             JSON.stringify({
               type: 'feature_event',
               instanceId: workerInternal.instanceId,
-              eventType: 'feature:created',
+              eventType: 'project:created',
               payload: { id: 'queued-1' },
               timestamp: new Date().toISOString(),
             }),
@@ -361,7 +361,7 @@ describe('CrdtSyncService', () => {
             JSON.stringify({
               type: 'feature_event',
               instanceId: workerInternal.instanceId,
-              eventType: 'feature:updated',
+              eventType: 'project:updated',
               payload: { id: 'queued-2' },
               timestamp: new Date().toISOString(),
             }),
@@ -456,6 +456,7 @@ describe('CrdtSyncService', () => {
       const mockWs = {
         readyState: 1, // WebSocket.OPEN = 1
         send: vi.fn((msg: string) => sentMessages.push(msg)),
+        terminate: vi.fn(), // called by shutdown()
       };
       (service as unknown as { wsClient: typeof mockWs }).wsClient = mockWs;
 
