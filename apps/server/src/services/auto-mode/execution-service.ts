@@ -1813,6 +1813,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
       resume?: string;
       /** Provider ID from PhaseModelEntry for explicit provider lookup */
       providerId?: string;
+      /**
+       * Middleware hook called immediately before the model call.
+       * Return a non-null string to inject additional context into the prompt.
+       * Return null to leave the prompt unchanged.
+       */
+      preModelCallHook?: () => Promise<string | null>;
     }
   ): Promise<void> {
     const finalProjectPath = options?.projectPath || projectPath;
@@ -2024,6 +2030,16 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       sdkSessionId: options?.resume, // Forward resume session ID for session continuity
       hooks: sdkOptions.hooks as ExecuteOptions['hooks'], // Worktree write guard
     };
+
+    // Middleware hook point: allow callers to inject additional context before the model call.
+    // The hook returns a string to prepend to the prompt, or null to leave it unchanged.
+    if (options?.preModelCallHook) {
+      const hookContext = await options.preModelCallHook();
+      if (hookContext) {
+        executeOptions.prompt = `${hookContext}\n\n---\n\n${executeOptions.prompt}`;
+        logger.info('[Middleware] preModelCallHook injected context into prompt');
+      }
+    }
 
     // Execute via provider
     logger.info(`Starting stream for feature ${featureId}...`);
