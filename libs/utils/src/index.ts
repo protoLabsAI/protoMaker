@@ -113,6 +113,8 @@ export {
   type SimpleMemoryFile,
   type DedupChecker,
   type IndexRebuilder,
+  type MemoryStatsCrdtWriter,
+  type MemoryStatsAggregateReader,
 } from './memory-loader.js';
 
 // String utilities

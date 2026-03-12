@@ -399,6 +399,17 @@ export const normalizeTodosDocument: SchemaNormalizer<TodosDocument> = (raw) => 
 // ---------------------------------------------------------------------------
 
 /**
+ * Per-file memory usage statistics for a single instance.
+ * Mirrors UsageStats from @protolabsai/utils but is kept local to avoid
+ * a circular package dependency.
+ */
+export interface MemoryUsageStat {
+  loaded: number;
+  referenced: number;
+  successfulFeatures: number;
+}
+
+/**
  * MetricsDocument stores aggregated DORA metrics across all instances.
  *
  * Use domain='metrics', document id='dora' for the aggregate DORA store.
@@ -417,6 +428,13 @@ export interface MetricsDocument extends CRDTDocumentRoot {
       doneCount: number;
     }
   >;
+  /**
+   * Per-instance memory file usage stats.
+   * Outer key: instanceId. Inner key: filename (basename, e.g. "gotchas.md").
+   * Each instance writes only to its own instanceId key.
+   * Read path: aggregate across all instanceId keys to get total usage counts.
+   */
+  memoryStats: Record<string, Record<string, MemoryUsageStat>>;
   /** ISO timestamp of last aggregate update */
   updatedAt: string;
 }
@@ -434,6 +452,7 @@ export const normalizeMetricsDocument: SchemaNormalizer<MetricsDocument> = (raw)
     schemaVersion: 1,
     _meta,
     instanceReports: doc.instanceReports ?? {},
+    memoryStats: doc.memoryStats ?? {},
     updatedAt: doc.updatedAt ?? _meta.updatedAt,
   };
 };

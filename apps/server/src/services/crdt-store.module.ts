@@ -23,8 +23,14 @@
 import { join } from 'node:path';
 import { WebSocketServer } from 'ws';
 import { CRDTStore, WebSocketServerAdapter } from '@protolabsai/crdt';
+import type { MetricsDocument } from '@protolabsai/crdt';
 import { loadProtoConfig } from '@protolabsai/platform';
 import { createLogger } from '@protolabsai/utils';
+import type {
+  MemoryStatsCrdtWriter,
+  MemoryStatsAggregateReader,
+  UsageStats,
+} from '@protolabsai/utils';
 import type { ServiceContainer } from '../server/services.js';
 
 const logger = createLogger('CrdtStoreModule');
@@ -32,9 +38,25 @@ const logger = createLogger('CrdtStoreModule');
 /** Default port offset from the CrdtSyncService sync port */
 const CRDT_STORE_PORT_OFFSET = 1;
 
+/** Domain and document ID used for the shared metrics document */
+const METRICS_DOMAIN = 'metrics' as const;
+const METRICS_DOC_ID = 'dora';
+
 export interface CrdtStoreModuleResult {
   store: CRDTStore;
   close: () => Promise<void>;
+  /**
+   * Write a memory file stat increment to the CRDT Metrics document.
+   * Writes under the local instanceId key — each instance owns its own slice.
+   * Pass to incrementUsageStat / recordMemoryUsage for hivemind-wide tracking.
+   */
+  memoryStatsCrdtWriter: MemoryStatsCrdtWriter;
+  /**
+   * Read aggregated memory file usage stats from the CRDT Metrics document.
+   * Aggregates across ALL instanceId keys to produce the hivemind-wide total.
+   * Pass to loadRelevantMemory for better cross-instance scoring.
+   */
+  memoryStatsAggregateReader: MemoryStatsAggregateReader;
 }
 
 /**
@@ -174,5 +196,65 @@ export async function register(container: ServiceContainer): Promise<CrdtStoreMo
     logger.info('CRDTStore shut down');
   };
 
-  return { store, close };
+  // ---------------------------------------------------------------------------
+  // Memory stats CRDT callbacks
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Writes a single stat increment for filename under the local instanceId key
+   * in memoryStats of the shared metrics CRDT document (domain='metrics', id='dora').
+   */
+  const memoryStatsCrdtWriter: MemoryStatsCrdtWriter = async (
+    filename: string,
+    stat: keyof UsageStats
+  ): Promise<void> => {
+    await store.change<MetricsDocument>(METRICS_DOMAIN, METRICS_DOC_ID, (doc) => {
+      if (!doc.memoryStats) {
+        doc.memoryStats = {};
+      }
+      if (!doc.memoryStats[instanceId]) {
+        doc.memoryStats[instanceId] = {};
+      }
+      const instanceStats = doc.memoryStats[instanceId];
+      if (!instanceStats[filename]) {
+        instanceStats[filename] = { loaded: 0, referenced: 0, successfulFeatures: 0 };
+      }
+      instanceStats[filename][stat]++;
+    });
+  };
+
+  /**
+   * Reads and aggregates memory file usage stats across ALL instanceId keys
+   * so callers see the combined signal from every hivemind instance.
+   */
+  const memoryStatsAggregateReader: MemoryStatsAggregateReader = async (
+    filename: string
+  ): Promise<UsageStats | null> => {
+    const handle = await store.getOrCreate<MetricsDocument>(METRICS_DOMAIN, METRICS_DOC_ID);
+    const doc = handle.doc();
+    if (!doc) return null;
+
+    const memoryStats = doc.memoryStats ?? {};
+    let loaded = 0;
+    let referenced = 0;
+    let successfulFeatures = 0;
+    let hasAnyData = false;
+
+    for (const instanceStats of Object.values(memoryStats)) {
+      const fileStat = instanceStats[filename];
+      if (fileStat) {
+        loaded += fileStat.loaded;
+        referenced += fileStat.referenced;
+        successfulFeatures += fileStat.successfulFeatures;
+        hasAnyData = true;
+      }
+    }
+
+    if (!hasAnyData) return null;
+    return { loaded, referenced, successfulFeatures };
+  };
+
+  logger.info('Memory stats CRDT callbacks created (domain=metrics, id=dora)');
+
+  return { store, close, memoryStatsCrdtWriter, memoryStatsAggregateReader };
 }
