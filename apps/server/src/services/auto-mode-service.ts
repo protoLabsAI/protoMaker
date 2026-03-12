@@ -306,6 +306,8 @@ export class AutoModeService {
       getRunningCountForWorktree: this.getRunningCountForWorktree.bind(this),
       hasInProgressFeatures: this.hasInProgressFeatures.bind(this),
       isFeatureRunning: this.isFeatureRunning.bind(this),
+      isFeatureActiveInPipeline: (featureId: string) =>
+        this.leadEngineerService?.isFeatureActive(featureId) ?? false,
       isFeatureFinished: this.isFeatureFinished.bind(this),
       emitAutoModeEvent: this.emitAutoModeEvent.bind(this),
       getHeapUsagePercent: this.getHeapUsagePercent.bind(this),
