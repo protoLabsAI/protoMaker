@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 426
-  referenced: 62
-  successfulFeatures: 62
+  loaded: 427
+  referenced: 63
+  successfulFeatures: 63
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -348,3 +348,15 @@ usageStats:
 - **Rejected:** Renaming wire format string to 'sync_wire_message' would achieve naming consistency but breaks peers on old versions
 - **Trade-offs:** Slightly confusing having a type named 'SyncWireMessage' with wire value 'feature_event', but gains backwards compatibility
 - **Breaking if changed:** If wire format string is changed, any remote peer with old code fails to deserialize the message
+
+#### [Gotcha] ProtoConfigHive type had instanceId field but YAML hive block never populated it (hiveId/syncPort/meshEnabled only). Type and schema were out of sync — dead type field never used in practice. (2026-03-12)
+- **Situation:** Removing vestigial hive config revealed type/schema mismatch
+- **Root cause:** TypeScript types were defined defensively but not validated against actual YAML structure; no enforcement that typed fields are populated
+- **How to avoid:** Discovered dead code only by systematic review; better to validate typed fields at runtime or in tests
+
+### Consolidated instance identity resolution: protolab.instanceId (explicit) → hivemind.instanceId → hostname registry match → os.hostname(). Stored result in protolab.instanceId, not hive.instanceId. (2026-03-12)
+- **Context:** Multiple fields capable of holding instanceId; unclear priority when multiple defined
+- **Why:** Establishes single source of truth in protolab; explicit config takes precedence over derived/fallback values; prevents silent surprises from stale values
+- **Rejected:** Keep hive.instanceId as separate path (adds complexity, was never populated); treat all sources equally (ambiguous precedence)
+- **Trade-offs:** Code path is clearer and testable; requires explicit migration of existing protolab configs, but this was already the practice
+- **Breaking if changed:** Code reading config.hive.instanceId returns undefined; must use config.protolab.instanceId. Env var PROTO_HIVE_INSTANCE_ID now sets protolab.instanceId (redirect preserves intent)

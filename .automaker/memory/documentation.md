@@ -5,9 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 325
-  referenced: 69
-  successfulFeatures: 69
+  loaded: 326
+  referenced: 70
+  successfulFeatures: 70
 ---
 <!-- domain: Documentation | Docs standards, structure, maintenance patterns -->
 

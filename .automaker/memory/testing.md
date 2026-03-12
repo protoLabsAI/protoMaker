@@ -113,3 +113,8 @@ usageStats:
 - **Situation:** Tests for abandoned features tend to rot while still compiling, creating false sense of coverage.
 - **Root cause:** When feature-sync model was abandoned, tests weren't marked as deprecated or removed. They became invisible maintenance debt.
 - **How to avoid:** Removing tests forces test suite to shrink and stay current. But loses historical documentation of why sync model existed.
+
+#### [Pattern] Updated all 6 instance-identity resolution tests before removing code. Tests validate new resolution order and precedence rules with clear, single-concern test cases. (2026-03-12)
+- **Problem solved:** Refactoring identity resolution — need confidence that new path works and captures all precedence scenarios
+- **Why this works:** Tests serve as both validation and living documentation of resolution hierarchy; updating them first validates assumptions before code changes; makes the intent of precedence explicit
+- **Trade-offs:** Unit tests are fast and deterministic; captures all edge cases (env override, registry miss, etc.) in one place; future changes to identity resolution are protected

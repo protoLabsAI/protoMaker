@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1389
-  referenced: 320
-  successfulFeatures: 320
+  loaded: 1390
+  referenced: 321
+  successfulFeatures: 321
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -864,3 +864,8 @@ usageStats:
 - **Situation:** Running build command in isolated worktree with TypeScript changes to verify compilation
 - **Root cause:** Turbo cache is shared across worktrees and main repo; it doesn't detect that an isolated worktree's files are different from the main repo source
 - **How to avoid:** Must use explicit workspace builds (npm run build --workspace=libs/types) instead of aggregate commands, adds extra verification step
+
+#### [Gotcha] Local proto.config.yaml is gitignored; removing hive: section from it can't be committed as part of the PR. Risk: developers won't know to remove it from their local configs. (2026-03-12)
+- **Situation:** Configuration file removal can't be enforced via CI; users must self-serve local cleanup
+- **Root cause:** Local config files contain secrets/state; committing removal signals breaking change but doesn't enforce it
+- **How to avoid:** PR description documents removal, but enforcement is manual; consider migration guide or deprecation warning in code

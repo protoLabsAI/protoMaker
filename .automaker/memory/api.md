@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 478
-  referenced: 110
-  successfulFeatures: 110
+  loaded: 479
+  referenced: 111
+  successfulFeatures: 111
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -144,3 +144,10 @@ usageStats:
 - **Rejected:** Keeping name CrdtFeatureEvent and adding a clarifying JSDoc comment (less effective for IDE autocomplete and code reading)
 - **Trade-offs:** Small refactoring effort in crdt-sync-service and exports; caught by TypeScript at compile time so no runtime risk
 - **Breaking if changed:** External consumers of the exported CrdtSyncWireMessage type must update imports (hard breaking change at type boundary)
+
+### Preserved PROTO_HIVE_INSTANCE_ID env var with semantic redirect: now sets protolab.instanceId instead of hive.instanceId. No removal of the env var. (2026-03-12)
+- **Context:** Env var still referenced in deployments/scripts; removing it would break existing workflows
+- **Why:** Backward compatibility with production deployments that set PROTO_HIVE_INSTANCE_ID; maintains external contracts while internally consolidating identity resolution
+- **Rejected:** Remove env var entirely (breaks existing deployments); add parallel env var (confusing, multiple sources of truth)
+- **Trade-offs:** Easier upgrade path for existing deployments; adds one indirect mapping in applyEnvOverrides() but self-documents intent
+- **Breaking if changed:** If code checks specifically for hive.instanceId being set, it will see undefined; but if code just reads instanceId from anywhere, the env var still works via protolab
