@@ -1,7 +1,7 @@
 /**
  * Built-in Integration Descriptors
  *
- * Registers the Phase 1 integrations (Discord, GitHub, Twitch) at tier 0.
+ * Registers the Phase 1 integrations (Discord, GitHub) at tier 0.
  * Health check wiring connects to the existing IntegrationService methods.
  */
 
@@ -117,54 +117,6 @@ const GITHUB_DESCRIPTOR: IntegrationDescriptor = {
   ],
 };
 
-const TWITCH_DESCRIPTOR: IntegrationDescriptor = {
-  id: 'twitch',
-  name: 'Twitch',
-  description: 'Chat suggestions, polls, and live coding interactions',
-  category: 'streaming',
-  scope: 'project',
-  tier: 0,
-  iconName: 'Tv',
-  brandColor: '#9146FF',
-  enabled: false,
-  hasHealthCheck: false,
-  docsUrl: '/docs/integrations/twitch',
-  tags: ['streaming', 'chat', 'suggestions'],
-  configFields: [
-    {
-      key: 'channelName',
-      label: 'Channel Name',
-      type: 'string',
-      description: 'Twitch channel to connect to (without #)',
-      placeholder: 'your_channel',
-      group: 'Connection',
-    },
-    {
-      key: 'botUsername',
-      label: 'Bot Username',
-      type: 'string',
-      description: 'Twitch bot account username',
-      group: 'Connection',
-    },
-    {
-      key: 'minAccountAgeDays',
-      label: 'Min Account Age (days)',
-      type: 'number',
-      defaultValue: 7,
-      description: 'Minimum account age to prevent spam',
-      group: 'Moderation',
-    },
-    {
-      key: 'rateLimitSeconds',
-      label: 'Rate Limit (seconds)',
-      type: 'number',
-      defaultValue: 60,
-      description: 'Cooldown per user between suggestions',
-      group: 'Moderation',
-    },
-  ],
-};
-
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
@@ -174,7 +126,7 @@ const TWITCH_DESCRIPTOR: IntegrationDescriptor = {
  * Returns the number of successfully registered integrations.
  */
 export function registerBuiltInIntegrations(registry: IntegrationRegistryService): number {
-  const descriptors = [DISCORD_DESCRIPTOR, GITHUB_DESCRIPTOR, TWITCH_DESCRIPTOR];
+  const descriptors = [DISCORD_DESCRIPTOR, GITHUB_DESCRIPTOR];
   let count = 0;
 
   for (const descriptor of descriptors) {

@@ -775,10 +775,6 @@ interface ToolContext {
 }
 ```
 
-### Twitch tools
-
-Twitch chat interaction tools (see `libs/tools/src/domains/twitch/`).
-
 ## Related documentation
 
 - [Notes Panel](./notes-panel) — AI editor features and agent integration

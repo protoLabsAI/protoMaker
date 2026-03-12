@@ -23,7 +23,6 @@
  *   - Claude-code delegation: claude-code
  *   - Project management: project_* suite
  *   - Full board suite: create_feature, delete_feature, set_dependencies, get_dependencies, query_board
- *   - Twitch engagement: twitch_* suite
  *
  * Review agents only read; they never mutate state.
  */
@@ -127,7 +126,7 @@ export const ORCHESTRATION_PROFILE: ToolProfile = {
   name: 'orchestration',
   description:
     'Full tool set for Ava and orchestration agents: all board, project, Discord, ' +
-    'GitHub PR, Claude-code delegation, HITL, and Twitch tools.',
+    'GitHub PR, Claude-code delegation, and HITL tools.',
   tools: [
     // Board — full CRUD + dependency management
     'list_features',
@@ -163,10 +162,6 @@ export const ORCHESTRATION_PROFILE: ToolProfile = {
     'claude-code',
     // HITL
     'request_user_input',
-    // Twitch engagement
-    'twitch_build_suggestion',
-    'twitch_create_poll',
-    'twitch_list_suggestions',
     // Claude Code built-ins
     'Read',
     'Write',
@@ -207,9 +202,6 @@ export const ORCHESTRATION_PROFILE: ToolProfile = {
     github_check_pr_status: 'Ava monitors CI for PR health.',
     'claude-code': 'Ava delegates coding sub-tasks to execution agents.',
     request_user_input: 'Ava escalates decisions requiring human input.',
-    twitch_build_suggestion: 'Ava manages Twitch community engagement.',
-    twitch_create_poll: 'Ava runs community polls on Twitch.',
-    twitch_list_suggestions: 'Ava reads community feature suggestions.',
     Read: 'File reading for context and review.',
     Write: 'File creation for docs and config.',
     Edit: 'Targeted file edits.',

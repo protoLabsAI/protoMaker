@@ -1,10 +1,9 @@
 /**
- * Stream Overlay View - OBS-optimized view for Twitch streaming
+ * Stream Overlay View - OBS-optimized view for streaming
  *
  * Displays:
  * - Current board state (compact cards in columns)
  * - 'Now Building' banner with submitter attribution
- * - Suggestion queue (top 5)
  * - Agent activity feed (last 10 events)
  *
  * Dark theme, large fonts, no scrollbars, no interactive elements.
@@ -15,9 +14,7 @@ import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { OverlayBoard } from './stream-overlay/overlay-board';
-import { SuggestionQueue } from './stream-overlay/suggestion-queue';
 import { ActivityFeed } from './stream-overlay/activity-feed';
-import type { TwitchSuggestion } from '@protolabsai/types';
 
 interface ActivityEvent {
   id: string;
@@ -32,25 +29,7 @@ export function StreamOverlayView() {
     features: state.features,
   }));
 
-  const [suggestions, setSuggestions] = useState<TwitchSuggestion[]>([]);
   const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([]);
-
-  // Load suggestions on mount
-  useEffect(() => {
-    if (!currentProject) return;
-
-    const loadSuggestions = async () => {
-      try {
-        // TODO: Add API endpoint to fetch suggestions
-        // For now, use empty array
-        setSuggestions([]);
-      } catch (error) {
-        console.error('Failed to load suggestions:', error);
-      }
-    };
-
-    loadSuggestions();
-  }, [currentProject]);
 
   // Subscribe to real-time events for activity feed
   useEffect(() => {
@@ -110,11 +89,6 @@ export function StreamOverlayView() {
 
         {/* Right Sidebar - 1 column */}
         <div className="flex flex-col gap-4 overflow-hidden">
-          {/* Suggestion Queue */}
-          <div className="flex-1 min-h-0">
-            <SuggestionQueue suggestions={suggestions} />
-          </div>
-
           {/* Activity Feed */}
           <div className="flex-1 min-h-0">
             <ActivityFeed events={activityEvents} />

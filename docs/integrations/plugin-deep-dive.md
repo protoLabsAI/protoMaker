@@ -136,7 +136,7 @@ All tools are defined as static schemas in separate module files under `packages
 | Promotion          | `promotion-tools.ts`     | Staging/main promotion pipeline                |
 | Calendar           | `calendar-tools.ts`      | Calendar events CRUD                           |
 | Content            | `content-tools.ts`       | Content pipeline (blog, docs)                  |
-| Integrations       | `integration-tools.ts`   | Discord, Twitch, HITL forms                    |
+| Integrations       | `integration-tools.ts`   | Discord, HITL forms                            |
 | Lead Engineer      | `lead-engineer-tools.ts` | Lead engineer state machine control            |
 | Observability      | `observability-tools.ts` | Langfuse traces, costs, scoring, datasets      |
 | Quarantine         | `quarantine-tools.ts`    | Quarantine entries, trust tiers                |
