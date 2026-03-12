@@ -45,6 +45,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@automerge/prosemirror": "^0.2.0",
     "@ai-sdk/anthropic": "^3.0.45",
     "@ai-sdk/react": "^3.0.92",
     "@codemirror/lang-css": "^6.3.1",
