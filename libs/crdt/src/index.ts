@@ -27,6 +27,7 @@ export type {
   CalendarDocument,
   TodosDocument,
   MetricsDocument,
+  MemoryUsageStat,
 } from './documents.js';
 
 export type {

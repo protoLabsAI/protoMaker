@@ -1,6 +1,8 @@
 // CRDT sync module — wires EventBus to CrdtSyncService for cross-instance event propagation.
 // Features are LOCAL only — only project events cross the wire.
 
+import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import type { Project } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { ServiceContainer } from '../server/services.js';
@@ -46,6 +48,21 @@ export async function register(container: ServiceContainer): Promise<void> {
         logger.info(`[CRDT] Persisting remote project:deleted ${projectSlug}`);
         container.projectService.persistRemoteDelete(projectPath, projectSlug).catch((err) => {
           logger.error(`[CRDT] Failed to persist remote project:deleted ${projectSlug}: ${err}`);
+        });
+        break;
+      }
+      case 'categories:updated': {
+        const categories = payload.categories;
+        if (!Array.isArray(categories)) {
+          logger.warn(
+            '[CRDT] Received categories:updated without valid categories array, skipping'
+          );
+          break;
+        }
+        logger.info('[CRDT] Overwriting local categories from remote categories:updated');
+        const categoriesPath = join(projectPath, '.automaker', 'categories.json');
+        writeFile(categoriesPath, JSON.stringify(categories, null, 2), 'utf-8').catch((err) => {
+          logger.error(`[CRDT] Failed to write remote categories: ${err}`);
         });
         break;
       }

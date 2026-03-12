@@ -5,9 +5,9 @@ relevantTo: [persistence]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 22
-  referenced: 5
-  successfulFeatures: 5
+  loaded: 23
+  referenced: 6
+  successfulFeatures: 6
 ---
 <!-- domain: Data Persistence | File I/O, atomic writes, backup and recovery patterns -->
 

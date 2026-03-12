@@ -176,3 +176,20 @@ usageStats:
 - **Situation:** Persisting merge metrics: both prMergedAt and prReviewDurationMs set synchronously after merge confirmation
 - **Root cause:** Works currently due to colocation, but creates hidden dependency. Better design: calculate duration from deserialized prMergedAt to ensure values are verifiably consistent.
 - **How to avoid:** Simple synchronous approach works when collocated; explicit dependency would require parsing prMergedAt post-persistence
+
+#### [Pattern] normalizeProjectDocument() fills missing fields with safe defaults: status→'researching', milestones→[], prd (string)→SPARCPrd{approach}, _meta.instanceId→'unknown', timestamps derived from _meta. Phases missing executionStatus default to 'unclaimed'. (2026-03-12)
+- **Problem solved:** Legacy documents have different schemas (plain-string PRD instead of structured SPARCPrd, missing status/milestones)
+- **Why this works:** Enables forward compatibility: old documents work with new code without explicit migrations. Normalization at read-time is safer than runtime type assertions.
+- **Trade-offs:** Forgiving data handling vs. stricter schema. Normalization hides schema drift; consider logging when defaults are applied.
+
+### Categories use Last-Write-Wins (LWW) file overwrite semantics instead of CRDT merge (2026-03-12)
+- **Context:** Simple string array state (categories list) needed to sync across instances
+- **Why:** Categories don't require distributed merge resolution; simple overwrite is safe, readable, and maintainable. Full CRDT complexity unnecessary for non-structured data
+- **Rejected:** Could implement CRDT-style merge with vector clocks; would handle concurrent writes perfectly but massive overkill
+- **Trade-offs:** Gained simplicity and readability; traded away ability to recover from concurrent category additions across instances (last write wins)
+- **Breaking if changed:** If requirements change to preserve concurrent category additions across instances, entire synchronization strategy fails and needs CRDT rewrite
+
+#### [Pattern] Schema-on-read migration: normalizeNotesWorkspace() applies defaults for all missing fields (tabs, tabOrder, activeTabId) (2026-03-12)
+- **Problem solved:** Disk workspace.json may exist in older format from before NoteTab/NotesWorkspaceDocument schema was formalized
+- **Why this works:** Allows gradual schema evolution without hard migrations. Old disk files are automatically uplifted to new format on read. No script-based data transformation needed.
+- **Trade-offs:** Easier evolution vs. schema divergence: old disk files may differ from current schema, hidden behind normalizer. Bugs in normalization logic silently corrupt data.

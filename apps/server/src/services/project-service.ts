@@ -137,47 +137,6 @@ export class ProjectService {
     }
   }
 
-  /**
-   * Apply Automerge binary changes received from a remote peer.
-   * Merges the changes into the local doc and emits project events for any
-   * projects that changed. Called by the wiring layer on 'crdt:remote-changes'.
-   */
-  applyRemoteChanges(projectPath: string, changes: Uint8Array[]): void {
-    let doc = this._docs.get(projectPath);
-    const isNew = !doc;
-    if (!doc) {
-      doc = Automerge.init<ProjectsDoc>();
-      this._initPromises.set(projectPath, Promise.resolve());
-    }
-    const oldProjects = doc.projects || {};
-    const [newDoc] = Automerge.applyChanges<ProjectsDoc>(doc, changes);
-    this._docs.set(projectPath, newDoc);
-    const newProjects = newDoc.projects || {};
-    const allSlugs = new Set([...Object.keys(oldProjects), ...Object.keys(newProjects)]);
-    for (const slug of allSlugs) {
-      const oldProject = isNew ? undefined : oldProjects[slug];
-      const newProject = newProjects[slug];
-      const unchanged =
-        !isNew &&
-        oldProject !== undefined &&
-        newProject !== undefined &&
-        JSON.stringify(oldProject) === JSON.stringify(newProject);
-      if (!unchanged) {
-        if (newProject) {
-          const eventType = oldProject ? 'project:updated' : 'project:created';
-          this._crdtEvents?.emit(eventType, {
-            projectSlug: slug,
-            projectPath,
-            project: newProject,
-          });
-        } else {
-          this._crdtEvents?.emit('project:deleted', { projectSlug: slug, projectPath });
-        }
-      }
-    }
-    logger.debug(`[CRDT] Applied ${changes.length} remote change(s) for ${projectPath}`);
-  }
-
   // ─── Remote sync (called by crdt-sync.module.ts) ─────────────────────────
 
   /**
@@ -461,6 +420,20 @@ export class ProjectService {
       }
     }
 
+    // Update CRDT doc and emit event so peers receive the milestone update
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
+      });
+      this._docs.set(projectPath, newDoc);
+      this._crdtEvents?.emit('project:updated', {
+        projectSlug,
+        projectPath,
+        project: updated,
+      });
+    }
+
     logger.info(`Saved ${milestones.length} milestones for project: ${projectSlug}`);
     return updated;
   }
@@ -491,6 +464,20 @@ export class ProjectService {
 
     const jsonPath = getProjectJsonPath(projectPath, projectSlug);
     await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
+
+    // Update CRDT doc and emit event so peers receive the claim update
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(project);
+      });
+      this._docs.set(projectPath, newDoc);
+      this._crdtEvents?.emit('project:updated', {
+        projectSlug,
+        projectPath,
+        project,
+      });
+    }
   }
 
   /**

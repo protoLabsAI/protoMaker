@@ -1,15 +1,14 @@
 ---
 tags: []
-summary: 'relevantTo: []'
+summary: "relevantTo: []"
 relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 282
-  referenced: 66
-  successfulFeatures: 66
+  loaded: 289
+  referenced: 69
+  successfulFeatures: 69
 ---
-
 <!-- domain: GTM Signal Intelligence | Go-to-market signal processing and routing -->
 
 # GTM Signal Intelligence & Content Operations

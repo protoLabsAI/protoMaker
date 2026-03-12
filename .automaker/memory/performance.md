@@ -310,3 +310,10 @@ usageStats:
 - **Situation:** Preventing duplicate URLs from bloating recent history
 - **Root cause:** Write-time deduplication keeps localStorage small and getRecentUrls() reads fast; alternative (read-time dedup) would add latency to every access; unbounded lists eventually degrade
 - **How to avoid:** Gained: Fast reads, clean state. Lost: O(n) cost per add (acceptable since adds are infrequent, but non-obvious)
+
+### Hydration is fire-and-forget async (void hydrateNotesWorkspace()). Does not block server startup. (2026-03-12)
+- **Context:** Server initialization needs to be fast; hydration may take time if workspace.json is large or I/O is slow
+- **Why:** Non-blocking startup allows server to begin accepting requests immediately while CRDT document is being seeded in background. Improves perceived responsiveness.
+- **Rejected:** Alternative: await hydration during initialization. Rejected because adds latency to critical path (server startup), especially problematic in CI/deployments.
+- **Trade-offs:** Faster startup vs. potential data consistency gap: queries to notes workspace may see empty/stale data if hydration hasn't completed. Hydration failures are logged but don't crash server.
+- **Breaking if changed:** If consuming code assumes notes workspace is fully populated at server.ready(), it will race and may see incomplete data.

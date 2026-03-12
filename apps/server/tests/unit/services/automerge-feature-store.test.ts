@@ -4,14 +4,13 @@
  * Tests are split into two suites:
  *  - CRDT disabled (no proto.config.yaml): all operations delegate to FeatureLoader
  *  - CRDT enabled (proto.config.yaml present): reads from Automerge doc, writes go to
- *    disk then update in-memory CRDT doc; applyRemoteChanges merges peer changes.
+ *    disk then update in-memory CRDT doc.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import * as Automerge from '@automerge/automerge';
 
 import { AutomergeFeatureStore } from '../../../src/services/automerge-feature-store.js';
 import { createEventEmitter } from '../../../src/lib/events.js';
@@ -224,70 +223,6 @@ describe('AutomergeFeatureStore — CRDT enabled (proto.config.yaml present)', (
 
       const ok = await store.claim(tempDir, feature.id, 'instance-b');
       expect(ok).toBe(true);
-    });
-  });
-
-  describe('applyRemoteChanges — integration', () => {
-    it('feature created on instance A appears on instance B', async () => {
-      // Instance A creates a feature
-      const eventsB = createEventEmitter();
-      const receivedOnB: string[] = [];
-      eventsB.on('feature:updated', (d: { featureId: string }) => receivedOnB.push(d.featureId));
-      const storeB = new AutomergeFeatureStore(eventsB);
-
-      // A creates a feature
-      const featureA = await store.create(tempDir, { title: 'Cross-Instance Feature' });
-
-      // Get A's Automerge binary
-      const binaryA = await store.getDocBinary(tempDir);
-
-      // Derive changes from A's full doc
-      const docA = Automerge.load<{ features: Record<string, unknown> }>(binaryA);
-      const changes = Automerge.getAllChanges(docA);
-
-      // Apply to B
-      storeB.applyRemoteChanges(tempDir, changes);
-
-      // B can see the feature (from CRDT doc, not disk)
-      const allB = await storeB.getAll(tempDir);
-      expect(allB.some((f) => f.id === featureA.id)).toBe(true);
-      expect(allB.find((f) => f.id === featureA.id)?.title).toBe('Cross-Instance Feature');
-
-      // B emitted a feature:updated event
-      expect(receivedOnB).toContain(featureA.id);
-    });
-
-    it('merges concurrent changes from two instances', async () => {
-      const eventsB = createEventEmitter();
-      const storeB = new AutomergeFeatureStore(eventsB);
-
-      // Both start with the same base
-      const base = await store.getDocBinary(tempDir);
-      storeB.applyRemoteChanges(tempDir, Automerge.getAllChanges(Automerge.load(base)));
-
-      // A creates feature-1, B creates feature-2
-      const f1 = await store.create(tempDir, { title: 'From A' });
-      const f2 = await storeB.create(tempDir, { title: 'From B' });
-
-      // Exchange changes
-      const binaryA = await store.getDocBinary(tempDir);
-      const binaryB = await storeB.getDocBinary(tempDir);
-
-      const docA = Automerge.load<{ features: Record<string, unknown> }>(binaryA);
-      const docB = Automerge.load<{ features: Record<string, unknown> }>(binaryB);
-
-      // A applies B's changes, B applies A's changes
-      store.applyRemoteChanges(tempDir, Automerge.getAllChanges(docB));
-      storeB.applyRemoteChanges(tempDir, Automerge.getAllChanges(docA));
-
-      const allA = await store.getAll(tempDir);
-      const allB = await storeB.getAll(tempDir);
-
-      // Both instances should have both features
-      expect(allA.some((f) => f.id === f1.id)).toBe(true);
-      expect(allA.some((f) => f.id === f2.id)).toBe(true);
-      expect(allB.some((f) => f.id === f1.id)).toBe(true);
-      expect(allB.some((f) => f.id === f2.id)).toBe(true);
     });
   });
 });

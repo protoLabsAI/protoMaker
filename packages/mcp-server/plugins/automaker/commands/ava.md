@@ -296,7 +296,7 @@ Every agent launch is a potential waste of API budget if the agent starts on sta
 1. **Resolve `projectPath`** (see Path Resolution above)
 2. Call `mcp__plugin_protolabs_studio__get_settings({ projectPath })` to retrieve `userProfile.name`. Use that name as the operator's name. Fallback: "the operator".
 3. Gather situational awareness in parallel:
-   - `get_sitrep({ projectPath })` — single call that returns board summary, auto-mode status, running agents, blocked features, review features, escalations, open PRs with CI status, staging delta, recent commits, and server health
+   - `get_sitrep({ projectPath, projectSlug })` — single call that returns board summary, auto-mode status, running agents, blocked features, review features, escalations, open PRs with CI status, staging delta, recent commits, and server health. Pass `projectSlug` to scope board counts to a specific project.
    - `get_briefing({ projectPath })` — events since last session
    - Read your Notes tab: `list_note_tabs` → `read_note_tab` for the "Ava" tab
    - Check auto-memory directory
