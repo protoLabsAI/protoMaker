@@ -764,10 +764,33 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       const fs = await import('fs');
       const path = await import('path');
 
-      // Resolve log file path: DATA_DIR/server.log
-      const dataDir =
-        process.env.DATA_DIR || path.join(process.env.AUTOMAKER_ROOT || process.cwd(), 'data');
-      const logPath = path.join(dataDir, 'server.log');
+      // Resolve log file path by asking the running server for its absolute path.
+      // The server runs from apps/server/ so its DATA_DIR resolves differently than
+      // the MCP server's CWD (monorepo root). Asking the server eliminates the mismatch.
+      // Falls back to a computed path if the server is down.
+      let logPath: string;
+      try {
+        const logPathResult = (await apiCall('/health/log-path', {}, 'GET')) as {
+          logPath: string;
+        };
+        logPath = logPathResult.logPath;
+      } catch {
+        // Server is down — compute best-guess path.
+        // Server CWD is apps/server/ and DATA_DIR defaults to ./data (relative to that).
+        const dataDirEnv = process.env.DATA_DIR;
+        if (dataDirEnv && path.isAbsolute(dataDirEnv)) {
+          // Absolute DATA_DIR: both server and MCP agree on this path
+          logPath = path.join(dataDirEnv, 'server.log');
+        } else {
+          // Relative or unset DATA_DIR: resolve relative to apps/server/ within AUTOMAKER_ROOT
+          const serverRoot = path.join(
+            process.env.AUTOMAKER_ROOT || process.cwd(),
+            'apps',
+            'server'
+          );
+          logPath = path.join(serverRoot, dataDirEnv || 'data', 'server.log');
+        }
+      }
 
       if (!fs.existsSync(logPath)) {
         return {
