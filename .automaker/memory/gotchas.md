@@ -889,3 +889,15 @@ usageStats:
 - **Situation:** diskTab.metadata?.createdAt is numeric; mapped to Date constructor which expects milliseconds, then .toISOString()
 - **Root cause:** Likely historical: disk format designed separately, ISO strings are standard in CRDT/JSON contexts
 - **How to avoid:** Human-readable ISO strings in logs vs. precision loss if disk format ever changes to seconds or different epoch
+
+#### [Gotcha] 'notes' is not yet in the DomainName union in @protolabsai/crdt — must cast as `'notes' as unknown as DomainName` until types package is updated. (2026-03-12)
+
+- **Situation:** `apps/server/src/routes/notes/index.ts` uses `NOTES_CRDT_DOMAIN = 'notes' as unknown as DomainName` to satisfy the store's typed domain parameter.
+- **Root cause:** `DomainName` is a discriminated union in `@protolabsai/crdt` that doesn't include `'notes'` yet. Adding a new CRDT domain requires updating the types package and rebuilding.
+- **How to avoid:** The double-cast (`as unknown as DomainName`) is the accepted pattern for domains not yet in the union. When adding a new CRDT domain, add the string literal to `DomainName` in `libs/crdt/src/types.ts` and remove the cast.
+
+#### [Gotcha] Automerge doc properties are proxies — must spread/copy before returning to callers, or the values become invalid after the handle is released. (2026-03-12)
+
+- **Situation:** `docToWorkspace()` in `apps/server/src/routes/notes/index.ts` explicitly spreads all nested objects (tabOrder via `Array.from`, tab fields via object literal). Returning the proxy directly causes silent failures when callers access properties after the doc handle lifetime ends.
+- **Root cause:** Automerge wraps document fields in proxy objects for change tracking. The proxy is only valid within the document's active scope; external code reading after scope closure gets undefined or throws.
+- **How to avoid:** Any function that reads from an Automerge document and returns data to callers must copy all fields into plain JS values. Pattern: `Array.from(doc.tabOrder)` for arrays, `{ id: tab.id, name: tab.name, ... }` for objects — never return the proxy directly.

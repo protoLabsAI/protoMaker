@@ -73,3 +73,16 @@ usageStats:
 - **Problem solved:** Removing 'crdt:remote-changes' required confirming zero subscribers and zero emitters exist
 - **Why this works:** Event-driven architectures lack static type safety for event completeness; text search is the only reliable way to find all emit() and on() call sites across the codebase
 - **Trade-offs:** Labor-intensive manual search, but 100% reliable; false negatives are impossible if search is thorough
+
+#### [Pattern] Notes CRDT dual-write: disk is primary (always written first, awaited), CRDT is secondary (fire-and-forget for replication). CRDT read is guarded by seeded-check before use. (2026-03-12)
+
+- **Problem solved:** Notes workspace needs multi-instance eventual consistency via CRDT, but must remain reliable when CRDT is unavailable.
+- **Why this works:** `saveWorkspaceWithCrdt()` awaits the disk write first, then calls `store.change(...).catch(...)` without awaiting. Disk success is the durable guarantee; CRDT propagates asynchronously. On read, `loadWorkspaceWithCrdt()` only uses CRDT data if `doc.tabOrder` is non-empty (the seeded-check) — an empty tabOrder means the document was created by `getOrCreate` but never written via this service, so disk is the correct source.
+- **Trade-offs:** Brief window of inconsistency between disk and CRDT after a write. CRDT failures are logged but don't surface to callers. Read falls back silently to disk if CRDT is unavailable or un-seeded.
+- **Key implementation:** `apps/server/src/routes/notes/index.ts` — `loadWorkspaceWithCrdt()` and `saveWorkspaceWithCrdt()`.
+
+#### [Pattern] Setter injection for DATA_DIR on CeremonyService: `setDataDir(dataDir)` called post-construction in services.ts to avoid circular dependency at service initialization time. (2026-03-12)
+
+- **Problem solved:** `CeremonyService` needs to know `DATA_DIR` to write ceremony state to the correct location, but `dataDir` is resolved from the service container context after construction.
+- **Why this works:** Follows the same setter injection pattern used for `setAutoModeService()` — construction and wiring are decoupled. `getCeremonyStatePath()` falls back to the old `.automaker/projects/{slug}/ceremony-state.json` path if `dataDir` is not set, preserving backward compatibility.
+- **Trade-offs:** Easy to forget calling `setDataDir()` after construction (silent fallback to old path). Consistent with established service wiring pattern in the codebase.

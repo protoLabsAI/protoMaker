@@ -503,17 +503,18 @@ export class ExecutionService {
         return;
       }
 
-      // CRITICAL: Rebase worktree onto latest origin/main before agent execution
-      // This prevents agents from executing against stale code when PRs merge in quick succession
+      // CRITICAL: Merge worktree with latest origin/main before agent execution
+      // This prevents agents from executing against stale code when PRs merge in quick succession.
+      // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully.
       if (worktreePath) {
         try {
-          logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
-          const rebaseResult = await rebaseWorktreeOnMain(worktreePath);
+          logger.info(`Merging worktree with latest origin/main: ${worktreePath}`);
+          const mergeResult = await rebaseWorktreeOnMain(worktreePath);
 
-          if (!rebaseResult.success) {
-            if (rebaseResult.hasConflicts) {
+          if (!mergeResult.success) {
+            if (mergeResult.hasConflicts) {
               const reason =
-                `Pre-flight rebase onto origin/main has conflicts — branch "${branchName}" must be manually rebased before the agent can proceed. ` +
+                `Pre-flight merge with origin/main has conflicts — branch "${branchName}" must be manually merged before the agent can proceed. ` +
                 `Blocking feature to prevent repeated merge_conflict failures.`;
               logger.warn(`${reason} Feature: ${featureId}`);
               await this.featureLoader.update(projectPath, featureId, {
@@ -524,19 +525,16 @@ export class ExecutionService {
               return;
             } else {
               logger.warn(
-                `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
+                `Merge failed (${mergeResult.error}). Agent will execute on current base. ` +
                   `Feature: ${featureId}`
               );
             }
           } else {
-            logger.info(`Worktree successfully rebased onto latest origin/main`);
+            logger.info(`Worktree successfully merged with latest origin/main`);
           }
-        } catch (rebaseError) {
+        } catch (mergeError) {
           // Log error but don't fail execution - agent can still work on stale base
-          logger.error(
-            `Unexpected error during pre-execution rebase for ${featureId}:`,
-            rebaseError
-          );
+          logger.error(`Unexpected error during pre-execution merge for ${featureId}:`, mergeError);
         }
       }
 
@@ -693,8 +691,8 @@ export class ExecutionService {
       // Persist the resolved model to the feature JSON so the UI can display it
       await this.featureLoader.update(projectPath, featureId, { model: modelResult.model });
 
-      // Rebase branch onto origin/dev before agent execution
-      // This keeps the branch fresh and reduces merge conflicts
+      // Merge branch with origin/dev before agent execution
+      // Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully
       if (branchName && useWorktrees) {
         logger.info(`Syncing branch ${branchName} before agent execution...`);
         this.typedEventBus.emitAutoModeEvent('sync_started', {
@@ -706,58 +704,26 @@ export class ExecutionService {
         try {
           await execAsync('git fetch origin', { cwd: workDir, timeout: 30000 });
 
-          // Stash unstaged changes before rebasing to prevent
-          // "cannot rebase: You have unstaged changes" errors
-          let stashed = false;
-          try {
-            const { stdout: statusOut } = await execAsync('git status --porcelain', {
-              cwd: workDir,
-              timeout: 10000,
-            });
-            if (statusOut.trim().length > 0) {
-              logger.info(`Unstaged changes detected in ${branchName}, stashing before rebase...`);
-              await execAsync('git stash --include-untracked', { cwd: workDir, timeout: 15000 });
-              stashed = true;
-            }
-          } catch (stashErr) {
-            logger.warn(
-              `Pre-rebase stash attempt failed for ${branchName}: ${stashErr instanceof Error ? stashErr.message : String(stashErr)}`
-            );
-          }
-
-          await execAsync('git rebase origin/dev', { cwd: workDir, timeout: 60000 });
-          logger.info(`Branch ${branchName} rebased onto origin/dev`);
-
-          // Pop the stash after a successful rebase
-          if (stashed) {
-            try {
-              await execAsync('git stash pop', { cwd: workDir, timeout: 15000 });
-              logger.info(`Stash popped successfully after rebase for ${branchName}`);
-            } catch (popErr) {
-              logger.warn(
-                `Stash pop had conflicts after rebase for ${branchName}: ${popErr instanceof Error ? popErr.message : String(popErr)}. Continuing with agent execution.`
-              );
-            }
-          }
+          await execAsync('git merge origin/dev', { cwd: workDir, timeout: 60000 });
+          logger.info(`Branch ${branchName} merged with origin/dev`);
 
           this.typedEventBus.emitAutoModeEvent('sync_completed', {
             featureId,
             branchName,
-            message: 'Branch rebased onto origin/dev',
+            message: 'Branch merged with origin/dev',
           });
-        } catch (rebaseError) {
-          const rebaseMsg =
-            rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
-          // If rebase fails (conflicts), abort and block the feature to prevent repeated merge_conflict failures
-          if (rebaseMsg.includes('conflict') || rebaseMsg.includes('CONFLICT')) {
-            logger.warn(`Git rebase encountered conflicts for ${branchName}, aborting rebase`);
+        } catch (mergeError) {
+          const mergeMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
+          // If merge fails (conflicts), abort and block the feature to prevent repeated merge_conflict failures
+          if (mergeMsg.includes('conflict') || mergeMsg.includes('CONFLICT')) {
+            logger.warn(`Git merge encountered conflicts for ${branchName}, aborting merge`);
             try {
-              await execAsync('git rebase --abort', { cwd: workDir, timeout: 10000 });
+              await execAsync('git merge --abort', { cwd: workDir, timeout: 10000 });
             } catch {
               // Abort failed — not much we can do
             }
             const reason =
-              `Pre-flight rebase onto origin/dev has conflicts — branch "${branchName}" must be manually rebased before the agent can proceed. ` +
+              `Pre-flight merge with origin/dev has conflicts — branch "${branchName}" must be manually merged before the agent can proceed. ` +
               `Blocking feature to prevent repeated merge_conflict failures.`;
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
@@ -772,11 +738,11 @@ export class ExecutionService {
             this.events.emit('feature:error', { projectPath, featureId, error: reason });
             return;
           } else {
-            logger.warn(`Git rebase failed for ${branchName}: ${rebaseMsg}`);
+            logger.warn(`Git merge failed for ${branchName}: ${mergeMsg}`);
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
               branchName,
-              message: `Git rebase failed: ${rebaseMsg}. Continuing with agent execution.`,
+              message: `Git merge failed: ${mergeMsg}. Continuing with agent execution.`,
               warning: true,
             });
           }
