@@ -7,6 +7,7 @@
  */
 
 import { exec, execFile } from 'child_process';
+import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
@@ -279,4 +280,155 @@ export async function checkAndRecoverUncommittedWork(
     logger.error(`[PostAgentHook] Recovery failed for feature ${feature.id}: ${fullError}`);
     return result;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Nested worktree recovery
+// ---------------------------------------------------------------------------
+
+export interface NestedWorktreeRecoveryResult {
+  /** Whether any .claude/worktrees/agent-* directories were discovered */
+  found: boolean;
+  /** Absolute paths of nested worktrees that had uncommitted changes */
+  worktreesWithChanges: string[];
+  /** Relative paths of files that were copied back to the main worktree */
+  copiedFiles: string[];
+  /** Non-fatal errors encountered during scan/copy */
+  errors: string[];
+}
+
+/**
+ * Scan for nested Claude agent worktrees inside a main worktree and copy any
+ * uncommitted work back to the main worktree so the normal recovery flow can
+ * commit and push it.
+ *
+ * The Claude Agent SDK creates worktrees at `.claude/worktrees/agent-{id}/`
+ * inside whatever worktree it is spawned from.  If such an agent completes
+ * work but fails to commit, those changes are invisible to the main worktree's
+ * git status — this helper bridges that gap.
+ *
+ * Steps:
+ * 1. Look for `.claude/worktrees/agent-{id}/` directories inside mainWorktreePath
+ * 2. Run `git status --short` on each
+ * 3. Copy every modified/added file back to mainWorktreePath (preserving relative path)
+ * 4. Clean up the nested worktree directory after copying
+ *
+ * @param mainWorktreePath - Absolute path to the main (outer) worktree
+ */
+export async function recoverNestedWorktreeWork(
+  mainWorktreePath: string
+): Promise<NestedWorktreeRecoveryResult> {
+  const result: NestedWorktreeRecoveryResult = {
+    found: false,
+    worktreesWithChanges: [],
+    copiedFiles: [],
+    errors: [],
+  };
+
+  try {
+    const claudeWorktreesDir = path.join(mainWorktreePath, '.claude', 'worktrees');
+
+    // Fast-path: directory doesn't exist — no nested worktrees ever created
+    try {
+      await fs.access(claudeWorktreesDir);
+    } catch {
+      return result;
+    }
+
+    const entries = await fs.readdir(claudeWorktreesDir, { withFileTypes: true });
+    const agentDirs = entries
+      .filter((e) => e.isDirectory() && e.name.startsWith('agent-'))
+      .map((e) => path.join(claudeWorktreesDir, e.name));
+
+    if (agentDirs.length === 0) {
+      return result;
+    }
+
+    result.found = true;
+    logger.info(`[WorktreeRecovery] Found ${agentDirs.length} nested agent worktree(s) to scan`);
+
+    for (const nestedWorktreePath of agentDirs) {
+      try {
+        const { stdout: statusOutput } = await execAsync('git status --short', {
+          cwd: nestedWorktreePath,
+          env: execEnv,
+        });
+
+        if (!statusOutput.trim()) {
+          logger.info(
+            `[WorktreeRecovery] Nested worktree ${nestedWorktreePath} is clean — skipping`
+          );
+          continue;
+        }
+
+        logger.info(
+          `[WorktreeRecovery] Nested worktree ${nestedWorktreePath} has uncommitted changes — copying to main worktree`
+        );
+        logger.debug(`[WorktreeRecovery] Uncommitted changes:\n${statusOutput}`);
+        result.worktreesWithChanges.push(nestedWorktreePath);
+
+        // Parse file paths from `git status --short` output.
+        // Format: "XY filename" or "XY old -> new" for renames.
+        // Status codes: M=modified, A=added, D=deleted, R=renamed, ??=untracked.
+        const changedFiles = statusOutput
+          .trim()
+          .split('\n')
+          .map((line) => {
+            const rest = line.slice(3).trim(); // strip 2-char status code + space
+            // Handle rename: "old-path -> new-path" — use the new path
+            if (rest.includes(' -> ')) {
+              return rest.split(' -> ').pop()!.trim();
+            }
+            return rest;
+          })
+          .filter(Boolean);
+
+        for (const relPath of changedFiles) {
+          const srcPath = path.join(nestedWorktreePath, relPath);
+          const destPath = path.join(mainWorktreePath, relPath);
+
+          try {
+            // Skip files that no longer exist in the nested worktree (e.g. deletions)
+            try {
+              await fs.access(srcPath);
+            } catch {
+              logger.debug(`[WorktreeRecovery] Skipping absent file (likely deleted): ${relPath}`);
+              continue;
+            }
+
+            await fs.mkdir(path.dirname(destPath), { recursive: true });
+            await fs.copyFile(srcPath, destPath);
+            result.copiedFiles.push(relPath);
+            logger.info(`[WorktreeRecovery] Copied ${relPath} -> main worktree`);
+          } catch (copyError) {
+            const msg = copyError instanceof Error ? copyError.message : String(copyError);
+            logger.error(`[WorktreeRecovery] Failed to copy ${relPath}: ${msg}`);
+            result.errors.push(`copy ${relPath}: ${msg}`);
+          }
+        }
+
+        // Clean up the nested worktree after copying
+        try {
+          await fs.rm(nestedWorktreePath, { recursive: true, force: true });
+          logger.info(`[WorktreeRecovery] Cleaned up nested worktree at ${nestedWorktreePath}`);
+        } catch (cleanupError) {
+          const msg = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
+          logger.warn(`[WorktreeRecovery] Could not clean up ${nestedWorktreePath}: ${msg}`);
+          // Non-fatal — leave cleanup for next run
+        }
+      } catch (worktreeError) {
+        const msg = worktreeError instanceof Error ? worktreeError.message : String(worktreeError);
+        logger.error(
+          `[WorktreeRecovery] Error processing nested worktree ${nestedWorktreePath}: ${msg}`
+        );
+        result.errors.push(`process ${nestedWorktreePath}: ${msg}`);
+      }
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error(`[WorktreeRecovery] Failed to scan for nested worktrees: ${msg}`);
+    result.errors.push(`scan: ${msg}`);
+  }
+
+  return result;
 }

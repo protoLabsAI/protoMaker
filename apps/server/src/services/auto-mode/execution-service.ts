@@ -41,7 +41,12 @@ import {
   type DedupChecker,
   type IndexRebuilder,
 } from '@protolabsai/utils';
-import { resolveModelString, resolvePhaseModel, DEFAULT_MODELS } from '@protolabsai/model-resolver';
+import {
+  resolveModelString,
+  resolvePhaseModel,
+  resolvePhaseTemperature,
+  DEFAULT_MODELS,
+} from '@protolabsai/model-resolver';
 import { getFeatureDir } from '@protolabsai/platform';
 import { rebaseWorktreeOnMain, extractTitleFromDescription } from '@protolabsai/git-utils';
 import { exec } from 'child_process';
@@ -60,6 +65,7 @@ import {
   agentExecutionsTotal,
 } from '../../lib/prometheus.js';
 import { createAutoModeOptions, validateWorkingDirectory } from '../../lib/sdk-options.js';
+import { PromptBuilder } from '../../lib/prompt-builder.js';
 import { FeatureLoader } from '../feature-loader.js';
 import type { SettingsService } from '../settings-service.js';
 import type { AuthorityService } from '../authority-service.js';
@@ -76,10 +82,11 @@ import { RecoveryService } from '../recovery-service.js';
 import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js';
 import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
-import { writeLock, removeLock } from '../../lib/worktree-lock.js';
+import { writeLock } from '../../lib/worktree-lock.js';
 import { getReactiveSpawnerService } from '../reactive-spawner-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
+import { PostExecutionMiddleware } from './post-execution-middleware.js';
 import type {
   RunningFeature,
   ParsedTask,
@@ -257,6 +264,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 
 export class ExecutionService {
   private readonly typedEventBus: TypedEventBus;
+  private readonly postExecutionMiddleware: PostExecutionMiddleware;
 
   constructor(
     private readonly events: EventEmitter,
@@ -272,6 +280,7 @@ export class ExecutionService {
     private readonly callbacks: IAutoModeCallbacks
   ) {
     this.typedEventBus = new TypedEventBus(events);
+    this.postExecutionMiddleware = new PostExecutionMiddleware();
   }
 
   // ---------------------------------------------------------------------------
@@ -593,6 +602,15 @@ export class ExecutionService {
         '[AutoMode]'
       );
 
+      // Load workflow settings to determine the tool profile for this run
+      const workflowSettings = await getWorkflowSettings(
+        projectPath,
+        this.settingsService,
+        '[AutoMode]'
+      );
+      // Default to 'execution' profile for feature agents; project settings may override to 'full'
+      const featureToolProfile: 'full' | 'execution' = workflowSettings.toolProfile ?? 'execution';
+
       // Get customized prompts from settings
       const prompts = await getPromptCustomization(this.settingsService, '[AutoMode]');
 
@@ -621,7 +639,12 @@ export class ExecutionService {
         logger.info(`Using continuation prompt for feature ${featureId}`);
       } else {
         // Normal flow: build prompt with planning phase
-        const featurePrompt = this.buildFeaturePrompt(feature, prompts.taskExecution);
+        // Context files are passed as the CONTEXT section in the PromptBuilder
+        const featurePrompt = this.buildFeaturePrompt(
+          feature,
+          prompts.taskExecution,
+          combinedSystemPrompt || undefined
+        );
         const planningPrefix = await this.getPlanningPromptPrefix(feature);
         prompt = planningPrefix + featurePrompt;
 
@@ -774,6 +797,8 @@ export class ExecutionService {
           maxTurns,
           resume: resumeSessionId,
           providerId: modelResult.providerId,
+          phase: 'EXECUTE', // Apply EXECUTE phase temperature (deterministic implementation)
+          toolProfile: featureToolProfile,
         }
       );
 
@@ -1427,26 +1452,24 @@ export class ExecutionService {
       }
     } finally {
       logger.info(`Feature ${featureId} execution ended, cleaning up runningFeatures`);
-      abortController?.abort();
-
-      // Remove worktree lock file now that the agent has exited
-      const worktreeForCleanup = tempRunningFeature.worktreePath;
-      if (worktreeForCleanup) {
-        await removeLock(worktreeForCleanup);
-      }
-
-      // Only delete if the current entry is still the one we created
-      // (delegated executions may have created a new entry)
-      const current = this.runningFeatures.get(featureId);
-      if (current === tempRunningFeature) {
-        this.runningFeatures.delete(featureId);
-        activeAgentsCount.set(this.runningFeatures.size);
-      }
-
-      // Update execution state after feature completes
-      if (this.callbacks.getAutoLoopRunning() && projectPath) {
-        await this.callbacks.saveExecutionState(projectPath);
-      }
+      await this.postExecutionMiddleware.run({
+        featureId,
+        projectPath,
+        feature,
+        tempRunningFeature,
+        runningFeatures: this.runningFeatures,
+        abortController,
+        getAutoLoopRunning: () => this.callbacks.getAutoLoopRunning(),
+        saveExecutionState: (p) => this.callbacks.saveExecutionState(p),
+        getRecoveryBaseBranch: this.settingsService
+          ? async () => {
+              const settings = await this.settingsService!.getGlobalSettings();
+              return settings.gitWorkflow?.prBaseBranch;
+            }
+          : undefined,
+        updateFeatureStatus: (p, id, status) => this.callbacks.updateFeatureStatus(p, id, status),
+        emitEvent: (eventType, data) => this.typedEventBus.emitAutoModeEvent(eventType, data),
+      });
     }
   }
 
@@ -1687,6 +1710,7 @@ export class ExecutionService {
         autoLoadClaudeMd,
         thinkingLevel: feature.thinkingLevel,
         providerId: modelResult.providerId,
+        phase: 'REVIEW', // Apply REVIEW phase temperature (balanced evaluation)
       }
     );
 
@@ -1805,6 +1829,24 @@ Complete the pipeline step instructions above. Review the previous work and appl
       resume?: string;
       /** Provider ID from PhaseModelEntry for explicit provider lookup */
       providerId?: string;
+      /**
+       * Pipeline phase for temperature resolution.
+       * PLAN=1.0 (creative), EXECUTE=0 (deterministic), REVIEW=0.5 (balanced).
+       * When provided, the phase temperature from WorkflowSettings.phaseTemperatures is applied.
+       */
+      phase?: 'PLAN' | 'EXECUTE' | 'REVIEW';
+      /**
+       * Middleware hook called immediately before the model call.
+       * Return a non-null string to inject additional context into the prompt.
+       * Return null to leave the prompt unchanged.
+       */
+      preModelCallHook?: () => Promise<string | null>;
+      /**
+       * Tool profile to use for this agent run.
+       * - 'full': full tool access including Task/Skill (default)
+       * - 'execution': execution-focused tools only (no Task/Skill)
+       */
+      toolProfile?: 'full' | 'execution';
     }
   ): Promise<void> {
     const finalProjectPath = options?.projectPath || projectPath;
@@ -1911,6 +1953,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       maxTurns: options?.maxTurns,
       resume: options?.resume,
       projectPath, // Enable worktree write guard
+      toolProfile: options?.toolProfile, // Tool profile for filtering agent tools
     });
 
     // Extract model, maxTurns, and allowedTools from SDK options
@@ -2000,6 +2043,27 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       ? stripProviderPrefix(providerResolvedModel)
       : bareModel;
 
+    // Resolve phase temperature from workflow settings when a phase is specified.
+    // This applies per-phase temperature config (PLAN=1.0, EXECUTE=0, REVIEW=0.5) to control
+    // model creativity vs determinism. Falls back to provider default when no phase or config.
+    let phaseTemperature: number | undefined;
+    if (options?.phase) {
+      const wfSettingsForTemp = await getWorkflowSettings(
+        finalProjectPath,
+        this.settingsService,
+        '[AutoMode]'
+      );
+      phaseTemperature = resolvePhaseTemperature(
+        options.phase,
+        wfSettingsForTemp.phaseTemperatures
+      );
+      if (phaseTemperature !== undefined) {
+        logger.info(
+          `[AutoMode] Phase temperature for ${options.phase}: ${phaseTemperature} (feature ${featureId})`
+        );
+      }
+    }
+
     const executeOptions: ExecuteOptions = {
       prompt: promptContent,
       model: effectiveBareModel,
@@ -2015,7 +2079,18 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
       sdkSessionId: options?.resume, // Forward resume session ID for session continuity
       hooks: sdkOptions.hooks as ExecuteOptions['hooks'], // Worktree write guard
+      ...(phaseTemperature !== undefined && { temperature: phaseTemperature }), // Phase temperature
     };
+
+    // Middleware hook point: allow callers to inject additional context before the model call.
+    // The hook returns a string to prepend to the prompt, or null to leave it unchanged.
+    if (options?.preModelCallHook) {
+      const hookContext = await options.preModelCallHook();
+      if (hookContext) {
+        executeOptions.prompt = `${hookContext}\n\n---\n\n${executeOptions.prompt}`;
+        logger.info('[Middleware] preModelCallHook injected context into prompt');
+      }
+    }
 
     // Execute via provider
     logger.info(`Starting stream for feature ${featureId}...`);
@@ -2836,32 +2911,50 @@ After generating the revised spec, output:
   }
 
   /**
-   * Build the main feature implementation prompt.
+   * Build the main feature implementation prompt using PromptBuilder.
+   *
+   * Sections:
+   * - CONTEXT (all phases): Optional project context files from loadContextFiles()
+   * - FEATURE_HEADER (all phases): Feature ID, title, description
+   * - SPEC (all phases): Feature specification when present
+   * - IMAGES (all phases): Context image attachments when present
+   * - CODING_STANDARDS (EXECUTE): Implementation instructions / coding standards
+   * - VERIFICATION (EXECUTE): Playwright verification instructions when tests are enabled
+   *
+   * @param feature              The feature to build a prompt for
+   * @param taskExecutionPrompts Implementation and verification instruction templates
+   * @param contextContent       Optional project context from loadContextFiles() — becomes
+   *                             the CONTEXT section when provided
    */
   buildFeaturePrompt(
     feature: Feature,
     taskExecutionPrompts: {
       implementationInstructions: string;
       playwrightVerificationInstructions: string;
-    }
+    },
+    contextContent?: string
   ): string {
     const title = extractTitleFromDescription(feature.description);
 
-    let prompt = `## Feature Implementation Task
+    const builder = new PromptBuilder('EXECUTE');
 
-**Feature ID:** ${feature.id}
-**Title:** ${title}
-**Description:** ${feature.description}
-`;
-
-    if (feature.spec) {
-      prompt += `
-**Specification:**
-${feature.spec}
-`;
+    // CONTEXT section — project files loaded via loadContextFiles() (all phases)
+    if (contextContent) {
+      builder.addSection('CONTEXT', contextContent);
     }
 
-    // Add images note (like old implementation)
+    // FEATURE_HEADER section — feature identity (all phases)
+    builder.addSection(
+      'FEATURE_HEADER',
+      `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${feature.description}\n`
+    );
+
+    // SPEC section — feature specification when present (all phases)
+    if (feature.spec) {
+      builder.addSection('SPEC', `\n**Specification:**\n${feature.spec}\n`);
+    }
+
+    // IMAGES section — context image attachments when present (all phases)
     if (feature.imagePaths && feature.imagePaths.length > 0) {
       const imagesList = feature.imagePaths
         .map((img, idx) => {
@@ -2875,26 +2968,27 @@ ${feature.spec}
         })
         .join('\n');
 
-      prompt += `
-**Context Images Attached:**
-The user has attached ${feature.imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:
-
-${imagesList}
-
-You can use the Read tool to view these images at any time during implementation. Review them carefully before implementing.
-`;
+      builder.addSection(
+        'IMAGES',
+        `\n**Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:\n\n${imagesList}\n\nYou can use the Read tool to view these images at any time during implementation. Review them carefully before implementing.\n`
+      );
     }
 
-    // Add verification instructions based on testing mode
-    if (feature.skipTests) {
-      // Manual verification - just implement the feature
-      prompt += `\n${taskExecutionPrompts.implementationInstructions}`;
-    } else {
-      // Automated testing - implement and verify with Playwright
-      prompt += `\n${taskExecutionPrompts.implementationInstructions}\n\n${taskExecutionPrompts.playwrightVerificationInstructions}`;
+    // CODING_STANDARDS section — implementation instructions (EXECUTE phase only)
+    builder.addSection('CODING_STANDARDS', `\n${taskExecutionPrompts.implementationInstructions}`, [
+      'EXECUTE',
+    ]);
+
+    // VERIFICATION section — Playwright verification (EXECUTE phase only, skipped when skipTests)
+    if (!feature.skipTests) {
+      builder.addSection(
+        'VERIFICATION',
+        `\n\n${taskExecutionPrompts.playwrightVerificationInstructions}`,
+        ['EXECUTE']
+      );
     }
 
-    return prompt;
+    return builder.build();
   }
 
   /**
@@ -2931,7 +3025,11 @@ You can use the Read tool to view these images at any time during implementation
   }
 
   /**
-   * Build a focused prompt for a single task in multi-agent execution.
+   * Build a focused prompt for a single task in multi-agent execution using PromptBuilder.
+   *
+   * Sections:
+   * - TASK_PROMPT (EXECUTE): The fully substituted task prompt template, including task context,
+   *   completed/remaining task lists, user feedback, and plan content.
    */
   private buildTaskPrompt(
     task: ParsedTask,
@@ -2964,18 +3062,22 @@ You can use the Read tool to view these images at any time during implementation
     // Build user feedback string
     const userFeedbackStr = userFeedback ? `### User Feedback\n${userFeedback}\n` : '';
 
-    // Use centralized template with variable substitution
-    let prompt = taskPromptTemplate;
-    prompt = prompt.replace(/\{\{taskId\}\}/g, task.id);
-    prompt = prompt.replace(/\{\{taskDescription\}\}/g, task.description);
-    prompt = prompt.replace(/\{\{taskFilePath\}\}/g, task.filePath || '');
-    prompt = prompt.replace(/\{\{taskPhase\}\}/g, task.phase || '');
-    prompt = prompt.replace(/\{\{completedTasks\}\}/g, completedTasksStr);
-    prompt = prompt.replace(/\{\{remainingTasks\}\}/g, remainingTasksStr);
-    prompt = prompt.replace(/\{\{userFeedback\}\}/g, userFeedbackStr);
-    prompt = prompt.replace(/\{\{planContent\}\}/g, planContent);
+    // Perform template variable substitution
+    let taskPrompt = taskPromptTemplate;
+    taskPrompt = taskPrompt.replace(/\{\{taskId\}\}/g, task.id);
+    taskPrompt = taskPrompt.replace(/\{\{taskDescription\}\}/g, task.description);
+    taskPrompt = taskPrompt.replace(/\{\{taskFilePath\}\}/g, task.filePath || '');
+    taskPrompt = taskPrompt.replace(/\{\{taskPhase\}\}/g, task.phase || '');
+    taskPrompt = taskPrompt.replace(/\{\{completedTasks\}\}/g, completedTasksStr);
+    taskPrompt = taskPrompt.replace(/\{\{remainingTasks\}\}/g, remainingTasksStr);
+    taskPrompt = taskPrompt.replace(/\{\{userFeedback\}\}/g, userFeedbackStr);
+    taskPrompt = taskPrompt.replace(/\{\{planContent\}\}/g, planContent);
 
-    return prompt;
+    // Assemble via PromptBuilder — TASK_PROMPT is an EXECUTE-phase section
+    const builder = new PromptBuilder('EXECUTE');
+    builder.addSection('TASK_PROMPT', taskPrompt, ['EXECUTE']);
+
+    return builder.build();
   }
 
   /**

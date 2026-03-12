@@ -49,6 +49,13 @@ interface Message {
   isError?: boolean;
 }
 
+interface QueuedMessage {
+  id: string;
+  message: string;
+  sender: string;
+  timestamp: string;
+}
+
 interface QueuedPrompt {
   id: string;
   message: string;
@@ -56,6 +63,81 @@ interface QueuedPrompt {
   model?: string;
   thinkingLevel?: ThinkingLevel;
   addedAt: string;
+  sender?: string;
+}
+
+/**
+ * MessageQueueMiddleware
+ *
+ * Provides middleware semantics for the agent's prompt queue:
+ * - Accepts messages while the agent is busy (via enqueue)
+ * - Injects queued messages as context before the next model call (via inject)
+ * - Clears the queue after injection
+ * - Logs all queue operations for debugging
+ */
+export class MessageQueueMiddleware {
+  private queue: QueuedMessage[] = [];
+  private logger = createLogger('MessageQueueMiddleware');
+
+  /**
+   * Enqueue a message with timestamp and sender context.
+   * Call this when a message arrives while the agent is busy.
+   */
+  enqueue(id: string, message: string, sender: string = 'user'): void {
+    const item: QueuedMessage = {
+      id,
+      message,
+      sender,
+      timestamp: new Date().toISOString(),
+    };
+    this.queue.push(item);
+    this.logger.info(
+      `[Queue] Enqueued message from "${sender}" (id: ${id}, queue size: ${this.queue.length})`
+    );
+  }
+
+  /**
+   * Remove a specific message from the context queue by id.
+   * Used to exclude the item about to be processed as the primary task
+   * so it is not duplicated in the injected context.
+   */
+  remove(id: string): boolean {
+    const index = this.queue.findIndex((item) => item.id === id);
+    if (index !== -1) {
+      this.queue.splice(index, 1);
+      this.logger.info(
+        `[Queue] Removed message ${id} from context queue (queue size: ${this.queue.length})`
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Inject all queued messages as a formatted context string and clear the queue.
+   * Returns null if the queue is empty.
+   * Call this before each model call to prepend pending-message context.
+   */
+  inject(): string | null {
+    if (this.queue.length === 0) return null;
+
+    const count = this.queue.length;
+    const lines = this.queue.map((item) => `[${item.timestamp}] ${item.sender}: ${item.message}`);
+    const context = `The following messages were received while the agent was busy:\n${lines.join('\n')}`;
+
+    this.queue = [];
+    this.logger.info(`[Queue] Injected ${count} message(s) as context, queue cleared`);
+
+    return context;
+  }
+
+  hasMessages(): boolean {
+    return this.queue.length > 0;
+  }
+
+  getQueueSize(): number {
+    return this.queue.length;
+  }
 }
 
 interface Session {
@@ -68,6 +150,7 @@ interface Session {
   reasoningEffort?: ReasoningEffort; // Reasoning effort for Codex models
   sdkSessionId?: string; // Claude SDK session ID for conversation continuity
   promptQueue: QueuedPrompt[]; // Queue of prompts to auto-run after current task
+  messageQueueMiddleware: MessageQueueMiddleware; // Middleware for context injection before model calls
   featureContext?: {
     projectPath: string;
     featureId: string;
@@ -155,6 +238,7 @@ export class AgentService {
         workingDirectory: resolvedWorkingDirectory,
         sdkSessionId: sessionMetadata?.sdkSessionId, // Load persisted SDK session ID
         promptQueue,
+        messageQueueMiddleware: new MessageQueueMiddleware(),
       });
     }
 
@@ -454,9 +538,17 @@ export class AgentService {
         claudeCompatibleProvider, // Pass provider for alternative endpoint configuration (GLM, MiniMax, etc.)
       };
 
+      // Inject any queued messages as context before the model call (middleware hook point).
+      // Messages that arrived while the agent was busy are prepended as context so the
+      // agent is aware of additional pending work before it begins execution.
+      const queuedContext = session.messageQueueMiddleware.inject();
+      const messageWithContext = queuedContext
+        ? `${queuedContext}\n\n---\n\nCurrent task:\n${message}`
+        : message;
+
       // Build prompt content with images
       const { content: promptContent } = await buildPromptWithImages(
-        message,
+        messageWithContext,
         imagePaths,
         undefined, // no workDir for agent service
         true // include image paths in text
@@ -876,10 +968,15 @@ export class AgentService {
       model: prompt.model,
       thinkingLevel: prompt.thinkingLevel,
       addedAt: new Date().toISOString(),
+      sender: 'user',
     };
 
     session.promptQueue.push(queuedPrompt);
     await this.saveQueueState(sessionId, session.promptQueue);
+
+    // Also enqueue to the message queue middleware so it can be injected as
+    // context before the next model call (provides awareness of pending tasks).
+    session.messageQueueMiddleware.enqueue(queuedPrompt.id, queuedPrompt.message, 'user');
 
     // Emit queue update event
     this.emitAgentEvent(sessionId, {
@@ -990,6 +1087,11 @@ export class AgentService {
 
     const nextPrompt = session.promptQueue.shift();
     if (!nextPrompt) return;
+
+    // Remove from the middleware context queue so the task being processed
+    // doesn't appear in its own injected context (it will be the "Current task").
+    // Any remaining middleware items will be injected as context by sendMessage.
+    session.messageQueueMiddleware.remove(nextPrompt.id);
 
     await this.saveQueueState(sessionId, session.promptQueue);
 
