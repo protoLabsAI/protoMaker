@@ -60,6 +60,7 @@ import {
   agentExecutionsTotal,
 } from '../../lib/prometheus.js';
 import { createAutoModeOptions, validateWorkingDirectory } from '../../lib/sdk-options.js';
+import { PromptBuilder } from '../../lib/prompt-builder.js';
 import { FeatureLoader } from '../feature-loader.js';
 import type { SettingsService } from '../settings-service.js';
 import type { AuthorityService } from '../authority-service.js';
@@ -625,7 +626,12 @@ export class ExecutionService {
         logger.info(`Using continuation prompt for feature ${featureId}`);
       } else {
         // Normal flow: build prompt with planning phase
-        const featurePrompt = this.buildFeaturePrompt(feature, prompts.taskExecution);
+        // Context files are passed as the CONTEXT section in the PromptBuilder
+        const featurePrompt = this.buildFeaturePrompt(
+          feature,
+          prompts.taskExecution,
+          combinedSystemPrompt || undefined
+        );
         const planningPrefix = await this.getPlanningPromptPrefix(feature);
         prompt = planningPrefix + featurePrompt;
 
@@ -2836,32 +2842,50 @@ After generating the revised spec, output:
   }
 
   /**
-   * Build the main feature implementation prompt.
+   * Build the main feature implementation prompt using PromptBuilder.
+   *
+   * Sections:
+   * - CONTEXT (all phases): Optional project context files from loadContextFiles()
+   * - FEATURE_HEADER (all phases): Feature ID, title, description
+   * - SPEC (all phases): Feature specification when present
+   * - IMAGES (all phases): Context image attachments when present
+   * - CODING_STANDARDS (EXECUTE): Implementation instructions / coding standards
+   * - VERIFICATION (EXECUTE): Playwright verification instructions when tests are enabled
+   *
+   * @param feature              The feature to build a prompt for
+   * @param taskExecutionPrompts Implementation and verification instruction templates
+   * @param contextContent       Optional project context from loadContextFiles() — becomes
+   *                             the CONTEXT section when provided
    */
   buildFeaturePrompt(
     feature: Feature,
     taskExecutionPrompts: {
       implementationInstructions: string;
       playwrightVerificationInstructions: string;
-    }
+    },
+    contextContent?: string
   ): string {
     const title = extractTitleFromDescription(feature.description);
 
-    let prompt = `## Feature Implementation Task
+    const builder = new PromptBuilder('EXECUTE');
 
-**Feature ID:** ${feature.id}
-**Title:** ${title}
-**Description:** ${feature.description}
-`;
-
-    if (feature.spec) {
-      prompt += `
-**Specification:**
-${feature.spec}
-`;
+    // CONTEXT section — project files loaded via loadContextFiles() (all phases)
+    if (contextContent) {
+      builder.addSection('CONTEXT', contextContent);
     }
 
-    // Add images note (like old implementation)
+    // FEATURE_HEADER section — feature identity (all phases)
+    builder.addSection(
+      'FEATURE_HEADER',
+      `## Feature Implementation Task\n\n**Feature ID:** ${feature.id}\n**Title:** ${title}\n**Description:** ${feature.description}\n`
+    );
+
+    // SPEC section — feature specification when present (all phases)
+    if (feature.spec) {
+      builder.addSection('SPEC', `\n**Specification:**\n${feature.spec}\n`);
+    }
+
+    // IMAGES section — context image attachments when present (all phases)
     if (feature.imagePaths && feature.imagePaths.length > 0) {
       const imagesList = feature.imagePaths
         .map((img, idx) => {
@@ -2875,26 +2899,27 @@ ${feature.spec}
         })
         .join('\n');
 
-      prompt += `
-**Context Images Attached:**
-The user has attached ${feature.imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:
-
-${imagesList}
-
-You can use the Read tool to view these images at any time during implementation. Review them carefully before implementing.
-`;
+      builder.addSection(
+        'IMAGES',
+        `\n**Context Images Attached:**\nThe user has attached ${feature.imagePaths.length} image(s) for context. These images are provided both visually (in the initial message) and as files you can read:\n\n${imagesList}\n\nYou can use the Read tool to view these images at any time during implementation. Review them carefully before implementing.\n`
+      );
     }
 
-    // Add verification instructions based on testing mode
-    if (feature.skipTests) {
-      // Manual verification - just implement the feature
-      prompt += `\n${taskExecutionPrompts.implementationInstructions}`;
-    } else {
-      // Automated testing - implement and verify with Playwright
-      prompt += `\n${taskExecutionPrompts.implementationInstructions}\n\n${taskExecutionPrompts.playwrightVerificationInstructions}`;
+    // CODING_STANDARDS section — implementation instructions (EXECUTE phase only)
+    builder.addSection('CODING_STANDARDS', `\n${taskExecutionPrompts.implementationInstructions}`, [
+      'EXECUTE',
+    ]);
+
+    // VERIFICATION section — Playwright verification (EXECUTE phase only, skipped when skipTests)
+    if (!feature.skipTests) {
+      builder.addSection(
+        'VERIFICATION',
+        `\n\n${taskExecutionPrompts.playwrightVerificationInstructions}`,
+        ['EXECUTE']
+      );
     }
 
-    return prompt;
+    return builder.build();
   }
 
   /**
@@ -2931,7 +2956,11 @@ You can use the Read tool to view these images at any time during implementation
   }
 
   /**
-   * Build a focused prompt for a single task in multi-agent execution.
+   * Build a focused prompt for a single task in multi-agent execution using PromptBuilder.
+   *
+   * Sections:
+   * - TASK_PROMPT (EXECUTE): The fully substituted task prompt template, including task context,
+   *   completed/remaining task lists, user feedback, and plan content.
    */
   private buildTaskPrompt(
     task: ParsedTask,
@@ -2964,18 +2993,22 @@ You can use the Read tool to view these images at any time during implementation
     // Build user feedback string
     const userFeedbackStr = userFeedback ? `### User Feedback\n${userFeedback}\n` : '';
 
-    // Use centralized template with variable substitution
-    let prompt = taskPromptTemplate;
-    prompt = prompt.replace(/\{\{taskId\}\}/g, task.id);
-    prompt = prompt.replace(/\{\{taskDescription\}\}/g, task.description);
-    prompt = prompt.replace(/\{\{taskFilePath\}\}/g, task.filePath || '');
-    prompt = prompt.replace(/\{\{taskPhase\}\}/g, task.phase || '');
-    prompt = prompt.replace(/\{\{completedTasks\}\}/g, completedTasksStr);
-    prompt = prompt.replace(/\{\{remainingTasks\}\}/g, remainingTasksStr);
-    prompt = prompt.replace(/\{\{userFeedback\}\}/g, userFeedbackStr);
-    prompt = prompt.replace(/\{\{planContent\}\}/g, planContent);
+    // Perform template variable substitution
+    let taskPrompt = taskPromptTemplate;
+    taskPrompt = taskPrompt.replace(/\{\{taskId\}\}/g, task.id);
+    taskPrompt = taskPrompt.replace(/\{\{taskDescription\}\}/g, task.description);
+    taskPrompt = taskPrompt.replace(/\{\{taskFilePath\}\}/g, task.filePath || '');
+    taskPrompt = taskPrompt.replace(/\{\{taskPhase\}\}/g, task.phase || '');
+    taskPrompt = taskPrompt.replace(/\{\{completedTasks\}\}/g, completedTasksStr);
+    taskPrompt = taskPrompt.replace(/\{\{remainingTasks\}\}/g, remainingTasksStr);
+    taskPrompt = taskPrompt.replace(/\{\{userFeedback\}\}/g, userFeedbackStr);
+    taskPrompt = taskPrompt.replace(/\{\{planContent\}\}/g, planContent);
 
-    return prompt;
+    // Assemble via PromptBuilder — TASK_PROMPT is an EXECUTE-phase section
+    const builder = new PromptBuilder('EXECUTE');
+    builder.addSection('TASK_PROMPT', taskPrompt, ['EXECUTE']);
+
+    return builder.build();
   }
 
   /**
