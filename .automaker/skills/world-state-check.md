@@ -1,7 +1,7 @@
 ---
 name: world-state-check
 emoji: 🌍
-description: Quick situational awareness procedure. What to check, in what order, and what actions to take based on findings.
+description: Quick situational awareness procedure for Ava. Use at session start, after returning from idle, or when unsure of current board state. Trigger on "what is the status", "check board", "situational awareness", "what needs attention", or "check current state".
 metadata:
   author: agent
   created: 2026-02-12T02:11:51.978Z
@@ -33,18 +33,18 @@ gh pr list --state open --json number,title,statusCheckRollup,autoMergeRequest
 
 ## Decision Matrix
 
-| Signal | Condition | Action |
-|--------|-----------|--------|
-| Feature in review + PR merged | Status drift | `move_feature` → done |
-| Feature in_progress + no agent | Orphaned | Reset to backlog |
-| PR checks passing + no auto-merge | Stuck pipeline | `gh pr merge <n> --auto --squash` |
-| PR with unresolved threads | CodeRabbit blocking | `resolve_review_threads` or GraphQL batch |
-| PR format failure | Agent output dirty | Format from inside worktree, commit, push |
-| PR build failure | TypeScript error | Diagnose, fix, push |
-| PR behind main | Stale branch | Update branch |
-| Agent stuck > 30 min | Hung agent | Stop and reset feature |
-| Auto-mode stopped + backlog > 0 | Idle capacity | Start auto-mode |
-| Types PR just merged | Stale dist risk | `npm run build:packages` |
+| Signal                            | Condition           | Action                                    |
+| --------------------------------- | ------------------- | ----------------------------------------- |
+| Feature in review + PR merged     | Status drift        | `move_feature` → done                     |
+| Feature in_progress + no agent    | Orphaned            | Reset to backlog                          |
+| PR checks passing + no auto-merge | Stuck pipeline      | `gh pr merge <n> --auto --squash`         |
+| PR with unresolved threads        | CodeRabbit blocking | `resolve_review_threads` or GraphQL batch |
+| PR format failure                 | Agent output dirty  | Format from inside worktree, commit, push |
+| PR build failure                  | TypeScript error    | Diagnose, fix, push                       |
+| PR behind main                    | Stale branch        | Update branch                             |
+| Agent stuck > 30 min              | Hung agent          | Stop and reset feature                    |
+| Auto-mode stopped + backlog > 0   | Idle capacity       | Start auto-mode                           |
+| Types PR just merged              | Stale dist risk     | `npm run build:packages`                  |
 
 ## Deep Check (2 minutes, periodic)
 
@@ -68,11 +68,11 @@ mcp: get_capacity_metrics → utilization?
 
 ## Monitoring Cadence
 
-| Check | Frequency | When |
-|-------|-----------|------|
-| Quick check | Every activation | Always first |
-| Deep check | Every 30 min | During long sessions |
-| Full audit | Daily | Start of day / new session |
+| Check       | Frequency        | When                       |
+| ----------- | ---------------- | -------------------------- |
+| Quick check | Every activation | Always first               |
+| Deep check  | Every 30 min     | During long sessions       |
+| Full audit  | Daily            | Start of day / new session |
 
 ## Red Flags (Immediate Action)
 

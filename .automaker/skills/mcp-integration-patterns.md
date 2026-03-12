@@ -1,7 +1,7 @@
 ---
 name: mcp-integration-patterns
 emoji: 🔌
-description: How to add MCP tools to the Automaker MCP server — tool definition, handler registration, error handling, and testing patterns.
+description: How to add MCP tools to the Automaker MCP server. Use when creating new MCP tools, registering handlers, or debugging MCP tool errors. Trigger on "new MCP tool", "add MCP", "tool registration", "MCP handler", or "expose via MCP".
 metadata:
   author: agent
   created: 2026-02-25T00:00:00.000Z

@@ -1,7 +1,7 @@
 ---
 name: pr-pipeline
 emoji: 🔀
-description: PR lifecycle management — auto-merge, CodeRabbit, format fixes, branch protection rules.
+description: PR lifecycle management and troubleshooting. Use when PRs are stuck on auto-merge, CodeRabbit blocks a merge, or format checks fail in CI. Trigger on "PR not merging", "CodeRabbit", "auto-merge", "format check failed", "branch protection", or "PR stuck".
 metadata:
   author: agent
   created: 2026-02-11T23:24:35.201Z

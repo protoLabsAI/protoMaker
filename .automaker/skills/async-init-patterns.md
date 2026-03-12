@@ -1,7 +1,7 @@
 ---
 name: async-init-patterns
 emoji: 🔄
-description: Handle race conditions in service initialization. Retry patterns for fire-and-forget async init where dependent code runs before service is ready.
+description: Handle race conditions in service initialization. Use when a service crashes or behaves incorrectly because dependent services are not ready yet. Trigger on "race condition", "service not ready", "initialization error", "fires before service is ready", or "async init".
 metadata:
   author: agent
   created: 2026-02-12T21:10:38.325Z
@@ -19,9 +19,9 @@ A common pattern in the server causes race conditions:
 
 ```typescript
 // index.ts startup sequence
-void discordBotService.initialize();     // fire-and-forget (async)
+void discordBotService.initialize(); // fire-and-forget (async)
 avaGatewayService.setDiscordBot(discordBotService);
-avaGatewayService.initialize(events);    // calls postStartupMessage() immediately
+avaGatewayService.initialize(events); // calls postStartupMessage() immediately
 ```
 
 The `void` keyword discards the promise — initialization runs in background. Any code that depends on the service being ready will fail silently.
