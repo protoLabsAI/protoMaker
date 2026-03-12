@@ -135,7 +135,8 @@ export class LeadEngineerService {
     private projectService: ProjectService,
     private projectLifecycleService: ProjectLifecycleService,
     private settingsService: SettingsService,
-    private metricsService: MetricsService
+    private metricsService: MetricsService,
+    private dataDir: string = process.env.DATA_DIR ?? './data'
   ) {
     this.worldStateBuilder = new WorldStateBuilder({
       featureLoader,
@@ -144,7 +145,11 @@ export class LeadEngineerService {
       metricsService,
       settingsService,
     });
-    this.sessionStore = new LeadEngineerSessionStore({ featureLoader, settingsService });
+    this.sessionStore = new LeadEngineerSessionStore({
+      featureLoader,
+      settingsService,
+      dataDir: this.dataDir,
+    });
   }
 
   setCheckpointService(s: PipelineCheckpointService): void {

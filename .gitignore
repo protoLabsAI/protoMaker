@@ -57,6 +57,13 @@ docs/.vitepress/cache/
 # Instance-specific — each machine starts fresh
 .automaker/settings.json
 
+# Runtime state files — now stored in DATA_DIR (not git-tracked)
+.automaker/metrics/dora.json
+.automaker/metrics/error-budget.json
+.automaker/lead-engineer-sessions.json
+apps/server/.automaker/pr-tracking.json
+.automaker/projects/*/ceremony-state.json
+
 # Track shared knowledge (agent learning, skills, context, spec, projects)
 !.automaker/context/
 !.automaker/skills/

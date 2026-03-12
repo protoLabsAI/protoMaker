@@ -1,7 +1,7 @@
 // Startup sequence: settings migration, reconciliation, worktree recovery, auto-mode start, Codex cache
 
-import { access, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { access, unlink, rename, mkdir, readdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { createLogger, setLogLevel, LogLevel } from '@protolabsai/utils';
 
 import type { ServiceContainer } from './services.js';
@@ -18,6 +18,58 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
   info: LogLevel.INFO,
   debug: LogLevel.DEBUG,
 };
+
+/**
+ * One-time migration: move runtime state files from .automaker/ into DATA_DIR.
+ * Safe to run multiple times — skips files that don't exist at old location.
+ */
+async function migrateRuntimeStateFiles(repoRoot: string, dataDir: string): Promise<void> {
+  const moves: Array<{ from: string; to: string }> = [
+    {
+      from: join(repoRoot, '.automaker', 'metrics', 'dora.json'),
+      to: join(dataDir, 'metrics', 'dora.json'),
+    },
+    {
+      from: join(repoRoot, '.automaker', 'metrics', 'error-budget.json'),
+      to: join(dataDir, 'metrics', 'error-budget.json'),
+    },
+    {
+      from: join(repoRoot, '.automaker', 'lead-engineer-sessions.json'),
+      to: join(dataDir, 'lead-engineer-sessions.json'),
+    },
+    {
+      from: join(repoRoot, 'apps', 'server', '.automaker', 'pr-tracking.json'),
+      to: join(dataDir, 'pr-tracking.json'),
+    },
+  ];
+
+  // Ceremony state: .automaker/projects/*/ceremony-state.json → DATA_DIR/ceremony-state/{slug}.json
+  try {
+    const projectsDir = join(repoRoot, '.automaker', 'projects');
+    const slugs = await readdir(projectsDir).catch(() => [] as string[]);
+    for (const slug of slugs) {
+      const fromPath = join(projectsDir, slug, 'ceremony-state.json');
+      moves.push({ from: fromPath, to: join(dataDir, 'ceremony-state', `${slug}.json`) });
+    }
+  } catch {
+    // No projects dir
+  }
+
+  for (const { from, to } of moves) {
+    try {
+      await access(from); // Check exists
+    } catch {
+      continue; // Source doesn't exist — skip
+    }
+    try {
+      await mkdir(dirname(to), { recursive: true });
+      await rename(from, to);
+      logger.info(`[MIGRATE] Moved ${from} → ${to}`);
+    } catch (err) {
+      logger.warn(`[MIGRATE] Failed to move ${from} → ${to}:`, err);
+    }
+  }
+}
 
 /**
  * Run async initialization: settings migration, knowledge store setup, feature reconciliation,
@@ -56,6 +108,13 @@ export async function runStartup(
     }
   } catch (err) {
     logger.warn('Failed to check for legacy settings migration:', err);
+  }
+
+  // Migrate runtime state files from .automaker/ to DATA_DIR
+  try {
+    await migrateRuntimeStateFiles(repoRoot, dataDir);
+  } catch (err) {
+    logger.warn('[MIGRATE] Runtime state migration failed:', err);
   }
 
   // Apply logging settings from saved settings

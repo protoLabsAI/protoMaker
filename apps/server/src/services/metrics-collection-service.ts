@@ -65,8 +65,10 @@ interface FailureRecord {
 export class MetricsCollectionService {
   private readonly events: EventEmitter;
   private readonly featureLoader: FeatureLoader;
-  /** Path to the project root — used to locate `.automaker/metrics/dora.json`. */
+  /** Path to the project root — used for feature lookups. */
   private readonly projectPath: string;
+  /** DATA_DIR — runtime data directory for dora.json. */
+  private readonly dataDir: string;
 
   /** Per-day merge counters (keyed by YYYY-MM-DD). */
   private readonly dayCounters = new Map<string, number>();
@@ -85,10 +87,16 @@ export class MetricsCollectionService {
   /** Cleanup function returned by `events.subscribe`. */
   private unsubscribe?: () => void;
 
-  constructor(events: EventEmitter, featureLoader: FeatureLoader, projectPath: string) {
+  constructor(
+    events: EventEmitter,
+    featureLoader: FeatureLoader,
+    projectPath: string,
+    dataDir: string
+  ) {
     this.events = events;
     this.featureLoader = featureLoader;
     this.projectPath = projectPath;
+    this.dataDir = dataDir;
   }
 
   // ---------------------------------------------------------------------------
@@ -251,7 +259,7 @@ export class MetricsCollectionService {
   // ---------------------------------------------------------------------------
 
   private getDoraPath(): string {
-    return path.join(this.projectPath, '.automaker', 'metrics', 'dora.json');
+    return path.join(this.dataDir, 'metrics', 'dora.json');
   }
 
   private readDocument(): DoraTimeSeriesDocument {

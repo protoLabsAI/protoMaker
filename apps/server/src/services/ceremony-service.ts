@@ -351,8 +351,15 @@ export class CeremonyService {
   // CeremonyState persistence
   // ---------------------------------------------------------------------------
 
-  private getCeremonyStatePath(projectPath: string, projectSlug: string): string {
-    return path.join(getProjectDir(projectPath, projectSlug), CEREMONY_STATE_FILE);
+  setDataDir(dataDir: string): void {
+    this.dataDir = dataDir;
+  }
+
+  private getCeremonyStatePath(_projectPath: string, projectSlug: string): string {
+    if (this.dataDir) {
+      return path.join(this.dataDir, 'ceremony-state', `${projectSlug}.json`);
+    }
+    return path.join(getProjectDir(_projectPath, projectSlug), CEREMONY_STATE_FILE);
   }
 
   async getCeremonyState(projectPath: string, projectSlug: string): Promise<CeremonyState> {
@@ -381,10 +388,9 @@ export class CeremonyService {
     projectSlug: string,
     state: CeremonyState
   ): Promise<void> {
-    const projectDir = getProjectDir(projectPath, projectSlug);
-    // Ensure the directory exists (project dir under .automaker/projects/{slug})
-    await secureFs.mkdir(projectDir, { recursive: true });
-    const filePath = path.join(projectDir, CEREMONY_STATE_FILE);
+    const filePath = this.getCeremonyStatePath(projectPath, projectSlug);
+    const dir = path.dirname(filePath);
+    await secureFs.mkdir(dir, { recursive: true });
     await secureFs.writeFile(filePath, JSON.stringify(state, null, 2), 'utf-8');
   }
 

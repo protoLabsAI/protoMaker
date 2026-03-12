@@ -94,7 +94,7 @@ export class PRFeedbackService {
   private leadEngineerService: { isFeatureActive(featureId: string): boolean } | null = null;
 
   /** Path to persisted PR tracking state */
-  private readonly prTrackingPath = path.join(process.cwd(), '.automaker', 'pr-tracking.json');
+  private readonly prTrackingPath: string;
 
   /** PRs we're actively monitoring, keyed by featureId */
   private trackedPRs = new Map<string, TrackedPR>();
@@ -113,9 +113,10 @@ export class PRFeedbackService {
   private readonly feedbackAggregator: FeedbackAggregator;
   private readonly threadResolver: ThreadResolver;
 
-  constructor(events: EventEmitter, featureLoader: FeatureLoader) {
+  constructor(events: EventEmitter, featureLoader: FeatureLoader, dataDir: string) {
     this.events = events;
     this.featureLoader = featureLoader;
+    this.prTrackingPath = path.join(dataDir, 'pr-tracking.json');
     this.feedbackAggregator = new FeedbackAggregator(featureLoader);
     this.threadResolver = new ThreadResolver(events, featureLoader);
   }
