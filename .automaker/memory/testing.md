@@ -118,3 +118,8 @@ usageStats:
 - **Problem solved:** Refactoring identity resolution — need confidence that new path works and captures all precedence scenarios
 - **Why this works:** Tests serve as both validation and living documentation of resolution hierarchy; updating them first validates assumptions before code changes; makes the intent of precedence explicit
 - **Trade-offs:** Unit tests are fast and deterministic; captures all edge cases (env override, registry miss, etc.) in one place; future changes to identity resolution are protected
+
+#### [Pattern] When fixing stale data issues, test plan must explicitly verify freshness (last-modified time), not just 'can read file', to catch scenarios where fix reads different (but still stale) file (2026-03-12)
+- **Problem solved:** Original bug was invisible during normal use (tool still returned *a* log file, just wrong one); test plan called out 'lines from currently-running server's log (last-modified seconds ago, not 12 hours ago)'
+- **Why this works:** Stale data bugs can masquerade as working if you only test for 'file exists' or 'can parse content'; explicit freshness check catches the actual problem being fixed
+- **Trade-offs:** Requires more context-aware testing (know what freshness should be), but catches the real bug instead of false positives

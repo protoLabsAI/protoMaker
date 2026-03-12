@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-03-12T05:36:41.753Z",
+  "updatedAt": "2026-03-12T17:51:35.646Z",
   "entries": [
     {
       "timestamp": "2026-03-10T23:27:16.307Z",
@@ -501,6 +501,27 @@
       },
       "changeFailRate": {
         "totalMerges": 10,
+        "totalFailures": 0,
+        "ratio": 0
+      },
+      "recoveryTime": null
+    },
+    {
+      "timestamp": "2026-03-12T17:51:35.643Z",
+      "deploymentFrequency": {
+        "mergesPerDay": 1,
+        "mergesPerWeek": 1,
+        "dayBucket": "2026-03-12"
+      },
+      "changeLeadTime": {
+        "featureId": "feature-1773337165694-p49h9xdmt",
+        "featureTitle": "Fix: MCP get_server_logs reads stale log file from wrong path",
+        "featureCreatedAt": "2026-03-12T17:39:25.694Z",
+        "prMergedAt": "2026-03-12T17:51:35.643Z",
+        "leadTimeMs": 729949
+      },
+      "changeFailRate": {
+        "totalMerges": 1,
         "totalFailures": 0,
         "ratio": 0
       },
