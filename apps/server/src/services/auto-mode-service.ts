@@ -1904,10 +1904,16 @@ export class AutoModeService {
 
           if (!rebaseResult.success) {
             if (rebaseResult.hasConflicts) {
-              logger.warn(
-                `⚠️  Worktree has merge conflicts with main. Agent will execute on stale base. ` +
-                  `Feature: ${featureId}, Branch: ${branchName}`
-              );
+              const reason =
+                `Pre-flight rebase onto origin/main has conflicts — branch "${branchName}" must be manually rebased before the agent can proceed. ` +
+                `Blocking feature to prevent repeated merge_conflict failures.`;
+              logger.warn(`⚠️  ${reason} Feature: ${featureId}`);
+              await this.featureLoader.update(projectPath, featureId, {
+                status: 'blocked',
+                statusChangeReason: reason,
+              });
+              this.events.emit('feature:error', { projectPath, featureId, error: reason });
+              return;
             } else {
               logger.warn(
                 `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
@@ -2201,6 +2207,7 @@ export class AutoModeService {
     }
 
     // CRITICAL: Rebase worktree onto latest origin/main before follow-up execution
+    let followUpConflictReason: string | null = null;
     if (worktreePath) {
       try {
         logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
@@ -2208,10 +2215,10 @@ export class AutoModeService {
 
         if (!rebaseResult.success) {
           if (rebaseResult.hasConflicts) {
-            logger.warn(
-              `⚠️  Worktree has merge conflicts with main. Follow-up will execute on stale base. ` +
-                `Feature: ${featureId}, Branch: ${branchName}`
-            );
+            followUpConflictReason =
+              `Pre-flight rebase onto origin/main has conflicts — branch "${branchName}" must be manually rebased before the follow-up can proceed. ` +
+              `Blocking feature to prevent repeated merge_conflict failures.`;
+            logger.warn(`⚠️  ${followUpConflictReason} Feature: ${featureId}`);
           } else {
             logger.warn(
               `Rebase failed (${rebaseResult.error}). Follow-up will execute on current base. ` +
@@ -2224,6 +2231,16 @@ export class AutoModeService {
       } catch (rebaseError) {
         logger.error(`Unexpected error during pre-execution rebase for ${featureId}:`, rebaseError);
       }
+    }
+
+    // Block follow-up execution if rebase conflicts were detected (outside try/catch so throw propagates)
+    if (followUpConflictReason) {
+      await this.featureLoader.update(projectPath, featureId, {
+        status: 'blocked',
+        statusChangeReason: followUpConflictReason,
+      });
+      this.events.emit('feature:error', { projectPath, featureId, error: followUpConflictReason });
+      throw new Error(followUpConflictReason);
     }
 
     // Load previous agent output if it exists
