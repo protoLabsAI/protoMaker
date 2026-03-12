@@ -859,11 +859,15 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     }
 
     case 'get_sitrep':
-      return apiCall('/sitrep', { projectPath: args.projectPath });
+      return apiCall('/sitrep', {
+        projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
+      });
 
     case 'get_board_summary': {
       const result = (await apiCall('/features/summary', {
         projectPath: args.projectPath,
+        projectSlug: args.projectSlug,
       })) as { summary?: Record<string, number> };
       return result.summary ?? result;
     }

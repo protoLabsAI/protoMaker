@@ -29,7 +29,7 @@ export function createSitrepRoutes({
   const router = Router();
 
   router.post('/', async (req: Request, res: Response) => {
-    const { projectPath } = req.body;
+    const { projectPath, projectSlug } = req.body;
     if (!projectPath) {
       res.status(400).json({ error: 'projectPath is required' });
       return;
@@ -37,7 +37,7 @@ export function createSitrepRoutes({
 
     try {
       // Gather everything in parallel for speed
-      const [features, autoStatus, runningAgents, prData, recentCommits, stagingDelta, health] =
+      const [allFeatures, autoStatus, runningAgents, prData, recentCommits, stagingDelta, health] =
         await Promise.all([
           featureLoader.getAll(projectPath).catch(() => [] as Feature[]),
           getAutoModeStatus(autoModeService, projectPath),
@@ -47,6 +47,11 @@ export function createSitrepRoutes({
           getStagingDelta(repoRoot),
           getServerHealth(),
         ]);
+
+      // Filter by projectSlug when provided
+      const features = projectSlug
+        ? allFeatures.filter((f) => f.projectSlug === projectSlug)
+        : allFeatures;
 
       // Compute board summary from features
       const board = {

@@ -111,7 +111,7 @@ Run all of these to build a complete picture of the system:
 mcp__plugin_protolabs_studio__health_check()
 
 # Board state
-mcp__plugin_protolabs_studio__get_board_summary({ projectPath })
+mcp__plugin_protolabs_studio__get_board_summary({ projectPath, projectSlug })  # projectSlug optional — scopes counts to one project
 mcp__plugin_protolabs_studio__list_features({ projectPath })
 mcp__plugin_protolabs_studio__get_execution_order({ projectPath })
 
