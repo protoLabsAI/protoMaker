@@ -415,13 +415,13 @@ usageStats:
 - **Why this works:** Partial fixes create maintenance debt and confusion; when server is down, tool should still work correctly; fallback path serves the same purpose (reading logs) so it must have same fix
 - **Trade-offs:** Fixing fallback requires understanding root cause deeply (more work upfront), but prevents cascading bugs and ensures consistent behavior in all modes (server up/down)
 
-### Services (updatePhaseClaim, saveProjectMilestones) write to disk but do NOT auto-emit CRDT events. Callers (route handlers, WorkIntakeService) must manually emit project:updated or call syncProjectToCrdt. (2026-03-12)
+### Services (updatePhaseClaim, saveProjectMilestones) write to disk AND auto-emit project:updated when CRDT is enabled. syncProjectToCrdt() is the escape hatch for external callers that write project.json themselves and need to sync the in-memory doc. (2026-03-12, corrected 2026-03-12)
 
-- **Context:** Tests revealed that disk writes don't propagate to instances until events are explicitly fired
-- **Why:** Separation of concerns: persistence is orthogonal to event propagation. Different callers (HTTP, CLI, scheduled jobs) may need different event handling.
-- **Rejected:** Could have services auto-emit on every write, but this couples persistence to event logic and prevents batch operations
-- **Trade-offs:** Caller responsibility is more error-prone (easy to forget emit) but enables flexibility (batch writes without per-write events)
-- **Breaking if changed:** If a new caller (e.g., bulk import) doesn't emit events, those changes won't sync to other instances
+- **Context:** Both `updatePhaseClaim()` and `saveProjectMilestones()` in ProjectService include CRDT doc updates and `this._crdtEvents?.emit('project:updated', ...)` when `_isCrdtEnabled()` returns true. Emission is part of the service method, not the caller's responsibility.
+- **Why:** Atomicity: disk write + Automerge doc update + event emission are a single logical operation. Callers (WorkIntakeService, route handlers) don't need to remember to fire a separate event.
+- **syncProjectToCrdt() use case:** Routes that bypass the service (e.g., directly write project.json via the create/update route handler) and only need to sync the in-memory doc without a disk re-write should call `syncProjectToCrdt()` explicitly.
+- **Trade-offs:** Caller simplicity (one call does everything) vs reduced flexibility for batch operations that want to suppress intermediate events. `syncProjectToCrdt()` remains the escape hatch.
+- **Breaking if changed:** If `_crdtEvents?.emit(...)` calls are removed from these methods, WorkIntakeService phase claims and PM agent milestone saves will stop propagating to remote peers silently.
 
 #### [Pattern] Tests simulate event-driven sync (EventBus → persistRemoteProject) without real WebSockets. crdt-sync.module.ts wiring is tested indirectly through event flow, not transport layer. (2026-03-12)
 
