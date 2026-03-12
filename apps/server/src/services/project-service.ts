@@ -137,47 +137,6 @@ export class ProjectService {
     }
   }
 
-  /**
-   * Apply Automerge binary changes received from a remote peer.
-   * Merges the changes into the local doc and emits project events for any
-   * projects that changed. Called by the wiring layer on 'crdt:remote-changes'.
-   */
-  applyRemoteChanges(projectPath: string, changes: Uint8Array[]): void {
-    let doc = this._docs.get(projectPath);
-    const isNew = !doc;
-    if (!doc) {
-      doc = Automerge.init<ProjectsDoc>();
-      this._initPromises.set(projectPath, Promise.resolve());
-    }
-    const oldProjects = doc.projects || {};
-    const [newDoc] = Automerge.applyChanges<ProjectsDoc>(doc, changes);
-    this._docs.set(projectPath, newDoc);
-    const newProjects = newDoc.projects || {};
-    const allSlugs = new Set([...Object.keys(oldProjects), ...Object.keys(newProjects)]);
-    for (const slug of allSlugs) {
-      const oldProject = isNew ? undefined : oldProjects[slug];
-      const newProject = newProjects[slug];
-      const unchanged =
-        !isNew &&
-        oldProject !== undefined &&
-        newProject !== undefined &&
-        JSON.stringify(oldProject) === JSON.stringify(newProject);
-      if (!unchanged) {
-        if (newProject) {
-          const eventType = oldProject ? 'project:updated' : 'project:created';
-          this._crdtEvents?.emit(eventType, {
-            projectSlug: slug,
-            projectPath,
-            project: newProject,
-          });
-        } else {
-          this._crdtEvents?.emit('project:deleted', { projectSlug: slug, projectPath });
-        }
-      }
-    }
-    logger.debug(`[CRDT] Applied ${changes.length} remote change(s) for ${projectPath}`);
-  }
-
   // ─── Remote sync (called by crdt-sync.module.ts) ─────────────────────────
 
   /**

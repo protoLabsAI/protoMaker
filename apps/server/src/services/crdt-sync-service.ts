@@ -18,7 +18,7 @@ import type {
   InstanceRole,
   SyncRole,
   SyncServerStatus,
-  CrdtFeatureEvent,
+  CrdtSyncWireMessage,
   CompactionDiagnosticsSnapshot,
 } from '@protolabsai/types';
 import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
@@ -71,7 +71,7 @@ interface CrdtRegistrySyncEvent {
   timestamp: string;
 }
 
-type SyncMessage = PeerMessage | CrdtFeatureEvent | CrdtSettingsEvent | CrdtRegistrySyncEvent;
+type SyncMessage = PeerMessage | CrdtSyncWireMessage | CrdtSettingsEvent | CrdtRegistrySyncEvent;
 
 interface TrackedPeer extends HivemindPeer {
   ws?: WebSocket;
@@ -258,7 +258,7 @@ export class CrdtSyncService {
       if (!CRDT_SYNCED_EVENT_TYPES.has(type)) return;
       if (!this.started) return;
 
-      const msg: CrdtFeatureEvent = {
+      const msg: CrdtSyncWireMessage = {
         type: 'feature_event',
         instanceId: this.instanceId,
         eventType: type,

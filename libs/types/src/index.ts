@@ -35,7 +35,7 @@ export type { EventLedgerCorrelationIds, EventLedgerEntry } from './event-ledger
 
 // EventBus-CRDT bridge types
 export { CRDT_SYNCED_EVENT_TYPES } from './events.js';
-export type { CrdtFeatureEvent } from './events.js';
+export type { CrdtSyncWireMessage } from './events.js';
 
 // Automation registry supplementary types (CreateAutomationInput, UpdateAutomationInput, FlowFactory)
 // Core types (Automation, AutomationRunRecord, etc.) are already exported from the base workspace types
