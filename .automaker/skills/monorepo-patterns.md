@@ -195,3 +195,4 @@ npm run build:packages   # verify it builds
 | Forgetting `composite: true` in tsconfig | Project references break | Always add it to lib tsconfigs |
 | Not running `npm install` after adding package | Workspace symlink missing | Run `npm install` from root after adding a package |
 | `process.env` at module level in shared packages | Crashes browser (no `process` in browser) | Guard with `typeof process !== 'undefined'` |
+| Modifying shared types in a worktree without rebuilding | npm workspace hoisting resolves `@protolabsai/types` to the main repo's copy, not the worktree's | Run `npm run build:packages` from within the worktree after changing shared types |

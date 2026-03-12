@@ -186,6 +186,19 @@ Handler logic is thin (`apiCall` wrappers) — prefer integration testing via MC
 
 ---
 
+## Token Separation
+
+`DISCORD_TOKEN` and `DISCORD_BOT_TOKEN` may hold the same value but are consumed differently:
+
+- **Server** (`automaker/.env`): `DISCORD_TOKEN` — used by `DiscordBotService.initialize()` via `client.login(token)`
+- **Plugin** (`packages/mcp-server/plugins/automaker/.env`): `DISCORD_BOT_TOKEN` — used by MCP Discord tools via REST API with token header
+
+Keep both files in sync. Never commit either `.env` file — both are gitignored.
+
+## Auto-Login
+
+`AUTOMAKER_AUTO_LOGIN=true` (in `automaker/.env`) skips the login prompt in development. **Disabled when `NODE_ENV=production`.** Required for headless/automated operation.
+
 ## Anti-Patterns Summary
 
 | Anti-Pattern | Consequence | Fix |
@@ -197,3 +210,4 @@ Handler logic is thin (`apiCall` wrappers) — prefer integration testing via MC
 | Forgetting `npm run build:packages` after changes | MCP client still sees old tool list | Rebuild + restart MCP server |
 | Accessing `~/.secrets/` for credentials | Path doesn't exist | Use `.env` files at project/plugin level |
 | Creating a new API route without an MCP wrapper | Feature accessible only via curl | Always pair new routes with an MCP tool |
+| Committing `.env` files | Leaks secrets into git history | Both `.env` files are gitignored — never force-add them |
