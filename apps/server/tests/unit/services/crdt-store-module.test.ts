@@ -10,6 +10,9 @@ vi.mock('@protolabsai/crdt', () => {
     init: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
     attachServerAdapter: vi.fn(),
+    // hydrateNotesWorkspace() runs fire-and-forget so these must survive restoreAllMocks()
+    getRegistry: () => ({}),
+    getOrCreate: async () => ({ doc: () => null }),
   };
   // Must use function (not arrow) so it can be called with `new`
   const CRDTStore = vi.fn(function () {

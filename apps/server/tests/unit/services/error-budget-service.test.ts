@@ -251,10 +251,10 @@ describe('ErrorBudgetService', () => {
     expect(state.failRate).toBeCloseTo(0.5);
   });
 
-  it('persists to the correct path (.automaker/metrics/error-budget.json)', () => {
+  it('persists to the correct path (metrics/error-budget.json under dataDir)', () => {
     const svc = new ErrorBudgetService(tmpDir);
     svc.recordMerge('f1', false);
-    const expectedPath = path.join(tmpDir, '.automaker', 'metrics', 'error-budget.json');
+    const expectedPath = path.join(tmpDir, 'metrics', 'error-budget.json');
     expect(fs.existsSync(expectedPath)).toBe(true);
   });
 
