@@ -9,6 +9,7 @@ usageStats:
   referenced: 27
   successfulFeatures: 27
 ---
+
 <!-- domain: Testing Patterns | Unit test patterns, integration test strategies, test isolation -->
 
 # testing
@@ -103,33 +104,26 @@ usageStats:
 - **Root cause:** Vitest uses its own module resolver that doesn't read tsconfig.paths by default. Both must be configured independently.
 - **How to avoid:** When adding path aliases to tsconfig, immediately add matching entry to vitest.config.ts resolve.alias.
 
-
 #### [Pattern] Inline object stubs (not vi.mock) for interface-driven test coverage: Tests create inline implementations of BriefingWorldStateProvider, PMWorldStateBuilder, LeadEngineerWorldStateProvider to avoid mock complexity and preserve interface contract visibility. (2026-03-11)
+
 - **Problem solved:** Integration tests verify data flow through three layers with failure scenarios. Code is heavily interface-driven with multiple collaboration points.
 - **Why this works:** Inline stubs make interface contracts explicit in test code and provide fine-grained control over each layer's behavior independently. Mock libraries abstract away the contract.
 - **Trade-offs:** More test setup boilerplate but better visibility. Easier to debug stub behavior. Less 'magic' in test infrastructure.
 
 #### [Gotcha] applyRemoteChanges integration tests existed and compiled, but were dead code — never ran in CI/normal workflows, hid design evolution. (2026-03-12)
+
 - **Situation:** Tests for abandoned features tend to rot while still compiling, creating false sense of coverage.
 - **Root cause:** When feature-sync model was abandoned, tests weren't marked as deprecated or removed. They became invisible maintenance debt.
 - **How to avoid:** Removing tests forces test suite to shrink and stay current. But loses historical documentation of why sync model existed.
 
 #### [Pattern] Updated all 6 instance-identity resolution tests before removing code. Tests validate new resolution order and precedence rules with clear, single-concern test cases. (2026-03-12)
+
 - **Problem solved:** Refactoring identity resolution — need confidence that new path works and captures all precedence scenarios
 - **Why this works:** Tests serve as both validation and living documentation of resolution hierarchy; updating them first validates assumptions before code changes; makes the intent of precedence explicit
 - **Trade-offs:** Unit tests are fast and deterministic; captures all edge cases (env override, registry miss, etc.) in one place; future changes to identity resolution are protected
 
 #### [Pattern] When fixing stale data issues, test plan must explicitly verify freshness (last-modified time), not just 'can read file', to catch scenarios where fix reads different (but still stale) file (2026-03-12)
-- **Problem solved:** Original bug was invisible during normal use (tool still returned *a* log file, just wrong one); test plan called out 'lines from currently-running server's log (last-modified seconds ago, not 12 hours ago)'
+
+- **Problem solved:** Original bug was invisible during normal use (tool still returned _a_ log file, just wrong one); test plan called out 'lines from currently-running server's log (last-modified seconds ago, not 12 hours ago)'
 - **Why this works:** Stale data bugs can masquerade as working if you only test for 'file exists' or 'can parse content'; explicit freshness check catches the actual problem being fixed
 - **Trade-offs:** Requires more context-aware testing (know what freshness should be), but catches the real bug instead of false positives
-
-#### [Pattern] Integration tests disable CRDT (no proto.config.yaml) to keep state on disk rather than in Automerge docs. This sidesteps the inconsistency where updatePhaseClaim writes to disk but getProject reads from doc. (2026-03-12)
-- **Problem solved:** Services can write to disk (updatePhaseClaim) or read from doc (getProject), causing test flakiness if both operate on different state stores
-- **Why this works:** Automerge document sync between instances adds complexity; disk-only state is deterministic for testing. Core CRDT logic is still tested via event propagation simulation.
-- **Trade-offs:** Simpler, faster tests vs. not testing actual Automerge document consistency. Compensated by testing event wiring (EventBus → persistRemoteProject) which is the sync mechanism.
-
-#### [Pattern] Unit tests verified broadcast() calls using Jest mocks and actual Express server on ephemeral port (2026-03-12)
-- **Problem solved:** Route code needed verification that categories:updated events are broadcast correctly and files persist
-- **Why this works:** Mock events.broadcast() to verify correct event signatures; real Express server to verify HTTP behavior and file I/O together without stubbing filesystem
-- **Trade-offs:** Gained confidence in integration between routes and events; test setup more complex than pure unit tests

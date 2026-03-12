@@ -5,10 +5,11 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1399
-  referenced: 327
-  successfulFeatures: 327
+  loaded: 1393
+  referenced: 323
+  successfulFeatures: 323
 ---
+
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
@@ -859,28 +860,20 @@ usageStats:
 - **Root cause:** WebSocket close is not automatic on object destruction; browser keeps connection alive until explicitly terminated
 - **How to avoid:** Gained: clean connection lifecycle; lost: ability to assume cleanup on object disposal
 
-
 #### [Gotcha] Turbo cache in monorepo worktrees replays old cached output rather than recompiling modified files; 'npm run build:packages' appeared to succeed but didn't validate worktree type changes (2026-03-12)
+
 - **Situation:** Running build command in isolated worktree with TypeScript changes to verify compilation
 - **Root cause:** Turbo cache is shared across worktrees and main repo; it doesn't detect that an isolated worktree's files are different from the main repo source
 - **How to avoid:** Must use explicit workspace builds (npm run build --workspace=libs/types) instead of aggregate commands, adds extra verification step
 
 #### [Gotcha] Local proto.config.yaml is gitignored; removing hive: section from it can't be committed as part of the PR. Risk: developers won't know to remove it from their local configs. (2026-03-12)
+
 - **Situation:** Configuration file removal can't be enforced via CI; users must self-serve local cleanup
 - **Root cause:** Local config files contain secrets/state; committing removal signals breaking change but doesn't enforce it
 - **How to avoid:** PR description documents removal, but enforcement is manual; consider migration guide or deprecation warning in code
 
 #### [Gotcha] SPARCPrd wrapping strategy: legacy plain-string prd is mapped to SPARCPrd.approach only, with situation/problem/results/constraints left empty. Original content structure is irretrievable. (2026-03-12)
+
 - **Situation:** Converting from prd: string to prd: SPARCPrd object during normalization
 - **Root cause:** String doesn't indicate which SPARC field it belongs to; safer to put it in approach (closest to 'explanation') than guess; allows document to normalize without data loss
 - **How to avoid:** No data loss (string is preserved) but structure is lost (can't tell if string was a situation, problem analysis, or results summary); downstream tools must assume approach-only SPARCPrd from legacy docs
-
-#### [Gotcha] Turbo incremental build cache served stale dist for @protolabsai/crdt. Tests failed until running npm run build --workspace=libs/crdt instead of aggregate build command. (2026-03-12)
-- **Situation:** Tests calling normalizeProjectDocument() from stale dist received old schema (no milestones array property)
-- **Root cause:** Turbo caches based on package fingerprints. If a package's source changes but no other workspace references change, Turbo may skip rebuilding dependent packages' dist.
-- **How to avoid:** Workspace-specific builds force rebuild but require knowing which package to rebuild. Aggregate builds are faster but can miss stale dist.
-
-#### [Gotcha] Timestamp conversion assumes disk format uses milliseconds (createdAtMs) but converts to ISO strings. Assumption is implicit in variable naming. (2026-03-12)
-- **Situation:** diskTab.metadata?.createdAt is numeric; mapped to Date constructor which expects milliseconds, then .toISOString()
-- **Root cause:** Likely historical: disk format designed separately, ISO strings are standard in CRDT/JSON contexts
-- **How to avoid:** Human-readable ISO strings in logs vs. precision loss if disk format ever changes to seconds or different epoch

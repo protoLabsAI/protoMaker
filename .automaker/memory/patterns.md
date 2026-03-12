@@ -9,6 +9,7 @@ usageStats:
   referenced: 23
   successfulFeatures: 23
 ---
+
 <!-- domain: Patterns & Best Practices | Reusable implementation patterns proven in this codebase -->
 
 # patterns
@@ -44,27 +45,31 @@ usageStats:
 - **Trade-offs:** Easier: eliminates render thrashing, smooth streaming UX. Harder: requires threading `isStreaming` prop down to leaf display components. Pattern: add `isStreaming?: boolean` to component props, skip expensive effect when true, re-run effect when `isStreaming` transitions to `false`.
 
 #### [Pattern] Typed event payload interfaces exported from central types package, paired with EventType union that includes event names as discriminated union. (2026-02-14)
+
 - **Problem solved:** Event system needs type safety across multiple services and files that emit/listen to events.
 - **Why this works:** Allows type-safe event emission with IDE autocomplete and compile-time validation. Central types package ensures consistency. Discriminated union enables TypeScript to infer payload shape from event name.
 - **Trade-offs:** More boilerplate (define both EventType string and PayloadInterface) but provides exhaustive type checking at emit sites.
 
 #### [Pattern] For state-changing operations with async/deferred semantics, follow command execution with explicit state verification queries rather than relying on command exit codes. (2026-02-24)
+
 - **Problem solved:** After `gh pr merge`, query actual PR state via `gh pr view --json state` to confirm MERGED rather than assuming success from command completion.
 - **Why this works:** Deferred operations (auto-merge, background jobs, queued work) can succeed as a command while the actual state transition happens later or conditionally. Exit codes don't reflect final state.
 - **Trade-offs:** Additional API call adds latency/cost but provides ground truth.
 
 #### [Pattern] Form state machine implemented with vanilla JavaScript using CSS class toggling (.hidden, loading spinner state) instead of framework state management. (2026-02-24)
+
 - **Problem solved:** No frontend framework in use; need to coordinate form submission, loading, success, and error states.
 - **Why this works:** Minimal overhead, works in vanilla JS context, leverages existing Tailwind CSS utility classes.
 - **Trade-offs:** Simple for single form; brittle if CSS class names change.
 
 #### [Pattern] Background job ownership stays with orchestrator: HyPE generation (runBackgroundHype) is orchestrator responsibility, not delegated elsewhere. (2026-02-24)
+
 - **Problem solved:** HyPE processing is async background work triggered during knowledge operations.
 - **Why this works:** Orchestrator owns embedding lifecycle end-to-end, so it should own jobs that operate on embeddings. Prevents fragmented background job management.
 - **Trade-offs:** KnowledgeStoreService must call out to orchestrator to trigger background work; single clear owner of HyPE job lifecycle.
 
-
 #### [Pattern] Identify dead event types by full-codebase text search for EventType string literal (emit, on, event payload references) (2026-03-12)
+
 - **Problem solved:** Removing 'crdt:remote-changes' required confirming zero subscribers and zero emitters exist
 - **Why this works:** Event-driven architectures lack static type safety for event completeness; text search is the only reliable way to find all emit() and on() call sites across the codebase
 - **Trade-offs:** Labor-intensive manual search, but 100% reliable; false negatives are impossible if search is thorough
