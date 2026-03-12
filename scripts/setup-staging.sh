@@ -215,6 +215,17 @@ start_services() {
   info "Starting services..."
   cd "$PROJECT_ROOT"
 
+  # Reset staging board state — features are gitignored runtime artifacts.
+  # The staging server modifies .automaker/features/ via bind mount. Without
+  # this cleanup, stale feature status survives across deploys and the board
+  # drifts out of sync with the actual codebase.
+  local project_path="${AUTOMAKER_PROJECT_PATH:-}"
+  if [ -n "$project_path" ] && [ -d "$project_path/.automaker/features" ]; then
+    info "Cleaning stale feature state from $project_path/.automaker/features/"
+    rm -rf "$project_path/.automaker/features/"
+    ok "Feature state reset (CRDT will rebuild from clean state)"
+  fi
+
   # Ensure named volumes exist (external: true in compose won't auto-create them)
   for vol in automaker-data automaker-claude-config automaker-cursor-config \
              automaker-opencode-data automaker-opencode-config automaker-opencode-cache; do
