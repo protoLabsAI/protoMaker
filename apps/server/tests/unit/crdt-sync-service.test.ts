@@ -301,89 +301,85 @@ describe('CrdtSyncService', () => {
         }
       });
 
-      it(
-        'replays queued events to primary in order when partition heals',
-        async () => {
-          const port = 19880;
+      it('replays queued events to primary in order when partition heals', async () => {
+        const port = 19880;
 
-          // Start primary A
-          mockLoadProtoConfig.mockResolvedValueOnce({
-            protolab: { role: 'primary', syncPort: port, instanceId: 'primary-a' },
-          } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
-          primaryA = new CrdtSyncService();
-          await primaryA.start('/fake/repo-primary-a');
+        // Start primary A
+        mockLoadProtoConfig.mockResolvedValueOnce({
+          protolab: { role: 'primary', syncPort: port, instanceId: 'primary-a' },
+        } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
+        primaryA = new CrdtSyncService();
+        await primaryA.start('/fake/repo-primary-a');
 
-          // Start worker pointed at primary A
-          mockLoadProtoConfig.mockResolvedValueOnce({
-            protolab: {
-              role: 'worker',
-              instanceId: 'worker-rp',
-              instanceUrl: 'ws://localhost:29999',
-            },
-            hivemind: {
-              peers: [`ws://localhost:${port}`],
-              heartbeatIntervalMs: 60000,
-              peerTtlMs: 120000,
-            },
-          } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
-          await partitionWorker.start('/fake/repo-worker');
+        // Start worker pointed at primary A
+        mockLoadProtoConfig.mockResolvedValueOnce({
+          protolab: {
+            role: 'worker',
+            instanceId: 'worker-rp',
+            instanceUrl: 'ws://localhost:29999',
+          },
+          hivemind: {
+            peers: [`ws://localhost:${port}`],
+            heartbeatIntervalMs: 60000,
+            peerTtlMs: 120000,
+          },
+        } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
+        await partitionWorker.start('/fake/repo-worker');
 
-          // Wait for initial connection to establish
-          await new Promise((res) => setTimeout(res, 400));
+        // Wait for initial connection to establish
+        await new Promise((res) => setTimeout(res, 400));
 
-          const workerInternal = partitionWorker as unknown as {
-            wsClient: unknown;
-            outboundQueue: string[];
-            partitionSince: string | null;
-            instanceId: string;
-          };
-          expect(workerInternal.wsClient).not.toBeNull();
+        const workerInternal = partitionWorker as unknown as {
+          wsClient: unknown;
+          outboundQueue: string[];
+          partitionSince: string | null;
+          instanceId: string;
+        };
+        expect(workerInternal.wsClient).not.toBeNull();
 
-          // Partition: shut down primary A
-          await primaryA.shutdown();
-          primaryA = null;
+        // Partition: shut down primary A
+        await primaryA.shutdown();
+        primaryA = null;
 
-          // Wait for worker to detect the disconnect
-          await new Promise((res) => setTimeout(res, 300));
-          expect(workerInternal.partitionSince).not.toBeNull();
+        // Wait for worker to detect the disconnect
+        await new Promise((res) => setTimeout(res, 300));
+        expect(workerInternal.partitionSince).not.toBeNull();
 
-          // Enqueue two events (simulating CRDT changes that occurred during the partition)
-          workerInternal.outboundQueue.push(
-            JSON.stringify({
-              type: 'feature_event',
-              instanceId: workerInternal.instanceId,
-              eventType: 'project:created',
-              payload: { id: 'queued-1' },
-              timestamp: new Date().toISOString(),
-            }),
-          );
-          workerInternal.outboundQueue.push(
-            JSON.stringify({
-              type: 'feature_event',
-              instanceId: workerInternal.instanceId,
-              eventType: 'project:updated',
-              payload: { id: 'queued-2' },
-              timestamp: new Date().toISOString(),
-            }),
-          );
-          expect(workerInternal.outboundQueue.length).toBe(2);
+        // Enqueue two events (simulating CRDT changes that occurred during the partition)
+        workerInternal.outboundQueue.push(
+          JSON.stringify({
+            type: 'feature_event',
+            instanceId: workerInternal.instanceId,
+            eventType: 'project:created',
+            payload: { id: 'queued-1' },
+            timestamp: new Date().toISOString(),
+          })
+        );
+        workerInternal.outboundQueue.push(
+          JSON.stringify({
+            type: 'feature_event',
+            instanceId: workerInternal.instanceId,
+            eventType: 'project:updated',
+            payload: { id: 'queued-2' },
+            timestamp: new Date().toISOString(),
+          })
+        );
+        expect(workerInternal.outboundQueue.length).toBe(2);
 
-          // Partition heals: restart primary on the same port
-          mockLoadProtoConfig.mockResolvedValueOnce({
-            protolab: { role: 'primary', syncPort: port, instanceId: 'primary-b' },
-          } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
-          primaryB = new CrdtSyncService();
-          await primaryB.start('/fake/repo-primary-b');
+        // Partition heals: restart primary on the same port
+        mockLoadProtoConfig.mockResolvedValueOnce({
+          protolab: { role: 'primary', syncPort: port, instanceId: 'primary-b' },
+        } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
+        primaryB = new CrdtSyncService();
+        await primaryB.start('/fake/repo-primary-b');
 
-          // Wait for the reconnect interval to fire (RECONNECT_INTERVAL_MS = 5000ms) + buffer
-          await new Promise((res) => setTimeout(res, 6500));
+        // Wait for the reconnect interval to fire (RECONNECT_INTERVAL_MS = 5000ms) + buffer
+        await new Promise((res) => setTimeout(res, 6500));
 
-          // Queue must be fully flushed and partition marker cleared
-          expect(workerInternal.outboundQueue.length).toBe(0);
-          expect(workerInternal.partitionSince).toBeNull();
-        },
-        12000,
-      );
+        // Queue must be fully flushed and partition marker cleared
+        expect(workerInternal.outboundQueue.length).toBe(0);
+        expect(workerInternal.partitionSince).toBeNull();
+      }, 12000);
     });
   });
 
@@ -494,7 +490,7 @@ describe('CrdtSyncService', () => {
           settings: { theme: 'dark', autoMode: true },
           timestamp: new Date().toISOString(),
         },
-        mockWs,
+        mockWs
       );
 
       expect(receivedSettings.length).toBe(1);
