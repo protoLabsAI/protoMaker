@@ -276,10 +276,10 @@ export class DiscordBotService {
   async initialize(): Promise<boolean> {
     if (this.initialized) return true;
 
-    const token = process.env.DISCORD_BOT_TOKEN;
+    const token = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
     if (!token) {
       logger.info('DISCORD_BOT_TOKEN not set - Discord bot features disabled');
-      logger.info('Set DISCORD_BOT_TOKEN in .env to enable /idea command in Discord');
+      logger.info('Set DISCORD_BOT_TOKEN (or DISCORD_TOKEN) in .env to enable Discord integration');
       return false;
     }
 
