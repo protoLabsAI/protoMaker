@@ -1116,6 +1116,13 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         limit: args.limit || 10,
       });
 
+    case 'add_discord_reaction':
+      return apiCall('/discord/add-reaction', {
+        channelId: args.channelId,
+        messageId: args.messageId,
+        emoji: args.emoji,
+      });
+
     // Setup Pipeline
     case 'research_repo':
       return apiCall('/setup/research', {
