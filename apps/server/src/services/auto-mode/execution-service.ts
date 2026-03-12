@@ -76,10 +76,11 @@ import { RecoveryService } from '../recovery-service.js';
 import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js';
 import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
-import { writeLock, removeLock } from '../../lib/worktree-lock.js';
+import { writeLock } from '../../lib/worktree-lock.js';
 import { getReactiveSpawnerService } from '../reactive-spawner-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
+import { PostExecutionMiddleware } from './post-execution-middleware.js';
 import type {
   RunningFeature,
   ParsedTask,
@@ -257,6 +258,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 
 export class ExecutionService {
   private readonly typedEventBus: TypedEventBus;
+  private readonly postExecutionMiddleware: PostExecutionMiddleware;
 
   constructor(
     private readonly events: EventEmitter,
@@ -272,6 +274,7 @@ export class ExecutionService {
     private readonly callbacks: IAutoModeCallbacks
   ) {
     this.typedEventBus = new TypedEventBus(events);
+    this.postExecutionMiddleware = new PostExecutionMiddleware();
   }
 
   // ---------------------------------------------------------------------------
@@ -1427,26 +1430,22 @@ export class ExecutionService {
       }
     } finally {
       logger.info(`Feature ${featureId} execution ended, cleaning up runningFeatures`);
-      abortController?.abort();
-
-      // Remove worktree lock file now that the agent has exited
-      const worktreeForCleanup = tempRunningFeature.worktreePath;
-      if (worktreeForCleanup) {
-        await removeLock(worktreeForCleanup);
-      }
-
-      // Only delete if the current entry is still the one we created
-      // (delegated executions may have created a new entry)
-      const current = this.runningFeatures.get(featureId);
-      if (current === tempRunningFeature) {
-        this.runningFeatures.delete(featureId);
-        activeAgentsCount.set(this.runningFeatures.size);
-      }
-
-      // Update execution state after feature completes
-      if (this.callbacks.getAutoLoopRunning() && projectPath) {
-        await this.callbacks.saveExecutionState(projectPath);
-      }
+      await this.postExecutionMiddleware.run({
+        featureId,
+        projectPath,
+        feature,
+        tempRunningFeature,
+        runningFeatures: this.runningFeatures,
+        abortController,
+        getAutoLoopRunning: () => this.callbacks.getAutoLoopRunning(),
+        saveExecutionState: (p) => this.callbacks.saveExecutionState(p),
+        getRecoveryBaseBranch: this.settingsService
+          ? async () => {
+              const settings = await this.settingsService!.getGlobalSettings();
+              return settings.gitWorkflow?.prBaseBranch;
+            }
+          : undefined,
+      });
     }
   }
 
