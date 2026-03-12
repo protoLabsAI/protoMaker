@@ -34,6 +34,14 @@ usageStats:
 - **Why this works:** localStorage provides client-side persistence; namespace prevents collisions with other apps. Enables 'set once, forget' UX without rebuild/redeploy cycle.
 - **Trade-offs:** Pro: simple, no server required. Con: cleared if user clears browser cache; namespace is convention not enforced.
 
+### lead-engineer-sessions.json uses a multi-project map format: { sessions: Record<projectPath, PersistedSessionData>, savedAt: string } (2026-03-12)
+
+- **Context:** Previously one file per project path at `.automaker/lead-engineer-sessions.json`. Now a single file at `DATA_DIR/lead-engineer-sessions.json` keyed by project path.
+- **Why:** Single file with keyed map eliminates the need to enumerate all known project paths at restore time. `save()` merges into the map (read-modify-write); `remove()` deletes the key; `restoreSessions()` iterates entries directly.
+- **Rejected:** Retaining per-project files with a discovery scan — fragile to missing settings, breaks when projects move.
+- **Trade-offs:** All sessions in one file means a single corrupt file affects all projects. `readJsonWithRecovery` provides crash resilience.
+- **Breaking if changed:** Old per-project format is migrated at startup by `migrateRuntimeStateFiles()` but only the single top-level `lead-engineer-sessions.json` — not legacy per-project files from older layouts.
+
 ### recentServerUrls persisted via browser localStorage (per-origin key-value) rather than IndexedDB or server-side user preferences (2026-03-11)
 
 - **Context:** UI needs quick access to recent server URLs for dropdown, but doesn't require cross-device sync or complex queries

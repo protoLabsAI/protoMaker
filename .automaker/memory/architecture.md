@@ -496,3 +496,29 @@ usageStats:
 - **Problem solved:** Store registry holds documents from multiple domains (calendar, todos, avaChannel); needs to disambiguate notes documents
 - **Why this works:** Enables future documents under 'notes' domain (e.g., 'notes:trash', 'notes:archived') without key collisions. Scalable design.
 - **Trade-offs:** Clear namespacing vs. hardcoded separator logic; adding new document types requires updating hydration and registry lookup
+
+### Runtime state files migrated from .automaker/ subdirectories to DATA_DIR (2026-03-12)
+
+- **Context:** Previously, metrics, session, PR tracking, and ceremony state files were scattered under `.automaker/` in the repo root and `apps/server/.automaker/`. Moved to `DATA_DIR` (env var `DATA_DIR`, defaults to `./data`) so runtime state is cleanly separated from repo-tracked config.
+- **Affected services and new paths:**
+  - `ErrorBudgetService`: constructor takes `dataDir`; path is `DATA_DIR/metrics/error-budget.json`
+  - `MetricsCollectionService`: new `dataDir` parameter; path is `DATA_DIR/metrics/dora.json`
+  - `PRFeedbackService`: new `dataDir` parameter; path is `DATA_DIR/pr-tracking.json`
+  - `LeadEngineerSessionStore`: `deps.dataDir` required; path is `DATA_DIR/lead-engineer-sessions.json`
+  - `CeremonyService`: call `setDataDir(dataDir)` after construction; path is `DATA_DIR/ceremony-state/{slug}.json`
+- **One-time migration:** `migrateRuntimeStateFiles()` in `startup.ts` runs at server start, moving old files from `.automaker/` paths to new `DATA_DIR` paths. Idempotent — skips files that don't exist at old location.
+- **Breaking if changed:** If `dataDir` is not passed to these services (or `setDataDir()` not called on `CeremonyService`), services fall back to CWD-relative paths which diverge between MCP server and app server processes.
+
+### LeadEngineerSessionStore consolidated from per-project files to a single multi-project file (2026-03-12)
+
+- **Context:** Previously stored one `lead-engineer-sessions.json` per project path. Now uses a single `DATA_DIR/lead-engineer-sessions.json` with structure `{ sessions: Record<string, PersistedSessionData>, savedAt: string }`.
+- **Why:** Eliminates the need to enumerate all project paths at restore time. `findProjectsWithSessions()` was fragile — it scanned settings for project paths and checked each for a session file. Single file with keyed map is simpler and survives project path changes.
+- **Rejected:** Per-project files with a shared index; keyed map achieves the same lookup without extra indirection.
+- **Breaking if changed:** If the file format reverts to per-project, `restoreSessions()` must re-implement project enumeration. Old per-project files are migrated by `migrateRuntimeStateFiles()` at startup (only the top-level `lead-engineer-sessions.json`).
+
+### Pre-flight rebase conflict blocks feature execution instead of proceeding on stale base (2026-03-12)
+
+- **Context:** Previously, when a pre-flight rebase onto `origin/main` (or `origin/dev`) detected merge conflicts, auto-mode logged a warning and let the agent proceed on the conflict-ridden branch. This caused repeated `merge_conflict` failures wasting execution cycles.
+- **Why:** Setting status to `blocked` with a clear `statusChangeReason` stops the wasted execution and surfaces the required manual action (human must resolve conflicts and rebase). Both `AutoModeService` and `ExecutionService` apply this gate for initial execution and follow-up execution paths.
+- **Follow-up path detail:** `AutoModeService` captures the conflict reason in `followUpConflictReason` before the rebase try/catch block, then checks and throws after it — this ensures the block-and-throw runs outside the rebase catch scope.
+- **Breaking if changed:** Reverting to warning-only would resume repeated merge_conflict failures for stale branches. The `blocked` status is the only signal to the human that manual rebase is needed.
