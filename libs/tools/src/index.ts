@@ -28,3 +28,14 @@ export { createClaudeCodeTool } from './claude-code-tool.js';
 export type { ClaudeCodeDeps } from './claude-code-tool.js';
 export { createProjectTools } from './project-tools.js';
 export type { ProjectDeps } from './project-tools.js';
+
+// Tool profiles — named capability sets for agent roles
+export {
+  getToolsForProfile,
+  getProfile,
+  listProfileNames,
+  EXECUTION_PROFILE,
+  ORCHESTRATION_PROFILE,
+  REVIEW_PROFILE,
+} from './tool-profiles.js';
+export type { ToolProfile, ToolProfileName } from './tool-profiles.js';
