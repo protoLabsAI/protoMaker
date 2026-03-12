@@ -100,8 +100,7 @@ export const EXECUTION_PROFILE: ToolProfile = {
       'Agents need to inspect existing features to avoid duplicates and understand project state.',
     get_feature:
       'Required to load full feature spec (description, acceptance criteria) at task start.',
-    update_feature:
-      'Required to mark features in-progress, done, or blocked as work proceeds.',
+    update_feature: 'Required to mark features in-progress, done, or blocked as work proceeds.',
     request_user_input:
       'Allows agents to surface blockers to humans rather than guessing or stalling.',
     Read: 'Core file-read capability — used on every trajectory for context loading.',
