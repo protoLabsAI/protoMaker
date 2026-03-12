@@ -34,15 +34,19 @@ Auto-merge waits for all required checks then merges automatically. Set it early
 ## CodeRabbit Gotchas
 
 ### CodeRabbit Doesn't Review
+
 If CodeRabbit doesn't post a review, auto-merge hangs forever (it's a required check).
 
 **Fix:** Comment on the PR:
+
 ```bash
 gh pr comment <number> --body "@coderabbitai review"
 ```
 
 ### Unresolved Threads Block Merge
+
 Use the `resolve_review_threads` MCP tool for batch resolution, or GraphQL:
+
 ```bash
 gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "<id>"}) { thread { isResolved } } }'
 ```
@@ -62,6 +66,49 @@ npm run build:packages
 ```
 
 Stale `dist/` after types changes causes downstream PRs to fail with wrong type references.
+
+## Post-Agent Checklist
+
+Run this after every agent completion or turn-limit hit:
+
+1. **Check for uncommitted work first:**
+
+   ```bash
+   git -C <worktree-path> status --short
+   ```
+
+   If uncommitted changes exist, review the diff — this work is lost if the worktree is cleaned up.
+
+2. **Formatting** is handled automatically by `worktree-recovery-service.ts` and `git-workflow-service.ts`. For manual fixes: `npx prettier --write <file> --ignore-path /dev/null`.
+
+3. **Commit, push, create PR** if the agent left work uncommitted:
+
+   ```bash
+   git -C <worktree-path> add <specific-files>
+   git -C <worktree-path> commit -m "feat: <description>"
+   git -C <worktree-path> push -u origin <branch-name>
+   gh pr create --base dev ...
+   ```
+
+4. **Enable auto-merge:** `gh pr merge <number> --auto --squash`
+
+5. **Trigger CodeRabbit** if missing: `gh pr comment <number> --body "@coderabbitai review"`
+
+6. **Resolve CodeRabbit threads** via `resolve_review_threads` MCP tool before merge.
+
+Prefer delegating steps 2–6 to the **PR Maintainer** agent.
+
+## Direct Commits to Main
+
+Branch protection blocks `git push origin main` even with admin bypass. Always use PRs.
+
+If you must bypass for a critical hotfix:
+
+1. Run `npm run format` first (CI won't run for direct pushes)
+2. Verify with `npm run build:packages && npm run build:server`
+3. Create a PR instead — auto-merge + thread resolution is the fastest path
+
+**Runner config:** Self-hosted runner is `ava-staging` (configured via `UserProfile.infra.stagingHost`). Auto-deploy triggers on push to main.
 
 ## Large PRs = Review Bottleneck
 

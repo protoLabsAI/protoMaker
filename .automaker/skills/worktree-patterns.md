@@ -131,6 +131,7 @@ git worktree prune --dry-run
 ```
 
 Output showing `prunable` means the worktree is stale:
+
 ```
 Removing worktrees/my-old-branch: gitdir file points to non-existent location
 ```
@@ -171,14 +172,102 @@ git worktree remove --force .worktrees/feature-foo             # force (uncommit
 
 ---
 
+## Pre-Removal Safety Checklist
+
+Before removing ANY worktree, ALL of the following must be true:
+
+1. **No running agent**: `list_running_agents` shows no agent with this worktree path
+2. **No lock file**: No `.automaker-lock` in the worktree (or the PID inside it is dead)
+3. **No uncommitted changes**: `git -C <worktree> status --short` is empty
+4. **No unpushed commits**: `git -C <worktree> log --oneline origin/HEAD..HEAD` is empty
+
+```bash
+WORKTREE="/path/to/.worktrees/feature-branch"
+
+# Check lock file
+cat "$WORKTREE/.automaker-lock" 2>/dev/null && echo "LOCKED — check PID before removing"
+
+# Check uncommitted changes
+git -C "$WORKTREE" status --short
+
+# Check unpushed commits
+git -C "$WORKTREE" log --oneline origin/HEAD..HEAD 2>/dev/null
+```
+
+If uncommitted changes exist and the worktree must be removed:
+
+```bash
+git -C "$WORKTREE" add -A -- ':!.automaker/'
+git -C "$WORKTREE" commit --no-verify -m "wip: preserve work before cleanup"
+git -C "$WORKTREE" push -u origin HEAD
+```
+
+---
+
+## Stale Worktree Cleanup — Operational
+
+Stale worktrees block auto-mode because `loadPendingFeatures()` filters features with a `branchName` AND an existing worktree as "belonging to that worktree" — excluding them from the main worktree queue. After agent failures, features reset to `backlog` but keep their `branchName` and worktree, so every backlog feature is filtered out.
+
+**Diagnostic: check for stale worktrees**
+
+```bash
+for wt in .worktrees/*/; do
+  name=$(basename "$wt")
+  changes=$(git -C "$wt" status --short 2>/dev/null | wc -l | tr -d ' ')
+  ahead=$(git -C "$wt" log --oneline origin/main..HEAD 2>/dev/null | wc -l | tr -d ' ')
+  echo "$name: $changes uncommitted, $ahead ahead of main"
+done
+```
+
+**Decision matrix before removing:**
+
+| State                  | Action                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| 0 uncommitted, 0 ahead | Safe to remove — clean slate                                                   |
+| 0 uncommitted, N ahead | Has commits but likely partial; safe to remove. Auto-mode recreates fresh.     |
+| N uncommitted, 0 ahead | Agent hit turn limit. Review diff. Commit/push/PR before removing if valuable. |
+
+**Safe cleanup procedure:**
+
+```bash
+mcp__plugin_protolabs_studio__stop_auto_mode({ projectPath })
+
+for wt in .worktrees/*/; do
+  git worktree remove --force ".worktrees/$(basename $wt)"
+done
+
+mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency: 1 })
+```
+
+**Crew loop delegation:** Worktree health monitoring is handled by the **Frank** crew loop every 10 minutes. Only intervene manually for worktrees with uncommitted critical changes.
+
+---
+
+## Data Safety — Incident Context
+
+On Feb 10, 2026, ALL 141 feature.json files were recursively deleted during a 9+ agent crash. Two interacting causes:
+
+1. **Branch checkout in main repo** — `git checkout feature-branch` overwrites `.automaker/features/` with whatever that branch has (usually nothing)
+2. **`git add -A` in worktree commits** — Captures stale feature.json state. When merged, deletes features from main because the branch snapshot didn't include them
+
+**Hard rules (reinforced):**
+
+- Never `git checkout` branches in the main repo — always use worktrees
+- Never `git add -A` or `git add .` — always stage specific files or use `git add -A -- ':!.automaker/'`
+- Always ensure features have `branchName` set before starting agents
+
+**Backup strategy note:** AtomicWriter `.bak` files live in the same directory — useless when the directory itself is deleted. The feature backup service (PR #164) provides out-of-directory backups as the real safety net. `.automaker/features/` is intentionally not git-tracked (incompatible with server runtime writes).
+
+---
+
 ## Anti-Patterns Summary
 
-| Anti-Pattern | Consequence | Fix |
-|---|---|---|
-| `cd .worktrees/my-branch` | Breaks Bash permanently if worktree removed | Use `git -C <path>` or absolute paths |
-| `npx prettier --write .` from worktree dir | Wrong ignore paths; `npx` fails silently (no node_modules) | Server handles this automatically now; manual: `npx prettier --write <file> --ignore-path /dev/null` |
-| Starting agent without rebase | Mid-feature merge conflicts, wasted work | Always `fetch` + `rebase origin/dev` first |
-| `git worktree remove` with uncommitted work | Data loss | Check `git status --short` first |
-| `git checkout <branch>` in main repo | Modifies `.automaker/features/` on disk → data loss | Use worktrees or `git -C <wt> checkout` |
-| `git add -A` in main repo | Captures runtime files (.automaker/) | Use `git add <specific-files>` |
-| Not `cd`-ing back after worktree commands | Next Bash call starts in wrong directory | Always return: `&& cd /Users/kj/dev/automaker` |
+| Anti-Pattern                                | Consequence                                                | Fix                                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `cd .worktrees/my-branch`                   | Breaks Bash permanently if worktree removed                | Use `git -C <path>` or absolute paths                                                                |
+| `npx prettier --write .` from worktree dir  | Wrong ignore paths; `npx` fails silently (no node_modules) | Server handles this automatically now; manual: `npx prettier --write <file> --ignore-path /dev/null` |
+| Starting agent without rebase               | Mid-feature merge conflicts, wasted work                   | Always `fetch` + `rebase origin/dev` first                                                           |
+| `git worktree remove` with uncommitted work | Data loss                                                  | Check `git status --short` first                                                                     |
+| `git checkout <branch>` in main repo        | Modifies `.automaker/features/` on disk → data loss        | Use worktrees or `git -C <wt> checkout`                                                              |
+| `git add -A` in main repo                   | Captures runtime files (.automaker/)                       | Use `git add <specific-files>`                                                                       |
+| Not `cd`-ing back after worktree commands   | Next Bash call starts in wrong directory                   | Always return: `&& cd /Users/kj/dev/automaker`                                                       |

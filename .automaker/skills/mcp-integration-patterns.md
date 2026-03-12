@@ -32,6 +32,7 @@ mcp__plugin_protolabs_studio__list_features({ projectPath: "/path/to/project" })
 ```
 
 **Why?**
+
 - MCP handles `AUTOMAKER_API_KEY` automatically (from plugin's `.env`)
 - MCP returns structured responses; curl returns raw JSON/HTML
 - When the API key rotates, MCP picks it up; hardcoded curl breaks
@@ -75,7 +76,7 @@ export const myTools: Tool[] = [
           },
         },
       },
-      required: ['projectPath', 'featureId'],   // ← list ALL required fields
+      required: ['projectPath', 'featureId'], // ← list ALL required fields
     },
   },
 ];
@@ -186,14 +187,28 @@ Handler logic is thin (`apiCall` wrappers) — prefer integration testing via MC
 
 ---
 
+## Token Separation
+
+`DISCORD_TOKEN` and `DISCORD_BOT_TOKEN` may hold the same value but are consumed differently:
+
+- **Server** (`automaker/.env`): `DISCORD_TOKEN` — used by `DiscordBotService.initialize()` via `client.login(token)`
+- **Plugin** (`packages/mcp-server/plugins/automaker/.env`): `DISCORD_BOT_TOKEN` — used by MCP Discord tools via REST API with token header
+
+Keep both files in sync. Never commit either `.env` file — both are gitignored.
+
+## Auto-Login
+
+`AUTOMAKER_AUTO_LOGIN=true` (in `automaker/.env`) skips the login prompt in development. **Disabled when `NODE_ENV=production`.** Required for headless/automated operation.
+
 ## Anti-Patterns Summary
 
-| Anti-Pattern | Consequence | Fix |
-|---|---|---|
-| Direct `curl`/`fetch` to Automaker API | Auth fails after key rotation; no retry | Use `mcp__plugin_protolabs_studio__*` tools |
-| No error response shape | Callers can't detect failure programmatically | Return `{ success: false, error: string }` |
-| Hardcoding `http://localhost:3008` in tools | Breaks in staging/production | Use `apiCall()` — it reads `AUTOMAKER_API_URL` |
-| Adding tool definition but not the handler case | Tool is listed but throws "Unknown tool" | Always add both definition + case in handleTool |
-| Forgetting `npm run build:packages` after changes | MCP client still sees old tool list | Rebuild + restart MCP server |
-| Accessing `~/.secrets/` for credentials | Path doesn't exist | Use `.env` files at project/plugin level |
-| Creating a new API route without an MCP wrapper | Feature accessible only via curl | Always pair new routes with an MCP tool |
+| Anti-Pattern                                      | Consequence                                   | Fix                                                     |
+| ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------- |
+| Direct `curl`/`fetch` to Automaker API            | Auth fails after key rotation; no retry       | Use `mcp__plugin_protolabs_studio__*` tools             |
+| No error response shape                           | Callers can't detect failure programmatically | Return `{ success: false, error: string }`              |
+| Hardcoding `http://localhost:3008` in tools       | Breaks in staging/production                  | Use `apiCall()` — it reads `AUTOMAKER_API_URL`          |
+| Adding tool definition but not the handler case   | Tool is listed but throws "Unknown tool"      | Always add both definition + case in handleTool         |
+| Forgetting `npm run build:packages` after changes | MCP client still sees old tool list           | Rebuild + restart MCP server                            |
+| Accessing `~/.secrets/` for credentials           | Path doesn't exist                            | Use `.env` files at project/plugin level                |
+| Creating a new API route without an MCP wrapper   | Feature accessible only via curl              | Always pair new routes with an MCP tool                 |
+| Committing `.env` files                           | Leaks secrets into git history                | Both `.env` files are gitignored — never force-add them |

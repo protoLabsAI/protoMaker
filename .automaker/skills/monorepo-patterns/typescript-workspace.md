@@ -29,5 +29,6 @@ Each shared package sets `"main": "./dist/index.js"` and `"exports"` in its `pac
 | Anti-Pattern | Why It Fails | Fix |
 |---|---|---|
 | `build:server` without `build:packages` first | Stale types from old dist | Always run `build:packages` first |
+| Modifying shared types in a worktree without rebuilding | npm workspace hoisting resolves `@protolabsai/types` to the main repo's copy, not the worktree's | Run `npm run build:packages` from within the worktree after changing shared types |
 | Relative imports across package boundaries | Breaks when packages move; no workspace resolution | Use `@protolabsai/*` imports |
 | Forgetting `composite: true` in tsconfig | Project references break | Always add it to lib tsconfigs |
