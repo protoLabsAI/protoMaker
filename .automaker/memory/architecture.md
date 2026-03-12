@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 428
-  referenced: 64
-  successfulFeatures: 64
+  loaded: 430
+  referenced: 65
+  successfulFeatures: 65
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -384,3 +384,20 @@ usageStats:
 - **Situation:** Legacy thin Milestone objects may not have phases with executionStatus fields; normalizer must supply a default
 - **Root cause:** 'unclaimed' is safest domain default (allows re-assignment); prevents false assumption that old phases are already executing
 - **How to avoid:** Bulk operation on old projects will show all phases as unclaimed (may require claiming/reassigning work); safe but creates operational overhead
+
+#### [Gotcha] Relative path resolution diverges when different processes run from different working directories. MCP server runs from monorepo root, actual server runs from apps/server/, causing ./data to resolve to different locations (automaker/data vs apps/server/data) (2026-03-12)
+- **Situation:** Debugging stale logs that appeared 12+ hours old despite server being fresh; logs were actually from a different file path entirely
+- **Root cause:** Relative paths like ./data are resolved against the process's CWD; when CWD differs, the same path string resolves to completely different filesystem locations
+- **How to avoid:** Using relative paths is convenient (portable), but creates fragility across process boundary; absolute paths are more explicit but less portable
+
+### When two systems can compute the same value differently (log path), make the system actually using it the authoritative source via API, rather than duplicating computation logic in both places (2026-03-12)
+- **Context:** MCP and server both needed to know log path; path computation diverged due to CWD mismatch; had to choose between option 1 (API) or option 2 (agreed absolute path in both)
+- **Why:** Server is the authoritative source (it's the one writing logs); eliminates coordination overhead; automatically handles environment variations (DATA_DIR changes, path overrides, etc.); enables correct fallback logic for server-down case
+- **Rejected:** Option 2 (hardcode agreed absolute path in both MCP and server code) fails when environment changes; creates maintenance burden of keeping two code paths in sync
+- **Trade-offs:** One extra network hop when server is up (acceptable cost for observability); enables working offline with corrected logic; eliminates future path divergence
+- **Breaking if changed:** If API contract changes without updating fallback logic, or if getServerLogPath() implementation changes without verifying fallback still works
+
+#### [Pattern] When adding an API dependency to replace buggy fallback logic, the fallback must be corrected too (not kept in old buggy state) to avoid regression when the API is unavailable (2026-03-12)
+- **Problem solved:** Adding GET /api/health/log-path meant old fallback path (AUTOMAKER_ROOT/data/server.log) was still used when server down; had to decide whether to fix fallback or keep it for 'compatibility'
+- **Why this works:** Partial fixes create maintenance debt and confusion; when server is down, tool should still work correctly; fallback path serves the same purpose (reading logs) so it must have same fix
+- **Trade-offs:** Fixing fallback requires understanding root cause deeply (more work upfront), but prevents cascading bugs and ensures consistent behavior in all modes (server up/down)

@@ -6,7 +6,7 @@
       "prNumber": 21,
       "prUrl": "https://github.com/protoLabsAI/project-atlas/pull/21",
       "branchName": "",
-      "lastCheckedAt": 1773300399213,
+      "lastCheckedAt": 1773337840420,
       "reviewStatus": "pending",
       "remediationCount": 0,
       "trackedSince": 1773294739640
@@ -17,11 +17,22 @@
       "prNumber": 22,
       "prUrl": "https://github.com/protoLabsAI/project-atlas/pull/22",
       "branchName": "",
-      "lastCheckedAt": 1773300399659,
+      "lastCheckedAt": 1773337841122,
       "reviewStatus": "pending",
       "remediationCount": 0,
       "trackedSince": 1773295084282
+    },
+    {
+      "featureId": "feature-1773337165694-p49h9xdmt",
+      "projectPath": "/Users/kj/dev/automaker",
+      "prNumber": 2333,
+      "prUrl": "https://github.com/protoLabsAI/protoMaker/pull/2333",
+      "branchName": "",
+      "lastCheckedAt": 0,
+      "reviewStatus": "pending",
+      "remediationCount": 0,
+      "trackedSince": 1773337895645
     }
   ],
-  "savedAt": "2026-03-12T07:26:41.322Z"
+  "savedAt": "2026-03-12T17:51:35.645Z"
 }

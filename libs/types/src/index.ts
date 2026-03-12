@@ -169,6 +169,7 @@ export type {
   Project,
   SPARCPrd,
   PRDReviewComment,
+  CadenceConfig,
   FeatureFactoryResult,
   CreateProjectInput,
   UpdateProjectInput,
