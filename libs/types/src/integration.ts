@@ -5,7 +5,7 @@
  * Each integration is described by an IntegrationDescriptor — a serializable manifest
  * that declares its config fields, category, scope, icon, and health check capability.
  *
- * Phase 1: Discord, GitHub, Twitch
+ * Phase 1: Discord, GitHub
  * Phase 2: AI providers, MCP servers, Langfuse
  */
 

@@ -1,5 +1,5 @@
 /**
- * External Integration Tools (Discord, Twitch, HITL)
+ * External Integration Tools (Discord, HITL)
  */
 
 import { Tool } from '@modelcontextprotocol/sdk/types.js';

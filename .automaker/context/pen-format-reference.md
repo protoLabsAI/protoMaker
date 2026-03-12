@@ -6,30 +6,30 @@ The `designs/` directory contains `.pen` files — JSON scene graphs from pencil
 
 ```typescript
 interface PenDocument {
-  version: string;                           // "2.8"
-  themes?: Record<string, string[]>;         // { "Mode": ["Light", "Dark"], "Base": ["Zinc", ...] }
-  variables?: Record<string, PenVariable>;   // Design tokens
-  children: PenNode[];                       // Scene graph root nodes
+  version: string; // "2.8"
+  themes?: Record<string, string[]>; // { "Mode": ["Light", "Dark"], "Base": ["Zinc", ...] }
+  variables?: Record<string, PenVariable>; // Design tokens
+  children: PenNode[]; // Scene graph root nodes
 }
 ```
 
 ## Node Types (discriminated union on `type` field)
 
-| Type | Renders As | Key Props |
-|------|-----------|-----------|
-| `frame` | `<div>` with flexbox | layout, gap, padding, fill, stroke, clip, cornerRadius, children |
-| `group` | `<div>` container (no fill) | layout, children |
-| `text` | `<span>` | content (string or TextStyle[]), fontFamily, fontSize, fontWeight, textAlign |
-| `icon_font` | Lucide React icon | iconFontName ("hexagon"), iconFontFamily ("lucide"), fill |
-| `ref` | Clone of referenced component | ref (source ID), descendants (overrides map) |
-| `rectangle` | `<div>` with fill | fill, stroke, cornerRadius |
-| `ellipse` | `<div>` with border-radius: 50% | fill, stroke, startAngle, endAngle |
-| `line` | SVG line | x1, y1, x2, y2, stroke |
-| `polygon` | SVG polygon | sides, fill, stroke |
-| `path` | SVG path | d (SVG path data), fill, stroke |
-| `note` | Hidden (design annotation) | content |
-| `prompt` | Hidden (AI prompt) | content, model |
-| `context` | Hidden (context info) | content |
+| Type        | Renders As                      | Key Props                                                                    |
+| ----------- | ------------------------------- | ---------------------------------------------------------------------------- |
+| `frame`     | `<div>` with flexbox            | layout, gap, padding, fill, stroke, clip, cornerRadius, children             |
+| `group`     | `<div>` container (no fill)     | layout, children                                                             |
+| `text`      | `<span>`                        | content (string or TextStyle[]), fontFamily, fontSize, fontWeight, textAlign |
+| `icon_font` | Lucide React icon               | iconFontName ("hexagon"), iconFontFamily ("lucide"), fill                    |
+| `ref`       | Clone of referenced component   | ref (source ID), descendants (overrides map)                                 |
+| `rectangle` | `<div>` with fill               | fill, stroke, cornerRadius                                                   |
+| `ellipse`   | `<div>` with border-radius: 50% | fill, stroke, startAngle, endAngle                                           |
+| `line`      | SVG line                        | x1, y1, x2, y2, stroke                                                       |
+| `polygon`   | SVG polygon                     | sides, fill, stroke                                                          |
+| `path`      | SVG path                        | d (SVG path data), fill, stroke                                              |
+| `note`      | Hidden (design annotation)      | content                                                                      |
+| `prompt`    | Hidden (AI prompt)              | content, model                                                               |
+| `context`   | Hidden (context info)           | content                                                                      |
 
 ## Common Properties (all nodes)
 
@@ -58,6 +58,7 @@ clip?: boolean;  // overflow: hidden
 ```
 
 **Size mapping:**
+
 - `fill_container` → `flex: 1` (or `width: 100%` in non-flex)
 - `fit_content` → `width: auto`
 - `{ fit_content: 200 }` → `width: auto; min-width: 200px`
@@ -117,11 +118,11 @@ fill?: PenFill[];
 
 ## Existing Designs
 
-| File | Content |
-|------|---------|
-| `designs/components/shadcn-kit.pen` | 88 reusable components, 28 variables, multi-theme (Light/Dark + 5 bases + 8 accents). Sidebar, Buttons, Cards, Dashboards, Hero CTA, Twitch Panel. **6,321 lines.** |
-| `designs/site/landing-page.pen` | Empty placeholder (800x600) |
-| `designs/experiments/scratch.pen` | Empty placeholder (800x600) |
+| File                                | Content                                                                                                                                               |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `designs/components/shadcn-kit.pen` | 88 reusable components, 28 variables, multi-theme (Light/Dark + 5 bases + 8 accents). Sidebar, Buttons, Cards, Dashboards, Hero CTA. **6,321 lines.** |
+| `designs/site/landing-page.pen`     | Empty placeholder (800x600)                                                                                                                           |
+| `designs/experiments/scratch.pen`   | Empty placeholder (800x600)                                                                                                                           |
 
 ## Implementation Rules
 

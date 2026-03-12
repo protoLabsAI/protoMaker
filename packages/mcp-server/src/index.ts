@@ -1470,28 +1470,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         metadata: args.metadata,
       });
 
-    // Twitch Integration
-    case 'twitch_list_suggestions':
-      return apiCall(
-        '/twitch/suggestions',
-        {
-          filter: args.filter,
-        },
-        'GET'
-      );
-
-    case 'twitch_build_suggestion':
-      return apiCall(`/twitch/suggestions/${args.suggestionId}/build`, {
-        projectPath: args.projectPath,
-      });
-
-    case 'twitch_create_poll':
-      return apiCall('/twitch/poll', {
-        suggestionIds: args.suggestionIds,
-        projectPath: args.projectPath,
-        durationSeconds: args.durationSeconds,
-      });
-
     // HITL Forms
     case 'request_user_input':
       return apiCall('/hitl-forms/create', {

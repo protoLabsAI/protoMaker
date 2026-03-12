@@ -83,7 +83,7 @@ The MCP server exposes ~159 tools organized by category:
 - **Reports** (2) -- generate, open
 - **SetupLab** (7) -- repo analysis, gap analysis, alignment
 - **Discord** (4) -- DMs, provisioning, ceremonies
-- **Integration** (3) -- Twitch, Discord
+- **Integration** -- Discord, HITL forms
 - **Settings & Health** (4) -- settings, health, logs
 - **Events** (2) -- events, notifications
 - **Metrics** (3) -- project metrics, capacity, forecasts

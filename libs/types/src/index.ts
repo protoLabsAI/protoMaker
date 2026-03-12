@@ -825,10 +825,6 @@ export type {
   PipelineResult,
 } from './lead-engineer.js';
 
-// Twitch integration types (chat suggestions)
-export type { TwitchSuggestion, TwitchSettings } from './twitch.js';
-export { DEFAULT_TWITCH_SETTINGS } from './twitch.js';
-
 // Notes types (Tiptap-based project notes workspace)
 export type { NoteTab, NoteTabPermissions, NotesWorkspace } from './notes.js';
 
