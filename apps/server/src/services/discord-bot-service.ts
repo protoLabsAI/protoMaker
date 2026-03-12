@@ -1584,6 +1584,30 @@ export class DiscordBotService {
   }
 
   /**
+   * Add a reaction (emoji) to a message in a channel.
+   */
+  async addReaction(channelId: string, messageId: string, emoji: string): Promise<boolean> {
+    if (!this.client) return false;
+
+    try {
+      const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
+      if (!channel?.isTextBased()) return false;
+
+      const message = await channel.messages.fetch(messageId);
+      await message.react(emoji);
+
+      logger.info(`Added reaction ${emoji} to message ${messageId} in channel ${channelId}`);
+      return true;
+    } catch (error) {
+      logger.error(
+        `Failed to add reaction to message ${messageId} in channel ${channelId}:`,
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
    * Create a thread for an extended conversation.
    */
   async createThread(channelId: string, messageId: string, name: string): Promise<string | null> {

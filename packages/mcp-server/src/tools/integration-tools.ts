@@ -119,6 +119,97 @@ export const integrationTools: Tool[] = [
   },
 
   {
+    name: 'add_discord_reaction',
+    description:
+      'Add an emoji reaction to a Discord message. Use Unicode emoji (e.g. "✅", "👍") or custom emoji name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channelId: {
+          type: 'string',
+          description: 'Discord channel ID containing the message',
+        },
+        messageId: {
+          type: 'string',
+          description: 'Discord message ID to react to',
+        },
+        emoji: {
+          type: 'string',
+          description: 'Emoji to react with (Unicode emoji like "✅" or custom emoji name)',
+        },
+      },
+      required: ['channelId', 'messageId', 'emoji'],
+    },
+  },
+
+  {
+    name: 'twitch_list_suggestions',
+    description:
+      'View Twitch chat suggestion queue with filtering. Use filter="unprocessed" to see only new suggestions, "approved" for processed ones, or "all" for everything.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        filter: {
+          type: 'string',
+          enum: ['all', 'unprocessed', 'approved'],
+          description: 'Filter suggestions by processing status',
+          default: 'all',
+        },
+      },
+    },
+  },
+  {
+    name: 'twitch_build_suggestion',
+    description:
+      'Approve a Twitch suggestion and create a board feature directly (skip poll). Marks suggestion as processed and creates feature with chat attribution.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        suggestionId: {
+          type: 'string',
+          description: 'ID of the suggestion to build',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+      },
+      required: ['suggestionId', 'projectPath'],
+    },
+  },
+  {
+    name: 'twitch_create_poll',
+    description:
+      'Create a native Twitch poll from 2-4 selected suggestions. When poll ends, winning suggestion auto-creates a board feature. Requires Twitch API credentials.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        suggestionIds: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+          minItems: 2,
+          maxItems: 4,
+          description: 'Array of 2-4 suggestion IDs to include in the poll',
+        },
+        projectPath: {
+          type: 'string',
+          description: 'Absolute path to the project directory',
+        },
+        durationSeconds: {
+          type: 'number',
+          description: 'Poll duration in seconds (15-1800, default: 60)',
+          default: 60,
+          minimum: 15,
+          maximum: 1800,
+        },
+      },
+      required: ['suggestionIds', 'projectPath'],
+    },
+  },
+
+  {
     name: 'request_user_input',
     description:
       'Create a HITL form request that renders as a dialog in the UI. ' +

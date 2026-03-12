@@ -1,5 +1,105 @@
 # @protolabsai/observability
 
+## 0.48.0
+
+### Minor Changes
+
+- ### Features
+  - add recentEscalations and recentLogErrors to sitrep
+  - add recentEscalations and recentLogErrors to sitrep
+  - move runtime state files from .automaker/ to DATA_DIR (#2346)
+  - Notes as CRDT domain — dual-write with disk fallback (#2340)
+  - add Notes as CRDT domain (#2338)
+  - move runtime state files from .automaker/ to DATA_DIR (#2346)
+  - Notes as CRDT domain — dual-write with disk fallback (#2340)
+  - add Notes as CRDT domain (#2338)
+  - add projectSlug filter to get_sitrep and get_board_summary
+  - extend MetricsDocument with memoryStats for hivemind-wide memory file scoring (#2337)
+  - add categories:updated CRDT sync via event bridge (#2336)
+  - align ProjectDocument schema with full Project type (#2332)
+  - remove vestigial hive config — replace with protolab/hivemind instanceId resolution (#2330)
+  - add projectSlug filter to get_sitrep and get_board_summary
+  - extend MetricsDocument with memoryStats for hivemind-wide memory file scoring (#2337)
+  - add categories:updated CRDT sync via event bridge (#2336)
+  - align ProjectDocument schema with full Project type (#2332)
+  - remove vestigial hive config — replace with protolab/hivemind instanceId resolution (#2330)
+  - expose category field in create_feature and update_feature MCP tools
+  - expose category field in create_feature and update_feature MCP tools
+  - wire tool profiles into execution pipeline (#2313)
+  - auto-create PR after uncommitted work recovery (#2300)
+  - wire tool profiles into execution pipeline (#2313)
+  - auto-create PR after uncommitted work recovery (#2300)
+  - replace inline project form with dialog including color and priority
+  - replace inline project form with dialog including color and priority
+
+  ### Bug Fixes
+  - null phase model value crashes settings endpoint (#2358)
+  - reset stale feature state on staging deploy restart (#2353)
+  - null phase model value crashes settings endpoint (#2358)
+  - reset stale feature state on staging deploy restart (#2353)
+  - replace pre-flight git rebase with git merge to prevent parallel agent conflicts (#2351)
+  - replace pre-flight git rebase with git merge to prevent parallel agent conflicts (#2351)
+  - align test mocks with runtime state extraction and notes hydration (#2348)
+  - block feature execution when pre-flight rebase detects merge conflicts (#2343)
+  - handle directory entries in nested worktree recovery
+  - align test mocks with runtime state extraction and notes hydration (#2348)
+  - block feature execution when pre-flight rebase detects merge conflicts (#2343)
+  - handle directory entries in nested worktree recovery
+  - export CadenceConfig from @protolabsai/types barrel
+  - resolve get_server_logs log path via server api, not monorepo root (#2333)
+  - fall back to dev when epic branch doesn't exist on remote
+  - export CadenceConfig from @protolabsai/types barrel
+  - resolve get_server_logs log path via server api, not monorepo root (#2333)
+  - fall back to dev when epic branch doesn't exist on remote
+  - auto-mode concurrency race from premature startingFeatures timeout (#2327)
+  - auto-mode concurrency race from premature startingFeatures timeout (#2327)
+  - discord bot silent failure from env var mismatch (#2325)
+  - discord bot silent failure from env var mismatch (#2325)
+  - remove flaky AtomicWriter log assertion from feature-loader test
+  - update feature-loader test for AtomicWriter cooldown cache
+  - remove flaky AtomicWriter log assertion from feature-loader test
+  - update feature-loader test for AtomicWriter cooldown cache
+  - remove PORT=3009 override from \_dev:server script
+  - remove PORT=3009 override from \_dev:server script
+  - split server tsconfig for tsx dev vs tsc build
+  - split server tsconfig for tsx dev vs tsc build
+
+  ### Refactors
+  - Upgrade @automerge packages to latest 3.x (#2347)
+  - Fill CRDTStore test gaps (#2345)
+  - Upgrade @automerge packages to latest 3.x (#2347)
+  - Fill CRDTStore test gaps (#2345)
+  - Fix updatePhaseClaim and saveProjectMilestones to broadcast to peers (#2334)
+  - remove dead crdt:remote-changes event and rename CrdtFeatureEvent (#2331)
+  - remove dead code from AutomergeFeatureStore (#2329)
+  - Fix updatePhaseClaim and saveProjectMilestones to broadcast to peers (#2334)
+  - remove dead crdt:remote-changes event and rename CrdtFeatureEvent (#2331)
+  - remove dead code from AutomergeFeatureStore (#2329)
+  - Update docs after: Open SWE Lessons: Agent Execution Hardening (#2318)
+  - Update docs after: Open SWE Lessons: Agent Execution Hardening (#2318)
+  - CRDT sync: suppress log spam for features without backing feature.json (#2315)
+  - Post-execution middleware: recover work from nested Claude worktrees (#2314)
+  - Per-phase temperature routing (#2312)
+  - Update docs after: Open SWE Lessons: Agent Execution Hardening (#2310)
+  - Message queue middleware with inject-clear pattern (#2306)
+  - Refactor execution-service prompts to use PromptBuilder (#2304)
+  - Tool error wrapper in provider layer (#2303)
+  - CRDT sync: suppress log spam for features without backing feature.json (#2315)
+  - Post-execution middleware: recover work from nested Claude worktrees (#2314)
+  - Per-phase temperature routing (#2312)
+  - Update docs after: Open SWE Lessons: Agent Execution Hardening (#2310)
+  - Message queue middleware with inject-clear pattern (#2306)
+  - Refactor execution-service prompts to use PromptBuilder (#2304)
+  - Tool error wrapper in provider layer (#2303)
+  - slash command dropdown with category grouping
+  - slash command dropdown with category grouping
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.48.0
+  - @protolabsai/utils@0.48.0
+
 ## 0.47.0
 
 ### Minor Changes
