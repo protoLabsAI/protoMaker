@@ -16,6 +16,9 @@ import { getExecutionStatePath } from '@protolabsai/platform';
 import type { ExecutionState, Feature } from '@protolabsai/types';
 import { FeatureLoader } from '../../services/feature-loader.js';
 import * as secureFs from '../../lib/secure-fs.js';
+import { getEscalationRouter } from '../../services/escalation-router.js';
+import { open } from 'node:fs/promises';
+import { getServerLogPath } from '../../lib/server-log.js';
 
 const logger = createLogger('Sitrep');
 
@@ -152,8 +155,66 @@ async function buildSitrep(projectPath: string): Promise<string> {
   lines.push('## Auto-Mode');
   lines.push('');
   lines.push(`**Status:** ${autoModeActive ? '🟢 Running' : '⚪ Stopped'}`);
+  lines.push('');
+
+  // Recent escalations from audit log
+  try {
+    const router = getEscalationRouter();
+    const entries = router.getLog(5);
+    if (entries.length > 0) {
+      lines.push('## Recent Escalations');
+      lines.push('');
+      for (const entry of entries) {
+        const ctx = entry.signal.context ?? {};
+        const title = (ctx.featureTitle as string) || (ctx.featureId as string) || 'Unknown';
+        const reason = (ctx.reason as string) || (ctx.message as string) || entry.signal.type;
+        const short = reason.length > 120 ? reason.slice(0, 120) + '...' : reason;
+        lines.push(`- [${entry.signal.severity}] **${title}** — ${short}`);
+      }
+      lines.push('');
+    }
+  } catch {
+    // Escalation router not available
+  }
+
+  // Recent server log errors
+  try {
+    const logErrors = await readRecentLogErrors(5);
+    if (logErrors.length > 0) {
+      lines.push('## Recent Server Errors');
+      lines.push('');
+      for (const line of logErrors) {
+        const short = line.length > 150 ? line.slice(0, 150) + '...' : line;
+        lines.push(`- \`${short}\``);
+      }
+      lines.push('');
+    }
+  } catch {
+    // Log file not available
+  }
 
   return lines.join('\n');
+}
+
+async function readRecentLogErrors(limit: number): Promise<string[]> {
+  let fh: Awaited<ReturnType<typeof open>> | null = null;
+  try {
+    const logPath = getServerLogPath();
+    fh = await open(logPath, 'r');
+    const { size } = await fh.stat();
+    const readSize = Math.min(size, 65536);
+    const buffer = Buffer.alloc(readSize);
+    await fh.read(buffer, 0, readSize, size - readSize);
+    await fh.close();
+    fh = null;
+    const lines = buffer.toString('utf-8').split('\n');
+    return lines
+      .filter((line) => line.includes('[ERROR]') || line.includes('[FATAL]'))
+      .slice(-limit);
+  } catch {
+    if (fh) await fh.close().catch(() => {});
+    return [];
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

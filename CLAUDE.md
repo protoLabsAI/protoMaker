@@ -40,6 +40,43 @@ See `docs/dev/branch-strategy.md` for the full strategy.
 - Before committing, run `git status` and verify only intended files are staged. Watch for accidentally staged deletions from previously merged PRs.
 - `.automaker/memory/` files are updated by agents during autonomous work. Include memory changes in your commits alongside related code changes — don't leave them as unstaged drift.
 
+## Release Workflow
+
+Releases follow a two-step CI workflow. Version bumps happen on staging BEFORE promotion to main.
+
+### Step 1: Prepare Release (bump version on staging)
+
+Trigger the `prepare-release.yml` workflow on staging. This bumps `version` in all `package.json` files across the monorepo (root, apps, libs), commits, and optionally syncs the bump to dev.
+
+```bash
+# Trigger version bump (auto-detects next minor from git tags)
+gh workflow run prepare-release.yml --ref staging
+
+# Or dry run first
+gh workflow run prepare-release.yml --ref staging -f dry_run=true
+```
+
+Wait for the workflow to complete before proceeding.
+
+### Step 2: Promote staging to main
+
+Create a merge-commit PR from staging to main. The PR title should include the version.
+
+```bash
+gh pr create --base main --head staging --title "Promote staging to main (vX.Y.Z)"
+gh pr merge <number> --merge --auto
+```
+
+### Step 3: Auto Release (automatic)
+
+When the staging→main PR merges, `auto-release.yml` fires automatically. It reads the version from `package.json`, creates a git tag (`vX.Y.Z`), and publishes a GitHub Release.
+
+If the tag already exists, the workflow skips with `WARNING: vX.Y.Z is already tagged. Skipping.` — this means Step 1 was missed or the version wasn't bumped.
+
+### Common Mistake
+
+Promoting staging→main WITHOUT running prepare-release first. The auto-release sees the existing tag and does nothing. Always bump version on staging first.
+
 ## Session Continuation
 
 - When continuing a previous session or autonomous loop, always check MCP server connectivity and board status FIRST before attempting any agent launches or API calls.

@@ -11,6 +11,9 @@ import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
 import type { FeatureLoader } from '../../services/feature-loader.js';
 import type { AutoModeService } from '../../services/auto-mode-service.js';
+import { getEscalationRouter } from '../../services/escalation-router.js';
+import { open } from 'node:fs/promises';
+import { getServerLogPath } from '../../lib/server-log.js';
 
 const logger = createLogger('SitrepRoute');
 const execFileAsync = promisify(execFile);
@@ -37,16 +40,25 @@ export function createSitrepRoutes({
 
     try {
       // Gather everything in parallel for speed
-      const [allFeatures, autoStatus, runningAgents, prData, recentCommits, stagingDelta, health] =
-        await Promise.all([
-          featureLoader.getAll(projectPath).catch(() => [] as Feature[]),
-          getAutoModeStatus(autoModeService, projectPath),
-          getRunningAgents(autoModeService),
-          getOpenPRs(repoRoot),
-          getRecentCommits(repoRoot),
-          getStagingDelta(repoRoot),
-          getServerHealth(),
-        ]);
+      const [
+        allFeatures,
+        autoStatus,
+        runningAgents,
+        prData,
+        recentCommits,
+        stagingDelta,
+        health,
+        recentLogErrors,
+      ] = await Promise.all([
+        featureLoader.getAll(projectPath).catch(() => [] as Feature[]),
+        getAutoModeStatus(autoModeService, projectPath),
+        getRunningAgents(autoModeService),
+        getOpenPRs(repoRoot),
+        getRecentCommits(repoRoot),
+        getStagingDelta(repoRoot),
+        getServerHealth(),
+        getRecentLogErrors(10),
+      ]);
 
       // Filter by projectSlug when provided
       const features = projectSlug
@@ -107,6 +119,9 @@ export function createSitrepRoutes({
           classification: f.failureClassification?.category,
         }));
 
+      // Pull recent entries from the escalation router audit log
+      const recentEscalations = getRecentEscalations(10);
+
       res.json({
         timestamp: new Date().toISOString(),
         board,
@@ -115,6 +130,8 @@ export function createSitrepRoutes({
         blockedFeatures,
         reviewFeatures,
         escalations,
+        recentEscalations,
+        recentLogErrors,
         openPRs: prData,
         stagingDelta,
         recentCommits,
@@ -231,6 +248,54 @@ async function getStagingDelta(repoRoot: string) {
     return { commitsAhead: commits.length, commits: commits.slice(0, 5) };
   } catch {
     return { commitsAhead: 0, commits: [] };
+  }
+}
+
+function getRecentEscalations(limit: number) {
+  try {
+    const router = getEscalationRouter();
+    const entries = router.getLog(limit);
+    return entries.map((entry) => {
+      const ctx = entry.signal.context ?? {};
+      const failureAnalysis = ctx.failureAnalysis as Record<string, unknown> | undefined;
+      return {
+        type: entry.signal.type,
+        severity: entry.signal.severity,
+        source: entry.signal.source,
+        timestamp: entry.timestamp,
+        deduplicated: entry.deduplicated,
+        routedTo: entry.routedTo,
+        context: {
+          featureId: ctx.featureId as string | undefined,
+          featureTitle: ctx.featureTitle as string | undefined,
+          reason: (ctx.reason as string) || (ctx.message as string) || undefined,
+          projectPath: ctx.projectPath as string | undefined,
+          classification: failureAnalysis?.category as string | undefined,
+        },
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function getRecentLogErrors(limit: number): Promise<string[]> {
+  let fh: Awaited<ReturnType<typeof open>> | null = null;
+  try {
+    const logPath = getServerLogPath();
+    fh = await open(logPath, 'r');
+    const { size } = await fh.stat();
+    const readSize = Math.min(size, 65536);
+    const buffer = Buffer.alloc(readSize);
+    await fh.read(buffer, 0, readSize, size - readSize);
+    await fh.close();
+    fh = null;
+    const lines = buffer.toString('utf-8').split('\n');
+    const errorLines = lines.filter((line) => line.includes('[ERROR]') || line.includes('[FATAL]'));
+    return errorLines.slice(-limit);
+  } catch {
+    if (fh) await fh.close().catch(() => {});
+    return [];
   }
 }
 
