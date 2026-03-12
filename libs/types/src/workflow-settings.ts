@@ -97,6 +97,34 @@ export const DEFAULT_TRUST_BOUNDARY_CONFIG: TrustBoundaryConfig = {
 };
 
 // ============================================================================
+// Phase Temperature Configuration
+// ============================================================================
+
+/**
+ * PhaseTemperaturesConfig — Per-pipeline-phase temperature settings for agent execution.
+ *
+ * Controls model temperature (creativity vs determinism) for each major phase:
+ * - PLAN: Creative exploration for planning (default: 1.0)
+ * - EXECUTE: Deterministic implementation (default: 0)
+ * - REVIEW: Balanced evaluation (default: 0.5)
+ */
+export interface PhaseTemperaturesConfig {
+  /** Temperature for PLAN phase — creative exploration (default: 1.0) */
+  PLAN: number;
+  /** Temperature for EXECUTE phase — deterministic implementation (default: 0) */
+  EXECUTE: number;
+  /** Temperature for REVIEW phase — balanced evaluation (default: 0.5) */
+  REVIEW: number;
+}
+
+/** Default per-phase temperatures */
+export const DEFAULT_PHASE_TEMPERATURES: PhaseTemperaturesConfig = {
+  PLAN: 1.0,
+  EXECUTE: 0,
+  REVIEW: 0.5,
+};
+
+// ============================================================================
 // Workflow Settings - Pipeline hardening configuration
 // ============================================================================
 
@@ -264,6 +292,13 @@ export interface WorkflowSettings {
    * @default true
    */
   errorBudgetAutoFreeze?: boolean;
+  /**
+   * Per-phase temperature configuration for agent execution.
+   * Controls model temperature (creativity vs determinism) per pipeline phase.
+   * PLAN=1.0 (creative exploration), EXECUTE=0 (deterministic), REVIEW=0.5 (balanced).
+   * When absent, provider default temperature is used.
+   */
+  phaseTemperatures?: PhaseTemperaturesConfig;
 }
 
 /** Default workflow settings */
@@ -298,4 +333,5 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
   postMergeVerification: true,
   postMergeVerificationCommands: ['npm run typecheck'],
   preFlightChecks: true,
+  phaseTemperatures: DEFAULT_PHASE_TEMPERATURES,
 };

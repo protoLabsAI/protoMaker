@@ -17,5 +17,6 @@ export {
   resolveModelString,
   getEffectiveModel,
   resolvePhaseModel,
+  resolvePhaseTemperature,
   type ResolvedPhaseModel,
 } from './resolver.js';
