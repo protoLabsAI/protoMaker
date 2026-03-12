@@ -512,10 +512,16 @@ export class ExecutionService {
 
           if (!rebaseResult.success) {
             if (rebaseResult.hasConflicts) {
-              logger.warn(
-                `Worktree has merge conflicts with main. Agent will execute on stale base. ` +
-                  `Feature: ${featureId}, Branch: ${branchName}`
-              );
+              const reason =
+                `Pre-flight rebase onto origin/main has conflicts — branch "${branchName}" must be manually rebased before the agent can proceed. ` +
+                `Blocking feature to prevent repeated merge_conflict failures.`;
+              logger.warn(`${reason} Feature: ${featureId}`);
+              await this.featureLoader.update(projectPath, featureId, {
+                status: 'blocked',
+                statusChangeReason: reason,
+              });
+              this.events.emit('feature:error', { projectPath, featureId, error: reason });
+              return;
             } else {
               logger.warn(
                 `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
@@ -742,7 +748,7 @@ export class ExecutionService {
         } catch (rebaseError) {
           const rebaseMsg =
             rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
-          // If rebase fails (conflicts), abort and let agent work on current state
+          // If rebase fails (conflicts), abort and block the feature to prevent repeated merge_conflict failures
           if (rebaseMsg.includes('conflict') || rebaseMsg.includes('CONFLICT')) {
             logger.warn(`Git rebase encountered conflicts for ${branchName}, aborting rebase`);
             try {
@@ -750,12 +756,21 @@ export class ExecutionService {
             } catch {
               // Abort failed — not much we can do
             }
+            const reason =
+              `Pre-flight rebase onto origin/dev has conflicts — branch "${branchName}" must be manually rebased before the agent can proceed. ` +
+              `Blocking feature to prevent repeated merge_conflict failures.`;
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
               featureId,
               branchName,
-              message: `Rebase conflicts detected. Agent will work on current branch state.`,
+              message: reason,
               warning: true,
             });
+            await this.featureLoader.update(projectPath, featureId, {
+              status: 'blocked',
+              statusChangeReason: reason,
+            });
+            this.events.emit('feature:error', { projectPath, featureId, error: reason });
+            return;
           } else {
             logger.warn(`Git rebase failed for ${branchName}: ${rebaseMsg}`);
             this.typedEventBus.emitAutoModeEvent('sync_warning', {
