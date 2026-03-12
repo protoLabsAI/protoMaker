@@ -332,8 +332,6 @@ export type EventType =
   | 'subagent:tool-approval-response'
   // Server lifecycle events
   | 'server:shutdown'
-  // CRDT sync events (multi-instance feature store sync via Automerge)
-  | 'crdt:remote-changes'
   // Sync mesh partition and peer health events
   | 'sync:partition-recovered'
   | 'sync:peer-unreachable'
@@ -830,14 +828,6 @@ export interface EventPayloadMap {
     approvalId: string;
     approved: boolean;
     message?: string;
-  };
-
-  // CRDT sync events (multi-instance feature store sync via Automerge)
-  'crdt:remote-changes': {
-    /** Absolute path to the project whose CRDT doc received remote changes */
-    projectPath: string;
-    /** Automerge binary change payloads received from a peer */
-    changes: Uint8Array[];
   };
 
   // Ava Channel events (private multi-instance coordination channel)

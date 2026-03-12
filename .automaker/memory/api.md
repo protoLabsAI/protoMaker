@@ -5,11 +5,10 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 476
-  referenced: 108
-  successfulFeatures: 108
+  loaded: 479
+  referenced: 111
+  successfulFeatures: 111
 ---
-
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
 # api
@@ -137,3 +136,18 @@ usageStats:
 - **Rejected:** Passing raw hook commands directly to ChatInput; exporting full SlashCommand type through the boundary
 - **Trade-offs:** One-line map() adds minimal overhead, but enforces encapsulation. Prevents accidental coupling to hook internals. Adding new display property requires explicit map update (good: catches intent).
 - **Breaking if changed:** Removing the map and passing raw commands tightly couples ChatInput to hook's SlashCommand shape. Hook refactors could break ChatInput unexpectedly.
+
+
+### Renamed CrdtFeatureEvent to CrdtSyncWireMessage to match semantic meaning (type carries all wire messages: project events, settings events, etc., not just feature events) (2026-03-12)
+- **Context:** Type was used for generic wire message transport, but name incorrectly suggested it only carried feature events
+- **Why:** Accurate type names prevent future developer confusion about what the type represents; mis-named types lead to incorrect assumptions and bugs
+- **Rejected:** Keeping name CrdtFeatureEvent and adding a clarifying JSDoc comment (less effective for IDE autocomplete and code reading)
+- **Trade-offs:** Small refactoring effort in crdt-sync-service and exports; caught by TypeScript at compile time so no runtime risk
+- **Breaking if changed:** External consumers of the exported CrdtSyncWireMessage type must update imports (hard breaking change at type boundary)
+
+### Preserved PROTO_HIVE_INSTANCE_ID env var with semantic redirect: now sets protolab.instanceId instead of hive.instanceId. No removal of the env var. (2026-03-12)
+- **Context:** Env var still referenced in deployments/scripts; removing it would break existing workflows
+- **Why:** Backward compatibility with production deployments that set PROTO_HIVE_INSTANCE_ID; maintains external contracts while internally consolidating identity resolution
+- **Rejected:** Remove env var entirely (breaks existing deployments); add parallel env var (confusing, multiple sources of truth)
+- **Trade-offs:** Easier upgrade path for existing deployments; adds one indirect mapping in applyEnvOverrides() but self-documents intent
+- **Breaking if changed:** If code checks specifically for hive.instanceId being set, it will see undefined; but if code just reads instanceId from anywhere, the env var still works via protolab

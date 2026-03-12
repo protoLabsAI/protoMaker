@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 422
-  referenced: 60
-  successfulFeatures: 60
+  loaded: 428
+  referenced: 64
+  successfulFeatures: 64
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -323,3 +323,64 @@ usageStats:
 - **Context:** Tool execution errors previously propagated as exceptions that could crash the agent session. `ToolRegistry.execute()` now wraps all tool calls in an error boundary (commit befe3e279).
 - **Why:** The LLM should receive structured error context (toolName, errorMessage, recoveryHint) to attempt recovery rather than the session crashing. Always resolves; never throws.
 - **Breaking if changed:** If error boundary is removed, tool errors crash the agent session rather than giving the LLM a chance to recover. If recoveryHint is removed from metadata, LLM has less guidance on how to proceed after a failure.
+
+
+#### [Gotcha] CLAIM_VERIFY_DELAY_MS (200ms setTimeout/re-read pattern in claim()) was based on false assumption that remote peers could mutate the Automerge doc. Features are strictly local-only; only the owning instance mutates the doc. (2026-03-12)
+- **Situation:** Inherited synchronization pattern from distributed system design that didn't match actual architecture.
+- **Root cause:** Code assumed distributed consensus settling was needed for claim ownership. Actually unnecessary because features never receive remote mutations.
+- **How to avoid:** Claim operations became instant instead of 200ms+ delayed. Safe because local-only semantics eliminate race conditions.
+
+### Removed applyRemoteChanges() and getDocBinary() methods — part of abandoned cross-instance CRDT sync model from db8801061. (2026-03-12)
+- **Context:** Dead code that persisted years after the feature-sync model was abandoned, never called from production.
+- **Why:** Dead code accumulates technical debt and obscures actual system behavior. Historical commit analysis confirms model is abandoned.
+- **Rejected:** Keeping for 'future compatibility' or gradual deprecation period.
+- **Trade-offs:** Cleaner, smaller surface area. But requires confidence in git history and grep verification before removal.
+- **Breaking if changed:** If code was being called via reflection/dynamic dispatch or in untested code paths, removal would break those.
+
+#### [Pattern] Scope boundary pattern: CLAIM_VERIFY_DELAY_MS exists in both AutomergeFeatureStore AND work-intake-service.ts with different values/purposes. Each service has own claim logic. (2026-03-12)
+- **Problem solved:** Similar constants/methods across services can mask that they solve different problems with different timing requirements.
+- **Why this works:** Services have different claim semantics (work-intake is multi-step workflow, automerge is local feature ownership). Unifying constants would break both.
+- **Trade-offs:** Code duplication, but each service can optimize for its actual constraints. Prevents accidental coupling.
+
+### Left JSON wire format string 'feature_event' unchanged while renaming TypeScript type CrdtFeatureEvent → CrdtSyncWireMessage (2026-03-12)
+- **Context:** Refactoring type name for semantic clarity (type carries all wire messages, not just feature events), but need to maintain wire protocol stability for remote peer compatibility
+- **Why:** Wire format is a JSON protocol contract over WebSocket; TypeScript identifiers are internal. Decoupling them prevents breaking remote peers running older code
+- **Rejected:** Renaming wire format string to 'sync_wire_message' would achieve naming consistency but breaks peers on old versions
+- **Trade-offs:** Slightly confusing having a type named 'SyncWireMessage' with wire value 'feature_event', but gains backwards compatibility
+- **Breaking if changed:** If wire format string is changed, any remote peer with old code fails to deserialize the message
+
+#### [Gotcha] ProtoConfigHive type had instanceId field but YAML hive block never populated it (hiveId/syncPort/meshEnabled only). Type and schema were out of sync — dead type field never used in practice. (2026-03-12)
+- **Situation:** Removing vestigial hive config revealed type/schema mismatch
+- **Root cause:** TypeScript types were defined defensively but not validated against actual YAML structure; no enforcement that typed fields are populated
+- **How to avoid:** Discovered dead code only by systematic review; better to validate typed fields at runtime or in tests
+
+### Consolidated instance identity resolution: protolab.instanceId (explicit) → hivemind.instanceId → hostname registry match → os.hostname(). Stored result in protolab.instanceId, not hive.instanceId. (2026-03-12)
+- **Context:** Multiple fields capable of holding instanceId; unclear priority when multiple defined
+- **Why:** Establishes single source of truth in protolab; explicit config takes precedence over derived/fallback values; prevents silent surprises from stale values
+- **Rejected:** Keep hive.instanceId as separate path (adds complexity, was never populated); treat all sources equally (ambiguous precedence)
+- **Trade-offs:** Code path is clearer and testable; requires explicit migration of existing protolab configs, but this was already the practice
+- **Breaking if changed:** Code reading config.hive.instanceId returns undefined; must use config.protolab.instanceId. Env var PROTO_HIVE_INSTANCE_ID now sets protolab.instanceId (redirect preserves intent)
+
+#### [Pattern] LegacyProjectDoc intersection type (Partial<ProjectDocument> & { prd?: string | SPARCPrd; milestoneCount?: number }) enables safe backwards-compatible normalizers without type-casting to `any` (2026-03-12)
+- **Problem solved:** Normalizer must handle wire format fields (legacy string prd, milestoneCount) that don't exist in the final ProjectDocument type
+- **Why this works:** Preserves type safety across both legacy and new field shapes; documents the migration contract explicitly; compiler catches if normalizer accesses undefined fields
+- **Trade-offs:** Slightly more verbose type signature but eliminates entire class of runtime errors where normalizer might access non-existent fields
+
+### Three-layer legacy migration in normalizeProjectDocument: (1) missing milestones → [] (2) string prd → SPARCPrd with approach field, empty other fields (3) missing phase.executionStatus → 'unclaimed' (2026-03-12)
+- **Context:** Expanding thin ProjectDocument schema from 7 fields to 40+; old CRDT documents in the wild won't have new fields
+- **Why:** Ensures old documents normalize without errors; allows incremental schema evolution; defaults are domain-safe (empty milestones = no work, unclaimed phases = ready to assign)
+- **Rejected:** Requiring migrations to be re-written (breaks old data); failing on missing fields (requires data repair); making fields mandatory (incompatible with old docs)
+- **Trade-offs:** Migration layers hide incompleteness (old string prd loses structure); requires testing each migration path; easier than data repair tool but creates technical debt if migrations are forgotten
+- **Breaking if changed:** Removing any migration layer causes old documents to fail normalization or normalize incorrectly (e.g., if milestones migration is removed, documents without milestones array will have undefined milestones field)
+
+### Replaced denormalized milestoneCount: number with milestones: Milestone[] array. Consumers switch from `doc.milestoneCount` to `doc.milestones.length`. (2026-03-12)
+- **Context:** Schema expansion to align with full Project type; thin stub had only denormalized count
+- **Why:** Normalizes the data model (single source of truth); enables accessing milestone details; aligns with Project domain model
+- **Rejected:** Keeping both milestoneCount and milestones (dual representation); computing count on write (extra work in every create/update)
+- **Trade-offs:** Easier to work with milestone data; breaking change for code reading milestoneCount directly; length computation is negligible (O(1) for arrays)
+- **Breaking if changed:** Any code accessing doc.milestoneCount will read undefined. Normalizer doesn't include milestoneCount in output, so migrations must update all readers.
+
+#### [Gotcha] Phase.executionStatus defaults to 'unclaimed' when missing in legacy documents, implicitly assuming all old phases are unassigned. Different default (e.g., 'executing') would change bulk semantics. (2026-03-12)
+- **Situation:** Legacy thin Milestone objects may not have phases with executionStatus fields; normalizer must supply a default
+- **Root cause:** 'unclaimed' is safest domain default (allows re-assignment); prevents false assumption that old phases are already executing
+- **How to avoid:** Bulk operation on old projects will show all phases as unclaimed (may require claiming/reassigning work); safe but creates operational overhead

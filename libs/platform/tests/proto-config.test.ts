@@ -192,16 +192,16 @@ describe('instance identity resolution', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('sets hive.instanceId to os.hostname() when no explicit config', async () => {
+  it('sets protolab.instanceId to os.hostname() when no explicit config', async () => {
     writeFile(tmpDir, 'proto.config.yaml', 'name: test\n');
     const result = await loadProtoConfig(tmpDir);
-    expect(result?.hive?.instanceId).toBe(os.hostname());
+    expect(result?.protolab?.instanceId).toBe(os.hostname());
   });
 
-  it('uses explicit instanceId from hive config in YAML', async () => {
-    writeFile(tmpDir, 'proto.config.yaml', 'name: test\nhive:\n  instanceId: explicit-id\n');
+  it('uses explicit instanceId from protolab config in YAML', async () => {
+    writeFile(tmpDir, 'proto.config.yaml', 'name: test\nprotolab:\n  instanceId: explicit-id\n');
     const result = await loadProtoConfig(tmpDir);
-    expect(result?.hive?.instanceId).toBe('explicit-id');
+    expect(result?.protolab?.instanceId).toBe('explicit-id');
   });
 
   it('resolves instanceId by matching hostname in instances registry', async () => {
@@ -212,7 +212,7 @@ describe('instance identity resolution', () => {
       `name: test\ninstances:\n  - instanceId: matched-instance\n    hostname: ${hostname}\n  - instanceId: other-instance\n    hostname: other-host\n`
     );
     const result = await loadProtoConfig(tmpDir);
-    expect(result?.hive?.instanceId).toBe('matched-instance');
+    expect(result?.protolab?.instanceId).toBe('matched-instance');
   });
 
   it('falls back to hostname when no instance registry match', async () => {
@@ -222,21 +222,21 @@ describe('instance identity resolution', () => {
       'name: test\ninstances:\n  - instanceId: unrelated\n    hostname: some-other-host\n'
     );
     const result = await loadProtoConfig(tmpDir);
-    expect(result?.hive?.instanceId).toBe(os.hostname());
+    expect(result?.protolab?.instanceId).toBe(os.hostname());
   });
 
   it('PROTO_HIVE_INSTANCE_ID env var overrides resolved identity', async () => {
     writeFile(tmpDir, 'proto.config.yaml', 'name: test\n');
     process.env.PROTO_HIVE_INSTANCE_ID = 'env-override-id';
     const result = await loadProtoConfig(tmpDir);
-    expect(result?.hive?.instanceId).toBe('env-override-id');
+    expect(result?.protolab?.instanceId).toBe('env-override-id');
   });
 
-  it('PROTO_HIVE_INSTANCE_ID wins over YAML hive.instanceId', async () => {
-    writeFile(tmpDir, 'proto.config.yaml', 'name: test\nhive:\n  instanceId: yaml-id\n');
+  it('PROTO_HIVE_INSTANCE_ID wins over YAML protolab.instanceId', async () => {
+    writeFile(tmpDir, 'proto.config.yaml', 'name: test\nprotolab:\n  instanceId: yaml-id\n');
     process.env.PROTO_HIVE_INSTANCE_ID = 'env-id';
     const result = await loadProtoConfig(tmpDir);
-    expect(result?.hive?.instanceId).toBe('env-id');
+    expect(result?.protolab?.instanceId).toBe('env-id');
   });
 });
 

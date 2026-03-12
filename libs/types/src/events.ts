@@ -22,8 +22,9 @@ export const CRDT_SYNCED_EVENT_TYPES: ReadonlySet<EventType> = new Set<EventType
 /**
  * CRDT wire message carrying a local EventBus event to remote instances.
  * Transported as JSON over the sync WebSocket channel.
+ * Covers all wire message types (project events, settings events, etc.)
  */
-export interface CrdtFeatureEvent {
+export interface CrdtSyncWireMessage {
   type: 'feature_event';
   /** Originating instance ID — receivers skip re-emit if it matches self */
   instanceId: string;

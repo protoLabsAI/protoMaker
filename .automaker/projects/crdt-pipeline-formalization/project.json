@@ -1,0 +1,303 @@
+{
+  "slug": "crdt-pipeline-formalization",
+  "title": "CRDT Pipeline Formalization",
+  "goal": "Formalize the instance-local feature model, eliminate dead code from the abandoned feature-sync era, extend CRDT sync to cover notes and categories, and close test coverage gaps — producing a clean, well-documented CRDT architecture where features are definitively local and all shared state syncs via Automerge.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-dead-code-removal",
+      "title": "Dead Code Removal",
+      "description": "Eliminate all remnants of the abandoned feature-sync model. Remove dead methods, dead event types, dead config sections, and rename misleading type names. No behavior changes — purely subtractive.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "remove-dead-automergefeaturestore-methods-and-claim-protocol",
+          "title": "Remove dead AutomergeFeatureStore methods and claim protocol",
+          "description": "Remove applyRemoteChanges() and getDocBinary() from AutomergeFeatureStore — these methods were designed for a feature-sync model that was abandoned in db8801061 and are never called from production code. Remove the 200ms claim settle delay (CLAIM_VERIFY_DELAY_MS) and re-read-after-settle logic from the claim() method — features are local and the Automerge doc is never updated by remote peers, making the settle pointless. Update the corresponding tests to remove test cases for these removed methods. Keep invalidateDoc() and the in-memory Automerge doc (they provide fast local reads).",
+          "filesToModify": [
+            "apps/server/src/services/automerge-feature-store.ts",
+            "apps/server/tests/unit/services/automerge-feature-store.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "applyRemoteChanges() method is removed from AutomergeFeatureStore",
+            "getDocBinary() method is removed from AutomergeFeatureStore",
+            "CLAIM_VERIFY_DELAY_MS constant and the 200ms setTimeout/re-read pattern in claim() are removed",
+            "claim() still correctly returns false if feature.claimedBy is already set to another instanceId",
+            "No references to removed methods remain in production code",
+            "Test file updated: removed test cases for applyRemoteChanges and getDocBinary",
+            "npm run typecheck passes",
+            "npm run test:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773334176285-xldjvmmu5"
+        },
+        {
+          "number": 2,
+          "name": "remove-crdt-remote-changes-event-type-and-rename-crdtfeatureevent",
+          "title": "Remove crdt:remote-changes event type and rename CrdtFeatureEvent",
+          "description": "Remove the crdt:remote-changes EventType entry from libs/types/src/events.ts — it has zero subscribers and zero emitters in production code. Remove applyRemoteChanges() from ProjectService which references this dead event. Rename CrdtFeatureEvent to CrdtSyncWireMessage (3 files: events.ts, index.ts, crdt-sync-service.ts) — the type represents all wire messages (project events, settings events), not just feature events. The wire format string 'feature_event' remains unchanged for backwards compat.",
+          "filesToModify": [
+            "libs/types/src/events.ts",
+            "libs/types/src/index.ts",
+            "apps/server/src/services/crdt-sync-service.ts",
+            "apps/server/src/services/project-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "crdt:remote-changes is removed from the EventType union in events.ts",
+            "CrdtFeatureEvent is renamed to CrdtSyncWireMessage in events.ts",
+            "Re-export in index.ts updated to CrdtSyncWireMessage",
+            "crdt-sync-service.ts import updated to CrdtSyncWireMessage",
+            "ProjectService.applyRemoteChanges() method removed",
+            "Wire format string 'feature_event' in crdt-sync-service.ts is unchanged",
+            "npm run typecheck passes with no new errors",
+            "npm run test:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773334176286-iwdqukdyb"
+        },
+        {
+          "number": 3,
+          "name": "remove-vestigial-hive-config-section",
+          "title": "Remove vestigial hive: config section",
+          "description": "Remove the hive: section from proto.config.yaml (hiveId, syncPort=9800, meshEnabled fields) — this section is not read by any server runtime code; the actual hivemind config is under hivemind:. Before removing, update loadProtoConfig() in libs/platform/src/proto-config.ts to remove the hive.instanceId fallback path for instance ID resolution, replacing it with a direct hivemind.instanceId or protolab.instanceId lookup. Remove ProtoConfigHive interface and the hive?: ProtoConfigHive field from the ProtoConfig type. Update any tests that reference the hive config.",
+          "filesToModify": [
+            "libs/platform/src/proto-config.ts",
+            "proto.config.yaml",
+            "libs/types/src/proto-config.ts"
+          ],
+          "acceptanceCriteria": [
+            "ProtoConfigHive interface removed from libs/types/src/proto-config.ts",
+            "hive?: field removed from ProtoConfig interface",
+            "loadProtoConfig() no longer reads config.hive for any fallback logic",
+            "Instance ID resolution in loadProtoConfig() still works (uses protolab.instanceId or hivemind config)",
+            "proto.config.yaml hive: section removed",
+            "npm run typecheck passes",
+            "npm run test:packages passes",
+            "Server starts without error (no references to removed hive fields)"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773334176286-aw02momj8"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773334176283-zieqffycz"
+    },
+    {
+      "number": 2,
+      "slug": "02-lightweight-sync-extensions",
+      "title": "Lightweight Sync Extensions",
+      "description": "Two small additions that close real sync gaps without introducing new full CRDT domains: categories via the existing event bridge, and memory usage stats folded into the existing Metrics domain.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "categories-via-event-bridge",
+          "title": "Categories via event bridge",
+          "description": "Add categories:updated to CRDT_SYNCED_EVENT_TYPES in libs/types/src/events.ts. The categories file (.automaker/categories.json) is a simple string array. When a category is added or deleted, the categories route should broadcast the full updated array as a categories:updated event. Add a handler in crdt-sync.module.ts that on receiving a remote categories:updated event, calls the categories service to overwrite local categories (simple LWW for a small config array is correct). This is intentionally NOT a full CRDT domain — it is a 21-byte config value that changes rarely.",
+          "filesToModify": [
+            "libs/types/src/events.ts",
+            "apps/server/src/services/crdt-sync.module.ts",
+            "apps/server/src/routes/categories/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "categories:updated is added to CRDT_SYNCED_EVENT_TYPES",
+            "Categories route broadcasts categories:updated event after every create/delete mutation",
+            "crdt-sync.module.ts registers a handler for remote categories:updated events",
+            "Handler overwrites local categories with the remote payload",
+            "No new CRDT domain added — uses the existing event bridge",
+            "npm run typecheck passes",
+            "npm run test:server passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773334176289-qsbmfnjax"
+        },
+        {
+          "number": 2,
+          "name": "memory-usage-stats-in-metrics-crdt-domain",
+          "title": "Memory usage stats in Metrics CRDT domain",
+          "description": "Extend MetricsDocument in libs/crdt/src/documents.ts to add a memoryStats field: Record<instanceId, Record<filename, { loaded: number, referenced: number, successfulFeatures: number }>>. Update memory-loader.ts (libs/utils/src/memory-loader.ts) to write usage stat increments to the CRDT Metrics document via a callback/injected function instead of (or in addition to) writing to disk YAML frontmatter. Each instance writes to its own instanceId key. Read path: aggregate across all instance keys at load time to get total usage counts for memory file scoring. The YAML frontmatter on disk can be deprecated — it remains for backwards compat but is no longer the source of truth for scoring when CRDT is available.",
+          "filesToModify": [
+            "libs/crdt/src/documents.ts",
+            "libs/utils/src/memory-loader.ts",
+            "apps/server/src/services/crdt-store.module.ts"
+          ],
+          "acceptanceCriteria": [
+            "MetricsDocument has memoryStats: Record<instanceId, Record<filename, MemoryUsageStat>> field",
+            "Normalizer for MetricsDocument handles missing memoryStats field (schema-on-read)",
+            "memory-loader.ts accepts an optional CRDTStore reference (or callback) for writing stats",
+            "When CRDT is available, stat increments write to CRDT Metrics doc under local instanceId key",
+            "Memory file scoring reads aggregated stats across all instanceId keys when CRDT is available",
+            "Disk YAML frontmatter still updated for backwards compat (graceful degradation)",
+            "npm run typecheck passes",
+            "npm run test:packages passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773334176290-1tw44fucb"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773334176288-qd9fng0sk"
+    },
+    {
+      "number": 3,
+      "slug": "03-notes-as-crdt-domain",
+      "title": "Notes as CRDT Domain",
+      "description": "Add a NotesWorkspace CRDT domain following the todos pattern — one shared document per project containing all tabs with LWW-per-tab semantics. Multi-instance agents can read and write notes without last-write-wins data loss. Hydrate from existing workspace.json on first start.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-notesworkspace-crdt-domain-schema",
+          "title": "Add NotesWorkspace CRDT domain schema",
+          "description": "Add NotesWorkspaceDocument to libs/crdt/src/documents.ts. Schema mirrors the existing disk format: { schemaVersion, _meta, tabs: Record<tabId, NoteTab>, tabOrder: string[], activeTabId: string | null }. NoteTab fields: id, name, content (string — HTML from TipTap), permissions (agentRead, agentWrite), createdAt, updatedAt, wordCount, characterCount. Add normalizer that handles missing fields for schema-on-read migration. Add 'notes' to the DomainName union in libs/crdt/src/types.ts. Wire into crdt-store.module.ts: inject CRDTStore into a new NotesService, initialize the notes domain document with id='workspace', implement hydration function that reads existing .automaker/notes/workspace.json and seeds the CRDT document on first start.",
+          "filesToModify": [
+            "libs/crdt/src/documents.ts",
+            "libs/crdt/src/types.ts",
+            "apps/server/src/services/crdt-store.module.ts"
+          ],
+          "acceptanceCriteria": [
+            "NotesWorkspaceDocument interface defined in documents.ts with all NoteTab fields",
+            "normalizeNotesWorkspace() normalizer handles missing tabs, tabOrder, activeTabId",
+            "'notes' added to DomainName union in types.ts",
+            "crdt-store.module.ts injects CRDTStore into notes handling with domain='notes', id='workspace'",
+            "Hydration function reads .automaker/notes/workspace.json and calls getOrCreate with initial data",
+            "Hydration is idempotent (only runs if document does not exist in registry)",
+            "npm run typecheck passes",
+            "npm run test:packages passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773334176292-twbrouuzy"
+        },
+        {
+          "number": 2,
+          "name": "refactor-notes-routes-to-use-crdtstore-with-disk-fallback",
+          "title": "Refactor notes routes to use CRDTStore with disk fallback",
+          "description": "Refactor the notes route handlers in apps/server/src/routes/notes/index.ts to use CRDTStore when available, with fallback to disk (current behavior) when CRDT is not initialized. For reads: use store.subscribe() or store.getOrCreate() to read from the Automerge document. For writes (create-tab, write-tab, update-tab, delete-tab): use store.change() to mutate the Automerge document AND write to disk (dual-write for backwards compat). Emit notes:tab-updated event after mutations as before. The disk workspace.json remains as a local backup/fallback.",
+          "filesToModify": [
+            "apps/server/src/routes/notes/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "get-workspace and list-tabs routes read from CRDT document when available",
+            "create-tab, write-tab, delete-tab, rename-tab routes call store.change() for mutations",
+            "All mutations still write to disk workspace.json as fallback",
+            "When CRDT is not available (no proto.config.yaml), routes fall back to disk-only behavior",
+            "notes:tab-updated event emitted after every mutation as before",
+            "Multi-instance scenario: mutation on instance A is visible to instance B via CRDT subscription",
+            "npm run typecheck passes",
+            "npm run test:server passes"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773334176293-04fpa3vfp"
+        },
+        {
+          "number": 3,
+          "name": "expose-notes-crdt-via-mcp-tools-and-document-the-boundary",
+          "title": "Expose notes CRDT via MCP tools and document the boundary",
+          "description": "Verify that the MCP tools for notes (list_note_tabs, read_note_tab, write_note_tab, create_note_tab, delete_note_tab) work correctly through the refactored notes routes. Update the MCP tool descriptions or server-side validation if needed to reflect CRDT-backed behavior. Add a comment block at the top of the notes route file documenting the storage model: primary=CRDT (Automerge, domain='notes', id='workspace'), fallback=disk (.automaker/notes/workspace.json). Update docs/dev/ with a notes-sync.md page documenting the notes CRDT domain, conflict semantics (LWW per tab), and the deferred TipTap binding.",
+          "filesToModify": [
+            "apps/server/src/routes/notes/index.ts",
+            "docs/dev/notes-sync.md"
+          ],
+          "acceptanceCriteria": [
+            "All 5 MCP note tools function correctly with CRDT-backed routes",
+            "Storage model comment block added to notes route file",
+            "docs/dev/notes-sync.md created documenting: domain name, id, conflict semantics, hydration, fallback behavior, deferred TipTap binding",
+            "docs/dev/notes-sync.md is under 800 lines and added to appropriate sidebar section",
+            "npm run typecheck passes"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773334176294-ptqip7tqu"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773334176291-6nb4xdtuu"
+    },
+    {
+      "number": 4,
+      "slug": "04-test-coverage-and-automerge-upgrade",
+      "title": "Test Coverage and Automerge Upgrade",
+      "description": "Fill identified test gaps for partition recovery, registry sync, and compaction. Upgrade all @automerge packages to latest 3.x for the 10x memory improvement and latest bug fixes.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "fill-crdtsyncservice-test-gaps",
+          "title": "Fill CrdtSyncService test gaps",
+          "description": "Add missing test cases to apps/server/tests/unit/crdt-sync-service.test.ts. Tests to add: (1) Partition recovery — simulate worker disconnect, enqueue events in outboundQueue, reconnect, verify queued events are replayed to primary in order. (2) Registry sync — simulate worker connecting to primary, verify primary sends registry_sync message, verify worker calls adoptRemoteRegistry() with the received registry. (3) Settings event broadcast — verify that publishSettings() sends CrdtSettingsEvent to all connected peers and that a received settings_event invokes the onSettingsReceived callback. (4) Peer eviction on TTL — advance mock clock past peerTtlMs, verify peer is marked offline and isOnline returns false.",
+          "filesToModify": [
+            "apps/server/tests/unit/crdt-sync-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Partition recovery test: outboundQueue fills during disconnect, events replayed on reconnect",
+            "Registry sync test: worker receives registry from primary, adoptRemoteRegistry called",
+            "Settings broadcast test: publishSettings sends to all peers, callback fires on receive",
+            "TTL eviction test: peer marked offline after peerTtlMs passes",
+            "All new tests pass with npm run test:server",
+            "No existing tests broken"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773334176296-usi6rp8ql"
+        },
+        {
+          "number": 2,
+          "name": "fill-crdtstore-test-gaps",
+          "title": "Fill CRDTStore test gaps",
+          "description": "Add missing test cases to libs/crdt/src/__tests__/crdt-store.test.ts. Tests to add: (1) Compaction checkpoint — call compact(), verify checkpoint files are written to storageDir/checkpoints/ for each loaded document handle. (2) Filesystem hydration — on first init with a hydrationFn, verify the function is called exactly once; on subsequent init (registry already populated), verify hydrationFn is NOT called. (3) Registry persistence — create document, close store, re-init, verify the same Automerge URL is returned from the registry (not a new document).",
+          "filesToModify": [
+            "libs/crdt/src/__tests__/crdt-store.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Compaction test: checkpoint files exist on disk after compact() call",
+            "Hydration test: hydrationFn called once on fresh init, not called on subsequent init",
+            "Registry persistence test: same URL returned after store close and re-init",
+            "All new tests pass with npm run test:packages",
+            "No existing tests broken"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773334176297-8qjbw9d0l"
+        },
+        {
+          "number": 3,
+          "name": "upgrade-automerge-packages-to-latest-3-x",
+          "title": "Upgrade @automerge packages to latest 3.x",
+          "description": "Upgrade all four @automerge packages in libs/crdt/package.json to latest 3.x versions: @automerge/automerge, @automerge/automerge-repo, @automerge/automerge-repo-network-websocket, @automerge/automerge-repo-storage-nodefs. Check Automerge 3.x CHANGELOG for breaking changes (the Text class rename from v3.0 may affect our code — check for any RawString or Text usage). Verify the file format is backwards compatible with existing .automaker/crdt/ checkpoint files. Run full test suite. Also add @automerge/prosemirror to apps/ui/package.json as a forward-looking dependency for the future TipTap binding project (installed but not wired yet).",
+          "filesToModify": [
+            "libs/crdt/package.json",
+            "apps/ui/package.json"
+          ],
+          "acceptanceCriteria": [
+            "All @automerge/* packages upgraded to latest 3.x in libs/crdt/package.json",
+            "@automerge/prosemirror added to apps/ui/package.json",
+            "No RawString or legacy Text class usage in libs/crdt/src/ after upgrade",
+            "npm run build:packages passes",
+            "npm run test:packages passes",
+            "npm run test:server passes",
+            "npm run typecheck passes",
+            "Server starts and loads existing CRDT checkpoint files without error"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773334176297-nlmfrqzvh"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773334176295-93cn3bgfn"
+    }
+  ],
+  "prd": {
+    "situation": "Automaker uses Automerge 3.2.4 with a two-layer sync mesh (JSON events on port 4444 for cluster coordination, Automerge binary on port 4445 for document replication) over Tailscale VPN. Seven CRDT domains are live: projects, shared settings, capacity, ava-channel, calendar, todos, and metrics. Features are intentionally instance-local — each instance manages its own board and coordinates via phase claims on shared project documents. This architecture is sound and battle-tested over ~300 shipped features.",
+    "problem": "The codebase contains significant dead code from a previous architectural attempt to sync features via CRDT that was correctly abandoned in February 2026 (commit db8801061). Dead methods (applyRemoteChanges, getDocBinary), dead event types (crdt:remote-changes), a dead claim protocol (200ms settle delay with no actual sync), and a vestigial hive: config section all remain. Beyond cleanup, two gaps exist in shared data coverage: (1) Notes tabs are disk-only — multiple instances writing notes simultaneously produce silent last-write-wins data loss. (2) Categories are disk-only — instances diverge on available categories. Additionally, memory file usage stats (loaded/referenced counters) diverge across instances because each writes to its own disk file with no aggregation. Test coverage for partition recovery, registry sync, and compaction is absent.",
+    "approach": "Four milestones in dependency order: (1) Dead code removal — eliminate all remnants of the feature-sync model, rename the misleadingly-named CrdtFeatureEvent type, remove the vestigial hive: config. (2) Lightweight sync extensions — add categories to the event bridge (not a full CRDT domain; it is a 21-byte array), move memory usage stats into the existing Metrics CRDT domain. (3) Notes as CRDT domain — add a NotesWorkspace CRDT domain following the todos pattern (one shared document, LWW per tab), implement hydration from existing workspace.json files, add server-side CRDT read/write to the notes routes with disk fallback. (4) Test coverage and Automerge upgrade — fill the identified test gaps for partition recovery, registry sync, and compaction; upgrade all @automerge packages to latest 3.x to capture the 10x memory improvement. The @automerge/prosemirror TipTap binding for real-time character-level collaboration is deferred as a separate project — the current approach (CRDT-backed JSON API) is sufficient for multi-instance agent sync.",
+    "results": "Clean CRDT codebase with no dead code from the feature-sync era. Instance-local feature model is formally documented and enforced. Notes sync across instances (agents on staging see operator notes from dev). Categories stay consistent across instances. Memory usage stats aggregate across instances via the Metrics domain. All CRDT sync paths have tests for partition recovery and registry sync. Automerge upgraded to latest 3.x with confirmed backwards compat.",
+    "constraints": [
+      "Features remain instance-local — this is a design decision, not a gap to fill",
+      "Memory file CONTENT stays git-tracked only — no dual-channel sync (git + CRDT would produce guaranteed merge conflicts)",
+      "Context files stay git-tracked only — same dual-channel reason; they are operator-curated project config",
+      "No @automerge/prosemirror TipTap binding in this project — character-level rich text sync is a separate future project",
+      "All PR targets dev branch. No direct pushes to staging or main",
+      "Notes CRDT uses LWW-per-tab semantics (not character-level merge) — consistent with the existing todos and calendar patterns",
+      "proto.config.yaml hive: section removal must update loadProtoConfig() instance ID fallback before removing the type — avoid compile errors",
+      "Automerge upgrade must confirm file format backwards compat (guaranteed by Automerge 3.x, but verify in tests)",
+      "No credentials or API keys ever enter any CRDT domain"
+    ]
+  },
+  "createdAt": "2026-03-12T16:48:26.033Z",
+  "updatedAt": "2026-03-12T17:02:26.111Z"
+}

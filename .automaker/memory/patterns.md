@@ -62,3 +62,9 @@ usageStats:
 - **Problem solved:** HyPE processing is async background work triggered during knowledge operations.
 - **Why this works:** Orchestrator owns embedding lifecycle end-to-end, so it should own jobs that operate on embeddings. Prevents fragmented background job management.
 - **Trade-offs:** KnowledgeStoreService must call out to orchestrator to trigger background work; single clear owner of HyPE job lifecycle.
+
+
+#### [Pattern] Identify dead event types by full-codebase text search for EventType string literal (emit, on, event payload references) (2026-03-12)
+- **Problem solved:** Removing 'crdt:remote-changes' required confirming zero subscribers and zero emitters exist
+- **Why this works:** Event-driven architectures lack static type safety for event completeness; text search is the only reliable way to find all emit() and on() call sites across the codebase
+- **Trade-offs:** Labor-intensive manual search, but 100% reliable; false negatives are impossible if search is thorough

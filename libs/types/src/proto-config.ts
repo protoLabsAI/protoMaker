@@ -142,21 +142,6 @@ export const ProtoWorkIntakeSchema = z.object({
 export type ProtoWorkIntake = z.infer<typeof ProtoWorkIntakeSchema>;
 
 // ---------------------------------------------------------------------------
-// Hive identity — multi-instance mesh coordination
-// ---------------------------------------------------------------------------
-
-export const ProtoHiveSchema = z.object({
-  /** Shared identifier for the hive cluster (all instances share this) */
-  hiveId: z.string().optional(),
-  /** WebSocket port used for CRDT sync between instances */
-  syncPort: z.number().int().min(1024).max(65535).default(9800),
-  /** Whether multi-instance mesh sync is enabled */
-  meshEnabled: z.boolean().default(false),
-});
-
-export type ProtoHive = z.infer<typeof ProtoHiveSchema>;
-
-// ---------------------------------------------------------------------------
 // Instance registry — per-instance identity entries
 // ---------------------------------------------------------------------------
 
@@ -256,8 +241,6 @@ export const ProtoConfigSchema = z.object({
   protolab: ProtoLabSchema.optional(),
   /** Project-level defaults for features and automation */
   defaults: ProtoDefaultsSchema.optional(),
-  /** Hive mesh identity and sync configuration */
-  hive: ProtoHiveSchema.optional(),
   /** Registry of known instances in this hive */
   instances: z.array(ProtoInstanceSchema).optional(),
   /** Work assignment strategy across instances */
