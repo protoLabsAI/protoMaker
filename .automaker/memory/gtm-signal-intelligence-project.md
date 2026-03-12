@@ -1,6 +1,6 @@
 ---
 tags: []
-summary: "relevantTo: []"
+summary: 'relevantTo: []'
 relevantTo: []
 importance: 0.5
 relatedFiles: []
@@ -9,11 +9,12 @@ usageStats:
   referenced: 66
   successfulFeatures: 66
 ---
+
 <!-- domain: GTM Signal Intelligence | Go-to-market signal processing and routing -->
 
 # GTM Signal Intelligence & Content Operations
 
-## Status: ACTIVE — Linear project created, content pipeline running
+## Status: ACTIVE — content pipeline running (Note: Linear deprecated 2026-03-04; project management moved to in-app board)
 
 ## Date: 2026-02-21
 

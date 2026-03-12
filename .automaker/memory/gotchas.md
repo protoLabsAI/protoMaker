@@ -9,11 +9,19 @@ usageStats:
   referenced: 318
   successfulFeatures: 318
 ---
+
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
 
-#### [Gotcha] Worktree node_modules/@protolabsai/* symlinks resolve to MAIN repo, not worktree (2026-03-10)
+#### [Gotcha] apps/server has TWO tsconfig files: tsconfig.json (src paths, for tsx dev + IDE) and tsconfig.build.json (dist paths, for tsc build). Do NOT point tsconfig.json paths at dist/ — tsx crashes executing .d.ts files. (2026-03-11)
+
+- **Situation:** tsconfig.json previously had paths pointing at `dist/index.d.ts`. tsx (used by the dev server) resolves paths at runtime and crashes trying to execute `.d.ts` files as JavaScript.
+- **Root cause:** tsx and tsc have different resolution needs. tsx needs `src/index.ts` (source files). tsc build needs `dist/index.d.ts` (type declarations, required because they live outside rootDir).
+- **Fix:** `tsconfig.json` paths → `src/index.ts` (used by tsx + IDE). `tsconfig.build.json` extends it, overriding paths to `dist/index.d.ts` (used by `tsc -p tsconfig.build.json`).
+- **How to avoid:** When adding a new `@protolabsai/*` path alias to apps/server, add src path to `tsconfig.json` AND dist path to `tsconfig.build.json`. Do not put dist paths in `tsconfig.json`.
+
+#### [Gotcha] Worktree node_modules/@protolabsai/\* symlinks resolve to MAIN repo, not worktree (2026-03-10)
 
 - **Situation:** When working in a git worktree and adding new exports to a shared package (e.g. `@protolabsai/types`), `npm run build:server` fails with "cannot find module" or "export not found" even though you just added it.
 - **Root cause:** Git worktrees share the parent repo's `node_modules/` via Node.js directory traversal (Node walks up from `.worktrees/feature-xxx/` to `/automaker/node_modules/`). The symlink `node_modules/@protolabsai/types → /automaker/libs/types/dist/` points to the MAIN REPO's dist, not the worktree's. New exports in the worktree's `libs/types/src/` are invisible at compile time.
@@ -624,193 +632,230 @@ usageStats:
 - **Root cause:** Without checking Set membership before cleanup, timeout firing after legitimate completion could corrupt state machine (double removal, or re-lock an already-running feature). The check prevents this.
 - **How to avoid:** Gained: Safety from race conditions, self-healing on hangs. Lost: Slight complexity in cleanup logic (must check Set membership).
 
-
 #### [Gotcha] Silent guards with no diagnostic context are worse than incomplete pattern matching. A failure dropped silently is harder to debug than a failure marked as 'unknown' with the raw reason visible. (2026-03-09)
+
 - **Situation:** The friction-tracker service silently returned on 'unknown' patterns without logging. Combined with debug-level logging in the classifier, unclassified failures were invisible end-to-end.
 - **Root cause:** When a failure is silently dropped, nobody knows it happened. When it's logged at warn level with context ('unclassified: needs human input'), operators and monitoring can detect the gap and request pattern expansion.
 - **How to avoid:** Easier to spot failure gaps now, but requires disciplined log analysis. Trade-off is worth it because it unblocks system improvement.
 
 #### [Gotcha] Auto-generated feature descriptions reference completed projects that no longer exist in .automaker/projects/ (e.g., automation-control-plane-consolidation, automations-upgrade, ava-chat-context-window-management). (2026-03-09)
+
 - **Situation:** Documentation review feature was generated from git history but included stale project file references that have since been removed.
 - **Root cause:** Completed projects are cleaned up from the projects directory to keep active work list current. Feature metadata was generated at a point-in-time before cleanup.
 - **How to avoid:** Clean project directory (-historical audit trail) vs. historical reference preservation (+storage, +navigation complexity)
 
 #### [Gotcha] Pre-existing git merge conflict in tool-invocation-part.tsx (containing git stash markers: <<<<<<< Updated upstream / >>>>>>> Stashed changes) was blocking the entire build, even though the conflict was unrelated to the feature being implemented. (2026-03-09)
+
 - **Situation:** Parallel development created stashed changes that weren't properly merged during rebase/merge operations.
 - **Root cause:** Git stash markers are not valid TypeScript syntax and prevent tsc from parsing the file, killing the entire monorepo build.
 - **How to avoid:** Spending 5 mins to resolve merge conflict (keep both import/registration sets) vs. hours of blocked CI/CD. The additive merge is safe because both sitrep-card and health-check-card files exist and their tool IDs don't collide.
 
 #### [Gotcha] useEffect dependencies on incrementally-updated streaming content (e.g., `code` prop) re-fire on every token, not just on initial mount. Expensive operations like Prism.js highlight thrashing occur at every token delivery. (2026-03-09)
+
 - **Situation:** Code block receives streaming tokens character-by-character; the `code` dependency genuinely changes on each token, triggering effects.
 - **Root cause:** Root cause: useEffect correctly identifies `code` as a dependency that changed. The gotcha is that streaming creates high-frequency changes, not low-frequency initialization.
 - **How to avoid:** Understanding: recognize that streaming is high-frequency state change, not initialization. Solution complexity: requires `isStreaming` flag to distinguish initialization from streaming completion.
 
 #### [Gotcha] Category names use spaces in string literals ('Work Steal', not 'WorkSteal') in TypeScript union type (2026-03-09)
+
 - **Situation:** CATEGORY_TAG_MAP and ProtocolCategory type definition use space-containing strings like 'Work Steal' as enum-like values
 - **Root cause:** Display names come from product spec (human-readable UI labels) rather than code identifiers. Reusing display names as type keys avoided separate mapping layer.
 - **How to avoid:** One source of truth for category names reduces sync bugs. However, space-in-identifiers violates JavaScript naming conventions and breaks developer mental models (unusual in codebases).
 
 #### [Gotcha] Feature description referenced files at 'apps/server/src/server/services/' but actual implementation lives at 'apps/server/src/services/' (2026-03-09)
+
 - **Situation:** Audit followed documented paths and couldn't find files initially, wasted time searching worktree
 - **Root cause:** Likely a refactoring moved services up one level in directory hierarchy, but feature description wasn't updated
 - **How to avoid:** Extra path searches cost time, but revealed documentation drift
 
 #### [Gotcha] WorkIntakeService phase claims require a 200ms settle delay then a verify read — skipping the verify causes false positive claims where two instances both believe they own the phase (2026-03-09)
+
 - **Situation:** Automerge CRDT merges are eventually consistent. After writing a claim, another instance may have simultaneously written its own claim. Without reading back after a brief settle, the instance proceeds as though it won the claim even when Automerge resolved to a different winner.
 - **Root cause:** CRDT last-writer-wins semantics means two simultaneous claims resolve to one, but neither writer knows which won until they re-read. The 200ms delay (`CLAIM_VERIFY_DELAY_MS`) gives the WebSocket sync round-trip time to complete before the verify read.
 - **How to avoid:** Always use the full `claimAndMaterialize` flow: write claim → wait 200ms → read back → check `holdsClaim(phase, instanceId)`. Never skip the verify step, even in tests or one-off scripts.
 
 #### [Gotcha] WorkIntakeService features are LOCAL only — phases are the cross-instance coordination unit, NOT features (2026-03-09)
+
 - **Situation:** It's tempting to sync features via CRDT like other entities. The pull-based model deliberately does NOT do this. Each instance creates its own local feature from a claimed phase and never broadcasts that feature to peers.
 - **Root cause:** Features are execution artifacts specific to one instance. Syncing them would cause every instance to see (and potentially try to execute) every other instance's work. Phases, by contrast, are coordination primitives shared via project CRDT documents.
 - **How to avoid:** If you see a feature appearing on multiple instances unexpectedly, check whether CRDT feature sync was accidentally re-enabled. The rule: projects (and their phases) cross the wire, features never do.
 
 #### [Gotcha] WorkIntakeService stale claim recovery silently skips everything if getPeerStatus() returns an empty map (2026-03-09)
+
 - **Situation:** `reclaimStalePhases()` calls `isReclaimable(phase, peerStatus, claimTimeoutMs)`. The `peerStatus` map is used to check whether the claiming instance is still online. If the map is empty (e.g., CrdtSyncService not connected), no stale claims are ever reclaimed regardless of timeout.
 - **Root cause:** The design is conservative: don't reclaim if you can't verify the peer is truly offline. An empty peer map means "we don't know who's online" not "everyone is offline."
 - **How to avoid:** If stale claims are piling up in the project doc, first check whether CrdtSyncService is connected and peers are being tracked. `workIntakeService` reclaim only activates once peer presence data is available.
 
 #### [Gotcha] Performance narrative (React 'never re-reconciles' static HTML) was masking a hidden feature regression (loss of custom component renderers in completed messages) (2026-03-09)
+
 - **Situation:** The original code included a comment justifying dangerouslySetInnerHTML with 'React never re-reconciles this' — treating it as an optimization feature. This framing normalized accepting limited rendering capability (no CodeBlock, table, or citation components) in completed messages
 - **Root cause:** The optimization comment was technically true but created false justification for code that actually broke feature parity. Developers reading the code would see 'optimization' and assume the limitation was worth it, without questioning whether the trade-off was necessary
 - **How to avoid:** Gained code clarity and unified features; lost a narrow optimization that wasn't delivering value. The narrative loss is the real cost — developers in future codebases may keep similar 'optimized' dual paths without questioning them
 
 #### [Gotcha] Type assertion evolution: code initially used `as any` for form steps (step={firstStep as any}), then refined to `as HITLFormStep`. Indicates type wasn't imported or understood during initial implementation. (2026-03-09)
+
 - **Situation:** Implementing form rendering component without full type information available or imported.
 - **Root cause:** Rapid iteration. Start with loose types to unblock implementation, tighten as you understand the data shape. `as any` is a common escape hatch when types aren't available.
 - **How to avoid:** Fast iteration vs. type safety. Loose types hide errors but allow development to proceed. Type refinement happens naturally once types are discovered.
 
 #### [Gotcha] The `includeProtocol: true` flag on `avaChannel.getMessages()` is REQUIRED to surface backchannel messages in results (2026-03-09)
+
 - **Situation:** Polling for responses in the response-waiting loop relies on protocol messages appearing in getMessages results
 - **Root cause:** By default getMessages filters out protocol/backchannel messages. Flag was discovered via debugging.
 - **How to avoid:** Flag inclusion adds clarity but is non-obvious API design. Without it, feature silently fails (polls timeout with no responses found).
 
 #### [Gotcha] Infrastructure partially existed before plumbing completed: PRWatcherService already had sessionId on WatchEntry and emitted it in events, but HTTP/tool layers weren't connected (2026-03-09)
+
 - **Situation:** Feature required only connecting layers, not building storage mechanism. Developers found sessionId already in wire format but not flowing through buildAvaTools → watch_pr tool.
 - **Root cause:** Suggests sessionId was added to PRWatcherService separately (possibly for future use or incomplete PR). Missing connection prevented feature activation.
 - **How to avoid:** Partial implementations can silently exist (feature half-works). Good: saves rework. Bad: obscures incomplete features, makes it unclear who 'owns' finishing them.
 
 #### [Gotcha] Build + lint verification was done before committing changes; without this step, TypeScript errors or prettier/eslint violations would not surface until CI (2026-03-10)
+
 - **Situation:** Committed 4 files with ~1000 LOC of new code; build passed cleanly
 - **Root cause:** Worktree isolation means local environment might diverge from CI—pre-commit build verification catches issues before push and avoids CI loop delay
 - **How to avoid:** Adds ~2min overhead locally to catch issues immediately vs 5-10min waiting for CI to run; prevents broken commits on branch
 
 #### [Gotcha] Discord channel IDs table existed in both the LLM prompt and in memory/MEMORY.md, creating a duplicate data maintenance burden. Removing from prompt eliminates sync risk. (2026-03-10)
+
 - **Situation:** System configuration scattered across multiple files — channel IDs in prompt, same IDs in memory file. Updates to either location could desynchronize.
 - **Root cause:** System prompts are code and should follow DRY principle. Reference data that changes independently (channel IDs, config) should have a single source of truth. LLM prompts should reference stable facts, not configuration that ops teams might update.
 - **How to avoid:** Prompt is smaller and cleaner vs. if Ava needs channel IDs at runtime, must query them from MCP or memory rather than having them inline.
 
 #### [Gotcha] Bootstrap synchronization: `serverUrlOverride` is initialized from localStorage in store setup. If store hydration is not guaranteed before HTTP client makes first request, race condition exists where client uses fallback URL while store is still syncing. (2026-03-10)
+
 - **Situation:** App startup sequence: store initialization, HTTP client creation, first API call. Order matters.
 - **Root cause:** localStorage is async in some contexts (though typically sync in browsers); if hydration is deferred, early requests use old URL.
 - **How to avoid:** Hydration adds small startup cost. If not handled carefully, can cause race conditions. The summary doesn't specify how hydration is guaranteed to complete before first request.
 
 #### [Gotcha] emit() and broadcast() coexist on the same EventEmitter object, making it easy to pick the wrong method when handling events that cross server-client boundaries (2026-03-10)
+
 - **Situation:** Developer modifying event emission in ava-tools.ts has two methods available with similar names but different scopes
 - **Root cause:** EventEmitter surface area is large. Without explicit documentation/comments, caller doesn't know their event audience (server-only vs broadcast).
 - **How to avoid:** Generic EventEmitter is reusable across projects but requires developer knowledge of when to use emit vs broadcast. Specificity would reduce confusion but reduce reusability.
 
 #### [Gotcha] WebSocket events that don't match the UI's narrowed EventType union are silently dropped (never dispatched to callbacks), with no error or warning (2026-03-10)
+
 - **Situation:** When 'chat:user-input-request' was missing from the UI's EventType union, the server was sending these events but the client was discarding them without trace
 - **Root cause:** The EventHandler filters incoming messages by type-checking against the union; unmatched types fail the type guard and are never delivered to registered callbacks
 - **How to avoid:** Silent dropping is less disruptive than runtime errors, but makes debugging much harder - events disappear with no signal to developer
 
 #### [Gotcha] Script named 'dev:headless' runs NODE_ENV=production. The 'dev:' prefix refers to 'running in local development workflow', not 'development environment mode'. Easy misinterpretation. (2026-03-10)
+
 - **Situation:** Codebase convention uses 'dev:' prefix for local-execution scripts, but this variant must run production environment to accurately test deployed configuration
 - **Root cause:** Enables testing production behavior (AUTO_MODE=true, NODE_ENV=production) locally before CI deployment. Validates server correctness in its actual runtime environment, not a mock dev environment.
 - **How to avoid:** Consistent naming across root scripts vs. explicit environment signaling in script name
 
 #### [Gotcha] staleForMs might be 0 or imprecise, so fallback to 'some time' instead of computing staleHours; loses precision in user-facing message (2026-03-10)
+
 - **Situation:** Drift data structure has optional staleForMs field; value could be missing, zero, or calculated inaccurately from timestamps
 - **Root cause:** Defensive: avoid showing '0 hours' or NaN in comment body; vague message still readable
 - **How to avoid:** User sees less precise info ('some time' vs '72 hours'), but message degrades gracefully instead of erroring or misleading
 
 #### [Gotcha] Deferred signals are stored in-memory in the SignalIntakeService instance and do not persist across server restarts (2026-03-10)
+
 - **Situation:** getDeferredQueue() returns in-memory array; no database or file persistence implemented
 - **Root cause:** Simpler initial implementation; deferred queue is a temporary holding pattern expected to be processed by human review within a session; external persistence adds DB dependency
 - **How to avoid:** Gained: zero persistence overhead, simple to implement. Lost: queue lost on server crash; no audit trail of deferrals
 
 #### [Gotcha] LeadEngineerRule contract (pure function, no side effects beyond logging) prevents errorBudgetExhausted rule from actually enforcing budget (auto-pause) (2026-03-10)
+
 - **Situation:** Feature spec includes auto-pause when budget exhausted, but rule can only emit warn log. Full enforcement requires FeatureScheduler integration (separate work outside described scope).
 - **Root cause:** Rule engine designed for simplicity/testability/determinism. Complex enforcement (skipping non-bugfix features) requires scheduler access (scheduler orchestrates feature selection). Rules are evaluation-only.
 - **How to avoid:** Simpler rule engine in exchange for limited rule capabilities. Enforcement requires two-phase architecture: rules report state → scheduler acts on state.
 
 #### [Gotcha] libs/types dist files were stale, causing TypeScript errors. Needed explicit rebuild via `cd libs/types && npm run build` even though monorepo is linked. (2026-03-10)
+
 - **Situation:** Working in worktree with @protolabsai/types as published package + local libs/types source.
 - **Root cause:** Node module resolution and npm hoisting mean the published .d.ts files in node_modules/@protolabsai/types/dist/ are not auto-synced with source changes. Build step required.
 - **How to avoid:** Explicit rebuild step adds friction but catches type drift. Better than silent type errors.
 
 #### [Gotcha] Recent URLs deduplication uses O(n) .filter() scan on each addition despite only storing max 10 items: [url, ...recent.filter(u => u !== url)].slice(0, 10) (2026-03-10)
+
 - **Situation:** Maintaining deduplicated recent server URLs list for UI dropdown
 - **Root cause:** Simple, readable code sufficient for 10-item bounded list. Algorithm complexity was sacrificed for maintainability.
 - **How to avoid:** Clear, easy-to-read code vs. technically inefficient algorithm; works fine at 10 items, breaks visibly if list grows to 100s; synchronous localStorage means no async overhead
 
 #### [Gotcha] Review queue depth uses count of features with status='review' as proxy for PR queue depth. Assumes 1:1 mapping of feature→PR. (2026-03-10)
+
 - **Situation:** Code: `allFeatures.filter((f) => f.status === 'review').length`. No accounting for draft PRs, stacked PRs, or features with zero PRs.
 - **Root cause:** Simple and fast. Feature status is the single source of truth; avoids expensive GitHub API queries per feature.
 - **How to avoid:** Easier: O(1) memory/compute. Harder: doesn't detect PRs opened outside the feature system, or multiple PRs per feature.
 
 #### [Gotcha] Portfolio gate's `deferredQueue` is in-memory only — deferred signals are lost on server restart (2026-03-10)
+
 - **Situation:** SignalIntakeService defers incoming signals to `deferredQueue` when capacity or error-budget checks fail. Queue is not persisted to disk or database.
 - **Root cause:** Simpler initial implementation; can optimize based on observed deferral patterns before adding persistence layer. Assumption is that deferred signals are low-priority and will be re-submitted by users if important.
 - **How to avoid:** Simpler code and faster iteration on gate thresholds now, but users must re-submit deferred signals after server restart. Loss is acceptable for non-critical signals.
+
 #### [Gotcha] Features in 'review' status must have prNumber field populated; no validation of this invariant in task (2026-02-10)
+
 - **Situation:** Task assumes feature.prNumber exists if feature.status === 'review'. No defensive checks.
 - **Root cause:** Assumed board-health system maintains this invariant (features only marked 'review' after PR created). Defensive checks add noise.
 - **How to avoid:** Trust the invariant vs defensive programming. Silence if invariant breaks (prNumber undefined = skipped feature, hard to debug). Documented in notes to avoid later confusion.
 
 #### [Gotcha] npm install failed with 'node-pty rebuild requiring Python' when installing dagre dependencies. Required --ignore-scripts --legacy-peer-deps flags. (2026-02-19)
+
 - **Situation:** Adding dagre and @types/dagre to package.json triggered post-install build scripts that needed Python toolchain.
 - **Root cause:** node-pty is a transitive dependency of some package that requires native compilation. The --ignore-scripts flag skips post-install scripts, --legacy-peer-deps allows peer dependency resolution.
 - **How to avoid:** Use --ignore-scripts --legacy-peer-deps for deps with native transitive dependencies.
 
 #### [Gotcha] Build failures don't necessarily indicate code correctness — distinguish environment issue (missing p-limit in node_modules) from actual code problems by verifying only changed files' errors. (2026-02-21)
+
 - **Situation:** Build failed during verification but all feature changes were isolated to apps/ui; libs/platform/secure-fs.ts error indicated upstream dependency problem.
 - **Root cause:** Dependency resolution failures occur independently of code changes; git diff provides objective proof of which files changed vs where errors occur.
 - **How to avoid:** If error file wasn't modified, it's likely environmental — check git diff before attributing blame.
 
 #### [Gotcha] OG meta tags must use absolute URLs, not relative URLs, because social media crawlers are external services without context to resolve relative URLs. (2026-02-24)
+
 - **Situation:** Implementing og:image meta tags for social sharing across landing pages.
 - **Root cause:** Social platforms crawl pages from their own servers and cannot resolve relative URLs the way a browser would.
 - **How to avoid:** Absolute URLs required for external crawlers; hardcode domain or use environment variable for base URL.
 
 #### [Gotcha] Same satisfiedStatuses list appears in 3+ separate functions within single resolver.ts file. Each function keeps this in sync independently. (2026-02-24)
+
 - **Situation:** Three functions (areDependenciesSatisfied, getBlockingDependencies, getBlockingDependenciesFromMap) each had their own copy of which statuses count as 'satisfied'.
 - **Root cause:** Each function evolved independently. Extracting to constant seemed premature until a change revealed the cost.
 - **How to avoid:** DRY principle violation — maintain single STATUS_SATISFIED constant.
 
 #### [Gotcha] ProjectSettingsPanel and ProjectSettingsView are separate components on different routes, risking duplication of webhook settings UI logic. (2026-03-07)
+
 - **Situation:** /project-settings uses ProjectSettingsView with ProjectWebhooksSection; new ProjectSettingsPanel is milestone component with same webhook validation.
 - **Root cause:** Feature built incrementally; ProjectSettingsPanel is new milestone piece for future Project Page Hub; old route unchanged.
 - **How to avoid:** Incrementally ship without touching stable routes, but document the duplication risk.
 
 #### [Gotcha] Feature creation logic duplicated: blocked features use `status: 'blocked'` + `blockingReason` while passed features use `status: 'backlog'` with no blocking fields. Both branches exist in same method. (2026-03-10)
+
 - **Situation:** Gate decision requires different feature metadata for blocked vs. passed features.
 - **Root cause:** Blocked features need explicit reason tracking; passed features don't. Cannot use single feature constructor.
 - **How to avoid:** Explicit metadata per path vs. code duplication; easier to understand each path vs. harder to maintain when feature creation logic changes.
 
 #### [Gotcha] Portfolio gate's deferredQueue is in-memory only — deferred signals are lost on server restart. (2026-03-10)
+
 - **Situation:** SignalIntakeService defers incoming signals to deferredQueue when capacity or error-budget checks fail. Queue is not persisted.
 - **Root cause:** Simpler initial implementation; assumption is that deferred signals are low-priority and will be re-submitted by users if important.
 - **How to avoid:** Users must re-submit deferred signals after server restart. Add persistence if deferral rate increases.
 
-
 #### [Gotcha] recentServerUrls deduplication on add: if user re-selects same server URL, old entry is removed and new one appended (maintains insertion order, prevents duplicates) (2026-03-11)
+
 - **Situation:** Maintaining recent server history without duplicates. User might frequently switch between 2-3 servers.
 - **Root cause:** Prevents cluttering the dropdown with repeated URLs. Moving to end of list (LRU-like behavior) makes recently-used servers more discoverable.
 - **How to avoid:** More intuitive UX (recent = at bottom) but requires O(n) search to find and remove existing entry before append. For max-10 list, negligible.
 
 #### [Gotcha] setServerUrlOverride() must call invalidateHttpClient() to reconnect WebSocket to new server (2026-03-11)
+
 - **Situation:** Multiple transport layers exist (HTTP client, WebSocket). Changing server URL in state doesn't auto-update live connections.
 - **Root cause:** WebSocket client holds a reference to the old server URL. If only localStorage/state changes, WebSocket silently continues connecting to old server. invalidateHttpClient() closes old connection and creates new singleton, forcing reconnection.
 - **How to avoid:** Coupling setServerUrlOverride() to HTTP client layer (tight dependency), but ensures correctness. Forgetting this call causes silent data loss—app stops receiving updates without error.
 
 #### [Gotcha] Recent URLs deduplication (max 10 limit) is only applied when setServerUrlOverride() is called; manual localStorage edits bypass it (2026-03-11)
+
 - **Situation:** User experience feature: remember recent servers for quick switching. Constraint of max 10 prevents unbounded growth.
 - **Root cause:** Implementation: [newUrl, ...stored.filter(u => u !== newUrl)].slice(0, 10). Deduplication moves matching URL to front, then slice enforces max. But if someone manually edits localStorage to add 11+ URLs, constraint isn't enforced until next state update.
 - **How to avoid:** Simple implementation (one-liner filter+slice) vs. reactive enforcement. Edge case only occurs if localStorage is manually edited (rare) or if feature is scripted externally.
 
 #### [Gotcha] WebSocket connections must be explicitly closed before creating new client pointing to different URL (2026-03-11)
+
 - **Situation:** If you recreate HTTP client without closing previous WebSocket, stale connections persist and can interfere with routing
 - **Root cause:** WebSocket close is not automatic on object destruction; browser keeps connection alive until explicitly terminated
 - **How to avoid:** Gained: clean connection lifecycle; lost: ability to assume cleanup on object disposal
