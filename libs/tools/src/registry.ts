@@ -104,11 +104,19 @@ export class ToolRegistry {
   /**
    * Execute a tool by name with the provided input and context.
    *
+   * Includes an error boundary that catches tool execution errors and converts
+   * them to structured error responses instead of propagating exceptions. This
+   * ensures the LLM receives error context rather than causing a session crash.
+   *
+   * The structured error response includes:
+   * - toolName: the name of the tool that failed
+   * - errorMessage: the original error message for debugging
+   * - recoveryHint: a suggested action to recover from the error
+   *
    * @param name - The name of the tool to execute
    * @param input - The input data for the tool
    * @param context - The execution context for dependency injection
-   * @returns The tool execution result
-   * @throws Error if the tool is not found
+   * @returns The tool execution result, always resolves (never throws)
    */
   async execute<TInput = unknown, TOutput = unknown>(
     name: string,
@@ -121,19 +129,61 @@ export class ToolRegistry {
       return {
         success: false,
         error: `Tool '${name}' not found in registry`,
+        metadata: {
+          toolName: name,
+          recoveryHint: `Verify the tool name is correct and the tool has been registered. Available tools can be listed via the registry.`,
+        },
       };
     }
 
     try {
-      return await tool.execute(input, context);
+      const result = await tool.execute(input, context);
+
+      // If the tool returned a failure result (e.g. caught internally by defineSharedTool),
+      // enrich it with structured error metadata so the LLM gets full context.
+      if (!result.success) {
+        const errorMessage = result.error ?? 'Tool returned a failure result';
+
+        // Log for server-side debugging
+        console.error(`[ToolRegistry] Tool '${name}' returned a failure result:`, {
+          toolName: name,
+          errorMessage,
+        });
+
+        return {
+          ...result,
+          error: `Tool '${name}' failed: ${errorMessage}`,
+          metadata: {
+            ...result.metadata,
+            toolName: name,
+            errorMessage,
+            recoveryHint:
+              (result.metadata?.recoveryHint as string | undefined) ??
+              `The tool '${name}' encountered an error. Check the inputs and try again. If the problem persists, the tool may need reconfiguration.`,
+          },
+        };
+      }
+
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      // Log original error for debugging — preserve full details server-side
+      console.error(`[ToolRegistry] Tool '${name}' threw an unexpected error:`, {
+        toolName: name,
+        errorMessage,
+        stack: errorStack,
+      });
 
       return {
         success: false,
-        error: `Failed to execute tool '${name}': ${errorMessage}`,
+        error: `Tool '${name}' failed: ${errorMessage}`,
         metadata: {
+          toolName: name,
           originalError: error,
+          errorMessage,
+          recoveryHint: `The tool '${name}' encountered an error. Check the inputs and try again. If the problem persists, the tool may need reconfiguration.`,
         },
       };
     }

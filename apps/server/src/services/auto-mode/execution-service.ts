@@ -88,6 +88,7 @@ import type {
   IAutoModeCallbacks,
   ExecuteFeatureOptions,
 } from './execution-types.js';
+import type { ToolRegistry, ToolContext, ToolResult } from '@protolabsai/tools';
 
 const logger = createLogger('AutoMode');
 
@@ -3314,5 +3315,56 @@ You can use the Read tool to view these images at any time during implementation
       branchName,
       content,
     });
+  }
+
+  /**
+   * Execute a tool from a registry with a structured error boundary.
+   *
+   * Wraps registry.execute() so that tool errors are caught and converted to
+   * structured error responses instead of propagating exceptions. This prevents
+   * tool failures from crashing the agent session — the LLM receives error
+   * context (tool name, message, and recovery hint) and can decide how to
+   * proceed.
+   *
+   * Original errors are logged server-side for debugging, while a clean
+   * structured message is returned to the caller.
+   *
+   * @param registry - The ToolRegistry instance to execute against
+   * @param toolName - Name of the tool to execute
+   * @param input - Input data for the tool
+   * @param context - Optional execution context for dependency injection
+   * @returns Structured tool result that always resolves (never throws)
+   */
+  async executeToolWithErrorBoundary<TOutput = unknown>(
+    registry: ToolRegistry,
+    toolName: string,
+    input: unknown,
+    context: ToolContext = {}
+  ): Promise<ToolResult<TOutput>> {
+    try {
+      const result = await registry.execute<unknown, TOutput>(toolName, input, context);
+      return result;
+    } catch (error) {
+      // Catch any exception that escapes the registry's own error boundary
+      // (e.g. if a future refactor removes the try/catch there)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      logger.error(`[ExecutionService] Tool '${toolName}' execution failed unexpectedly:`, {
+        toolName,
+        errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      return {
+        success: false,
+        error: `Tool '${toolName}' failed: ${errorMessage}`,
+        metadata: {
+          toolName,
+          originalError: error,
+          errorMessage,
+          recoveryHint: `The tool '${toolName}' failed unexpectedly. Check inputs and tool configuration. If the session is degraded, consider retrying or using an alternative tool.`,
+        },
+      } as ToolResult<TOutput>;
+    }
   }
 }
