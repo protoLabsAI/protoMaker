@@ -16,7 +16,10 @@
 import path from 'path';
 import { createLogger } from '@protolabsai/utils';
 import type { Feature } from '@protolabsai/types';
-import { checkAndRecoverUncommittedWork } from '../worktree-recovery-service.js';
+import {
+  checkAndRecoverUncommittedWork,
+  recoverNestedWorktreeWork,
+} from '../worktree-recovery-service.js';
 import { removeLock } from '../../lib/worktree-lock.js';
 import { activeAgentsCount } from '../../lib/prometheus.js';
 import type { RunningFeature } from './execution-types.js';
@@ -171,6 +174,113 @@ export class PostExecutionMiddleware {
         logger.error(
           `[PostExecution] ${featureId}: uncommitted work check threw unexpectedly:`,
           recoveryError
+        );
+      }
+
+      // -----------------------------------------------------------------------
+      // Step 1.5: Nested worktree scanning
+      // The Claude Agent SDK creates worktrees at .claude/worktrees/agent-{id}/
+      // inside the main worktree. If an agent left uncommitted work there, the
+      // Step 1 check above found nothing (it only looks at the main worktree).
+      // Here we copy those files into the main worktree and re-run recovery.
+      // -----------------------------------------------------------------------
+      logger.info(`[PostExecution] ${featureId}: scanning for nested Claude agent worktrees`);
+      try {
+        const mainWorkDir = path.resolve(worktreePath);
+        const nestedResult = await recoverNestedWorktreeWork(mainWorkDir);
+
+        if (!nestedResult.found) {
+          logger.info(`[PostExecution] ${featureId}: no nested agent worktrees found`);
+        } else if (nestedResult.worktreesWithChanges.length === 0) {
+          logger.info(
+            `[PostExecution] ${featureId}: nested agent worktrees found but all are clean`
+          );
+        } else {
+          logger.info(
+            `[PostExecution] ${featureId}: ${nestedResult.worktreesWithChanges.length} nested worktree(s) had uncommitted work — ` +
+              `${nestedResult.copiedFiles.length} file(s) copied to main worktree`
+          );
+
+          if (nestedResult.errors.length > 0) {
+            logger.warn(
+              `[PostExecution] ${featureId}: nested worktree copy errors: ${nestedResult.errors.join(', ')}`
+            );
+          }
+
+          if (nestedResult.copiedFiles.length > 0) {
+            // Resolve recovery base branch (same logic as Step 1).
+            let nestedRecoveryBaseBranch: string | undefined;
+            if (ctx.getRecoveryBaseBranch) {
+              try {
+                nestedRecoveryBaseBranch = await ctx.getRecoveryBaseBranch();
+              } catch {
+                // Fall through to default
+              }
+            }
+
+            logger.info(
+              `[PostExecution] ${featureId}: running recovery on main worktree for nested work`
+            );
+            const nestedRecovery = await checkAndRecoverUncommittedWork(
+              feature,
+              mainWorkDir,
+              projectPath,
+              nestedRecoveryBaseBranch
+            );
+
+            if (nestedRecovery.detected && nestedRecovery.recovered) {
+              logger.info(
+                `[PostExecution] ${featureId}: nested worktree recovery succeeded — PR at ${nestedRecovery.prUrl}`
+              );
+
+              if (ctx.updateFeatureStatus) {
+                try {
+                  await ctx.updateFeatureStatus(projectPath, featureId, 'review');
+                  logger.info(
+                    `[PostExecution] ${featureId}: feature status updated to 'review' (nested recovery)`
+                  );
+                } catch (statusError) {
+                  logger.error(
+                    `[PostExecution] ${featureId}: failed to update feature status after nested recovery:`,
+                    statusError
+                  );
+                }
+              }
+
+              if (ctx.emitEvent) {
+                ctx.emitEvent('auto_mode_recovery_pr_created', {
+                  featureId,
+                  projectPath,
+                  prUrl: nestedRecovery.prUrl,
+                  prNumber: nestedRecovery.prNumber,
+                  prCreatedAt: nestedRecovery.prCreatedAt,
+                  source: 'nested_worktree',
+                });
+              }
+            } else if (nestedRecovery.detected && !nestedRecovery.recovered) {
+              logger.warn(
+                `[PostExecution] ${featureId}: nested worktree recovery failed: ${nestedRecovery.error}`
+              );
+              if (ctx.emitEvent) {
+                ctx.emitEvent('auto_mode_recovery_failed', {
+                  featureId,
+                  projectPath,
+                  error: nestedRecovery.error,
+                  source: 'nested_worktree',
+                });
+              }
+            } else {
+              logger.warn(
+                `[PostExecution] ${featureId}: files were copied but git status shows nothing to recover`
+              );
+            }
+          }
+        }
+      } catch (nestedError) {
+        // Safety net must never propagate — swallow and log.
+        logger.error(
+          `[PostExecution] ${featureId}: nested worktree scan threw unexpectedly:`,
+          nestedError
         );
       }
     } else {
