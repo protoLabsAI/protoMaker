@@ -314,7 +314,7 @@ export class SettingsService {
           continue;
         }
         const value = settings.phaseModels[key];
-        if (value !== undefined) {
+        if (value != null) {
           // Convert string to PhaseModelEntry if needed (v2 -> v3 migration)
           merged[key] = this.toPhaseModelEntry(value as string | PhaseModelEntry);
         }
@@ -347,7 +347,10 @@ export class SettingsService {
    * @param value - Phase model value (string or PhaseModelEntry)
    * @returns PhaseModelEntry object with canonical model ID
    */
-  private toPhaseModelEntry(value: string | PhaseModelEntry): PhaseModelEntry {
+  private toPhaseModelEntry(value: string | PhaseModelEntry | null | undefined): PhaseModelEntry {
+    if (value == null) {
+      return { model: 'claude-sonnet' };
+    }
     if (typeof value === 'string') {
       // v2 format: just a model string - migrate to canonical ID
       return { model: migrateModelId(value) as PhaseModelEntry['model'] };
