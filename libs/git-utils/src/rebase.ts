@@ -1,5 +1,5 @@
 /**
- * Git rebase utilities
+ * Git merge utilities for pre-flight worktree synchronization
  */
 
 import { exec } from 'child_process';
@@ -7,26 +7,27 @@ import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
 
 const execAsync = promisify(exec);
-const logger = createLogger('GitRebase');
+const logger = createLogger('GitMerge');
 
 /**
- * Result of a rebase operation
+ * Result of a merge operation
  */
 export interface RebaseResult {
-  /** Whether the rebase was successful */
+  /** Whether the merge was successful */
   success: boolean;
-  /** Error message if rebase failed */
+  /** Error message if merge failed */
   error?: string;
   /** Whether conflicts were detected */
   hasConflicts?: boolean;
 }
 
 /**
- * Rebase a worktree onto the latest origin/main
- * This ensures agents execute against up-to-date code when PRs merge in quick succession
+ * Merge a worktree with the latest origin/main
+ * This ensures agents execute against up-to-date code when PRs merge in quick succession.
+ * Uses merge instead of rebase to handle concurrent .automaker/ modifications gracefully.
  *
- * @param worktreePath - Path to the worktree to rebase
- * @param targetBranch - Target branch to rebase onto (default: 'origin/main')
+ * @param worktreePath - Path to the worktree to merge
+ * @param targetBranch - Target branch to merge from (default: 'origin/main')
  * @returns RebaseResult indicating success/failure
  */
 export async function rebaseWorktreeOnMain(
@@ -42,30 +43,30 @@ export async function rebaseWorktreeOnMain(
         timeout: 30_000,
       });
     } catch (fetchError) {
-      // Fetch failure is non-critical - we'll try to rebase anyway
+      // Fetch failure is non-critical - we'll try to merge anyway
       const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
       logger.warn(`git fetch failed (continuing anyway): ${errorMsg}`);
     }
 
-    // Step 2: Attempt rebase onto target branch
-    logger.info(`Rebasing worktree onto ${targetBranch}: ${worktreePath}`);
+    // Step 2: Attempt merge with target branch
+    logger.info(`Merging worktree with ${targetBranch}: ${worktreePath}`);
     try {
-      const { stdout, stderr } = await execAsync(`git rebase ${targetBranch}`, {
+      const { stdout, stderr } = await execAsync(`git merge ${targetBranch}`, {
         cwd: worktreePath,
         timeout: 60_000,
       });
 
-      // Check if rebase output indicates "Already up to date"
+      // Check if merge output indicates "Already up to date"
       const output = stdout + stderr;
-      if (output.includes('is up to date') || output.includes('Current branch')) {
+      if (output.includes('Already up to date') || output.includes('is up to date')) {
         logger.info(`Worktree already up to date: ${worktreePath}`);
       } else {
-        logger.info(`Successfully rebased worktree onto ${targetBranch}: ${worktreePath}`);
+        logger.info(`Successfully merged worktree with ${targetBranch}: ${worktreePath}`);
       }
 
       return { success: true };
-    } catch (rebaseError) {
-      const errorMsg = rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
+    } catch (mergeError) {
+      const errorMsg = mergeError instanceof Error ? mergeError.message : String(mergeError);
 
       // Check if this is a conflict error
       const hasConflicts =
@@ -75,32 +76,32 @@ export async function rebaseWorktreeOnMain(
 
       if (hasConflicts) {
         logger.warn(
-          `Rebase conflicts detected in ${worktreePath}, aborting rebase. Agent will proceed on stale base.`
+          `Merge conflicts detected in ${worktreePath}, aborting merge. Agent will proceed on stale base.`
         );
 
-        // Abort the rebase to return worktree to clean state
+        // Abort the merge to return worktree to clean state
         try {
-          await execAsync('git rebase --abort', {
+          await execAsync('git merge --abort', {
             cwd: worktreePath,
             timeout: 30_000,
           });
-          logger.info(`Aborted rebase cleanly for ${worktreePath}`);
+          logger.info(`Aborted merge cleanly for ${worktreePath}`);
         } catch (abortError) {
           logger.error(
-            `Failed to abort rebase for ${worktreePath}:`,
+            `Failed to abort merge for ${worktreePath}:`,
             abortError instanceof Error ? abortError.message : String(abortError)
           );
         }
 
         return {
           success: false,
-          error: 'Rebase conflicts detected',
+          error: 'Merge conflicts detected',
           hasConflicts: true,
         };
       }
 
-      // Other rebase errors (not conflicts)
-      logger.warn(`Rebase failed for ${worktreePath}: ${errorMsg}`);
+      // Other merge errors (not conflicts)
+      logger.warn(`Merge failed for ${worktreePath}: ${errorMsg}`);
       return {
         success: false,
         error: errorMsg,
@@ -109,7 +110,7 @@ export async function rebaseWorktreeOnMain(
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error(`Unexpected error during rebase for ${worktreePath}:`, errorMsg);
+    logger.error(`Unexpected error during merge for ${worktreePath}:`, errorMsg);
     return {
       success: false,
       error: errorMsg,
