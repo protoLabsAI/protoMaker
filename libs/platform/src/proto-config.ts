@@ -51,17 +51,6 @@ export interface ProtoConfigServer {
   port?: number;
 }
 
-export interface ProtoConfigHive {
-  /** Shared identifier for the hive cluster */
-  hiveId?: string;
-  /** WebSocket port for CRDT sync between instances */
-  syncPort?: number;
-  /** Whether multi-instance mesh sync is enabled */
-  meshEnabled?: boolean;
-  /** Resolved identity for the current instance */
-  instanceId?: string;
-}
-
 export interface ProtoConfigProtolab {
   /** Whether ProtoLab sync is enabled for this project */
   enabled?: boolean;
@@ -90,7 +79,6 @@ export interface ProtoConfig {
   brand?: ProtoConfigBrand;
   discord?: ProtoConfigDiscord;
   server?: ProtoConfigServer;
-  hive?: ProtoConfigHive;
   protolab?: ProtoConfigProtolab;
   instance?: ProtoConfigInstance;
   [key: string]: unknown;
@@ -143,7 +131,7 @@ function deepMerge(
  *   PROTO_DISCORD_SERVER_ID   — config.discord.serverId
  *   PROTO_DISCORD_CHANNEL_ID  — config.discord.channelId
  *   PROTO_SERVER_PORT         — config.server.port (integer)
- *   PROTO_HIVE_INSTANCE_ID    — config.hive.instanceId (overrides auto-detection)
+ *   PROTO_HIVE_INSTANCE_ID    — config.protolab.instanceId (overrides auto-detection)
  */
 function applyEnvOverrides(config: ProtoConfig): ProtoConfig {
   const result: ProtoConfig = { ...config };
@@ -173,7 +161,7 @@ function applyEnvOverrides(config: ProtoConfig): ProtoConfig {
   }
 
   if (process.env.PROTO_HIVE_INSTANCE_ID) {
-    result.hive = { ...result.hive, instanceId: process.env.PROTO_HIVE_INSTANCE_ID };
+    result.protolab = { ...result.protolab, instanceId: process.env.PROTO_HIVE_INSTANCE_ID };
   }
 
   return result;
@@ -183,14 +171,24 @@ function applyEnvOverrides(config: ProtoConfig): ProtoConfig {
  * Resolves the instanceId for this process.
  *
  * Priority:
- *   1. Explicit instanceId already set in config (from YAML or settings.json)
- *   2. Match by hostname against the `instances` registry in config
- *   3. Fall back to os.hostname() directly
+ *   1. protolab.instanceId already set in config (from YAML or settings.json)
+ *   2. hivemind.instanceId from config
+ *   3. Match by hostname against the `instances` registry in config
+ *   4. Fall back to os.hostname() directly
  */
 function resolveInstanceIdentity(config: ProtoConfig): ProtoConfig {
-  if (config.hive?.instanceId) {
+  if (config.protolab?.instanceId) {
     // Already explicitly set — nothing to do
     return config;
+  }
+
+  // Check hivemind.instanceId as alternative config path
+  const hivemind = config['hivemind'] as { instanceId?: string } | undefined;
+  if (hivemind?.instanceId) {
+    return {
+      ...config,
+      protolab: { ...config.protolab, instanceId: hivemind.instanceId },
+    };
   }
 
   const hostname = os.hostname();
@@ -205,7 +203,7 @@ function resolveInstanceIdentity(config: ProtoConfig): ProtoConfig {
 
   return {
     ...config,
-    hive: { ...config.hive, instanceId },
+    protolab: { ...config.protolab, instanceId },
   };
 }
 
