@@ -29,13 +29,7 @@ export async function register(container: ServiceContainer): Promise<void> {
     integrationRegistryService,
   } = container;
 
-  // Discord Bot Service initialization
-  void discordBotService.initialize();
-
-  // Wire Discord bot service to Ava Gateway
-  avaGatewayService.setDiscordBot(discordBotService);
-
-  // Event Hook Service initialization (must be after DiscordBotService)
+  // Event Hook Service initialization — runs regardless of Discord (handles non-Discord hooks too)
   eventHookService.initialize(
     events,
     settingsService,
@@ -43,6 +37,22 @@ export async function register(container: ServiceContainer): Promise<void> {
     featureLoader,
     discordBotService
   );
+
+  // Skip all Discord wiring when no token is configured.
+  // DiscordBotService methods gracefully no-op when uninitialized,
+  // but there's no reason to wire event subscriptions, escalation channels,
+  // or agent routers that will never fire.
+  const hasDiscordToken = !!(process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN);
+  if (!hasDiscordToken) {
+    logger.info('Discord integration disabled (DISCORD_BOT_TOKEN / DISCORD_TOKEN not set)');
+    return;
+  }
+
+  // Discord Bot Service initialization
+  void discordBotService.initialize();
+
+  // Wire Discord bot service to Ava Gateway
+  avaGatewayService.setDiscordBot(discordBotService);
 
   // Bridge integration:discord events to Discord bot service
   events.subscribe(async (type, payload) => {
@@ -115,20 +125,14 @@ export async function register(container: ServiceContainer): Promise<void> {
     )
   );
 
-  // Start Discord channel signal monitoring when DISCORD_TOKEN is configured.
-  // The monitor polls only channels registered in integrationRegistryService.
-  // Configs start empty and are populated at runtime via setChannelConfigs().
-  if (process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN) {
-    const discordMonitor = new DiscordMonitor(events);
-    discordMonitor.setDiscordBotService(discordBotService);
+  // Start Discord channel signal monitoring.
+  const discordMonitor = new DiscordMonitor(events);
+  discordMonitor.setDiscordBotService(discordBotService);
 
-    const configs = integrationRegistryService.getAllEnabledChannelConfigs();
-    void discordMonitor.startChannelMonitoring(configs).catch((err) => {
-      logger.error('Failed to start Discord channel signal monitoring:', err);
-    });
+  const configs = integrationRegistryService.getAllEnabledChannelConfigs();
+  void discordMonitor.startChannelMonitoring(configs).catch((err) => {
+    logger.error('Failed to start Discord channel signal monitoring:', err);
+  });
 
-    logger.info(`Discord channel signal monitor started (${configs.length} channel(s) configured)`);
-  } else {
-    logger.info('Discord channel signal monitor skipped (DISCORD_TOKEN not set)');
-  }
+  logger.info(`Discord channel signal monitor started (${configs.length} channel(s) configured)`);
 }

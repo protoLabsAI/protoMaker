@@ -119,6 +119,30 @@ export const integrationTools: Tool[] = [
   },
 
   {
+    name: 'add_discord_reaction',
+    description:
+      'Add an emoji reaction to a Discord message. Use Unicode emoji (e.g. "✅", "👍") or custom emoji name.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channelId: {
+          type: 'string',
+          description: 'Discord channel ID containing the message',
+        },
+        messageId: {
+          type: 'string',
+          description: 'Discord message ID to react to',
+        },
+        emoji: {
+          type: 'string',
+          description: 'Emoji to react with (Unicode emoji like "✅" or custom emoji name)',
+        },
+      },
+      required: ['channelId', 'messageId', 'emoji'],
+    },
+  },
+
+  {
     name: 'twitch_list_suggestions',
     description:
       'View Twitch chat suggestion queue with filtering. Use filter="unprocessed" to see only new suggestions, "approved" for processed ones, or "all" for everything.',
