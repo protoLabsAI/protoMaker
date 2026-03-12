@@ -64,8 +64,14 @@ export class PostExecutionMiddleware {
    * must never throw — all errors are caught and logged internally.
    */
   async run(ctx: PostExecutionContext): Promise<void> {
-    const { featureId, projectPath, feature, tempRunningFeature, runningFeatures, abortController } =
-      ctx;
+    const {
+      featureId,
+      projectPath,
+      feature,
+      tempRunningFeature,
+      runningFeatures,
+      abortController,
+    } = ctx;
     const worktreePath = tempRunningFeature.worktreePath;
 
     // -------------------------------------------------------------------------
@@ -95,9 +101,7 @@ export class PostExecutionMiddleware {
         }
 
         const workDir = path.resolve(worktreePath);
-        logger.info(
-          `[PostExecution] ${featureId}: checking for uncommitted work in ${workDir}`
-        );
+        logger.info(`[PostExecution] ${featureId}: checking for uncommitted work in ${workDir}`);
 
         const result = await checkAndRecoverUncommittedWork(
           feature,
@@ -166,9 +170,7 @@ export class PostExecutionMiddleware {
       runningFeatures.delete(featureId);
       activeAgentsCount.set(runningFeatures.size);
     } else {
-      logger.info(
-        `[PostExecution] ${featureId}: runningFeatures entry replaced — skipping delete`
-      );
+      logger.info(`[PostExecution] ${featureId}: runningFeatures entry replaced — skipping delete`);
     }
 
     // -------------------------------------------------------------------------
