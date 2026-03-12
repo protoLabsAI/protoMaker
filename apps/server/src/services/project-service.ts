@@ -420,6 +420,20 @@ export class ProjectService {
       }
     }
 
+    // Update CRDT doc and emit event so peers receive the milestone update
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
+      });
+      this._docs.set(projectPath, newDoc);
+      this._crdtEvents?.emit('project:updated', {
+        projectSlug,
+        projectPath,
+        project: updated,
+      });
+    }
+
     logger.info(`Saved ${milestones.length} milestones for project: ${projectSlug}`);
     return updated;
   }
@@ -450,6 +464,20 @@ export class ProjectService {
 
     const jsonPath = getProjectJsonPath(projectPath, projectSlug);
     await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
+
+    // Update CRDT doc and emit event so peers receive the claim update
+    if (this._isCrdtEnabled(projectPath)) {
+      const doc = await this._ensureDoc(projectPath);
+      const newDoc = Automerge.change(doc, (d) => {
+        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(project);
+      });
+      this._docs.set(projectPath, newDoc);
+      this._crdtEvents?.emit('project:updated', {
+        projectSlug,
+        projectPath,
+        project,
+      });
+    }
   }
 
   /**
