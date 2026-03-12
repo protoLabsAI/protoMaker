@@ -347,7 +347,9 @@ export type EventType =
   | 'error_budget:exhausted'
   | 'error_budget:recovered'
   // Project failover events (auto-claim of orphaned projects)
-  | 'project:failover';
+  | 'project:failover'
+  // Categories sync events (lightweight LWW config sync via CRDT bridge)
+  | 'categories:updated';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
