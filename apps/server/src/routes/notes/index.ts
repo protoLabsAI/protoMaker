@@ -1,9 +1,27 @@
 /**
  * Notes Routes — CRUD for per-project Tiptap notes workspace
  *
- * Storage: .automaker/notes/workspace.json (single file per project)
- * CRDT: When CRDTStore is available, reads serve from Automerge document and
- *       writes dual-write to both CRDT and disk for backwards compatibility.
+ * ## Storage Model
+ *
+ * **Primary:** CRDT (Automerge)
+ *   - Domain: `notes`
+ *   - Document ID: `workspace`
+ *   - Full registry key: `notes:workspace`
+ *   - Seeded on first startup via `hydrateNotesWorkspace()` in crdt-store.module.ts
+ *   - Provides multi-instance eventual consistency via the CRDTStore sync mesh
+ *
+ * **Fallback (routes):** Disk — `.automaker/notes/workspace.json`
+ *   - Routes read from and write to disk directly (synchronous, always available)
+ *   - Disk writes fire-and-forget into the CRDT store for replication
+ *   - When CRDT is unavailable, disk is the durable source of truth
+ *
+ * **Conflict semantics:** Last-write-wins (LWW) per tab field.
+ *   Tab content, name, and permissions are independent Automerge fields — the
+ *   last mutation to each field wins if two instances write concurrently.
+ *
+ * **TipTap CRDT binding (deferred):** Tab content is currently stored as a plain
+ *   HTML string. Per-character collaborative editing via TipTap's Y.js integration
+ *   is planned but not yet implemented — content fields remain LWW until then.
  */
 
 import { Router, type Request, type Response } from 'express';

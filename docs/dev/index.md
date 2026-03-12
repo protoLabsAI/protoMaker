@@ -18,6 +18,7 @@ Extend protoLabs. Architecture, packages, code standards, and how to contribute.
 ## Distributed Systems
 
 - **[Distributed Sync](./distributed-sync)** — CRDT sync mesh, partition detection, reconnection resilience, compaction diagnostics, and Automerge time-travel debugging
+- **[Notes Sync](./notes-sync)** — Notes CRDT domain: storage model, hydration, conflict semantics (LWW per tab), and deferred TipTap binding
 
 ## Pipeline & Orchestration
 
