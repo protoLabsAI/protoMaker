@@ -17,6 +17,37 @@ const logger = createLogger('AtomicWriter');
 export const DEFAULT_BACKUP_COUNT = 3;
 
 /**
+ * Cooldown period (ms) during which repeated missing-file warnings are suppressed.
+ * After the first WARN for a given path, subsequent failures within this window
+ * are logged at DEBUG level to prevent log spam for ghost CRDT features.
+ */
+const MISSING_FILE_WARN_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Cache of file paths whose absence has already been logged at WARN level.
+ * Maps resolved file path → timestamp (ms) of first WARN emission.
+ * Entries expire after MISSING_FILE_WARN_COOLDOWN_MS.
+ */
+const missingFileWarnCache = new Map<string, number>();
+
+/**
+ * Determine whether to log a missing-file event at WARN vs DEBUG level.
+ *
+ * Returns `true` (should warn) on the first call for a given path, or after the
+ * cooldown window has elapsed. Returns `false` (should debug) on repeated calls
+ * within the cooldown window.
+ */
+function shouldWarnForMissingFile(resolvedPath: string): boolean {
+  const now = Date.now();
+  const lastWarn = missingFileWarnCache.get(resolvedPath);
+  if (lastWarn === undefined || now - lastWarn > MISSING_FILE_WARN_COOLDOWN_MS) {
+    missingFileWarnCache.set(resolvedPath, now);
+    return true;
+  }
+  return false;
+}
+
+/**
  * Options for atomic write operations
  */
 export interface AtomicWriteOptions {
@@ -307,8 +338,15 @@ export async function readJsonWithRecovery<T>(
         ? 'File does not exist'
         : `Failed to parse: ${mainError instanceof Error ? mainError.message : String(mainError)}`;
 
-    // If file doesn't exist, check for temp files or backups
-    logger.warn(`Main file ${resolvedPath} unavailable: ${errorMessage}`);
+    // If file doesn't exist, check for temp files or backups.
+    // Use WARN only on first occurrence (or after cooldown) to prevent log spam
+    // for ghost CRDT feature IDs that have no backing file on disk.
+    const shouldWarn = shouldWarnForMissingFile(resolvedPath);
+    if (shouldWarn) {
+      logger.warn(`Main file ${resolvedPath} unavailable: ${errorMessage}`);
+    } else {
+      logger.debug(`Main file ${resolvedPath} unavailable: ${errorMessage}`);
+    }
 
     // Try to find and recover from temp files first (in case of interrupted write)
     try {
@@ -381,8 +419,13 @@ export async function readJsonWithRecovery<T>(
       }
     }
 
-    // All recovery attempts failed, return default
-    logger.warn(`All recovery attempts failed for ${resolvedPath}, using default value`);
+    // All recovery attempts failed, return default.
+    // Use the same WARN/DEBUG decision as the primary missing-file log above.
+    if (shouldWarn) {
+      logger.warn(`All recovery attempts failed for ${resolvedPath}, using default value`);
+    } else {
+      logger.debug(`All recovery attempts failed for ${resolvedPath}, using default value`);
+    }
     return { data: defaultValue, recovered: true, source: 'default', error: errorMessage };
   }
 }

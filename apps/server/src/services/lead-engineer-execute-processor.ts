@@ -987,9 +987,9 @@ export class ExecuteProcessor implements StateProcessor {
       /* no upstream set — use default */
     }
 
-    // ── Commit .automaker/ drift before rebasing ──────────────────────────────
+    // ── Commit .automaker/ drift before merging ───────────────────────────────
     // Services write to .automaker/ (ledger, metrics, sessions, features) without
-    // committing. This drift causes "cannot rebase: You have unstaged changes".
+    // committing. This drift causes "cannot merge: You have unstaged changes".
     // The LE owns committing this drift as part of its pre-flight responsibility.
     try {
       const { stdout: driftStatus } = await execAsync(
@@ -997,7 +997,7 @@ export class ExecuteProcessor implements StateProcessor {
         { cwd: workDir, timeout: 10_000 }
       );
       if (driftStatus.trim().length > 0) {
-        logger.info('[EXECUTE][pre-flight] Committing .automaker/ drift before rebase', {
+        logger.info('[EXECUTE][pre-flight] Committing .automaker/ drift before merge', {
           featureId: feature.id,
           files: driftStatus.trim().split('\n').length,
         });
@@ -1005,7 +1005,7 @@ export class ExecuteProcessor implements StateProcessor {
           cwd: workDir,
           timeout: 10_000,
         });
-        await execAsync('git commit --no-verify -m "chore: commit automaker drift before rebase"', {
+        await execAsync('git commit --no-verify -m "chore: commit automaker drift before merge"', {
           cwd: workDir,
           timeout: 15_000,
         });
@@ -1024,70 +1024,24 @@ export class ExecuteProcessor implements StateProcessor {
       const behind = parseInt(revList.trim(), 10);
       if (!isNaN(behind) && behind > 0) {
         logger.info(
-          `[EXECUTE][pre-flight] Worktree is ${behind} commits behind origin/${baseBranch}, rebasing`,
+          `[EXECUTE][pre-flight] Worktree is ${behind} commits behind origin/${baseBranch}, merging`,
           { featureId: feature.id }
         );
-        // Stash any unstaged changes before rebasing to prevent
-        // "cannot rebase: You have unstaged changes" errors.
-        // Mirrors the same fix applied in execution-service.ts.
-        let stashed = false;
-        try {
-          const { stdout: remainingStatus } = await execAsync('git status --porcelain', {
-            cwd: workDir,
-            timeout: 10_000,
-          });
-          if (remainingStatus.trim().length > 0) {
-            logger.info('[EXECUTE][pre-flight] Stashing unstaged changes before rebase', {
-              featureId: feature.id,
-            });
-            await execAsync('git stash --include-untracked', { cwd: workDir, timeout: 15_000 });
-            stashed = true;
-          }
-        } catch (stashErr) {
-          const stashMsg = stashErr instanceof Error ? stashErr.message : String(stashErr);
-          logger.warn('[EXECUTE][pre-flight] Pre-rebase stash failed (non-fatal)', {
-            msg: stashMsg,
-          });
-        }
 
         try {
-          await execAsync(`git rebase origin/${baseBranch}`, { cwd: workDir, timeout: 60_000 });
-          logger.info('[EXECUTE][pre-flight] Rebase succeeded', { featureId: feature.id });
-
-          // Restore stashed changes after a successful rebase
-          if (stashed) {
-            try {
-              await execAsync('git stash pop', { cwd: workDir, timeout: 15_000 });
-              logger.info('[EXECUTE][pre-flight] Stash popped after rebase', {
-                featureId: feature.id,
-              });
-            } catch (popErr) {
-              const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
-              logger.warn(
-                '[EXECUTE][pre-flight] Stash pop had conflicts after rebase (non-fatal, continuing)',
-                { msg: popMsg }
-              );
-            }
-          }
-        } catch (rebaseErr) {
-          // Abort the rebase to leave the worktree clean
+          await execAsync(`git merge origin/${baseBranch}`, { cwd: workDir, timeout: 60_000 });
+          logger.info('[EXECUTE][pre-flight] Merge succeeded', { featureId: feature.id });
+        } catch (mergeErr) {
+          // Abort the merge to leave the worktree clean
           try {
-            await execAsync('git rebase --abort', { cwd: workDir, timeout: 10_000 });
+            await execAsync('git merge --abort', { cwd: workDir, timeout: 10_000 });
           } catch {
             /* best-effort */
           }
-          // Restore stash even on failure so the worktree is not left empty
-          if (stashed) {
-            try {
-              await execAsync('git stash pop', { cwd: workDir, timeout: 15_000 });
-            } catch {
-              /* best-effort */
-            }
-          }
-          const rebaseMsg = rebaseErr instanceof Error ? rebaseErr.message : String(rebaseErr);
+          const mergeMsg = mergeErr instanceof Error ? mergeErr.message : String(mergeErr);
           return {
             passed: false,
-            reason: `Worktree rebase onto origin/${baseBranch} failed (conflicts or error): ${rebaseMsg}`,
+            reason: `Worktree merge with origin/${baseBranch} failed (conflicts or error): ${mergeMsg}`,
           };
         }
       }

@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { createIndexHandler } from './routes/index.js';
 import { createEnvironmentHandler } from './routes/environment.js';
 import { createReadyHandler } from './routes/ready.js';
+import { createLogPathHandler } from './routes/log-path.js';
 
 /**
  * Create unauthenticated health routes (basic check only)
@@ -26,6 +27,10 @@ export function createHealthRoutes(): Router {
   // Environment info including containerization status
   // This is unauthenticated so the UI can check on startup
   router.get('/environment', createEnvironmentHandler());
+
+  // Log file path — unauthenticated so the MCP tool can resolve the correct
+  // absolute path without knowing the server's working directory
+  router.get('/log-path', createLogPathHandler());
 
   return router;
 }

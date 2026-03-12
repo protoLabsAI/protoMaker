@@ -176,3 +176,7 @@ export type { OutlinePlannerConfig } from './content/outline-planner.js';
 // Release notes rewriter
 export { RELEASE_NOTES_SYSTEM_PROMPT, buildReleaseNotesPrompt } from './release-notes.js';
 export type { ReleaseNotesInput } from './release-notes.js';
+
+// Modular prompt builder
+export { PromptBuilder, SectionName } from './prompt-builder.js';
+export type { SectionOptions } from './prompt-builder.js';

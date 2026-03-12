@@ -365,17 +365,16 @@ describe('ExecutionService - IAutoModeCallbacks contract', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Stash-rebase-pop flow tests
+// Merge pre-flight tests
 // ---------------------------------------------------------------------------
 
-describe('ExecutionService - stash-rebase-pop pre-flight', () => {
+describe('ExecutionService - merge pre-flight', () => {
   const PROJECT_PATH = '/tmp/test-project';
   const WORKTREE_PATH = '/tmp/test-project/.worktrees/feature-test-branch';
   const FEATURE_ID = 'feature-stash-test-1';
 
   beforeEach(() => {
     vi.stubEnv('AUTOMAKER_MOCK_AGENT', 'true');
-    // Default: no unstaged changes
     mockExecAsync.mockReset();
     mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
   });
@@ -383,8 +382,8 @@ describe('ExecutionService - stash-rebase-pop pre-flight', () => {
   function makeWorktreeFeature(overrides: Partial<Feature> = {}): Feature {
     return {
       id: FEATURE_ID,
-      title: 'Stash Test Feature',
-      description: 'Test stash-rebase-pop',
+      title: 'Merge Test Feature',
+      description: 'Test merge pre-flight',
       status: 'backlog',
       branchName: 'feature/test-branch',
       skipTests: true,
@@ -419,10 +418,62 @@ describe('ExecutionService - stash-rebase-pop pre-flight', () => {
     };
   }
 
-  it('stashes before rebase and pops after when unstaged changes exist', async () => {
+  it('runs git merge origin/dev during pre-flight sync', async () => {
     const feat = makeWorktreeFeature();
 
-    // Simulate unstaged changes on git status
+    mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+    const callbacks = makeWorktreeCallbacks(feat);
+    const recoveryService = {
+      analyzeFailure: vi.fn(async () => ({
+        isRetryable: false,
+        maxRetries: 0,
+        suggestedDelay: 0,
+        category: 'execution',
+        confidence: 'high',
+        reason: 'test',
+      })),
+      executeRecovery: vi.fn(async () => ({ shouldRetry: false, actionTaken: 'none' })),
+      planRecovery: vi.fn(async () => null),
+    } as any;
+
+    const svc = new ExecutionService(
+      { subscribe: vi.fn(), emit: vi.fn() } as any,
+      null,
+      {
+        get: vi.fn(async () => feat),
+        update: vi.fn(async (_p: string, _id: string, updates: Record<string, unknown>) => ({
+          ...feat,
+          ...updates,
+        })),
+        list: vi.fn(async () => []),
+        save: vi.fn(async () => {}),
+      } as any,
+      null,
+      recoveryService,
+      null,
+      new Map(),
+      new Map(),
+      90,
+      95,
+      callbacks
+    );
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID, true /* useWorktrees */);
+
+    const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
+
+    // Merge must be called; stash must NOT be called (merge handles concurrent edits natively)
+    expect(commands).toContain('git merge origin/dev');
+    expect(commands).not.toContain('git stash --include-untracked');
+    expect(commands).not.toContain('git stash pop');
+    expect(commands).not.toContain('git rebase origin/dev');
+  });
+
+  it('does not stash even when unstaged changes exist (merge handles them natively)', async () => {
+    const feat = makeWorktreeFeature();
+
+    // Simulate unstaged changes — merge should proceed without stashing
     mockExecAsync.mockImplementation(async (cmd: string) => {
       if (cmd === 'git status --porcelain') {
         return {
@@ -473,24 +524,32 @@ describe('ExecutionService - stash-rebase-pop pre-flight', () => {
 
     const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
 
-    // All three git operations must have been called
-    expect(commands).toContain('git stash --include-untracked');
-    expect(commands).toContain('git rebase origin/dev');
-    expect(commands).toContain('git stash pop');
-
-    // Order: stash → rebase → pop
-    const stashIdx = commands.indexOf('git stash --include-untracked');
-    const rebaseIdx = commands.indexOf('git rebase origin/dev');
-    const popIdx = commands.indexOf('git stash pop');
-    expect(stashIdx).toBeLessThan(rebaseIdx);
-    expect(rebaseIdx).toBeLessThan(popIdx);
+    // Stash must never be called regardless of working tree state
+    expect(commands).not.toContain('git stash --include-untracked');
+    expect(commands).not.toContain('git stash pop');
+    // Merge still runs
+    expect(commands).toContain('git merge origin/dev');
   });
 
-  it('skips stash entirely when no unstaged changes exist', async () => {
+  it('blocks feature and aborts merge when merge conflicts occur', async () => {
     const feat = makeWorktreeFeature();
 
-    // git status returns empty (clean working tree)
-    mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+    mockExecAsync.mockImplementation(async (cmd: string) => {
+      if (cmd === 'git merge origin/dev') {
+        throw new Error('CONFLICT (content): Merge conflict in apps/server/src/index.ts');
+      }
+      return { stdout: '', stderr: '' };
+    });
+
+    const featureLoader = {
+      get: vi.fn(async () => feat),
+      update: vi.fn(async (_p: string, _id: string, updates: Record<string, unknown>) => ({
+        ...feat,
+        ...updates,
+      })),
+      list: vi.fn(async () => []),
+      save: vi.fn(async () => {}),
+    } as any;
 
     const callbacks = makeWorktreeCallbacks(feat);
     const recoveryService = {
@@ -509,15 +568,7 @@ describe('ExecutionService - stash-rebase-pop pre-flight', () => {
     const svc = new ExecutionService(
       { subscribe: vi.fn(), emit: vi.fn() } as any,
       null,
-      {
-        get: vi.fn(async () => feat),
-        update: vi.fn(async (_p: string, _id: string, updates: Record<string, unknown>) => ({
-          ...feat,
-          ...updates,
-        })),
-        list: vi.fn(async () => []),
-        save: vi.fn(async () => {}),
-      } as any,
+      featureLoader,
       null,
       recoveryService,
       null,
@@ -532,77 +583,13 @@ describe('ExecutionService - stash-rebase-pop pre-flight', () => {
 
     const commands: string[] = mockExecAsync.mock.calls.map(([cmd]) => cmd as string);
 
-    // Stash and pop must NOT be called when working tree is clean
-    expect(commands).not.toContain('git stash --include-untracked');
-    expect(commands).not.toContain('git stash pop');
-    // Rebase still runs
-    expect(commands).toContain('git rebase origin/dev');
-  });
-
-  it('logs warning and continues when stash pop fails after rebase', async () => {
-    const feat = makeWorktreeFeature();
-
-    mockExecAsync.mockImplementation(async (cmd: string) => {
-      if (cmd === 'git status --porcelain') {
-        return { stdout: ' M some-file.ts\n', stderr: '' };
-      }
-      if (cmd === 'git stash pop') {
-        throw new Error('CONFLICT (content): Merge conflict in some-file.ts');
-      }
-      return { stdout: '', stderr: '' };
-    });
-
-    const callbacks = makeWorktreeCallbacks(feat);
-    const recoveryService = {
-      analyzeFailure: vi.fn(async () => ({
-        isRetryable: false,
-        maxRetries: 0,
-        suggestedDelay: 0,
-        category: 'execution',
-        confidence: 'high',
-        reason: 'test',
-      })),
-      executeRecovery: vi.fn(async () => ({ shouldRetry: false, actionTaken: 'none' })),
-      planRecovery: vi.fn(async () => null),
-    } as any;
-
-    const svc = new ExecutionService(
-      { subscribe: vi.fn(), emit: vi.fn() } as any,
-      null,
-      {
-        get: vi.fn(async () => feat),
-        update: vi.fn(async (_p: string, _id: string, updates: Record<string, unknown>) => ({
-          ...feat,
-          ...updates,
-        })),
-        list: vi.fn(async () => []),
-        save: vi.fn(async () => {}),
-      } as any,
-      null,
-      recoveryService,
-      null,
-      new Map(),
-      new Map(),
-      90,
-      95,
-      callbacks
-    );
-
-    // Should not throw — stash pop failure is non-fatal
-    await expect(
-      svc.executeFeature(PROJECT_PATH, FEATURE_ID, true /* useWorktrees */)
-    ).resolves.not.toThrow();
-
-    // A warning should have been logged
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Stash pop had conflicts')
-    );
-
-    // Feature should still reach a terminal status (not throw/crash)
-    expect(callbacks.updateFeatureStatus).toHaveBeenCalledWith(
+    // Merge abort must be called to clean up the worktree
+    expect(commands).toContain('git merge --abort');
+    // Feature must be blocked
+    expect(featureLoader.update).toHaveBeenCalledWith(
       PROJECT_PATH,
       FEATURE_ID,
-      'in_progress'
+      expect.objectContaining({ status: 'blocked' })
     );
   });
 });

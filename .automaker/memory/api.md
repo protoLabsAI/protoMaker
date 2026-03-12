@@ -5,10 +5,11 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 476
-  referenced: 108
-  successfulFeatures: 108
+  loaded: 484
+  referenced: 115
+  successfulFeatures: 115
 ---
+
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
 # api
@@ -39,17 +40,17 @@ usageStats:
 - **Why:** Returning boolean for known failure states (channel not found, permissions) allows callers to decide response. Throwing only on unexpected errors preserves the distinction.
 - **Breaking if changed:** If changed to throw on every failure, event processing could crash if Discord is unreachable. If changed to never throw, unexpected errors become silent.
 
-### System prompt prepended (not replaced) when role template provided (2026-02-12)
+### System prompt prepended (not replaced) when a role-specific prompt is provided to AgentService (2026-02-12, updated 2026-03-11)
 
-- **Context:** AgentTemplate includes systemPrompt; AgentService already had a systemPrompt parameter for the base send operation.
-- **Why:** Prepending preserves existing system prompt semantics while adding template directives. Allows templates to augment, not override. Backward compatible.
-- **Breaking if changed:** If changed to replacement, all role-based agent executions would lose the original system prompt, breaking agents that rely on base directives.
+- **Context:** AgentService accepts an optional systemPrompt override alongside the base session prompt. Role prompts from `@protolabsai/prompts` are prepended rather than replacing the base prompt. (Note: the dynamic AgentTemplate/RoleRegistryService system was removed in commit 2a1563ca — role prompts are now hardcoded functions in `libs/prompts/src/agents/`.)
+- **Why:** Prepending preserves existing system prompt semantics while adding role directives. Allows role context to augment, not override. Backward compatible.
+- **Breaking if changed:** If changed to replacement, role-based agent executions would lose the original system prompt, breaking agents that rely on base directives.
 
 #### [Gotcha] API method names are inconsistent across query hooks — getAll() vs list() vs status(). Must review existing hooks before implementing new data fetching to avoid using non-existent methods. (2026-02-12)
 
 - **Situation:** Initially attempted to use api.features.list() and api.autoMode.getRunningAgents() which don't exist.
 - **Root cause:** Codebase has organic growth with different naming conventions across different API endpoints. No centralized API spec or TypeScript types enforce consistency.
-- **How to avoid:** Examine existing use-*.ts hook files before implementing new API calls.
+- **How to avoid:** Examine existing use-\*.ts hook files before implementing new API calls.
 
 ### Error handling in data fetching throws Error when API result.success is false, rather than returning error state directly (2026-02-12)
 
@@ -105,30 +106,70 @@ usageStats:
 - **Root cause:** GitHub GraphQL requires explicit cursor-based pagination. There's no way to fetch all items without implementing pagination loop.
 - **How to avoid:** For most PRs, 100 threads is sufficient. Add `pageInfo { hasNextPage, endCursor }` to query and implement pagination loop if thread count regularly exceeds 100.
 
-
 #### [Pattern] getServerUrl() implements strict precedence: localStorage override > cached value > environment variable. The precedence order is non-configurable and critical. (2026-03-11)
+
 - **Problem solved:** Resolving multiple server URL sources with different specificity levels
 - **Why this works:** Precedence chain implements proper specificity: user intent (override) > transient state (cache) > static config (env). Prevents static config from shadowing user choice.
 - **Trade-offs:** Gained: Clean override semantics without code changes. Lost: Hidden state machine - source of truth is precedence-dependent, complicates debugging
 
 #### [Pattern] Activation deactivates on any space in input (`!input.includes(' ')`), limiting to single-word search queries (2026-03-11)
+
 - **Problem solved:** Need simple rule to detect slash-command mode vs regular text input
 - **Why this works:** Simple binary check; avoids complex command parsing logic. Prevents confusion between `/command arg1 arg2` (command execution) vs `/quer` (autocomplete search)
 - **Trade-offs:** Simpler activation logic vs limited search capability (can't search multi-word command names like 'Create New File'); clear UX boundary
 
 #### [Gotcha] Case-insensitive filtering requires toLowerCase() on both query and field, but natural include() is case-sensitive (2026-03-11)
+
 - **Situation:** Spec requires 'case-insensitive substring match' but naive implementation would use case-sensitive includes()
 - **Root cause:** JavaScript's includes() is case-sensitive; case-insensitive search requires normalizing both sides to same case
 - **How to avoid:** toLowerCase() on every filter call is cheap; adds minimal complexity; regex alternative more powerful but harder to read and maintain
 
 #### [Pattern] getServerUrl() uses explicit precedence chain: override → env var → window.location.origin, not boolean flags or computed defaults (2026-03-11)
+
 - **Problem solved:** Multiple sources of server URL truth: user selection (override), deployment config (env), browser location. Need predictable resolution.
 - **Why this works:** Explicit chain makes precedence obvious and testable. User's explicit choice wins, deployment config is fallback, browser is last resort.
 - **Trade-offs:** Flat chain is less DRY than config object, but more readable and harder to get wrong
 
 ### Hook result mapped through normalizer before passing to ChatInput: extracts {name, description, source, argHint} only (2026-03-11)
+
 - **Context:** useSlashCommands returns SlashCommand with internal structure; ChatInput receives UseSlashCommandsResult with normalized subset
 - **Why:** Decouples ChatInput from hook's internal structure. ChatInput only needs to know what it displays (name, description, etc.). If hook internals change, ChatInput remains unaffected. Contract is explicit via UseSlashCommandsResult type.
 - **Rejected:** Passing raw hook commands directly to ChatInput; exporting full SlashCommand type through the boundary
 - **Trade-offs:** One-line map() adds minimal overhead, but enforces encapsulation. Prevents accidental coupling to hook internals. Adding new display property requires explicit map update (good: catches intent).
 - **Breaking if changed:** Removing the map and passing raw commands tightly couples ChatInput to hook's SlashCommand shape. Hook refactors could break ChatInput unexpectedly.
+
+### Renamed CrdtFeatureEvent to CrdtSyncWireMessage to match semantic meaning (type carries all wire messages: project events, settings events, etc., not just feature events) (2026-03-12)
+
+- **Context:** Type was used for generic wire message transport, but name incorrectly suggested it only carried feature events
+- **Why:** Accurate type names prevent future developer confusion about what the type represents; mis-named types lead to incorrect assumptions and bugs
+- **Rejected:** Keeping name CrdtFeatureEvent and adding a clarifying JSDoc comment (less effective for IDE autocomplete and code reading)
+- **Trade-offs:** Small refactoring effort in crdt-sync-service and exports; caught by TypeScript at compile time so no runtime risk
+- **Breaking if changed:** External consumers of the exported CrdtSyncWireMessage type must update imports (hard breaking change at type boundary)
+
+### Preserved PROTO_HIVE_INSTANCE_ID env var with semantic redirect: now sets protolab.instanceId instead of hive.instanceId. No removal of the env var. (2026-03-12)
+
+- **Context:** Env var still referenced in deployments/scripts; removing it would break existing workflows
+- **Why:** Backward compatibility with production deployments that set PROTO_HIVE_INSTANCE_ID; maintains external contracts while internally consolidating identity resolution
+- **Rejected:** Remove env var entirely (breaks existing deployments); add parallel env var (confusing, multiple sources of truth)
+- **Trade-offs:** Easier upgrade path for existing deployments; adds one indirect mapping in applyEnvOverrides() but self-documents intent
+- **Breaking if changed:** If code checks specifically for hive.instanceId being set, it will see undefined; but if code just reads instanceId from anywhere, the env var still works via protolab
+
+### Unauthenticated observability endpoints (health, logs, metrics) should be registered before auth middleware within the main router (createHealthRoutes), not as separate unprotected routes, to keep semantically-related endpoints colocated (2026-03-12)
+
+- **Context:** MCP tool needs to call /api/health/log-path without credentials for debugging when auth might be broken; needed to decide placement within routing structure
+- **Why:** Observability must work even when auth is broken (you need to read logs to debug auth problems); createHealthRoutes() is semantically correct place for system-level endpoints; keeps health-related logic together
+- **Rejected:** Could create separate /api/unauth/ prefix (less semantic, splits system concerns); could require auth (defeats purpose of log-reading tool for debugging)
+- **Trade-offs:** Unauthenticated endpoints expand attack surface slightly, but gain is significant (self-diagnostics always work); middleware ordering becomes important implementation detail
+- **Breaking if changed:** If someone adds auth middleware before health route registration, tool breaks even when server is up
+
+#### [Gotcha] Must use events.broadcast() not events.emit() to trigger remote sync via event bridge (2026-03-12)
+
+- **Situation:** Categories route broadcasts 'categories:updated' to trigger local file write AND cross-instance propagation
+- **Root cause:** setRemoteBroadcaster only intercepts broadcast() calls; emit() would only trigger local listeners and skip remote forwarding
+- **How to avoid:** broadcast() adds indirection/naming confusion; gained deterministic remote propagation without explicit socket code
+
+#### [Pattern] Callback injection pattern: functions accept optional callback types (MemoryStatsCrdtWriter, MemoryStatsAggregateReader) instead of requiring CRDT store injection. Existing callers work unchanged; new callers opt-in. (2026-03-12)
+
+- **Problem solved:** Adding CRDT tracking to memory-loader utilities without breaking existing code paths. Need backwards compatibility in monorepo with many call sites.
+- **Why this works:** Gradual adoption: callers like auto-mode-service can pass callbacks when available; other callers (existing, or those without CRDT context) don't pass them. No big-bang refactoring.
+- **Trade-offs:** Optional callbacks: low friction adoption vs caller must know to pass them to get CRDT benefit. Type-safe callback params vs implicit dependency.

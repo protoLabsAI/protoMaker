@@ -118,7 +118,7 @@ export async function register(container: ServiceContainer): Promise<void> {
   // Start Discord channel signal monitoring when DISCORD_TOKEN is configured.
   // The monitor polls only channels registered in integrationRegistryService.
   // Configs start empty and are populated at runtime via setChannelConfigs().
-  if (process.env.DISCORD_TOKEN) {
+  if (process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN) {
     const discordMonitor = new DiscordMonitor(events);
     discordMonitor.setDiscordBotService(discordBotService);
 

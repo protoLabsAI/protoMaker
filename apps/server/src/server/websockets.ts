@@ -99,7 +99,7 @@ export function setupWebSockets(server: http.Server, services: ServiceContainer)
   const DISCORD_INFRA_CHANNEL = '1469109809939742814';
   events.on('scheduler:task-failed', (payload) => {
     const { discordBotService } = services;
-    if (!discordBotService || !process.env.DISCORD_TOKEN) return;
+    if (!discordBotService?.isConnected()) return;
     const p = payload as { taskId: string; taskName: string; error: string; timestamp: string };
     const message = `Scheduler task failed: **${p.taskName}** (${p.taskId})\nError: ${p.error}\nTime: ${p.timestamp}`;
     discordBotService.sendToChannel(DISCORD_INFRA_CHANNEL, message).catch((err: Error) => {

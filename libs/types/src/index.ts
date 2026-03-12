@@ -35,7 +35,7 @@ export type { EventLedgerCorrelationIds, EventLedgerEntry } from './event-ledger
 
 // EventBus-CRDT bridge types
 export { CRDT_SYNCED_EVENT_TYPES } from './events.js';
-export type { CrdtFeatureEvent } from './events.js';
+export type { CrdtSyncWireMessage } from './events.js';
 
 // Automation registry supplementary types (CreateAutomationInput, UpdateAutomationInput, FlowFactory)
 // Core types (Automation, AutomationRunRecord, etc.) are already exported from the base workspace types
@@ -169,6 +169,7 @@ export type {
   Project,
   SPARCPrd,
   PRDReviewComment,
+  CadenceConfig,
   FeatureFactoryResult,
   CreateProjectInput,
   UpdateProjectInput,
@@ -375,6 +376,7 @@ export type {
   ClaudeApiProfileTemplate,
   // Workflow settings types
   WorkflowSettings,
+  PhaseTemperaturesConfig,
   // Ava Channel reactor settings
   AvaChannelReactorSettings,
   SchedulerSettings,
@@ -407,6 +409,7 @@ export {
   DEFAULT_TRUST_BOUNDARY_CONFIG,
   // Workflow settings defaults
   DEFAULT_WORKFLOW_SETTINGS,
+  DEFAULT_PHASE_TEMPERATURES,
   // Ava Channel reactor settings defaults
   DEFAULT_AVA_CHANNEL_REACTOR_SETTINGS,
   DEFAULT_SCHEDULER_SETTINGS,
@@ -936,7 +939,6 @@ export {
   ProtoGitSchema,
   ProtoLabSchema,
   ProtoDefaultsSchema,
-  ProtoHiveSchema,
   ProtoInstanceSchema,
   ProtoAssignmentSchema,
   ProtoInstanceProfileSchema,
@@ -952,7 +954,6 @@ export type {
   ProtoGit,
   ProtoLab,
   ProtoDefaults,
-  ProtoHive,
   ProtoInstance,
   ProtoAssignment,
   ProtoInstanceProfile,

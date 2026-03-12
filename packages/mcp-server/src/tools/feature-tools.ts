@@ -135,6 +135,11 @@ export const featureTools: Tool[] = [
           description:
             'Mark as foundation feature (package scaffold, base types). Downstream features wait for this to be merged before starting.',
         },
+        category: {
+          type: 'string',
+          description:
+            'Category for organizing this feature on the board (optional, defaults to "Uncategorized"). Examples: "infrastructure", "frontend", "api", "bug-fix".',
+        },
       },
       required: ['projectPath', 'title', 'description'],
     },
@@ -203,6 +208,11 @@ export const featureTools: Tool[] = [
           type: 'string',
           description:
             "Required when setting status to 'blocked'. Explain why the feature is blocked (e.g., 'Waiting on PR #123 to merge', 'Blocked by API rate limits').",
+        },
+        category: {
+          type: 'string',
+          description:
+            'Category for organizing this feature on the board (optional). Examples: "infrastructure", "frontend", "api", "bug-fix".',
         },
       },
       required: ['projectPath', 'featureId'],

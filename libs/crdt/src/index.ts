@@ -18,6 +18,7 @@ export {
   normalizeCalendarDocument,
   normalizeTodosDocument,
   normalizeMetricsDocument,
+  normalizeNotesWorkspace,
 } from './documents.js';
 
 export type {
@@ -27,6 +28,9 @@ export type {
   CalendarDocument,
   TodosDocument,
   MetricsDocument,
+  MemoryUsageStat,
+  NotesWorkspaceDocument,
+  NoteTab,
 } from './documents.js';
 
 export type {

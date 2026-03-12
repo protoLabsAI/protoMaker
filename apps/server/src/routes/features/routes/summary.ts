@@ -67,7 +67,10 @@ export function createSummaryHandler(
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath } = req.body as { projectPath: string };
+      const { projectPath, projectSlug } = req.body as {
+        projectPath: string;
+        projectSlug?: string;
+      };
 
       if (!projectPath) {
         res.status(400).json({ success: false, error: 'projectPath is required' });
@@ -75,7 +78,12 @@ export function createSummaryHandler(
       }
 
       // Always read from disk to avoid stale in-memory state
-      const features = await featureLoader.getAll(projectPath);
+      const allFeatures = await featureLoader.getAll(projectPath);
+
+      // Filter by projectSlug when provided
+      const features = projectSlug
+        ? allFeatures.filter((f) => f.projectSlug === projectSlug)
+        : allFeatures;
 
       let inProgressCount = 0;
       let reviewCount = 0;

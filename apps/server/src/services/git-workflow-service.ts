@@ -375,8 +375,27 @@ export class GitWorkflowService {
     // - If feature belongs to an epic and epicBranchName is provided, use it
     // - If feature is an epic itself, use the default base (main)
     // - Otherwise use the default base from settings
-    const rawBaseBranch =
+    let rawBaseBranch =
       epicBranchName && !feature.isEpic ? epicBranchName : gitSettings.prBaseBranch;
+
+    // If targeting an epic branch, verify it exists on remote. The first feature
+    // in an epic may run before the epic branch is created — fall back to the
+    // default base branch (usually dev) to avoid silent PR creation failure.
+    if (epicBranchName && !feature.isEpic && rawBaseBranch === epicBranchName) {
+      try {
+        await execAsync(`git ls-remote --exit-code origin refs/heads/${epicBranchName}`, {
+          cwd: workDir,
+          env: execEnv,
+          timeout: 15_000,
+        });
+      } catch {
+        logger.warn(
+          `Epic branch "${epicBranchName}" does not exist on remote — falling back to "${gitSettings.prBaseBranch}" as PR base for feature ${featureId}`
+        );
+        rawBaseBranch = gitSettings.prBaseBranch;
+      }
+    }
+
     // Sanitize branch name to prevent shell injection — allow only valid git ref characters
     const prBaseBranch = rawBaseBranch.replace(/[^a-zA-Z0-9_./-]/g, '');
 

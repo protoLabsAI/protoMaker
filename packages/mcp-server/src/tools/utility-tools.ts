@@ -69,6 +69,11 @@ export const utilityTools: Tool[] = [
           type: 'string',
           description: 'Absolute path to the project directory',
         },
+        projectSlug: {
+          type: 'string',
+          description:
+            'Filter to a specific project slug. When provided, board counts, blocked features, review features, and escalations only include features belonging to this project.',
+        },
       },
       required: ['projectPath'],
     },
@@ -82,6 +87,11 @@ export const utilityTools: Tool[] = [
         projectPath: {
           type: 'string',
           description: 'Absolute path to the project directory',
+        },
+        projectSlug: {
+          type: 'string',
+          description:
+            'Filter to a specific project slug. When provided, only features belonging to this project are counted.',
         },
       },
       required: ['projectPath'],

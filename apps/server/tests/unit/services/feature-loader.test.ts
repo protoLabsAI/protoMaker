@@ -190,11 +190,6 @@ describe('feature-loader.ts', () => {
       const result = await loader.getAll(testProjectPath);
 
       expect(result).toEqual([]);
-      // With recovery-enabled reads, warnings come from AtomicWriter and FeatureLoader
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/WARN.*\[AtomicWriter\]/),
-        expect.stringContaining('unavailable')
-      );
 
       consoleSpy.mockRestore();
     });

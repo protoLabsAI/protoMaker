@@ -26,6 +26,7 @@ import {
   migrateModelId,
   type PhaseModelEntry,
   type ThinkingLevel,
+  type PhaseTemperaturesConfig,
 } from '@protolabsai/types';
 
 // Pattern definitions for Codex/OpenAI models
@@ -218,4 +219,28 @@ export function resolvePhaseModel(
     model: resolveModelString(phaseModel.model, defaultModel),
     thinkingLevel: phaseModel.thinkingLevel,
   };
+}
+
+/**
+ * Resolve the temperature for a given pipeline phase.
+ *
+ * Returns the configured temperature for the specified phase, or undefined
+ * if no phase temperature config is provided (preserving default provider behavior).
+ *
+ * @param phase - Pipeline phase ('PLAN' | 'EXECUTE' | 'REVIEW')
+ * @param phaseTemperatures - Optional per-phase temperature config from WorkflowSettings
+ * @returns Temperature value for the phase, or undefined if not configured
+ *
+ * @example
+ * ```ts
+ * const temp = resolvePhaseTemperature('EXECUTE', workflowSettings.phaseTemperatures);
+ * // temp === 0 (deterministic implementation)
+ * ```
+ */
+export function resolvePhaseTemperature(
+  phase: 'PLAN' | 'EXECUTE' | 'REVIEW',
+  phaseTemperatures?: PhaseTemperaturesConfig
+): number | undefined {
+  if (!phaseTemperatures) return undefined;
+  return phaseTemperatures[phase];
 }

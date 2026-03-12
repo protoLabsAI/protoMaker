@@ -9,6 +9,7 @@
  * - instanceId and timestamp attribution
  * - Compaction checkpoint generation
  * - One-time hydration from filesystem
+ * - Registry persistence across store close and re-init
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -279,6 +280,43 @@ describe('CRDTStore — single node', () => {
 
     // Hydration marker exists after first init, so second init skips hydration
     expect(callCount).toBe(1);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('registry URL persists across store close and re-init (same URL, not new document)', async () => {
+    const dir = makeTempDir();
+
+    // First init: create a document and record its Automerge URL
+    const s1 = new CRDTStore({ storageDir: dir, instanceId: 'node-persist' });
+    await s1.init();
+    await s1.getOrCreate<ProjectDocument>('projects', 'persist-proj', {
+      id: 'persist-proj',
+      title: 'Registry persistence test',
+      goal: '',
+      status: 'active',
+      prd: '',
+      milestoneCount: 0,
+      createdAt: new Date().toISOString(),
+    });
+
+    const urlBefore = s1.getDocumentUrl('projects', 'persist-proj');
+    expect(urlBefore).toMatch(/^automerge:/);
+
+    await s1.close();
+
+    // Second init: same storageDir — registry should be loaded from disk
+    const s2 = new CRDTStore({ storageDir: dir, instanceId: 'node-persist' });
+    await s2.init();
+
+    // getDocumentUrl reads from the in-memory registry loaded during init
+    const urlAfter = s2.getDocumentUrl('projects', 'persist-proj');
+    expect(urlAfter).toBe(urlBefore);
+
+    // getOrCreate without initialData must reuse the existing document (not create a new one)
+    const handle = await s2.getOrCreate<ProjectDocument>('projects', 'persist-proj');
+    expect(handle.url).toBe(urlBefore);
+
+    await s2.close();
     fs.rmSync(dir, { recursive: true, force: true });
   });
 });

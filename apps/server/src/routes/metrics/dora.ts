@@ -709,6 +709,7 @@ export function createDoraMetricsRoute(deps: DoraRouteDependencies): Router {
       try {
         const handle = await deps.crdtStore.getOrCreate<MetricsDocument>('metrics', 'dora', {
           instanceReports: {},
+          memoryStats: {},
           updatedAt: new Date().toISOString(),
         });
         const doc = handle.doc();

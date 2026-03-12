@@ -327,11 +327,16 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const doraMetricsService = new DoraMetricsService(featureLoader);
 
   // DORA Metrics Collection Service — event-driven time-series persistence
-  const metricsCollectionService = new MetricsCollectionService(events, featureLoader, repoRoot);
+  const metricsCollectionService = new MetricsCollectionService(
+    events,
+    featureLoader,
+    repoRoot,
+    dataDir
+  );
   metricsCollectionService.initialize();
 
-  // Error Budget Service — rolling change fail rate tracker (persists to .automaker/metrics/error-budget.json)
-  const errorBudgetService = new ErrorBudgetService(repoRoot);
+  // Error Budget Service — rolling change fail rate tracker (persists to DATA_DIR/metrics/error-budget.json)
+  const errorBudgetService = new ErrorBudgetService(dataDir);
   // Wire error budget into the event pipeline: record merges and CI failures
   events.subscribe((type, payload) => {
     const p = payload as Record<string, unknown>;
@@ -515,6 +520,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Ceremony Audit Log and Ceremony Service
   const ceremonyAuditLog = new CeremonyAuditLogService();
+  // Wire DATA_DIR into ceremony service so state files write to DATA_DIR/ceremony-state/
+  ceremonyService.setDataDir(dataDir);
 
   // Completion Detector Service — cascades feature done → epic → milestone → project
   const completionDetectorService = new CompletionDetectorService();
@@ -536,7 +543,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectService,
     projectLifecycleService,
     settingsService,
-    metricsService
+    metricsService,
+    dataDir
   );
   const pipelineCheckpointService = new PipelineCheckpointService();
 
@@ -561,7 +569,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
 
   // PR Feedback Service (monitors open PRs for review comments)
-  const prFeedbackService = new PRFeedbackService(events, featureLoader);
+  const prFeedbackService = new PRFeedbackService(events, featureLoader, dataDir);
 
   // Worktree Lifecycle Service (auto-cleanup after merge + recovery)
   const worktreeLifecycleService = new WorktreeLifecycleService(events, featureLoader, async () => {

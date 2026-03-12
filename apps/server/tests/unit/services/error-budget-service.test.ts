@@ -189,7 +189,7 @@ describe('ErrorBudgetService', () => {
 
     // Manually write an old record to disk (8 days ago)
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-    const budgetPath = path.join(tmpDir, '.automaker', 'metrics', 'error-budget.json');
+    const budgetPath = path.join(tmpDir, 'metrics', 'error-budget.json');
     fs.mkdirSync(path.dirname(budgetPath), { recursive: true });
     fs.writeFileSync(
       budgetPath,
@@ -214,7 +214,7 @@ describe('ErrorBudgetService', () => {
     const svc = new ErrorBudgetService(tmpDir, { windowDays: 7, threshold: 0.2 });
 
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
-    const budgetPath = path.join(tmpDir, '.automaker', 'metrics', 'error-budget.json');
+    const budgetPath = path.join(tmpDir, 'metrics', 'error-budget.json');
     fs.mkdirSync(path.dirname(budgetPath), { recursive: true });
     fs.writeFileSync(
       budgetPath,
@@ -251,10 +251,10 @@ describe('ErrorBudgetService', () => {
     expect(state.failRate).toBeCloseTo(0.5);
   });
 
-  it('persists to the correct path (.automaker/metrics/error-budget.json)', () => {
+  it('persists to the correct path (metrics/error-budget.json under dataDir)', () => {
     const svc = new ErrorBudgetService(tmpDir);
     svc.recordMerge('f1', false);
-    const expectedPath = path.join(tmpDir, '.automaker', 'metrics', 'error-budget.json');
+    const expectedPath = path.join(tmpDir, 'metrics', 'error-budget.json');
     expect(fs.existsSync(expectedPath)).toBe(true);
   });
 
