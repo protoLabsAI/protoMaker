@@ -199,7 +199,9 @@ describe('PromptBuilder', () => {
 
   describe('setPhase', () => {
     it('supports chaining', () => {
-      const builder = new PromptBuilder().setPhase('planning').addSection(SectionName.TASK, 'Do it');
+      const builder = new PromptBuilder()
+        .setPhase('planning')
+        .addSection(SectionName.TASK, 'Do it');
       expect(builder.build()).toContain('## TASK');
     });
   });
