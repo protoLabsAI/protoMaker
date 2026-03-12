@@ -190,9 +190,10 @@ describe('feature-loader.ts', () => {
       const result = await loader.getAll(testProjectPath);
 
       expect(result).toEqual([]);
-      // With recovery-enabled reads, warnings come from AtomicWriter and FeatureLoader
+      // With recovery-enabled reads, warnings come from AtomicWriter and FeatureLoader.
+      // The cooldown cache may suppress WARN to DEBUG after repeated reads for the same path.
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringMatching(/WARN.*\[AtomicWriter\]/),
+        expect.stringMatching(/(WARN|DEBUG).*\[AtomicWriter\]/),
         expect.stringContaining('unavailable')
       );
 
