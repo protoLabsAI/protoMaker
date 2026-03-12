@@ -3,7 +3,6 @@
  *
  * Reads are served from the in-memory Automerge doc (no disk I/O after init).
  * Writes go through the parent FeatureLoader for disk persistence, then update the CRDT doc.
- * Remote peer changes can be merged in via applyRemoteChanges(), which emits feature:updated events.
  *
  * Falls back to the parent FeatureLoader for all operations when no proto.config.yaml is present
  * at the projectPath (single-instance mode).
@@ -197,11 +196,10 @@ export class AutomergeFeatureStore extends FeatureLoader {
   // ─── claim / release ─────────────────────────────────────────────────────
 
   /**
-   * Optimistic CRDT claim:
+   * Claim a feature for exclusive execution by this instance.
    *   1. Check the in-memory doc — reject immediately if already claimed by another instance.
    *   2. Write the claim (to disk + CRDT doc).
-   *   3. Wait ~200ms for sync to settle.
-   *   4. Re-read from the CRDT doc; if another instance won, release and return false.
+   *   3. Return true. Features are local; no remote peers update this doc.
    */
   override async claim(
     projectPath: string,
@@ -223,20 +221,6 @@ export class AutomergeFeatureStore extends FeatureLoader {
     // Write the claim
     await this.update(projectPath, featureId, { claimedBy: instanceId });
 
-    // Wait for sync to settle
-    await new Promise<void>((resolve) => setTimeout(resolve, 200));
-
-    // Re-read and verify ownership
-    const verifiedDoc = await this.ensureDoc(projectPath);
-    const verified = (verifiedDoc.features || {})[featureId] as Feature | undefined;
-    if (!verified) {
-      return false;
-    }
-    if (verified.claimedBy !== instanceId) {
-      await this.release(projectPath, featureId);
-      return false;
-    }
-
     return true;
   }
 
@@ -247,61 +231,7 @@ export class AutomergeFeatureStore extends FeatureLoader {
     await this.update(projectPath, featureId, { claimedBy: undefined });
   }
 
-  // ─── Peer sync ────────────────────────────────────────────────────────────
-
-  /**
-   * Apply changes received from a remote peer (delivered by the sync layer).
-   * Merges the changes into the local Automerge doc and emits feature:updated
-   * events for any features that changed.
-   *
-   * Called by the wiring layer when 'crdt:remote-changes' fires on the EventBus.
-   */
-  applyRemoteChanges(projectPath: string, changes: Uint8Array[]): void {
-    let doc = this.docs.get(projectPath);
-    const isNew = !doc;
-
-    if (!doc) {
-      // Initialise an empty doc; caller is responsible for applying a full snapshot
-      doc = Automerge.init<FeaturesDoc>();
-      // Mark as initialised so ensureDoc skips disk load
-      this.initPromises.set(projectPath, Promise.resolve());
-    }
-
-    const oldFeatures = doc.features || {};
-    const [newDoc] = Automerge.applyChanges<FeaturesDoc>(doc, changes);
-    this.docs.set(projectPath, newDoc);
-
-    const newFeatures = newDoc.features || {};
-    const allIds = new Set([...Object.keys(oldFeatures), ...Object.keys(newFeatures)]);
-
-    for (const featureId of allIds) {
-      const oldRaw = isNew ? undefined : oldFeatures[featureId];
-      const newRaw = newFeatures[featureId];
-      const unchanged =
-        !isNew &&
-        oldRaw !== undefined &&
-        newRaw !== undefined &&
-        JSON.stringify(oldRaw) === JSON.stringify(newRaw);
-      if (!unchanged) {
-        const feature = newRaw ? (newRaw as Feature) : null;
-        this.crdtEvents.emit('feature:updated', { featureId, projectPath, feature });
-      }
-    }
-
-    logger.debug(
-      `Applied ${changes.length} remote change(s) for ${projectPath}, ` +
-        `${allIds.size} feature(s) in scope`
-    );
-  }
-
-  /**
-   * Returns the binary Automerge snapshot for a project's doc.
-   * Used by tests and the sync layer to obtain changes to send to peers.
-   */
-  async getDocBinary(projectPath: string): Promise<Uint8Array> {
-    const doc = await this.ensureDoc(projectPath);
-    return Automerge.save(doc);
-  }
+  // ─── Doc management ───────────────────────────────────────────────────────
 
   /**
    * Invalidate the cached doc for a project (forces re-init from disk on next access).
