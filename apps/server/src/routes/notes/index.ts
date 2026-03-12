@@ -2,6 +2,8 @@
  * Notes Routes — CRUD for per-project Tiptap notes workspace
  *
  * Storage: .automaker/notes/workspace.json (single file per project)
+ * CRDT: When CRDTStore is available, reads serve from Automerge document and
+ *       writes dual-write to both CRDT and disk for backwards compatibility.
  */
 
 import { Router, type Request, type Response } from 'express';
@@ -14,8 +16,34 @@ import {
 } from '@protolabsai/platform';
 import type { NotesWorkspace, NoteTab, NoteTabPermissions } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
+import type { CRDTStore, CRDTDocumentRoot, DomainName } from '@protolabsai/crdt';
 
 const logger = createLogger('NotesRoutes');
+
+// ---------------------------------------------------------------------------
+// CRDT document type
+// ---------------------------------------------------------------------------
+
+/**
+ * NotesWorkspaceDocument is the CRDT representation of the notes workspace.
+ * Fields mirror NotesWorkspace but extend CRDTDocumentRoot for attribution.
+ * Domain key: 'notes:workspace'
+ */
+interface NotesWorkspaceDocument extends CRDTDocumentRoot {
+  version: 1;
+  workspaceVersion?: number;
+  activeTabId: string | null;
+  tabOrder: string[];
+  tabs: Record<string, NoteTab>;
+}
+
+// 'notes' is not yet in the DomainName union — cast until the types package is updated.
+const NOTES_CRDT_DOMAIN = 'notes' as unknown as DomainName;
+const NOTES_CRDT_ID = 'workspace';
+
+// ---------------------------------------------------------------------------
+// Disk helpers (unchanged from original)
+// ---------------------------------------------------------------------------
 
 function createDefaultWorkspace(): NotesWorkspace {
   const now = Date.now();
@@ -57,7 +85,125 @@ function bumpVersion(workspace: NotesWorkspace): void {
   workspace.workspaceVersion = (workspace.workspaceVersion ?? 0) + 1;
 }
 
-export function createNotesRoutes(events?: EventEmitter): Router {
+// ---------------------------------------------------------------------------
+// CRDT helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert an Automerge doc snapshot to a plain NotesWorkspace.
+ * Spreads nested objects to produce plain JS values (not Automerge proxies).
+ */
+function docToWorkspace(doc: NotesWorkspaceDocument): NotesWorkspace {
+  return {
+    version: 1,
+    workspaceVersion: doc.workspaceVersion,
+    activeTabId: doc.activeTabId,
+    tabOrder: Array.from(doc.tabOrder),
+    tabs: Object.fromEntries(
+      Object.entries(doc.tabs as Record<string, NoteTab>).map(([id, tab]) => [
+        id,
+        {
+          id: tab.id,
+          name: tab.name,
+          content: tab.content,
+          permissions: {
+            agentRead: tab.permissions.agentRead,
+            agentWrite: tab.permissions.agentWrite,
+          },
+          metadata: {
+            createdAt: tab.metadata.createdAt,
+            updatedAt: tab.metadata.updatedAt,
+            wordCount: tab.metadata.wordCount,
+            characterCount: tab.metadata.characterCount,
+          },
+        },
+      ])
+    ),
+  };
+}
+
+/**
+ * Load notes workspace: try CRDT first, fall back to disk.
+ * CRDT data is considered valid only if tabOrder has been populated (i.e. at least
+ * one write has occurred via saveWorkspaceWithCrdt).
+ */
+async function loadWorkspaceWithCrdt(
+  projectPath: string,
+  store?: CRDTStore
+): Promise<NotesWorkspace> {
+  if (store) {
+    try {
+      const handle = await store.getOrCreate<NotesWorkspaceDocument>(
+        NOTES_CRDT_DOMAIN,
+        NOTES_CRDT_ID
+      );
+      const doc = handle.doc();
+      // Only use CRDT data if the workspace has been seeded (tabOrder present and non-empty)
+      if (doc && Array.isArray(doc.tabOrder) && doc.tabOrder.length > 0 && doc.tabs) {
+        return docToWorkspace(doc);
+      }
+    } catch (err) {
+      logger.warn('[Notes CRDT] Read failed, falling back to disk:', err);
+    }
+  }
+  return loadWorkspace(projectPath);
+}
+
+/**
+ * Save notes workspace: always write to disk (primary store), then fire-and-forget
+ * CRDT update for multi-instance propagation.
+ */
+async function saveWorkspaceWithCrdt(
+  projectPath: string,
+  workspace: NotesWorkspace,
+  store?: CRDTStore
+): Promise<void> {
+  // Primary store: disk — always succeeds before CRDT
+  await saveWorkspace(projectPath, workspace);
+
+  // Secondary store: CRDT — fire-and-forget, disk write already succeeded
+  if (store) {
+    store
+      .change<NotesWorkspaceDocument>(NOTES_CRDT_DOMAIN, NOTES_CRDT_ID, (doc) => {
+        // Use Record cast to allow setting fields that may not exist in fresh doc
+        const mutable = doc as unknown as Record<string, unknown>;
+        mutable['version'] = 1;
+        mutable['workspaceVersion'] = workspace.workspaceVersion;
+        mutable['activeTabId'] = workspace.activeTabId;
+        mutable['tabOrder'] = workspace.tabOrder.slice();
+        // Copy plain objects into CRDT — Automerge converts them to tracked structures
+        mutable['tabs'] = Object.fromEntries(
+          Object.entries(workspace.tabs).map(([id, tab]) => [
+            id,
+            {
+              id: tab.id,
+              name: tab.name,
+              content: tab.content,
+              permissions: {
+                agentRead: tab.permissions.agentRead,
+                agentWrite: tab.permissions.agentWrite,
+              },
+              metadata: {
+                createdAt: tab.metadata.createdAt,
+                updatedAt: tab.metadata.updatedAt,
+                wordCount: tab.metadata.wordCount,
+                characterCount: tab.metadata.characterCount,
+              },
+            },
+          ])
+        );
+      })
+      .catch((err) => {
+        logger.warn('[Notes CRDT] Write failed (disk write succeeded):', err);
+      });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Route factory
+// ---------------------------------------------------------------------------
+
+export function createNotesRoutes(events?: EventEmitter, store?: CRDTStore): Router {
   const router = Router();
 
   /**
@@ -72,7 +218,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
       res.json({ workspace });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -83,7 +229,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
 
   /**
    * POST /api/notes/save
-   * Save workspace
+   * Save workspace (full replacement)
    */
   router.post('/save', async (req: Request, res: Response) => {
     try {
@@ -96,7 +242,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
       res.json({ success: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
@@ -117,7 +263,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
       const tab = workspace.tabs[tabId];
       if (!tab) {
         res.status(404).json({ error: 'Tab not found' });
@@ -150,7 +296,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
       const tabs: Array<{
         id: string;
         name: string;
@@ -196,7 +342,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
       const tab = workspace.tabs[tabId];
       if (!tab) {
         res.status(404).json({ error: 'Tab not found' });
@@ -217,7 +363,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
       tab.metadata.characterCount = plainText.length;
 
       bumpVersion(workspace);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
 
       if (events) {
         events.emit('notes:tab-updated', { projectPath, tabId, name: tab.name });
@@ -258,7 +404,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
 
       const now = Date.now();
       const tabId = crypto.randomUUID();
@@ -285,7 +431,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
       workspace.tabs[tabId] = newTab;
       workspace.tabOrder.push(tabId);
       bumpVersion(workspace);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
 
       if (events) {
         events.emit('notes:tab-created', { projectPath, tabId, name: tabName });
@@ -320,7 +466,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
 
       if (!workspace.tabs[tabId]) {
         res.status(404).json({ error: 'Tab not found' });
@@ -339,7 +485,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
       }
 
       bumpVersion(workspace);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
 
       if (events) {
         events.emit('notes:tab-deleted', { projectPath, tabId });
@@ -373,7 +519,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
       const tab = workspace.tabs[tabId];
       if (!tab) {
         res.status(404).json({ error: 'Tab not found' });
@@ -384,7 +530,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
       tab.metadata.updatedAt = Date.now();
 
       bumpVersion(workspace);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
 
       if (events) {
         events.emit('notes:tab-renamed', { projectPath, tabId, name });
@@ -418,7 +564,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
       const tab = workspace.tabs[tabId];
       if (!tab) {
         res.status(404).json({ error: 'Tab not found' });
@@ -434,7 +580,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
       tab.metadata.updatedAt = Date.now();
 
       bumpVersion(workspace);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
 
       if (events) {
         events.emit('notes:tab-permissions-changed', {
@@ -471,7 +617,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
         return;
       }
       validatePath(projectPath);
-      const workspace = await loadWorkspace(projectPath);
+      const workspace = await loadWorkspaceWithCrdt(projectPath, store);
 
       // Validate all IDs exist and no extra/missing IDs
       const existingIds = new Set(Object.keys(workspace.tabs));
@@ -489,7 +635,7 @@ export function createNotesRoutes(events?: EventEmitter): Router {
 
       workspace.tabOrder = tabOrder;
       bumpVersion(workspace);
-      await saveWorkspace(projectPath, workspace);
+      await saveWorkspaceWithCrdt(projectPath, workspace, store);
 
       res.json({
         success: true,
