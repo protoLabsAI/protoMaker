@@ -75,6 +75,7 @@ export interface SchedulerCallbacks {
   getRunningCountForWorktree(projectPath: string, branchName: string | null): Promise<number>;
   hasInProgressFeatures(projectPath: string, branchName: string | null): Promise<boolean>;
   isFeatureRunning(featureId: string): boolean;
+  isFeatureActiveInPipeline(featureId: string): boolean;
   isFeatureFinished(feature: Feature): boolean;
   emitAutoModeEvent(eventType: string, data: Record<string, unknown>): void;
   getHeapUsagePercent(): number;
@@ -404,10 +405,10 @@ export class FeatureScheduler {
           // Reset idle event flag since we're doing work again
           projectState.hasEmittedIdleEvent = false;
 
-          // Safety timeout: Remove from starting set after 30 seconds if still there.
-          // Before declaring a feature stuck, check whether a lock file exists in its
-          // worktree — if it does, the agent process is alive and startup succeeded;
-          // extend the timeout rather than cleaning up prematurely.
+          // Safety timeout: Remove from starting set if the feature is truly stuck.
+          // Check pipeline activity and worktree locks before declaring stuck —
+          // the Lead Engineer PLAN phase can take 30-120s for LLM calls.
+          const STARTING_TIMEOUT_MS = 300_000; // 5 minutes — covers longest PLAN phase
           const featureForTimeout = nextFeature;
           const scheduleStartingTimeout = (delayMs: number): NodeJS.Timeout => {
             return setTimeout(() => {
@@ -416,6 +417,16 @@ export class FeatureScheduler {
               // If the feature is already in runningFeatures, startup succeeded — clear silently
               if (this.callbacks.isFeatureRunning(featureForTimeout.id)) {
                 projectState.startingFeatures.delete(featureForTimeout.id);
+                return;
+              }
+
+              // If the feature is active in the Lead Engineer pipeline (INTAKE/PLAN/EXECUTE),
+              // it's progressing — extend the timeout rather than creating a phantom slot
+              if (this.callbacks.isFeatureActiveInPipeline(featureForTimeout.id)) {
+                logger.info(
+                  `[AutoLoop] Feature ${featureForTimeout.id} still starting after ${delayMs}ms but active in pipeline — extending timeout`
+                );
+                scheduleStartingTimeout(STARTING_TIMEOUT_MS);
                 return;
               }
 
@@ -433,10 +444,10 @@ export class FeatureScheduler {
                       logger.info(
                         `[AutoLoop] Feature ${featureForTimeout.id} still starting after ${delayMs}ms but lock file shows live process — extending timeout`
                       );
-                      scheduleStartingTimeout(30000);
+                      scheduleStartingTimeout(STARTING_TIMEOUT_MS);
                     } else {
                       logger.warn(
-                        `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
+                        `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms (no pipeline activity, no lock), cleaning up`
                       );
                       projectState.startingFeatures.delete(featureForTimeout.id);
                     }
@@ -448,14 +459,15 @@ export class FeatureScheduler {
                     projectState.startingFeatures.delete(featureForTimeout.id);
                   });
               } else {
+                // No branch yet — feature is in INTAKE/PLAN. Only clean up if not active in pipeline
                 logger.warn(
-                  `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
+                  `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms (no branch, no pipeline activity), cleaning up`
                 );
                 projectState.startingFeatures.delete(featureForTimeout.id);
               }
             }, delayMs);
           };
-          const startingTimeout = scheduleStartingTimeout(30000);
+          const startingTimeout = scheduleStartingTimeout(STARTING_TIMEOUT_MS);
 
           // Start feature execution in background.
           // All features route through the PipelineRunner.
