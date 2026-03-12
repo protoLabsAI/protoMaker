@@ -94,7 +94,6 @@ import type {
   IAutoModeCallbacks,
   ExecuteFeatureOptions,
 } from './execution-types.js';
-import type { ToolRegistry, ToolContext, ToolResult } from '@protolabsai/tools';
 
 const logger = createLogger('AutoMode');
 
@@ -603,6 +602,15 @@ export class ExecutionService {
         '[AutoMode]'
       );
 
+      // Load workflow settings to determine the tool profile for this run
+      const workflowSettings = await getWorkflowSettings(
+        projectPath,
+        this.settingsService,
+        '[AutoMode]'
+      );
+      // Default to 'execution' profile for feature agents; project settings may override to 'full'
+      const featureToolProfile: 'full' | 'execution' = workflowSettings.toolProfile ?? 'execution';
+
       // Get customized prompts from settings
       const prompts = await getPromptCustomization(this.settingsService, '[AutoMode]');
 
@@ -790,6 +798,7 @@ export class ExecutionService {
           resume: resumeSessionId,
           providerId: modelResult.providerId,
           phase: 'EXECUTE', // Apply EXECUTE phase temperature (deterministic implementation)
+          toolProfile: featureToolProfile,
         }
       );
 
@@ -1832,6 +1841,12 @@ Complete the pipeline step instructions above. Review the previous work and appl
        * Return null to leave the prompt unchanged.
        */
       preModelCallHook?: () => Promise<string | null>;
+      /**
+       * Tool profile to use for this agent run.
+       * - 'full': full tool access including Task/Skill (default)
+       * - 'execution': execution-focused tools only (no Task/Skill)
+       */
+      toolProfile?: 'full' | 'execution';
     }
   ): Promise<void> {
     const finalProjectPath = options?.projectPath || projectPath;
@@ -1938,6 +1953,7 @@ This mock response was generated because AUTOMAKER_MOCK_AGENT=true was set.
       maxTurns: options?.maxTurns,
       resume: options?.resume,
       projectPath, // Enable worktree write guard
+      toolProfile: options?.toolProfile, // Tool profile for filtering agent tools
     });
 
     // Extract model, maxTurns, and allowedTools from SDK options
@@ -3401,56 +3417,5 @@ After generating the revised spec, output:
       branchName,
       content,
     });
-  }
-
-  /**
-   * Execute a tool from a registry with a structured error boundary.
-   *
-   * Wraps registry.execute() so that tool errors are caught and converted to
-   * structured error responses instead of propagating exceptions. This prevents
-   * tool failures from crashing the agent session — the LLM receives error
-   * context (tool name, message, and recovery hint) and can decide how to
-   * proceed.
-   *
-   * Original errors are logged server-side for debugging, while a clean
-   * structured message is returned to the caller.
-   *
-   * @param registry - The ToolRegistry instance to execute against
-   * @param toolName - Name of the tool to execute
-   * @param input - Input data for the tool
-   * @param context - Optional execution context for dependency injection
-   * @returns Structured tool result that always resolves (never throws)
-   */
-  async executeToolWithErrorBoundary<TOutput = unknown>(
-    registry: ToolRegistry,
-    toolName: string,
-    input: unknown,
-    context: ToolContext = {}
-  ): Promise<ToolResult<TOutput>> {
-    try {
-      const result = await registry.execute<unknown, TOutput>(toolName, input, context);
-      return result;
-    } catch (error) {
-      // Catch any exception that escapes the registry's own error boundary
-      // (e.g. if a future refactor removes the try/catch there)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-
-      logger.error(`[ExecutionService] Tool '${toolName}' execution failed unexpectedly:`, {
-        toolName,
-        errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-
-      return {
-        success: false,
-        error: `Tool '${toolName}' failed: ${errorMessage}`,
-        metadata: {
-          toolName,
-          originalError: error,
-          errorMessage,
-          recoveryHint: `The tool '${toolName}' failed unexpectedly. Check inputs and tool configuration. If the session is degraded, consider retrying or using an alternative tool.`,
-        },
-      } as ToolResult<TOutput>;
-    }
   }
 }

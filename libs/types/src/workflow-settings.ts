@@ -299,6 +299,13 @@ export interface WorkflowSettings {
    * When absent, provider default temperature is used.
    */
   phaseTemperatures?: PhaseTemperaturesConfig;
+  /**
+   * Tool profile to use for feature execution agents.
+   * - 'full': full tool access including Task and Skill orchestration tools (default)
+   * - 'execution': execution-focused tools only (no Task/Skill)
+   * @default 'full'
+   */
+  toolProfile?: 'full' | 'execution';
 }
 
 /** Default workflow settings */

@@ -787,6 +787,7 @@ export async function getWorkflowSettings(
           DEFAULT_WORKFLOW_SETTINGS.postMergeVerificationCommands,
         preFlightChecks:
           projectSettings.workflow.preFlightChecks ?? DEFAULT_WORKFLOW_SETTINGS.preFlightChecks,
+        toolProfile: projectSettings.workflow.toolProfile ?? DEFAULT_WORKFLOW_SETTINGS.toolProfile,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;

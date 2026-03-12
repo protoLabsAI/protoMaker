@@ -260,6 +260,25 @@ export const TOOL_PRESETS = {
     'Skill',
   ] as const,
 
+  /**
+   * Execution-focused tools for feature agents.
+   * Provides code read/write/edit capability without orchestration tools
+   * (no Task spawning, no Skill invocations).
+   */
+  execution: [
+    'Read',
+    'Write',
+    'Edit',
+    'Glob',
+    'Grep',
+    'Bash',
+    'WebSearch',
+    'WebFetch',
+    'TodoWrite',
+    'MultiEdit',
+    'LS',
+  ] as const,
+
   /** Tools for chat/interactive mode */
   chat: [
     'Read',
@@ -518,6 +537,13 @@ export interface CreateSdkOptionsConfig {
    * PreToolUse write guard that blocks agent file writes outside the worktree.
    */
   projectPath?: string;
+
+  /**
+   * Tool profile to apply when building allowedTools.
+   * - 'full': full tool access including Task and Skill (default)
+   * - 'execution': execution-focused tools only (no Task/Skill orchestration)
+   */
+  toolProfile?: 'full' | 'execution';
 }
 
 // Re-export MCP types from @protolabsai/types for convenience
@@ -696,12 +722,16 @@ export function createAutoModeOptions(config: CreateSdkOptionsConfig): Options {
   // Build worktree write guard hook (blocks writes outside the worktree)
   const worktreeHooks = buildWorktreeGuardHooks(config);
 
+  // Select tool set based on profile: 'execution' profile omits Task/Skill orchestration tools
+  const toolSet =
+    config.toolProfile === 'execution' ? TOOL_PRESETS.execution : TOOL_PRESETS.fullAccess;
+
   return {
     ...getBaseOptions(),
     model: getModelForUseCase('auto', config.model),
     maxTurns: config.maxTurns ?? MAX_TURNS.maximum,
     cwd: config.cwd,
-    allowedTools: [...TOOL_PRESETS.fullAccess],
+    allowedTools: [...toolSet],
     enableFileCheckpointing: true,
     ...claudeMdOptions,
     ...thinkingOptions,
