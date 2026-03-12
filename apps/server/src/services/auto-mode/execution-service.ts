@@ -1445,6 +1445,8 @@ export class ExecutionService {
               return settings.gitWorkflow?.prBaseBranch;
             }
           : undefined,
+        updateFeatureStatus: (p, id, status) => this.callbacks.updateFeatureStatus(p, id, status),
+        emitEvent: (eventType, data) => this.typedEventBus.emitAutoModeEvent(eventType, data),
       });
     }
   }

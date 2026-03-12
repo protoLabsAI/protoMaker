@@ -50,6 +50,16 @@ export interface PostExecutionContext {
    * when omitted or when the call throws.
    */
   getRecoveryBaseBranch?: () => Promise<string | undefined>;
+  /**
+   * Optional: updates the feature status after successful recovery.
+   * Called with status='review' after a recovery PR is created.
+   */
+  updateFeatureStatus?: (projectPath: string, featureId: string, status: string) => Promise<void>;
+  /**
+   * Optional: emits a structured event after recovery completes.
+   * Called with recovery details when uncommitted work is recovered into a PR.
+   */
+  emitEvent?: (eventType: string, data: Record<string, unknown>) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -115,10 +125,43 @@ export class PostExecutionMiddleware {
             logger.info(
               `[PostExecution] ${featureId}: recovery succeeded — PR created at ${result.prUrl}`
             );
+
+            // Move feature to 'review' status now that a recovery PR exists.
+            if (ctx.updateFeatureStatus) {
+              try {
+                await ctx.updateFeatureStatus(projectPath, featureId, 'review');
+                logger.info(`[PostExecution] ${featureId}: feature status updated to 'review'`);
+              } catch (statusError) {
+                logger.error(
+                  `[PostExecution] ${featureId}: failed to update feature status to 'review':`,
+                  statusError
+                );
+              }
+            }
+
+            // Emit a recovery event so listeners can react (e.g. UI, Discord).
+            if (ctx.emitEvent) {
+              ctx.emitEvent('auto_mode_recovery_pr_created', {
+                featureId,
+                projectPath,
+                prUrl: result.prUrl,
+                prNumber: result.prNumber,
+                prCreatedAt: result.prCreatedAt,
+              });
+            }
           } else {
             logger.warn(
               `[PostExecution] ${featureId}: uncommitted work detected but recovery failed: ${result.error}`
             );
+
+            // Emit a recovery-failed event so listeners are aware.
+            if (ctx.emitEvent) {
+              ctx.emitEvent('auto_mode_recovery_failed', {
+                featureId,
+                projectPath,
+                error: result.error,
+              });
+            }
           }
         } else {
           logger.info(`[PostExecution] ${featureId}: worktree is clean — no recovery needed`);
