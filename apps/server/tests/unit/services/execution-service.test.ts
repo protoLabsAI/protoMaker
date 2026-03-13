@@ -93,8 +93,13 @@ vi.mock('@/lib/sdk-options.js', () => ({
   createAutoModeOptions: vi.fn(() => ({})),
 }));
 
+const mockGetWorkflowSettings = vi.hoisted(() => vi.fn(async () => ({})));
+const mockGetPhaseModelWithOverrides = vi.hoisted(() =>
+  vi.fn(async () => ({ phaseModel: { model: '' }, isProjectOverride: false }))
+);
+
 vi.mock('@/lib/settings-helpers.js', () => ({
-  getWorkflowSettings: vi.fn(async () => ({})),
+  getWorkflowSettings: mockGetWorkflowSettings,
   getAutoLoadClaudeMdSetting: vi.fn(async () => false),
   filterClaudeMdFromContext: vi.fn(() => ''),
   getMCPServersFromSettings: vi.fn(async () => []),
@@ -112,6 +117,16 @@ vi.mock('@/lib/settings-helpers.js', () => ({
     },
   })),
   getProviderByModelId: vi.fn(async () => null),
+  getPhaseModelWithOverrides: mockGetPhaseModelWithOverrides,
+}));
+
+// Mock AgentManifestService
+const mockGetAgent = vi.hoisted(() => vi.fn(async () => undefined));
+
+vi.mock('@/services/agent-manifest-service.js', () => ({
+  getAgentManifestService: vi.fn(() => ({
+    getAgent: mockGetAgent,
+  })),
 }));
 
 vi.mock('@/lib/secure-fs.js', () => ({
@@ -591,5 +606,167 @@ describe('ExecutionService - merge pre-flight', () => {
       FEATURE_ID,
       expect.objectContaining({ status: 'blocked' })
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getModelForFeature — assignedRole model override tests
+// ---------------------------------------------------------------------------
+
+describe('ExecutionService - getModelForFeature assignedRole', () => {
+  const PROJECT_PATH = '/tmp/test-project';
+
+  function makeTestService(): ExecutionService {
+    const feature = makeFeature();
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const recoveryService = makeRecoveryService();
+    return makeService(callbacks, featureLoader, recoveryService);
+  }
+
+  beforeEach(() => {
+    mockGetAgent.mockReset();
+    mockGetWorkflowSettings.mockReset();
+    mockGetPhaseModelWithOverrides.mockReset();
+    // Default: no phase model override
+    mockGetPhaseModelWithOverrides.mockResolvedValue({
+      phaseModel: { model: '' },
+      isProjectOverride: false,
+    });
+    // Default: no workflow settings overrides
+    mockGetWorkflowSettings.mockResolvedValue({});
+    // Default: no manifest agent
+    mockGetAgent.mockResolvedValue(undefined);
+  });
+
+  it('uses manifest model override when agent has a model', async () => {
+    mockGetAgent.mockResolvedValue({
+      name: 'frontend-dev',
+      extends: 'developer',
+      model: 'claude-opus-4-5',
+    });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature(
+      { assignedRole: 'frontend-dev' },
+      PROJECT_PATH
+    );
+
+    expect(result.model).toContain('claude-opus-4-5');
+    expect(mockGetAgent).toHaveBeenCalledWith(PROJECT_PATH, 'frontend-dev');
+  });
+
+  it('uses settings roleModelOverrides when no manifest model is set', async () => {
+    mockGetAgent.mockResolvedValue({ name: 'backend-dev', extends: 'developer' }); // no model
+    mockGetWorkflowSettings.mockResolvedValue({
+      agentConfig: {
+        roleModelOverrides: {
+          'backend-dev': { model: 'claude-haiku-4-5', providerId: 'anthropic' },
+        },
+      },
+    });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature(
+      { assignedRole: 'backend-dev' },
+      PROJECT_PATH
+    );
+
+    expect(result.model).toContain('claude-haiku-4-5');
+    expect(result.providerId).toBe('anthropic');
+  });
+
+  it('manifest model takes precedence over settings roleModelOverrides when both exist', async () => {
+    mockGetAgent.mockResolvedValue({
+      name: 'full-stack',
+      extends: 'developer',
+      model: 'claude-opus-4-5',
+    });
+    mockGetWorkflowSettings.mockResolvedValue({
+      agentConfig: {
+        roleModelOverrides: {
+          'full-stack': { model: 'claude-haiku-4-5' },
+        },
+      },
+    });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature(
+      { assignedRole: 'full-stack' },
+      PROJECT_PATH
+    );
+
+    // Manifest wins
+    expect(result.model).toContain('claude-opus-4-5');
+    // Settings override should NOT have been consulted for model
+    expect(mockGetWorkflowSettings).not.toHaveBeenCalled();
+  });
+
+  it('falls through to agentExecutionModel setting when role has no manifest and no settings override', async () => {
+    mockGetAgent.mockResolvedValue(undefined); // unknown role
+    mockGetWorkflowSettings.mockResolvedValue({ agentConfig: { roleModelOverrides: {} } });
+    mockGetPhaseModelWithOverrides.mockResolvedValue({
+      phaseModel: { model: 'claude-sonnet-4-6' },
+      isProjectOverride: false,
+    });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature(
+      { assignedRole: 'unknown-role' },
+      PROJECT_PATH
+    );
+
+    expect(result.model).toContain('claude-sonnet-4-6');
+    expect(mockGetPhaseModelWithOverrides).toHaveBeenCalledWith(
+      'agentExecutionModel',
+      null,
+      PROJECT_PATH
+    );
+  });
+
+  it('features without assignedRole behave exactly as before (no manifest lookup)', async () => {
+    mockGetPhaseModelWithOverrides.mockResolvedValue({
+      phaseModel: { model: 'claude-sonnet-4-6' },
+      isProjectOverride: false,
+    });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature({ complexity: 'medium' }, PROJECT_PATH);
+
+    expect(result.model).toContain('claude-sonnet-4-6');
+    expect(mockGetAgent).not.toHaveBeenCalled();
+    expect(mockGetWorkflowSettings).not.toHaveBeenCalled();
+  });
+
+  it('explicit feature.model override still takes highest priority over assignedRole', async () => {
+    mockGetAgent.mockResolvedValue({ name: 'dev', extends: 'developer', model: 'claude-opus-4-5' });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature(
+      { model: 'claude-haiku-4-5', assignedRole: 'dev' },
+      PROJECT_PATH
+    );
+
+    expect(result.model).toContain('claude-haiku-4-5');
+    expect(mockGetAgent).not.toHaveBeenCalled();
+  });
+
+  it('failure escalation still takes priority over assignedRole', async () => {
+    mockGetAgent.mockResolvedValue({
+      name: 'dev',
+      extends: 'developer',
+      model: 'claude-haiku-4-5',
+    });
+
+    const svc = makeTestService();
+    const result = await (svc as any).getModelForFeature(
+      { failureCount: 2, assignedRole: 'dev' },
+      PROJECT_PATH
+    );
+
+    // Should be opus due to failure escalation, not haiku from manifest
+    expect(mockGetAgent).not.toHaveBeenCalled();
+    // The model should be the claude (opus) default
+    expect(result.model).toBeDefined();
   });
 });

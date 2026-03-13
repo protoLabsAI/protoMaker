@@ -84,6 +84,7 @@ import { gitWorkflowService } from '../git-workflow-service.js';
 import type { KnowledgeStoreService } from '../knowledge-store-service.js';
 import { writeLock } from '../../lib/worktree-lock.js';
 import { getReactiveSpawnerService } from '../reactive-spawner-service.js';
+import { getAgentManifestService } from '../agent-manifest-service.js';
 
 import { TypedEventBus } from './typed-event-bus.js';
 import { PostExecutionMiddleware } from './post-execution-middleware.js';
@@ -3350,20 +3351,58 @@ After generating the revised spec, output:
    * Priority: explicit feature.model > failure escalation > architectural > settings > complexity
    */
   private async getModelForFeature(
-    feature: { model?: string; complexity?: string; failureCount?: number },
+    feature: { model?: string; complexity?: string; failureCount?: number; assignedRole?: string },
     projectPath?: string
   ): Promise<{ model: string; providerId?: string }> {
+    // 1. Explicit per-feature model override
     if (feature.model) {
       return { model: resolveModelString(feature.model, DEFAULT_MODELS.autoMode) };
     }
+    // 2. Failure escalation: 2+ failures → opus
     if (feature.failureCount && feature.failureCount >= 2) {
       logger.info(`Escalating to opus after ${feature.failureCount} failures`);
       return { model: DEFAULT_MODELS.claude };
     }
+    // 3. Architectural complexity → opus
     if (feature.complexity === 'architectural') {
       logger.info('Using opus for architectural feature');
       return { model: DEFAULT_MODELS.claude };
     }
+    // 4. AssignedRole model override (manifest takes precedence over settings)
+    if (feature.assignedRole && projectPath) {
+      try {
+        const agentManifestService = getAgentManifestService();
+        const agent = await agentManifestService.getAgent(projectPath, feature.assignedRole);
+        if (agent?.model) {
+          logger.info(
+            `Using manifest model override "${agent.model}" for role "${feature.assignedRole}"`
+          );
+          return { model: resolveModelString(agent.model, DEFAULT_MODELS.autoMode) };
+        }
+      } catch (err) {
+        logger.warn(
+          `Failed to read agent manifest model for role "${feature.assignedRole}": ${err}`
+        );
+      }
+      // 4b. Settings roleModelOverrides fallback
+      try {
+        const workflowSettings = await getWorkflowSettings(projectPath, this.settingsService);
+        const roleOverride =
+          workflowSettings.agentConfig?.roleModelOverrides?.[feature.assignedRole];
+        if (roleOverride?.model) {
+          logger.info(
+            `Using settings roleModelOverride "${roleOverride.model}" for role "${feature.assignedRole}"`
+          );
+          return {
+            model: resolveModelString(roleOverride.model, DEFAULT_MODELS.autoMode),
+            providerId: roleOverride.providerId,
+          };
+        }
+      } catch (err) {
+        logger.warn(`Failed to read roleModelOverrides for role "${feature.assignedRole}": ${err}`);
+      }
+    }
+    // 5. phaseModels.agentExecutionModel from settings
     try {
       const { phaseModel } = await getPhaseModelWithOverrides(
         'agentExecutionModel',
@@ -3379,6 +3418,7 @@ After generating the revised spec, output:
     } catch (err) {
       logger.warn(`Failed to read agentExecutionModel setting, using fallback: ${err}`);
     }
+    // 6. Complexity fallback
     if (feature.complexity === 'small') {
       logger.info('Using haiku for small feature');
       return { model: DEFAULT_MODELS.trivial };

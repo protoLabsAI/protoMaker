@@ -788,6 +788,7 @@ export async function getWorkflowSettings(
         preFlightChecks:
           projectSettings.workflow.preFlightChecks ?? DEFAULT_WORKFLOW_SETTINGS.preFlightChecks,
         toolProfile: projectSettings.workflow.toolProfile ?? DEFAULT_WORKFLOW_SETTINGS.toolProfile,
+        agentConfig: projectSettings.workflow.agentConfig,
       };
     }
     return DEFAULT_WORKFLOW_SETTINGS;
