@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "rootDir": "../../",
     "paths": {
       "@protolabsai/crdt": ["../../libs/crdt/dist/index.d.ts"],
       "@protolabsai/dependency-resolver": ["../../libs/dependency-resolver/dist/index.d.ts"],
