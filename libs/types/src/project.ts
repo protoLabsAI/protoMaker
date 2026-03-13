@@ -259,9 +259,6 @@ export interface Project {
 
   /** Feedback from last "request changes" review */
   reviewFeedback?: string;
-
-  /** Ceremony cadence configuration */
-  cadence?: CadenceConfig;
 }
 
 /**
