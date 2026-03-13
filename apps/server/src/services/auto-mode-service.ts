@@ -4052,13 +4052,15 @@ You can use the Read tool to view these images at any time during implementation
                 `Found interrupted feature: ${feature.id} (${feature.title}) - status: ${feature.status}`
               );
             } catch {
-              // No context file — still include interrupted features (they get started fresh)
-              if (feature.status === 'interrupted') {
-                interruptedFeatures.push(feature);
-                logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
-              } else {
-                logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
-              }
+              // No context file — include all interrupted/in_progress features so they
+              // are either resumed (if context materialises later) or restarted fresh.
+              // Previously, in_progress features without agent-output.md were silently
+              // skipped, leaving them stuck as in_progress forever and blocking the
+              // auto-loop capacity check (hasInProgressFeatures).
+              interruptedFeatures.push(feature);
+              logger.info(
+                `Feature ${feature.id} (${feature.status}) has no context file, will restart fresh`
+              );
             }
           }
         }
