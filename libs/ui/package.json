@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/ui",
-  "version": "0.52.0",
+  "version": "0.53.0",
   "type": "module",
   "description": "Shared UI components for AutoMaker",
   "main": "dist/index.js",

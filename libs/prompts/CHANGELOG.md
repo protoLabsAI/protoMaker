@@ -1,5 +1,39 @@
 # @protolabsai/prompts
 
+## 0.53.0
+
+### Minor Changes
+
+- ### Features
+  - auto-assign role via match rules before feature execution (#2441)
+  - inject role promptFile into agent system prompt (#2440)
+  - auto-assign role via match rules before feature execution (#2441)
+  - inject role promptFile into agent system prompt (#2440)
+  - add AgentConfig to WorkflowSettings for per-role model overrides (#2431)
+  - make AgentRole extensible with BUILT_IN_AGENT_ROLES and add agent-manifest types (#2430)
+  - add InlineEditor component for click-to-edit fields
+
+  ### Bug Fixes
+  - force exit on graceful shutdown when server.close() hangs
+  - force exit on graceful shutdown when server.close() hangs
+  - no-op agent completion stuck in in_progress + status filter mismatch
+  - deduplicate docs update feature spawning
+  - notification badges show unread count instead of pending count
+
+  ### Refactors
+  - Agents panel in project settings + feature role selector (#2442)
+  - Wire assignedRole into getModelForFeature() (#2439)
+  - API routes for agent manifest (#2438)
+  - Agents panel in project settings + feature role selector (#2442)
+  - Wire assignedRole into getModelForFeature() (#2439)
+  - API routes for agent manifest (#2438)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.53.0
+  - @protolabsai/utils@0.53.0
+
 ## 0.52.0
 
 ### Minor Changes
