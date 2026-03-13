@@ -6,7 +6,15 @@
  */
 
 import { useState } from 'react';
-import { FileText, ScrollText, AlertTriangle, Mic, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  FileText,
+  ScrollText,
+  AlertTriangle,
+  Mic,
+  Search,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
 import { Card } from '@protolabsai/ui/atoms';
 import type { ArtifactIndexEntry, ArtifactType } from '@protolabsai/types';
 
@@ -35,6 +43,11 @@ const ARTIFACT_CONFIG: Record<
     icon: FileText,
     label: 'Standup',
     color: 'text-green-500',
+  },
+  'research-report': {
+    icon: Search,
+    label: 'Research Report',
+    color: 'text-cyan-500',
   },
 };
 
