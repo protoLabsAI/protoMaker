@@ -198,7 +198,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]
 
 # Start server
-CMD ["node", "apps/server/dist/index.js"]
+CMD ["node", "apps/server/dist/apps/server/src/index.js"]
 
 # =============================================================================
 # DOCS BUILD STAGE (standalone — no workspace deps needed)
