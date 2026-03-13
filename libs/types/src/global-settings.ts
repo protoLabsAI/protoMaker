@@ -736,6 +736,29 @@ export interface GlobalSettings {
    * @see AvaChannelReactorSettings
    */
   avaChannelReactor?: AvaChannelReactorSettings;
+
+  /**
+   * Global ceremony configuration.
+   * Controls autonomous ceremony execution (e.g., daily standups) across all projects.
+   * @see GlobalCeremoniesConfig
+   */
+  ceremonies?: GlobalCeremoniesConfig;
+}
+
+/**
+ * Global configuration for autonomous ceremony execution.
+ * Stored at the top level of GlobalSettings so ceremony cadence can be
+ * managed independently of individual project settings.
+ */
+export interface GlobalCeremoniesConfig {
+  /** Daily standup ceremony configuration */
+  dailyStandup: {
+    /** Whether the daily standup ceremony is enabled globally */
+    enabled: boolean;
+
+    /** ISO 8601 timestamp of the last standup run (undefined if never run) */
+    lastRunAt?: string;
+  };
 }
 
 /** Default global settings used when no settings file exists */
