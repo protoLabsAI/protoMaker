@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   Plus,
   Trash2,
@@ -8,8 +8,6 @@ import {
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
-  Pencil,
-  Eye,
 } from 'lucide-react';
 import {
   Button,
@@ -28,12 +26,7 @@ import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
 import type { Project, ProjectLink } from '@protolabsai/types';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Link from '@tiptap/extension-link';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
-import { Markdown } from 'tiptap-markdown';
+import { InlineEditor } from '@/components/shared/inline-editor';
 
 interface DocEntry {
   id: string;
@@ -99,67 +92,6 @@ export function ResourcesTab({ projectSlug, project }: { projectSlug: string; pr
   );
 }
 
-/**
- * TipTap-based document editor with editable toggle.
- * Content is stored as markdown — the Markdown extension handles
- * parsing on load and serialisation on save via `editor.storage.markdown.getMarkdown()`.
- */
-function DocumentEditor({
-  content,
-  editable,
-  onUpdate,
-}: {
-  content: string;
-  editable: boolean;
-  onUpdate: (markdown: string) => void;
-}) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Link.configure({
-        openOnClick: !editable,
-        HTMLAttributes: { class: 'text-[var(--status-info)] hover:underline' },
-      }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Markdown,
-    ],
-    content,
-    editable,
-    editorProps: {
-      attributes: {
-        class: cn(
-          'prose prose-sm max-w-none focus:outline-none px-3 py-2 min-h-[240px]',
-          editable && 'cursor-text'
-        ),
-      },
-    },
-    onUpdate: ({ editor: e }) => {
-      onUpdate(e.storage.markdown.getMarkdown());
-    },
-  });
-
-  // Toggle editable when prop changes
-  useEffect(() => {
-    if (editor) {
-      editor.setEditable(editable);
-    }
-  }, [editable, editor]);
-
-  // Sync content when document selection changes (content prop changes externally)
-  useEffect(() => {
-    if (editor && content !== editor.storage.markdown.getMarkdown()) {
-      editor.commands.setContent(content, false);
-    }
-  }, [content, editor]);
-
-  return (
-    <div className="w-full h-full overflow-y-auto [&_.is-editor-empty]:hidden">
-      <EditorContent editor={editor} />
-    </div>
-  );
-}
-
 function DocumentsSection({
   projectSlug,
   open,
@@ -173,7 +105,6 @@ function DocumentsSection({
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editTitle, setEditTitle] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const docsData = docsQuery.data as
@@ -208,7 +139,6 @@ function DocumentsSection({
     setSelectedDocId(doc.id);
     setEditTitle(doc.title);
     setEditContent(doc.content);
-    setIsEditing(false);
   }, []);
 
   const handleDelete = useCallback(
@@ -332,32 +262,23 @@ function DocumentsSection({
             <Card className="flex-1 overflow-hidden py-0">
               {selectedDoc ? (
                 <>
-                  <div className="px-3 py-2 border-b border-border/20 flex items-center gap-2">
+                  <div className="px-3 py-2 border-b border-border/20">
                     <Input
                       value={editTitle}
                       onChange={(e) => handleTitleChange(e.target.value)}
-                      className="border-none shadow-none bg-transparent font-medium focus-visible:ring-0 flex-1"
+                      className="border-none shadow-none bg-transparent font-medium focus-visible:ring-0"
                       placeholder="Document title..."
                     />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 shrink-0"
-                      onClick={() => setIsEditing((v) => !v)}
-                      aria-label={isEditing ? 'Switch to preview' : 'Switch to edit'}
-                    >
-                      {isEditing ? (
-                        <Eye className="w-3.5 h-3.5" />
-                      ) : (
-                        <Pencil className="w-3.5 h-3.5" />
-                      )}
-                    </Button>
                   </div>
                   <div className="flex-1 overflow-y-auto">
-                    <DocumentEditor
+                    <InlineEditor
                       content={editContent}
-                      editable={isEditing}
-                      onUpdate={handleContentChange}
+                      markdown
+                      placeholder="Start writing..."
+                      className="min-h-[240px] text-sm"
+                      isSaving={updateDoc.isPending}
+                      onSave={handleContentChange}
+                      onChange={handleContentChange}
                     />
                   </div>
                 </>

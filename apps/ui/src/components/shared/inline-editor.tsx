@@ -9,13 +9,19 @@ import { useCallback, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import { Markdown } from 'tiptap-markdown';
 import { cn } from '@/lib/utils';
 
 interface InlineEditorProps {
-  /** Content string (plain text or HTML depending on mode) */
+  /** Content string (plain text, HTML, or markdown depending on mode) */
   content: string;
   /** Called with updated content on blur */
   onSave: (content: string) => void;
+  /** Called on every edit (for debounced auto-save) */
+  onChange?: (content: string) => void;
   /** Placeholder when empty */
   placeholder?: string;
   /** Additional className for the wrapper */
@@ -24,40 +30,70 @@ interface InlineEditorProps {
   isSaving?: boolean;
   /** Render as single-line (no Enter key) */
   singleLine?: boolean;
+  /** Enable markdown mode — adds Link, TaskList, Markdown extensions */
+  markdown?: boolean;
 }
 
 export function InlineEditor({
   content,
   onSave,
+  onChange,
   placeholder = 'Click to edit...',
   className,
   isSaving,
   singleLine,
+  markdown,
 }: InlineEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
   const savedContentRef = useRef(content);
 
+  const getContent = useCallback(
+    (ed: ReturnType<typeof useEditor>) => {
+      if (!ed) return '';
+      return markdown ? ed.storage.markdown.getMarkdown() : ed.getText();
+    },
+    [markdown]
+  );
+
+  const extensions = [
+    StarterKit.configure({
+      codeBlock: false,
+      horizontalRule: false,
+      ...(singleLine
+        ? { heading: false, bulletList: false, orderedList: false, blockquote: false }
+        : {}),
+    }),
+    Placeholder.configure({ placeholder }),
+    ...(markdown
+      ? [
+          Link.configure({
+            openOnClick: true,
+            HTMLAttributes: { class: 'text-[var(--status-info)] hover:underline' },
+          }),
+          TaskList,
+          TaskItem.configure({ nested: true }),
+          Markdown,
+        ]
+      : []),
+  ];
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        codeBlock: false,
-        horizontalRule: false,
-        ...(singleLine
-          ? { heading: false, bulletList: false, orderedList: false, blockquote: false }
-          : {}),
-      }),
-      Placeholder.configure({ placeholder }),
-    ],
+    extensions,
     content: content || '',
     editable: false,
     onBlur: ({ editor: ed }) => {
-      const text = ed.getText();
+      const text = getContent(ed);
       if (text !== savedContentRef.current) {
         savedContentRef.current = text;
         onSave(text);
       }
       ed.setEditable(false);
       setIsEditing(false);
+    },
+    onUpdate: ({ editor: ed }) => {
+      if (onChange) {
+        onChange(getContent(ed));
+      }
     },
   });
 
