@@ -122,10 +122,12 @@ vi.mock('@/lib/settings-helpers.js', () => ({
 
 // Mock AgentManifestService
 const mockGetAgent = vi.hoisted(() => vi.fn(async () => undefined));
+const mockMatchFeature = vi.hoisted(() => vi.fn(async () => null));
 
 vi.mock('@/services/agent-manifest-service.js', () => ({
   getAgentManifestService: vi.fn(() => ({
     getAgent: mockGetAgent,
+    matchFeature: mockMatchFeature,
   })),
 }));
 
@@ -768,5 +770,187 @@ describe('ExecutionService - getModelForFeature assignedRole', () => {
     expect(mockGetAgent).not.toHaveBeenCalled();
     // The model should be the claude (opus) default
     expect(result.model).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Match rule auto-assign tests
+// ---------------------------------------------------------------------------
+
+describe('ExecutionService - match rule auto-assign', () => {
+  const PROJECT_PATH = '/tmp/test-project';
+  const FEATURE_ID = 'feature-match-test-1';
+
+  let featureLoader: ReturnType<typeof makeFeatureLoader>;
+
+  beforeEach(() => {
+    vi.stubEnv('AUTOMAKER_MOCK_AGENT', 'true');
+    mockMatchFeature.mockReset();
+    mockMatchFeature.mockResolvedValue(null); // default: no match
+    mockGetWorkflowSettings.mockReset();
+    mockGetWorkflowSettings.mockResolvedValue({}); // default: no agentConfig
+  });
+
+  function makeMatchTestFeature(overrides: Partial<Feature> = {}): Feature {
+    return makeFeature({
+      id: FEATURE_ID,
+      category: 'frontend',
+      title: 'Add login form',
+      description: 'Create a login form with email and password fields',
+      filesToModify: ['apps/web/src/components/LoginForm.tsx'],
+      ...overrides,
+    });
+  }
+
+  it('category match: assigns role and persists routingSuggestion when matchFeature returns agent', async () => {
+    const feat = makeMatchTestFeature();
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockMatchFeature.mockResolvedValue({
+      name: 'frontend-dev',
+      extends: 'developer',
+      description: 'Frontend specialist',
+    });
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      expect.objectContaining({
+        assignedRole: 'frontend-dev',
+        routingSuggestion: expect.objectContaining({
+          role: 'frontend-dev',
+          confidence: 1.0,
+          autoAssigned: true,
+          reasoning: expect.stringContaining('frontend-dev'),
+        }),
+      })
+    );
+  });
+
+  it('keyword match: assigns role based on keyword in title', async () => {
+    const feat = makeMatchTestFeature({ title: 'Fix database migration script' });
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockMatchFeature.mockResolvedValue({
+      name: 'backend-dev',
+      extends: 'developer',
+      description: 'Backend specialist',
+    });
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      expect.objectContaining({ assignedRole: 'backend-dev' })
+    );
+  });
+
+  it('file pattern match: assigns role based on filesToModify', async () => {
+    const feat = makeMatchTestFeature({
+      filesToModify: ['apps/server/src/services/auth-service.ts'],
+    });
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockMatchFeature.mockResolvedValue({
+      name: 'server-dev',
+      extends: 'developer',
+      description: 'Server specialist',
+    });
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      expect.objectContaining({ assignedRole: 'server-dev' })
+    );
+    expect(mockMatchFeature).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      expect.objectContaining({
+        filesToModify: ['apps/server/src/services/auth-service.ts'],
+      })
+    );
+  });
+
+  it('no match: does not update assignedRole when matchFeature returns null', async () => {
+    const feat = makeMatchTestFeature();
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockMatchFeature.mockResolvedValue(null);
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    const autoAssignCall = featureLoader.update.mock.calls.find(
+      ([, , updates]) => 'assignedRole' in updates
+    );
+    expect(autoAssignCall).toBeUndefined();
+  });
+
+  it('manual override respected: skips matchFeature when assignedRole is already set', async () => {
+    const feat = makeMatchTestFeature({ assignedRole: 'manual-role' as any });
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    expect(mockMatchFeature).not.toHaveBeenCalled();
+  });
+
+  it('autoAssignEnabled=false: skips matchFeature when disabled in agentConfig', async () => {
+    const feat = makeMatchTestFeature();
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockGetWorkflowSettings.mockResolvedValue({
+      agentConfig: { autoAssignEnabled: false },
+    });
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    expect(mockMatchFeature).not.toHaveBeenCalled();
+  });
+
+  it('autoAssignEnabled=true: matchFeature is called when explicitly enabled', async () => {
+    const feat = makeMatchTestFeature();
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockGetWorkflowSettings.mockResolvedValue({
+      agentConfig: { autoAssignEnabled: true },
+    });
+    mockMatchFeature.mockResolvedValue(null);
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    expect(mockMatchFeature).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      expect.objectContaining({ title: 'Add login form' })
+    );
+  });
+
+  it('match error is non-fatal: execution proceeds even when matchFeature throws', async () => {
+    const feat = makeMatchTestFeature();
+    const callbacks = makeCallbacks(feat);
+    featureLoader = makeFeatureLoader(feat);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    mockMatchFeature.mockRejectedValue(new Error('Manifest parse error'));
+
+    // Should not throw — execution continues normally
+    await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID)).resolves.not.toThrow();
   });
 });

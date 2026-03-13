@@ -683,6 +683,44 @@ export class ExecutionService {
         typeof img === 'string' ? img : img.path
       );
 
+      // Auto-assign agent role via manifest match rules (if not already assigned)
+      if (!feature.assignedRole && workflowSettings.agentConfig?.autoAssignEnabled !== false) {
+        try {
+          const agentManifestService = getAgentManifestService();
+          const matched = await agentManifestService.matchFeature(projectPath, {
+            category: feature.category,
+            title: feature.title ?? '',
+            description: feature.description,
+            filesToModify: feature.filesToModify,
+          });
+          if (matched) {
+            const assignedRole = matched.name as import('@protolabsai/types').AgentRole;
+            const routingSuggestion = {
+              role: assignedRole,
+              confidence: 1.0,
+              reasoning: `Auto-assigned via manifest match rule (agent: ${matched.name})`,
+              autoAssigned: true,
+              suggestedAt: new Date().toISOString(),
+            };
+            feature = {
+              ...feature,
+              assignedRole,
+              routingSuggestion,
+            };
+            await this.featureLoader.update(projectPath, featureId, {
+              assignedRole,
+              routingSuggestion,
+            });
+            logger.info(
+              `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match`
+            );
+          }
+        } catch (matchError) {
+          // Non-fatal: log and proceed with default execution
+          logger.warn(`Match rule auto-assign failed for feature ${featureId}:`, matchError);
+        }
+      }
+
       // Get model based on feature complexity and failure count
       const modelResult = await this.getModelForFeature(feature, projectPath);
       const maxTurns = getTurnsForFeature(feature);
