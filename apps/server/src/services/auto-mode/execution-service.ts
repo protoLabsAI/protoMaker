@@ -631,11 +631,11 @@ export class ExecutionService {
             filesToModify: feature.filesToModify,
           });
           if (matched) {
-            const assignedRole = matched.name as import('@protolabsai/types').AgentRole;
+            const assignedRole = matched.agent.name as import('@protolabsai/types').AgentRole;
             const routingSuggestion = {
               role: assignedRole,
-              confidence: 1.0,
-              reasoning: `Auto-assigned via manifest match rule (agent: ${matched.name})`,
+              confidence: matched.confidence,
+              reasoning: `Auto-assigned via manifest match rule (agent: ${matched.agent.name})`,
               autoAssigned: true,
               suggestedAt: new Date().toISOString(),
             };
@@ -649,7 +649,7 @@ export class ExecutionService {
               routingSuggestion,
             });
             logger.info(
-              `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match`
+              `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match (confidence: ${matched.confidence.toFixed(2)})`
             );
           }
         } catch (matchError) {
@@ -1656,11 +1656,11 @@ export class ExecutionService {
           filesToModify: feature.filesToModify,
         });
         if (matched) {
-          const assignedRole = matched.name as import('@protolabsai/types').AgentRole;
+          const assignedRole = matched.agent.name as import('@protolabsai/types').AgentRole;
           const routingSuggestion = {
             role: assignedRole,
-            confidence: 1.0,
-            reasoning: `Auto-assigned via manifest match rule (agent: ${matched.name})`,
+            confidence: matched.confidence,
+            reasoning: `Auto-assigned via manifest match rule (agent: ${matched.agent.name})`,
             autoAssigned: true,
             suggestedAt: new Date().toISOString(),
           };
@@ -1674,7 +1674,7 @@ export class ExecutionService {
             routingSuggestion,
           });
           logger.info(
-            `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match (pipeline path)`
+            `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match (pipeline path, confidence: ${matched.confidence.toFixed(2)})`
           );
         }
       } catch (matchError) {

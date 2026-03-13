@@ -188,7 +188,8 @@ export function createAgentRoutes(featureLoader: FeatureLoader): Router {
         success: true,
         projectPath,
         featureId,
-        agent: matched,
+        agent: matched?.agent ?? null,
+        confidence: matched?.confidence ?? null,
       });
     } catch (error) {
       logger.error('Failed to match agent for feature:', error);
