@@ -1069,7 +1069,8 @@ export class ExecutionService {
       // PR-evidence gate: runs AFTER git workflow so prNumber/prMergedAt are populated.
       // - skipTests=true (manual verification): go to 'waiting_approval'
       // - skipTests=false + PR evidence: go to 'verified' (auto-verify)
-      // - skipTests=false + no PR evidence: go to 'review' (agent ran but no PR yet)
+      // - skipTests=false + no PR evidence + no changes: go to 'done' (no-op completion)
+      // - skipTests=false + no PR evidence + had changes: go to 'review' (agent ran but no PR yet)
       const postGitFeature = await this.featureLoader.get(projectPath, featureId);
       const hasPrEvidence = !!(
         postGitFeature?.prMergedAt ??
@@ -1088,6 +1089,14 @@ export class ExecutionService {
           finalStatus = 'waiting_approval';
         } else if (hasPrEvidence) {
           finalStatus = 'verified';
+        } else if (!gitWorkflowResult) {
+          // Agent completed successfully but made zero changes (no commits, no PR).
+          // This happens when the work was already done on the base branch before the
+          // feature branch was created. Transition to 'done' — there's nothing to review.
+          finalStatus = 'done';
+          logger.info(
+            `[AutoVerify] No changes made for ${featureId} (git workflow returned null) — marking as done.`
+          );
         } else {
           finalStatus = 'review';
           logger.warn(

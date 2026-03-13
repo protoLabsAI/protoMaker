@@ -9,6 +9,7 @@ usageStats:
   referenced: 123
   successfulFeatures: 123
 ---
+
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
 # api
@@ -173,28 +174,44 @@ usageStats:
 - **Why this works:** Gradual adoption: callers like auto-mode-service can pass callbacks when available; other callers (existing, or those without CRDT context) don't pass them. No big-bang refactoring.
 - **Trade-offs:** Optional callbacks: low friction adoption vs caller must know to pass them to get CRDT benefit. Type-safe callback params vs implicit dependency.
 
-
 #### [Gotcha] getResearchMdPath duplicates getResearchFilePath functionality — both return identical path (.automaker/projects/{slug}/research.md). Two functions, one return value. (2026-03-13)
+
 - **Situation:** Added getResearchMdPath as a 'more descriptive name' for research path access, but identical function already exists as getResearchFilePath.
 - **Root cause:** Unclear naming convention or API design — suggests ambiguity about which function callers should use going forward.
 - **How to avoid:** Easier to find via both names (discoverability) but harder to maintain — both must be updated if path convention changes. Creates decision fatigue for API consumers.
 
 #### [Gotcha] Research route must be registered BEFORE the lifecycle sub-router in Express. Registering after the sub-router causes Express to match the sub-router first and the specific route never executes. (2026-03-13)
-- **Situation:** Express matches routes in registration order. Sub-routers like /lifecycle catch all /lifecycle/* requests if registered first.
+
+- **Situation:** Express matches routes in registration order. Sub-routers like /lifecycle catch all /lifecycle/\* requests if registered first.
 - **Root cause:** Express routing is sequential. More specific routes must come before less specific ones (sub-routers). Reverse order means POST /lifecycle/research gets caught by router.use('/lifecycle', ...) handler.
 - **How to avoid:** Easier: clear route priority. Harder: route registration order becomes a hidden dependency.
 
 #### [Pattern] Establish projectSlug as the canonical key for locating project-scoped research artifacts (2026-03-13)
+
 - **Problem solved:** Research.md lookup gated on feature.projectSlug existence; path resolution via getResearchFilePath(projectPath, projectSlug)
 - **Why this works:** Creates a simple 1:1 convention for artifact discovery; avoids ID-based lookups or dynamic path resolution
 - **Trade-offs:** Slug-based is human-readable and versioning-stable, but assumes research always co-located with project; refactoring if research moves to centralized store
 
 #### [Gotcha] POST /api/projects/lifecycle/initiate returns localSlug (not project.slug) for post-creation navigation. Returns field name is non-intuitive. (2026-03-13)
+
 - **Situation:** Navigation after project creation requires the new project's path. Endpoint documentation/naming unclear about return value.
 - **Root cause:** Server-side design choice - localSlug is auto-generated from title. Full project slug may not be available yet or requires additional processing.
 - **How to avoid:** Gain: unique URL-safe identifier immediately available. Loss: developer must discover localSlug vs slug distinction.
 
 #### [Pattern] Event enrichment pattern: TimelineEvent interface extended with optional ceremony-specific fields (`ceremonyLabel?`, `artifactUrl?`) rather than creating separate ceremony event type. (2026-03-13)
+
 - **Problem solved:** Need to add ceremony-specific metadata (labels, artifact URLs) to timeline events without fragmenting event type system.
 - **Why this works:** Single TimelineEvent type for all timeline entries. Optional fields make it extensible for future enrichment without creating subtype explosion.
 - **Trade-offs:** TimelineEvent becomes less semantically pure but more pragmatic. UI must handle optional fields, but avoids discriminated union complexity.
+
+#### [Gotcha] HITL formId must be the FULL UUID (e.g., `hitl-abc12345-...`), not a short/truncated ID. Using a short ID causes form lookup to fail silently. (2026-03-13)
+
+- **Situation:** HITL form responses were lost because the form polling used a truncated formId rather than the full UUID returned by `request_user_input`.
+- **Root cause:** The full UUID is stored as the key in the form registry. Short IDs don't match, so `get_form_response()` returns `status: "pending"` indefinitely.
+- **How to avoid:** Always pass the exact `formId` string returned by `request_user_input` to subsequent `get_form_response()` calls. Do not truncate, hash, or reformat it.
+
+#### [Gotcha] Use `broadcast()` not `emit()` when events must cross the server→client WebSocket boundary. `emit()` is server-process-local only. (2026-03-13)
+
+- **Situation:** HITL and feature status events were emitted with `emit()` inside tool handlers. The UI never received them because they stayed within the Node.js process.
+- **Root cause:** `EventEmitter.emit()` dispatches to in-process listeners only. `broadcast()` serializes the event over WebSocket to all connected UI clients. Same-named methods with completely different scopes — easy to pick the wrong one.
+- **How to avoid:** Rule: if the event consumer is the browser UI, always use `broadcast()`. If the consumer is another server-side service (e.g., AutoModeService listening for feature status), use `emit()`. When in doubt, grep for existing call sites of the same event name.

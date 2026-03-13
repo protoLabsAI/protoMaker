@@ -9,6 +9,7 @@ usageStats:
   referenced: 27
   successfulFeatures: 27
 ---
+
 <!-- domain: Testing Patterns | Unit test patterns, integration test strategies, test isolation -->
 
 # testing
@@ -139,8 +140,21 @@ usageStats:
 - **Why this works:** Mock events.broadcast() to verify correct event signatures; real Express server to verify HTTP behavior and file I/O together without stubbing filesystem
 - **Trade-offs:** Gained confidence in integration between routes and events; test setup more complex than pure unit tests
 
-
 #### [Gotcha] Playwright tests can't run against worktree code because dev server serves main repo, not worktree branch. Test infrastructure doesn't support per-worktree dev servers. (2026-03-13)
+
 - **Situation:** Attempted to verify dialog functionality with Playwright. Tests reused main repo dev server instead of worktree code.
 - **Root cause:** Dev server configured with fixed paths (main repo). Worktrees are isolated git copies but share same dev server infrastructure.
 - **How to avoid:** Gain: single dev server reduces resource overhead. Loss: can't test worktree changes in isolation without running separate server or static analysis.
+
+#### [Gotcha] Server build must explicitly copy `.md` asset files — TypeScript compiler only copies `.ts` source files. Missing copy step caused staging to 404 on markdown-based prompt/context files. (2026-03-13)
+
+- **Situation:** Staging deploy broke when new `.md` files were added to `apps/server/src/`. The server started but requests to endpoints that read those files returned 404.
+- **Root cause:** `tsc` compiles `.ts` → `.js` but ignores all other file types. Any non-TS assets (`.md`, `.json`, `.yaml`) must be copied separately via a build script step.
+- **Fix:** Added explicit `.md` asset copy to the server build script (PR #2124). Pattern: `cp -r src/**/*.md dist/` or equivalent in the build pipeline.
+- **How to avoid:** Any time you add a `.md`, `.json`, or `.yaml` file under `apps/server/src/`, verify it is included in the build copy step. Otherwise it only works in dev (tsx reads source directly) and silently breaks in staging/production.
+
+#### [Pattern] Use `waitForDocumentReady()` helper in CRDT tests to await Automerge document initialization before asserting state. Eliminates race-condition flakiness. (2026-03-13)
+
+- **Problem solved:** CRDT tests were flaky because assertions ran before the Automerge document was fully initialized and synced after creation.
+- **Why this works:** `waitForDocumentReady()` polls the document handle until it transitions from the loading state. Provides a deterministic synchronization point that `await` alone cannot guarantee for Automerge's async initialization.
+- **Trade-offs:** Small additional async overhead per test, but eliminates non-deterministic failures that made CI unreliable. Pattern is reusable across all CRDT service tests.

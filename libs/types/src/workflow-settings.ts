@@ -5,6 +5,7 @@
  * retro feedback, cleanup, signal intake, bug tracking, and PRD trust boundaries.
  */
 
+import type { PhaseModelEntry } from './agent-settings.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
 
@@ -123,6 +124,39 @@ export const DEFAULT_PHASE_TEMPERATURES: PhaseTemperaturesConfig = {
   EXECUTE: 0,
   REVIEW: 0.5,
 };
+
+// ============================================================================
+// Agent Configuration - Per-role model overrides and assignment behavior
+// ============================================================================
+
+/**
+ * AgentConfig — Per-project agent assignment and model override configuration.
+ *
+ * Stored in the project's .automaker/settings.json under `agentConfig`.
+ * All fields are optional; defaults apply when absent.
+ */
+export interface AgentConfig {
+  /**
+   * Per-role model overrides. Maps role name (string) to a PhaseModelEntry
+   * describing which model to use for that role's executions.
+   * Example: { 'frontend-engineer': { model: 'claude-opus-4-5', provider: 'anthropic' } }
+   */
+  roleModelOverrides?: Record<string, PhaseModelEntry>;
+  /**
+   * Whether automatic agent assignment via match rules is enabled.
+   * When true (default), the system evaluates manifest match rules to assign
+   * agents to features. When false, features are executed by the default agent.
+   * @default true
+   */
+  autoAssignEnabled?: boolean;
+  /**
+   * Additional manifest file paths to search for agent definitions, beyond
+   * the default `.automaker/agents/` directory. Paths are relative to the
+   * project root.
+   * @default []
+   */
+  manifestPaths?: string[];
+}
 
 // ============================================================================
 // Workflow Settings - Pipeline hardening configuration
@@ -306,6 +340,11 @@ export interface WorkflowSettings {
    * @default 'full'
    */
   toolProfile?: 'full' | 'execution';
+  /**
+   * Per-project agent configuration: role model overrides, auto-assignment behavior,
+   * and custom manifest paths. When absent, system defaults apply.
+   */
+  agentConfig?: AgentConfig;
 }
 
 /** Default workflow settings */
