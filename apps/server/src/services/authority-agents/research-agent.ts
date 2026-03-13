@@ -24,11 +24,7 @@ import type { AuthorityService } from '../authority-service.js';
 import type { ProjectService } from '../project-service.js';
 import { projectArtifactService } from '../project-artifact-service.js';
 import { streamingQuery } from '../../providers/simple-query-service.js';
-import {
-  createAgentState,
-  withProcessingGuard,
-  type AgentState,
-} from './agent-utils.js';
+import { createAgentState, withProcessingGuard, type AgentState } from './agent-utils.js';
 
 const logger = createLogger('ResearchAgent');
 
@@ -234,7 +230,9 @@ Search the codebase for relevant patterns and integration points, then search th
             fullReport: researchText,
           }
         );
-        logger.info(`[ResearchAgent] Saved research-report artifact ${artifactId} for ${projectSlug}`);
+        logger.info(
+          `[ResearchAgent] Saved research-report artifact ${artifactId} for ${projectSlug}`
+        );
       } catch (artifactErr) {
         logger.warn(
           `[ResearchAgent] Failed to save research-report artifact for ${projectSlug}:`,
