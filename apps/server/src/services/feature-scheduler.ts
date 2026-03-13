@@ -257,8 +257,14 @@ export class FeatureScheduler {
           branchName
         );
 
-        // Count features that are in the process of being started
-        const startingCount = projectState.startingFeatures.size;
+        // Count features that are in the process of being started but not yet
+        // tracked by the ConcurrencyManager. Exclude any feature that has already
+        // acquired a running lease — it is already counted by getRunningCountForWorktree
+        // and adding it again here causes double-counting that blocks the second
+        // concurrent slot when maxConcurrency >= 2.
+        const startingCount = [...projectState.startingFeatures].filter(
+          (id) => !this.callbacks.isFeatureRunning(id)
+        ).length;
 
         // Total occupied slots = running + starting
         const totalOccupied = projectRunningCount + startingCount;
@@ -387,7 +393,9 @@ export class FeatureScheduler {
             projectPath,
             branchName
           );
-          const currentStartingCount = projectState.startingFeatures.size;
+          const currentStartingCount = [...projectState.startingFeatures].filter(
+            (id) => !this.callbacks.isFeatureRunning(id)
+          ).length;
           const currentTotalOccupied = currentRunningCount + currentStartingCount;
 
           if (currentTotalOccupied >= projectState.config.maxConcurrency) {
