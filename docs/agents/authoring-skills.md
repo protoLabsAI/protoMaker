@@ -100,7 +100,7 @@ Skills use YAML frontmatter for metadata:
 ---
 name: skill-name # Required: kebab-case identifier
 emoji: 🚀 # Optional: visual identifier
-description: Brief desc # Required: when/why to use this skill
+description: Brief desc. Use when X. Trigger on "keyword1", "keyword2". # Required
 requires: # Optional: prerequisites
   bins: [git, npm] # Required executables
   files: [package.json] # Required files
@@ -116,6 +116,28 @@ metadata: # Tracking data
   source: learned # learned | imported | built-in
 ---
 ```
+
+### Trigger Descriptions
+
+The `description` field doubles as an automatic trigger specification. Use a three-part format:
+
+```
+<what it does>. Use when <conditions>. Trigger on "<keyword1>", "<keyword2>", "<keyword3>".
+```
+
+**Example:**
+
+```yaml
+description: Safe patterns for git worktrees in the Automaker project. Use when working with feature worktrees, fixing prettier in worktrees, or recovering stale worktrees. Trigger on "worktree", "cd into worktree", "stale worktree", "worktree rebase", or "prettier in worktree".
+```
+
+The trigger keywords enable automatic skill discovery — when an agent's task context contains matching phrases, the skill is surfaced without requiring tag matching. This is especially useful for domain-specific terminology that may not align with general tags.
+
+**Best practices for triggers:**
+
+- Include the exact phrases users/agents will type ("stale worktree", not just "worktree")
+- Cover both the domain term and common task phrases
+- 3-6 triggers is the right range — more dilutes relevance
 
 ### Markdown Body
 
@@ -400,179 +422,99 @@ Now includes OWASP Top 10 checks...`,
 console.log('Updated:', updated?.metadata.updated);
 ```
 
-## Skill Categories
+## Skill Inventory
 
-### Code Quality Skills
+The active skills in `.automaker/skills/` as of the most recent audit:
 
-```yaml
-name: clean-code-review
-tags: [code-quality, refactoring, maintainability]
-```
-
-**Examples:**
-
-- `code-review-checklist` - Comprehensive PR review
-- `refactoring-guidelines` - When and how to refactor
-- `naming-conventions` - Variable/function naming standards
-
-### Testing Skills
-
-```yaml
-name: test-driven-development
-tags: [testing, tdd, quality]
-```
-
-**Examples:**
-
-- `unit-testing-guide` - Writing effective unit tests
-- `integration-testing-patterns` - Testing service boundaries
-- `test-data-factories` - Creating test fixtures
-
-### Git Skills
-
-```yaml
-name: commit-message-format
-tags: [git, commits, conventional-commits]
-```
-
-**Examples:**
-
-- `conventional-commits` - Commit message standards
-- `branch-naming` - Feature branch conventions
-- `merge-conflict-resolution` - Resolving conflicts
-
-### Debugging Skills
-
-```yaml
-name: systematic-debugging
-tags: [debugging, troubleshooting, problem-solving]
-```
-
-**Examples:**
-
-- `debugging-methodology` - Systematic bug investigation
-- `performance-profiling` - Identifying bottlenecks
-- `log-analysis` - Reading and analyzing logs
-
-### Documentation Skills
-
-```yaml
-name: api-documentation
-tags: [documentation, api, openapi]
-```
-
-**Examples:**
-
-- `readme-template` - Project README structure
-- `api-docs-standards` - API documentation patterns
-- `code-comments` - When and how to comment code
+| Skill                       | Triggers                                                     |
+| --------------------------- | ------------------------------------------------------------ |
+| `agent-preflight`           | "pre-flight", "before starting agent", "preflight check"     |
+| `async-init-patterns`       | "async init", "constructor async", "service initialization"  |
+| `auto-mode-troubleshooting` | "auto mode stuck", "auto mode not running", "queue blocked"  |
+| `dependency-management`     | "npm install", "package version", "dependency conflict"      |
+| `discord-integration`       | "Discord", "send message", "discord channel"                 |
+| `hitl-management`           | "HITL", "human in the loop", "request user input", "form"    |
+| `mcp-integration-patterns`  | "MCP tool", "credentials", "secrets", "mcp discipline"       |
+| `monorepo-patterns/`        | "new package", "build order", "import path", "monorepo"      |
+| `plugin-management`         | "plugin", "install plugin", "claude plugin"                  |
+| `pr-conflict-resolution`    | "merge conflict", "PR conflict", "rebase conflict"           |
+| `pr-pipeline`               | "CI", "CodeRabbit", "PR review", "post-flight", "auto-merge" |
+| `reactflow`                 | "React Flow", "node graph", "flow diagram", "custom node"    |
+| `server-limits`             | "rate limit", "token limit", "context window"                |
+| `session-continuity`        | "resume session", "continue from", "session restart"         |
+| `testing-strategies`        | "write tests", "test coverage", "vitest", "playwright"       |
+| `worktree-patterns`         | "worktree", "cd into worktree", "stale worktree"             |
+| `world-state-check`         | "what is the status", "check board", "board summary"         |
+| `zombie-agent-recovery`     | "zombie agent", "hung agent", "agent not responding"         |
 
 ## Best Practices
 
-### 1. Write Clear Descriptions
+| Practice         | Do                                                                                           | Avoid                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Name**         | `frontend-accessibility-audit`, `database-migration-workflow`                                | `audit`, `migration`                                   |
+| **Description**  | Include what, when, and trigger keywords (see [Trigger Descriptions](#trigger-descriptions)) | Generic one-liners with no context                     |
+| **Tags**         | Specific: `[security, authentication, jwt, oauth]`                                           | Vague: `[misc, stuff]`                                 |
+| **Requirements** | Declare `bins`, `files`, `env` so the skill self-validates                                   | Leave empty — skill fails silently on missing deps     |
+| **Content**      | Include concrete examples, commands, and success criteria                                    | Vague prose like "make sure it works"                  |
+| **Size**         | Keep single-file skills under ~150 lines                                                     | Monolithic files over 200 lines — use a folder instead |
 
-**Do:**
+## Hierarchical Skill Folders
 
-```yaml
-description: Comprehensive checklist for reviewing pull requests, covering code quality, testing, security, and documentation
+When a skill grows complex enough to warrant multiple reference pages, decompose it into a folder:
+
+```
+.automaker/skills/
+  monorepo-patterns/        # Folder skill
+    SKILL.md                # Required: index with frontmatter and overview table
+    build-order.md          # Sub-file: specific topic
+    imports.md              # Sub-file: specific topic
+    adding-packages.md      # Sub-file: specific topic
+    typescript-workspace.md # Sub-file: specific topic
 ```
 
-**Don't:**
+The `SKILL.md` file carries the frontmatter (name, description, tags) and acts as an index with a table linking to sub-files. Sub-files are plain markdown with no frontmatter — they are reference content, not standalone skills.
 
-```yaml
-description: Review stuff
-```
-
-### 2. Use Descriptive Names
-
-**Do:**
-
-```yaml
-name: frontend-accessibility-audit
-name: database-migration-workflow
-```
-
-**Don't:**
-
-```yaml
-name: audit
-name: migration
-```
-
-### 3. Add Relevant Tags
-
-**Do:**
-
-```yaml
-tags: [security, authentication, jwt, oauth]
-```
-
-**Don't:**
-
-```yaml
-tags: [misc, stuff]
-```
-
-### 4. Specify Requirements
-
-**Do:**
-
-```yaml
-requires:
-  bins: [git, gh]
-  files: [.git, package.json]
-  env: [GITHUB_TOKEN]
-```
-
-**Don't:**
-
-```yaml
-# No requirements specified
-# Skill may fail if prerequisites missing
-```
-
-### 5. Provide Examples
-
-**Do:**
+**`SKILL.md` template:**
 
 ```markdown
-# Example Usage
+---
+name: my-domain-patterns
+description: Patterns for X. Use when working with Y or Z. Trigger on "X", "Y pattern", "Z setup".
+tags: [domain, relevant, tags]
+---
 
-\`\`\`bash
-git commit -m "feat: add user authentication
+# My Domain Patterns
 
-Implement JWT-based authentication with refresh tokens.
+Overview paragraph.
 
-Closes #123
-\`\`\`
+## Rules
+
+| Rule    | File                       | Description         |
+| ------- | -------------------------- | ------------------- |
+| Topic A | [topic-a.md](./topic-a.md) | When to use topic A |
+| Topic B | [topic-b.md](./topic-b.md) | When to use topic B |
+
+## Quick Reference
+
+Key commands or patterns inline here.
 ```
 
-**Don't:**
+**When to use a folder vs a single file:**
 
-```markdown
-# Instructions
+- Single file: skill content fits in ~100 lines, topics are tightly coupled
+- Folder: skill has 3+ distinct sub-topics, or the file would exceed ~150 lines
 
-Do the thing.
-```
+## Skill Consolidation
 
-### 6. Include Success Criteria
+When auditing skills, merge skills that overlap significantly in scope:
 
-**Do:**
+| Pattern                  | When to merge                 | How                                        |
+| ------------------------ | ----------------------------- | ------------------------------------------ |
+| Feature + safety variant | Same domain, one is a subset  | Combine into one skill with both rule sets |
+| Pre-flight + post-flight | Same workflow boundary        | Merge into a single lifecycle skill        |
+| Two config guides        | Same system, different facets | Use hierarchical folder with sub-files     |
 
-```markdown
-## Success Criteria
-
-- [ ] All tests pass
-- [ ] No linting errors
-- [ ] Documentation updated
-- [ ] PR approved by 2 reviewers
-```
-
-**Don't:**
-
-```markdown
-Make sure it works.
-```
+After merging, verify the new skill's trigger keywords cover both the original skills' trigger terms.
 
 ## Skill Composition
 
