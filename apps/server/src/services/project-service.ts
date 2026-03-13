@@ -217,7 +217,7 @@ export class ProjectService {
       (d.projects as Record<string, unknown>)[project.slug] = this._toAutomergeValue(project);
     });
     this._docs.set(projectPath, newDoc);
-    this._crdtEvents?.emit(eventType, {
+    this._crdtEvents?.broadcast(eventType, {
       projectSlug: project.slug,
       projectPath,
       project,
@@ -307,7 +307,7 @@ export class ProjectService {
         (d.projects as Record<string, unknown>)[project.slug] = this._toAutomergeValue(project);
       });
       this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.emit('project:created', {
+      this._crdtEvents?.broadcast('project:created', {
         projectSlug: project.slug,
         projectPath,
         project,
@@ -427,7 +427,7 @@ export class ProjectService {
         (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
       });
       this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.emit('project:updated', {
+      this._crdtEvents?.broadcast('project:updated', {
         projectSlug,
         projectPath,
         project: updated,
@@ -472,7 +472,7 @@ export class ProjectService {
         (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(project);
       });
       this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.emit('project:updated', {
+      this._crdtEvents?.broadcast('project:updated', {
         projectSlug,
         projectPath,
         project,
@@ -552,7 +552,7 @@ export class ProjectService {
         (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
       });
       this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.emit('project:updated', {
+      this._crdtEvents?.broadcast('project:updated', {
         projectSlug,
         projectPath,
         project: updated,
@@ -635,7 +635,7 @@ export class ProjectService {
           delete (d.projects as Record<string, Project | undefined>)[projectSlug];
         });
         this._docs.set(projectPath, newDoc);
-        this._crdtEvents?.emit('project:deleted', { projectSlug, projectPath });
+        this._crdtEvents?.broadcast('project:deleted', { projectSlug, projectPath });
       }
 
       return true;

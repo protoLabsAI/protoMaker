@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/dependency-resolver",
-  "version": "0.50.2",
+  "version": "0.50.3",
   "description": "Feature dependency resolution for AutoMaker",
   "type": "module",
   "main": "dist/index.js",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.50.2"
+    "@protolabsai/types": "^0.50.3"
   },
   "devDependencies": {
     "@types/node": "22.19.3",

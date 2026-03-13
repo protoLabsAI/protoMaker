@@ -1,5 +1,16 @@
 # @protolabsai/git-utils
 
+## 0.50.3
+
+### Patch Changes
+
+- ### Bug Fixes
+  - use broadcast() instead of emit() for CRDT project sync
+  - use broadcast() instead of emit() for CRDT project sync
+- Updated dependencies
+  - @protolabsai/types@0.50.3
+  - @protolabsai/utils@0.50.3
+
 ## 0.50.2
 
 ### Patch Changes
