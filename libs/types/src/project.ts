@@ -398,6 +398,9 @@ export interface CreateProjectInput {
 
   /** Optional research summary */
   researchSummary?: string;
+
+  /** Initial research status (set to 'idle' to enable auto-research on create) */
+  researchStatus?: ResearchStatus;
 }
 
 /**
