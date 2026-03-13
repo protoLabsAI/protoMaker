@@ -118,7 +118,14 @@ export function createAgentRoutes(featureLoader: FeatureLoader): Router {
         return;
       }
 
-      const capabilities = await service.getResolvedCapabilities(projectPath, agent.name);
+      let capabilities = await service.getResolvedCapabilities(projectPath, agent.name);
+
+      // getResolvedCapabilities returns null when the agent isn't in the project manifest
+      // (i.e. it's a synthetic built-in). Fall back to direct ROLE_CAPABILITIES lookup so
+      // built-in roles always return their capabilities.
+      if (capabilities === null && ROLE_CAPABILITIES[agent.name]) {
+        capabilities = ROLE_CAPABILITIES[agent.name];
+      }
 
       res.json({
         success: true,
