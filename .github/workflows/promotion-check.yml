@@ -53,8 +53,8 @@ jobs:
 
       - name: Check version against latest tag
         run: |
-          # Read version from staging's package.json
-          STAGING_VERSION=$(node -p "require('./libs/types/package.json').version")
+          # Read version from staging's package.json (shell-only, no node required)
+          STAGING_VERSION=$(grep '"version"' libs/types/package.json | head -1 | sed 's/.*"\([0-9][^"]*\)".*/\1/')
           echo "Staging version: v${STAGING_VERSION}"
 
           # Get the latest tag on main
