@@ -7,6 +7,7 @@ import {
   Webhook,
   PartyPopper,
   Plug,
+  Bot,
 } from 'lucide-react';
 import type { SettingsNavigationItem } from '@/components/shared/settings';
 import type { ProjectSettingsViewId } from '../hooks/use-project-settings-view';
@@ -31,6 +32,7 @@ export const PROJECT_NAV_GROUPS: ProjectNavigationGroup[] = [
       { id: 'webhooks', label: 'Webhooks', icon: Webhook },
       { id: 'ceremonies', label: 'Ceremonies', icon: PartyPopper },
       { id: 'integrations', label: 'Integrations', icon: Plug },
+      { id: 'agents', label: 'Agents', icon: Bot },
     ],
   },
   {

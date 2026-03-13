@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@protolabsai/ui/atoms'
 import { ScrollArea } from '@protolabsai/ui/atoms';
 import { Badge } from '@protolabsai/ui/atoms';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@protolabsai/ui/atoms';
+import {
   GitPullRequest,
   CheckCircle2,
   Clock,
@@ -12,10 +19,16 @@ import {
   AlertTriangle,
   RefreshCw,
   Server,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { Feature } from '@/store/types';
 import { useAuthorityEvents } from '@/hooks/use-authority-events';
+import { useAgents } from '@/hooks/use-agents';
+import { useUpdateFeature } from '@/hooks/mutations';
+import { useAppStore } from '@/store/app-store';
+import { BUILT_IN_AGENT_ROLES } from '@protolabsai/types';
 
 interface FeatureDetailProps {
   feature: Feature;
@@ -200,6 +213,78 @@ const PRFeedbackPanel = memo(function PRFeedbackPanel({ feature }: { feature: Fe
 });
 
 /**
+ * Role Selector — dropdown to assign an agent role to a feature.
+ * "Auto" clears the assignedRole and lets match rules decide.
+ */
+const RoleSelector = memo(function RoleSelector({ feature }: { feature: Feature }) {
+  const projectPath = useAppStore((s) => s.currentProject?.path);
+  const { data: agents = [] } = useAgents(projectPath);
+  const updateFeature = useUpdateFeature(projectPath ?? '');
+
+  // Build options: Auto + built-in roles + project-specific agents
+  const projectAgents = agents.filter(
+    (a) => (a as unknown as Record<string, unknown>)._builtIn !== true
+  );
+
+  const handleChange = (value: string) => {
+    if (!projectPath) return;
+    const assignedRole = value === '__auto__' ? undefined : value;
+    updateFeature.mutate(
+      { ...feature, assignedRole },
+      {
+        onSuccess: () =>
+          toast.success(
+            assignedRole ? `Role set to ${assignedRole}` : 'Role cleared — auto-assign enabled'
+          ),
+        onError: (err: Error) => toast.error('Failed to update role', { description: err.message }),
+      }
+    );
+  };
+
+  const currentValue = (feature.assignedRole as string | undefined) ?? '__auto__';
+
+  return (
+    <div>
+      <span className="text-sm font-medium text-muted-foreground flex items-center gap-1 mb-1">
+        <Bot className="w-3.5 h-3.5" />
+        Agent Role:{' '}
+      </span>
+      <Select value={currentValue} onValueChange={handleChange} disabled={!projectPath}>
+        <SelectTrigger className="w-full text-sm h-8">
+          <SelectValue placeholder="Auto (match rules)" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__auto__">
+            <span className="text-muted-foreground italic">Auto (match rules)</span>
+          </SelectItem>
+
+          {/* Built-in roles */}
+          {BUILT_IN_AGENT_ROLES.map((role) => (
+            <SelectItem key={role} value={role}>
+              {role}
+            </SelectItem>
+          ))}
+
+          {/* Project-defined agents */}
+          {projectAgents.length > 0 && (
+            <>
+              <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-t border-border/30 mt-1">
+                Project Agents
+              </div>
+              {projectAgents.map((agent) => (
+                <SelectItem key={agent.name} value={agent.name}>
+                  {agent.name}
+                </SelectItem>
+              ))}
+            </>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+});
+
+/**
  * Feature Detail View Component
  * Extended with PR feedback panel showing thread decisions, severity badges,
  * remediation cycles, and escalation status
@@ -241,6 +326,9 @@ export const FeatureDetail = memo(function FeatureDetail({ feature }: FeatureDet
                 </span>
               </div>
             )}
+
+            {/* Agent Role selector */}
+            <RoleSelector feature={feature} />
           </div>
         </CardContent>
       </Card>
