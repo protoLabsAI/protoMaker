@@ -1,5 +1,12 @@
 # @protolabsai/crdt
 
+## 0.42.10
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.52.0
+
 ## 0.42.9
 
 ### Patch Changes

@@ -1,5 +1,22 @@
 # @protolabsai/types
 
+## 0.52.0
+
+### Minor Changes
+
+- ### Features
+  - add AgentConfig to WorkflowSettings for per-role model overrides (#2431)
+  - make AgentRole extensible with BUILT_IN_AGENT_ROLES and add agent-manifest types (#2430)
+  - add AgentConfig to WorkflowSettings for per-role model overrides (#2431)
+  - make AgentRole extensible with BUILT_IN_AGENT_ROLES and add agent-manifest types (#2430)
+  - add InlineEditor component for click-to-edit fields
+
+  ### Bug Fixes
+  - no-op agent completion stuck in in_progress + status filter mismatch
+  - no-op agent completion stuck in in_progress + status filter mismatch
+  - deduplicate docs update feature spawning
+  - notification badges show unread count instead of pending count
+
 ## 0.51.0
 
 ### Minor Changes
