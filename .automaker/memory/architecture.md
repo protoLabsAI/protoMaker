@@ -5,10 +5,11 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 464
-  referenced: 83
-  successfulFeatures: 83
+  loaded: 459
+  referenced: 79
+  successfulFeatures: 79
 ---
+
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
 # architecture
@@ -521,13 +522,14 @@ usageStats:
 - **Follow-up path detail:** `AutoModeService` captures the conflict reason in `followUpConflictReason` before the rebase try/catch block, then checks and throws after it — this ensures the block-and-throw runs outside the rebase catch scope.
 - **Breaking if changed:** Reverting to warning-only would resume repeated merge_conflict failures for stale branches. The `blocked` status is the only signal to the human that manual rebase is needed.
 
-
 #### [Pattern] Path helpers delegate validation to composed parent function (getProjectDir → validateSlugInput). Validation is inherited implicitly, not validated at each helper level. (2026-03-13)
+
 - **Problem solved:** getResearchMdPath and getResearchArtifactDir both call getProjectDir internally, which handles slug validation automatically.
 - **Why this works:** Composition pattern reduces duplication — validate once at the base level, all derived paths inherit safety. Single source of validation rules.
 - **Trade-offs:** Implicit validation easier to maintain (rules in one place) but harder to trace — caller can't see validation happening without reading implementation.
 
 ### Introduced nested artifact directory convention: artifacts/research-report/ subdirectory under project slug, rather than flat artifact storage. (2026-03-13)
+
 - **Context:** getResearchArtifactDir returns .automaker/projects/{slug}/artifacts/research-report/, establishing a tiered structure for artifact categorization.
 - **Why:** Scalable for multiple artifact types (design-doc, specs, reports, etc.) without flat-dir name collision. Organizes by artifact purpose, not by project.
 - **Rejected:** Flat structure (.automaker/projects/{slug}/research-report/ or similar) — simpler initially but harder to scale if artifacts diversify.
@@ -535,6 +537,7 @@ usageStats:
 - **Breaking if changed:** Code expecting artifacts at project root (.automaker/projects/{slug}/research-report/) will fail. Paths are concrete; moving artifacts breaks all references.
 
 ### Implemented deep merge for nested `ceremonies` object in SettingsService instead of shallow merge/replacement (2026-03-13)
+
 - **Context:** Updating nested settings (ceremonies.dailyStandup) where multiple sibling properties (enabled, lastRunAt) must persist atomically
 - **Why:** Shallow merge would overwrite entire ceremonies.dailyStandup object, losing lastRunAt timestamp when toggling enabled flag. Deep merge preserves all properties in nested objects.
 - **Rejected:** Shallow merge or direct property assignment - these would lose sibling properties in the nested object hierarchy
@@ -542,11 +545,13 @@ usageStats:
 - **Breaking if changed:** If reverted to shallow merge, lastRunAt would be lost on every enabled toggle, causing ceremony automation to lose execution history
 
 #### [Gotcha] GlobalCeremoniesConfig type already existed in global-settings.ts but was not exported from package @protolabsai/types index (2026-03-13)
+
 - **Situation:** Monorepo with multiple packages consuming shared types; type defined in one module but not accessible to cross-package consumers
 - **Root cause:** Package index exports define the public API boundary; internal module definitions are invisible to consumers using package imports
 - **How to avoid:** Explicit exports in index.ts add maintenance burden (must keep in sync) but enforce clean architecture and prevent internal API leakage
 
 ### Placed CeremoniesSection component within Developer settings tab rather than creating dedicated /settings/ceremonies route (2026-03-13)
+
 - **Context:** Ceremony automation feature is new and currently scoped to single ceremony type (Daily Standup); room for future expansion to multiple ceremony types
 - **Why:** Current scope is minimal; co-locating with other developer settings reduces routing complexity. Component can be extracted later if ceremonies becomes first-class feature.
 - **Rejected:** Dedicated settings route - would be premature abstraction given current single-ceremony scope; adds routing maintenance without clear benefit
@@ -554,6 +559,7 @@ usageStats:
 - **Breaking if changed:** If ceremonies system expands to multiple ceremony types and dedicated UX, component placement becomes limiting and requires restructuring settings navigation
 
 ### Created synthetic StandupProjectService adapter to convert board-wide context into standup-flow LangGraph API format, rather than modifying the flow or changing data structures (2026-03-13)
+
 - **Context:** standup-flow expects project-scoped milestone and feature arrays; board context is cross-project and flat
 - **Why:** Allows standup-flow to remain independent and reusable without coupling to board architecture; adapter layer isolates API contract negotiation
 - **Rejected:** Modifying standup-flow to accept board-wide context directly would couple it to this specific board implementation
@@ -561,11 +567,13 @@ usageStats:
 - **Breaking if changed:** If standup-flow changes its input shape, the adapter is the single point of failure for the entire ceremony
 
 #### [Pattern] Multi-level fallback chain for Discord channel resolution: global discord integration → project settings → DISCORD_CHANNEL_DEV env var, with explicit cast to typed interface at each level (2026-03-13)
+
 - **Problem solved:** Discord channel could be configured at global or project level, with env var as safety net; need to resolve without null-coalescing errors
 - **Why this works:** Provides configuration flexibility (global team channels vs project-specific) while maintaining clear precedence; explicit typing at each level prevents silent config misses
 - **Trade-offs:** Easier deployment (many configs work); harder debugging (which level actually won?); type casting complexity increases but clarity improves
 
 ### Dual guards on cron execution: enabled flag AND 20+ hour window since lastRunAt, preventing both admin disable and ceremony fatigue (2026-03-13)
+
 - **Context:** Cron runs every 15 minutes; standup should fire ~once daily but user can pause via settings
 - **Why:** Prevents noisy standups even if somehow triggered multiple times; makes enabled flag meaningful beyond just disable; ensures ceremonies stay valuable
 - **Rejected:** Single enabled flag would allow accidental multiple-standups-per-day if someone forgets to disable; pure time-based would fire even if already ran that day
@@ -573,11 +581,13 @@ usageStats:
 - **Breaking if changed:** Removing the 20-hour window reverts to fire-on-demand behavior; removing enabled check removes operator control
 
 #### [Pattern] Cron task registration delegated to SchedulerModule during startup (scheduler.module.ts calls dailyStandupService.initialize), rather than service self-registering (2026-03-13)
+
 - **Problem solved:** Service exists independently; scheduler infrastructure is environment-specific (might not exist in tests or edge environments)
 - **Why this works:** Cleanly separates concerns: service logic doesn't depend on scheduler; scheduler module has single entry point for all cron tasks; enables testing service without scheduler infrastructure
 - **Trade-offs:** Cleaner testing; requires two files to understand the full flow (service + scheduler); initialization order becomes explicit dependency
 
 ### Board-wide standup aggregation (single aggregated standup across all projects) rather than per-project ceremonies (2026-03-13)
+
 - **Context:** Daily standup is implicit team ritual; board context is cross-project; most other features are project-scoped
 - **Why:** Standup needs to show team-wide activity to be useful; one daily cadence for whole team prevents ceremony fragmentation
 - **Rejected:** Per-project standups would allow project autonomy but fragment communication and require N running agents; project-scoped ceremonies don't capture cross-project dependencies
@@ -585,11 +595,13 @@ usageStats:
 - **Breaking if changed:** If the architecture moves to project isolation, this artifact model becomes incompatible
 
 #### [Pattern] Fire-and-forget HTTP endpoint with async background execution: endpoint validates input and returns {started: true} immediately while research runs async via runResearch(). Route is separate from service to isolate HTTP concerns. (2026-03-13)
+
 - **Problem solved:** Research operations can be long-running (minutes). Blocking HTTP response would cause client timeout.
 - **Why this works:** Decouples request/response cycle from operation duration. Client gets immediate confirmation of acceptance, work proceeds independently. Return value signals initiation success, not completion.
 - **Trade-offs:** Easier: client doesn't hang. Harder: client can't track research progress directly via response, needs separate polling or events.
 
 ### Double-run guard using researchStatus state flag: method checks if researchStatus === 'running' and returns {started: true} without re-queuing. Idempotent pattern prevents duplicate concurrent research on same project. (2026-03-13)
+
 - **Context:** Multiple API calls or auto-triggers could fire research on same project within milliseconds. Prevent resource waste and conflicting results.
 - **Why:** Simple state check is efficient for single-node scenarios. Idempotent behavior (caller gets same response whether it's new or already-running) is correct for async operations.
 - **Rejected:** Distributed locking via Redis would be over-engineered for single-node. Unique job IDs in queue would still allow duplicate queue entries.
@@ -597,11 +609,13 @@ usageStats:
 - **Breaking if changed:** If guard is removed, duplicate research jobs could run simultaneously on same project, wasting compute and producing conflicting outputs.
 
 #### [Pattern] Auto-trigger via event listener with conditional filtering: listens for project:lifecycle:initiated event, checks project.researchOnCreate flag before firing research. Decouples research initiation from project creation logic. (2026-03-13)
+
 - **Problem solved:** Want automated research for some projects (those marked for it) but not all. Don't want to hardcode auto-trigger into creation logic.
 - **Why this works:** Event-driven architecture allows optional behavior. Conditional flag (researchOnCreate) makes feature toggleable per-project without code changes. Service can subscribe/unsubscribe independently.
 - **Trade-offs:** Easier: feature is optional and configurable. Harder: requires event system and listener registration.
 
 ### ResearchStatus added to CreateProjectInput so initiate() can set researchStatus: 'idle' atomically at project creation. Status is pre-populated so auto-trigger listener knows project is ready without separate query. (2026-03-13)
+
 - **Context:** Auto-trigger checks researchStatus === 'idle' to decide whether to fire research. If status is set after creation via separate step, race condition where event fires before status is set.
 - **Why:** Ensures correct initial state at creation time. Eliminates race between project creation event and status initialization. Event listener can trust status is correct.
 - **Rejected:** Setting status in separate step after creation creates race window. Querying project to check status before triggering adds latency.
@@ -609,6 +623,7 @@ usageStats:
 - **Breaking if changed:** If researchStatus is removed from input, auto-trigger becomes racy: event fires before status can be set, trigger sees undefined/null and skips research.
 
 ### Use existing getResearchFilePath() instead of waiting for dedicated getResearchMdPath() function (2026-03-13)
+
 - **Context:** Feature spec referenced getResearchMdPath which doesn't exist yet; getResearchFilePath provides identical path semantics
 - **Why:** Pragmatic unblocking: both return same path, avoids cross-phase dependency wait, reduces implementation blocker
 - **Rejected:** Wait for platform helpers phase to deliver getResearchMdPath; build custom path resolver inline
@@ -616,6 +631,7 @@ usageStats:
 - **Breaking if changed:** If getResearchMdPath semantics differ when implemented, this becomes a hot-spot for bugs during refactoring
 
 ### Maintain dual research sections in PRD prompt: Codebase Research Findings (automated) vs. Research Findings (pre-existing docs) (2026-03-13)
+
 - **Context:** Added Research Findings section separate from existing Codebase Research Findings in prompt template
 - **Why:** Preserves source attribution: distinguishes between dynamically-analyzed code patterns vs. human-curated pre-research; avoids conflating data sources
 - **Rejected:** Merge both sections; replace codebase findings with research.md if available
@@ -623,16 +639,19 @@ usageStats:
 - **Breaking if changed:** If model training shifts to expect merged research sections, prompt structure becomes suboptimal; if source distinction becomes unimportant, dual sections waste context
 
 #### [Pattern] Optional enrichment files in project structure (research.md, artifacts/) enable specialized workflows without burdening all projects (2026-03-13)
+
 - **Problem solved:** Project lifecycle accommodates both minimal projects (just project.md, project.json) and feature-rich projects that generate research notes and ceremony artifacts
 - **Why this works:** Not all projects perform research phase or ceremonies; consumers (PM agent, CeremonyService) handle both cases gracefully. Keeps baseline project structure lightweight.
 - **Trade-offs:** Optional files increase documentation complexity (must explain when/why) but maximize flexibility. PM agent must check file existence before consuming.
 
 #### [Pattern] Single-source-of-truth path helpers (getResearchFilePath) in platform layer abstract path construction from consuming code (2026-03-13)
+
 - **Problem solved:** research.md location is computed via getResearchFilePath(projectPath, projectSlug) instead of having path format scattered across PM agent, setup handlers, and docs
 - **Why this works:** Path structure can change (e.g., new nesting) without updating every consumer. Centralizes validation of path format. Reduces coupling to path conventions.
 - **Trade-offs:** Adds single import/function call cost; gains refactoring safety and consistency. Forces developers to think about path abstraction instead of hardcoding.
 
 ### Under resource constraints (96 files changed, tight turn budget), scoped documentation to single file with concrete bugs rather than broad sweep of all affected docs (2026-03-13)
+
 - **Context:** Feature touched many components; could have attempted to update all 96 files' docs or just the one with duplicate section + research.md gaps
 - **Why:** One accurate, complete doc is better than 96 partially accurate docs. Correctness > coverage. Duplicate section removal is objective correctness fix, not opinion.
 - **Rejected:** Broad doc updates without prioritization would have risked shipping inaccurate docs at scale or missing the quality bar
@@ -640,6 +659,7 @@ usageStats:
 - **Breaking if changed:** If other docs remain inconsistent with project-lifecycle.md canonical source, new developers will have conflicting references. Single source of truth pattern requires discipline to update all references or none.
 
 ### Refactored NewProjectDialog from callback-based (onSubmit/isPending props) to self-contained hook pattern using useCreateProject internally. (2026-03-13)
+
 - **Context:** Dialog needed to handle submission, navigation, and toasts. Original design used parent component callbacks.
 - **Why:** Self-contained hooks pattern eliminates prop drilling, makes side effects (navigation, toasts) local to dialog, cleaner for features with internal complexity. Dialog becomes autonomous unit.
 - **Rejected:** Keep callback delegation pattern (onSubmit/isPending props from ProjectsList). Would require prop threading for each new side effect.
@@ -647,11 +667,13 @@ usageStats:
 - **Breaking if changed:** If future features need dialog to work with different submission logic (e.g., draft saving, different endpoints), you'd need to either parameterize the hook or break out callback pattern again.
 
 #### [Pattern] Multi-source artifact field extraction: Server checks three payload field names (`artifactUrl`, `reportUrl`, `reportPath`) for artifact URL, accepting the first present value. (2026-03-13)
+
 - **Problem solved:** Different ceremony services use different naming conventions for artifact/report URLs. Need to integrate with heterogeneous systems without version negotiation.
 - **Why this works:** Defensive programming for integration with multiple ceremony implementations. Centralizes compatibility logic on server where ceremony knowledge lives.
 - **Trade-offs:** Extraction logic slightly more complex, but supports multiple ceremony implementations without coupling or version negotiation.
 
 ### Server owns ceremony type → label mapping. Ceremony handler contains `CEREMONY_LABELS` dictionary, sends `ceremonyLabel` in TimelineEvent response. UI renders this label in badge. (2026-03-13)
+
 - **Context:** Ceremony type names (e.g., 'standup', 'milestone_retro') are not user-friendly. Need readable labels for timeline UI.
 - **Why:** Ceremony type semantics are business logic; centralizing on server prevents UI from needing to know ceremony taxonomy. Single source of truth for label definitions.
 - **Rejected:** Send raw ceremony type to UI, let client map it (creates duplicate label definitions, harder to maintain, UI depends on ceremony domain knowledge).
@@ -659,16 +681,19 @@ usageStats:
 - **Breaking if changed:** Moving labels to UI requires syncing definitions across systems; removing label logic entirely means UI shows raw ceremony type strings.
 
 #### [Gotcha] Decision and escalation filters were already implemented from prior session. Icon/color configs were already defined. Feature was 'missing last mile' — foundational pieces existed but weren't connected to ceremony events. (2026-03-13)
+
 - **Situation:** Implementing ceremony label and artifact link features. Expected to build filters from scratch; discovered they already existed in codebase.
 - **Root cause:** Parallel feature development with layered implementation. Filter system built, but not applied to ceremony events. No integration work until now.
 - **How to avoid:** Extra audit time up-front (reading existing code) saved duplicate implementation effort. Ensured consistency.
 
 #### [Pattern] Archive deprecated patterns with date/reason instead of deleting them; preserve underlying pattern knowledge while marking use case as inactive (2026-03-13)
+
 - **Problem solved:** Frank auto-spawn IIFE and cooldown patterns were deprecated (crew loops removed 2026-03-04), but the underlying fire-and-forget async pattern and in-memory cooldown approach remain valid for other use cases
 - **Why this works:** Prevents institutional knowledge loss; allows future developers to understand why patterns exist and reuse the pattern logic for similar problems. Archiving with [ARCHIVED — date] signals status without orphaning the technical insight.
 - **Trade-offs:** Requires more doc maintenance (marking sections as archived) but preserves pattern reusability and decision context for future work
 
 ### Rely on strategic decisions document as single source of truth for major changes (Linear removal, crew loops removal); don't require updates to all downstream references if patterns remain conceptually valid (2026-03-13)
+
 - **Context:** Explore agent found deprecated Linear/Frank references across 5+ docs (security.md, performance.md, gotchas.md). Rather than updating all, chose to update only key decision points (architecture.md, templates) and leave historical patterns intact
 - **Why:** Reduces update burden when strategic changes cascade widely. Historical patterns (rate limiting, diagnostic scoping, eventual consistency) remain valid even if specific implementation (Frank, Linear) is removed. Strategic decisions doc serves as authoritative changelog.
 - **Rejected:** Alternative of updating every downstream reference is high effort for low benefit, especially when the patterns themselves are reusable
@@ -676,6 +701,7 @@ usageStats:
 - **Breaking if changed:** If strategic decisions doc is not maintained as source of truth, readers have no way to understand which references are stale vs which patterns are still valid
 
 ### Accept ArtifactEntry with optional content field; provide metadata-as-markdown fallback when content unavailable (2026-03-13)
+
 - **Context:** Component needs to display expandable markdown views, but ArtifactIndexEntry has no content field. Parent component (project-detail.tsx) would need to fetch and enrich artifacts with real content.
 - **Why:** Enables gradual adoption: component is immediately useful with metadata fallback while allowing parent to add content enrichment later without requiring immediate parent refactor. Maintains type compatibility (ArtifactEntry extends ArtifactIndexEntry), so existing callsites work without changes.
 - **Rejected:** Could require content field (breaking change) or wrap ArtifactIndexEntry in separate enrichment type (requires parent coordination)
@@ -683,85 +709,32 @@ usageStats:
 - **Breaking if changed:** Removing metadata fallback would cause artifact cards without content to show nothing; expanding cards becomes pointless for non-enriched data
 
 #### [Pattern] Sort artifacts globally by date-descending before grouping by type; grouping preserves global sort order within each group (2026-03-13)
+
 - **Problem solved:** Need to show artifacts grouped by type (Standup, Ceremony Report, etc.) but also maintain consistent date ordering within and across groups.
 - **Why this works:** Single-pass sort maintains sort invariant across all group boundaries. Alternative (per-group sorting) would require map iteration + individual sorts, adding complexity. This pattern ensures if user views 'All' vs filtered view, relative date ordering is identical.
 - **Trade-offs:** Simpler code (one sort operation), but requires understanding that Map iteration order equals sort order. Makes it harder to implement non-date sorts later (would need post-group resort).
 
 ### Separate filterTypes prop (parent control) from typeFilter state (user control); allow independent filtering dimensions (2026-03-13)
+
 - **Context:** Parent may want to show only certain artifact types (e.g., 'ceremonies only'), while user wants to filter further within that set (e.g., 'standups only'). Both needs must be satisfied without coupling.
 - **Why:** Prop controls scope (what types are available), state controls user selection (which type to focus on). Allows parent to restrict domain (SUPPORTED types) while user navigates freely within it. Cleaner separation of concerns than trying to merge decisions into single state.
 - **Rejected:** Single filter state (requires parent to manage local UI state); no supported-types gate (leaks invalid types into UI)
 - **Trade-offs:** Slightly more code (two separate filters), but each dimension is independently controllable. Harder to reason about if not documented.
 - **Breaking if changed:** Removing SUPPORTED gate allows invalid types into the component; removing typeFilter state removes user control
 
-#### [Gotcha] Record<T, V> behavior changes fundamentally when T shifts from a union type to a string type. With union ('a'|'b'|'c'), Record creates an object with exactly those keys enforced by TypeScript. With string, Record<string, V> accepts any string key and loses static key enforcement. (2026-03-13)
-- **Situation:** When AgentRole changed from union (8 literal strings) to string, ROLE_CAPABILITIES had to change from Record<AgentRole, RoleCapabilities> to Record<string, RoleCapabilities>. Attempting Record<AgentRole, V> with AgentRole=string would compile but provides no type safety.
-- **Root cause:** Record is a mapped type that respects its key parameter. String keys are infinitely large; unions are finite. TypeScript correctly models this distinction, and failing to update Record definitions can silently lose type safety.
-- **How to avoid:** Simpler record definition in code, but lost compile-time key enforcement. Must now rely on BUILT_IN_AGENT_ROLES.includes() for validation.
+### IssueCreationService + GitHubIssueChannel create in-app board features, not GitHub issues (2026-03-13)
 
-### Shifted from closed type-system validation (union type enforces valid roles at compile-time) to open type-system + runtime validation (string type + BUILT_IN_AGENT_ROLES const array). (2026-03-13)
-- **Context:** Had two options: (1) keep AgentRole as union, add separate ProjectAgent.extends field with custom roles, OR (2) make AgentRole itself open as string and store built-ins in a const. Chose option 2.
-- **Why:** Option 2 unifies the role namespace — built-in and custom roles are the same type. Allows arbitrary project-defined roles without code or type changes. Enables role discovery via BUILT_IN_AGENT_ROLES constant. Makes role matching logic simpler (one code path for all roles).
-- **Rejected:** Option 1 (keep union, separate custom type) preserves static type safety but creates two role namespaces, complicates matching logic, and requires code changes when adding built-in roles.
-- **Trade-offs:** Gained: extensibility without code changes, unified role namespace, runtime role discovery. Lost: compile-time exhaustiveness checking, TypeScript error messages when typos occur in role strings.
-- **Breaking if changed:** Code relying on TypeScript to prevent invalid role assignments (via union exhaustion) will no longer get compile errors. This is mitigated by adding BUILT_IN_AGENT_ROLES.includes() checks, but requires discipline.
+- **Context:** Bug routing refactor changed how new work items are created. Previously, triage and routing created GitHub issues. Now all new work items are created as in-app features on the Automaker board.
+- **Why:** GitHub issues are for external/community tracking. Internal work is managed through the in-app board — the single source of truth per strategic decision 2026-03-04. Routing to GH created duplicate tracking surfaces and required manual board sync.
+- **Rejected:** Keeping dual-tracking (GH issues + board features) — too much operational overhead, easy to lose sync. Keeping GH-only — disconnects auto-mode from board visibility.
+- **Trade-offs:** Board is now authoritative for all tracked work. Existing GitHub issues were migrated to the board and closed on GH. External contributors can't see internal tickets via GH, but this is intentional.
+- **Breaking if changed:** If IssueCreationService is reverted to create GH issues, features won't appear on the board for auto-mode to pick up. GitHubIssueChannel consumers expecting GH issue URLs will also break.
 
-#### [Pattern] Backward compatibility through type hierarchy: changing a type from a closed union ('a'|'b'|'c') to its open supertype (string) is assignment-compatible. Existing consumers passing one of the 8 literal strings continue to typecheck without modification. (2026-03-13)
-- **Problem solved:** When AgentRole type expanded from union of 8 strings to any string, all existing code that assigned the literal strings ('frontend-engineer', etc.) remained valid without recompilation.
-- **Why this works:** In TypeScript's type system, string is a supertype of any union of string literals. Any value assignable to the narrower type is assignable to the wider type. This allows gradual API expansion without breaking existing code.
-- **Trade-offs:** Easier migration path and zero churn for existing code. Downside: developers new to the codebase may not realize roles are now open and might assume only 8 are valid.
+### CRDT wire format adds projectName field; foreign events from other projects are silently rejected (2026-03-13)
 
-#### [Pattern] Separating extensibility (open string type) from built-in enumeration (BUILT_IN_AGENT_ROLES const) creates two sources of truth that require manual synchronization. This shifts validation from compile-time to runtime. (2026-03-13)
-- **Problem solved:** The 8 original roles now live in both the type system (implicitly, via existing code) and the BUILT_IN_AGENT_ROLES array. Custom roles can be added to BUILT_IN_AGENT_ROLES or entirely outside it.
-- **Why this works:** This pattern enables discovery: code can iterate BUILT_IN_AGENT_ROLES to enumerate known roles without relying on TypeScript reflection. It also enables role registration at runtime (loading roles from config files). Pure type unions cannot be reflected at runtime.
-- **Trade-offs:** Gained: runtime discovery, dynamic role loading, manifest-based extensibility. Lost: single source of truth, compile-time validation that BUILT_IN_AGENT_ROLES stays in sync with actual usage.
-
-#### [Pattern] Undefined defaults over explicit defaults in DEFAULT_WORKFLOW_SETTINGS constant (2026-03-13)
-- **Problem solved:** AgentConfig field added to WorkflowSettings as optional, but DEFAULT_WORKFLOW_SETTINGS intentionally omits agentConfig (undefined = use defaults)
-- **Why this works:** Keeps default object minimal and explicit about which fields have special default behavior, avoids redundancy between type JSDoc and runtime constant
-- **Trade-offs:** Consuming code must implement default logic (less boilerplate in constant, more code at consumption point); unclear whether undefined or explicit defaults were intended
-
-#### [Pattern] Three orthogonal configuration concerns (roleModelOverrides, autoAssignEnabled, manifestPaths) grouped into single AgentConfig interface (2026-03-13)
-- **Problem solved:** Per-project agent behavior has multiple independent dimensions: which models, whether to use assignment, where to load definitions
-- **Why this works:** Cohesive configuration unit — all three relate to agent behavior per-project, avoids scattering across WorkflowSettings
-- **Trade-offs:** Clear conceptual boundary; but makes it harder to change one field without touching the others
-
-#### [Pattern] Event enrichment via optional fields on single type (TimelineEvent with ceremonyLabel?, artifactUrl?) rather than discriminated union or subtype (2026-03-13)
-- **Problem solved:** Need to add ceremony-specific metadata to timeline events without fragmenting event type system
-- **Why this works:** Avoids discriminated union complexity; single type remains extensible for future enrichment without exploding subtype count
-- **Trade-offs:** TimelineEvent loses semantic purity (less type safety on which fields apply when), UI must handle optional fields, but eliminates complexity in event type system
-
-### IssueCreationService + GitHubIssueChannel now create in-app board features instead of GitHub issues (2026-03-13)
-- **Context:** Work routing was creating items as GitHub issues when they should be tracked on the in-app board (aligned with 2026-03-04 board-as-SSoT decision)
-- **Why:** Enforces single source of truth on the app's own board; eliminates bi-directional sync complexity and inconsistency between GitHub and in-app state
-- **Rejected:** Continuing to route work to GitHub issues would contradict the core architectural decision that the board is the authoritative project management system
-- **Trade-offs:** GitHub becomes read-only for issues; team loses GitHub issue notifications (but gains unified board interface). Eliminates sync logic complexity
-- **Breaking if changed:** Reverting to GitHub issue creation violates the board-as-SSoT decision and reintroduces multi-system state management
-
-### CRDT wire format: add projectName field and reject foreign events to prevent cross-project event contamination (2026-03-13)
-- **Context:** CRDT synced events from rabbit-hole.io to automaker board because events lacked project scoping in wire format
-- **Why:** Project name acts as a scope key in the wire format; validation rejects events from mismatched projects at the sync boundary, preventing data leakage
-- **Rejected:** Assuming project context was implicit or would be preserved through the sync layer; skipping validation on event source
-- **Trade-offs:** Adds projectName field to wire format and validation logic; prevents a class of hard-to-debug cross-contamination bugs
-- **Breaking if changed:** Removing projectName validation allows events to leak across projects; removing the field makes it impossible to implement project-scoped filtering
-
-### Plugin-based agent extensibility via ProjectAgent.extends: custom agents inherit all built-in role defaults (tools, maxTurns, capabilities) and override only what differs, rather than requiring full role specification or hardcoding in platform config. (2026-03-13)
-- **Context:** Projects need specialist variants of built-in roles (e.g., React-focused frontend-engineer) without platform code changes or duplicating built-in role configuration.
-- **Why:** Single-inheritance model builds on proven defaults and minimizes configuration surface. Per-project customization via .automaker/agents/ avoids hardcoded platform bloat. manifestPaths override adds flexibility for non-default locations.
-- **Rejected:** Hardcoding custom agents in platform config (eliminates per-project customization), requiring full role specification (high maintenance and duplication of built-in defaults), mixin-style multiple inheritance (adds complexity when single primary role is clearer).
-- **Trade-offs:** Gain: low-maintenance custom agents, clear inheritance chain. Loss: single inheritance means agents needing capabilities from multiple roles must choose primary and manually override others.
-- **Breaking if changed:** If default .automaker/agents/ directory changes or is removed, all projects silently lose custom agents even with manifestPaths fallback. Projects expecting default location are vulnerable to silent configuration loss.
-
-### AgentMatchRules uses OR logic across three independent filter dimensions (categories + keywords + filePatterns): any match in any dimension triggers agent assignment. (2026-03-13)
-- **Context:** Auto-assign features to specialist agents without manual tagging. Different feature descriptions use different styles—some are well-categorized, others use natural language, others reference technical specs.
-- **Why:** OR logic maximizes recall because each filter type handles cases others miss. Categories work for tagged features, keywords for natural language, filePatterns for technical specs. Three independent dimensions ensure no description style is overlooked.
-- **Rejected:** AND logic (all must match) too restrictive—most features describe the problem in only one dimension. Single filter type—misses descriptions that don't use that dimension.
-- **Trade-offs:** Gain: high recall, catches diverse feature descriptions. Loss: high recall risks false positives if match rules are too broad. Requires per-project tuning and careful rule specificity.
-- **Breaking if changed:** If match logic changes from OR to AND, most existing match configurations stop triggering entirely. If any filter type is removed, projects relying on it for routing break silently without error.
-
-### Agent manifests use YAML format with runtime loading rather than compile-time type validation in platform code. (2026-03-13)
-- **Context:** Projects define custom agents via .automaker/agents/manifest.yml files. Need balance between human-readability (for PR review) and type safety.
-- **Why:** YAML is human-readable and PR-reviewable by non-developers. Runtime loading preserves flexibility for projects to define agents without platform rebuild. No compile-time validation needed for customization patterns.
-- **Rejected:** Inline TypeScript config (less human-readable), compile-time validation (requires platform code changes for each new project agent).
-- **Trade-offs:** Gain: human-readable, flexible, PR-reviewable. Loss: no compile-time validation of custom role extensions—misconfigured agents silently fail at runtime.
-- **Breaking if changed:** If manifest file format (version, structure) changes, projects with old manifests fail silently or load with unexpected behavior. No migration path without runtime version checking.
+- **Context:** Bug: staging created features for rabbit-hole.io, CRDT synced them to the automaker board because project context was absent from the wire message. Fixed by adding `projectName` to `CrdtSyncWireMessage` and rejecting events where `projectName !== localProjectName`.
+- **Why:** CRDT sync is scoped to a single project. Without project identity in the wire format, all connected peers receive all events regardless of project — cross-contaminating boards in multi-project / multi-tenant setups.
+- **Files changed:** `libs/types/src/events.ts` (wire format type), `crdt-sync-service.ts` (rejection logic).
+- **Rejected:** Per-channel CRDT isolation (complex infra change) vs. simple header field + filter (minimal, effective).
+- **Trade-offs:** Wire format bump breaks peers on old code (they lack projectName, events are rejected on both ends). Clean cutover is safe because all instances upgrade together.
+- **Breaking if changed:** Removing projectName from wire format re-introduces cross-project event contamination in multi-instance deployments. Removing the rejection filter causes foreign events to be applied locally, corrupting board state.
