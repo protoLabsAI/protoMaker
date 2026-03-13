@@ -36,6 +36,7 @@ export class LeadEngineerSessionStore {
         savedAt: string;
       } | null>(filePath, null);
       const doc = result.data ?? { sessions: {}, savedAt: '' };
+      doc.sessions ??= {};
       const data: PersistedSessionData = {
         projectPath: session.projectPath,
         projectSlug: session.projectSlug,
@@ -57,7 +58,7 @@ export class LeadEngineerSessionStore {
         sessions: Record<string, PersistedSessionData>;
         savedAt: string;
       } | null>(filePath, null);
-      if (!result.data) return;
+      if (!result.data?.sessions) return;
       delete result.data.sessions[projectPath];
       result.data.savedAt = new Date().toISOString();
       await atomicWriteJson(filePath, result.data);
