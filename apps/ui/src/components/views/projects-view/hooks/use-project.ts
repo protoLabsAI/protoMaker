@@ -98,6 +98,26 @@ export function useLaunchProject(projectSlug: string) {
   });
 }
 
+export function useResearchTrigger(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const api = getHttpApiClient();
+      return api.lifecycle.triggerResearch(projectPath, projectSlug);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+
+  return {
+    trigger: mutation.mutate,
+    isPending: mutation.isPending,
+  };
+}
+
 export function useCreateProject() {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
   const queryClient = useQueryClient();
