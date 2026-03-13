@@ -191,6 +191,9 @@ export type {
   TimelineEntryAuthor,
   TimelineEntry,
   ProjectTimelineFile,
+  ResearchStatus,
+  ResearchSource,
+  ResearchReport,
 } from './project.js';
 
 // Calendar types

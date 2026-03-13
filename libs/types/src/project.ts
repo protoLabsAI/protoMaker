@@ -239,6 +239,9 @@ export interface Project {
   /** Research summary (from deep research agent) */
   researchSummary?: string;
 
+  /** Current status of the deep research operation */
+  researchStatus?: ResearchStatus;
+
   /** SPARC PRD content */
   prd?: SPARCPrd;
 
@@ -568,9 +571,50 @@ export interface ProjectStats {
 }
 
 /**
+ * Status of a deep research operation
+ */
+export type ResearchStatus = 'idle' | 'running' | 'complete' | 'failed';
+
+/**
+ * A single source document surfaced during deep research
+ */
+export interface ResearchSource {
+  /** URL of the source */
+  url: string;
+
+  /** Title of the source document or page */
+  title: string;
+
+  /** Brief summary of the source's relevance */
+  summary: string;
+}
+
+/**
+ * A completed (or in-progress) research report for a project
+ */
+export interface ResearchReport {
+  /** Current status of the research operation */
+  status: ResearchStatus;
+
+  /** High-level summary produced by the research agent */
+  summary: string;
+
+  /** Source documents discovered and cited during research */
+  sources: ResearchSource[];
+
+  /** ISO 8601 timestamp when research completed (undefined if not yet complete) */
+  completedAt?: string;
+}
+
+/**
  * Artifact type — categories of persisted project artifacts
  */
-export type ArtifactType = 'ceremony-report' | 'changelog' | 'escalation' | 'standup';
+export type ArtifactType =
+  | 'ceremony-report'
+  | 'changelog'
+  | 'escalation'
+  | 'standup'
+  | 'research-report';
 
 /**
  * A single entry in the artifact index
