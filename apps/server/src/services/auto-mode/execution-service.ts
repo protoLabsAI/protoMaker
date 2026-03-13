@@ -635,7 +635,13 @@ export class ExecutionService {
       // When autoLoadClaudeMd is enabled, filter out CLAUDE.md to avoid duplication
       // (SDK handles CLAUDE.md via settingSources), but keep other context files like CODE_QUALITY.md
       // Note: contextResult.formattedPrompt now includes both context AND memory
-      const combinedSystemPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+      const baseSystemPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+
+      // Prepend role-specific prompt when the feature has an assignedRole with a promptFile
+      const rolePromptPrefix = await this.loadRolePromptPrefix(projectPath, feature);
+      const combinedSystemPrompt = rolePromptPrefix
+        ? rolePromptPrefix + (baseSystemPrompt || '')
+        : baseSystemPrompt;
 
       if (options?.continuationPrompt) {
         // Continuation prompt is used when recovering from a plan approval
@@ -1600,7 +1606,13 @@ export class ExecutionService {
         description: feature.description ?? '',
       },
     });
-    const contextFilesPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+    const baseContextFilesPrompt = filterClaudeMdFromContext(contextResult, autoLoadClaudeMd);
+
+    // Prepend role-specific prompt when the feature has an assignedRole with a promptFile
+    const pipelineRolePromptPrefix = await this.loadRolePromptPrefix(projectPath, feature);
+    const contextFilesPrompt = pipelineRolePromptPrefix
+      ? pipelineRolePromptPrefix + (baseContextFilesPrompt || '')
+      : baseContextFilesPrompt;
 
     // Load previous agent output for context continuity
     const featureDir = getFeatureDir(projectPath, featureId);
@@ -3452,5 +3464,50 @@ After generating the revised spec, output:
       branchName,
       content,
     });
+  }
+
+  /**
+   * Build a role-specific prompt prefix when the feature has an assignedRole with a
+   * promptFile defined in the agent manifest.
+   *
+   * Format:
+   * ```
+   * ## Agent Role: {agent.name}
+   * {agent.description}
+   *
+   * {contents of agent.promptFile}
+   *
+   * ---
+   * ```
+   *
+   * Returns an empty string when no role prompt applies.
+   * Logs a warning and returns empty string if the promptFile cannot be read.
+   */
+  private async loadRolePromptPrefix(projectPath: string, feature: Feature): Promise<string> {
+    if (!feature.assignedRole) {
+      return '';
+    }
+    try {
+      const agentManifestService = getAgentManifestService();
+      const agent = await agentManifestService.getAgent(projectPath, feature.assignedRole);
+      if (!agent?.promptFile) {
+        return '';
+      }
+      const promptFilePath = path.join(projectPath, agent.promptFile);
+      let promptFileContents: string;
+      try {
+        promptFileContents = (await secureFs.readFile(promptFilePath, 'utf-8')) as string;
+      } catch (err) {
+        logger.warn(
+          `Role prompt file not found for role "${feature.assignedRole}" at ${promptFilePath}: ${err}`
+        );
+        return '';
+      }
+      const description = agent.description ? `${agent.description}\n\n` : '';
+      return `## Agent Role: ${agent.name}\n${description}${promptFileContents}\n\n---\n`;
+    } catch (err) {
+      logger.warn(`Failed to load role prompt for role "${feature.assignedRole}": ${err}`);
+      return '';
+    }
   }
 }
