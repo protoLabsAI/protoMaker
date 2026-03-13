@@ -64,11 +64,8 @@ export function createListHandler(featureLoader: FeatureLoader) {
       let features = await featureLoader.getAll(projectPath);
 
       // Filter by status if provided
-      // Normalize hyphenated status values (e.g. "in-progress") to underscore format
-      // ("in_progress") to match the canonical FeatureStatus type stored on disk.
       if (status) {
-        const normalizedStatus = status.replace(/-/g, '_');
-        features = features.filter((f) => f.status === normalizedStatus);
+        features = features.filter((f) => f.status === status);
       }
 
       // Filter by projectSlug if provided

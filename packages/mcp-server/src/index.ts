@@ -298,15 +298,6 @@ const tools: Tool[] = [
   ...knowledgeTools,
 ];
 
-/**
- * Normalize MCP status values (hyphenated, e.g. "in-progress") to the canonical
- * underscore format used internally (e.g. "in_progress"). Returns the value
- * unchanged if it's not a string.
- */
-function normalizeStatus(value: unknown): unknown {
-  return typeof value === 'string' ? value.replace(/-/g, '_') : value;
-}
-
 // Tool implementations
 async function handleTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
@@ -314,7 +305,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case 'list_features':
       return apiCall('/features/list', {
         projectPath: args.projectPath,
-        status: normalizeStatus(args.status),
+        status: args.status,
         projectSlug: args.projectSlug,
         compact: true, // Use compact mode to reduce response size
       });
@@ -347,7 +338,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       const featureData: Record<string, unknown> = {
         title: args.title,
         description: args.description,
-        status: normalizeStatus(args.status) || 'backlog',
+        status: args.status || 'backlog',
       };
       if (args.branchName) featureData.branchName = args.branchName;
       if (args.dependencies) featureData.dependencies = args.dependencies;
@@ -369,7 +360,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       const updates: Record<string, unknown> = {};
       if (args.title) updates.title = args.title;
       if (args.description) updates.description = args.description;
-      if (args.status) updates.status = normalizeStatus(args.status);
+      if (args.status) updates.status = args.status;
       if (args.complexity) updates.complexity = args.complexity;
       if (args.assignee !== undefined) updates.assignee = args.assignee;
       if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
@@ -410,7 +401,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/features/update', {
         projectPath: args.projectPath,
         featureId: args.featureId,
-        updates: { status: normalizeStatus(args.status) },
+        updates: { status: args.status },
       });
 
     case 'rollback_feature':
