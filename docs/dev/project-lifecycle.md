@@ -160,6 +160,7 @@ This enables launching existing projects that were set up before the lifecycle f
 | -------------- | ------------------------------------------------------ |
 | Idea doc       | `.automaker/projects/{slug}/project.md`                |
 | PRD            | `.automaker/projects/{slug}/project.json`              |
+| Research notes | `.automaker/projects/{slug}/research.md`               |
 | Milestones     | `.automaker/projects/{slug}/milestones/`               |
 | Phases         | `.automaker/projects/{slug}/milestones/{n}/phase-*.md` |
 | Deletion stats | `.automaker/projects/stats.json`                       |
@@ -210,32 +211,6 @@ Artifacts are saved automatically by:
 
 **Types:** `ArtifactType`, `ArtifactIndexEntry`, `ArtifactIndex`, `ProjectArtifact` from `@protolabsai/types`
 
-## Project artifacts
-
-`ProjectArtifactService` persists structured artifacts alongside project files:
-
-```text
-{projectPath}/.automaker/projects/{slug}/artifacts/
-├── index.json                      # Artifact index (id, type, timestamp)
-├── ceremony-report/
-│   └── {id}.json                   # Ceremony retro or standup report
-├── escalation/
-│   └── {id}.json                   # Escalation events with project context
-├── changelog/
-│   └── {id}.json                   # Project changelog entries
-└── standup/
-    └── {id}.json                   # Standup report artifacts
-```
-
-Artifacts are saved automatically by:
-
-- `CeremonyService` — saves `ceremony-report` artifacts after milestone and project retros
-- `EventLedgerService` — saves `escalation` artifacts when `escalation:signal-received` events have project context
-
-**Service:** `apps/server/src/services/project-artifact-service.ts`
-
-**Types:** `ArtifactType`, `ArtifactIndexEntry`, `ArtifactIndex`, `ProjectArtifact` from `@protolabsai/types`
-
 ## Project file structure
 
 After creation, project files are organized as:
@@ -245,6 +220,7 @@ After creation, project files are organized as:
 ├── project.md           # High-level overview
 ├── project.json         # Full structured data (PRD, milestones, phases)
 ├── prd.md               # SPARC PRD document
+├── research.md          # Optional: codebase research notes for PM context
 └── milestones/
     ├── 01-{name}/
     │   ├── milestone.md
@@ -257,18 +233,19 @@ After creation, project files are organized as:
 
 ## Key files
 
-| File                                                             | Purpose                                     |
-| ---------------------------------------------------------------- | ------------------------------------------- |
-| `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle         |
-| `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator       |
-| `apps/server/src/services/lead-engineer-rules.ts`                | 14 fast-path rules (pure functions, no LLM) |
-| `apps/server/src/services/event-ledger-service.ts`               | Append-only JSONL event persistence         |
-| `apps/server/src/services/project-artifact-service.ts`           | Project artifact persistence                |
-| `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                              |
-| `apps/server/src/routes/projects/routes/timeline.ts`             | `GET /api/projects/:slug/timeline`          |
-| `packages/mcp-server/plugins/automaker/commands/plan-project.md` | Skill file                                  |
-| `libs/types/src/project.ts`                                      | `ProjectLifecyclePhase`, artifact types     |
-| `libs/types/src/lead-engineer.ts`                                | `LeadWorldState`, session types             |
+| File                                                             | Purpose                                                |
+| ---------------------------------------------------------------- | ------------------------------------------------------ |
+| `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle                    |
+| `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator                  |
+| `apps/server/src/services/lead-engineer-rules.ts`                | 14 fast-path rules (pure functions, no LLM)            |
+| `apps/server/src/services/event-ledger-service.ts`               | Append-only JSONL event persistence                    |
+| `apps/server/src/services/project-artifact-service.ts`           | Project artifact persistence                           |
+| `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                                         |
+| `apps/server/src/routes/projects/routes/timeline.ts`             | `GET /api/projects/:slug/timeline`                     |
+| `packages/mcp-server/plugins/automaker/commands/plan-project.md` | Skill file                                             |
+| `libs/types/src/project.ts`                                      | `ProjectLifecyclePhase`, artifact types                |
+| `libs/types/src/lead-engineer.ts`                                | `LeadWorldState`, session types                        |
+| `libs/platform/src/projects.ts`                                  | `getResearchFilePath()` and other project path helpers |
 
 ## Related documentation
 

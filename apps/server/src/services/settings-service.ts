@@ -693,6 +693,18 @@ export class SettingsService {
       };
     }
 
+    // Deep merge ceremonies if provided
+    if (sanitizedUpdates.ceremonies) {
+      updated.ceremonies = {
+        ...current.ceremonies,
+        ...sanitizedUpdates.ceremonies,
+        dailyStandup: {
+          ...current.ceremonies?.dailyStandup,
+          ...sanitizedUpdates.ceremonies.dailyStandup,
+        },
+      };
+    }
+
     await writeSettingsJson(settingsPath, updated);
     logger.info('Global settings updated');
 

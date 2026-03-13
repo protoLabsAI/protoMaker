@@ -65,7 +65,8 @@ services:
     restart: on-failure:5
     ports:
       - '${API_PORT:-3008}:3008'
-      - '${SYNC_PORT:-9800}:9800'
+      - '${CRDT_MESH_PORT:-4444}:4444'
+      - '${CRDT_STORE_PORT:-4445}:4445'
     environment:
       # API keys (from .env or environment)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}

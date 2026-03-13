@@ -6,9 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@protolabsai/ui/atoms';
-import { Button, Input, Textarea, Label } from '@protolabsai/ui/atoms';
+import { Button, Input, Textarea, Label, Switch } from '@protolabsai/ui/atoms';
 import { Loader2, Plus, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCreateProject } from '../hooks/use-project';
 
 const PRESET_COLORS = [
   '#6366f1',
@@ -41,42 +42,52 @@ const PRIORITIES = [
 interface NewProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { title: string; goal: string; color?: string; priority?: string }) => void;
-  isPending: boolean;
 }
 
-export function NewProjectDialog({
-  open,
-  onOpenChange,
-  onSubmit,
-  isPending,
-}: NewProjectDialogProps) {
+export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) {
   const [title, setTitle] = useState('');
   const [goal, setGoal] = useState('');
+  const [description, setDescription] = useState('');
   const [color, setColor] = useState('');
   const [priority, setPriority] = useState('medium');
+  const [researchOnCreate, setResearchOnCreate] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
+
+  const createMutation = useCreateProject();
 
   const handleSubmit = () => {
     if (!title.trim()) return;
     if (!goal.trim()) return;
-    onSubmit({
-      title: title.trim(),
-      goal: goal.trim(),
-      color: color || undefined,
-      priority,
-    });
+    createMutation.mutate(
+      {
+        title: title.trim(),
+        goal: goal.trim(),
+        description: description.trim() || undefined,
+        color: color || undefined,
+        priority,
+        researchOnCreate,
+      },
+      {
+        onSuccess: () => {
+          handleOpenChange(false);
+        },
+      }
+    );
   };
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setTitle('');
       setGoal('');
+      setDescription('');
       setColor('');
       setPriority('medium');
+      setResearchOnCreate(false);
     }
     onOpenChange(next);
   };
+
+  const isPending = createMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -113,6 +124,18 @@ export function NewProjectDialog({
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               rows={3}
+            />
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <Label htmlFor="project-description">Description</Label>
+            <Textarea
+              id="project-description"
+              placeholder="Additional context or idea description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
             />
           </div>
 
@@ -174,6 +197,23 @@ export function NewProjectDialog({
                 aria-label="Custom color picker"
               />
             </div>
+          </div>
+
+          {/* Start with research toggle */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="space-y-0.5">
+              <Label htmlFor="research-toggle" className="text-sm font-medium">
+                Start with research
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Auto-run a research pass when the project is created
+              </p>
+            </div>
+            <Switch
+              id="research-toggle"
+              checked={researchOnCreate}
+              onCheckedChange={setResearchOnCreate}
+            />
           </div>
         </div>
 

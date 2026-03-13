@@ -100,7 +100,7 @@ done
 mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency: 1 })
 ```
 
-Worktree health monitoring is handled manually. Run `git worktree prune` periodically to remove stale entries, and use the checklist above before any removal.
+Intervene manually for worktrees with uncommitted critical changes. No automated worktree health loop is active (crew loops removed 2026-03-04).
 
 ---
 

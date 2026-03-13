@@ -5,6 +5,8 @@
  * idea -> dedup -> PRD -> review -> milestones -> features -> auto-mode
  */
 
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import type {
   LifecycleInitiateResult,
   LifecycleApproveResult,
@@ -15,14 +17,23 @@ import type {
   ProjectLifecyclePhase,
 } from '@protolabsai/types';
 import { createLogger, slugify } from '@protolabsai/utils';
+import { resolveModelString } from '@protolabsai/model-resolver';
+import { getResearchFilePath } from '@protolabsai/platform';
 import type { SettingsService } from './settings-service.js';
 import type { ProjectService } from './project-service.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
 import { orchestrateProjectFeatures } from './project-orchestration-service.js';
 import type { EventEmitter } from '../lib/events.js';
+import { streamingQuery } from '../providers/simple-query-service.js';
 
 const logger = createLogger('ProjectLifecycle');
+
+/** Model used for deep project research */
+const RESEARCH_MODEL = resolveModelString('sonnet');
+
+/** Allowed tools for research sessions — read-only + web search */
+const RESEARCH_TOOLS = ['Glob', 'Grep', 'Read', 'WebFetch', 'WebSearch'];
 
 export class ProjectLifecycleService {
   constructor(
@@ -31,7 +42,39 @@ export class ProjectLifecycleService {
     private featureLoader: FeatureLoader,
     private autoModeService: AutoModeService,
     private events: EventEmitter
-  ) {}
+  ) {
+    this.registerResearchListener();
+  }
+
+  /**
+   * Register event listener to auto-trigger research on project initiation
+   * when researchOnCreate flag is set in the initiate payload.
+   */
+  private registerResearchListener(): void {
+    this.events.subscribe((type, payload) => {
+      if (type === 'project:lifecycle:initiated') {
+        const data = payload as {
+          projectPath?: string;
+          slug?: string;
+          researchOnCreate?: boolean;
+        };
+
+        if (!data.researchOnCreate || !data.projectPath || !data.slug) return;
+
+        // Fire-and-forget: check project state then trigger research
+        void (async () => {
+          try {
+            const project = await this.projectService.getProject(data.projectPath!, data.slug!);
+            if (!project || project.researchStatus !== 'idle') return;
+
+            await this.research(data.projectPath!, data.slug!);
+          } catch (err) {
+            logger.warn(`[ProjectLifecycle] Auto-trigger research failed for ${data.slug}:`, err);
+          }
+        })();
+      }
+    });
+  }
 
   /**
    * Initiate a project: create local project entry
@@ -39,15 +82,17 @@ export class ProjectLifecycleService {
   async initiate(
     projectPath: string,
     title: string,
-    ideaDescription: string
+    ideaDescription: string,
+    options?: { researchOnCreate?: boolean }
   ): Promise<LifecycleInitiateResult> {
     const localSlug = slugify(title);
 
-    // Create local project
+    // Create local project — set researchStatus to 'idle' when researchOnCreate requested
     await this.projectService.createProject(projectPath, {
       slug: localSlug,
       title,
       goal: ideaDescription,
+      researchStatus: options?.researchOnCreate ? 'idle' : undefined,
     });
 
     this.events.emit('project:lifecycle:initiated', {
@@ -55,6 +100,7 @@ export class ProjectLifecycleService {
       slug: localSlug,
       title,
       hasDuplicates: false,
+      researchOnCreate: options?.researchOnCreate ?? false,
     });
 
     logger.info(`Initiated project: ${title}`);
@@ -179,6 +225,153 @@ export class ProjectLifecycleService {
       autoModeStarted,
       featuresInBacklog: backlogFeatures.length,
     };
+  }
+
+  /**
+   * Trigger deep research for a project.
+   *
+   * Delegates to the ResearchAgent pipeline:
+   * - Updates researchStatus to 'running'
+   * - Runs a Claude session with read-only + web tools
+   * - Writes research.md to the project directory
+   * - Updates project.researchSummary
+   * - Emits project:research:completed
+   *
+   * Returns { started: true } immediately; research runs asynchronously.
+   */
+  async research(projectPath: string, projectSlug: string): Promise<{ started: true }> {
+    const project = await this.projectService.getProject(projectPath, projectSlug);
+    if (!project) {
+      throw new Error(`Project "${projectSlug}" not found`);
+    }
+
+    // Don't start if already running
+    if (project.researchStatus === 'running') {
+      logger.info(`[ProjectLifecycle] Research already in progress for ${projectSlug}`);
+      return { started: true };
+    }
+
+    // Fire-and-forget the research pipeline
+    void this.runResearch(projectPath, projectSlug, project);
+
+    return { started: true };
+  }
+
+  /**
+   * Run the full research pipeline asynchronously.
+   * Called by research() — not intended for direct use.
+   */
+  private async runResearch(
+    projectPath: string,
+    projectSlug: string,
+    project: Project
+  ): Promise<void> {
+    logger.info(`[ProjectLifecycle] Starting research for project: ${projectSlug}`);
+
+    // Step 1: Mark researchStatus as running
+    try {
+      await this.projectService.updateProject(projectPath, projectSlug, {
+        researchStatus: 'running',
+      });
+    } catch (err) {
+      logger.warn(
+        `[ProjectLifecycle] Failed to set researchStatus=running for ${projectSlug}:`,
+        err
+      );
+    }
+
+    try {
+      const systemPrompt = `You are a senior engineer and researcher conducting deep research for a new software project.
+
+Your goal is to:
+1. Understand the project's objective and scope
+2. Search the existing codebase for related patterns, services, utilities, and integration points
+3. Research the web for relevant libraries, approaches, and best practices
+4. Produce a comprehensive, structured research report
+
+Research strategy:
+- Start by understanding the project goal and description
+- Explore the project structure (package.json, tsconfig, src/ directories)
+- Find existing patterns, conventions, and architecture relevant to this project's goals
+- Identify files and modules that this project would interact with or extend
+- Search the web for industry approaches and relevant libraries
+- Note potential technical constraints, dependencies, and risks
+
+Your final output MUST be a structured research report in Markdown with these sections:
+## Summary
+## Codebase Findings
+## Relevant Patterns & Integration Points
+## External Research
+## Recommended Approach
+## Open Questions & Risks`;
+
+      const prompt = `Research this project thoroughly and produce a structured research report.
+
+**Project Slug:** ${projectSlug}
+**Title:** ${project.title}
+${project.goal ? `**Goal:** ${project.goal}` : ''}
+
+Search the codebase for relevant patterns and integration points, then research the web for relevant approaches and libraries. Write a comprehensive structured research report.`;
+
+      // Step 2: Run Claude session with read-only + web tools
+      logger.info(`[ProjectLifecycle] Running research session for: ${projectSlug}`);
+      const result = await streamingQuery({
+        prompt,
+        systemPrompt,
+        model: RESEARCH_MODEL,
+        cwd: projectPath,
+        maxTurns: 40,
+        allowedTools: RESEARCH_TOOLS,
+      });
+
+      const researchText = result.text || '';
+      logger.info(
+        `[ProjectLifecycle] Research session completed: ${researchText.length} chars for ${projectSlug}`
+      );
+
+      // Step 3: Write research.md
+      const researchMdPath = getResearchFilePath(projectPath, projectSlug);
+      try {
+        await fs.mkdir(path.dirname(researchMdPath), { recursive: true });
+        await fs.writeFile(
+          researchMdPath,
+          `# Research Report: ${project.title}\n\nGenerated: ${new Date().toISOString()}\n\n${researchText}`,
+          'utf-8'
+        );
+        logger.info(`[ProjectLifecycle] Wrote research.md to ${researchMdPath}`);
+      } catch (writeErr) {
+        logger.warn(`[ProjectLifecycle] Failed to write research.md for ${projectSlug}:`, writeErr);
+      }
+
+      // Step 4: Extract summary and update project
+      const summaryMatch = researchText.match(/## Summary\n([\s\S]*?)(?=\n##|$)/);
+      const researchSummary = summaryMatch
+        ? summaryMatch[1].trim()
+        : researchText.slice(0, 1000).trim();
+
+      await this.projectService.updateProject(projectPath, projectSlug, {
+        researchSummary,
+        researchStatus: 'complete',
+      });
+      logger.info(`[ProjectLifecycle] Updated researchSummary for ${projectSlug}`);
+
+      // Step 5: Emit completion event
+      this.events.emit('project:research:completed', {
+        projectPath,
+        slug: projectSlug,
+        researchMdPath,
+        summary: researchSummary,
+      });
+
+      logger.info(`[ProjectLifecycle] Research complete for project: ${projectSlug}`);
+    } catch (error) {
+      logger.error(`[ProjectLifecycle] Research failed for ${projectSlug}:`, error);
+
+      // Mark as failed
+      await this.projectService
+        .updateProject(projectPath, projectSlug, { researchStatus: 'failed' })
+        .catch(() => {});
+    }
   }
 
   /**

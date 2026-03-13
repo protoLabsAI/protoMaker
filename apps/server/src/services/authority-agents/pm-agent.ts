@@ -32,6 +32,7 @@ import type { AuditService } from '../audit-service.js';
 import type { SettingsService } from '../settings-service.js';
 import type { HITLFormService } from '../hitl-form-service.js';
 import { simpleQuery, streamingQuery } from '../../providers/simple-query-service.js';
+import { getResearchFilePath, secureFs } from '@protolabsai/platform';
 import {
   createAgentState,
   initializeAgent,
@@ -881,6 +882,18 @@ Explore the project structure and relevant code, then provide a structured resea
       logger.debug('No context files loaded for PRD generation');
     }
 
+    // Load pre-existing research.md if available for this project
+    let researchFindings = '';
+    if (feature.projectSlug) {
+      try {
+        const researchPath = getResearchFilePath(projectPath, feature.projectSlug);
+        researchFindings = (await secureFs.readFile(researchPath, 'utf-8')) as string;
+        logger.debug(`Loaded research.md for project "${feature.projectSlug}"`);
+      } catch {
+        // research.md doesn't exist — proceed without it
+      }
+    }
+
     const systemPrompt = `You are a senior Product Manager creating a SPARC PRD (Product Requirements Document).
 ${contextRules ? `\n## Project-Specific Rules\n${contextRules}\n` : ''}
 SPARC Framework:
@@ -920,7 +933,7 @@ ${description}${attachmentContext}
 
 **Codebase Research Findings:**
 ${researchSummary}
-
+${researchFindings ? `\n**Research Findings:**\n${researchFindings}\n` : ''}
 Generate a comprehensive SPARC PRD as JSON.`;
 
     try {

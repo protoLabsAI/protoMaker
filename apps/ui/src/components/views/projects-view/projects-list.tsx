@@ -1,13 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { FolderKanban, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { PanelHeader } from '@/components/shared/panel-header';
 import { Spinner } from '@protolabsai/ui/atoms';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { useProjectFeatures } from './hooks/use-project-features';
 import { NewProjectDialog } from './components/new-project-dialog';
 
@@ -84,7 +83,6 @@ function ProjectProgress({ projectSlug }: { projectSlug: string }) {
 
 export function ProjectsList() {
   const projectPath = useAppStore((s) => s.currentProject?.path);
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -113,35 +111,6 @@ export function ProjectsList() {
       return results;
     },
     enabled: !!projectPath && !!listData?.projects && listData.projects.length > 0,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async (data: {
-      title: string;
-      goal: string;
-      color?: string;
-      priority?: string;
-    }) => {
-      const api = getHttpApiClient();
-      return api.lifecycle.createProject(projectPath || '', data);
-    },
-    onSuccess: (result, variables) => {
-      toast.success('Project created', {
-        description: `Created "${variables.title}"`,
-      });
-      setShowNewProjectDialog(false);
-      queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
-      // Navigate to the new project page
-      const slug = result.project?.slug;
-      if (slug) {
-        navigate({ to: '/projects/$slug', params: { slug } });
-      }
-    },
-    onError: (error) => {
-      toast.error(
-        `Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-    },
   });
 
   const projects = projectDetails || [];
@@ -192,12 +161,7 @@ export function ProjectsList() {
         ]}
       />
 
-      <NewProjectDialog
-        open={showNewProjectDialog}
-        onOpenChange={setShowNewProjectDialog}
-        onSubmit={(data) => createMutation.mutate(data)}
-        isPending={createMutation.isPending}
-      />
+      <NewProjectDialog open={showNewProjectDialog} onOpenChange={setShowNewProjectDialog} />
 
       {/* Project List */}
       <div className="flex-1 overflow-y-auto">
