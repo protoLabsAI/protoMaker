@@ -47,6 +47,7 @@ export const AgentSuggestion = memo(function AgentSuggestion({
   if (!suggestion) return null;
 
   const roleLabel = ROLE_LABELS[suggestion.role] || suggestion.role;
+  const isBuiltIn = suggestion.role in ROLE_LABELS;
   const confidencePercent = Math.round(suggestion.confidence * 100);
 
   const handleOverride = useCallback(
@@ -75,6 +76,11 @@ export const AgentSuggestion = memo(function AgentSuggestion({
       >
         <Bot className={`w-3 h-3 shrink-0 ${getConfidenceColor(suggestion.confidence)}`} />
         <span className="text-[11px] font-medium truncate">{roleLabel}</span>
+        {isBuiltIn && (
+          <span className="text-[9px] px-1 py-px rounded bg-muted text-muted-foreground border border-border shrink-0">
+            built-in
+          </span>
+        )}
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>

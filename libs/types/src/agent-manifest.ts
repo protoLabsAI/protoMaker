@@ -45,6 +45,12 @@ export interface ProjectAgent {
 
   /** Rules for automatically matching this agent to work items */
   match?: AgentMatchRules;
+
+  /**
+   * True when this entry represents a built-in role (synthetic, not from the project manifest).
+   * Set by the API layer; never present in user-authored agent manifests.
+   */
+  _builtIn?: boolean;
 }
 
 /**

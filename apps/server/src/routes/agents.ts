@@ -44,7 +44,7 @@ export function createAgentRoutes(featureLoader: FeatureLoader): Router {
         extends: role,
         description: ROLE_CAPABILITIES[role]?.description ?? '',
         _builtIn: true,
-      })) as unknown as ProjectAgent[];
+      }));
 
       const service = getAgentManifestService();
       const manifest = await service.getAgentsForProject(projectPath);
