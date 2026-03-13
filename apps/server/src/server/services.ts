@@ -111,6 +111,7 @@ import type { AvaChannelReactorService } from '../services/ava-channel-reactor-s
 import { CommandRegistryService } from '../services/command-registry-service.js';
 import { CheckpointService } from '../services/checkpoint-service.js';
 import { DailyStandupService } from '../services/daily-standup-service.js';
+import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
 
 const logger = createLogger('Server:Services');
 
@@ -288,6 +289,9 @@ export interface ServiceContainer {
 
   // Chat checkpoint service (intercepts Write/Edit tools to enable per-session rewind)
   checkpointService: CheckpointService;
+
+  // Project slug resolver (resolves default projectSlug for a given projectPath)
+  projectSlugResolver: ProjectSlugResolver;
 
   // CRDT document store (set by crdt-store.module, used by dependent modules)
   _crdtStore?: import('@protolabsai/crdt').CRDTStore;
@@ -708,6 +712,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Chat Checkpoint Service — intercepts Write/Edit tool calls to enable per-session rewind
   const checkpointService = new CheckpointService();
 
+  // Project Slug Resolver — resolves default projectSlug for a given projectPath
+  const projectSlugResolver = new ProjectSlugResolver(settingsService);
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -908,6 +915,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     reactiveSpawnerService,
     commandRegistryService,
     checkpointService,
+    projectSlugResolver,
     driftCheckInterval: null,
   };
 }
