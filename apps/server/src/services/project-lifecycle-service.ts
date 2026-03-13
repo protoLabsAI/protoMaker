@@ -402,19 +402,27 @@ Search the codebase for relevant patterns and integration points, then research 
 
     // Build markdown checklist from phases that have acceptance criteria
     let hasAnyCriteria = false;
-    const lines: string[] = ['# QA Checklist\n'];
+    const lines: string[] = [`# QA Checklist — ${project.title}`];
 
-    for (const milestone of milestones) {
+    for (const [milestoneIndex, milestone] of milestones.entries()) {
+      const milestoneNumber = milestone.number ?? milestoneIndex + 1;
       const phasesWithCriteria = (milestone.phases ?? []).filter(
         (p) => p.acceptanceCriteria && p.acceptanceCriteria.length > 0
       );
 
       if (phasesWithCriteria.length === 0) continue;
 
-      lines.push(`## Milestone ${milestone.number}: ${milestone.title}\n`);
+      lines.push(`## Milestone ${milestoneNumber}: ${milestone.title}`);
 
-      for (const phase of phasesWithCriteria) {
-        lines.push(`### Phase ${phase.number}: ${phase.title}\n`);
+      for (const [phaseIndex, phase] of phasesWithCriteria.entries()) {
+        const phaseNumber = phase.number ?? phaseIndex + 1;
+        lines.push(`### Phase ${phaseNumber}: ${phase.title}`);
+
+        if (phase.description) {
+          lines.push(`> ${phase.description}`);
+        }
+
+        lines.push('');
 
         for (const criterion of phase.acceptanceCriteria!) {
           lines.push(`- [ ] ${criterion}`);
