@@ -455,6 +455,9 @@ export interface UpdateProjectInput {
   /** Update research summary */
   researchSummary?: string;
 
+  /** Update research status */
+  researchStatus?: ResearchStatus;
+
   /** Add review comments */
   reviewComments?: PRDReviewComment[];
 
