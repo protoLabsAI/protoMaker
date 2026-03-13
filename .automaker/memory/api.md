@@ -198,3 +198,13 @@ usageStats:
 - **Problem solved:** Need to add ceremony-specific metadata (labels, artifact URLs) to timeline events without fragmenting event type system.
 - **Why this works:** Single TimelineEvent type for all timeline entries. Optional fields make it extensible for future enrichment without creating subtype explosion.
 - **Trade-offs:** TimelineEvent becomes less semantically pure but more pragmatic. UI must handle optional fields, but avoids discriminated union complexity.
+
+#### [Gotcha] HITL formId must be the FULL UUID (e.g., `hitl-abc12345-...`), not a short/truncated ID. Using a short ID causes form lookup to fail silently. (2026-03-13)
+- **Situation:** HITL form responses were lost because the form polling used a truncated formId rather than the full UUID returned by `request_user_input`.
+- **Root cause:** The full UUID is stored as the key in the form registry. Short IDs don't match, so `get_form_response()` returns `status: "pending"` indefinitely.
+- **How to avoid:** Always pass the exact `formId` string returned by `request_user_input` to subsequent `get_form_response()` calls. Do not truncate, hash, or reformat it.
+
+#### [Gotcha] Use `broadcast()` not `emit()` when events must cross the server→client WebSocket boundary. `emit()` is server-process-local only. (2026-03-13)
+- **Situation:** HITL and feature status events were emitted with `emit()` inside tool handlers. The UI never received them because they stayed within the Node.js process.
+- **Root cause:** `EventEmitter.emit()` dispatches to in-process listeners only. `broadcast()` serializes the event over WebSocket to all connected UI clients. Same-named methods with completely different scopes — easy to pick the wrong one.
+- **How to avoid:** Rule: if the event consumer is the browser UI, always use `broadcast()`. If the consumer is another server-side service (e.g., AutoModeService listening for feature status), use `emit()`. When in doubt, grep for existing call sites of the same event name.

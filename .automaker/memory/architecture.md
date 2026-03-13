@@ -693,3 +693,20 @@ usageStats:
 - **Rejected:** Single filter state (requires parent to manage local UI state); no supported-types gate (leaks invalid types into UI)
 - **Trade-offs:** Slightly more code (two separate filters), but each dimension is independently controllable. Harder to reason about if not documented.
 - **Breaking if changed:** Removing SUPPORTED gate allows invalid types into the component; removing typeFilter state removes user control
+
+### IssueCreationService + GitHubIssueChannel create in-app board features, not GitHub issues (2026-03-13)
+
+- **Context:** Bug routing refactor changed how new work items are created. Previously, triage and routing created GitHub issues. Now all new work items are created as in-app features on the Automaker board.
+- **Why:** GitHub issues are for external/community tracking. Internal work is managed through the in-app board — the single source of truth per strategic decision 2026-03-04. Routing to GH created duplicate tracking surfaces and required manual board sync.
+- **Rejected:** Keeping dual-tracking (GH issues + board features) — too much operational overhead, easy to lose sync. Keeping GH-only — disconnects auto-mode from board visibility.
+- **Trade-offs:** Board is now authoritative for all tracked work. Existing GitHub issues were migrated to the board and closed on GH. External contributors can't see internal tickets via GH, but this is intentional.
+- **Breaking if changed:** If IssueCreationService is reverted to create GH issues, features won't appear on the board for auto-mode to pick up. GitHubIssueChannel consumers expecting GH issue URLs will also break.
+
+### CRDT wire format adds projectName field; foreign events from other projects are silently rejected (2026-03-13)
+
+- **Context:** Bug: staging created features for rabbit-hole.io, CRDT synced them to the automaker board because project context was absent from the wire message. Fixed by adding `projectName` to `CrdtSyncWireMessage` and rejecting events where `projectName !== localProjectName`.
+- **Why:** CRDT sync is scoped to a single project. Without project identity in the wire format, all connected peers receive all events regardless of project — cross-contaminating boards in multi-project / multi-tenant setups.
+- **Files changed:** `libs/types/src/events.ts` (wire format type), `crdt-sync-service.ts` (rejection logic).
+- **Rejected:** Per-channel CRDT isolation (complex infra change) vs. simple header field + filter (minimal, effective).
+- **Trade-offs:** Wire format bump breaks peers on old code (they lack projectName, events are rejected on both ends). Clean cutover is safe because all instances upgrade together.
+- **Breaking if changed:** Removing projectName from wire format re-introduces cross-project event contamination in multi-instance deployments. Removing the rejection filter causes foreign events to be applied locally, corrupting board state.
