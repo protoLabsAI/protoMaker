@@ -420,6 +420,12 @@ export const withSystemClient = <TBase extends Constructor<BaseHttpClient>>(Base
       }> =>
         this.post('/api/projects/lifecycle/launch', { projectPath, projectSlug, maxConcurrency }),
 
+      triggerResearch: (
+        projectPath: string,
+        projectSlug: string
+      ): Promise<{ success: boolean; started?: boolean; error?: string }> =>
+        this.post('/api/projects/lifecycle/research', { projectPath, projectSlug }),
+
       // --- Shared tool routes (mounted via Express adapter) ---
 
       addLink: (projectPath: string, projectSlug: string, label: string, url: string) =>

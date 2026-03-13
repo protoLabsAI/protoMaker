@@ -82,6 +82,16 @@ export function register(container: ServiceContainer): void {
         true
       );
 
+      // Initialize and register daily standup cron (every 15 minutes)
+      container.dailyStandupService.initialize(
+        settingsService,
+        featureLoader,
+        container.discordBotService,
+        schedulerService,
+        dataDir
+      );
+      await container.dailyStandupService.registerCronTask();
+
       // Apply taskOverrides from global settings after all tasks are registered
       await schedulerService.applySettingsOverrides();
     })

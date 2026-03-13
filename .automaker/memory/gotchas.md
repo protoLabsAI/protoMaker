@@ -5,11 +5,10 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1399
-  referenced: 327
-  successfulFeatures: 327
+  loaded: 1422
+  referenced: 337
+  successfulFeatures: 337
 ---
-
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas
@@ -901,3 +900,34 @@ usageStats:
 - **Situation:** `docToWorkspace()` in `apps/server/src/routes/notes/index.ts` explicitly spreads all nested objects (tabOrder via `Array.from`, tab fields via object literal). Returning the proxy directly causes silent failures when callers access properties after the doc handle lifetime ends.
 - **Root cause:** Automerge wraps document fields in proxy objects for change tracking. The proxy is only valid within the document's active scope; external code reading after scope closure gets undefined or throws.
 - **How to avoid:** Any function that reads from an Automerge document and returns data to callers must copy all fields into plain JS values. Pattern: `Array.from(doc.tabOrder)` for arrays, `{ id: tab.id, name: tab.name, ... }` for objects — never return the proxy directly.
+
+
+#### [Gotcha] secureFs exported as namespace (`export * as secureFs`) requiring cast on readFile result despite 'utf-8' encoding parameter (2026-03-13)
+- **Situation:** secureFs.readFile signature includes Buffer return type; passing 'utf-8' guarantees string at runtime but TypeScript doesn't narrow it
+- **Root cause:** secureFs export pattern uses namespace re-export; readFile overloads don't bind encoding parameter to return type inference
+- **How to avoid:** Type assertion is safe at runtime (encoding ensures string) but masks type system uncertainty; proper fix needs platform-level type improvements
+
+#### [Gotcha] Silent catch block on research.md read masks distinguish-ability between 'file not found' vs. 'read failed' (2026-03-13)
+- **Situation:** Single catch-all with no logging on failure: `} catch { /* research.md doesn't exist — proceed without it */ }`
+- **Root cause:** Research is optional; any failure should be non-fatal. Avoids throwing/warning overhead.
+- **How to avoid:** Simple and non-intrusive now, but debugging is harder when research exists but has permission issues or encoding problems
+
+#### [Gotcha] Documentation can lag code features by multiple cycles; feature code (getResearchFilePath, research.md generation) was complete but docs were not updated in same PR (2026-03-13)
+- **Situation:** Project Intelligence feature shipped research capability to codebase; project-lifecycle.md did not reflect research.md file until separate doc-only PR weeks later
+- **Root cause:** Docs often treated as post-work artifact rather than parallel deliverable. No automated enforcement that new files appear in architectural docs. 96 changed files in same cycle masked the gap.
+- **How to avoid:** Documenting in parallel costs time upfront but prevents distributed confusion later. Lag reveals process gap: no linting rule checking that new .automaker files are documented.
+
+#### [Gotcha] Verification discipline required: phantom endpoint (/lifecycle/research) initially reported before checking actual code. Real endpoint is /api/setup/research from different feature. (2026-03-13)
+- **Situation:** Explore agent surfaced endpoint name without validating against route files; scope tightening prevented documenting a non-existent endpoint
+- **Root cause:** Documenting wrong endpoints trains developers to incorrect behaviors; wrong docs are worse than no docs. Must cross-reference code before writing architectural docs.
+- **How to avoid:** Verification step adds latency (read route files, check service signatures) but prevents documentation-code mismatch that erodes trust
+
+#### [Gotcha] researchOnCreate flag is accepted by POST /api/projects/lifecycle/initiate but silently ignored on server. UI toast fires client-side, but research never actually starts until server-side support added in milestone 02/phase 02. (2026-03-13)
+- **Situation:** Acceptance criteria required researchOnCreate flag be passed to initiate route. Server doesn't yet use it.
+- **Root cause:** Milestone decomposition: UI phase 01 shipped before server phase 02. Flag passed correctly, just unused server-side.
+- **How to avoid:** Gain: UI complete and testable. Loss: false sense of completeness - feature appears to work but research silently does nothing.
+
+#### [Gotcha] Worktree state can diverge from main repo; agent modifications in worktrees (e.g., gtm-signal-intelligence-project.md) may already contain updates not yet in main (2026-03-13)
+- **Situation:** gtm-signal-intelligence-project.md in the worktree was already more up-to-date (Linear marked DEPRECATED, monitor/OAuth pattern updated) than main repo version. Discover this via read operations, not assumptions.
+- **Root cause:** Previous agent had already made updates in the worktree but those haven't been merged back to main yet. This reveals the workflow: agents work in feature branches/worktrees, and state diverges until merge.
+- **How to avoid:** Agents must always check worktree state before deciding what edits to make; adds a verification step but prevents duplicate work

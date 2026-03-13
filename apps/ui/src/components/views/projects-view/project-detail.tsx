@@ -26,6 +26,7 @@ import { ResearchTab } from './tabs/research-tab';
 import { MilestonesTab } from './tabs/milestones-tab';
 import { ProjectTimeline } from '@/components/views/projects/project-timeline';
 import { ProjectArtifactViewer } from '@/components/views/projects/project-artifact-viewer';
+import { ProjectProgressWizard } from './components/project-progress-wizard';
 import type { Project, ArtifactIndexEntry } from '@protolabsai/types';
 
 export function ProjectDetail({
@@ -39,6 +40,7 @@ export function ProjectDetail({
   const { data: project, isLoading } = useProject(projectSlug);
   const deleteMutation = useProjectDelete();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('features');
   const setPendingProjectSlug = useAvaChannelStore((s) => s.setPendingProjectSlug);
   const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
@@ -95,91 +97,94 @@ export function ProjectDetail({
       <div className="flex-1 flex min-h-0">
         <ProjectSidebar project={project as Project} isOpen={sidebarOpen} />
 
-        <div className="flex-1 overflow-y-auto px-3 sm:px-6">
-          <Tabs defaultValue="features" className="flex flex-col h-full">
-            <TabsList className="mt-3 mb-1">
-              <TabsTrigger value="prd">
-                <FileText />
-                <span className="hidden sm:inline">PRD</span>
-              </TabsTrigger>
+        <div className="flex-1 overflow-y-auto">
+          <ProjectProgressWizard project={project as Project} onTabChange={setActiveTab} />
+          <div className="px-3 sm:px-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+              <TabsList className="mt-3 mb-1">
+                <TabsTrigger value="prd">
+                  <FileText />
+                  <span className="hidden sm:inline">PRD</span>
+                </TabsTrigger>
+                {project.milestones && project.milestones.length > 0 && (
+                  <TabsTrigger value="milestones">
+                    <Milestone />
+                    <span className="hidden sm:inline">Milestones</span>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="features">
+                  <Layers />
+                  <span className="hidden sm:inline">Features</span>
+                </TabsTrigger>
+                <TabsTrigger value="resources">
+                  <BookOpen />
+                  <span className="hidden sm:inline">Resources</span>
+                </TabsTrigger>
+                <TabsTrigger value="updates">
+                  <MessageSquare />
+                  <span className="hidden sm:inline">Updates</span>
+                </TabsTrigger>
+                {project.researchSummary && (
+                  <TabsTrigger value="research">
+                    <FlaskConical />
+                    <span className="hidden sm:inline">Research</span>
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="timeline">
+                  <Activity />
+                  <span className="hidden sm:inline">Timeline</span>
+                </TabsTrigger>
+                <TabsTrigger value="artifacts">
+                  <Archive />
+                  <span className="hidden sm:inline">Artifacts</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="prd">
+                <PrdTab project={project as Project} projectSlug={projectSlug} />
+              </TabsContent>
+
               {project.milestones && project.milestones.length > 0 && (
-                <TabsTrigger value="milestones">
-                  <Milestone />
-                  <span className="hidden sm:inline">Milestones</span>
-                </TabsTrigger>
+                <TabsContent value="milestones">
+                  <MilestonesTab project={project as Project} />
+                </TabsContent>
               )}
-              <TabsTrigger value="features">
-                <Layers />
-                <span className="hidden sm:inline">Features</span>
-              </TabsTrigger>
-              <TabsTrigger value="resources">
-                <BookOpen />
-                <span className="hidden sm:inline">Resources</span>
-              </TabsTrigger>
-              <TabsTrigger value="updates">
-                <MessageSquare />
-                <span className="hidden sm:inline">Updates</span>
-              </TabsTrigger>
+
+              <TabsContent value="features">
+                <FeaturesTab projectSlug={projectSlug} />
+              </TabsContent>
+
+              <TabsContent value="resources">
+                <ResourcesTab projectSlug={projectSlug} project={project as Project} />
+              </TabsContent>
+
+              <TabsContent value="updates">
+                <UpdatesTab project={project as Project} />
+              </TabsContent>
+
               {project.researchSummary && (
-                <TabsTrigger value="research">
-                  <FlaskConical />
-                  <span className="hidden sm:inline">Research</span>
-                </TabsTrigger>
+                <TabsContent value="research">
+                  <ResearchTab project={project as Project} />
+                </TabsContent>
               )}
-              <TabsTrigger value="timeline">
-                <Activity />
-                <span className="hidden sm:inline">Timeline</span>
-              </TabsTrigger>
-              <TabsTrigger value="artifacts">
-                <Archive />
-                <span className="hidden sm:inline">Artifacts</span>
-              </TabsTrigger>
-            </TabsList>
 
-            <TabsContent value="prd">
-              <PrdTab project={project as Project} projectSlug={projectSlug} />
-            </TabsContent>
-
-            {project.milestones && project.milestones.length > 0 && (
-              <TabsContent value="milestones">
-                <MilestonesTab project={project as Project} />
+              <TabsContent value="timeline">
+                <div className="py-4">
+                  <ProjectTimeline projectSlug={projectSlug} />
+                </div>
               </TabsContent>
-            )}
 
-            <TabsContent value="features">
-              <FeaturesTab projectSlug={projectSlug} />
-            </TabsContent>
-
-            <TabsContent value="resources">
-              <ResourcesTab projectSlug={projectSlug} project={project as Project} />
-            </TabsContent>
-
-            <TabsContent value="updates">
-              <UpdatesTab project={project as Project} />
-            </TabsContent>
-
-            {project.researchSummary && (
-              <TabsContent value="research">
-                <ResearchTab project={project as Project} />
+              <TabsContent value="artifacts">
+                <div className="py-4">
+                  <ProjectArtifactViewer
+                    artifacts={
+                      (project as Project & { artifacts?: ArtifactIndexEntry[] }).artifacts ?? []
+                    }
+                  />
+                </div>
               </TabsContent>
-            )}
-
-            <TabsContent value="timeline">
-              <div className="py-4">
-                <ProjectTimeline projectSlug={projectSlug} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="artifacts">
-              <div className="py-4">
-                <ProjectArtifactViewer
-                  artifacts={
-                    (project as Project & { artifacts?: ArtifactIndexEntry[] }).artifacts ?? []
-                  }
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
       </div>
     </div>

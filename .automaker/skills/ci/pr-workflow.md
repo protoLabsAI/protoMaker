@@ -86,7 +86,7 @@ Run after every agent completion or turn-limit hit:
 
 5. **Resolve CodeRabbit threads** via `resolve_review_threads` MCP tool before merge.
 
-Prefer delegating steps 2–5 to the **PR Maintainer** agent. Routine pipeline work (auto-merge, thread resolution, format fixes) is handled by PR Maintainer every 10 minutes — only intervene manually for complex failures requiring strategic judgment.
+All PR pipeline steps (auto-merge, thread resolution, format fixes) are handled manually or by Ava on request. No automated crew loops are active — handle each step directly as needed.
 
 ## Large PRs
 

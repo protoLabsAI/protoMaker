@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Switch } from '@protolabsai/ui/atoms';
 import { Label, Kbd, KbdGroup } from '@protolabsai/ui/atoms';
-import { Wand2, GitBranch, ClipboardCheck, DollarSign, Sparkles } from 'lucide-react';
+import { GitBranch, DollarSign, Sparkles } from 'lucide-react';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@protolabsai/ui/atoms';
 import { PanelHeader } from '@/components/shared/panel-header';
@@ -11,7 +11,6 @@ import { useSetupStore } from '@/store/setup-store';
 import { useIsTablet } from '@/hooks/use-media-query';
 import { AutoModeSettingsPopover } from './dialogs/auto-mode-settings-popover';
 import { WorktreeSettingsPopover } from './dialogs/worktree-settings-popover';
-import { PlanSettingsPopover } from './dialogs/plan-settings-popover';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { BoardSearchBar } from './board-search-bar';
 import { BoardControls } from './board-controls';
@@ -30,9 +29,6 @@ interface BoardHeaderProps {
   onConcurrencyChange: (value: number) => void;
   isAutoModeRunning: boolean;
   onAutoModeToggle: (enabled: boolean) => void;
-  onOpenPlanDialog: () => void;
-  hasPendingPlan?: boolean;
-  onOpenPendingPlan?: () => void;
   isMounted: boolean;
   // Search bar props
   searchQuery: string;
@@ -57,9 +53,6 @@ export function BoardHeader({
   onConcurrencyChange,
   isAutoModeRunning,
   onAutoModeToggle,
-  onOpenPlanDialog,
-  hasPendingPlan,
-  onOpenPendingPlan,
   isMounted,
   searchQuery,
   onSearchChange,
@@ -72,10 +65,6 @@ export function BoardHeader({
   const claudeAuthStatus = useSetupStore((state) => state.claudeAuthStatus);
   const skipVerificationInAutoMode = useAppStore((state) => state.skipVerificationInAutoMode);
   const setSkipVerificationInAutoMode = useAppStore((state) => state.setSkipVerificationInAutoMode);
-  const planUseSelectedWorktreeBranch = useAppStore((state) => state.planUseSelectedWorktreeBranch);
-  const setPlanUseSelectedWorktreeBranch = useAppStore(
-    (state) => state.setPlanUseSelectedWorktreeBranch
-  );
   const addFeatureUseSelectedWorktreeBranch = useAppStore(
     (state) => state.addFeatureUseSelectedWorktreeBranch
   );
@@ -189,8 +178,6 @@ export function BoardHeader({
                   onAutoModeToggle={onAutoModeToggle}
                   skipVerificationInAutoMode={skipVerificationInAutoMode}
                   onSkipVerificationChange={setSkipVerificationInAutoMode}
-                  onOpenPlanDialog={onOpenPlanDialog}
-                  showPlanButton={true}
                   showClaudeUsage={showClaudeUsage}
                   showCodexUsage={showCodexUsage}
                 />
@@ -250,33 +237,6 @@ export function BoardHeader({
                     maxConcurrency={maxConcurrency}
                     runningAgentsCount={runningAgentsCount}
                     onConcurrencyChange={onConcurrencyChange}
-                  />
-                </div>
-              )}
-
-              {/* Plan Button with Settings */}
-              {isMounted && !isTablet && (
-                <div className={controlContainerClass} data-testid="plan-button-container">
-                  {hasPendingPlan && (
-                    <button
-                      onClick={onOpenPendingPlan || onOpenPlanDialog}
-                      className="flex items-center gap-1.5 text-emerald-500 hover:text-emerald-400 transition-colors"
-                      data-testid="plan-review-button"
-                    >
-                      <ClipboardCheck className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={onOpenPlanDialog}
-                    className="flex items-center gap-1.5 hover:text-foreground transition-colors"
-                    data-testid="plan-backlog-button"
-                  >
-                    <Wand2 className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Plan</span>
-                  </button>
-                  <PlanSettingsPopover
-                    planUseSelectedWorktreeBranch={planUseSelectedWorktreeBranch}
-                    onPlanUseSelectedWorktreeBranchChange={setPlanUseSelectedWorktreeBranch}
                   />
                 </div>
               )}

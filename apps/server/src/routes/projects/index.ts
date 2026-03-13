@@ -28,6 +28,7 @@ import {
   createGetCeremonyTimelineHandler,
 } from './routes/ceremony-timeline.js';
 import { createLifecycleRoutes } from './lifecycle/index.js';
+import { createResearchHandler } from './lifecycle/research.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import { createProjectTools, toExpressRouter } from '@protolabsai/tools';
 import type { EventLedgerService } from '../../services/event-ledger-service.js';
@@ -96,6 +97,13 @@ export function createProjectsRoutes(
 
   // Mount lifecycle routes if service is available
   if (lifecycleService) {
+    // Research route registered before the lifecycle sub-router to ensure priority
+    router.post(
+      '/lifecycle/research',
+      validatePathParams('projectPath'),
+      validateSlugs('projectSlug'),
+      createResearchHandler(lifecycleService)
+    );
     router.use('/lifecycle', createLifecycleRoutes(lifecycleService, projectService, events));
   }
 

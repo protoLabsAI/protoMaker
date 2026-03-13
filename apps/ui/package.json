@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/app",
-  "version": "0.50.3",
+  "version": "0.51.0",
   "description": "An autonomous AI development studio that helps you build software faster using AI-powered agents",
   "homepage": "https://github.com/AutoMaker-Org/automaker",
   "repository": {
@@ -45,9 +45,9 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@automerge/prosemirror": "^0.2.0",
     "@ai-sdk/anthropic": "^3.0.45",
     "@ai-sdk/react": "^3.0.92",
+    "@automerge/prosemirror": "^0.2.0",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-javascript": "^6.2.4",
     "@codemirror/lang-json": "^6.0.2",
@@ -77,10 +77,10 @@
     "@fontsource/source-sans-3": "^5.2.9",
     "@fontsource/work-sans": "^5.2.8",
     "@lezer/highlight": "1.2.3",
-    "@protolabsai/dependency-resolver": "^0.50.3",
-    "@protolabsai/spec-parser": "^0.50.3",
-    "@protolabsai/types": "^0.50.3",
-    "@protolabsai/utils": "^0.50.3",
+    "@protolabsai/dependency-resolver": "^0.51.0",
+    "@protolabsai/spec-parser": "^0.51.0",
+    "@protolabsai/types": "^0.51.0",
+    "@protolabsai/utils": "^0.51.0",
     "@radix-ui/react-checkbox": "1.3.3",
     "@radix-ui/react-collapsible": "1.1.12",
     "@radix-ui/react-dialog": "1.1.15",
@@ -141,6 +141,7 @@
     "rehype-raw": "7.0.0",
     "sonner": "2.0.7",
     "tailwind-merge": "3.4.0",
+    "tiptap-markdown": "^0.9.0",
     "usehooks-ts": "3.1.1",
     "zod": "^4.3.6",
     "zustand": "5.0.9"
@@ -161,7 +162,7 @@
     "@electron/rebuild": "^4.0.3",
     "@eslint/js": "9.0.0",
     "@playwright/test": "1.57.0",
-    "@protolabsai/ui": "^0.50.3",
+    "@protolabsai/ui": "^0.51.0",
     "@storybook/addon-a11y": "^10.2.8",
     "@storybook/addon-docs": "^10.2.8",
     "@storybook/react-vite": "^10.2.8",

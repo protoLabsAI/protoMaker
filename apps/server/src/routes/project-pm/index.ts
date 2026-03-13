@@ -83,12 +83,6 @@ function buildPmSystemPrompt(opts: {
     status?: string;
     lead?: string;
     targetDate?: string;
-    cadence?: {
-      standupFrequency?: string;
-      retroFrequency?: string;
-      lastStandupAt?: string;
-      lastRetroAt?: string;
-    };
     prd?: {
       situation?: string;
       problem?: string;
@@ -179,58 +173,6 @@ function buildPmSystemPrompt(opts: {
     if (ceremonyStatus.lastRetro) parts.push(`**Last Retro:** ${ceremonyStatus.lastRetro}`);
     if (ceremonyStatus.standupCadence)
       parts.push(`**Standup Cadence:** ${ceremonyStatus.standupCadence}`);
-  }
-
-  // ── Ceremony cadence schedule ──────────────────────────────────────────────
-  if (project?.cadence) {
-    const cadence = project.cadence;
-    parts.push('', '## Ceremony Schedule');
-    parts.push(
-      `**Standup Frequency:** ${cadence.standupFrequency ?? 'daily'}`,
-      `**Retro Frequency:** ${cadence.retroFrequency ?? 'per-milestone'}`
-    );
-    if (cadence.lastStandupAt) {
-      parts.push(`**Last Standup:** ${cadence.lastStandupAt.slice(0, 10)}`);
-    }
-    if (cadence.lastRetroAt) {
-      parts.push(`**Last Retro:** ${cadence.lastRetroAt.slice(0, 10)}`);
-    }
-
-    // Compute next standup due date based on frequency
-    const standupFreq = cadence.standupFrequency ?? 'daily';
-    const lastStandupDate = cadence.lastStandupAt ? new Date(cadence.lastStandupAt) : null;
-    if (lastStandupDate) {
-      const nextStandup = new Date(lastStandupDate);
-      if (standupFreq === 'daily') {
-        nextStandup.setDate(nextStandup.getDate() + 1);
-      } else if (standupFreq === 'weekly') {
-        nextStandup.setDate(nextStandup.getDate() + 7);
-      }
-      if (standupFreq !== 'never') {
-        parts.push(`**Next Standup Due:** ${nextStandup.toISOString().slice(0, 10)}`);
-      }
-    } else if (standupFreq !== 'never') {
-      parts.push(`**Next Standup Due:** today (no standup on record)`);
-    }
-
-    // Compute next retro due date based on frequency
-    const retroFreq = cadence.retroFrequency ?? 'per-milestone';
-    const lastRetroDate = cadence.lastRetroAt ? new Date(cadence.lastRetroAt) : null;
-    if (retroFreq === 'weekly' || retroFreq === 'monthly') {
-      if (lastRetroDate) {
-        const nextRetro = new Date(lastRetroDate);
-        if (retroFreq === 'weekly') {
-          nextRetro.setDate(nextRetro.getDate() + 7);
-        } else {
-          nextRetro.setMonth(nextRetro.getMonth() + 1);
-        }
-        parts.push(`**Next Retro Due:** ${nextRetro.toISOString().slice(0, 10)}`);
-      } else {
-        parts.push(`**Next Retro Due:** as soon as possible (no retro on record)`);
-      }
-    } else if (retroFreq === 'per-milestone') {
-      parts.push(`**Next Retro Due:** at end of current milestone`);
-    }
   }
 
   // ── Active features (non-done, capped at 15) ────────────────────────────────
@@ -364,14 +306,6 @@ export function createProjectPmRoutes(
               status: project.status,
               lead: project.lead,
               targetDate: project.targetDate,
-              cadence: project.cadence
-                ? {
-                    standupFrequency: project.cadence.standupFrequency,
-                    retroFrequency: project.cadence.retroFrequency,
-                    lastStandupAt: project.cadence.lastStandupAt,
-                    lastRetroAt: project.cadence.lastRetroAt,
-                  }
-                : undefined,
               prd: project.prd
                 ? {
                     situation: project.prd.situation,

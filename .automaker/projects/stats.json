@@ -554,5 +554,21 @@
     "documentCount": 0,
     "createdAt": "2026-03-05T18:01:19.152Z",
     "deletedAt": "2026-03-09T15:05:20.709Z"
+  },
+  {
+    "slug": "test",
+    "title": "test",
+    "goal": "testing",
+    "status": "drafting",
+    "priority": "medium",
+    "milestoneCount": 0,
+    "phaseCount": 0,
+    "linkedPhaseCount": 0,
+    "featureCount": 0,
+    "updateCount": 0,
+    "linkCount": 0,
+    "documentCount": 0,
+    "createdAt": "2026-03-13T06:34:10.739Z",
+    "deletedAt": "2026-03-13T06:34:22.188Z"
   }
 ]

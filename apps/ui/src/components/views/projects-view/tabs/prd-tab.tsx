@@ -11,7 +11,13 @@ import Markdown from 'react-markdown';
 import { Button } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import type { Project } from '@protolabsai/types';
-import { useApprovePrd, useRequestChanges, useLaunchProject } from '../hooks/use-project';
+import {
+  useApprovePrd,
+  useRequestChanges,
+  useLaunchProject,
+  useProjectUpdate,
+} from '../hooks/use-project';
+import { InlineEditor } from '@/components/shared/inline-editor';
 
 const SPARC_SECTIONS = [
   { key: 'situation', label: 'Situation', color: 'text-[var(--status-info)]' },
@@ -26,11 +32,15 @@ function CollapsibleSection({
   color,
   content,
   defaultOpen = false,
+  onSave,
+  isSaving,
 }: {
   label: string;
   color: string;
   content: string;
   defaultOpen?: boolean;
+  onSave?: (html: string) => void;
+  isSaving?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -48,8 +58,20 @@ function CollapsibleSection({
         <h4 className={`text-xs font-semibold uppercase tracking-wider ${color}`}>{label}</h4>
       </button>
       {open && (
-        <div className="px-3 pb-3 prose prose-sm prose-invert max-w-none prose-p:text-foreground/90 prose-headings:text-foreground prose-li:text-foreground/90 prose-strong:text-foreground">
-          <Markdown>{content}</Markdown>
+        <div className="px-3 pb-3">
+          {onSave ? (
+            <InlineEditor
+              content={content}
+              onSave={onSave}
+              isSaving={isSaving}
+              placeholder={`Describe the ${label.toLowerCase()}...`}
+              className="prose prose-sm prose-invert max-w-none prose-p:text-foreground/90 prose-headings:text-foreground prose-li:text-foreground/90 prose-strong:text-foreground"
+            />
+          ) : (
+            <div className="prose prose-sm prose-invert max-w-none prose-p:text-foreground/90 prose-headings:text-foreground prose-li:text-foreground/90 prose-strong:text-foreground">
+              <Markdown>{content}</Markdown>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -220,6 +242,8 @@ function ApprovedActions({ projectSlug }: { projectSlug: string }) {
 }
 
 export function PrdTab({ project, projectSlug }: { project: Project; projectSlug: string }) {
+  const updateMutation = useProjectUpdate(projectSlug);
+
   if (!project.prd) {
     return (
       <div className="text-center py-12">
@@ -242,6 +266,13 @@ export function PrdTab({ project, projectSlug }: { project: Project; projectSlug
             color={color}
             content={content}
             defaultOpen={key === 'situation'}
+            isSaving={updateMutation.isPending}
+            onSave={(html) => {
+              updateMutation.mutate(
+                { prd: { ...project.prd, [key]: html } },
+                { onSuccess: () => toast.success(`${label} updated`) }
+              );
+            }}
           />
         );
       })}

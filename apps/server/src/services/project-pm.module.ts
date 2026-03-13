@@ -5,18 +5,32 @@
  *   project:lifecycle:launched  → auto-create PM session + append welcome message
  *   project:completed           → archive PM session
  *   feature:completed           → append system message to PM session
+ *
+ * Also registers:
+ *   ResearchAgent — deep project research on launch
  */
 
 import { createLogger } from '@protolabsai/utils';
 import type { ServiceContainer } from '../server/services.js';
+import { ResearchAgent } from './authority-agents/research-agent.js';
 
 const logger = createLogger('ProjectPMModule');
 
 type ProjectPmModuleDeps = Pick<ServiceContainer, 'events' | 'projectPmService'> &
-  Partial<Pick<ServiceContainer, 'projectService'>>;
+  Partial<Pick<ServiceContainer, 'projectService' | 'authorityService'>>;
 
 export async function register(services: ProjectPmModuleDeps): Promise<void> {
-  const { events, projectPmService, projectService } = services;
+  const { events, projectPmService, projectService, authorityService } = services;
+
+  // Register ResearchAgent alongside PM Agent
+  if (authorityService && projectService) {
+    const researchAgent = new ResearchAgent(events, authorityService, projectService);
+    logger.info('ResearchAgent registered');
+    // Expose for potential direct calls (e.g. from routes)
+    void researchAgent; // agent self-registers its event listener in constructor
+  } else {
+    logger.warn('ResearchAgent not registered: authorityService or projectService unavailable');
+  }
 
   events.on('project:lifecycle:launched', (payload) => {
     const { projectPath, projectSlug } = payload as {

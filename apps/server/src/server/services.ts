@@ -110,6 +110,7 @@ import { TodoService } from '../services/todo-service.js';
 import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
 import { CommandRegistryService } from '../services/command-registry-service.js';
 import { CheckpointService } from '../services/checkpoint-service.js';
+import { DailyStandupService } from '../services/daily-standup-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -224,6 +225,7 @@ export interface ServiceContainer {
   // Ceremonies
   ceremonyAuditLog: CeremonyAuditLogService;
   ceremonyService: CeremonyService;
+  dailyStandupService: DailyStandupService;
 
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
@@ -804,6 +806,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   );
   ceremonyService.setAuditLog(ceremonyAuditLog);
 
+  // Daily Standup Service — board-wide daily standup automation
+  const dailyStandupService = new DailyStandupService();
+
   // Initialize Completion Detector Service
   completionDetectorService.initialize(events, featureLoader, projectService, dataDir);
 
@@ -814,7 +819,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   issueCreationService.initialize();
 
   // Wire project-pm module event subscriptions (status sync)
-  await projectPmModule.register({ events, projectPmService, projectService });
+  await projectPmModule.register({ events, projectPmService, projectService, authorityService });
 
   return {
     dataDir,
@@ -876,6 +881,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectAssignmentService,
     ceremonyAuditLog,
     ceremonyService,
+    dailyStandupService,
     leadEngineerService,
     pipelineCheckpointService,
     factStoreService,

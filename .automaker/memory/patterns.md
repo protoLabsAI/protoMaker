@@ -5,11 +5,10 @@ relevantTo: [patterns]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 106
-  referenced: 23
-  successfulFeatures: 23
+  loaded: 112
+  referenced: 25
+  successfulFeatures: 25
 ---
-
 <!-- domain: Patterns & Best Practices | Reusable implementation patterns proven in this codebase -->
 
 # patterns
@@ -86,3 +85,9 @@ usageStats:
 - **Problem solved:** `CeremonyService` needs to know `DATA_DIR` to write ceremony state to the correct location, but `dataDir` is resolved from the service container context after construction.
 - **Why this works:** Follows the same setter injection pattern used for `setAutoModeService()` — construction and wiring are decoupled. `getCeremonyStatePath()` falls back to the old `.automaker/projects/{slug}/ceremony-state.json` path if `dataDir` is not set, preserving backward compatibility.
 - **Trade-offs:** Easy to forget calling `setDataDir()` after construction (silent fallback to old path). Consistent with established service wiring pattern in the codebase.
+
+
+#### [Pattern] Optional UI field (description) falls back to required API field (goal) for ideaDescription. Transformation: ideaDescription = description || goal. (2026-03-13)
+- **Problem solved:** Server's lifecycle/initiate endpoint requires non-empty ideaDescription. UI description field is optional.
+- **Why this works:** Pragmatic adaptation to incomplete API. Rather than mandate description, use goal as backup. Gracefully handles users who don't fill optional field.
+- **Trade-offs:** Gain: flexibility, matches form UX. Loss: ideaDescription quality degrades when using goal as fallback (less detailed).

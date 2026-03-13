@@ -1,5 +1,62 @@
 # @protolabsai/prompts
 
+## 0.51.0
+
+### Minor Changes
+
+- ### Features
+  - generate QA Checklist doc on project launch (#2419)
+  - generate QA Checklist doc on project launch (#2419)
+  - paper trail UI — grouped artifacts, markdown expand, download, filter dropdown (#2415)
+  - paper trail UI — ceremony labels, artifact links, decision/escalation filters (#2413)
+  - add research trigger UI to ResearchTab with 4-state rendering (#2412)
+  - enrich NewProjectDialog with description and research toggle (#2409)
+  - pm agent reads research.md before PRD generation (#2406)
+  - add POST /lifecycle/research route and lifecycle service method (#2404)
+  - ceremony automation milestone — ceremonies settings + UI toggle (#2401)
+  - add getResearchMdPath and getResearchArtifactDir helpers (#2399)
+  - paper trail UI — grouped artifacts, markdown expand, download, filter dropdown (#2415)
+  - paper trail UI — ceremony labels, artifact links, decision/escalation filters (#2413)
+  - add research trigger UI to ResearchTab with 4-state rendering (#2412)
+  - enrich NewProjectDialog with description and research toggle (#2409)
+  - pm agent reads research.md before PRD generation (#2406)
+  - add POST /lifecycle/research route and lifecycle service method (#2404)
+  - ceremony automation milestone — ceremonies settings + UI toggle (#2401)
+  - add getResearchMdPath and getResearchArtifactDir helpers (#2399)
+  - add InlineEditor component for click-to-edit fields
+
+  ### Bug Fixes
+  - copy non-TS assets into dist for Docker server build
+  - update Dockerfile server entrypoint for tsc project references output
+  - expose CRDT sync ports (4444/4445) in staging Docker compose
+  - deduplicate docs update feature spawning
+  - copy non-TS assets into dist for Docker server build
+  - update Dockerfile server entrypoint for tsc project references output
+  - expose CRDT sync ports (4444/4445) in staging Docker compose
+  - notification badges show unread count instead of pending count
+
+  ### Refactors
+  - use shared InlineEditor for Resources documents
+  - use shared InlineEditor for Resources documents
+  - use TipTap as inline editor for Resources documents
+  - use TipTap as inline editor for Resources documents
+  - Render markdown in Resources documents (#2423)
+  - Polish QA checklist output (#2420)
+  - Render markdown in Resources documents (#2423)
+  - Polish QA checklist output (#2420)
+  - Upgrade ResearchAgent with deep research patterns from open_deep_researc (#2416)
+  - Wire CeremonyService to ProjectArtifactService (#2407)
+  - Phase execution status sync from feature events (#2405)
+  - Upgrade ResearchAgent with deep research patterns from open_deep_researc (#2416)
+  - Wire CeremonyService to ProjectArtifactService (#2407)
+  - Phase execution status sync from feature events (#2405)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.51.0
+  - @protolabsai/utils@0.51.0
+
 ## 0.50.3
 
 ### Patch Changes

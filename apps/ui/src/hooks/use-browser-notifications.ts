@@ -18,14 +18,14 @@ const BASE_TITLE = 'protoLabs.studio';
  * Mount at app root to enable browser-level notification channels.
  */
 export function useBrowserNotifications() {
-  const pendingCount = useActionableItemsStore((s) => s.pendingCount);
+  const unreadCount = useActionableItemsStore((s) => s.unreadCount);
   const browserNotificationsEnabled = useAppStore((s) => s.browserNotificationsEnabled);
-  const previousPendingRef = useRef(pendingCount);
+  const previousUnreadRef = useRef(unreadCount);
 
-  // A. Title badge — always active
+  // A. Title badge — always active (shows unread count, not total pending)
   useEffect(() => {
-    if (pendingCount > 0) {
-      document.title = `(${pendingCount}) ${BASE_TITLE}`;
+    if (unreadCount > 0) {
+      document.title = `(${unreadCount}) ${BASE_TITLE}`;
     } else {
       document.title = BASE_TITLE;
     }
@@ -33,7 +33,7 @@ export function useBrowserNotifications() {
     return () => {
       document.title = BASE_TITLE;
     };
-  }, [pendingCount]);
+  }, [unreadCount]);
 
   // B. Web Notification API — opt-in
   useEffect(() => {
@@ -72,6 +72,6 @@ export function useBrowserNotifications() {
 
   // Track count changes for badge logic
   useEffect(() => {
-    previousPendingRef.current = pendingCount;
-  }, [pendingCount]);
+    previousUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 }

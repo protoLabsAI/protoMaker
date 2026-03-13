@@ -191,6 +191,9 @@ export type {
   TimelineEntryAuthor,
   TimelineEntry,
   ProjectTimelineFile,
+  ResearchStatus,
+  ResearchSource,
+  ResearchReport,
 } from './project.js';
 
 // Calendar types
@@ -380,6 +383,8 @@ export type {
   // Ava Channel reactor settings
   AvaChannelReactorSettings,
   SchedulerSettings,
+  // Ceremony settings
+  GlobalCeremoniesConfig,
 } from './settings.js';
 export {
   DEFAULT_KEYBOARD_SHORTCUTS,

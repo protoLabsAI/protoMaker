@@ -1400,9 +1400,6 @@ export function BoardView() {
             });
           }
         }}
-        onOpenPlanDialog={() => setShowPlanDialog(true)}
-        hasPendingPlan={Boolean(pendingBacklogPlan)}
-        onOpenPendingPlan={() => setShowPlanDialog(true)}
         isMounted={isMounted}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

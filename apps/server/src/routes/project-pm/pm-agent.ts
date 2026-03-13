@@ -37,12 +37,6 @@ function buildPmSystemPrompt(opts: {
     status?: string;
     lead?: string;
     targetDate?: string;
-    cadence?: {
-      standupFrequency?: string;
-      retroFrequency?: string;
-      lastStandupAt?: string;
-      lastRetroAt?: string;
-    };
     prd?: {
       situation?: string;
       problem?: string;
@@ -196,14 +190,6 @@ export async function queryPm(
           status: project.status,
           lead: project.lead,
           targetDate: project.targetDate,
-          cadence: project.cadence
-            ? {
-                standupFrequency: project.cadence.standupFrequency,
-                retroFrequency: project.cadence.retroFrequency,
-                lastStandupAt: project.cadence.lastStandupAt,
-                lastRetroAt: project.cadence.lastRetroAt,
-              }
-            : undefined,
           prd: project.prd
             ? {
                 situation: project.prd.situation,

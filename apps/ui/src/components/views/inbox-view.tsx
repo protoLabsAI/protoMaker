@@ -363,11 +363,12 @@ export function InboxView() {
     await api.actionableItems.dismiss(projectPath);
   }, [projectPath, dismissAll]);
 
-  // Pending counts per consolidated category for tab badges
-  const pendingCounts = useMemo(() => {
+  // Unread counts per consolidated category for tab badges
+  // Uses unread (pending + not yet read) so badges clear when items are read
+  const unreadCounts = useMemo(() => {
     const counts: Record<string, number> = { all: 0, decisions: 0, escalation: 0, ceremony: 0 };
     for (const item of items) {
-      if (item.status !== 'pending') continue;
+      if (item.status !== 'pending' || item.read) continue;
       counts.all++;
       if (DECISION_ACTION_TYPES.has(item.actionType)) {
         counts.decisions++;
@@ -396,9 +397,9 @@ export function InboxView() {
         icon={Inbox}
         title="Inbox"
         badge={
-          pendingCounts.all > 0 ? (
+          unreadCounts.all > 0 ? (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
-              {pendingCounts.all}
+              {unreadCounts.all}
             </span>
           ) : undefined
         }
@@ -432,7 +433,7 @@ export function InboxView() {
           >
             {tab.icon}
             {tab.label}
-            {(pendingCounts[tab.value] ?? 0) > 0 && (
+            {(unreadCounts[tab.value] ?? 0) > 0 && (
               <span
                 className={cn(
                   'ml-0.5 rounded-full px-1.5 py-0 text-[10px]',
@@ -441,7 +442,7 @@ export function InboxView() {
                     : 'bg-muted text-muted-foreground'
                 )}
               >
-                {pendingCounts[tab.value]}
+                {unreadCounts[tab.value]}
               </span>
             )}
           </button>

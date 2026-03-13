@@ -63,10 +63,111 @@ export class ProjectService {
     events?: EventEmitter
   ) {
     this._crdtEvents = events ?? null;
+
+    // Listen for feature status changes and mirror them onto the linked phase
+    if (events) {
+      events.on('feature:status-changed', (payload) => {
+        const { featureId, newStatus, projectPath } = payload;
+        if (!projectPath || !newStatus) return;
+        this._syncPhaseFromFeatureStatus(projectPath, featureId, newStatus).catch((err) =>
+          logger.warn(`Failed to sync phase execution status for feature ${featureId}:`, err)
+        );
+      });
+    }
   }
 
   setCalendarService(calendarService: CalendarService): void {
     this.calendarService = calendarService;
+  }
+
+  // ─── Feature status → phase execution status sync ──────────────────────────
+
+  /**
+   * Map a feature status to a phase executionStatus value.
+   * Returns null when the feature status has no ceremony-automation mapping.
+   */
+  private _mapFeatureStatusToPhaseExecution(
+    featureStatus: string
+  ): import('@protolabsai/types').Phase['executionStatus'] | null {
+    switch (featureStatus) {
+      case 'backlog':
+        return 'pending';
+      case 'in_progress':
+        return 'in-progress';
+      case 'review':
+        return 'in-review';
+      case 'done':
+        return 'completed';
+      case 'blocked':
+        return 'blocked';
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * Find the project phase linked to the given featureId and update its
+   * executionStatus to mirror the feature's new status. Writes project.json
+   * to disk and emits project:updated via CRDT sync.
+   *
+   * No-op when no phase has a matching featureId.
+   */
+  private async _syncPhaseFromFeatureStatus(
+    projectPath: string,
+    featureId: string,
+    featureStatus: string
+  ): Promise<void> {
+    const executionStatus = this._mapFeatureStatusToPhaseExecution(featureStatus);
+    if (!executionStatus) return;
+
+    const slugs = await this._listSlugsFromDisk(projectPath);
+
+    for (const slug of slugs) {
+      const project = await this.getProject(projectPath, slug);
+      if (!project) continue;
+
+      let found = false;
+      for (const milestone of project.milestones) {
+        for (const phase of milestone.phases) {
+          if (phase.featureId === featureId) {
+            phase.executionStatus = executionStatus;
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+
+      if (!found) continue;
+
+      project.updatedAt = new Date().toISOString();
+
+      // Write project.json to disk
+      const jsonPath = getProjectJsonPath(projectPath, slug);
+      await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
+
+      // Update CRDT doc and emit project:updated so peer instances see the update
+      if (this._isCrdtEnabled(projectPath)) {
+        const doc = await this._ensureDoc(projectPath);
+        const newDoc = Automerge.change(doc, (d) => {
+          (d.projects as Record<string, unknown>)[slug] = this._toAutomergeValue(project);
+        });
+        this._docs.set(projectPath, newDoc);
+        this._crdtEvents?.broadcast('project:updated', {
+          projectSlug: slug,
+          projectPath,
+          project,
+        });
+      }
+
+      logger.debug(
+        `Synced phase executionStatus for feature ${featureId}: ${featureStatus} → ${executionStatus} (project: ${slug})`
+      );
+      return; // phase found and updated — stop searching
+    }
+
+    // No phase linked to this featureId — no-op
+    logger.debug(`No phase linked to feature ${featureId} in ${projectPath}, skipping sync`);
   }
 
   // ─── CRDT helpers ──────────────────────────────────────────────────────────

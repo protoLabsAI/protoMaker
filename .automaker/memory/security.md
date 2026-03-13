@@ -175,3 +175,13 @@ usageStats:
 - **Rejected:** Hardcoded allowAllOrigins=true (security risk); environment variable (harder to audit feature dependencies)
 - **Trade-offs:** Gained: security boundary tied to product feature; lost: flexibility if CORS needed independent of hivemind
 - **Breaking if changed:** Removing feature flag coupling means CORS config must be maintained separately, risking desync where feature is enabled but CORS isn't
+
+#### [Gotcha] Type assertions in gatherBoardContext were removed in favor of trusting upstream types (e.g., changed from `(transitions[i] as { to?: string }).to` to `transitions[i].to`) (2026-03-13)
+- **Situation:** statusHistory array elements could be untyped or partially typed; defensive casting hid potential type definition gaps
+- **Root cause:** Cleaner code; but introduces assumption that statusHistory is properly typed elsewhere
+- **How to avoid:** Cleaner code maintenance; runtime errors if statusHistory typing is incomplete; easier to spot type bugs when they surface
+
+#### [Pattern] Conditional prompt inclusion to avoid poisoning empty/malformed research findings (2026-03-13)
+- **Problem solved:** Research findings conditionally appended to prompt: `${researchFindings ? ... : ''}`
+- **Why this works:** Prevents empty research section from appearing in prompt (cleaner output); silent failure on missing file avoids error cascading
+- **Trade-offs:** Optional becomes truly optional (graceful), but loses visibility into missing research; no feedback on file corruption

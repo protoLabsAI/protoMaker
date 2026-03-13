@@ -1,11 +1,13 @@
 import { Label } from '@protolabsai/ui/atoms';
 import { Switch } from '@protolabsai/ui/atoms';
-import { Code2, Flag, Network, RefreshCw, Server, X } from 'lucide-react';
+import { Calendar, Code2, Flag, Network, RefreshCw, Server, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore, type ServerLogLevel } from '@/store/app-store';
 import { toast } from 'sonner';
 import type { FeatureFlags, HivemindPeer } from '@protolabsai/types';
 import { useState } from 'react';
+import { useGlobalSettings } from '@/hooks/queries/use-settings';
+import { useUpdateGlobalSettings } from '@/hooks/mutations/use-settings-mutations';
 
 const LOG_LEVEL_OPTIONS: { value: ServerLogLevel; label: string; description: string }[] = [
   { value: 'error', label: 'Error', description: 'Only show error messages' },
@@ -476,6 +478,61 @@ export function DeveloperSection() {
             })}
           </div>
         </div>
+
+        {/* Ceremonies */}
+        <CeremoniesSection />
+      </div>
+    </div>
+  );
+}
+
+function CeremoniesSection() {
+  const { data: settings } = useGlobalSettings();
+  const updateSettings = useUpdateGlobalSettings({ showSuccessToast: false });
+
+  const dailyStandupEnabled = settings?.ceremonies?.dailyStandup?.enabled ?? false;
+
+  const handleDailyStandupToggle = (checked: boolean) => {
+    updateSettings.mutate(
+      {
+        ceremonies: {
+          dailyStandup: {
+            enabled: checked,
+            lastRunAt: settings?.ceremonies?.dailyStandup?.lastRunAt,
+          },
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(checked ? 'Daily standup enabled' : 'Daily standup disabled', {
+            description: 'Ceremony settings updated',
+          });
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="pt-4 border-t border-border/30 space-y-3">
+      <div className="flex items-center gap-2">
+        <Calendar className="w-4 h-4 text-muted-foreground" />
+        <Label className="text-foreground font-medium">Ceremonies</Label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Configure autonomous ceremony execution across all projects.
+      </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label className="text-sm text-foreground">Daily Standup</Label>
+          <p className="text-xs text-muted-foreground">
+            Automatically run daily standup ceremonies for active projects.
+          </p>
+        </div>
+        <Switch
+          checked={dailyStandupEnabled}
+          onCheckedChange={handleDailyStandupToggle}
+          disabled={updateSettings.isPending}
+        />
       </div>
     </div>
   );

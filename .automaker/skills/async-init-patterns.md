@@ -72,7 +72,7 @@ private async postStartupMessage(): Promise<void> {
 ## When to Use This Pattern
 
 - Any service method called during startup that depends on async initialization
-- Features that call external services (Discord, Linear, GitHub) during init
+- Features that call external services (Discord, GitHub) during init
 - Notification/message posting that's nice-to-have but not critical
 
 ## When NOT to Use

@@ -152,6 +152,28 @@ export function getResearchFilePath(projectPath: string, projectSlug: string): s
 }
 
 /**
+ * Get the research markdown file path
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param slug - Project slug
+ * @returns Absolute path to {projectPath}/.automaker/projects/{slug}/research.md
+ */
+export function getResearchMdPath(projectPath: string, slug: string): string {
+  return path.join(getProjectDir(projectPath, slug), 'research.md');
+}
+
+/**
+ * Get the research report artifact directory path
+ *
+ * @param projectPath - Absolute path to project directory
+ * @param slug - Project slug
+ * @returns Absolute path to {projectPath}/.automaker/projects/{slug}/artifacts/research-report/
+ */
+export function getResearchArtifactDir(projectPath: string, slug: string): string {
+  return path.join(getProjectDir(projectPath, slug), 'artifacts', 'research-report');
+}
+
+/**
  * Get the SPARC PRD file path
  *
  * @param projectPath - Absolute path to project directory

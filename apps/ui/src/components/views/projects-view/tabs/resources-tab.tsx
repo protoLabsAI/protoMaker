@@ -13,7 +13,6 @@ import {
   Button,
   Card,
   Input,
-  Textarea,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -27,6 +26,7 @@ import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
 import { toast } from 'sonner';
 import type { Project, ProjectLink } from '@protolabsai/types';
+import { InlineEditor } from '@/components/shared/inline-editor';
 
 interface DocEntry {
   id: string;
@@ -270,12 +270,15 @@ function DocumentsSection({
                       placeholder="Document title..."
                     />
                   </div>
-                  <div className="flex-1 overflow-y-auto p-3">
-                    <Textarea
-                      value={editContent}
-                      onChange={(e) => handleContentChange(e.target.value)}
-                      className="w-full h-full border-none shadow-none bg-transparent focus-visible:ring-0"
+                  <div className="flex-1 overflow-y-auto">
+                    <InlineEditor
+                      content={editContent}
+                      markdown
                       placeholder="Start writing..."
+                      className="min-h-[240px] text-sm"
+                      isSaving={updateDoc.isPending}
+                      onSave={handleContentChange}
+                      onChange={handleContentChange}
                     />
                   </div>
                 </>

@@ -12,6 +12,7 @@ import {
 import { HealthIndicator } from './health-indicator';
 import { getProjectStatusVariant } from '../lib/status-variants';
 import { useProjectUpdate } from '../hooks/use-project';
+import { InlineEditor } from '@/components/shared/inline-editor';
 import type { Project, ProjectHealth, ProjectPriority } from '@protolabsai/types';
 import { toast } from 'sonner';
 
@@ -121,14 +122,23 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
       className={`w-72 shrink-0 border-r border-border/40 overflow-y-auto px-4 py-4 space-y-4 ${isOpen ? 'block' : 'hidden'} md:block`}
     >
       {/* Goal */}
-      {project.goal && (
-        <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-            Goal
-          </h3>
-          <p className="text-sm text-foreground/90">{project.goal}</p>
-        </div>
-      )}
+      <div>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+          Goal
+        </h3>
+        <InlineEditor
+          content={project.goal || ''}
+          placeholder="Describe the project goal..."
+          className="text-sm text-foreground/90"
+          isSaving={updateMutation.isPending}
+          onSave={(html) => {
+            updateMutation.mutate(
+              { goal: html },
+              { onSuccess: () => toast.success('Goal updated') }
+            );
+          }}
+        />
+      </div>
 
       {/* Properties */}
       <div className="divide-y divide-border/20">

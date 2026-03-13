@@ -27,6 +27,7 @@ import type { CeremonyAuditLogService } from './ceremony-audit-service.js';
 import type { SchedulerService } from './scheduler-service.js';
 import { transition } from './ceremony-state-machine.js';
 import { projectArtifactService } from './project-artifact-service.js';
+import { projectTimelineService } from './project-timeline-service.js';
 import type { CalendarService } from './calendar-service.js';
 
 const logger = createLogger('CeremonyService');
@@ -579,6 +580,36 @@ export class CeremonyService {
         discordChannelId,
       });
       await flow.invoke({});
+
+      // Persist ceremony report artifact
+      void projectArtifactService
+        .saveArtifact(projectPath, projectSlug, 'ceremony-report', {
+          ceremonyType: 'standup',
+          milestoneSlug,
+          milestoneTitle,
+          milestoneNumber,
+          projectTitle,
+          completedAt: new Date().toISOString(),
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to save standup artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+
+      // Append timeline entry
+      void projectTimelineService
+        .appendEntry(projectPath, projectSlug, {
+          type: 'standup',
+          content: `Standup ceremony completed for milestone "${milestoneTitle}" (${projectTitle})`,
+          author: 'ava',
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to append standup timeline entry for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+
       this.auditLog?.record({
         id: correlationId,
         timestamp: new Date().toISOString(),
@@ -686,6 +717,19 @@ export class CeremonyService {
         .catch((err) => {
           logger.warn(
             `Failed to save milestone retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+
+      // Append timeline entry
+      void projectTimelineService
+        .appendEntry(projectPath, projectSlug, {
+          type: 'retro',
+          content: `Milestone retro completed for "${milestoneTitle}" (${projectTitle})`,
+          author: 'ava',
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to append milestone retro timeline entry for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
           );
         });
 
@@ -909,6 +953,19 @@ export class CeremonyService {
         .catch((err) => {
           logger.warn(
             `Failed to save project retro artifact for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
+          );
+        });
+
+      // Append timeline entry
+      void projectTimelineService
+        .appendEntry(projectPath, projectSlug, {
+          type: 'retro',
+          content: `Project retro completed for "${projectTitle}" (${payload.totalMilestones} milestones, ${payload.totalFeatures} features)`,
+          author: 'ava',
+        })
+        .catch((err) => {
+          logger.warn(
+            `Failed to append project retro timeline entry for ${projectSlug}: ${err instanceof Error ? err.message : String(err)}`
           );
         });
 

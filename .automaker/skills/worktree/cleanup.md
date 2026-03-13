@@ -100,7 +100,7 @@ done
 mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency: 1 })
 ```
 
-**Frank crew loop** handles worktree health monitoring every 10 minutes. Only intervene manually for worktrees with uncommitted critical changes.
+Worktree health monitoring is handled manually. Run `git worktree prune` periodically to remove stale entries, and use the checklist above before any removal.
 
 ---
 

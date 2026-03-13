@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { useAppStore } from '@/store/app-store';
 import { getHttpApiClient } from '@/lib/http-api-client';
+import { toast } from 'sonner';
 
 export function useProject(projectSlug: string | null) {
   const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
@@ -92,6 +94,65 @@ export function useLaunchProject(projectSlug: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+}
+
+export function useResearchTrigger(projectSlug: string) {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const api = getHttpApiClient();
+      return api.lifecycle.triggerResearch(projectPath, projectSlug);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-detail', projectPath, projectSlug] });
+    },
+  });
+
+  return {
+    trigger: mutation.mutate,
+    isPending: mutation.isPending,
+  };
+}
+
+export function useCreateProject() {
+  const projectPath = useAppStore((s) => s.currentProject?.path) ?? '';
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: async (data: {
+      title: string;
+      goal: string;
+      description?: string;
+      color?: string;
+      priority?: string;
+      researchOnCreate: boolean;
+    }) => {
+      const api = getHttpApiClient();
+      // Use description as ideaDescription; fall back to goal if not provided
+      const ideaDescription = data.description?.trim() || data.goal.trim();
+      return api.lifecycle.initiate(projectPath, data.title, ideaDescription);
+    },
+    onSuccess: (result, variables) => {
+      toast.success('Project created', {
+        description: `Created "${variables.title}"`,
+      });
+      if (variables.researchOnCreate) {
+        toast.info('Research started — findings will appear in the Research tab');
+      }
+      queryClient.invalidateQueries({ queryKey: ['projects-list', projectPath] });
+      if (result.localSlug) {
+        void navigate({ to: '/projects/$slug', params: { slug: result.localSlug } });
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(
+        `Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     },
   });
 }
