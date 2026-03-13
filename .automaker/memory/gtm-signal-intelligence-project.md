@@ -26,9 +26,11 @@ usageStats:
 - **Glyphkit**: glyphkit.design → glyphkit.protolabs.studio
 - **Google Workspace**: Setting up (protolabs.studio domain)
 
-## Linear Project
+## Linear Project (DEPRECATED)
 
-- URL: https://linear.app/protolabsai/project/gtm-signal-intelligence-and-content-operations-64cabf023337
+Linear was deprecated 2026-03-04. Project management for this workstream has moved to the in-app board. The Linear project below is archived and no longer active.
+
+- URL: https://linear.app/protolabsai/project/gtm-signal-intelligence-and-content-operations-64cabf023337 (archived)
 - ID: 76d33bc7-22d2-44d2-99ea-cc25a0797ad6
 - Issues: PRO-252 through PRO-257
 
@@ -45,10 +47,10 @@ Build signal monitoring and content operations infrastructure. Listen before we 
 
 - **Content creation pipeline**: 7-phase LangGraph flow, 3 antagonistic review gates, HITL, multi-format output
 - **Signal intake service**: Rule-based classifier, ops vs gtm routing, generic SignalPayload interface — EXTENSIBLE
-- **Monitor service pattern**: Discord, GitHub, Linear monitors all follow same polling pattern — TEMPLATE for social monitors
+- **Monitor service pattern**: Discord, GitHub monitors follow same polling pattern — TEMPLATE for social monitors (Linear monitor was removed with Linear deprecation)
 - **Discord as aggregation layer**: 20+ MCP tools, keyword detection, channel routing
 - **Event bus**: 347+ event types, GTM events already typed
-- **OAuth pattern**: Linear reference implementation — template for Google Workspace
+- **OAuth pattern**: GitHub OAuth is the reference implementation — template for Google Workspace (Linear OAuth no longer in use)
 - **Pipeline orchestrator**: Has explicit gtm branch with phase mapping
 
 ## Critical Gaps
@@ -62,7 +64,7 @@ Build signal monitoring and content operations infrastructure. Listen before we 
 
 ### 1. Signal Monitoring Infrastructure (PRIORITY)
 
-- SocialMonitor service following DiscordMonitor/GitHubMonitor/LinearMonitor pattern
+- SocialMonitor service following DiscordMonitor/GitHubMonitor pattern
 - Twitter/X: TwitterAPI.io (~$5/mo pay-as-you-go)
 - YouTube: Data API v3 (free, 10K units/day)
 - Substack: RSS feed polling (free)

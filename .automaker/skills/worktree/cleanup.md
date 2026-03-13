@@ -100,7 +100,7 @@ done
 mcp__plugin_protolabs_studio__start_auto_mode({ projectPath, maxConcurrency: 1 })
 ```
 
-**Frank crew loop** handles worktree health monitoring every 10 minutes. Only intervene manually for worktrees with uncommitted critical changes.
+Intervene manually for worktrees with uncommitted critical changes. No automated worktree health loop is active (crew loops removed 2026-03-04).
 
 ---
 

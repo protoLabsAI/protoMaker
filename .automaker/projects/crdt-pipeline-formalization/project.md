@@ -34,7 +34,7 @@ Features remain instance-local — this is a design decision, not a gap to fill,
 
 Eliminate all remnants of the abandoned feature-sync model. Remove dead methods, dead event types, dead config sections, and rename misleading type names. No behavior changes — purely subtractive.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -57,7 +57,7 @@ Two small additions that close real sync gaps without introducing new full CRDT 
 
 Add a NotesWorkspace CRDT domain following the todos pattern — one shared document per project containing all tabs with LWW-per-tab semantics. Multi-instance agents can read and write notes without last-write-wins data loss. Hydrate from existing workspace.json on first start.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
@@ -69,7 +69,7 @@ Add a NotesWorkspace CRDT domain following the todos pattern — one shared docu
 
 Fill identified test gaps for partition recovery, registry sync, and compaction. Upgrade all @automerge packages to latest 3.x for the 10x memory improvement and latest bug fixes.
 
-**Status:** pending
+**Status:** completed
 
 #### Phases
 
