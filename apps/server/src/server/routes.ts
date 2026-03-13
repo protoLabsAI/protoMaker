@@ -91,6 +91,7 @@ import { createLedgerRoutes } from '../routes/ledger/index.js';
 import { createAvaChannelRoutes } from '../routes/ava-channel/index.js';
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
+import { createAgentRoutes } from '../routes/agents.js';
 
 const logger = createLogger('Server:Routes');
 
@@ -439,6 +440,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   // DORA metrics routes (lead time, deployment frequency, change failure rate, recovery, rework)
   app.use('/api/dora', createDoraRoutes(services.doraMetricsService));
   logger.info('DORA metrics routes mounted at /api/dora');
+
+  // Agent manifest routes (list, get, match)
+  app.use('/api/agents', createAgentRoutes(featureLoader));
+  logger.info('Agent routes mounted at /api/agents');
 
   // Note: Sentry v8 automatically captures Express errors - no manual error handler needed
 }
