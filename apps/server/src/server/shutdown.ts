@@ -89,7 +89,15 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   await shutdownLangfuse();
   await shutdownOtel();
 
+  // Force exit after 5s if server.close() hangs (e.g. open WebSocket connections)
+  const forceExitTimeout = setTimeout(() => {
+    logger.warn('Graceful shutdown timed out after 5s, forcing exit');
+    process.exit(0);
+  }, 5_000);
+  forceExitTimeout.unref();
+
   server.close(() => {
+    clearTimeout(forceExitTimeout);
     logger.info('Server closed');
     process.exit(0);
   });
