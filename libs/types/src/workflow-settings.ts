@@ -149,13 +149,6 @@ export interface AgentConfig {
    * @default true
    */
   autoAssignEnabled?: boolean;
-  /**
-   * Additional manifest file paths to search for agent definitions, beyond
-   * the default `.automaker/agents/` directory. Paths are relative to the
-   * project root.
-   * @default []
-   */
-  manifestPaths?: string[];
 }
 
 // ============================================================================

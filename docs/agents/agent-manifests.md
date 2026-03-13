@@ -196,17 +196,15 @@ Configure agent behavior in `.automaker/settings.json`:
     "roleModelOverrides": {
       "react-specialist": { "model": "claude-opus-4-6" },
       "api-specialist": { "model": "claude-sonnet-4-6" }
-    },
-    "manifestPaths": [".automaker/agents/"]
+    }
   }
 }
 ```
 
-| Setting              | Default                  | Description                                               |
-| -------------------- | ------------------------ | --------------------------------------------------------- |
-| `autoAssignEnabled`  | `true`                   | Enable/disable match rule auto-assignment                 |
-| `roleModelOverrides` | `{}`                     | Per-role model overrides (settings-level, below manifest) |
-| `manifestPaths`      | `[".automaker/agents/"]` | Additional directories to search for manifests            |
+| Setting              | Default | Description                                               |
+| -------------------- | ------- | --------------------------------------------------------- |
+| `autoAssignEnabled`  | `true`  | Enable/disable match rule auto-assignment                 |
+| `roleModelOverrides` | `{}`    | Per-role model overrides (settings-level, below manifest) |
 
 ## API Reference
 
