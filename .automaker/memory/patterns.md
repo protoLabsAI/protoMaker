@@ -9,6 +9,7 @@ usageStats:
   referenced: 25
   successfulFeatures: 25
 ---
+
 <!-- domain: Patterns & Best Practices | Reusable implementation patterns proven in this codebase -->
 
 # patterns
@@ -86,8 +87,20 @@ usageStats:
 - **Why this works:** Follows the same setter injection pattern used for `setAutoModeService()` — construction and wiring are decoupled. `getCeremonyStatePath()` falls back to the old `.automaker/projects/{slug}/ceremony-state.json` path if `dataDir` is not set, preserving backward compatibility.
 - **Trade-offs:** Easy to forget calling `setDataDir()` after construction (silent fallback to old path). Consistent with established service wiring pattern in the codebase.
 
-
 #### [Pattern] Optional UI field (description) falls back to required API field (goal) for ideaDescription. Transformation: ideaDescription = description || goal. (2026-03-13)
+
 - **Problem solved:** Server's lifecycle/initiate endpoint requires non-empty ideaDescription. UI description field is optional.
 - **Why this works:** Pragmatic adaptation to incomplete API. Rather than mandate description, use goal as backup. Gracefully handles users who don't fill optional field.
 - **Trade-offs:** Gain: flexibility, matches form UX. Loss: ideaDescription quality degrades when using goal as fallback (less detailed).
+
+#### [Pattern] Single-inheritance role composition via `ProjectAgent.extends`: custom agents inherit all built-in role defaults (tools, maxTurns, capabilities) and override only what differs. (2026-03-13)
+
+- **Problem solved:** Projects want specialist variants of built-in roles (e.g., a React specialist that is a frontend-engineer but with custom prompt and different model).
+- **Why this works:** Builds on proven built-in role defaults; custom agents only declare what changes. Minimal config surface prevents configuration drift and reduces maintenance.
+- **Trade-offs:** Single inheritance (can only extend one built-in role) is simpler than mixins. If a custom agent needs capabilities from multiple roles, it must choose one primary and manually specify the rest in `capabilities` override.
+
+#### [Pattern] Config-map lookup replaces conditional chains for type-to-display-attribute mappings (icon, color, label). One object update adds a new type everywhere. (2026-03-13)
+
+- **Problem solved:** Adding a new artifact or ceremony type required changes in multiple UI component files (switch/if statements duplicated across icon picker, color selector, label renderer).
+- **Why this works:** Centralizing in a `ARTIFACT_CONFIG` or `CEREMONY_LABELS` object makes adding a new type a single-location change. Component code reduces to a lookup + fallback.
+- **Trade-offs:** Indirection (need to find the config object) vs. no scattered conditionals. Requires discipline to keep config object as the ONLY place where type-specific attributes live.

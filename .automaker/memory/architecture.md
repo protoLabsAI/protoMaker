@@ -738,3 +738,20 @@ usageStats:
 - **Rejected:** Per-channel CRDT isolation (complex infra change) vs. simple header field + filter (minimal, effective).
 - **Trade-offs:** Wire format bump breaks peers on old code (they lack projectName, events are rejected on both ends). Clean cutover is safe because all instances upgrade together.
 - **Breaking if changed:** Removing projectName from wire format re-introduces cross-project event contamination in multi-instance deployments. Removing the rejection filter causes foreign events to be applied locally, corrupting board state.
+
+### Agent manifest file system: project-level custom agents live in `.automaker/agents/` (default) with additional paths via `agentConfig.manifestPaths` (2026-03-13)
+
+- **Context:** Projects need to define custom agents that extend built-in roles without modifying platform code. `AgentManifest` (`.automaker/agents/*.yaml`) declares `ProjectAgent` entries that extend built-in roles via `extends` field.
+- **Why:** Plugin-based extensibility at the project level. Each project can define React specialists, domain experts, etc. built on top of the 8 `BUILT_IN_AGENT_ROLES` without any platform code changes. `AgentConfig.manifestPaths` in `WorkflowSettings` provides additional search locations.
+- **File format:** `{ version: string, agents: ProjectAgent[] }`. Each `ProjectAgent` has: `name`, `extends` (built-in role), `description`, optional `model`, `promptFile`, `capabilities` (partial override), and `match` rules (`categories`, `keywords`, `filePatterns`).
+- **Rejected:** Hardcoding custom agents in platform config (no per-project customization); requiring full role specification (high maintenance, duplicates built-in defaults).
+- **Trade-offs:** Runtime manifest loading (no compile-time validation of custom roles). YAML format is human-readable and PR-reviewable.
+- **Breaking if changed:** If default `.automaker/agents/` directory changes, all projects relying on default location silently lose their custom agents. `manifestPaths` fallback still applies.
+
+### `AgentMatchRules` triple-filter (categories + keywords + filePatterns): any match in any dimension triggers agent assignment (2026-03-13)
+
+- **Context:** Auto-assignment of features to specialist agents without manual tagging. Three independent filter types handle different feature description styles.
+- **Why:** Categories work for well-tagged features; keywords handle natural language descriptions; filePatterns match technical specs. OR logic (any match across all three) maximizes recall. Each filter type handles the cases others miss.
+- **Rejected:** AND logic (all must match) — too restrictive, most features only describe the problem in one dimension. Single filter type — misses descriptions that don't use that dimension.
+- **Trade-offs:** High recall risks false positives if match rules are too broad. Rule specificity requires tuning per project. Misconfigured rules silently route features to wrong specialists.
+- **Breaking if changed:** If match logic changes from OR to AND, most existing match configurations stop triggering. If any filter type is removed, projects relying on it for routing break silently.
