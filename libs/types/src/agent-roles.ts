@@ -5,9 +5,12 @@
  */
 
 /**
- * Agent role types
+ * Agent role type
  *
- * Each role has specific responsibilities in the development lifecycle:
+ * Extensible string type — allows both built-in roles and arbitrary project-defined roles.
+ * Use BUILT_IN_AGENT_ROLES for the canonical set of platform roles.
+ *
+ * Built-in roles and their responsibilities:
  * - product-manager: PRD creation, project orchestration, user communication
  * - engineering-manager: Feature breakdown, assignment, PR management, releases
  * - frontend-engineer: React, UI/UX implementation
@@ -15,16 +18,24 @@
  * - devops-engineer: CI/CD, infrastructure, deployment
  * - qa-engineer: Testing, PR review, quality assurance
  * - docs-engineer: Documentation, changelog generation
+ * - gtm-specialist: Content strategy, marketing, competitive research
  */
-export type AgentRole =
-  | 'product-manager'
-  | 'engineering-manager'
-  | 'frontend-engineer'
-  | 'backend-engineer'
-  | 'devops-engineer'
-  | 'qa-engineer'
-  | 'docs-engineer'
-  | 'gtm-specialist';
+export type AgentRole = string;
+
+/**
+ * The 8 built-in platform agent roles.
+ * Kept as a const array so callers can validate or enumerate the known roles.
+ */
+export const BUILT_IN_AGENT_ROLES = [
+  'product-manager',
+  'engineering-manager',
+  'frontend-engineer',
+  'backend-engineer',
+  'devops-engineer',
+  'qa-engineer',
+  'docs-engineer',
+  'gtm-specialist',
+] as const;
 
 /**
  * Agent task types
@@ -222,7 +233,7 @@ export interface RoleCapabilities {
 /**
  * Default role capabilities
  */
-export const ROLE_CAPABILITIES: Record<AgentRole, RoleCapabilities> = {
+export const ROLE_CAPABILITIES: Record<string, RoleCapabilities> = {
   'product-manager': {
     role: 'product-manager',
     tools: ['Read', 'Grep', 'Glob', 'WebSearch', 'WebFetch', 'Task'],

@@ -651,7 +651,11 @@ export type {
   WorkItem,
   RoleCapabilities,
 } from './agent-roles.js';
-export { ROLE_CAPABILITIES } from './agent-roles.js';
+export { BUILT_IN_AGENT_ROLES, ROLE_CAPABILITIES } from './agent-roles.js';
+
+// Agent manifest types (project-defined custom agents)
+export type { AgentMatchRules, ProjectAgent, AgentManifest } from './agent-manifest.js';
+export { DEFAULT_PROJECT_AGENT } from './agent-manifest.js';
 
 // Headsdown configuration types
 export type { HeadsdownLoopConfig, HeadsdownConfig, HeadsdownState } from './headsdown.js';
