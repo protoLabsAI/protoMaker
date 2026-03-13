@@ -10,6 +10,7 @@ import { getTerminalService } from '../services/terminal-service.js';
 import { shutdownLangfuse } from '../lib/langfuse-singleton.js';
 import { shutdownOtel } from '../lib/otel.js';
 import { getReactiveSpawnerService } from '../services/reactive-spawner-service.js';
+import { getAgentManifestService } from '../services/agent-manifest-service.js';
 
 const logger = createLogger('Server:Shutdown');
 
@@ -86,6 +87,12 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
     }
   }
   await crdtSyncService.shutdown();
+  // Dispose AgentManifestService fs.watch handles to prevent leaked watchers
+  try {
+    getAgentManifestService().dispose();
+  } catch (err) {
+    logger.warn('[SHUTDOWN] AgentManifestService dispose failed:', err);
+  }
   await shutdownLangfuse();
   await shutdownOtel();
 
