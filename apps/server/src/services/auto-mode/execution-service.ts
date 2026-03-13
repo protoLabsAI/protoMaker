@@ -1200,6 +1200,20 @@ export class ExecutionService {
           });
         }
       } else if (errorInfo.isAbort) {
+        // Release the in_progress status so the slot is freed and the auto loop can
+        // proceed.  When the agent is stopped by the user (or by an AbortError from
+        // an unexpected process exit), leaving the feature as in_progress would cause
+        // the scheduler to wait indefinitely for a status transition that never comes.
+        // Reset to 'backlog' so it can be retried; if it was never started (no work
+        // was committed) this is the safest fallback.
+        try {
+          await this.callbacks.updateFeatureStatus(projectPath, featureId, 'backlog');
+        } catch (statusError) {
+          logger.warn(
+            `[Abort] Failed to reset feature ${featureId} to backlog after abort:`,
+            statusError
+          );
+        }
         this.typedEventBus.emitAutoModeEvent('auto_mode_feature_complete', {
           featureId,
           featureName: feature?.title,
