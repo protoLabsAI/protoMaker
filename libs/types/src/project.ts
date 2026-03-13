@@ -127,8 +127,18 @@ export interface Phase {
   /** ISO timestamp when the phase was claimed */
   claimedAt?: string;
 
-  /** Execution status for mesh coordination */
-  executionStatus?: 'unclaimed' | 'claimed' | 'in_progress' | 'done' | 'failed';
+  /** Execution status for mesh coordination and ceremony automation */
+  executionStatus?:
+    | 'unclaimed'
+    | 'claimed'
+    | 'in_progress'
+    | 'done'
+    | 'failed'
+    | 'pending'
+    | 'in-progress'
+    | 'in-review'
+    | 'completed'
+    | 'blocked';
 
   /** PR URL created by the executing instance */
   prUrl?: string;
