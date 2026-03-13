@@ -25,6 +25,9 @@ const execFileAsync = promisify(execFile);
 
 const logger = createLogger('FeatureHealth');
 
+/** Maximum age for a concurrency lease before it is considered stale (45 minutes). */
+const STALE_LEASE_MAX_AGE_MS = 45 * 60 * 1000;
+
 export interface HealthIssue {
   type:
     | 'orphaned_epic_ref'
@@ -32,7 +35,8 @@ export interface HealthIssue {
     | 'stale_running'
     | 'stale_gate'
     | 'dangling_dependency'
-    | 'closed_pr_in_review';
+    | 'closed_pr_in_review'
+    | 'stale_lease';
   featureId: string;
   featureTitle: string;
   message: string;
@@ -74,6 +78,7 @@ export class FeatureHealthService {
     issues.push(...(await this.checkStaleRunning(features, projectPath)));
     issues.push(...this.checkStaleGates(features));
     issues.push(...(await this.checkClosedPRsInReview(features)));
+    issues.push(...this.checkStaleLeases());
 
     // Auto-fix if requested
     if (autoFix) {
@@ -274,6 +279,24 @@ export class FeatureHealthService {
       }
     }
     return issues;
+  }
+
+  /**
+   * Concurrency leases that have outlived their agents.
+   *
+   * If an agent process exits without releasing its lease (crash, OOM, etc.),
+   * the slot stays occupied indefinitely. This check releases leases older
+   * than STALE_LEASE_MAX_AGE_MS and reports them as auto-fixed issues.
+   */
+  private checkStaleLeases(): HealthIssue[] {
+    const released = this.autoModeService.releaseStaleLeases(STALE_LEASE_MAX_AGE_MS);
+    return released.map((featureId) => ({
+      type: 'stale_lease' as const,
+      featureId,
+      featureTitle: featureId,
+      message: `Concurrency lease for feature ${featureId} exceeded ${STALE_LEASE_MAX_AGE_MS / 60_000}min — forcefully released`,
+      autoFixable: false, // Already released inline; no further fix needed
+    }));
   }
 
   /**

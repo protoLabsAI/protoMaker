@@ -1348,6 +1348,15 @@ export class AutoModeService {
 
     running.abortController.abort();
 
+    // Reset feature status to backlog immediately so the board reflects reality.
+    // Without this, the feature stays in 'in_progress' for ~100 seconds until
+    // the health sweep catches the stale status.
+    try {
+      await this.updateFeatureStatus(running.projectPath, featureId, 'backlog');
+    } catch (err) {
+      logger.warn(`Failed to reset status for stopped feature ${featureId}: ${err}`);
+    }
+
     // Remove from running features immediately to allow resume
     // The abort signal will still propagate to stop any ongoing execution
     this.concurrencyManager.release(featureId);
@@ -3068,6 +3077,23 @@ Format your response as a structured markdown document.`;
       }
     }
     return Array.from(activeProjects);
+  }
+
+  /**
+   * Release concurrency leases older than `maxAgeMs`.
+   *
+   * Defence-in-depth: if an agent process exits without releasing its
+   * lease (crash, OOM, kill -9), the orphaned lease blocks a concurrency
+   * slot indefinitely. The health sweep calls this to reclaim them.
+   *
+   * @returns featureIds whose leases were forcefully released.
+   */
+  releaseStaleLeases(maxAgeMs: number): string[] {
+    const released = this.concurrencyManager.releaseStaleLeases(maxAgeMs);
+    if (released.length > 0) {
+      logger.warn(`Released ${released.length} stale concurrency lease(s): ${released.join(', ')}`);
+    }
+    return released;
   }
 
   /**

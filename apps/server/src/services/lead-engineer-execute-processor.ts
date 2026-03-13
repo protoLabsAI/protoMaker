@@ -1200,6 +1200,11 @@ export class ExecuteProcessor implements StateProcessor {
         safeResolve({ success: false, error: 'Execution timed out after 30 minutes' });
       }, EXECUTE_TIMEOUT_MS);
 
+      // Statuses that indicate the feature completed successfully (agent finished + PR created
+      // or feature moved to done). waitForCompletion must detect these via feature:status-changed
+      // because the git workflow moves features to 'review' without emitting feature:completed.
+      const SUCCESS_STATUSES = new Set(['review', 'done', 'verified']);
+
       // Subscribe to completion events for this feature (filter by both featureId and projectPath)
       unsubscribe = this.serviceContext.events.subscribe((type: EventType, payload: unknown) => {
         const p = payload as Record<string, unknown> | null;
@@ -1211,6 +1216,18 @@ export class ExecuteProcessor implements StateProcessor {
           if (!timedOut) {
             if (unsubscribe) unsubscribe();
             safeResolve({ success: true });
+          }
+        } else if (type === 'feature:status-changed') {
+          // Detect successful completion via status transition (e.g. agent finishes,
+          // git workflow moves feature to 'review'). Without this, the 30-minute
+          // timeout fires as a phantom error because feature:completed is never emitted.
+          const newStatus = p?.newStatus as string | undefined;
+          if (newStatus && SUCCESS_STATUSES.has(newStatus)) {
+            clearTimeout(timeout);
+            if (!timedOut) {
+              if (unsubscribe) unsubscribe();
+              safeResolve({ success: true });
+            }
           }
         } else if (type === 'feature:stopped') {
           clearTimeout(timeout);

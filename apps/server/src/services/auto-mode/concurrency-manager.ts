@@ -126,6 +126,28 @@ export class ConcurrencyManager {
   }
 
   /**
+   * Release all leases older than `maxAgeMs` milliseconds.
+   *
+   * Returns the featureIds of leases that were forcefully released.
+   * This is a defense-in-depth mechanism: if an agent exits without
+   * releasing its lease (crash, OOM, etc.), the health sweep can
+   * reclaim the orphaned concurrency slot.
+   */
+  releaseStaleLeases(maxAgeMs: number): string[] {
+    const now = Date.now();
+    const released: string[] = [];
+
+    for (const [featureId, lease] of this.leases) {
+      if (now - lease.startTime > maxAgeMs) {
+        this.leases.delete(featureId);
+        released.push(featureId);
+      }
+    }
+
+    return released;
+  }
+
+  /**
    * Count the number of features currently running in a specific worktree.
    *
    * - When `branchName` is `null` (main worktree / auto-loop context): counts
