@@ -2,9 +2,9 @@
 
 Formalize the instance-local feature model, eliminate dead code from the abandoned feature-sync era, extend CRDT sync to cover notes and categories, and close test coverage gaps — producing a clean, well-documented CRDT architecture where features are definitively local and all shared state syncs via Automerge.
 
-**Status:** active
+**Status:** completed
 **Created:** 2026-03-12T16:48:26.033Z
-**Updated:** 2026-03-12T18:25:53.953Z
+**Updated:** 2026-03-13T01:47:12.555Z
 
 ## PRD
 
