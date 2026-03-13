@@ -1,5 +1,20 @@
 # @protolabsai/platform
 
+## 0.50.2
+
+### Patch Changes
+
+- ### Bug Fixes
+  - prevent orphaned concurrency slots from blocking auto-mode (#2388)
+  - prevent orphaned concurrency slots from blocking auto-mode (#2388)
+
+  ### Refactors
+  - fix: auto-mode concurrency slots locked by orphaned in_progress features (#2386)
+  - fix: auto-mode concurrency slots locked by orphaned in_progress features (#2386)
+
+- Updated dependencies
+  - @protolabsai/types@0.50.2
+
 ## 0.50.1
 
 ### Patch Changes

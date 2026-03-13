@@ -1348,6 +1348,15 @@ export class AutoModeService {
 
     running.abortController.abort();
 
+    // Reset feature status to backlog immediately so the board reflects reality.
+    // Without this, the feature stays in 'in_progress' for ~100 seconds until
+    // the health sweep catches the stale status.
+    try {
+      await this.updateFeatureStatus(running.projectPath, featureId, 'backlog');
+    } catch (err) {
+      logger.warn(`Failed to reset status for stopped feature ${featureId}: ${err}`);
+    }
+
     // Remove from running features immediately to allow resume
     // The abort signal will still propagate to stop any ongoing execution
     this.concurrencyManager.release(featureId);
@@ -3071,6 +3080,23 @@ Format your response as a structured markdown document.`;
   }
 
   /**
+   * Release concurrency leases older than `maxAgeMs`.
+   *
+   * Defence-in-depth: if an agent process exits without releasing its
+   * lease (crash, OOM, kill -9), the orphaned lease blocks a concurrency
+   * slot indefinitely. The health sweep calls this to reclaim them.
+   *
+   * @returns featureIds whose leases were forcefully released.
+   */
+  releaseStaleLeases(maxAgeMs: number): string[] {
+    const released = this.concurrencyManager.releaseStaleLeases(maxAgeMs);
+    if (released.length > 0) {
+      logger.warn(`Released ${released.length} stale concurrency lease(s): ${released.join(', ')}`);
+    }
+    return released;
+  }
+
+  /**
    * Get detailed info about all running agents
    */
   async getRunningAgents(): Promise<
@@ -4052,13 +4078,15 @@ You can use the Read tool to view these images at any time during implementation
                 `Found interrupted feature: ${feature.id} (${feature.title}) - status: ${feature.status}`
               );
             } catch {
-              // No context file — still include interrupted features (they get started fresh)
-              if (feature.status === 'interrupted') {
-                interruptedFeatures.push(feature);
-                logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
-              } else {
-                logger.info(`Interrupted feature ${feature.id} has no context, will restart fresh`);
-              }
+              // No context file — include all interrupted/in_progress features so they
+              // are either resumed (if context materialises later) or restarted fresh.
+              // Previously, in_progress features without agent-output.md were silently
+              // skipped, leaving them stuck as in_progress forever and blocking the
+              // auto-loop capacity check (hasInProgressFeatures).
+              interruptedFeatures.push(feature);
+              logger.info(
+                `Feature ${feature.id} (${feature.status}) has no context file, will restart fresh`
+              );
             }
           }
         }
