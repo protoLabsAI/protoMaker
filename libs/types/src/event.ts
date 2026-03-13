@@ -344,7 +344,9 @@ export type EventType =
   // Project failover events (auto-claim of orphaned projects)
   | 'project:failover'
   // Categories sync events (lightweight LWW config sync via CRDT bridge)
-  | 'categories:updated';
+  | 'categories:updated'
+  // Research agent events (deep research pipeline)
+  | 'project:research:completed';
 
 export type EventCallback = (type: EventType, payload: unknown) => void;
 
