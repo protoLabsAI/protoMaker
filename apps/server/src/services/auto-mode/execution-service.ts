@@ -1636,6 +1636,56 @@ export class ExecutionService {
     // Get customized prompts from settings
     const prompts = await getPromptCustomization(this.settingsService, '[AutoMode]');
 
+    // Auto-assign agent role via manifest match rules BEFORE prompt building
+    // so that pipeline steps get the role prompt and model override.
+    const pipelineWorkflowSettings = await getWorkflowSettings(
+      projectPath,
+      this.settingsService,
+      '[AutoMode]'
+    );
+    if (
+      !feature.assignedRole &&
+      pipelineWorkflowSettings.agentConfig?.autoAssignEnabled !== false
+    ) {
+      try {
+        const agentManifestService = getAgentManifestService();
+        const matched = await agentManifestService.matchFeature(projectPath, {
+          category: feature.category,
+          title: feature.title ?? '',
+          description: feature.description,
+          filesToModify: feature.filesToModify,
+        });
+        if (matched) {
+          const assignedRole = matched.name as import('@protolabsai/types').AgentRole;
+          const routingSuggestion = {
+            role: assignedRole,
+            confidence: 1.0,
+            reasoning: `Auto-assigned via manifest match rule (agent: ${matched.name})`,
+            autoAssigned: true,
+            suggestedAt: new Date().toISOString(),
+          };
+          feature = {
+            ...feature,
+            assignedRole,
+            routingSuggestion,
+          };
+          await this.featureLoader.update(projectPath, featureId, {
+            assignedRole,
+            routingSuggestion,
+          });
+          logger.info(
+            `Auto-assigned role "${assignedRole}" to feature ${featureId} via manifest match (pipeline path)`
+          );
+        }
+      } catch (matchError) {
+        // Non-fatal: log and proceed with default execution
+        logger.warn(
+          `Match rule auto-assign failed for feature ${featureId} (pipeline path):`,
+          matchError
+        );
+      }
+    }
+
     // Load context files once with feature context for smart memory selection
     const contextResult = await loadContextFiles({
       projectPath,
