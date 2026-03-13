@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/crdt",
-  "version": "0.42.7",
+  "version": "0.42.8",
   "type": "module",
   "description": "CRDT document store wrapping Automerge + automerge-repo for AutoMaker",
   "main": "dist/index.js",
@@ -33,7 +33,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.49.0",
+    "@protolabsai/types": "^0.50.0",
     "@automerge/automerge": "^3.2.4",
     "@automerge/automerge-repo": "^2.5.3",
     "@automerge/automerge-repo-network-websocket": "^2.5.3",

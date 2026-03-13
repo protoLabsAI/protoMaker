@@ -1,5 +1,41 @@
 # @protolabsai/dependency-resolver
 
+## 0.50.0
+
+### Minor Changes
+
+- ### Features
+  - add discord reaction endpoint and conditional discord loading (#2362)
+  - add discord reaction endpoint and conditional discord loading (#2362)
+  - add discord reaction endpoint and conditional discord loading (#2362)
+  - add discord reaction endpoint and conditional discord loading (#2362)
+
+  ### Bug Fixes
+  - harden release pipeline — auto-sync, version gate, skip alert
+  - harden release pipeline — auto-sync, version gate, skip alert
+
+  ### Refactors
+  - Decompose CI skills (#2377)
+  - Decompose worktree skills (#2376)
+  - Add trigger descriptions to remaining skills (#2375)
+  - Decompose monorepo-patterns (#2374)
+  - Skill overlap audit (#2372)
+  - Decompose CI skills (#2377)
+  - Decompose worktree skills (#2376)
+  - Decompose CI skills (#2377)
+  - Decompose worktree skills (#2376)
+  - Add trigger descriptions to remaining skills (#2375)
+  - Decompose monorepo-patterns (#2374)
+  - Skill overlap audit (#2372)
+  - Remove twitch integration
+  - Remove twitch integration
+  - Remove twitch integration
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.50.0
+
 ## 0.49.0
 
 ### Minor Changes

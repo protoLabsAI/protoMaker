@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/pen-parser",
-  "version": "0.42.7",
+  "version": "0.42.8",
   "type": "module",
   "description": "PEN file parser for Penpot design files",
   "main": "dist/index.js",
@@ -32,7 +32,7 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.49.0"
+    "@protolabsai/types": "^0.50.0"
   },
   "devDependencies": {
     "@types/node": "22.19.3",
