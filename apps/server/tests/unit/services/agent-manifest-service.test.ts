@@ -16,6 +16,7 @@ import os from 'node:os';
 import {
   AgentManifestService,
   getAgentManifestService,
+  WATCH_POLL_INTERVAL_MS,
 } from '../../../src/services/agent-manifest-service.js';
 
 // ─── Mock logger ──────────────────────────────────────────────────────────────
@@ -281,6 +282,49 @@ agents:
       const second = await service.getAgentsForProject(tmpDir);
       expect(second!.agents).toHaveLength(2);
     });
+
+    it('invalidates cache when manifest file changes on disk (polling watcher)', async () => {
+      // This test verifies that the polling watcher correctly triggers cache
+      // invalidation when the file changes — the behavior that was broken by
+      // fs.watch({ recursive: true }) being a no-op on Linux.
+      //
+      // Strategy: use vi.useFakeTimers to advance the poll interval without
+      // waiting for real wall-clock time, making the test fast and deterministic.
+      vi.useFakeTimers();
+      try {
+        writeYaml(tmpDir, '.automaker/agents.yml', FRONTEND_AGENT_YAML);
+
+        // Warm the cache and start the polling watcher
+        const first = await service.getAgentsForProject(tmpDir);
+        expect(first!.agents).toHaveLength(1);
+
+        // Overwrite the manifest with a second agent
+        writeYaml(
+          tmpDir,
+          '.automaker/agents.yml',
+          `
+version: "1"
+agents:
+  - name: react-specialist
+    extends: frontend-engineer
+    description: First
+  - name: vue-specialist
+    extends: frontend-engineer
+    description: Second
+`
+        );
+
+        // Advance time past the poll interval so the setInterval fires
+        vi.advanceTimersByTime(WATCH_POLL_INTERVAL_MS + 100);
+
+        // Cache should now be invalidated; next load reads updated file
+        vi.useRealTimers();
+        const second = await service.getAgentsForProject(tmpDir);
+        expect(second!.agents).toHaveLength(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   // ── matchFeature: scoring rules ───────────────────────────────────────────
@@ -324,14 +368,15 @@ agents:
         title: 'Update the UI',
         category: 'frontend',
       });
-      expect(result?.name).toBe('react-specialist');
+      expect(result?.agent.name).toBe('react-specialist');
+      expect(result?.confidence).toBeGreaterThan(0);
     });
 
     it('matches agent by keyword in title', async () => {
       const result = await service.matchFeature(tmpDir, {
         title: 'Build react component for settings',
       });
-      expect(result?.name).toBe('react-specialist');
+      expect(result?.agent.name).toBe('react-specialist');
     });
 
     it('matches agent by keyword in description', async () => {
@@ -339,7 +384,7 @@ agents:
         title: 'New feature',
         description: 'Add a new endpoint for user data',
       });
-      expect(result?.name).toBe('api-specialist');
+      expect(result?.agent.name).toBe('api-specialist');
     });
 
     it('matches agent by filePatterns', async () => {
@@ -347,18 +392,21 @@ agents:
         title: 'Add settings panel',
         filesToModify: ['apps/ui/src/components/SettingsPanel.tsx'],
       });
-      expect(result?.name).toBe('react-specialist');
+      expect(result?.agent.name).toBe('react-specialist');
     });
 
     it('returns highest-scoring agent when multiple match', async () => {
-      // frontend agent: category=frontend (+10), keyword=react (+5), file=tsx (+3) = 18
+      // frontend agent: category=frontend (+10), keyword=react (+5), keyword=component (+5),
+      //                 file=*.tsx (+3) = 23 total
       // backend agent: no match
       const result = await service.matchFeature(tmpDir, {
         title: 'Build react component',
         category: 'frontend',
         filesToModify: ['apps/ui/src/components/MyComp.tsx'],
       });
-      expect(result?.name).toBe('react-specialist');
+      expect(result?.agent.name).toBe('react-specialist');
+      // confidence = 23 / (23 + 10) = 23/33 ≈ 0.697
+      expect(result?.confidence).toBeCloseTo(0.697, 2);
     });
 
     it('returns null when no agents match', async () => {
@@ -386,12 +434,12 @@ agents:
         title: 'Some task',
         category: 'FRONTEND',
       });
-      expect(categoryResult?.name).toBe('react-specialist');
+      expect(categoryResult?.agent.name).toBe('react-specialist');
 
       const keywordResult = await service.matchFeature(tmpDir, {
         title: 'Build REACT Component',
       });
-      expect(keywordResult?.name).toBe('react-specialist');
+      expect(keywordResult?.agent.name).toBe('react-specialist');
     });
   });
 
