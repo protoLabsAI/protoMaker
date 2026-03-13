@@ -5,7 +5,6 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -29,6 +28,6 @@
       "@protolabsai/utils": ["../../libs/utils/src/index.ts"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../.automaker/skills/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -55,3 +55,7 @@ Before the final commit, review each step in the plan and check:
 - Any PR that replaces one system with another (old removed + new added)
 
 Single-file changes and bug fixes do not need this checklist.
+
+## Related Context Rules
+
+- **Phase Restructuring Conflicts** (`phase-restructuring-conflicts.md`): When reviewing plans that restructure files across phases, check for modify/delete conflict patterns. Applies at plan design time, before any code is written.
