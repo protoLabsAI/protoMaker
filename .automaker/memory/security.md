@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 77
-  referenced: 21
-  successfulFeatures: 21
+  loaded: 79
+  referenced: 23
+  successfulFeatures: 23
 ---
 <!-- domain: Security | Auth guards, input validation, secure file operations, HMAC verification -->
 

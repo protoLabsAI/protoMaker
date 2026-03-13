@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 459
-  referenced: 79
-  successfulFeatures: 79
+  loaded: 464
+  referenced: 83
+  successfulFeatures: 83
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -693,3 +693,75 @@ usageStats:
 - **Rejected:** Single filter state (requires parent to manage local UI state); no supported-types gate (leaks invalid types into UI)
 - **Trade-offs:** Slightly more code (two separate filters), but each dimension is independently controllable. Harder to reason about if not documented.
 - **Breaking if changed:** Removing SUPPORTED gate allows invalid types into the component; removing typeFilter state removes user control
+
+#### [Gotcha] Record<T, V> behavior changes fundamentally when T shifts from a union type to a string type. With union ('a'|'b'|'c'), Record creates an object with exactly those keys enforced by TypeScript. With string, Record<string, V> accepts any string key and loses static key enforcement. (2026-03-13)
+- **Situation:** When AgentRole changed from union (8 literal strings) to string, ROLE_CAPABILITIES had to change from Record<AgentRole, RoleCapabilities> to Record<string, RoleCapabilities>. Attempting Record<AgentRole, V> with AgentRole=string would compile but provides no type safety.
+- **Root cause:** Record is a mapped type that respects its key parameter. String keys are infinitely large; unions are finite. TypeScript correctly models this distinction, and failing to update Record definitions can silently lose type safety.
+- **How to avoid:** Simpler record definition in code, but lost compile-time key enforcement. Must now rely on BUILT_IN_AGENT_ROLES.includes() for validation.
+
+### Shifted from closed type-system validation (union type enforces valid roles at compile-time) to open type-system + runtime validation (string type + BUILT_IN_AGENT_ROLES const array). (2026-03-13)
+- **Context:** Had two options: (1) keep AgentRole as union, add separate ProjectAgent.extends field with custom roles, OR (2) make AgentRole itself open as string and store built-ins in a const. Chose option 2.
+- **Why:** Option 2 unifies the role namespace — built-in and custom roles are the same type. Allows arbitrary project-defined roles without code or type changes. Enables role discovery via BUILT_IN_AGENT_ROLES constant. Makes role matching logic simpler (one code path for all roles).
+- **Rejected:** Option 1 (keep union, separate custom type) preserves static type safety but creates two role namespaces, complicates matching logic, and requires code changes when adding built-in roles.
+- **Trade-offs:** Gained: extensibility without code changes, unified role namespace, runtime role discovery. Lost: compile-time exhaustiveness checking, TypeScript error messages when typos occur in role strings.
+- **Breaking if changed:** Code relying on TypeScript to prevent invalid role assignments (via union exhaustion) will no longer get compile errors. This is mitigated by adding BUILT_IN_AGENT_ROLES.includes() checks, but requires discipline.
+
+#### [Pattern] Backward compatibility through type hierarchy: changing a type from a closed union ('a'|'b'|'c') to its open supertype (string) is assignment-compatible. Existing consumers passing one of the 8 literal strings continue to typecheck without modification. (2026-03-13)
+- **Problem solved:** When AgentRole type expanded from union of 8 strings to any string, all existing code that assigned the literal strings ('frontend-engineer', etc.) remained valid without recompilation.
+- **Why this works:** In TypeScript's type system, string is a supertype of any union of string literals. Any value assignable to the narrower type is assignable to the wider type. This allows gradual API expansion without breaking existing code.
+- **Trade-offs:** Easier migration path and zero churn for existing code. Downside: developers new to the codebase may not realize roles are now open and might assume only 8 are valid.
+
+#### [Pattern] Separating extensibility (open string type) from built-in enumeration (BUILT_IN_AGENT_ROLES const) creates two sources of truth that require manual synchronization. This shifts validation from compile-time to runtime. (2026-03-13)
+- **Problem solved:** The 8 original roles now live in both the type system (implicitly, via existing code) and the BUILT_IN_AGENT_ROLES array. Custom roles can be added to BUILT_IN_AGENT_ROLES or entirely outside it.
+- **Why this works:** This pattern enables discovery: code can iterate BUILT_IN_AGENT_ROLES to enumerate known roles without relying on TypeScript reflection. It also enables role registration at runtime (loading roles from config files). Pure type unions cannot be reflected at runtime.
+- **Trade-offs:** Gained: runtime discovery, dynamic role loading, manifest-based extensibility. Lost: single source of truth, compile-time validation that BUILT_IN_AGENT_ROLES stays in sync with actual usage.
+
+#### [Pattern] Undefined defaults over explicit defaults in DEFAULT_WORKFLOW_SETTINGS constant (2026-03-13)
+- **Problem solved:** AgentConfig field added to WorkflowSettings as optional, but DEFAULT_WORKFLOW_SETTINGS intentionally omits agentConfig (undefined = use defaults)
+- **Why this works:** Keeps default object minimal and explicit about which fields have special default behavior, avoids redundancy between type JSDoc and runtime constant
+- **Trade-offs:** Consuming code must implement default logic (less boilerplate in constant, more code at consumption point); unclear whether undefined or explicit defaults were intended
+
+#### [Pattern] Three orthogonal configuration concerns (roleModelOverrides, autoAssignEnabled, manifestPaths) grouped into single AgentConfig interface (2026-03-13)
+- **Problem solved:** Per-project agent behavior has multiple independent dimensions: which models, whether to use assignment, where to load definitions
+- **Why this works:** Cohesive configuration unit — all three relate to agent behavior per-project, avoids scattering across WorkflowSettings
+- **Trade-offs:** Clear conceptual boundary; but makes it harder to change one field without touching the others
+
+#### [Pattern] Event enrichment via optional fields on single type (TimelineEvent with ceremonyLabel?, artifactUrl?) rather than discriminated union or subtype (2026-03-13)
+- **Problem solved:** Need to add ceremony-specific metadata to timeline events without fragmenting event type system
+- **Why this works:** Avoids discriminated union complexity; single type remains extensible for future enrichment without exploding subtype count
+- **Trade-offs:** TimelineEvent loses semantic purity (less type safety on which fields apply when), UI must handle optional fields, but eliminates complexity in event type system
+
+### IssueCreationService + GitHubIssueChannel now create in-app board features instead of GitHub issues (2026-03-13)
+- **Context:** Work routing was creating items as GitHub issues when they should be tracked on the in-app board (aligned with 2026-03-04 board-as-SSoT decision)
+- **Why:** Enforces single source of truth on the app's own board; eliminates bi-directional sync complexity and inconsistency between GitHub and in-app state
+- **Rejected:** Continuing to route work to GitHub issues would contradict the core architectural decision that the board is the authoritative project management system
+- **Trade-offs:** GitHub becomes read-only for issues; team loses GitHub issue notifications (but gains unified board interface). Eliminates sync logic complexity
+- **Breaking if changed:** Reverting to GitHub issue creation violates the board-as-SSoT decision and reintroduces multi-system state management
+
+### CRDT wire format: add projectName field and reject foreign events to prevent cross-project event contamination (2026-03-13)
+- **Context:** CRDT synced events from rabbit-hole.io to automaker board because events lacked project scoping in wire format
+- **Why:** Project name acts as a scope key in the wire format; validation rejects events from mismatched projects at the sync boundary, preventing data leakage
+- **Rejected:** Assuming project context was implicit or would be preserved through the sync layer; skipping validation on event source
+- **Trade-offs:** Adds projectName field to wire format and validation logic; prevents a class of hard-to-debug cross-contamination bugs
+- **Breaking if changed:** Removing projectName validation allows events to leak across projects; removing the field makes it impossible to implement project-scoped filtering
+
+### Plugin-based agent extensibility via ProjectAgent.extends: custom agents inherit all built-in role defaults (tools, maxTurns, capabilities) and override only what differs, rather than requiring full role specification or hardcoding in platform config. (2026-03-13)
+- **Context:** Projects need specialist variants of built-in roles (e.g., React-focused frontend-engineer) without platform code changes or duplicating built-in role configuration.
+- **Why:** Single-inheritance model builds on proven defaults and minimizes configuration surface. Per-project customization via .automaker/agents/ avoids hardcoded platform bloat. manifestPaths override adds flexibility for non-default locations.
+- **Rejected:** Hardcoding custom agents in platform config (eliminates per-project customization), requiring full role specification (high maintenance and duplication of built-in defaults), mixin-style multiple inheritance (adds complexity when single primary role is clearer).
+- **Trade-offs:** Gain: low-maintenance custom agents, clear inheritance chain. Loss: single inheritance means agents needing capabilities from multiple roles must choose primary and manually override others.
+- **Breaking if changed:** If default .automaker/agents/ directory changes or is removed, all projects silently lose custom agents even with manifestPaths fallback. Projects expecting default location are vulnerable to silent configuration loss.
+
+### AgentMatchRules uses OR logic across three independent filter dimensions (categories + keywords + filePatterns): any match in any dimension triggers agent assignment. (2026-03-13)
+- **Context:** Auto-assign features to specialist agents without manual tagging. Different feature descriptions use different styles—some are well-categorized, others use natural language, others reference technical specs.
+- **Why:** OR logic maximizes recall because each filter type handles cases others miss. Categories work for tagged features, keywords for natural language, filePatterns for technical specs. Three independent dimensions ensure no description style is overlooked.
+- **Rejected:** AND logic (all must match) too restrictive—most features describe the problem in only one dimension. Single filter type—misses descriptions that don't use that dimension.
+- **Trade-offs:** Gain: high recall, catches diverse feature descriptions. Loss: high recall risks false positives if match rules are too broad. Requires per-project tuning and careful rule specificity.
+- **Breaking if changed:** If match logic changes from OR to AND, most existing match configurations stop triggering entirely. If any filter type is removed, projects relying on it for routing break silently without error.
+
+### Agent manifests use YAML format with runtime loading rather than compile-time type validation in platform code. (2026-03-13)
+- **Context:** Projects define custom agents via .automaker/agents/manifest.yml files. Need balance between human-readability (for PR review) and type safety.
+- **Why:** YAML is human-readable and PR-reviewable by non-developers. Runtime loading preserves flexibility for projects to define agents without platform rebuild. No compile-time validation needed for customization patterns.
+- **Rejected:** Inline TypeScript config (less human-readable), compile-time validation (requires platform code changes for each new project agent).
+- **Trade-offs:** Gain: human-readable, flexible, PR-reviewable. Loss: no compile-time validation of custom role extensions—misconfigured agents silently fail at runtime.
+- **Breaking if changed:** If manifest file format (version, structure) changes, projects with old manifests fail silently or load with unexpected behavior. No migration path without runtime version checking.

@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 499
-  referenced: 123
-  successfulFeatures: 123
+  loaded: 502
+  referenced: 125
+  successfulFeatures: 125
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -198,3 +198,25 @@ usageStats:
 - **Problem solved:** Need to add ceremony-specific metadata (labels, artifact URLs) to timeline events without fragmenting event type system.
 - **Why this works:** Single TimelineEvent type for all timeline entries. Optional fields make it extensible for future enrichment without creating subtype explosion.
 - **Trade-offs:** TimelineEvent becomes less semantically pure but more pragmatic. UI must handle optional fields, but avoids discriminated union complexity.
+
+### roleModelOverrides uses Record<string, PhaseModelEntry> instead of enum-based or tuple-array approach (2026-03-13)
+- **Context:** Need to map arbitrary role names to model configurations without pre-defining all valid roles
+- **Why:** Maximum flexibility: allows custom roles defined by users without modifying the type definition; PhaseModelEntry is reusable across different contexts
+- **Rejected:** Enum-based role names (type-safe but rigid), tuple array of {role, model} pairs (more structured but less ergonomic)
+- **Trade-offs:** Gains runtime extensibility and developer freedom; loses compile-time validation of role names (typos not caught until runtime)
+- **Breaking if changed:** If role name validation is added later (e.g., via a validator function), type would need to become a union or narrowed type
+
+#### [Gotcha] JSDoc @default documentation specifies defaults for autoAssignEnabled and manifestPaths, but these are not enforced in code (field is optional) (2026-03-13)
+- **Situation:** autoAssignEnabled has @default true in JSDoc but is genuinely optional on the interface
+- **Root cause:** Documentation-as-contract: tells developers the intended default without forcing it into DEFAULT_WORKFLOW_SETTINGS, which would be redundant
+- **How to avoid:** Clear intent via JSDoc; but defaults are now split between documentation and application code, increasing chance of divergence
+
+#### [Gotcha] HITL formId must be the full UUID (e.g., 'hitl-abc12345-...'), never truncated or reformatted (2026-03-13)
+- **Situation:** Form responses were lost because form polling used truncated formId instead of full UUID returned by request_user_input
+- **Root cause:** Form registry is keyed by full UUID; truncated IDs silently fail to match, causing get_form_response() to return 'pending' indefinitely with no error signal
+- **How to avoid:** Full UUID is longer to pass around, but provides exact key matching with no ambiguity
+
+#### [Gotcha] Use broadcast() not emit() when events must cross server→client WebSocket boundary; emit() is server-process-local only (2026-03-13)
+- **Situation:** HITL and feature status events were emitted with emit() inside tool handlers; UI never received them because they stayed within Node.js process
+- **Root cause:** EventEmitter.emit() dispatches to in-process listeners only; broadcast() serializes over WebSocket to all UI clients. Same method names, completely different scopes — trivial to pick the wrong one
+- **How to avoid:** broadcast() requires serialization overhead; emit() is faster but only works for same-process consumers

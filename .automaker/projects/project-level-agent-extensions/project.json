@@ -49,7 +49,7 @@
           "featureId": "feature-1773426322472-ihp92miv5"
         }
       ],
-      "status": "pending",
+      "status": "completed",
       "epicId": "feature-1773426322467-htb5m3530"
     },
     {
@@ -212,5 +212,5 @@
     ]
   },
   "createdAt": "2026-03-13T18:25:10.033Z",
-  "updatedAt": "2026-03-13T18:25:22.520Z"
+  "updatedAt": "2026-03-13T18:32:20.305Z"
 }

@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 91
-  referenced: 27
-  successfulFeatures: 27
+  loaded: 93
+  referenced: 29
+  successfulFeatures: 29
 ---
 <!-- domain: Testing Patterns | Unit test patterns, integration test strategies, test isolation -->
 
@@ -144,3 +144,13 @@ usageStats:
 - **Situation:** Attempted to verify dialog functionality with Playwright. Tests reused main repo dev server instead of worktree code.
 - **Root cause:** Dev server configured with fixed paths (main repo). Worktrees are isolated git copies but share same dev server infrastructure.
 - **How to avoid:** Gain: single dev server reduces resource overhead. Loss: can't test worktree changes in isolation without running separate server or static analysis.
+
+#### [Gotcha] Server build must explicitly copy .md asset files — TypeScript compiler only copies .ts source files, ignoring all other file types (2026-03-13)
+- **Situation:** Staging deploy broke when .md files were added to apps/server/src/; endpoints reading those files returned 404 because tsc didn't copy them to dist/
+- **Root cause:** tsc only compiles .ts → .js; non-TS assets must be copied separately. Dev mode works (tsx reads source directly) but production breaks silently
+- **How to avoid:** Explicit copy step adds build complexity; omitting it causes hidden failures only visible in staging/production
+
+#### [Pattern] Use waitForDocumentReady() helper in CRDT tests to await Automerge document initialization before asserting state (2026-03-13)
+- **Problem solved:** CRDT tests were flaky because assertions ran before Automerge document fully initialized and synced after creation
+- **Why this works:** await alone cannot guarantee async Automerge initialization completion; polling provides deterministic synchronization point that eliminates race conditions
+- **Trade-offs:** Small additional async overhead per test, but eliminates non-deterministic CI failures that made the suite unreliable

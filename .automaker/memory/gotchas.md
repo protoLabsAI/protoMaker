@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1422
-  referenced: 337
-  successfulFeatures: 337
+  loaded: 1427
+  referenced: 341
+  successfulFeatures: 341
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -931,3 +931,8 @@ usageStats:
 - **Situation:** gtm-signal-intelligence-project.md in the worktree was already more up-to-date (Linear marked DEPRECATED, monitor/OAuth pattern updated) than main repo version. Discover this via read operations, not assumptions.
 - **Root cause:** Previous agent had already made updates in the worktree but those haven't been merged back to main yet. This reveals the workflow: agents work in feature branches/worktrees, and state diverges until merge.
 - **How to avoid:** Agents must always check worktree state before deciding what edits to make; adds a verification step but prevents duplicate work
+
+#### [Gotcha] Worktree file path vs main repo path: initial edit targeted main repo, had to correct to worktree path (2026-03-13)
+- **Situation:** During feature development, both /Users/kj/dev/automaker/ and .worktrees/ paths exist, making it easy to edit the wrong location
+- **Root cause:** Muscle memory targeting the standard project path; worktree paths are less familiar
+- **How to avoid:** Explicit worktree path prevents accidental commits to wrong branch; requires extra awareness
