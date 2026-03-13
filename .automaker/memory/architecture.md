@@ -89,17 +89,16 @@ usageStats:
 - **Why:** Hardcoded prompt resolution is simpler and avoids the complexity of a dynamic registry. All roles have statically-defined prompts in `libs/prompts/src/agents/`. Adding a new role requires code changes across `libs/types`, `libs/prompts`, and `apps/server/src/services/agent-discord-router.ts`.
 - **Breaking if changed:** If a new role is added to `AgentRole` union without wiring a prompt function, the router throws at runtime — no silent fallback.
 
-### Fire-and-forget async agent spawning via void IIFE pattern in event handler (2026-02-12)
+### Fire-and-forget async agent spawning via void IIFE pattern in event handler (2026-02-12) [ARCHIVED — crew loops removed 2026-03-04]
 
-- **Context:** Need to spawn Frank agent on critical health events without blocking event loop.
-- **Why:** Event handlers must return quickly. `void (async () => {})()` allows non-blocking spawn with error isolation.
-- **Breaking if changed:** If changed to await, event loop blocks during Frank initialization (5-10s), health checks queue up, metrics become stale, critical events can be missed.
+- **Context (Historical):** Previously spawned Frank agent on critical health events without blocking the event loop. Frank cron schedules are no longer active.
+- **Why the pattern works:** Event handlers must return quickly. `void (async () => {})()` allows non-blocking async work with error isolation. Still applicable for any fire-and-forget async event handler work.
+- **Note:** If auto-spawned diagnostic agents are re-introduced, ensure they don't await in the event handler.
 
-### In-memory cooldown timestamp for Frank spawn throttling (not persistent state) (2026-02-12)
+### In-memory cooldown timestamp for async agent spawn throttling (2026-02-12) [ARCHIVED — crew loops removed 2026-03-04]
 
-- **Context:** Prevent spawn storms when critical health persists for hours.
-- **Why:** In-memory is sufficient because Frank is diagnostic-only; cooldown resets on server restart (when issues often resolve); no cross-session tracking needed.
-- **Breaking if changed:** If cooldown is removed, rapid critical events spawn Frank every 5 minutes — spawn storms can worsen cascading failures.
+- **Context (Historical):** Previously used to prevent Frank spawn storms when critical health events persisted for hours. No longer active.
+- **Why the pattern works:** In-memory cooldown avoids external state dependencies; resets naturally on server restart. Applicable for any auto-triggered async operation that needs rate-limiting.
 
 ### Dual ESM/CJS builds with separate tsconfig files and output directories (2026-02-13)
 
