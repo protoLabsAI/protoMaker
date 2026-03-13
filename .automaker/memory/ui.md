@@ -42,3 +42,20 @@ usageStats:
 - **Situation:** Multiple keyboard handlers (navigation, selection, closing) need to coordinate between textarea and dropdown. Interception can't happen in dropdown alone.
 - **Root cause:** Textarea is the focus target, so keyboard events bubble from there. ChatInput owns the keyboard context and must intercept first. Handlers then call hookResult methods (select, navigate) back through the interface.
 - **How to avoid:** Keyboard logic lives in ChatInput even though it's for dropdown—couples them slightly. Alternative (dropdown owned state) would require ChatInput to be uncontrolled dropdown parent. Current approach simpler.
+
+#### [Pattern] Graceful degradation: Badge shows `ceremonyLabel` when present, falls back to `config.label` for events without ceremony-specific labeling. (2026-03-13)
+- **Problem solved:** Not all ceremony events might have ceremony-specific labels; some might be generic config labels.
+- **Why this works:** Handles incomplete data gracefully. Allows gradual adoption of ceremony labeling without requiring migration of all events.
+- **Trade-offs:** UI logic simpler with optional data; badge always has a label even if not ceremony-specific.
+
+### Use config object (ARTIFACT_CONFIG) to map artifact type → icon, color, label; enable per-type customization without conditional branches (2026-03-13)
+- **Context:** Five artifact types (Standup, Ceremony Report, Changelog, Escalation, Research Report) each need distinct icon, visual color, and display label. Risk: adding new types requires code changes in multiple places.
+- **Why:** Centralized configuration reduces conditional logic in components. Adding a new type requires only one change (ARTIFACT_CONFIG). Config lookup is O(1), scales without performance impact.
+- **Rejected:** Inline icon selection with switch/if statements in ArtifactGroup (scatters type logic across components); hardcoded styling (loses visual hierarchy)
+- **Trade-offs:** More indirection (lookup table vs inline), but significantly cleaner component code. Requires discipline to update config when adding types.
+- **Breaking if changed:** Removing config fallback (DEFAULT_ARTIFACT_CONFIG) breaks graceful handling of unknown types
+
+#### [Pattern] Implement feature with graceful degradation: download button works with real content or metadata fallback, not blocked by upstream enrichment (2026-03-13)
+- **Problem solved:** Download-as-markdown feature is valuable immediately even though parent hasn't fetched real ceremony report content yet. Without fallback, feature would be useless until parent implements enrichment.
+- **Why this works:** Keeps feature partially useful during development of parent enrichment. Reduces coordination friction: artifact viewer can ship standalone; parent can add content enrichment independently.
+- **Trade-offs:** Download provides metadata instead of full report initially (lower value), but unblocks user-facing feature. Creates technical debt: metadata-based downloads become harder to remove later if UX wants them deprecated.

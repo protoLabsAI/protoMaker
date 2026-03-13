@@ -221,3 +221,11 @@ usageStats:
 - **Problem solved:** Disk workspace.json may exist in older format from before NoteTab/NotesWorkspaceDocument schema was formalized
 - **Why this works:** Allows gradual schema evolution without hard migrations. Old disk files are automatically uplifted to new format on read. No script-based data transformation needed.
 - **Trade-offs:** Easier evolution vs. schema divergence: old disk files may differ from current schema, hidden behind normalizer. Bugs in normalization logic silently corrupt data.
+
+
+### Persist lastRunAt via SettingsService.updateGlobalSettings() deep-merge on ceremonies.dailyStandup.lastRunAt, rather than direct state mutation or separate DB write (2026-03-13)
+- **Context:** Need to record when standup last ran, but avoid losing concurrent updates to GlobalSettings; settings is already deep-merged elsewhere
+- **Why:** Maintains immutability of GlobalSettings; uses existing settings update mechanism; deep-merge prevents overwriting sibling config values
+- **Rejected:** Direct mutation of service state would be lost on restart; separate DB table fragments settings into multiple places; raw writes might overwrite concurrent updates
+- **Trade-offs:** Safer (respects concurrent updates); slower (full settings fetch → merge → write); couples ceremony state to GlobalSettings schema
+- **Breaking if changed:** If SettingsService.updateGlobalSettings() behavior changes (no longer deep-merges), concurrent updates to other settings will be lost

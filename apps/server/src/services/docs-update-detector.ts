@@ -75,6 +75,37 @@ export class DocsUpdateDetector {
         return;
       }
 
+      // Dedup: skip if an active docs update feature already exists for this context
+      const existing = await this.featureLoader.getAll(projectPath);
+      const activeDocsFeature = existing.find(
+        (f) =>
+          f.category === 'Documentation' &&
+          f.title?.startsWith('Update docs after:') &&
+          f.status !== 'done'
+      );
+      if (activeDocsFeature) {
+        logger.debug(
+          `Skipping docs update for "${context}" — active feature ${activeDocsFeature.id} already exists (status: ${activeDocsFeature.status})`
+        );
+        return;
+      }
+
+      // Also skip if a docs update feature was completed recently (within last hour)
+      const recentlyCompleted = existing.find(
+        (f) =>
+          f.category === 'Documentation' &&
+          f.title?.startsWith('Update docs after:') &&
+          f.status === 'done' &&
+          f.completedAt &&
+          Date.now() - new Date(f.completedAt).getTime() < 60 * 60 * 1000
+      );
+      if (recentlyCompleted) {
+        logger.debug(
+          `Skipping docs update for "${context}" — feature ${recentlyCompleted.id} completed recently`
+        );
+        return;
+      }
+
       // Create a docs update feature
       const feature = await this.featureLoader.create(projectPath, {
         title: `Update docs after: ${context}`,

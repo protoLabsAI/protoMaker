@@ -5,9 +5,9 @@ relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 308
-  referenced: 13
-  successfulFeatures: 13
+  loaded: 313
+  referenced: 16
+  successfulFeatures: 16
 ---
 <!-- domain: Content Pipeline | Validation patterns for content processing pipelines -->
 

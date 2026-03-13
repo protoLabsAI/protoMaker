@@ -5,11 +5,10 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 90
+  loaded: 91
   referenced: 27
   successfulFeatures: 27
 ---
-
 <!-- domain: Testing Patterns | Unit test patterns, integration test strategies, test isolation -->
 
 # testing
@@ -139,3 +138,9 @@ usageStats:
 - **Problem solved:** Route code needed verification that categories:updated events are broadcast correctly and files persist
 - **Why this works:** Mock events.broadcast() to verify correct event signatures; real Express server to verify HTTP behavior and file I/O together without stubbing filesystem
 - **Trade-offs:** Gained confidence in integration between routes and events; test setup more complex than pure unit tests
+
+
+#### [Gotcha] Playwright tests can't run against worktree code because dev server serves main repo, not worktree branch. Test infrastructure doesn't support per-worktree dev servers. (2026-03-13)
+- **Situation:** Attempted to verify dialog functionality with Playwright. Tests reused main repo dev server instead of worktree code.
+- **Root cause:** Dev server configured with fixed paths (main repo). Worktrees are isolated git copies but share same dev server infrastructure.
+- **How to avoid:** Gain: single dev server reduces resource overhead. Loss: can't test worktree changes in isolation without running separate server or static analysis.
