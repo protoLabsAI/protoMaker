@@ -11,7 +11,7 @@
  *   - getAgentsForProject: Cached lookup with fs.watch-based invalidation
  *   - getAgent: Lookup a specific agent by name
  *   - getResolvedCapabilities: Merge project overrides onto base ROLE_CAPABILITIES
- *   - matchFeature: Run all match rules and return the best-matching agent
+ *   - matchFeature: Run all match rules and return the best-matching agent + normalized confidence
  */
 
 import path from 'path';
@@ -31,6 +31,21 @@ export interface MatchableFeature {
   title: string;
   description?: string;
   filesToModify?: string[];
+}
+
+/**
+ * Result returned by matchFeature: the best-matching agent plus a
+ * normalized confidence score in [0, 1) derived from the raw match score.
+ *
+ * Confidence uses a diminishing-returns formula: rawScore / (rawScore + 10)
+ *   rawScore=5  → ~0.33  (weak match, e.g. single keyword)
+ *   rawScore=10 → ~0.50  (moderate, e.g. one category hit)
+ *   rawScore=20 → ~0.67  (good, e.g. category + several keywords)
+ *   rawScore=30 → ~0.75  (strong, multiple signal types)
+ */
+export interface MatchResult {
+  agent: ProjectAgent;
+  confidence: number;
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -154,14 +169,17 @@ export class AgentManifestService {
 
   /**
    * Scores all project agents' match rules against the given feature and returns
-   * the highest-scoring agent, or null if no agents match (score > 0).
+   * the highest-scoring agent with a normalized confidence, or null if no agents
+   * match (score > 0).
    *
    * Scoring:
    *   - Category match: +10 per matched category
    *   - Keyword match:  +5 per matched keyword (title + description)
    *   - File pattern:   +3 per (file × pattern) match via minimatch
+   *
+   * Confidence is normalized via diminishing-returns: rawScore / (rawScore + 10)
    */
-  async matchFeature(projectPath: string, feature: MatchableFeature): Promise<ProjectAgent | null> {
+  async matchFeature(projectPath: string, feature: MatchableFeature): Promise<MatchResult | null> {
     const manifest = await this.getAgentsForProject(projectPath);
     if (!manifest || manifest.agents.length === 0) return null;
 
@@ -176,7 +194,12 @@ export class AgentManifestService {
       }
     }
 
-    return bestMatch;
+    if (!bestMatch) return null;
+
+    return {
+      agent: bestMatch,
+      confidence: this._normalizeScore(bestScore),
+    };
   }
 
   /**
@@ -302,6 +325,18 @@ export class AgentManifestService {
       if (typeof obj['version'] === 'number') return String(obj['version']);
     }
     return '1';
+  }
+
+  /**
+   * Normalizes a raw match score to a [0, 1) confidence value using a
+   * diminishing-returns formula: rawScore / (rawScore + 10).
+   *
+   * This ensures low-score matches produce low confidence (< 0.5) while
+   * high-score matches approach — but never reach — 1.0.
+   */
+  private _normalizeScore(rawScore: number): number {
+    if (rawScore <= 0) return 0;
+    return rawScore / (rawScore + 10);
   }
 
   private _scoreMatch(agent: ProjectAgent, feature: MatchableFeature): number {
