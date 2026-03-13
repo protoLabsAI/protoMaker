@@ -35,7 +35,9 @@ export class ProjectSlugResolver {
       // Read project directories — each sub-directory is a project slug
       let entries: import('fs').Dirent[];
       try {
-        entries = (await secureFs.readdir(projectsDir, { withFileTypes: true })) as import('fs').Dirent[];
+        entries = (await secureFs.readdir(projectsDir, {
+          withFileTypes: true,
+        })) as import('fs').Dirent[];
       } catch {
         // Projects directory doesn't exist yet — no projects
         logger.debug(`Projects directory not found at ${projectsDir}`);
