@@ -162,9 +162,7 @@ export function ProjectProgressWizard({ project, onTabChange }: ProjectProgressW
         <p className="text-xs text-muted-foreground">{config.description}</p>
       </div>
       {config.cta && (
-        <div className="shrink-0 flex items-center">
-          {config.cta({ project, onTabChange })}
-        </div>
+        <div className="shrink-0 flex items-center">{config.cta({ project, onTabChange })}</div>
       )}
     </div>
   );
