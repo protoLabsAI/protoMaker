@@ -201,6 +201,13 @@ export class ProjectLifecycleService {
       throw new Error('No features in backlog. Approve the PRD first to create features.');
     }
 
+    // Generate QA checklist doc (best-effort — never fails the launch)
+    try {
+      await this.generateQaDoc(projectPath, projectSlug, project);
+    } catch (err) {
+      logger.warn(`[ProjectLifecycle] Failed to generate QA doc for ${projectSlug}:`, err);
+    }
+
     // Start auto-mode
     let autoModeStarted = false;
     try {
@@ -372,6 +379,68 @@ Search the codebase for relevant patterns and integration points, then research 
         .updateProject(projectPath, projectSlug, { researchStatus: 'failed' })
         .catch(() => {});
     }
+  }
+
+  /**
+   * Generate a QA Checklist document from milestone/phase acceptance criteria.
+   * Idempotent: skips creation if a doc titled 'QA Checklist' already exists.
+   */
+  private async generateQaDoc(
+    projectPath: string,
+    projectSlug: string,
+    project: Project
+  ): Promise<void> {
+    // Idempotency check — skip if already exists
+    const docsFile = await this.projectService.listDocs(projectPath, projectSlug);
+    const alreadyExists = Object.values(docsFile.docs).some((d) => d.title === 'QA Checklist');
+    if (alreadyExists) {
+      logger.info(`[ProjectLifecycle] QA Checklist already exists for ${projectSlug}, skipping`);
+      return;
+    }
+
+    const milestones = project.milestones ?? [];
+
+    // Build markdown checklist from phases that have acceptance criteria
+    let hasAnyCriteria = false;
+    const lines: string[] = [`# QA Checklist — ${project.title}`];
+
+    for (const [milestoneIndex, milestone] of milestones.entries()) {
+      const milestoneNumber = milestone.number ?? milestoneIndex + 1;
+      const phasesWithCriteria = (milestone.phases ?? []).filter(
+        (p) => p.acceptanceCriteria && p.acceptanceCriteria.length > 0
+      );
+
+      if (phasesWithCriteria.length === 0) continue;
+
+      lines.push(`## Milestone ${milestoneNumber}: ${milestone.title}`);
+
+      for (const [phaseIndex, phase] of phasesWithCriteria.entries()) {
+        const phaseNumber = phase.number ?? phaseIndex + 1;
+        lines.push(`### Phase ${phaseNumber}: ${phase.title}`);
+
+        if (phase.description) {
+          lines.push(`> ${phase.description}`);
+        }
+
+        lines.push('');
+
+        for (const criterion of phase.acceptanceCriteria!) {
+          lines.push(`- [ ] ${criterion}`);
+          hasAnyCriteria = true;
+        }
+
+        lines.push('');
+      }
+    }
+
+    if (!hasAnyCriteria) {
+      lines.push('_No acceptance criteria found in milestones._');
+    }
+
+    const content = lines.join('\n');
+
+    await this.projectService.createDoc(projectPath, projectSlug, 'QA Checklist', content);
+    logger.info(`[ProjectLifecycle] Created QA Checklist for ${projectSlug}`);
   }
 
   /**
