@@ -41,6 +41,10 @@ export interface TimelineEvent {
   occurredAt: string;
   /** Who authored / triggered this entry */
   author?: string;
+  /** URL to an associated artifact (e.g. ceremony report markdown) */
+  artifactUrl?: string;
+  /** Human-readable ceremony type label, e.g. "Standup", "Milestone Retro" */
+  ceremonyLabel?: string;
   metadata?: Record<string, unknown>;
 }
 
