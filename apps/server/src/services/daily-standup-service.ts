@@ -257,7 +257,10 @@ export class DailyStandupService {
       try {
         const features = await this.featureLoader!.getAll(project.path);
         for (const feature of features) {
-          const summary: FeatureSummary = { title: feature.title, projectPath: project.path };
+          const summary: FeatureSummary = {
+            title: feature.title ?? feature.id,
+            projectPath: project.path,
+          };
 
           // Completed since lastRunAt
           if (
@@ -294,7 +297,7 @@ export class DailyStandupService {
                 break;
               }
             }
-            const isNewlyBlocked = !lastRunAt || (lastBlockedAt && new Date(lastBlockedAt) > since);
+            const isNewlyBlocked = lastBlockedAt && new Date(lastBlockedAt) > since;
             if (isNewlyBlocked) {
               blocked.push({
                 ...summary,
@@ -510,9 +513,9 @@ export class DailyStandupService {
     projects: Array<{ path: string }>
   ): Promise<string | undefined> {
     // Try global discord integration channels
-    const globalDiscord = (globalSettings as Record<string, unknown>)['discordIntegration'] as
-      | { channels?: { dev?: string } }
-      | undefined;
+    const globalDiscord = (globalSettings as unknown as Record<string, unknown>)[
+      'discordIntegration'
+    ] as { channels?: { dev?: string } } | undefined;
     if (globalDiscord?.channels?.dev) return globalDiscord.channels.dev;
 
     // Try first project's discord integration channels.dev
