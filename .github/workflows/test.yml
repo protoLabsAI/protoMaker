@@ -3,21 +3,11 @@ name: Test Suite
 
 on:
   pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - 'site/**'
-      - '**.md'
-      - '.automaker/**'
   push:
     branches:
       - main
       - staging
       - dev
-    paths-ignore:
-      - 'docs/**'
-      - 'site/**'
-      - '**.md'
-      - '.automaker/**'
 
 permissions: read-all
 
@@ -33,19 +23,41 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for code changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+          CHANGED=$(git diff --name-only "$BASE_SHA" HEAD | grep -vE '^(docs/|site/|\.automaker/|.*\.md$)' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Only docs/markdown/.automaker changes detected — skipping tests"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Code changes detected — running tests"
+          fi
 
       - name: Setup project
+        if: steps.changes.outputs.skip != 'true'
         uses: ./.github/actions/setup-project
         with:
           check-lockfile: 'true'
           rebuild-node-pty-path: 'apps/server'
 
       - name: Run package tests
+        if: steps.changes.outputs.skip != 'true'
         run: npm run test:packages
         env:
           NODE_ENV: test
 
       - name: Run server tests with coverage
+        if: steps.changes.outputs.skip != 'true'
         run: npm run test:server:coverage
         env:
           NODE_ENV: test
