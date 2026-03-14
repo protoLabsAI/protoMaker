@@ -85,6 +85,7 @@ export class FeatureStateManager {
           projectPath,
           featureId,
           featureTitle: updatedFeature.title,
+          projectSlug: updatedFeature.projectSlug,
           status,
         });
       }
@@ -95,6 +96,7 @@ export class FeatureStateManager {
           projectPath,
           featureId,
           error: updatedFeature.error || 'Feature execution failed',
+          projectSlug: updatedFeature.projectSlug,
           status,
         });
       }

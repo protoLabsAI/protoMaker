@@ -1912,7 +1912,12 @@ export class AutoModeService {
               status: 'blocked',
               statusChangeReason: reason,
             });
-            this.events.emit('feature:error', { projectPath, featureId, error: reason });
+            this.events.emit('feature:error', {
+              projectPath,
+              featureId,
+              error: reason,
+              projectSlug: feature.projectSlug,
+            });
             return;
           }
         }
@@ -1923,7 +1928,12 @@ export class AutoModeService {
           status: 'blocked',
           statusChangeReason: reason,
         });
-        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        this.events.emit('feature:error', {
+          projectPath,
+          featureId,
+          error: reason,
+          projectSlug: feature.projectSlug,
+        });
         return;
       }
 
@@ -1937,7 +1947,12 @@ export class AutoModeService {
           status: 'blocked',
           statusChangeReason: reason,
         });
-        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        this.events.emit('feature:error', {
+          projectPath,
+          featureId,
+          error: reason,
+          projectSlug: feature.projectSlug,
+        });
         return;
       }
 
@@ -1957,7 +1972,12 @@ export class AutoModeService {
                 status: 'blocked',
                 statusChangeReason: reason,
               });
-              this.events.emit('feature:error', { projectPath, featureId, error: reason });
+              this.events.emit('feature:error', {
+                projectPath,
+                featureId,
+                error: reason,
+                projectSlug: feature.projectSlug,
+              });
               return;
             } else {
               logger.warn(
@@ -2233,7 +2253,12 @@ export class AutoModeService {
             status: 'blocked',
             statusChangeReason: reason,
           });
-          this.events.emit('feature:error', { projectPath, featureId, error: reason });
+          this.events.emit('feature:error', {
+            projectPath,
+            featureId,
+            error: reason,
+            projectSlug: feature?.projectSlug,
+          });
           throw new Error(reason);
         }
       }
@@ -2247,7 +2272,12 @@ export class AutoModeService {
         status: 'blocked',
         statusChangeReason: reason,
       });
-      this.events.emit('feature:error', { projectPath, featureId, error: reason });
+      this.events.emit('feature:error', {
+        projectPath,
+        featureId,
+        error: reason,
+        projectSlug: feature?.projectSlug,
+      });
       throw new Error(reason);
     }
 
@@ -2284,7 +2314,12 @@ export class AutoModeService {
         status: 'blocked',
         statusChangeReason: followUpConflictReason,
       });
-      this.events.emit('feature:error', { projectPath, featureId, error: followUpConflictReason });
+      this.events.emit('feature:error', {
+        projectPath,
+        featureId,
+        error: followUpConflictReason,
+        projectSlug: feature?.projectSlug,
+      });
       throw new Error(followUpConflictReason);
     }
 

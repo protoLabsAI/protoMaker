@@ -248,6 +248,7 @@ export class CompletionDetectorService {
       projectPath,
       featureId: epicId,
       featureTitle: epic.title,
+      projectSlug: epic.projectSlug,
       isEpic: true,
     });
 

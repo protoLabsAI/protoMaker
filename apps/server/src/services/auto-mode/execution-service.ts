@@ -473,7 +473,12 @@ export class ExecutionService {
               status: 'blocked',
               statusChangeReason: reason,
             });
-            this.events.emit('feature:error', { projectPath, featureId, error: reason });
+            this.events.emit('feature:error', {
+              projectPath,
+              featureId,
+              error: reason,
+              projectSlug: feature?.projectSlug,
+            });
             return;
           }
         }
@@ -485,7 +490,12 @@ export class ExecutionService {
           status: 'blocked',
           statusChangeReason: reason,
         });
-        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        this.events.emit('feature:error', {
+          projectPath,
+          featureId,
+          error: reason,
+          projectSlug: feature?.projectSlug,
+        });
         return;
       }
 
@@ -500,7 +510,12 @@ export class ExecutionService {
           status: 'blocked',
           statusChangeReason: reason,
         });
-        this.events.emit('feature:error', { projectPath, featureId, error: reason });
+        this.events.emit('feature:error', {
+          projectPath,
+          featureId,
+          error: reason,
+          projectSlug: feature?.projectSlug,
+        });
         return;
       }
 
@@ -522,7 +537,12 @@ export class ExecutionService {
                 status: 'blocked',
                 statusChangeReason: reason,
               });
-              this.events.emit('feature:error', { projectPath, featureId, error: reason });
+              this.events.emit('feature:error', {
+                projectPath,
+                featureId,
+                error: reason,
+                projectSlug: feature?.projectSlug,
+              });
               return;
             } else {
               logger.warn(
@@ -781,7 +801,12 @@ export class ExecutionService {
               status: 'blocked',
               statusChangeReason: reason,
             });
-            this.events.emit('feature:error', { projectPath, featureId, error: reason });
+            this.events.emit('feature:error', {
+              projectPath,
+              featureId,
+              error: reason,
+              projectSlug: feature?.projectSlug,
+            });
             return;
           } else {
             logger.warn(`Git merge failed for ${branchName}: ${mergeMsg}`);
@@ -877,6 +902,7 @@ export class ExecutionService {
               projectPath,
               featureId,
               featureTitle: feature.title,
+              projectSlug: feature.projectSlug,
               status: 'review',
             });
             return;
@@ -895,6 +921,7 @@ export class ExecutionService {
               projectPath,
               featureId,
               error: reason,
+              projectSlug: feature.projectSlug,
             });
             return;
           }
