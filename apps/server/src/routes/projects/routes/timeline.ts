@@ -8,14 +8,21 @@
  * to TimelineEvent (occurredAt, type, title, description, author) so the UI
  * can render them without needing to understand the raw ledger schema.
  *
+ * When the ledger has no entries for a project, falls back to constructing
+ * timeline events directly from feature metadata (creation dates, status
+ * transitions). This ensures the timeline is populated even before ledger
+ * enrichment begins.
+ *
  * Query params:
- *   ?since=<ISO 8601>  — only return events after this timestamp (exclusive)
- *   ?type=<eventType>  — only return events of this type
+ *   ?projectPath=<path>  — project root path (used for feature fallback)
+ *   ?since=<ISO 8601>    — only return events after this timestamp (exclusive)
+ *   ?type=<eventType>    — only return events of this type
  */
 
 import type { Request, Response } from 'express';
-import type { EventLedgerEntry } from '@protolabsai/types';
+import type { EventLedgerEntry, Feature } from '@protolabsai/types';
 import type { EventLedgerService } from '../../../services/event-ledger-service.js';
+import type { FeatureLoader } from '../../../services/feature-loader.js';
 
 interface TimelineEvent {
   id: string;
@@ -312,7 +319,68 @@ function toTimelineEvent(entry: EventLedgerEntry): TimelineEvent {
   }
 }
 
-export function createTimelineHandler(eventLedger: EventLedgerService) {
+/**
+ * Synthesise TimelineEvent objects directly from a feature's metadata fields.
+ * Used as a fallback when the event ledger has no entries for a project.
+ *
+ * Emits one event per meaningful lifecycle timestamp present on the feature:
+ *   createdAt       → feature:created
+ *   startedAt       → feature:started
+ *   reviewStartedAt → pr:merged   (entered review / PR open phase)
+ *   completedAt     → feature:done
+ */
+function featureToTimelineEvents(feature: Feature): TimelineEvent[] {
+  const title = feature.title ?? feature.id;
+  const events: TimelineEvent[] = [];
+
+  if (feature.createdAt) {
+    events.push({
+      id: `${feature.id}:created`,
+      type: 'feature:created',
+      title: `Created: ${title}`,
+      occurredAt: feature.createdAt,
+      author: 'system',
+    });
+  }
+
+  if (feature.startedAt) {
+    events.push({
+      id: `${feature.id}:started`,
+      type: 'feature:started',
+      title: `Started: ${title}`,
+      occurredAt: feature.startedAt,
+      author: 'system',
+    });
+  }
+
+  if (feature.reviewStartedAt) {
+    events.push({
+      id: `${feature.id}:review`,
+      type: 'pr:merged',
+      title: `In review: ${title}`,
+      occurredAt: feature.reviewStartedAt,
+      author: 'system',
+    });
+  }
+
+  if (feature.completedAt) {
+    events.push({
+      id: `${feature.id}:done`,
+      type: 'feature:done',
+      title: `Completed: ${title}`,
+      description: feature.prNumber ? `PR #${feature.prNumber}` : undefined,
+      occurredAt: feature.completedAt,
+      author: 'system',
+    });
+  }
+
+  return events;
+}
+
+export function createTimelineHandler(
+  eventLedger: EventLedgerService,
+  featureLoader?: FeatureLoader
+) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
       const { slug } = req.params as { slug: string };
@@ -322,6 +390,7 @@ export function createTimelineHandler(eventLedger: EventLedgerService) {
         return;
       }
 
+      const projectPath = req.query.projectPath as string | undefined;
       const since = req.query.since as string | undefined;
       const type = req.query.type as string | undefined;
 
@@ -333,7 +402,30 @@ export function createTimelineHandler(eventLedger: EventLedgerService) {
       const entries = await eventLedger.queryByProject(slug, { since, type });
 
       // Transform raw ledger entries to display-ready timeline events
-      const events = entries.map(toTimelineEvent);
+      let events = entries.map(toTimelineEvent);
+
+      // ── Feature-metadata fallback ──────────────────────────────────────────
+      // When the ledger has no entries for this project (e.g. before enrichment
+      // starts, or for projects that pre-date the ledger), synthesise events
+      // from feature metadata so the timeline is never completely empty.
+      if (events.length === 0 && featureLoader && projectPath) {
+        const features = await featureLoader.getAll(projectPath);
+
+        if (features.length > 0) {
+          const sinceMs = since ? new Date(since).getTime() : undefined;
+
+          const fallbackEvents = features.flatMap(featureToTimelineEvents).filter((e) => {
+            // Apply the same `since` filter used by the ledger query
+            if (sinceMs !== undefined) {
+              return new Date(e.occurredAt).getTime() > sinceMs;
+            }
+            return true;
+          });
+
+          // Apply type filter when requested
+          events = type ? fallbackEvents.filter((e) => e.type === type) : fallbackEvents;
+        }
+      }
 
       // Sort newest first for the UI feed
       events.sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());

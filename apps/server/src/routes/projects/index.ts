@@ -88,7 +88,7 @@ export function createProjectsRoutes(
 
   // Timeline route — GET /api/projects/:slug/timeline
   if (eventLedgerService) {
-    router.get('/:slug/timeline', createTimelineHandler(eventLedgerService));
+    router.get('/:slug/timeline', createTimelineHandler(eventLedgerService, featureLoader));
   }
 
   // Ceremony timeline routes — append-only paper trail per project
