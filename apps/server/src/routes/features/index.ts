@@ -22,6 +22,7 @@ import { createHealthHandler } from './routes/health.js';
 import { createAssignAgentHandler } from './routes/assign-agent.js';
 import { createSummaryHandler } from './routes/summary.js';
 import { createRollbackHandler, RollbackRequestSchema } from './routes/rollback.js';
+import { createHandoffHandler, HandoffRequestSchema } from './routes/handoff.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
 import type { TrustTierService } from '../../services/trust-tier-service.js';
 
@@ -90,6 +91,13 @@ export function createFeaturesRoutes(
     validatePathParams('projectPath'),
     validateBody(RollbackRequestSchema),
     createRollbackHandler(featureLoader)
+  );
+
+  router.post(
+    '/handoff',
+    validatePathParams('projectPath'),
+    validateBody(HandoffRequestSchema),
+    createHandoffHandler()
   );
 
   return router;

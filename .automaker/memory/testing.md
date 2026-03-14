@@ -191,3 +191,13 @@ usageStats:
 - **Problem solved:** Spec omitted peer-mesh-service.ts but removing types from shared package broke typecheck
 - **Why this works:** Typecheck enforces transitive impact detection across the codebase; it's a better source of truth than manual file lists for refactoring scope
 - **Trade-offs:** Slower feedback loop (typecheck takes time) but more complete; catches hidden dependencies automatically; acceptance criteria act as specification enforcement
+
+#### [Gotcha] Node's promisify() utility with a vi.fn() mock only captures the first non-error callback argument as the resolved value - test callbacks must pass the complete result object (e.g., { stdout, stderr }) as arg[1], not spread across multiple args (2026-03-14)
+- **Situation:** Tests failed because mocks were calling cb(null, '[]', '') but the service code does { stdout } = await execFileAsync(...), expecting an object with stdout property
+- **Root cause:** promisify() has special logic for functions with [util.promisify.custom] symbol; vi.fn() lacks this, so promisify defaults to treating arg[1] (first non-error arg) as the entire resolved value. There's no automatic mapping of multiple callback args to an object.
+- **How to avoid:** Mocks now pass objects instead of spread arguments (slightly more boilerplate, but explicit and correct); avoids needing custom promisify logic
+
+#### [Gotcha] Module-level const mockExecFile = vi.fn() before vi.mock() hits temporal dead zone - use vi.hoisted(() => ({ mockExecFile: vi.fn() })) instead because vi.mock is hoisted above all module code (2026-03-14)
+- **Situation:** Tests threw 'Cannot access before initialization' even though mockExecFile was defined before vi.mock() in source order
+- **Root cause:** Vitest/TypeScript hoists vi.mock() calls to the top of the module during transformation, putting them before any module-level const declarations. The const stays in its source position, creating a temporal dead zone. vi.hoisted() runs the callback during the hoisting phase.
+- **How to avoid:** vi.hoisted() adds a wrapper function (slightly less readable), but it's the idiomatic Vitest pattern and guarantees the mock is initialized in the right phase

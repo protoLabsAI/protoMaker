@@ -86,7 +86,7 @@ function sleep(ms: number): Promise<void> {
 async function apiCall(
   endpoint: string,
   body: Record<string, unknown>,
-  method: 'GET' | 'POST' = 'POST'
+  method: 'GET' | 'POST' | 'PUT' = 'POST'
 ): Promise<unknown> {
   const options: RequestInit = {
     method,
@@ -106,7 +106,7 @@ async function apiCall(
       }
     });
     url += `?${params.toString()}`;
-  } else if (method === 'POST') {
+  } else if (method === 'POST' || method === 'PUT') {
     options.body = JSON.stringify(body);
   }
 
@@ -619,35 +619,38 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         research: args.research,
       });
 
-    case 'health_check': {
-      const response = await fetch(`${API_URL}/api/health`);
-      return response.json();
-    }
+    case 'health_check':
+      return apiCall('/health', {}, 'GET');
 
     case 'get_server_logs': {
-      // Read directly from disk — works even when server is down
+      // Strategy: ask the server to read its own log file via API.
+      // This works even when the server runs in Docker (log file is inside
+      // a Docker volume that the MCP tool on the host can't access).
+      // Falls back to direct disk reads only when the server is down.
       const fs = await import('fs');
       const path = await import('path');
 
-      // Resolve log file path by asking the running server for its absolute path.
-      // The server runs from apps/server/ so its DATA_DIR resolves differently than
-      // the MCP server's CWD (monorepo root). Asking the server eliminates the mismatch.
-      // Falls back to a computed path if the server is down.
-      let logPath: string;
+      const maxLines = (args.maxLines as number) || 200;
+      const filterText = args.filter as string | undefined;
+      const sinceTimestamp = args.since as string | undefined;
+
+      // Try the server API first — it can always access its own log file
       try {
-        const logPathResult = (await apiCall('/health/log-path', {}, 'GET')) as {
-          logPath: string;
-        };
-        logPath = logPathResult.logPath;
+        const params = new URLSearchParams();
+        if (maxLines) params.set('maxLines', String(maxLines));
+        if (filterText) params.set('filter', filterText);
+        if (sinceTimestamp) params.set('since', sinceTimestamp);
+
+        const result = await apiCall(`/health/logs?${params.toString()}`, {}, 'GET');
+        return result;
       } catch {
-        // Server is down — compute best-guess path.
-        // Server CWD is apps/server/ and DATA_DIR defaults to ./data (relative to that).
+        // Server is down — fall back to direct disk read.
+        // Compute best-guess path from environment.
         const dataDirEnv = process.env.DATA_DIR;
+        let logPath: string;
         if (dataDirEnv && path.isAbsolute(dataDirEnv)) {
-          // Absolute DATA_DIR: both server and MCP agree on this path
           logPath = path.join(dataDirEnv, 'server.log');
         } else {
-          // Relative or unset DATA_DIR: resolve relative to apps/server/ within AUTOMAKER_ROOT
           const serverRoot = path.join(
             process.env.AUTOMAKER_ROOT || process.cwd(),
             'apps',
@@ -655,57 +658,51 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
           );
           logPath = path.join(serverRoot, dataDirEnv || 'data', 'server.log');
         }
-      }
 
-      if (!fs.existsSync(logPath)) {
+        if (!fs.existsSync(logPath)) {
+          return {
+            success: false,
+            error: `Server is down and log file not found at ${logPath}. If the server runs in Docker, logs are only accessible while the server is running.`,
+            logPath,
+          };
+        }
+
+        const content = fs.readFileSync(logPath, 'utf-8');
+        let lines = content.split('\n').filter((l: string) => l.length > 0);
+
+        if (sinceTimestamp) {
+          const sinceDate = new Date(sinceTimestamp);
+          lines = lines.filter((line: string) => {
+            const match = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
+            if (!match) return true;
+            const lineDate = new Date(match[1]);
+            return lineDate >= sinceDate;
+          });
+        }
+
+        if (filterText) {
+          const lowerFilter = filterText.toLowerCase();
+          lines = lines.filter((line: string) => line.toLowerCase().includes(lowerFilter));
+        }
+
+        const totalLines = lines.length;
+        if (maxLines > 0 && lines.length > maxLines) {
+          lines = lines.slice(-maxLines);
+        }
+
+        const stats = fs.statSync(logPath);
+
         return {
-          success: false,
-          error: `Server log file not found at ${logPath}. The server may not have been started with file logging enabled.`,
+          success: true,
           logPath,
+          fileSize: `${(stats.size / 1024).toFixed(1)} KB`,
+          totalLines,
+          returnedLines: lines.length,
+          truncated: maxLines > 0 && totalLines > maxLines,
+          content: lines.join('\n'),
+          source: 'disk-fallback',
         };
       }
-
-      const maxLines = (args.maxLines as number) || 200;
-      const filterText = args.filter as string | undefined;
-      const sinceTimestamp = args.since as string | undefined;
-
-      const content = fs.readFileSync(logPath, 'utf-8');
-      let lines = content.split('\n').filter((l: string) => l.length > 0);
-
-      // Filter by timestamp if provided
-      if (sinceTimestamp) {
-        const sinceDate = new Date(sinceTimestamp);
-        lines = lines.filter((line: string) => {
-          const match = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
-          if (!match) return true; // Keep non-timestamped lines (markers, separators)
-          const lineDate = new Date(match[1]);
-          return lineDate >= sinceDate;
-        });
-      }
-
-      // Filter by text content if provided
-      if (filterText) {
-        const lowerFilter = filterText.toLowerCase();
-        lines = lines.filter((line: string) => line.toLowerCase().includes(lowerFilter));
-      }
-
-      // Take last N lines
-      const totalLines = lines.length;
-      if (maxLines > 0 && lines.length > maxLines) {
-        lines = lines.slice(-maxLines);
-      }
-
-      const stats = fs.statSync(logPath);
-
-      return {
-        success: true,
-        logPath,
-        fileSize: `${(stats.size / 1024).toFixed(1)} KB`,
-        totalLines,
-        returnedLines: lines.length,
-        truncated: maxLines > 0 && totalLines > maxLines,
-        content: lines.join('\n'),
-      };
     }
 
     case 'get_briefing': {
@@ -907,23 +904,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return settingsResult;
     }
 
-    case 'update_settings': {
-      const settingsBody = (args.settings || {}) as Record<string, unknown>;
-      const options: RequestInit = {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': API_KEY,
-        },
-        body: JSON.stringify(settingsBody),
-      };
-      const response = await fetch(`${API_URL}/api/settings/global`, options);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`API error ${response.status}: ${text}`);
-      }
-      return response.json();
-    }
+    case 'update_settings':
+      return apiCall('/settings/global', (args.settings || {}) as Record<string, unknown>, 'PUT');
 
     case 'list_events':
       return apiCall('/event-history/list', {
@@ -954,39 +936,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         complexity: args.complexity || 'medium',
       });
 
-    // Discord DM
-    case 'send_discord_dm':
-      return apiCall('/discord/send-dm', {
-        username: args.username,
-        content: args.content,
-      });
-
-    case 'read_discord_dms':
-      return apiCall('/discord/read-dms', {
-        username: args.username,
-        limit: args.limit || 10,
-      });
-
-    // Discord Channel Messages
-    case 'send_discord_channel_message':
-      return apiCall('/discord/send-channel-message', {
-        channelId: args.channelId,
-        content: args.content,
-        embed: args.embed,
-      });
-
-    case 'read_discord_channel_messages':
-      return apiCall('/discord/read-channel-messages', {
-        channelId: args.channelId,
-        limit: args.limit || 10,
-      });
-
-    case 'add_discord_reaction':
-      return apiCall('/discord/add-reaction', {
-        channelId: args.channelId,
-        messageId: args.messageId,
-        emoji: args.emoji,
-      });
+    // Discord tools moved to project-level — not shipped in plugin
 
     // Setup Pipeline
     case 'research_repo':
@@ -1285,55 +1235,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         alignmentPerformed: args.alignmentPerformed ?? false,
       });
 
-    // Langfuse Observability
-    case 'langfuse_list_traces':
-      return apiCall('/langfuse/traces', {
-        page: args.page,
-        limit: args.limit,
-        name: args.name,
-        tags: args.tags,
-        userId: args.userId,
-        sessionId: args.sessionId,
-        fromTimestamp: args.fromTimestamp,
-        toTimestamp: args.toTimestamp,
-      });
-
-    case 'langfuse_get_trace':
-      return apiCall('/langfuse/traces/detail', {
-        traceId: args.traceId,
-      });
-
-    case 'langfuse_get_costs':
-      return apiCall('/langfuse/costs', {
-        page: args.page,
-        limit: args.limit,
-        type: args.type,
-        model: args.model,
-        fromStartTime: args.fromStartTime,
-        toStartTime: args.toStartTime,
-      });
-
-    case 'langfuse_score_trace':
-      return apiCall('/langfuse/scores', {
-        traceId: args.traceId,
-        name: args.name,
-        value: args.value,
-        comment: args.comment,
-      });
-
-    case 'langfuse_list_datasets':
-      return apiCall('/langfuse/datasets', {
-        page: args.page,
-        limit: args.limit,
-      });
-
-    case 'langfuse_add_to_dataset':
-      return apiCall('/langfuse/datasets/items', {
-        datasetName: args.datasetName,
-        traceId: args.traceId,
-        observationId: args.observationId,
-        metadata: args.metadata,
-      });
+    // Langfuse tools moved to project-level — not shipped in plugin
 
     // HITL Forms
     case 'request_user_input':
@@ -1725,45 +1627,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/promotions/batches', {}, 'GET');
 
     // Lead Engineer Handoffs
-    case 'get_feature_handoff': {
-      const fsModule = await import('fs/promises');
-      const pathModule = await import('path');
-
-      const projectPath = args.projectPath as string;
-      const featureId = args.featureId as string;
-      const handoffDir = pathModule.join(projectPath, '.automaker', 'features', featureId);
-
-      let files: string[] = [];
-      try {
-        const entries = await fsModule.readdir(handoffDir);
-        files = entries.filter((f: string) => f.startsWith('handoff-') && f.endsWith('.json'));
-      } catch {
-        return { success: true, handoff: null, message: 'No handoffs found for this feature' };
-      }
-
-      if (files.length === 0) {
-        return { success: true, handoff: null, message: 'No handoffs found for this feature' };
-      }
-
-      // Find the latest handoff by createdAt
-      let latest: Record<string, unknown> | null = null;
-      for (const file of files) {
-        try {
-          const content = await fsModule.readFile(pathModule.join(handoffDir, file), 'utf-8');
-          const handoff = JSON.parse(content) as Record<string, unknown>;
-          if (
-            !latest ||
-            new Date(handoff.createdAt as string) > new Date(latest.createdAt as string)
-          ) {
-            latest = handoff;
-          }
-        } catch {
-          // Skip corrupt files
-        }
-      }
-
-      return { success: true, handoff: latest };
-    }
+    case 'get_feature_handoff':
+      return apiCall('/features/handoff', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
 
     // Knowledge Store
     case 'knowledge_search':

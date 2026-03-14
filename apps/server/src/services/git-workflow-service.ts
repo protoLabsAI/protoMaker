@@ -881,16 +881,12 @@ export class GitWorkflowService {
   }
 
   /**
-   * Check if PR has unresolved critical review threads.
-   * Critical threads must be manually reviewed and block auto-merge.
-   *
-   * @param workDir - Working directory containing the repository
-   * @param prNumber - PR number to check
-   * @returns true if critical threads exist, false otherwise
+   * Parse GitHub owner and repo name from a git remote URL in the given working directory
    */
-  private async checkForCriticalThreads(workDir: string, prNumber: number): Promise<boolean> {
+  private async parseOwnerRepo(
+    workDir: string
+  ): Promise<{ owner: string; repoName: string } | null> {
     try {
-      // Extract owner/repo from git remote
       const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
         cwd: workDir,
         env: execEnv,
@@ -903,10 +899,31 @@ export class GitWorkflowService {
 
       if (!match) {
         logger.warn(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
+        return null;
+      }
+
+      return { owner: match[1], repoName: match[2] };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if PR has unresolved critical review threads.
+   * Critical threads must be manually reviewed and block auto-merge.
+   *
+   * @param workDir - Working directory containing the repository
+   * @param prNumber - PR number to check
+   * @returns true if critical threads exist, false otherwise
+   */
+  private async checkForCriticalThreads(workDir: string, prNumber: number): Promise<boolean> {
+    try {
+      const parsed = await this.parseOwnerRepo(workDir);
+      if (!parsed) {
         return false;
       }
 
-      const [, owner, repoName] = match;
+      const { owner, repoName } = parsed;
 
       // Query review threads using GraphQL
       const query = `
@@ -929,7 +946,7 @@ export class GitWorkflowService {
         }
       `;
 
-      const { stdout } = await execAsync(`gh api graphql -f query='${query.replace(/\n/g, ' ')}'`, {
+      const { stdout } = await execFileAsync('gh', ['api', 'graphql', '-f', `query=${query}`], {
         cwd: workDir,
         env: execEnv,
       });
