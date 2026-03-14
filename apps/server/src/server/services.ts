@@ -64,7 +64,6 @@ import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from '../services/antagonistic-review-service.js';
 import { AgentScoringService } from '../services/agent-scoring-service.js';
 import { gitWorkflowService } from '../services/git-workflow-service.js';
-import { PipelineOrchestrator } from '../services/pipeline-orchestrator.js';
 import { TrustTierService } from '../services/trust-tier-service.js';
 import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
@@ -204,7 +203,6 @@ export interface ServiceContainer {
 
   // Signal & pipeline
   signalIntakeService: SignalIntakeService;
-  pipelineOrchestrator: PipelineOrchestrator;
   pipelineService: typeof pipelineService;
   channelRouter: ChannelRouter;
 
@@ -459,14 +457,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     repoRoot,
     settingsService
   );
-
-  // Pipeline Orchestrator — unified phase tracking across ops + gtm branches
-  const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
-  // Hydrate the pipeline feature flag from settings (async, non-blocking).
-  // Defaults to disabled (false) until the HITL pipeline overhaul ships.
-  void settingsService.getGlobalSettings().then((s) => {
-    pipelineOrchestrator.setEnabled(s.featureFlags?.pipeline ?? false);
-  });
 
   // Channel Router — routes HITL interactions to the originating channel
   const channelRouter = new ChannelRouter();
@@ -807,9 +797,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     logger.warn('[Affinity] Failed to load project preferences — affinity filtering skipped:', err);
   }
 
-  // Wire pipelineOrchestrator processors
-  pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });
-
   // Initialize Ceremony Service
   ceremonyService.initialize(
     events,
@@ -886,7 +873,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     eventStreamBuffer,
     briefingCursorService,
     signalIntakeService,
-    pipelineOrchestrator,
     pipelineService,
     channelRouter,
     docsUpdateDetector,
