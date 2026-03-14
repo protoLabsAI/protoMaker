@@ -54,7 +54,7 @@ When you invoke a domain agent in Claude Code, you get it in conversational mode
 When auto-mode picks up a frontend feature, it gets the same frontend agent template:
 
 - Runs in an isolated worktree
-- Board-driven lifecycle (INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE)
+- Board-driven lifecycle (INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE)
 - No human in the loop until ESCALATE
 - Output streams to the UI dashboard
 

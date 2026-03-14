@@ -346,7 +346,7 @@ The Lead Engineer service (`lead-engineer-service.ts`) is the production-phase n
 Signal (Discord event, GitHub event, MCP tool)
   --> SignalIntakeService.classifySignal() — ops vs gtm routing
   --> LeadEngineerService.process(feature)
-    --> FeatureStateMachine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE
+    --> FeatureStateMachine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
     --> Fast-path rules: pure functions, no LLM, event-driven
     --> Short-circuit: Any state → ESCALATE (on critical errors)
 ```
@@ -355,11 +355,12 @@ Signal (Discord event, GitHub event, MCP tool)
 
 | State    | Description                          | Transitions To              |
 | -------- | ------------------------------------ | --------------------------- |
-| INTAKE   | Feature created, awaiting processing | PLAN, ESCALATE              |
+| INTAKE   | Feature created, awaiting processing | PLAN, EXECUTE, ESCALATE     |
 | PLAN     | Requirements analysis, spec gen      | EXECUTE, ESCALATE           |
 | EXECUTE  | Implementation in worktree           | REVIEW, ESCALATE            |
 | REVIEW   | PR created, under CI/CodeRabbit      | MERGE, EXECUTE (on failure) |
-| MERGE    | PR approved, merging                 | DONE, ESCALATE              |
+| MERGE    | PR approved, merging                 | DEPLOY, ESCALATE            |
+| DEPLOY   | Post-merge verification, reflection  | DONE                        |
 | DONE     | Feature fully deployed and verified  | (terminal)                  |
 | ESCALATE | Blocked, needs intervention          | Any state (after fix)       |
 

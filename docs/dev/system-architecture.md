@@ -72,9 +72,9 @@ This is the canonical reference for how the system works at runtime. For the des
               |
               v
     +-------------------+     +-------------------+
-    | CEREMONY SYSTEM   |     | CRDT SYNC         |
+    | CEREMONY SYSTEM   |     | PEER MESH         |
     | standup | retro   |     | Multi-instance    |
-    | milestone | proj  |     | Automerge mesh    |
+    | milestone | proj  |     | coordination      |
     +-------------------+     +-------------------+
 ```
 
@@ -143,15 +143,15 @@ The per-feature execution engine. Runs inside auto-mode for each dispatched feat
 
 ### State Details
 
-| State        | Processor         | What Happens                                                                                                              | Next State                                                                             | Timeout          |
-| ------------ | ----------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------- |
-| **INTAKE**   | IntakeProcessor   | Load feature, validate deps, classify complexity, assign persona, select model, mark `in_progress`                        | PLAN (complex) or EXECUTE (simple)                                                     | --               |
-| **PLAN**     | PlanProcessor     | Generate plan via LLM, validate (>100 chars), antagonistic review for large/arch                                          | EXECUTE (approved) or ESCALATE (2 retries exhausted)                                   | --               |
-| **EXECUTE**  | ExecuteProcessor  | Launch agent in worktree, monitor cost ($10 budget), stream output                                                        | REVIEW (PR created) or ESCALATE (3 agent retries exhausted)                            | 30 min           |
-| **REVIEW**   | ReviewProcessor   | Poll PR state every 30s: CI status, review decision, thread count                                                         | MERGE (approved+CI) or EXECUTE (changes requested, max 4) or ESCALATE (pending >45min) | 45 min pending   |
-| **MERGE**    | MergeProcessor    | `gh pr merge --merge`, retry with 60s delay on failure                                                                    | DEPLOY (merged) or ESCALATE (merge fails)                                              | --               |
-| **DEPLOY**   | DeployProcessor   | Verify `done` status, run `npm run typecheck` (+ `build:packages` if libs/ touched), generate reflection, save trajectory | DONE                                                                                   | 120s per command |
-| **ESCALATE** | EscalateProcessor | Move to `blocked`, classify failure, create HITL form if non-retryable, save trajectory, emit signal                      | -- (terminal for cycle)                                                                | --               |
+| State        | Processor         | What Happens                                                                                                                                 | Next State                                                                             | Timeout          |
+| ------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------- |
+| **INTAKE**   | IntakeProcessor   | Load feature, validate deps, classify complexity, assign persona, select model, mark `in_progress`                                           | PLAN (complex) or EXECUTE (simple)                                                     | --               |
+| **PLAN**     | PlanProcessor     | Generate plan via LLM, validate (>100 chars), antagonistic review for large/arch                                                             | EXECUTE (approved) or ESCALATE (2 retries exhausted)                                   | --               |
+| **EXECUTE**  | ExecuteProcessor  | Launch agent in worktree, monitor cost ($10 budget), stream output                                                                           | REVIEW (PR created) or ESCALATE (3 agent retries exhausted)                            | 30 min           |
+| **REVIEW**   | ReviewProcessor   | Poll PR state every 30s: CI status, review decision, thread count                                                                            | MERGE (approved+CI) or EXECUTE (changes requested, max 4) or ESCALATE (pending >45min) | 45 min pending   |
+| **MERGE**    | MergeProcessor    | `gh pr merge --merge`, retry with 60s delay on failure                                                                                       | DEPLOY (merged) or ESCALATE (merge fails)                                              | --               |
+| **DEPLOY**   | DeployProcessor   | Verify `done` status, run `npm run typecheck` (+ `build:packages` if libs/ touched), generate reflection, goal verification, save trajectory | DONE                                                                                   | 120s per command |
+| **ESCALATE** | EscalateProcessor | Move to `blocked`, classify failure, create HITL form if non-retryable, save trajectory, emit signal                                         | -- (terminal for cycle)                                                                | --               |
 
 ### Transition Limits
 
@@ -243,7 +243,7 @@ Three failures in 60 seconds triggers a 5-minute cooldown pause, then auto-resum
 
 ---
 
-## Fast-Path Rules (17 Total)
+## Fast-Path Rules (16 Total)
 
 Pure functions evaluated on every event. No LLM calls.
 
@@ -279,7 +279,6 @@ Pure functions evaluated on every event. No LLM calls.
 | ------------------ | ----------------------------- | ------------------------------------------------- | -------------------------------------- |
 | classifiedRecovery | `escalation:signal-received`  | isRetryable + confidence >=0.7 + retryCount < max | Reset to backlog                       |
 | hitlFormResponse   | `lead-engineer:hitl-response` | HITL form submitted                               | Retry / provide context / skip / close |
-| rollbackTriggered  | `feature:health-degraded`     | Feature in done with health degradation           | Block + escalate for rollback          |
 
 ### Project Lifecycle Rules
 
@@ -477,11 +476,11 @@ Timeline entries (append-only): `.automaker/projects/{slug}/timeline.json`
 ### Core Event Bus
 
 ```typescript
-events.emit(type, payload); // Local subscribers only
-events.broadcast(type, payload); // Local + remote (CRDT sync mesh)
+events.emit(type, payload); // Local subscribers
+events.broadcast(type, payload); // Local + remote (peer mesh)
 ```
 
-**CRDT-synced events** (use `broadcast()`): `project:created`, `project:updated`, `project:deleted`, `categories:updated`, `job:*`, `settings:updated`
+**Broadcast events** (use `broadcast()`): `project:created`, `project:updated`, `project:deleted`, `categories:updated`, `job:*`, `settings:updated`
 
 **Local-only events** (use `emit()`): All feature events, agent events, escalation events
 
@@ -524,7 +523,7 @@ Two WebSocket servers:
 
 ---
 
-## Multi-Instance Coordination (CRDT Mesh)
+## Multi-Instance Coordination (Peer Mesh)
 
 ### Architecture
 
@@ -560,9 +559,9 @@ Non-cron periodic tasks running in the server process.
 | PR merge poller           | 2.5 min                     | Check for merged PRs                                   |
 | PR watcher                | 30s poll, 30min auto-expire | Monitor PR CI status                                   |
 | Feature health audit      | ~100s (50 loop iterations)  | Board health sweep in auto-mode loop                   |
-| CRDT heartbeat            | 15s                         | Peer mesh heartbeat                                    |
-| CRDT TTL enforcement      | 30s                         | Evict unreachable peers                                |
-| CRDT reconnect            | 5s                          | Worker reconnect to primary                            |
+| Peer mesh heartbeat       | 15s                         | Peer mesh heartbeat                                    |
+| Peer mesh TTL enforcement | 30s                         | Evict unreachable peers                                |
+| Peer mesh reconnect       | 5s                          | Worker reconnect to primary                            |
 | Worktree drift check      | 6 hours                     | Detect phantom/orphan worktrees                        |
 
 ---
@@ -578,7 +577,7 @@ Non-cron periodic tasks running in the server process.
 | Agent Execution           | 4     | AgentService, AutoModeService, LeadEngineerService, WorkIntakeService                                                                 |
 | Knowledge & Metrics       | 6     | KnowledgeStoreService, MetricsService, DoraMetricsService, ErrorBudgetService, LedgerService, ArchivalService                         |
 | Scheduling & Automation   | 4     | SchedulerService, AutomationService, JobExecutorService, DailyStandupService                                                          |
-| Multi-Instance (Hivemind) | 3     | CrdtSyncService, AvaChannelService, AvaChannelReactorService                                                                          |
+| Multi-Instance (Hivemind) | 3     | PeerMeshService, AvaChannelService, AvaChannelReactorService                                                                          |
 | Discord                   | 4     | DiscordService, DiscordBotService, AgentDiscordRouter, NotificationRouter                                                             |
 | Authority & Governance    | 6     | AuthorityService, PM/GTM/EM/ProjM Agents, AuditService                                                                                |
 | Pipeline & State          | 6     | PipelineOrchestrator, PipelineCheckpointService, LeadHandoffService, FactStoreService, TrajectoryStoreService, ContextFidelityService |
@@ -605,7 +604,7 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 10. registerInfrastructure        Health monitor + Ava Gateway
 11. registerProjectPm             PM Agent event sync
 12. registerEventLedger           13 lifecycle events -> audit log
-13. registerCrdtSync              Event bus <-> remote CRDT sync
+13. registerPeerMesh              Event bus <-> remote peer sync
 14. registerWorkIntake            Work distribution across instances
 15. registerAvaChannel            Auto-narration to private Ava Channel
 ```
@@ -615,9 +614,9 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 ```
 1. Settings migration (legacy Electron paths)
 2. Runtime state migration (.automaker/ -> DATA_DIR)
-3. CrdtSyncService.start()
+3. PeerMeshService.start()
 4. ProjectAssignmentService.claimPreferredProjects()
-5. CRDT store init (Automerge documents)
+5. Peer mesh init
 6. AvaChannelReactorService init
 7. KnowledgeStoreService.initialize() for all projects
 8. ProjectService.ensureBugsProject()
@@ -643,7 +642,7 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 9. Shutdown HITLFormService
 10. Stop AgentDiscordRouter
 11. Stop AvaChannelReactorService
-12. Shutdown CrdtSyncService
+12. Shutdown PeerMeshService
 13. Dispose AgentManifestService
 14. Shutdown Langfuse + OTel
 15. Close HTTP server (5s force-exit timeout)
@@ -688,10 +687,10 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 
 | Parameter            | Default | Description              |
 | -------------------- | ------- | ------------------------ |
-| CRDT heartbeat       | 15s     | Peer identity broadcast  |
-| CRDT TTL check       | 30s     | Remove unreachable peers |
-| CRDT peer TTL        | 120s    | Time before peer is dead |
-| CRDT reconnect       | 5s      | Worker retry delay       |
+| Peer mesh heartbeat  | 15s     | Peer identity broadcast  |
+| Peer mesh TTL check  | 30s     | Remove unreachable peers |
+| Peer mesh peer TTL   | 120s    | Time before peer is dead |
+| Peer mesh reconnect  | 5s      | Worker retry delay       |
 | Worktree drift check | 6 hours | Phantom/orphan detection |
 | Health monitor       | 5 min   | Stuck feature check      |
 | Spec gen monitor     | 30s     | Stalled spec cleanup     |
@@ -710,31 +709,33 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 
 ## Key Files
 
-| Purpose                  | File                                                      |
-| ------------------------ | --------------------------------------------------------- |
-| Lead Engineer service    | `apps/server/src/services/lead-engineer-service.ts`       |
-| Lead Engineer rules (17) | `apps/server/src/services/lead-engineer-rules.ts`         |
-| Auto-mode service        | `apps/server/src/services/auto-mode-service.ts`           |
-| Feature scheduler        | `apps/server/src/services/feature-scheduler.ts`           |
-| Execution service        | `apps/server/src/services/auto-mode/execution-service.ts` |
-| Git workflow service     | `apps/server/src/services/git-workflow-service.ts`        |
-| Stream observer          | `apps/server/src/services/stream-observer-service.ts`     |
-| Claude provider          | `apps/server/src/providers/claude-provider.ts`            |
-| Dependency resolver      | `libs/dependency-resolver/src/resolver.ts`                |
-| Ceremony service         | `apps/server/src/services/ceremony-service.ts`            |
-| Maintenance tasks        | `apps/server/src/services/maintenance-tasks.ts`           |
-| PR feedback service      | `apps/server/src/services/pr-feedback-service.ts`         |
-| Signal intake service    | `apps/server/src/services/signal-intake-service.ts`       |
-| Pipeline orchestrator    | `apps/server/src/services/pipeline-orchestrator.ts`       |
-| Service container        | `apps/server/src/server/services.ts`                      |
-| Wiring orchestrator      | `apps/server/src/server/wiring.ts`                        |
-| Event emitter            | `apps/server/src/lib/events.ts`                           |
-| Startup                  | `apps/server/src/server/startup.ts`                       |
-| Shutdown                 | `apps/server/src/server/shutdown.ts`                      |
-| Timing constants         | `apps/server/src/config/timeouts.ts`                      |
-| Project types            | `libs/types/src/project.ts`                               |
-| Lead Engineer types      | `libs/types/src/lead-engineer.ts`                         |
-| Pipeline phase types     | `libs/types/src/pipeline-phase.ts`                        |
+| Purpose                  | File                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| Lead Engineer service    | `apps/server/src/services/lead-engineer-service.ts`          |
+| Lead Engineer rules (16) | `apps/server/src/services/lead-engineer-rules.ts`            |
+| Auto-mode service        | `apps/server/src/services/auto-mode-service.ts`              |
+| Feature scheduler        | `apps/server/src/services/feature-scheduler.ts`              |
+| Execution service        | `apps/server/src/services/auto-mode/execution-service.ts`    |
+| Git workflow service     | `apps/server/src/services/git-workflow-service.ts`           |
+| Stream observer          | `apps/server/src/services/stream-observer-service.ts`        |
+| Claude provider          | `apps/server/src/providers/claude-provider.ts`               |
+| Dependency resolver      | `libs/dependency-resolver/src/resolver.ts`                   |
+| Deploy processor         | `apps/server/src/services/lead-engineer-deploy-processor.ts` |
+| Ceremony service         | `apps/server/src/services/ceremony-service.ts`               |
+| Ceremony action executor | `apps/server/src/services/ceremony-action-executor.ts`       |
+| Maintenance tasks        | `apps/server/src/services/maintenance-tasks.ts`              |
+| PR feedback service      | `apps/server/src/services/pr-feedback-service.ts`            |
+| Signal intake service    | `apps/server/src/services/signal-intake-service.ts`          |
+| Pipeline orchestrator    | `apps/server/src/services/pipeline-orchestrator.ts`          |
+| Service container        | `apps/server/src/server/services.ts`                         |
+| Wiring orchestrator      | `apps/server/src/server/wiring.ts`                           |
+| Event emitter            | `apps/server/src/lib/events.ts`                              |
+| Startup                  | `apps/server/src/server/startup.ts`                          |
+| Shutdown                 | `apps/server/src/server/shutdown.ts`                         |
+| Timing constants         | `apps/server/src/config/timeouts.ts`                         |
+| Project types            | `libs/types/src/project.ts`                                  |
+| Lead Engineer types      | `libs/types/src/lead-engineer.ts`                            |
+| Pipeline phase types     | `libs/types/src/pipeline-phase.ts`                           |
 
 ## Related Documentation
 
