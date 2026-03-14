@@ -38,7 +38,6 @@ import { PromptCustomizationSection } from './settings-view/prompts';
 import { EventHooksSection } from './settings-view/event-hooks';
 import { IntegrationsSection } from './settings-view/integrations';
 import { ProfileSection } from './settings-view/profile';
-import { PersonasSection } from './settings-view/personas';
 import { WorkflowSettingsPanel } from './settings-view/workflow/workflow-settings-panel';
 import { AutomationsSection } from './settings-view/automations/automations-section';
 import { SensorsSection } from './settings-view/sensors/sensors-section';
@@ -190,8 +189,6 @@ export function SettingsView() {
         return <AccountSection />;
       case 'profile':
         return <ProfileSection />;
-      case 'personas':
-        return <PersonasSection />;
       case 'security':
         return (
           <SecuritySection

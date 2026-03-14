@@ -268,6 +268,57 @@ export class SettingsService {
       needsSave = true;
     }
 
+    // Migration: personaOverrides -> project agentConfig.rolePromptOverrides
+    // If global settings has personaOverrides with any enabled entries, copy them to the
+    // current project's .automaker/settings.json under agentConfig.rolePromptOverrides,
+    // then remove personaOverrides from global settings.
+    const enabledPersonaOverrides = Object.entries(result.personaOverrides ?? {}).filter(
+      ([, v]) => v.enabled
+    );
+    if (enabledPersonaOverrides.length > 0 && result.currentProjectId && result.projects) {
+      const currentProject = result.projects.find((p) => p.id === result.currentProjectId);
+      if (currentProject?.path) {
+        try {
+          const projectSettings = await this.getProjectSettings(currentProject.path);
+          const existingOverrides =
+            projectSettings.workflow?.agentConfig?.rolePromptOverrides ?? {};
+          const mergedOverrides = { ...existingOverrides };
+          let migrated = false;
+          for (const [name, prompt] of enabledPersonaOverrides) {
+            // Only copy if no existing override for this role
+            if (!mergedOverrides[name]) {
+              mergedOverrides[name] = prompt;
+              migrated = true;
+            }
+          }
+          if (migrated) {
+            const updatedWorkflow = {
+              ...projectSettings.workflow,
+              agentConfig: {
+                ...projectSettings.workflow?.agentConfig,
+                rolePromptOverrides: mergedOverrides,
+              },
+            };
+            await this.updateProjectSettings(currentProject.path, {
+              workflow: updatedWorkflow as ProjectSettings['workflow'],
+            });
+            logger.info(
+              `Migration: copied ${enabledPersonaOverrides.length} personaOverride(s) to project "${currentProject.name}" agentConfig.rolePromptOverrides`
+            );
+          }
+        } catch (err) {
+          logger.warn('Migration: failed to copy personaOverrides to project settings:', err);
+        }
+      }
+      // Remove the global personaOverrides field
+      delete result.personaOverrides;
+      needsSave = true;
+    } else if (result.personaOverrides && Object.keys(result.personaOverrides).length > 0) {
+      // No enabled entries but field exists — remove it
+      delete result.personaOverrides;
+      needsSave = true;
+    }
+
     // Update version if any migration occurred
     if (needsSave) {
       result.version = SETTINGS_VERSION;

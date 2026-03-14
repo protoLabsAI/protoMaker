@@ -3603,26 +3603,39 @@ After generating the revised spec, output:
     if (!feature.assignedRole) {
       return '';
     }
+    const role = feature.assignedRole;
     try {
       const agentManifestService = getAgentManifestService();
-      const agent = await agentManifestService.getAgent(projectPath, feature.assignedRole);
-      if (!agent?.promptFile) {
-        return '';
+      const agent = await agentManifestService.getAgent(projectPath, role);
+
+      // Primary path: manifest promptFile takes precedence
+      if (agent?.promptFile) {
+        const promptFilePath = path.join(projectPath, agent.promptFile);
+        let promptFileContents: string;
+        try {
+          promptFileContents = (await secureFs.readFile(promptFilePath, 'utf-8')) as string;
+        } catch (err) {
+          logger.warn(`Role prompt file not found for role "${role}" at ${promptFilePath}: ${err}`);
+          return '';
+        }
+        const description = agent.description ? `${agent.description}\n\n` : '';
+        return `## Agent Role: ${agent.name}\n${description}${promptFileContents}\n\n---\n`;
       }
-      const promptFilePath = path.join(projectPath, agent.promptFile);
-      let promptFileContents: string;
-      try {
-        promptFileContents = (await secureFs.readFile(promptFilePath, 'utf-8')) as string;
-      } catch (err) {
-        logger.warn(
-          `Role prompt file not found for role "${feature.assignedRole}" at ${promptFilePath}: ${err}`
-        );
-        return '';
+
+      // Fallback: check project-level agentConfig.rolePromptOverrides
+      if (this.settingsService) {
+        const projectSettings = await this.settingsService.getProjectSettings(projectPath);
+        const override = projectSettings.workflow?.agentConfig?.rolePromptOverrides?.[role];
+        if (override?.enabled && override.value) {
+          const agentName = agent?.name ?? role;
+          const description = agent?.description ? `${agent.description}\n\n` : '';
+          return `## Agent Role: ${agentName}\n${description}${override.value}\n\n---\n`;
+        }
       }
-      const description = agent.description ? `${agent.description}\n\n` : '';
-      return `## Agent Role: ${agent.name}\n${description}${promptFileContents}\n\n---\n`;
+
+      return '';
     } catch (err) {
-      logger.warn(`Failed to load role prompt for role "${feature.assignedRole}": ${err}`);
+      logger.warn(`Failed to load role prompt for role "${role}": ${err}`);
       return '';
     }
   }

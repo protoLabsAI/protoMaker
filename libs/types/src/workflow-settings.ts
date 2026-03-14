@@ -8,6 +8,7 @@
 import type { PhaseModelEntry } from './agent-settings.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
+import type { CustomPrompt } from './prompts.js';
 
 // ============================================================================
 // Trust Boundary Settings - PRD Approval Gate Configuration
@@ -149,6 +150,14 @@ export interface AgentConfig {
    * @default true
    */
   autoAssignEnabled?: boolean;
+  /**
+   * Per-role system prompt overrides. Maps role name (string) to a CustomPrompt.
+   * When a feature's assignedRole matches a key here and the entry is enabled,
+   * the custom prompt value is used as the role prompt prefix (in place of a
+   * manifest promptFile). Manifest promptFile takes precedence when present.
+   * Example: { 'frontend-engineer': { value: 'You are...', enabled: true } }
+   */
+  rolePromptOverrides?: Record<string, CustomPrompt>;
 }
 
 // ============================================================================

@@ -24,7 +24,6 @@ export type SettingsViewId =
   | 'account'
   | 'security'
   | 'profile'
-  | 'personas'
   | 'health'
   | 'developer'
   | 'danger'

@@ -1,23 +1,55 @@
-import { Bot, Tag, FileSearch, Cpu, ChevronDown, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import {
+  Bot,
+  Tag,
+  FileSearch,
+  Cpu,
+  ChevronDown,
+  ChevronRight,
+  RotateCcw,
+  MessageSquare,
+} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
 import { Switch } from '@protolabsai/ui/atoms';
 import { Badge } from '@protolabsai/ui/atoms';
+import { Button } from '@protolabsai/ui/atoms';
+import { Textarea } from '@protolabsai/ui/atoms';
 import { toast } from 'sonner';
 import { useAgents } from '@/hooks/use-agents';
 import { useProjectSettings } from '@/hooks/queries';
 import { useUpdateProjectSettings } from '@/hooks/mutations';
 import type { Project } from '@/lib/electron';
-import type { ProjectAgent } from '@protolabsai/types';
+import type { ProjectAgent, CustomPrompt } from '@protolabsai/types';
 
 interface ProjectAgentsSectionProps {
   project: Project;
 }
 
+interface AgentCardProps {
+  agent: ProjectAgent;
+  promptOverride: CustomPrompt | undefined;
+  onTogglePromptOverride: () => void;
+  onUpdatePromptValue: (value: string) => void;
+  onResetPromptOverride: () => void;
+  isSaving: boolean;
+}
+
 /**
- * Individual agent card — collapsible, shows rules summary on expand.
+ * Individual agent card — collapsible, shows rules summary and prompt editor on expand.
  */
-function AgentCard({ agent }: { agent: ProjectAgent }) {
+function AgentCard({
+  agent,
+  promptOverride,
+  onTogglePromptOverride,
+  onUpdatePromptValue,
+  onResetPromptOverride,
+  isSaving,
+}: AgentCardProps) {
   const [open, setOpen] = useState(false);
+  const [localPromptValue, setLocalPromptValue] = useState(promptOverride?.value ?? '');
+
+  useEffect(() => {
+    setLocalPromptValue(promptOverride?.value ?? '');
+  }, [promptOverride?.value]);
 
   const hasRules =
     (agent.match?.categories?.length ?? 0) > 0 ||
@@ -41,6 +73,12 @@ function AgentCard({ agent }: { agent: ProjectAgent }) {
             {isBuiltIn && (
               <Badge variant="muted" className="text-[10px] px-1.5 py-0.5 shrink-0">
                 built-in
+              </Badge>
+            )}
+            {promptOverride?.enabled && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 shrink-0 gap-1">
+                <MessageSquare className="w-2.5 h-2.5" />
+                custom prompt
               </Badge>
             )}
             {agent.extends && agent.extends !== agent.name && (
@@ -70,7 +108,7 @@ function AgentCard({ agent }: { agent: ProjectAgent }) {
 
       {/* Expanded details */}
       {open && (
-        <div className="px-4 pb-4 pt-1 border-t border-border/30 space-y-3 bg-muted/20">
+        <div className="px-4 pb-4 pt-1 border-t border-border/30 space-y-4 bg-muted/20">
           {agent.model && (
             <div className="flex items-center gap-2 text-xs">
               <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
@@ -125,6 +163,57 @@ function AgentCard({ agent }: { agent: ProjectAgent }) {
           ) : (
             <p className="text-xs text-muted-foreground italic">No match rules configured.</p>
           )}
+
+          {/* Per-agent prompt override */}
+          <div className="space-y-2 border-t border-border/20 pt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Custom Prompt
+                </span>
+              </div>
+              <Switch
+                checked={promptOverride?.enabled ?? false}
+                onCheckedChange={onTogglePromptOverride}
+                disabled={isSaving}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground/70">
+              Override the system prompt for this agent. Prepended to the default prompt when this
+              agent runs. Only active when a manifest <code className="font-mono">promptFile</code>{' '}
+              is not set.
+            </p>
+
+            {promptOverride?.enabled && (
+              <div className="space-y-2">
+                <Textarea
+                  className="font-mono text-xs"
+                  rows={10}
+                  value={localPromptValue}
+                  onChange={(e) => setLocalPromptValue(e.target.value)}
+                  onBlur={() => {
+                    if (localPromptValue !== (promptOverride?.value ?? '')) {
+                      onUpdatePromptValue(localPromptValue);
+                    }
+                  }}
+                  placeholder={`Enter a custom system prompt for the ${agent.name} agent...`}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={onResetPromptOverride}
+                    disabled={isSaving}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -133,7 +222,7 @@ function AgentCard({ agent }: { agent: ProjectAgent }) {
 
 /**
  * Project Agents Section — shows built-in + project-manifest agents,
- * and a toggle for automatic assignment.
+ * a toggle for automatic assignment, and per-agent prompt overrides.
  */
 export function ProjectAgentsSection({ project }: ProjectAgentsSectionProps) {
   const { data: agents = [], isLoading, error } = useAgents(project.path);
@@ -141,6 +230,7 @@ export function ProjectAgentsSection({ project }: ProjectAgentsSectionProps) {
   const updateProjectSettings = useUpdateProjectSettings(project.path);
 
   const autoAssignEnabled = projectSettings?.workflow?.agentConfig?.autoAssignEnabled ?? true;
+  const rolePromptOverrides = projectSettings?.workflow?.agentConfig?.rolePromptOverrides ?? {};
 
   const handleAutoAssignToggle = (checked: boolean) => {
     updateProjectSettings.mutate(
@@ -165,6 +255,93 @@ export function ProjectAgentsSection({ project }: ProjectAgentsSectionProps) {
     );
   };
 
+  const handleTogglePromptOverride = useCallback(
+    (agentName: string) => {
+      const existing = rolePromptOverrides[agentName];
+      const updated = {
+        ...rolePromptOverrides,
+        [agentName]: {
+          value: existing?.value ?? '',
+          enabled: !existing?.enabled,
+        },
+      };
+      updateProjectSettings.mutate(
+        {
+          projectPath: project.path,
+          settings: {
+            workflow: {
+              ...(projectSettings?.workflow ?? {}),
+              agentConfig: {
+                ...(projectSettings?.workflow?.agentConfig ?? {}),
+                rolePromptOverrides: updated,
+              },
+            },
+          },
+        },
+        {
+          onError: (err: Error) =>
+            toast.error('Failed to update prompt override', { description: err.message }),
+        }
+      );
+    },
+    [project.path, projectSettings, rolePromptOverrides, updateProjectSettings]
+  );
+
+  const handleUpdatePromptValue = useCallback(
+    (agentName: string, value: string) => {
+      const existing = rolePromptOverrides[agentName];
+      const updated = {
+        ...rolePromptOverrides,
+        [agentName]: { value, enabled: existing?.enabled ?? true },
+      };
+      updateProjectSettings.mutate(
+        {
+          projectPath: project.path,
+          settings: {
+            workflow: {
+              ...(projectSettings?.workflow ?? {}),
+              agentConfig: {
+                ...(projectSettings?.workflow?.agentConfig ?? {}),
+                rolePromptOverrides: updated,
+              },
+            },
+          },
+        },
+        {
+          onError: (err: Error) =>
+            toast.error('Failed to save prompt', { description: err.message }),
+        }
+      );
+    },
+    [project.path, projectSettings, rolePromptOverrides, updateProjectSettings]
+  );
+
+  const handleResetPromptOverride = useCallback(
+    (agentName: string) => {
+      const { [agentName]: _, ...rest } = rolePromptOverrides;
+      updateProjectSettings.mutate(
+        {
+          projectPath: project.path,
+          settings: {
+            workflow: {
+              ...(projectSettings?.workflow ?? {}),
+              agentConfig: {
+                ...(projectSettings?.workflow?.agentConfig ?? {}),
+                rolePromptOverrides: rest,
+              },
+            },
+          },
+        },
+        {
+          onSuccess: () => toast.success('Prompt reset'),
+          onError: (err: Error) =>
+            toast.error('Failed to reset prompt', { description: err.message }),
+        }
+      );
+    },
+    [project.path, projectSettings, rolePromptOverrides, updateProjectSettings]
+  );
+
   const builtInAgents = agents.filter(
     (a) => (a as unknown as Record<string, unknown>)._builtIn === true
   );
@@ -182,7 +359,7 @@ export function ProjectAgentsSection({ project }: ProjectAgentsSectionProps) {
         <div>
           <h2 className="text-lg font-semibold text-foreground">Agents</h2>
           <p className="text-sm text-muted-foreground">
-            Built-in and project-defined agents with their match rules.
+            Built-in and project-defined agents with their match rules and prompt overrides.
           </p>
         </div>
       </div>
@@ -226,7 +403,15 @@ export function ProjectAgentsSection({ project }: ProjectAgentsSectionProps) {
           </h3>
           <div className="space-y-2">
             {projectAgents.map((agent) => (
-              <AgentCard key={agent.name} agent={agent} />
+              <AgentCard
+                key={agent.name}
+                agent={agent}
+                promptOverride={rolePromptOverrides[agent.name]}
+                onTogglePromptOverride={() => handleTogglePromptOverride(agent.name)}
+                onUpdatePromptValue={(value) => handleUpdatePromptValue(agent.name, value)}
+                onResetPromptOverride={() => handleResetPromptOverride(agent.name)}
+                isSaving={updateProjectSettings.isPending}
+              />
             ))}
           </div>
         </div>
@@ -240,7 +425,15 @@ export function ProjectAgentsSection({ project }: ProjectAgentsSectionProps) {
           </h3>
           <div className="space-y-2">
             {builtInAgents.map((agent) => (
-              <AgentCard key={agent.name} agent={agent} />
+              <AgentCard
+                key={agent.name}
+                agent={agent}
+                promptOverride={rolePromptOverrides[agent.name]}
+                onTogglePromptOverride={() => handleTogglePromptOverride(agent.name)}
+                onUpdatePromptValue={(value) => handleUpdatePromptValue(agent.name, value)}
+                onResetPromptOverride={() => handleResetPromptOverride(agent.name)}
+                isSaving={updateProjectSettings.isPending}
+              />
             ))}
           </div>
         </div>

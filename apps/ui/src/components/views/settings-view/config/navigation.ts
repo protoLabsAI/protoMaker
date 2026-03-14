@@ -18,7 +18,6 @@ import {
   Activity,
   Cog,
   UserCog,
-  Users,
   Zap,
   Radio,
 } from 'lucide-react';
@@ -92,7 +91,6 @@ export const GLOBAL_NAV_GROUPS: NavigationGroup[] = [
     label: 'System',
     items: [
       { id: 'health', label: 'Health', icon: Activity },
-      { id: 'personas', label: 'Personas', icon: Users },
       { id: 'workflow', label: 'Workflow', icon: Cog },
     ],
   },

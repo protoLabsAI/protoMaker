@@ -706,7 +706,11 @@ export interface GlobalSettings {
   /** User's name for assignment and display purposes (resolved from settings, env, or git) */
   userName?: string;
 
-  /** Per-persona system prompt overrides, keyed by template name (e.g., 'ava', 'frank') */
+  /**
+   * @deprecated Use project-level agentConfig.rolePromptOverrides instead.
+   * Kept temporarily so the migration in SettingsService can read and copy
+   * any enabled entries to the active project before removing this field.
+   */
   personaOverrides?: Record<string, CustomPrompt>;
 
   /**
