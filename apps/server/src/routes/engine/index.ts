@@ -20,7 +20,6 @@ import type { SignalIntakeService } from '../../services/signal-intake-service.j
 import type { GitWorkflowService } from '../../services/git-workflow-service.js';
 import { getAllGraphs, getGraph } from '../../lib/graph-registry.js';
 import type { FeatureLoader } from '../../services/feature-loader.js';
-import type { PipelineCheckpointService } from '../../services/pipeline-checkpoint-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import type { GTMAuthorityAgent } from '../../services/authority-agents/gtm-agent.js';
 import type { CeremonyService } from '../../services/ceremony-service.js';
@@ -41,7 +40,6 @@ export function createEngineRoutes(
   projectService?: ProjectService,
   contentFlowService?: ContentFlowService,
   featureLoader?: FeatureLoader,
-  pipelineCheckpointService?: PipelineCheckpointService,
   events?: EventEmitter,
   gtmAgent?: GTMAuthorityAgent,
   ceremonyService?: CeremonyService,
@@ -528,60 +526,6 @@ export function createEngineRoutes(
       res.status(500).json({
         success: false,
         error: 'Failed to submit signal',
-      });
-    }
-  });
-
-  /**
-   * POST /api/engine/pipeline-checkpoints
-   * Returns active pipeline checkpoints for crash recovery visibility.
-   */
-  router.post('/pipeline-checkpoints', async (req: Request, res: Response) => {
-    try {
-      const { projectPath, featureId } = (req.body ?? {}) as {
-        projectPath?: string;
-        featureId?: string;
-      };
-
-      if (!pipelineCheckpointService) {
-        res.status(503).json({
-          success: false,
-          error: 'PipelineCheckpointService not available',
-        });
-        return;
-      }
-
-      // If specific feature requested, return just that checkpoint
-      if (featureId && projectPath) {
-        const checkpoint = await pipelineCheckpointService.load(projectPath, featureId);
-        res.json({
-          success: true,
-          checkpoint: checkpoint ?? null,
-        });
-        return;
-      }
-
-      // List all checkpoints across known project
-      if (!projectPath) {
-        res.status(400).json({
-          success: false,
-          error: 'projectPath is required',
-        });
-        return;
-      }
-
-      const checkpoints = await pipelineCheckpointService.listAll(projectPath);
-      res.json({
-        success: true,
-        checkpoints,
-        total: checkpoints.length,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      logger.error('Failed to get pipeline checkpoints:', error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to get pipeline checkpoints',
       });
     }
   });

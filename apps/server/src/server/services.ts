@@ -51,7 +51,6 @@ import {
 } from '../services/built-in-integrations.js';
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
-import { PipelineCheckpointService } from '../services/pipeline-checkpoint-service.js';
 import { ProjectService } from '../services/project-service.js';
 import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
@@ -228,7 +227,6 @@ export interface ServiceContainer {
 
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
-  pipelineCheckpointService: PipelineCheckpointService;
   factStoreService: FactStoreService;
   trajectoryStoreService: TrajectoryStoreService;
   leadHandoffService: LeadHandoffService;
@@ -530,8 +528,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     metricsService,
     dataDir
   );
-  const pipelineCheckpointService = new PipelineCheckpointService();
-
   // ContextFidelityService for shaping prior context on retries
   const contextFidelityService = new ContextFidelityService();
 
@@ -762,8 +758,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setAuthorityService(authorityService);
 
   // Wire contextFidelityService into leadEngineerService
-  leadEngineerService.setCheckpointService(pipelineCheckpointService);
-  autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
   leadEngineerService.setContextFidelityService(contextFidelityService);
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
   leadEngineerService.setHITLFormService(hitlFormService);
@@ -871,7 +865,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     eventStreamBuffer,
     briefingCursorService,
     signalIntakeService,
-<<<<<<< HEAD
     channelRouter,
     docsUpdateDetector,
     authorityService,
@@ -888,7 +881,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     ceremonyService,
     dailyStandupService,
     leadEngineerService,
-    pipelineCheckpointService,
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
