@@ -1,5 +1,16 @@
 # @protolabsai/utils
 
+## 0.55.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - remove authority system from MCP tools
+  - remove authority system from MCP tools
+- Updated dependencies
+  - @protolabsai/types@0.55.1
+  - @protolabsai/platform@0.55.1
+
 ## 0.55.0
 
 ### Minor Changes

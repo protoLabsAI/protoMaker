@@ -1,5 +1,13 @@
 # @protolabsai/types
 
+## 0.55.1
+
+### Patch Changes
+
+- ### Bug Fixes
+  - remove authority system from MCP tools
+  - remove authority system from MCP tools
+
 ## 0.55.0
 
 ### Minor Changes

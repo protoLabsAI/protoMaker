@@ -1,6 +1,6 @@
 {
   "name": "@protolabsai/ui",
-  "version": "0.55.0",
+  "version": "0.55.1",
   "type": "module",
   "description": "Shared UI components for AutoMaker",
   "main": "dist/index.js",
@@ -70,8 +70,8 @@
     "node": ">=22.0.0 <23.0.0"
   },
   "dependencies": {
-    "@protolabsai/types": "^0.55.0",
-    "@protolabsai/utils": "^0.55.0",
+    "@protolabsai/types": "^0.55.1",
+    "@protolabsai/utils": "^0.55.1",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-collapsible": "1.1.12",
     "@radix-ui/react-dialog": "^1.1.4",
