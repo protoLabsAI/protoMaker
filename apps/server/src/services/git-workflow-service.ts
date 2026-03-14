@@ -497,14 +497,31 @@ export class GitWorkflowService {
         } catch (rebaseError) {
           const errorMsg = rebaseError instanceof Error ? rebaseError.message : String(rebaseError);
           if (errorMsg.includes('conflict') || errorMsg.includes('CONFLICT')) {
+            // Capture conflicting files before aborting for diagnostics
+            let conflictingFiles: string[] = [];
+            try {
+              const { stdout: conflictOutput } = await execAsync(
+                'git diff --name-only --diff-filter=U',
+                { cwd: workDir, env: execEnv, timeout: 10_000 }
+              );
+              conflictingFiles = conflictOutput
+                .split('\n')
+                .map((f) => f.trim())
+                .filter(Boolean);
+            } catch {
+              // Non-critical — best-effort file list
+            }
+
             logger.warn(
-              `Rebase conflicts for ${branchName}, aborting rebase — PR may need manual rebase`
+              `Rebase conflicts for ${branchName}, aborting rebase — PR may need manual rebase. Conflicting files: ${conflictingFiles.join(', ') || 'unknown'}`
             );
             try {
               await execAsync('git rebase --abort', { cwd: workDir, env: execEnv });
             } catch {
               // Best-effort abort
             }
+            result.rebaseConflicts = true;
+            result.conflictingFiles = conflictingFiles;
           } else {
             logger.warn(`Rebase failed for ${branchName}: ${errorMsg} — continuing without rebase`);
             try {

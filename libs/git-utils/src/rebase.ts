@@ -19,6 +19,8 @@ export interface RebaseResult {
   error?: string;
   /** Whether conflicts were detected */
   hasConflicts?: boolean;
+  /** List of files with merge conflicts (populated when hasConflicts is true) */
+  conflictingFiles?: string[];
 }
 
 /**
@@ -79,6 +81,21 @@ export async function rebaseWorktreeOnMain(
           `Merge conflicts detected in ${worktreePath}, aborting merge. Agent will proceed on stale base.`
         );
 
+        // Capture conflicting files before aborting so callers can include them in diagnostics
+        let conflictingFiles: string[] = [];
+        try {
+          const { stdout: conflictOutput } = await execAsync(
+            'git diff --name-only --diff-filter=U',
+            { cwd: worktreePath, timeout: 10_000 }
+          );
+          conflictingFiles = conflictOutput
+            .split('\n')
+            .map((f) => f.trim())
+            .filter(Boolean);
+        } catch {
+          // Non-critical — best-effort file list
+        }
+
         // Abort the merge to return worktree to clean state
         try {
           await execAsync('git merge --abort', {
@@ -97,6 +114,7 @@ export async function rebaseWorktreeOnMain(
           success: false,
           error: 'Merge conflicts detected',
           hasConflicts: true,
+          conflictingFiles,
         };
       }
 

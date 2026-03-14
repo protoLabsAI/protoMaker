@@ -529,8 +529,12 @@ export class ExecutionService {
 
           if (!mergeResult.success) {
             if (mergeResult.hasConflicts) {
+              const fileList =
+                mergeResult.conflictingFiles && mergeResult.conflictingFiles.length > 0
+                  ? ` Conflicting files: ${mergeResult.conflictingFiles.join(', ')}.`
+                  : '';
               const reason =
-                `Pre-flight merge with origin/main has conflicts — branch "${branchName}" must be manually merged before the agent can proceed. ` +
+                `Pre-flight merge with origin/main has conflicts — branch "${branchName}" must be manually merged before the agent can proceed.${fileList} ` +
                 `Blocking feature to prevent repeated merge_conflict failures.`;
               logger.warn(`${reason} Feature: ${featureId}`);
               await this.featureLoader.update(projectPath, featureId, {
@@ -1081,6 +1085,27 @@ export class ExecutionService {
                 message: `Git workflow warning: ${gitWorkflowResult.error}`,
                 projectPath,
               });
+            }
+
+            // Block feature when post-commit rebase has conflicts so the friction tracker
+            // can detect the recurring pattern. Without this, the feature transitions to
+            // "review" with a conflicting PR, which is never counted as a merge_conflict failure.
+            if (gitWorkflowResult.rebaseConflicts) {
+              const fileList =
+                gitWorkflowResult.conflictingFiles && gitWorkflowResult.conflictingFiles.length > 0
+                  ? ` Conflicting files: ${gitWorkflowResult.conflictingFiles.join(', ')}.`
+                  : '';
+              const conflictReason =
+                `Post-commit rebase onto base branch has merge conflicts — PR was pushed but will need manual rebase before it can be merged.${fileList} ` +
+                `Blocking feature to surface this as a merge_conflict failure for the self-improvement loop.`;
+              logger.warn(`${conflictReason} Feature: ${featureId}`);
+              // featureLoader.update auto-emits feature:status-changed, which triggers
+              // the friction tracker to record a merge_conflict failure
+              await this.featureLoader.update(projectPath, featureId, {
+                status: 'blocked',
+                statusChangeReason: conflictReason,
+              });
+              return;
             }
 
             this.typedEventBus.emitAutoModeEvent('auto_mode_git_workflow', {

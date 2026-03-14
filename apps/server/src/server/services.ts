@@ -81,7 +81,10 @@ import { JobExecutorService } from '../services/job-executor-service.js';
 import { DoraMetricsService } from '../services/dora-metrics-service.js';
 import { MetricsCollectionService } from '../services/metrics-collection-service.js';
 import { ErrorBudgetService } from '../services/error-budget-service.js';
-import { FrictionTrackerService } from '../services/friction-tracker-service.js';
+import {
+  FrictionTrackerService,
+  type FailureContext,
+} from '../services/friction-tracker-service.js';
 import { FailureClassifierService } from '../services/failure-classifier-service.js';
 import {
   getReactiveSpawnerService,
@@ -693,13 +696,36 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const failureClassifierService = new FailureClassifierService();
   events.subscribe((type, payload) => {
     if (type !== 'feature:status-changed') return;
-    const p = payload as { newStatus?: string; reason?: string; statusChangeReason?: string };
+    const p = payload as {
+      newStatus?: string;
+      reason?: string;
+      statusChangeReason?: string;
+      featureId?: string;
+      feature?: { branchName?: string };
+    };
     if (p.newStatus !== 'blocked') return;
 
     const reason = p.reason ?? p.statusChangeReason ?? '';
     const classification = failureClassifierService.classify(reason);
 
-    void frictionTrackerService.recordFailure(classification.category);
+    // Extract diagnostic context from the reason string for merge_conflict failures
+    if (classification.category === 'merge_conflict') {
+      const context: FailureContext = {
+        featureId: p.featureId,
+        branchName: p.feature?.branchName,
+      };
+      // Parse conflicting files from the reason string if present
+      const filesMatch = reason.match(/Conflicting files:\s*([^.]+)/);
+      if (filesMatch) {
+        context.conflictingFiles = filesMatch[1]
+          .split(',')
+          .map((f) => f.trim())
+          .filter(Boolean);
+      }
+      void frictionTrackerService.recordFailureWithContext(classification.category, context);
+    } else {
+      void frictionTrackerService.recordFailure(classification.category);
+    }
   });
 
   // Reactive Spawner Service — trigger-based agent spawning with rate limiting and circuit breaking

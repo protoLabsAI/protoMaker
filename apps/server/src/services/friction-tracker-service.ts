@@ -50,6 +50,16 @@ interface CounterEntry {
   windowStart: number;
 }
 
+/** Diagnostic context for a single failure occurrence */
+export interface FailureContext {
+  /** ID of the feature that failed */
+  featureId?: string;
+  /** Files that had conflicts (for merge_conflict pattern) */
+  conflictingFiles?: string[];
+  /** Branch that had conflicts */
+  branchName?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Dependencies
 // ---------------------------------------------------------------------------
@@ -76,6 +86,9 @@ export class FrictionTrackerService {
   /** Pattern → timestamp of the most-recent filing (local or peer) */
   private readonly recentFilings = new Map<string, number>();
 
+  /** Pattern → accumulated diagnostic context from individual failures */
+  private readonly failureContexts = new Map<string, FailureContext[]>();
+
   constructor(deps: FrictionTrackerDependencies) {
     this.deps = deps;
   }
@@ -83,6 +96,23 @@ export class FrictionTrackerService {
   // ---------------------------------------------------------------------------
   // Public API
   // ---------------------------------------------------------------------------
+
+  /**
+   * Record a failure occurrence with optional diagnostic context.
+   *
+   * The context is accumulated across occurrences and included in the filed
+   * System Improvement feature description for actionability.
+   */
+  async recordFailureWithContext(pattern: string, context: FailureContext): Promise<void> {
+    if (!pattern || pattern === 'unknown') return;
+
+    const existing = this.failureContexts.get(pattern) ?? [];
+    existing.push(context);
+    // Keep last 10 contexts to avoid unbounded growth
+    this.failureContexts.set(pattern, existing.slice(-10));
+
+    await this.recordFailure(pattern);
+  }
 
   /**
    * Record a failure occurrence for the given pattern.
@@ -183,7 +213,7 @@ export class FrictionTrackerService {
   }
 
   /**
-   * Remove a resolved pattern from both the counter and dedup maps.
+   * Remove a resolved pattern from all maps.
    * Called when a System Improvement feature for this pattern moves to done,
    * either locally or via a pattern_resolved broadcast from a peer.
    */
@@ -191,6 +221,7 @@ export class FrictionTrackerService {
     if (!pattern) return;
     this.counters.delete(pattern);
     this.recentFilings.delete(pattern);
+    this.failureContexts.delete(pattern);
     logger.info(`Pattern resolved and counters cleared: pattern="${pattern}"`);
   }
 
@@ -243,12 +274,15 @@ export class FrictionTrackerService {
     this.recentFilings.set(pattern, Date.now());
 
     try {
+      const contexts = this.failureContexts.get(pattern) ?? [];
+      const contextSection = this.buildContextSection(pattern, contexts);
       const description =
         `This feature was automatically filed by the self-improvement loop.\n\n` +
         `Pattern "${pattern}" has failed ${OCCURRENCE_THRESHOLD} or more times, ` +
         `indicating a systemic issue that warrants investigation and remediation.\n\n` +
         `**Action required:** Investigate the root cause of recurring ${pattern} failures ` +
-        `and implement a durable fix to prevent future occurrences.`;
+        `and implement a durable fix to prevent future occurrences.` +
+        contextSection;
 
       const feature = await this.deps.featureLoader.create(this.deps.projectPath, {
         title,
@@ -268,6 +302,37 @@ export class FrictionTrackerService {
       this.recentFilings.delete(pattern);
       logger.error(`Failed to file System Improvement feature for pattern="${pattern}":`, err);
     }
+  }
+
+  private buildContextSection(pattern: string, contexts: FailureContext[]): string {
+    if (contexts.length === 0) return '';
+
+    const lines: string[] = ['\n\n**Diagnostic Context (accumulated failures):**'];
+
+    if (pattern === 'merge_conflict') {
+      const affectedFeatures = [...new Set(contexts.map((c) => c.featureId).filter(Boolean))];
+      const allConflictingFiles = [
+        ...new Set(contexts.flatMap((c) => c.conflictingFiles ?? []).filter(Boolean)),
+      ];
+      const affectedBranches = [...new Set(contexts.map((c) => c.branchName).filter(Boolean))];
+
+      if (affectedFeatures.length > 0) {
+        lines.push(`- Affected features: ${affectedFeatures.join(', ')}`);
+      }
+      if (allConflictingFiles.length > 0) {
+        lines.push(`- Files with recurring conflicts: ${allConflictingFiles.join(', ')}`);
+      }
+      if (affectedBranches.length > 0) {
+        lines.push(`- Affected branches: ${affectedBranches.join(', ')}`);
+      }
+    } else {
+      const affectedFeatures = [...new Set(contexts.map((c) => c.featureId).filter(Boolean))];
+      if (affectedFeatures.length > 0) {
+        lines.push(`- Affected features: ${affectedFeatures.join(', ')}`);
+      }
+    }
+
+    return lines.join('\n');
   }
 
   private async broadcastFrictionReport(pattern: string, featureId: string): Promise<void> {

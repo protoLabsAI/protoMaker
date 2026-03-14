@@ -90,4 +90,8 @@ export interface GitWorkflowResult {
   prMergedAt?: string;
   /** Error message if any step failed (workflow continues best-effort) */
   error?: string;
+  /** True when post-commit rebase was skipped due to conflicts (PR may need manual rebase) */
+  rebaseConflicts?: boolean;
+  /** Files that had rebase conflicts (populated when rebaseConflicts is true) */
+  conflictingFiles?: string[];
 }
