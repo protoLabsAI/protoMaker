@@ -64,8 +64,8 @@ export class ProjectSlugResolver {
       // Multi-project: check settings for explicit default
       try {
         const globalSettings = await this.settingsService.getGlobalSettings();
-        // GlobalSettings does not yet define defaultProjectSlug — access via index signature
-        const defaultSlug = (globalSettings as Record<string, unknown>)['defaultProjectSlug'];
+        // GlobalSettings does not yet define defaultProjectSlug — access dynamically
+        const defaultSlug = (globalSettings as unknown as Record<string, unknown>)['defaultProjectSlug'];
         if (typeof defaultSlug === 'string' && defaultSlug.trim()) {
           logger.debug(`Using configured defaultProjectSlug: ${defaultSlug}`);
           return defaultSlug.trim();
