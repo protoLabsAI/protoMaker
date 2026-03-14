@@ -89,6 +89,7 @@ import { createAutomationsRoutes } from '../routes/automations/index.js';
 import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 import { createLedgerRoutes } from '../routes/ledger/index.js';
+import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/backfill.js';
 import { createAvaChannelRoutes } from '../routes/ava-channel/index.js';
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
@@ -432,6 +433,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
 
   // Ledger REST endpoints (event persistence layer)
   app.use('/api/ledger', createLedgerRoutes(ledgerService, featureLoader));
+  app.post(
+    '/api/ledger/backfill-project-slug',
+    createBackfillLedgerProjectSlugHandler(featureLoader, services.dataDir)
+  );
   logger.info('Ledger routes mounted at /api/ledger');
 
   // Ava Channel routes (private coordination channel for Ava instances)
