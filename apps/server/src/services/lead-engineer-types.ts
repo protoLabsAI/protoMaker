@@ -4,7 +4,7 @@
  * All types shared across the lead-engineer subsystem files.
  */
 
-import type { Feature, AgentRole, StructuredPlan } from '@protolabsai/types';
+import type { ContextMetrics, Feature, AgentRole, StructuredPlan } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -151,6 +151,8 @@ export interface StateContext {
   startedAt?: string;
   /** Structured plan produced by PlanProcessor, if parsing succeeded */
   structuredPlan?: StructuredPlan;
+  /** Context window utilization metrics from the most recent execution attempt */
+  contextMetrics?: ContextMetrics;
 }
 
 /**

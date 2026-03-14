@@ -833,6 +833,7 @@ export type {
   StructuredPlan,
   GoalCriterionResult,
   GoalVerificationResult,
+  ContextMetrics,
 } from './lead-engineer.js';
 
 // Notes types (Tiptap-based project notes workspace)
@@ -915,6 +916,7 @@ export type {
   TrajectoryFactCategory,
   VerifiedTrajectory,
   TrajectoryDomain,
+  TrajectoryContextMetrics,
 } from './trajectory.js';
 
 // Automation types (trigger-based automation definitions and run records)

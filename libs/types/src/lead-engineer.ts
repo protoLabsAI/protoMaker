@@ -409,6 +409,26 @@ export interface PipelineResult {
   retryAfterMs?: number;
 }
 
+// ────────────────────────── Context Metrics ──────────────────────────
+
+/**
+ * Cumulative token usage and context window utilization for an agent execution session.
+ * Tracked by StreamObserver and included in trajectory storage for analysis.
+ */
+export interface ContextMetrics {
+  /** Total input tokens consumed across all turns in the session */
+  inputTokens: number;
+  /** Total output tokens produced across all turns in the session */
+  outputTokens: number;
+  /** Estimated cost in USD for this session */
+  estimatedCostUsd: number;
+  /**
+   * Fraction of the model's context window consumed (0.0–1.0).
+   * Derived from inputTokens / maxContextTokens.
+   */
+  contextUsagePercent: number;
+}
+
 // ────────────────────────── Phase Handoffs ──────────────────────────
 
 /**
