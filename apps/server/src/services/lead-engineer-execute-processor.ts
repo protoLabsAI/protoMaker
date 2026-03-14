@@ -631,8 +631,8 @@ export class ExecuteProcessor implements StateProcessor {
         errorMsg.includes('authentication failed') ||
         errorMsg.includes('could not resolve host') ||
         errorMsg.includes('connection refused') ||
-        errorMsg.includes('worktree') ||
-        errorMsg.includes('timed out');
+        errorMsg.includes('fatal: worktree') ||
+        errorMsg.includes('connection timed out');
 
       if (isFatalInfraFailure) {
         ctx.escalationReason = `Infrastructure failure (not retryable): ${result.error}`;
