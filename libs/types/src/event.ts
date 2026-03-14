@@ -542,6 +542,14 @@ export interface EventPayloadMap {
     featureId: string;
     projectPath: string;
   };
+  'feature:blocked': {
+    featureId: string;
+    featureTitle?: string;
+    projectPath?: string;
+    previousStatus?: string;
+    newStatus?: string;
+    reason?: string;
+  };
   'cost:exceeded': {
     featureId: string;
     projectPath: string;

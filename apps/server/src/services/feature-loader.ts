@@ -756,6 +756,22 @@ export class FeatureLoader implements FeatureStore {
             : 'status updated',
         feature: updatedFeature,
       });
+
+      // Emit specific lifecycle events based on new status
+      const lifecyclePayload = {
+        featureId,
+        featureTitle: updatedFeature.title,
+        projectPath,
+        previousStatus: feature.status,
+        newStatus: updates.status,
+      };
+      if (updates.status === 'in_progress') {
+        this.events.broadcast('feature:started', lifecyclePayload);
+      } else if (updates.status === 'blocked') {
+        this.events.broadcast('feature:blocked', lifecyclePayload);
+      } else if (updates.status === 'done') {
+        this.events.broadcast('feature:stopped', lifecyclePayload);
+      }
     }
 
     // Auto-complete epic when all child features reach 'done'
