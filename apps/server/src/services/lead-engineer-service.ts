@@ -107,6 +107,10 @@ export class LeadEngineerService {
   private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private prMergeIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private activeFeatures = new Set<string>();
+  /** Per-session Promise chain — serializes evaluateAndExecute calls for each session */
+  private sessionChains = new Map<string, Promise<void>>();
+  /** Sessions where the last world-state refresh failed — rule evaluation is skipped until next successful refresh */
+  private worldStateRefreshFailed = new Set<string>();
 
   private discordBotService?: {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
@@ -255,11 +259,7 @@ export class LeadEngineerService {
         }
       }),
       this.events.subscribe((type: EventType, payload: unknown) => {
-        if (
-          type !== 'project:lifecycle:launched' &&
-          type !== 'lead-engineer:project-completing-requested' &&
-          type !== 'lead-engineer:rule-evaluated'
-        ) {
+        if (type !== 'project:lifecycle:launched' && !type.startsWith('lead-engineer:')) {
           this.onEvent(type, payload);
         }
       }),
@@ -293,6 +293,8 @@ export class LeadEngineerService {
     this.subscriptions = [];
     for (const [projectPath] of this.sessions) this.clearIntervals(projectPath);
     this.sessions.clear();
+    this.sessionChains.clear();
+    this.worldStateRefreshFailed.clear();
     logger.info('LeadEngineerService destroyed');
   }
 
@@ -340,14 +342,18 @@ export class LeadEngineerService {
             projectSlug,
             s.worldState.maxConcurrency
           );
-          this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
-            s,
-            DEFAULT_RULES,
-            'lead-engineer:rule-evaluated',
-            {},
-            MAX_RULE_LOG_ENTRIES
-          );
+          this.worldStateRefreshFailed.delete(projectPath);
+          this.enqueueForSession(projectPath, () => {
+            this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
+              s,
+              DEFAULT_RULES,
+              'lead-engineer:rule-evaluated',
+              {},
+              MAX_RULE_LOG_ENTRIES
+            );
+          });
         } catch (err) {
+          this.worldStateRefreshFailed.add(projectPath);
           logger.error(`WorldState refresh failed for ${projectSlug}:`, err);
         }
       }, WORLD_STATE_REFRESH_MS)
@@ -397,6 +403,8 @@ export class LeadEngineerService {
     }
     this.clearIntervals(projectPath);
     this.workflowSettingsCache.delete(projectPath);
+    this.sessionChains.delete(projectPath);
+    this.worldStateRefreshFailed.delete(projectPath);
     session.flowState = 'stopped';
     session.stoppedAt = new Date().toISOString();
     this.sessions.delete(projectPath);
@@ -578,6 +586,20 @@ export class LeadEngineerService {
 
   // ────────────────────────── Private ──────────────────────────
 
+  /**
+   * Enqueue a task onto the per-session Promise chain so that evaluateAndExecute
+   * calls for the same session are serialized and cannot race.
+   */
+  private enqueueForSession(projectPath: string, task: () => void | Promise<void>): void {
+    const current = this.sessionChains.get(projectPath) ?? Promise.resolve();
+    const next = current
+      .then(() => task())
+      .catch((err) => {
+        logger.warn(`[LeadEngineer] Session chain task failed for ${projectPath}:`, err);
+      });
+    this.sessionChains.set(projectPath, next);
+  }
+
   private getActionExecutor(
     workflowSettings?: import('@protolabsai/types').WorkflowSettings,
     projectPath?: string
@@ -690,7 +712,7 @@ export class LeadEngineerService {
     }
   }
 
-  private async onEvent(type: EventType, payload: unknown): Promise<void> {
+  private onEvent(type: EventType, payload: unknown): void {
     const p = payload as Record<string, unknown> | null;
     const nested = p?.payload as Record<string, unknown> | null;
     const projectPath = (p?.projectPath ?? nested?.projectPath) as string | undefined;
@@ -698,14 +720,17 @@ export class LeadEngineerService {
     if (projectPath) {
       const session = this.sessions.get(projectPath);
       if (session?.flowState === 'running') {
-        this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
-        this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
-          session,
-          DEFAULT_RULES,
-          type,
-          payload,
-          MAX_RULE_LOG_ENTRIES
-        );
+        this.enqueueForSession(projectPath, () => {
+          if (this.worldStateRefreshFailed.has(projectPath)) return;
+          this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
+          this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
+            session,
+            DEFAULT_RULES,
+            type,
+            payload,
+            MAX_RULE_LOG_ENTRIES
+          );
+        });
       }
       return;
     }
@@ -714,27 +739,31 @@ export class LeadEngineerService {
     if (featureId) {
       for (const session of this.sessions.values()) {
         if (session.flowState !== 'running') continue;
-        if (!session.worldState.features[featureId]) {
-          try {
-            const feature = await this.featureLoader.get(session.projectPath, featureId);
-            if (feature) {
-              session.worldState.features[featureId] =
-                this.worldStateBuilder.featureToSnapshot(feature);
-            } else {
-              continue;
+        const sp = session.projectPath;
+        this.enqueueForSession(sp, async () => {
+          if (this.worldStateRefreshFailed.has(sp)) return;
+          if (!session.worldState.features[featureId]) {
+            try {
+              const feature = await this.featureLoader.get(sp, featureId);
+              if (feature) {
+                session.worldState.features[featureId] =
+                  this.worldStateBuilder.featureToSnapshot(feature);
+              } else {
+                return;
+              }
+            } catch {
+              return;
             }
-          } catch {
-            continue;
           }
-        }
-        this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
-        this.getActionExecutor(undefined, session.projectPath).evaluateAndExecute(
-          session,
-          DEFAULT_RULES,
-          type,
-          payload,
-          MAX_RULE_LOG_ENTRIES
-        );
+          this.worldStateBuilder.updateFromEvent(session.worldState, type, payload);
+          this.getActionExecutor(undefined, sp).evaluateAndExecute(
+            session,
+            DEFAULT_RULES,
+            type,
+            payload,
+            MAX_RULE_LOG_ENTRIES
+          );
+        });
         return;
       }
     }

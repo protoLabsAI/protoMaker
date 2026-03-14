@@ -343,6 +343,9 @@ describe('LeadEngineerService', () => {
         projectPath: '/test/project',
       });
 
+      // Allow session chain to flush
+      await vi.advanceTimersByTimeAsync(0);
+
       const session = service.getSession('/test/project');
       expect(session?.worldState.features['f1'].status).toBe('done');
     });
@@ -352,9 +355,11 @@ describe('LeadEngineerService', () => {
       await service.start('/test/project', 'my-project');
 
       events._fire('auto-mode:started' as EventType, { projectPath: '/test/project' });
+      await vi.advanceTimersByTimeAsync(0);
       expect(service.getSession('/test/project')?.worldState.autoModeRunning).toBe(true);
 
       events._fire('auto-mode:stopped' as EventType, { projectPath: '/test/project' });
+      await vi.advanceTimersByTimeAsync(0);
       expect(service.getSession('/test/project')?.worldState.autoModeRunning).toBe(false);
     });
   });
@@ -431,6 +436,173 @@ describe('LeadEngineerService', () => {
 
       const session = service.getSession('/test/project');
       expect(session?.worldState.features['missing-1']).toBeUndefined();
+    });
+  });
+
+  // ──── Concurrency: per-session serialization ────
+
+  describe('concurrency: per-session serialization', () => {
+    it('serializes evaluateAndExecute calls via per-session chain', async () => {
+      const features = [createMockFeature({ id: 'f1', status: 'backlog' })];
+      featureLoader = createMockFeatureLoader(features);
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      // Fire two events rapidly — second event's status should win after chain settles
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'f1',
+        oldStatus: 'backlog',
+        newStatus: 'in_progress',
+        projectPath: '/test/project',
+      });
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'f1',
+        oldStatus: 'in_progress',
+        newStatus: 'review',
+        projectPath: '/test/project',
+      });
+
+      // Allow chain to flush both tasks
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Both events processed sequentially — worldState reflects the last status
+      const session = service.getSession('/test/project');
+      expect(session?.worldState.features['f1']?.status).toBe('review');
+    });
+  });
+
+  // ──── Event filtering: lead-engineer:* exclusion ────
+
+  describe('event filtering: lead-engineer:* exclusion', () => {
+    it('does not route lead-engineer:* events through onEvent', async () => {
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      const session = service.getSession('/test/project');
+      const initialActionsTaken = session?.actionsTaken ?? 0;
+
+      // Fire several lead-engineer:* events — none should trigger rule evaluation
+      events._fire('lead-engineer:rule-evaluated' as EventType, {
+        projectPath: '/test/project',
+      });
+      events._fire('lead-engineer:started' as EventType, { projectPath: '/test/project' });
+      events._fire('lead-engineer:stopped' as EventType, { projectPath: '/test/project' });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Actions taken should not have changed from these events
+      expect(session?.actionsTaken).toBe(initialActionsTaken);
+    });
+
+    it('still routes non-lead-engineer events normally', async () => {
+      const features = [createMockFeature({ id: 'f1', status: 'review' })];
+      featureLoader = createMockFeatureLoader(features);
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'f1',
+        oldStatus: 'review',
+        newStatus: 'done',
+        projectPath: '/test/project',
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      const session = service.getSession('/test/project');
+      expect(session?.worldState.features['f1']?.status).toBe('done');
+    });
+  });
+
+  // ──── Stale world state: skip rule evaluation ────
+
+  describe('stale world state: skip rule evaluation on refresh failure', () => {
+    it('skips rule evaluation when world state refresh fails', async () => {
+      const features = [createMockFeature({ id: 'f1', status: 'backlog' })];
+      featureLoader = createMockFeatureLoader(features);
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      // Mark world state as failed (simulates a failed refresh)
+      (service as any).worldStateRefreshFailed.add('/test/project');
+
+      const session = service.getSession('/test/project');
+      const statusBefore = session?.worldState.features['f1']?.status;
+
+      // Fire an event that would normally update world state
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'f1',
+        oldStatus: 'backlog',
+        newStatus: 'in_progress',
+        projectPath: '/test/project',
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      // World state should NOT have been updated because refresh is marked failed
+      expect(session?.worldState.features['f1']?.status).toBe(statusBefore);
+    });
+
+    it('resumes rule evaluation after successful world state refresh', async () => {
+      const features = [createMockFeature({ id: 'f1', status: 'backlog' })];
+      featureLoader = createMockFeatureLoader(features);
+      service = new LeadEngineerService(
+        events as any,
+        featureLoader as any,
+        autoModeService as any,
+        projectService as any,
+        projectLifecycleService as any,
+        settingsService as any,
+        metricsService as any
+      );
+      await service.initialize();
+      await service.start('/test/project', 'my-project');
+
+      // Initially mark as failed
+      (service as any).worldStateRefreshFailed.add('/test/project');
+
+      // Then simulate a successful refresh by clearing the flag
+      (service as any).worldStateRefreshFailed.delete('/test/project');
+
+      // Now events should update world state normally
+      events._fire('feature:status-changed' as EventType, {
+        featureId: 'f1',
+        oldStatus: 'backlog',
+        newStatus: 'in_progress',
+        projectPath: '/test/project',
+      });
+
+      await vi.advanceTimersByTimeAsync(0);
+
+      const session = service.getSession('/test/project');
+      expect(session?.worldState.features['f1']?.status).toBe('in_progress');
     });
   });
 
