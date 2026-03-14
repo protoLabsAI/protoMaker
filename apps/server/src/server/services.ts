@@ -19,7 +19,6 @@ import { calendarService } from '../services/calendar-service.js';
 import { GoogleCalendarSyncService } from '../services/google-calendar-sync-service.js';
 import { MCPTestService } from '../services/mcp-test-service.js';
 import { getEscalationRouter } from '../services/escalation-router.js';
-import { pipelineService } from '../services/pipeline-service.js';
 import { MetricsService } from '../services/metrics-service.js';
 import { getDevServerService } from '../services/dev-server-service.js';
 import { getNotificationService } from '../services/notification-service.js';
@@ -203,7 +202,6 @@ export interface ServiceContainer {
 
   // Signal & pipeline
   signalIntakeService: SignalIntakeService;
-  pipelineService: typeof pipelineService;
   channelRouter: ChannelRouter;
 
   // Docs detection
@@ -873,7 +871,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     eventStreamBuffer,
     briefingCursorService,
     signalIntakeService,
-    pipelineService,
+<<<<<<< HEAD
     channelRouter,
     docsUpdateDetector,
     authorityService,
