@@ -535,7 +535,7 @@ export class ExecuteProcessor implements StateProcessor {
         ctx.escalationReason = `Pre-flight check failed: ${preFlightResult.reason}`;
         return {
           nextState: 'ESCALATE',
-          shouldContinue: false,
+          shouldContinue: true,
           reason: ctx.escalationReason,
         };
       }
@@ -547,8 +547,23 @@ export class ExecuteProcessor implements StateProcessor {
     if (executionGateEnabled) {
       const gateResult = await this.runExecutionGate(ctx);
       if (!gateResult.passed) {
+        ctx.gateRejectionCount = (ctx.gateRejectionCount ?? 0) + 1;
+        if (ctx.gateRejectionCount >= 3) {
+          ctx.escalationReason = `Execution gate rejected ${ctx.gateRejectionCount} consecutive times: ${gateResult.reason}`;
+          logger.warn('[EXECUTE] Execution gate rejected 3+ times — escalating', {
+            featureId: ctx.feature.id,
+            gateRejectionCount: ctx.gateRejectionCount,
+            reason: gateResult.reason,
+          });
+          return {
+            nextState: 'ESCALATE',
+            shouldContinue: true,
+            reason: ctx.escalationReason,
+          };
+        }
         logger.warn('[EXECUTE] Execution gate blocked feature — returning to backlog', {
           featureId: ctx.feature.id,
+          gateRejectionCount: ctx.gateRejectionCount,
           reason: gateResult.reason,
         });
         await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
@@ -1346,12 +1361,19 @@ export class ExecuteProcessor implements StateProcessor {
       let unsubscribe: (() => void) | null = null;
       let timedOut = false;
 
-      // Track the execution promise so we can chain resolves through it.
-      // This prevents a race condition where the EXECUTE processor retries before
-      // concurrencyManager.release() runs in executeFeature()'s finally block:
-      // event fires → outer promise resolves → retry calls acquire() → lease still held.
-      // By chaining through executionSettled, we guarantee the finally block has run.
-      let executionSettled: Promise<void> = Promise.resolve();
+      // Deferred promise for executionSettled — created BEFORE the event subscription so
+      // safeResolve always chains through the real execution lifecycle even when an event
+      // fires synchronously (e.g. in tests) before executeFeature() is called.
+      //
+      // Without this, if the event fires before the `executionSettled = executeFeature(…)`
+      // assignment below, safeResolve chains through Promise.resolve() and the outer
+      // promise resolves immediately — before concurrencyManager.release() runs in
+      // executeFeature()'s finally block.  The next retry then calls acquire() while the
+      // lease is still held, causing a deadlock.
+      let resolveSettled!: () => void;
+      const executionSettled = new Promise<void>((r) => {
+        resolveSettled = r;
+      });
 
       const safeResolve = (result: { success: boolean; error?: string }) => {
         executionSettled.then(() => resolve(result)).catch(() => resolve(result));
@@ -1464,15 +1486,19 @@ export class ExecuteProcessor implements StateProcessor {
       const recoveryContext = contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
 
       // Start execution (bypasses lead engineer delegation — calls executeFeature directly).
-      // Store as executionSettled so safeResolve waits for the concurrency lease to be
-      // released before unblocking the EXECUTE processor's retry attempt.
-      executionSettled = this.serviceContext.autoModeService
+      // Resolve the deferred executionSettled promise when executeFeature settles so that
+      // safeResolve (called from the event subscriber above) waits for the concurrency
+      // lease to be released before unblocking the EXECUTE processor's retry attempt.
+      this.serviceContext.autoModeService
         .executeFeature(ctx.projectPath, ctx.feature.id, true, false, undefined, {
           recoveryContext,
           retryCount: ctx.retryCount,
         })
-        .then(() => {})
+        .then(() => {
+          resolveSettled();
+        })
         .catch((err: unknown) => {
+          resolveSettled(); // settle so any pending safeResolve unblocks
           clearTimeout(timeout);
           if (!timedOut && unsubscribe) {
             unsubscribe();

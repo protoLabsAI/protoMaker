@@ -25,7 +25,19 @@ vi.mock('@protolabsai/platform', () => ({
 }));
 
 vi.mock('node:child_process', () => ({
-  exec: vi.fn(),
+  // Default: call the callback with empty stdout so promisify(exec) resolves immediately.
+  // Existing tests never call exec (gate/pre-flight disabled), so this is backward-compatible.
+  exec: vi.fn(
+    (
+      _cmd: string,
+      _opts: unknown,
+      cb: (err: null, result: { stdout: string; stderr: string }) => void
+    ) => {
+      if (typeof cb === 'function') {
+        cb(null, { stdout: '', stderr: '' });
+      }
+    }
+  ),
 }));
 
 import { ExecuteProcessor } from '../../../src/services/lead-engineer-execute-processor.js';
@@ -332,5 +344,122 @@ describe('ExecuteProcessor — runtime cap (maxRuntimeMinutesPerFeature)', () =>
       'runtime:exceeded',
       expect.objectContaining({ capMinutes: 60 })
     );
+  });
+});
+
+describe('ExecuteProcessor — pre-flight failure (Bug 2: shouldContinue:true)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns shouldContinue:true so ESCALATE state actually runs on pre-flight failure', async () => {
+    // Enable pre-flight but make it fail by returning a blocked feature with unmerged
+    // foundation dependencies. featureLoader.getAll returns a dep with isFoundation:true
+    // and status 'in_progress' (not merged), which triggers the dep-check failure.
+    const { ctx } = makeServiceContext({
+      preFlightChecks: true,
+      executionGate: false,
+    });
+
+    // Override getAll to return a foundation dep that is not yet merged
+    const depFeature = makeFeature({
+      id: 'dep-001',
+      status: 'in_progress' as const,
+      isFoundation: true,
+    });
+    (ctx.featureLoader.getAll as ReturnType<typeof vi.fn>).mockResolvedValue([
+      makeFeature(),
+      depFeature,
+    ]);
+
+    const processor = new ExecuteProcessor(ctx);
+    // Feature has a dep on dep-001 so the foundation dep check triggers
+    const stateCtx = makeCtx({
+      feature: makeFeature({ dependencies: ['dep-001'] }),
+    });
+    const result = await processor.process(stateCtx);
+
+    // Must return ESCALATE with shouldContinue:true so the state machine continues
+    expect(result.nextState).toBe('ESCALATE');
+    expect(result.shouldContinue).toBe(true);
+    expect(result.reason).toMatch(/pre-flight/i);
+  });
+});
+
+describe('ExecuteProcessor — execution gate rejection tracking (Bug 3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns to backlog on first gate rejection (count < 3)', async () => {
+    // Gate enabled. featureLoader.getAll returns 6 features in 'review' (> default maxPendingReviews=5).
+    const reviewFeatures = Array.from({ length: 6 }, (_, i) =>
+      makeFeature({ id: `feat-review-${i}`, status: 'review' as const })
+    );
+    const { ctx, featureLoader } = makeServiceContext({
+      executionGate: true,
+      preFlightChecks: false,
+    });
+    (featureLoader.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(reviewFeatures);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx({ gateRejectionCount: 0 });
+    const result = await processor.process(stateCtx);
+
+    expect(result.nextState).toBeNull();
+    expect(result.shouldContinue).toBe(false);
+    expect(result.reason).toMatch(/review queue saturated/i);
+    expect(stateCtx.gateRejectionCount).toBe(1);
+
+    expect(featureLoader.update).toHaveBeenCalledWith(
+      '/test/project',
+      'feat-001',
+      expect.objectContaining({ status: 'backlog' })
+    );
+  });
+
+  it('escalates after 3rd consecutive gate rejection', async () => {
+    const reviewFeatures = Array.from({ length: 6 }, (_, i) =>
+      makeFeature({ id: `feat-review-${i}`, status: 'review' as const })
+    );
+    const { ctx, featureLoader } = makeServiceContext({
+      executionGate: true,
+      preFlightChecks: false,
+    });
+    (featureLoader.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(reviewFeatures);
+
+    const processor = new ExecuteProcessor(ctx);
+    // Simulate 2 prior rejections already tracked on ctx
+    const stateCtx = makeCtx({ gateRejectionCount: 2 });
+    const result = await processor.process(stateCtx);
+
+    expect(result.nextState).toBe('ESCALATE');
+    expect(result.shouldContinue).toBe(true);
+    expect(result.reason).toMatch(/3/);
+    expect(stateCtx.gateRejectionCount).toBe(3);
+
+    // Must NOT return to backlog on escalation
+    expect(featureLoader.update).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ status: 'backlog' })
+    );
+  });
+
+  it('increments gateRejectionCount from undefined on first rejection', async () => {
+    const reviewFeatures = Array.from({ length: 6 }, (_, i) =>
+      makeFeature({ id: `feat-review-${i}`, status: 'review' as const })
+    );
+    const { ctx } = makeServiceContext({
+      executionGate: true,
+      preFlightChecks: false,
+    });
+    (ctx.featureLoader.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(reviewFeatures);
+
+    const processor = new ExecuteProcessor(ctx);
+    const stateCtx = makeCtx(); // gateRejectionCount not set → undefined
+    await processor.process(stateCtx);
+
+    expect(stateCtx.gateRejectionCount).toBe(1);
   });
 });
