@@ -41,15 +41,15 @@ import type { EventEmitter } from '../lib/events.js';
 import type { LoopState } from './auto-mode/auto-loop-coordinator.js';
 import type { RunningFeature } from './auto-mode/execution-types.js';
 import type { HealthReport } from './feature-health-service.js';
+import {
+  SLEEP_INTERVAL_CAPACITY_MS,
+  SLEEP_INTERVAL_IDLE_MS,
+  SLEEP_INTERVAL_NORMAL_MS,
+  SLEEP_INTERVAL_ERROR_MS,
+} from '../config/timeouts.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('FeatureScheduler');
-
-// Auto-loop sleep interval constants
-const SLEEP_INTERVAL_CAPACITY_MS = 5000;
-const SLEEP_INTERVAL_IDLE_MS = 30000;
-const SLEEP_INTERVAL_NORMAL_MS = 2000;
-const SLEEP_INTERVAL_ERROR_MS = 5000;
 
 // ── Public interfaces ──────────────────────────────────────────────────────
 
