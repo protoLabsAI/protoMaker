@@ -63,13 +63,15 @@ Each file can contain:
 
 If both `.automaker/agents.yml` and the directory exist, the single file takes precedence.
 
+> **Note:** Manifest file locations are fixed — there is no `manifestPaths` setting to configure custom lookup paths.
+
 ### Agent Fields
 
 | Field          | Type   | Required | Description                                                    |
 | -------------- | ------ | -------- | -------------------------------------------------------------- |
 | `name`         | string | Yes      | Unique identifier (e.g., `react-specialist`)                   |
 | `extends`      | string | Yes      | Built-in role to inherit from                                  |
-| `description`  | string | Yes      | What this agent specializes in                                 |
+| `description`  | string | No       | What this agent specializes in (defaults to empty string)      |
 | `model`        | string | No       | Model override (e.g., `claude-opus-4-6`, `claude-sonnet-4-6`)  |
 | `promptFile`   | string | No       | Path to custom prompt file, relative to project root           |
 | `capabilities` | object | No       | Override inherited capabilities (tools, maxTurns, permissions) |
@@ -168,7 +170,7 @@ Manifest model (step 4) takes precedence over settings override (step 5), but se
 
 ## Prompt Injection
 
-When a feature has an assigned role with a `promptFile`, the file contents are prepended to the agent's system prompt:
+When a feature has an assigned role with a `promptFile`, the assembled system prompt follows this order:
 
 ```markdown
 ## Agent Role: react-specialist
@@ -180,8 +182,10 @@ Expert in React component architecture and hooks
 ---
 
 {context files from .automaker/context/}
-{standard system prompt}
+{memory from .automaker/memory/}
 ```
+
+The role prompt (header + `promptFile` contents) is injected first, followed by context and memory files.
 
 If the prompt file is missing, a warning is logged and execution continues normally.
 
