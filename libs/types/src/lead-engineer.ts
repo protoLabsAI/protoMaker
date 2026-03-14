@@ -511,6 +511,41 @@ export interface StructuredPlan {
   deviationRules: DeviationRule[];
 }
 
+// ────────────────────────── Goal Verification ──────────────────────────
+
+/** A single criterion evaluated during goal-backward verification */
+export interface GoalCriterionResult {
+  /** The original criterion text */
+  criterion: string;
+  /** Whether the criterion was satisfied by the merged changes */
+  met: boolean;
+  /** Brief explanation of why it was or wasn't met */
+  reason: string;
+}
+
+/**
+ * Result of the goal-backward verification step run by DeployProcessor
+ * after post-merge typecheck passes.
+ *
+ * Stored at: .automaker/trajectory/{featureId}/goal-verification.json
+ */
+export interface GoalVerificationResult {
+  /** Feature ID this verification belongs to */
+  featureId: string;
+  /** ISO timestamp when verification ran */
+  timestamp: string;
+  /** Per-criterion pass/fail results */
+  criteria: GoalCriterionResult[];
+  /** Number of criteria that were met */
+  metCount: number;
+  /** Total number of criteria evaluated */
+  totalCount: number;
+  /** True when all criteria were met */
+  allMet: boolean;
+  /** IDs of follow-up features created for unmet criteria (empty if all met) */
+  followUpFeatureIds: string[];
+}
+
 // ────────────────────────── Phase Handoff ──────────────────────────
 
 /**

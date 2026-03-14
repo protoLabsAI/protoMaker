@@ -13,6 +13,7 @@ import { getFeatureDir } from '@protolabsai/platform';
 import type { EventType } from '@protolabsai/types';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
+import type { GoalVerificationResult } from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -73,6 +74,9 @@ export class DeployProcessor implements StateProcessor {
 
     // Fire-and-forget reflection (non-blocking)
     void this.generateReflection(ctx);
+
+    // Fire-and-forget goal verification (non-blocking, advisory only)
+    void this.runGoalVerification(ctx);
 
     return {
       nextState: 'DONE',
@@ -201,6 +205,182 @@ ${failureSummary}
       logger.info(`[DEPLOY] Created bug-fix feature for verification failure of ${ctx.feature.id}`);
     } catch (err) {
       logger.warn(`[DEPLOY] Failed to create bug-fix feature:`, err);
+    }
+  }
+
+  /**
+   * Fire-and-forget goal-backward verification.
+   * Evaluates acceptance criteria against the merged git diff via haiku LLM call.
+   * Creates follow-up features for unmet criteria and stores the result in trajectory.
+   * Never blocks the DONE transition.
+   */
+  private async runGoalVerification(ctx: StateContext): Promise<void> {
+    try {
+      // Collect acceptance criteria — prefer structured plan, fall back to feature description
+      const criteria: string[] = [];
+
+      if (ctx.structuredPlan?.acceptanceCriteria?.length) {
+        for (const ac of ctx.structuredPlan.acceptanceCriteria) {
+          criteria.push(ac.description);
+        }
+      }
+
+      if (criteria.length === 0) {
+        logger.info(
+          `[DEPLOY] Goal verification skipped — no acceptance criteria for feature ${ctx.feature.id}`
+        );
+        return;
+      }
+
+      // Get git diff of merged changes
+      let gitDiff = '';
+      try {
+        const { stdout } = await execAsync('git diff HEAD~1 HEAD -- . ":(exclude).automaker"', {
+          cwd: ctx.projectPath,
+          timeout: 15_000,
+        });
+        // Truncate large diffs to keep LLM prompt manageable
+        gitDiff = stdout.length > 8000 ? stdout.slice(0, 8000) + '\n... (truncated)' : stdout;
+      } catch {
+        logger.warn(`[DEPLOY] Goal verification: could not get git diff, skipping`);
+        return;
+      }
+
+      if (!gitDiff.trim()) {
+        logger.info(`[DEPLOY] Goal verification: empty diff, skipping`);
+        return;
+      }
+
+      const criteriaList = criteria.map((c, i) => `${i + 1}. ${c}`).join('\n');
+
+      const prompt = `You are a strict acceptance criteria evaluator for a software feature.
+
+Feature: ${ctx.feature.title}
+Description: ${(ctx.feature.description ?? '').slice(0, 800)}
+
+Acceptance Criteria:
+${criteriaList}
+
+Git diff of merged changes:
+\`\`\`diff
+${gitDiff}
+\`\`\`
+
+Evaluate each acceptance criterion against the merged code changes. For each criterion, determine if it was met based solely on what is visible in the diff.
+
+Respond with a JSON array where each element matches this schema:
+{ "criterion": "<exact criterion text>", "met": true|false, "reason": "<one sentence>" }
+
+Return ONLY the JSON array, no other text.`;
+
+      const result = await simpleQuery({
+        prompt,
+        model: 'haiku',
+        cwd: ctx.projectPath,
+        maxTurns: 1,
+        allowedTools: [],
+        traceContext: {
+          featureId: ctx.feature.id,
+          featureName: ctx.feature.title,
+          agentRole: 'goal-verification',
+        },
+      });
+
+      // Parse LLM response
+      let criteriaResults: Array<{ criterion: string; met: boolean; reason: string }> = [];
+      try {
+        const jsonMatch = result.text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          criteriaResults = JSON.parse(jsonMatch[0]) as typeof criteriaResults;
+        }
+      } catch {
+        logger.warn(`[DEPLOY] Goal verification: failed to parse LLM response`);
+        return;
+      }
+
+      const metCount = criteriaResults.filter((r) => r.met).length;
+      const unmet = criteriaResults.filter((r) => !r.met);
+      const followUpFeatureIds: string[] = [];
+
+      // Create follow-up features for unmet criteria
+      for (const gap of unmet) {
+        try {
+          const description = `## Goal Verification Gap
+
+Feature **${ctx.feature.title}** (${ctx.feature.id}) was merged but the following acceptance criterion was not satisfied:
+
+**Criterion:** ${gap.criterion}
+
+**Gap Analysis:** ${gap.reason}
+
+## Context
+- Original feature: ${ctx.feature.id}
+- PR: ${ctx.prNumber ? `#${ctx.prNumber}` : 'unknown'}
+`;
+
+          const followUp = await this.serviceContext.featureLoader.create(ctx.projectPath, {
+            title: `Gap: "${gap.criterion.slice(0, 60)}${gap.criterion.length > 60 ? '…' : ''}"`,
+            description,
+            category: 'bug',
+            complexity: 'small',
+            status: 'backlog',
+          });
+
+          followUpFeatureIds.push(followUp.id);
+        } catch (err) {
+          logger.warn(`[DEPLOY] Goal verification: failed to create follow-up feature:`, err);
+        }
+      }
+
+      // Build and store the verification result
+      const verificationResult: GoalVerificationResult = {
+        featureId: ctx.feature.id,
+        timestamp: new Date().toISOString(),
+        criteria: criteriaResults.map((r) => ({
+          criterion: r.criterion,
+          met: r.met,
+          reason: r.reason,
+        })),
+        metCount,
+        totalCount: criteriaResults.length,
+        allMet: unmet.length === 0,
+        followUpFeatureIds,
+      };
+
+      // Persist to trajectory directory
+      try {
+        const fs = await import('node:fs/promises');
+        const trajectoryDir = path.join(
+          ctx.projectPath,
+          '.automaker',
+          'trajectory',
+          ctx.feature.id
+        );
+        await fs.mkdir(trajectoryDir, { recursive: true });
+        await fs.writeFile(
+          path.join(trajectoryDir, 'goal-verification.json'),
+          JSON.stringify(verificationResult, null, 2),
+          'utf-8'
+        );
+      } catch (err) {
+        logger.warn(`[DEPLOY] Goal verification: failed to write result to disk:`, err);
+      }
+
+      this.serviceContext.events.emit('feature:goal-verification:complete' as EventType, {
+        featureId: ctx.feature.id,
+        projectPath: ctx.projectPath,
+        allMet: verificationResult.allMet,
+        metCount,
+        totalCount: verificationResult.totalCount,
+        followUpFeatureIds,
+      });
+
+      logger.info(
+        `[DEPLOY] Goal verification complete for ${ctx.feature.id}: ${metCount}/${verificationResult.totalCount} criteria met`,
+        { allMet: verificationResult.allMet, followUpCount: followUpFeatureIds.length }
+      );
+    } catch (err) {
+      logger.warn(`[DEPLOY] Goal verification failed:`, err);
     }
   }
 

@@ -831,6 +831,8 @@ export type {
   DeviationRule,
   PlanTask,
   StructuredPlan,
+  GoalCriterionResult,
+  GoalVerificationResult,
 } from './lead-engineer.js';
 
 // Notes types (Tiptap-based project notes workspace)
