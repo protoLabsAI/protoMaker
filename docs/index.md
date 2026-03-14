@@ -19,16 +19,16 @@ features:
     link: /getting-started/
   - title: Agent Teams
     details: Specialized AI agents — backend, frontend, DevOps — each with their own tools and context. Orchestrate them like a CTO directs engineers.
-    link: /agents/
+    link: /concepts/
   - title: Self-Hosting
     details: Run it anywhere. Docker, systemd, bare metal. Your code stays on your infrastructure.
-    link: /infra/
+    link: /self-hosting/
   - title: Integrations
     details: Discord for team chat. Built-in board for project tracking. GitHub for PRs. Claude Code CLI for terminal control.
     link: /integrations/
   - title: Project Orchestration
     details: From PRD to shipped features. Define milestones, set dependencies, let auto-mode process the backlog.
-    link: /protolabs/
+    link: /concepts/project-lifecycle
   - title: Open Source
     details: Fully open source. Learn the methodology. Build with it. No vendor lock-in.
     link: https://github.com/protoLabsAI
