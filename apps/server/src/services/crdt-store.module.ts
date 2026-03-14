@@ -11,10 +11,6 @@
  * for binary document replication. Both ports are only active when
  * proto.config.yaml enables hivemind mode.
  *
- * Services injected:
- *   - CalendarService.setCrdtStore()
- *   - TodoService.setCrdtStore()
- *
  * Features and Projects use EventBus-based sync (handled by crdt-sync.module.ts)
  * because their storage is filesystem-primary with event notifications.
  */
@@ -142,12 +138,6 @@ export async function register(container: ServiceContainer): Promise<CrdtStoreMo
       )
     );
   }
-
-  // Inject into services that have setCrdtStore() hooks
-  container.calendarService.setCrdtStore(store);
-  container.todoService.setCrdtStore(store);
-
-  logger.info('CRDTStore injected into CalendarService, TodoService');
 
   // Hydrate notes workspace from disk — fire-and-forget, non-blocking
   void hydrateNotesWorkspace(store, repoRoot);
