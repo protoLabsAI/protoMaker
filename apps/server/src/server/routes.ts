@@ -23,6 +23,7 @@ import {
 } from '../routes/health/index.js';
 import { createSessionsRoutes } from '../routes/sessions/index.js';
 import { createFeaturesRoutes } from '../routes/features/index.js';
+import { createBackfillProjectSlugHandler } from '../routes/features/routes/backfill-project-slug.js';
 import { createProjectsRoutes } from '../routes/projects/index.js';
 import { createAutoModeRoutes } from '../routes/auto-mode/index.js';
 import { createEnhancePromptRoutes } from '../routes/enhance-prompt/index.js';
@@ -248,6 +249,10 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
       authorityService,
       featureHealthService
     )
+  );
+  app.post(
+    '/api/features/backfill-project-slug',
+    createBackfillProjectSlugHandler(featureLoader, projectService)
   );
   app.use(
     '/api/auto-mode',
