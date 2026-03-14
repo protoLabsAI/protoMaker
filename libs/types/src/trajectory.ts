@@ -54,6 +54,21 @@ export type TrajectoryDomain =
   | 'other';
 
 /**
+ * Context window utilization snapshot captured at the end of an execution attempt.
+ * Stored in VerifiedTrajectory for analysis of agent context usage patterns.
+ */
+export interface TrajectoryContextMetrics {
+  /** Total input tokens consumed across all turns */
+  inputTokens: number;
+  /** Total output tokens produced across all turns */
+  outputTokens: number;
+  /** Estimated cost in USD for this execution */
+  estimatedCostUsd: number;
+  /** Fraction of the model's context window consumed (0.0–1.0) */
+  contextUsagePercent: number;
+}
+
+/**
  * Verified trajectory record stored after each execution attempt.
  *
  * Stored at: .automaker/trajectory/{featureId}/attempt-{N}.json
@@ -97,4 +112,6 @@ export interface VerifiedTrajectory {
 
   /** Attempt number (1-indexed) */
   attemptNumber: number;
+  /** Context window utilization captured at end of execution (optional for backward compatibility) */
+  contextMetrics?: TrajectoryContextMetrics;
 }

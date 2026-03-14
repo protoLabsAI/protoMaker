@@ -16,6 +16,7 @@ export function register(container: ServiceContainer): void {
     trajectoryStoreService,
     leadHandoffService,
     antagonisticReviewService,
+    deviationRuleService,
   } = container;
 
   // Lead Engineer cross-service wiring
@@ -26,6 +27,7 @@ export function register(container: ServiceContainer): void {
   leadEngineerService.setTrajectoryStoreService(trajectoryStoreService);
   leadEngineerService.setHandoffService(leadHandoffService);
   leadEngineerService.setAntagonisticReviewService(antagonisticReviewService);
+  leadEngineerService.setDeviationRuleService(deviationRuleService);
 
   // EM Agent: yield lifecycle control to Lead Engineer when active
   emAgent.setLeadEngineerService(leadEngineerService);

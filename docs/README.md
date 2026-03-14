@@ -92,47 +92,47 @@
 
 ## Development
 
-| Document                                                | Description                                        |
-| ------------------------------------------------------- | -------------------------------------------------- |
-| [Overview](./dev/index.md)                              | Development guide overview                         |
-| [Environment Setup](./dev/environment-setup.md)         | Dev environment prerequisites and setup            |
-| [Branch Strategy](./dev/branch-strategy.md)             | Three-branch flow (dev, staging, main)             |
-| [Git Workflow](./dev/git-workflow.md)                   | Git conventions, PR process, worktrees             |
-| [Idea to Production](./dev/idea-to-production.md)       | The canonical 8-phase pipeline reference           |
-| [Inbox System](./dev/inbox-system.md)                   | Unified actionable items inbox                     |
-| [Project Lifecycle](./dev/project-lifecycle.md)         | Project state machine                              |
-| [PR Remediation Loop](./dev/pr-remediation-loop.md)     | Autonomous PR review feedback handling             |
-| [Feature Status System](./dev/feature-status-system.md) | 5-status feature lifecycle                         |
-| [Feature Flags](./dev/feature-flags.md)                 | Feature flag system and conventions                |
-| [Issue Management](./dev/issue-management.md)           | Automated failure-to-issue pipeline                |
-| [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture                      |
-| [Monorepo Architecture](./dev/monorepo-architecture.md) | Workspace structure and dependency chain           |
-| [Flows Package](./dev/flows.md)                         | LangGraph state graph primitives and patterns      |
-| [Tool Package](./dev/tool-package.md)                   | Unified tool definition and registry               |
-| [Observability Package](./dev/observability-package.md) | Langfuse tracing and cost tracking                 |
-| [Integration Registry](./dev/integration-registry.md)   | Service integration registry patterns              |
-| [Creating MCP Tools](./dev/creating-mcp-tools.md)       | How to add new MCP tools                           |
-| [Design Philosophy](./dev/design-philosophy.md)         | UI design direction (Linear, Vercel, shadcn/ui)    |
-| [Design System](./dev/design-system.md)                 | Design tokens, theming, component patterns         |
-| [Frontend Philosophy](./dev/frontend-philosophy.md)     | Gold standard frontend decisions                   |
-| [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns                    |
-| [UI Standards](./dev/ui-standards.md)                   | Component library, forbidden patterns, enforcement |
-| [Ava Chat System](./dev/ava-chat-system.md)             | Chat UI architecture, components, tool cards       |
-| [Notes Panel](./dev/notes-panel.md)                     | Notes panel feature documentation                  |
-| [Folder Pattern](./dev/folder-pattern.md)               | Directory organization conventions                 |
-| [Instance State](./dev/instance-state.md)               | Server instance state management                   |
-| [Contribution Model](./dev/contribution-model.md)       | How to contribute to protoLabs                     |
-| [Testing Patterns](./dev/testing-patterns.md)           | Test patterns and anti-patterns                    |
-| [Desktop Testing](./dev/desktop-testing.md)             | Electron desktop app testing                       |
-| [Clean Code](./dev/clean-code.md)                       | Code quality standards and patterns                |
-| [Versioning](./dev/versioning.md)                       | Version numbering and release tagging              |
-| [Release](./dev/release.md)                             | Release process and Electron builds                |
-| [Terminal](./dev/terminal.md)                           | Terminal feature documentation                     |
-| [tmux](./dev/tmux.md)                                   | Terminal multiplexer setup and keybindings         |
-| [Add New Cursor Model](./dev/add-new-cursor-model.md)   | How to add a new Cursor model                      |
-| [Gotchas](./dev/gotchas.md)                             | Known pitfalls and workarounds                     |
-| [Docs Standard](./dev/docs-standard.md)                 | IA rules, content guidelines, maintenance          |
-| [Docs Site](./dev/docs-site.md)                         | VitePress setup, deployment, and config            |
+| Document                                                | Description                                                      |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| [Overview](./dev/index.md)                              | Development guide overview                                       |
+| [Environment Setup](./dev/environment-setup.md)         | Dev environment prerequisites and setup                          |
+| [Branch Strategy](./dev/branch-strategy.md)             | Three-branch flow (dev, staging, main)                           |
+| [Git Workflow](./dev/git-workflow.md)                   | Git conventions, PR process, worktrees                           |
+| [Idea to Production](./dev/idea-to-production.md)       | The canonical 8-phase pipeline reference (7-state Lead Engineer) |
+| [Inbox System](./dev/inbox-system.md)                   | Unified actionable items inbox                                   |
+| [Project Lifecycle](./dev/project-lifecycle.md)         | Project state machine                                            |
+| [PR Remediation Loop](./dev/pr-remediation-loop.md)     | Autonomous PR review feedback handling                           |
+| [Feature Status System](./dev/feature-status-system.md) | 5-status feature lifecycle                                       |
+| [Feature Flags](./dev/feature-flags.md)                 | Feature flag system and conventions                              |
+| [Issue Management](./dev/issue-management.md)           | Automated failure-to-issue pipeline                              |
+| [Shared Packages](./dev/shared-packages.md)             | Monorepo package architecture                                    |
+| [Monorepo Architecture](./dev/monorepo-architecture.md) | Workspace structure and dependency chain                         |
+| [Flows Package](./dev/flows.md)                         | LangGraph state graph primitives and patterns                    |
+| [Tool Package](./dev/tool-package.md)                   | Unified tool definition and registry                             |
+| [Observability Package](./dev/observability-package.md) | Langfuse tracing and cost tracking                               |
+| [Integration Registry](./dev/integration-registry.md)   | Service integration registry patterns                            |
+| [Creating MCP Tools](./dev/creating-mcp-tools.md)       | How to add new MCP tools                                         |
+| [Design Philosophy](./dev/design-philosophy.md)         | UI design direction (Linear, Vercel, shadcn/ui)                  |
+| [Design System](./dev/design-system.md)                 | Design tokens, theming, component patterns                       |
+| [Frontend Philosophy](./dev/frontend-philosophy.md)     | Gold standard frontend decisions                                 |
+| [UI Architecture](./dev/ui-architecture.md)             | Frontend structure and patterns                                  |
+| [UI Standards](./dev/ui-standards.md)                   | Component library, forbidden patterns, enforcement               |
+| [Ava Chat System](./dev/ava-chat-system.md)             | Chat UI architecture, components, tool cards                     |
+| [Notes Panel](./dev/notes-panel.md)                     | Notes panel feature documentation                                |
+| [Folder Pattern](./dev/folder-pattern.md)               | Directory organization conventions                               |
+| [Instance State](./dev/instance-state.md)               | Server instance state management                                 |
+| [Contribution Model](./dev/contribution-model.md)       | How to contribute to protoLabs                                   |
+| [Testing Patterns](./dev/testing-patterns.md)           | Test patterns and anti-patterns                                  |
+| [Desktop Testing](./dev/desktop-testing.md)             | Electron desktop app testing                                     |
+| [Clean Code](./dev/clean-code.md)                       | Code quality standards and patterns                              |
+| [Versioning](./dev/versioning.md)                       | Version numbering and release tagging                            |
+| [Release](./dev/release.md)                             | Release process and Electron builds                              |
+| [Terminal](./dev/terminal.md)                           | Terminal feature documentation                                   |
+| [tmux](./dev/tmux.md)                                   | Terminal multiplexer setup and keybindings                       |
+| [Add New Cursor Model](./dev/add-new-cursor-model.md)   | How to add a new Cursor model                                    |
+| [Gotchas](./dev/gotchas.md)                             | Known pitfalls and workarounds                                   |
+| [Docs Standard](./dev/docs-standard.md)                 | IA rules, content guidelines, maintenance                        |
+| [Docs Site](./dev/docs-site.md)                         | VitePress setup, deployment, and config                          |
 
 ## protoLabs
 

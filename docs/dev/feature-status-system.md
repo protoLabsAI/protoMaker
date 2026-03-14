@@ -308,16 +308,16 @@ INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
                                                   ESCALATE ←── any state
 ```
 
-| State      | Description                                  |
-| ---------- | -------------------------------------------- |
-| `INTAKE`   | Feature created, awaiting triage             |
-| `PLAN`     | Requirements analysis and spec generation    |
-| `EXECUTE`  | Implementation in progress                   |
-| `REVIEW`   | PR open, awaiting reviewer approval          |
-| `MERGE`    | PR approved and CI passing, ready to merge   |
-| `DEPLOY`   | Merged to main, deployment in progress       |
-| `DONE`     | Fully deployed and verified (terminal state) |
-| `ESCALATE` | Blocked; needs human intervention            |
+| State      | Description                                                               |
+| ---------- | ------------------------------------------------------------------------- |
+| `INTAKE`   | Feature created, awaiting triage                                          |
+| `PLAN`     | Requirements analysis, structured plan generation, antagonistic review    |
+| `EXECUTE`  | Implementation in progress (agent in worktree)                            |
+| `REVIEW`   | PR open, awaiting reviewer approval + CI                                  |
+| `MERGE`    | PR approved and CI passing, merging via gh CLI                            |
+| `DEPLOY`   | Post-merge verification (typecheck, build), reflection, goal verification |
+| `DONE`     | Fully deployed and verified (terminal state)                              |
+| `ESCALATE` | Blocked; needs human intervention or auto-retry via fast-path rules       |
 
 ### Fast-Path Rules
 
@@ -344,14 +344,14 @@ type LeadRuleAction =
   | { type: 'reset_feature'; featureId: string; reason: string }
   | { type: 'unblock_feature'; featureId: string }
   | { type: 'enable_auto_merge'; featureId: string; prNumber: number }
+  | { type: 'resolve_threads_direct'; featureId: string; prNumber: number }
   | { type: 'restart_auto_mode'; projectPath: string; maxConcurrency?: number }
   | { type: 'stop_agent'; featureId: string }
-  | { type: 'send_agent_message'; featureId: string; message: string }
   | { type: 'abort_and_resume'; featureId: string; resumePrompt: string }
-  | { type: 'post_discord'; channelId: string; message: string }
-  | { type: 'escalate_llm'; reason: string; context: Record<string, unknown> }
+  | { type: 'log'; level: 'info' | 'warn' | 'error'; message: string }
+  | { type: 'update_feature'; featureId: string; updates: { ... } }
+  | { type: 'project_completing' }
   | { type: 'rollback_feature'; featureId: string; projectPath: string; reason: string };
-// ... (log, update_feature, project_completing)
 ```
 
 ### Phase Handoffs
