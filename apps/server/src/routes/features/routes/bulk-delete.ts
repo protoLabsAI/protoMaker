@@ -3,14 +3,15 @@
  */
 
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 
-interface BulkDeleteRequest {
-  projectPath: string;
-  featureIds: string[];
-}
+export const BulkDeleteRequestSchema = z.object({
+  projectPath: z.string().min(1, 'projectPath is required'),
+  featureIds: z.array(z.string()).min(1, 'featureIds must be a non-empty array'),
+});
 
 interface BulkDeleteResult {
   featureId: string;
@@ -21,15 +22,7 @@ interface BulkDeleteResult {
 export function createBulkDeleteHandler(featureLoader: FeatureLoader, events?: EventEmitter) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, featureIds } = req.body as BulkDeleteRequest;
-
-      if (!projectPath || !featureIds || !Array.isArray(featureIds) || featureIds.length === 0) {
-        res.status(400).json({
-          success: false,
-          error: 'projectPath and featureIds (non-empty array) are required',
-        });
-        return;
-      }
+      const { projectPath, featureIds }: z.infer<typeof BulkDeleteRequestSchema> = req.body;
 
       // Process in parallel batches of 20 for efficiency
       const BATCH_SIZE = 20;

@@ -9,6 +9,7 @@
  */
 
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { Feature, FeatureStatus, ActionProposal, RiskLevel } from '@protolabsai/types';
 import type { AuthorityService } from '../../../services/authority-service.js';
@@ -17,6 +18,22 @@ import type { FeatureHealthService } from '../../../services/feature-health-serv
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
 import { createLogger } from '@protolabsai/utils';
+
+export const UpdateRequestSchema = z.object({
+  projectPath: z.string().min(1, 'projectPath is required'),
+  featureId: z.string().min(1, 'featureId is required'),
+  updates: z.custom<Partial<Feature>>(
+    (val): val is Partial<Feature> => val !== null && typeof val === 'object',
+    'updates must be an object'
+  ),
+  descriptionHistorySource: z.enum(['enhance', 'edit']).optional(),
+  enhancementMode: z
+    .enum(['improve', 'technical', 'simplify', 'acceptance', 'ux-reviewer'])
+    .optional(),
+  preEnhancementDescription: z.string().optional(),
+  callerAgentId: z.string().optional(),
+  risk: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+});
 
 const logger = createLogger('features/update');
 
@@ -41,24 +58,7 @@ export function createUpdateHandler(
         preEnhancementDescription,
         callerAgentId,
         risk,
-      } = req.body as {
-        projectPath: string;
-        featureId: string;
-        updates: Partial<Feature>;
-        descriptionHistorySource?: 'enhance' | 'edit';
-        enhancementMode?: 'improve' | 'technical' | 'simplify' | 'acceptance' | 'ux-reviewer';
-        preEnhancementDescription?: string;
-        callerAgentId?: string;
-        risk?: RiskLevel;
-      };
-
-      if (!projectPath || !featureId || !updates) {
-        res.status(400).json({
-          success: false,
-          error: 'projectPath, featureId, and updates are required',
-        });
-        return;
-      }
+      }: z.infer<typeof UpdateRequestSchema> = req.body;
 
       // Check for duplicate title if title is being updated
       if (updates.title && updates.title.trim()) {
