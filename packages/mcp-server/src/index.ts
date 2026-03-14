@@ -936,39 +936,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         complexity: args.complexity || 'medium',
       });
 
-    // Discord DM
-    case 'send_discord_dm':
-      return apiCall('/discord/send-dm', {
-        username: args.username,
-        content: args.content,
-      });
-
-    case 'read_discord_dms':
-      return apiCall('/discord/read-dms', {
-        username: args.username,
-        limit: args.limit || 10,
-      });
-
-    // Discord Channel Messages
-    case 'send_discord_channel_message':
-      return apiCall('/discord/send-channel-message', {
-        channelId: args.channelId,
-        content: args.content,
-        embed: args.embed,
-      });
-
-    case 'read_discord_channel_messages':
-      return apiCall('/discord/read-channel-messages', {
-        channelId: args.channelId,
-        limit: args.limit || 10,
-      });
-
-    case 'add_discord_reaction':
-      return apiCall('/discord/add-reaction', {
-        channelId: args.channelId,
-        messageId: args.messageId,
-        emoji: args.emoji,
-      });
+    // Discord tools moved to project-level — not shipped in plugin
 
     // Setup Pipeline
     case 'research_repo':
@@ -1267,55 +1235,7 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         alignmentPerformed: args.alignmentPerformed ?? false,
       });
 
-    // Langfuse Observability
-    case 'langfuse_list_traces':
-      return apiCall('/langfuse/traces', {
-        page: args.page,
-        limit: args.limit,
-        name: args.name,
-        tags: args.tags,
-        userId: args.userId,
-        sessionId: args.sessionId,
-        fromTimestamp: args.fromTimestamp,
-        toTimestamp: args.toTimestamp,
-      });
-
-    case 'langfuse_get_trace':
-      return apiCall('/langfuse/traces/detail', {
-        traceId: args.traceId,
-      });
-
-    case 'langfuse_get_costs':
-      return apiCall('/langfuse/costs', {
-        page: args.page,
-        limit: args.limit,
-        type: args.type,
-        model: args.model,
-        fromStartTime: args.fromStartTime,
-        toStartTime: args.toStartTime,
-      });
-
-    case 'langfuse_score_trace':
-      return apiCall('/langfuse/scores', {
-        traceId: args.traceId,
-        name: args.name,
-        value: args.value,
-        comment: args.comment,
-      });
-
-    case 'langfuse_list_datasets':
-      return apiCall('/langfuse/datasets', {
-        page: args.page,
-        limit: args.limit,
-      });
-
-    case 'langfuse_add_to_dataset':
-      return apiCall('/langfuse/datasets/items', {
-        datasetName: args.datasetName,
-        traceId: args.traceId,
-        observationId: args.observationId,
-        metadata: args.metadata,
-      });
+    // Langfuse tools moved to project-level — not shipped in plugin
 
     // HITL Forms
     case 'request_user_input':
