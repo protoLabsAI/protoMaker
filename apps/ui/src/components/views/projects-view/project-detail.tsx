@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   FileText,
   Layers,
@@ -8,10 +8,14 @@ import {
   Activity,
   Archive,
   Milestone,
+  RefreshCw,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@protolabsai/ui/atoms';
-import { Spinner } from '@protolabsai/ui/atoms';
+import { Spinner, Button } from '@protolabsai/ui/atoms';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getHttpApiClient } from '@/lib/http-api-client';
+import type { EventType } from '@protolabsai/types';
 import { ProjectHeader } from './components/project-header';
 import { ProjectSidebar } from './components/project-sidebar';
 import { useProject, useProjectDelete } from './hooks/use-project';
@@ -44,12 +48,50 @@ export function ProjectDetail({
   const setPendingProjectSlug = useAvaChannelStore((s) => s.setPendingProjectSlug);
   const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
   const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
+  const queryClient = useQueryClient();
+  const [isRefreshingTimeline, setIsRefreshingTimeline] = useState(false);
 
   const handleOpenPmChat = () => {
     setPendingProjectSlug(projectSlug);
     setLastActiveTab('projects');
     setChatModalOpen(true);
   };
+
+  // ── Timeline refresh ─────────────────────────────────────────────────────────
+
+  const refreshTimeline = useCallback(() => {
+    setIsRefreshingTimeline(true);
+    queryClient
+      .invalidateQueries({ queryKey: ['project-timeline', projectPath, projectSlug] })
+      .finally(() => {
+        // Brief delay to let the spinner show before hiding
+        setTimeout(() => setIsRefreshingTimeline(false), 500);
+      });
+  }, [queryClient, projectPath, projectSlug]);
+
+  // Subscribe to WebSocket events that generate timeline entries and auto-refresh
+  useEffect(() => {
+    if (!projectPath || !projectSlug) return;
+
+    const TIMELINE_TRIGGER_EVENTS: EventType[] = [
+      'feature:status-changed',
+      'milestone:completed',
+      'ceremony:fired',
+      'pr:merged',
+      'escalation:signal-received',
+    ];
+
+    const api = getHttpApiClient();
+    const unsubscribe = api.subscribeToEvents((type: EventType) => {
+      if ((TIMELINE_TRIGGER_EVENTS as string[]).includes(type)) {
+        queryClient.invalidateQueries({ queryKey: ['project-timeline', projectPath, projectSlug] });
+      }
+    });
+
+    return unsubscribe;
+  }, [queryClient, projectPath, projectSlug]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   const handleDelete = () => {
     deleteMutation.mutate(projectSlug, {
@@ -170,6 +212,22 @@ export function ProjectDetail({
 
               <TabsContent value="timeline">
                 <div className="py-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-foreground">Activity Timeline</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={refreshTimeline}
+                      disabled={isRefreshingTimeline}
+                      aria-label="Refresh timeline"
+                      data-testid="timeline-refresh-button"
+                    >
+                      <RefreshCw
+                        className={`w-4 h-4 mr-1 ${isRefreshingTimeline ? 'animate-spin' : ''}`}
+                      />
+                      Refresh
+                    </Button>
+                  </div>
                   <ProjectTimeline projectSlug={projectSlug} />
                 </div>
               </TabsContent>
