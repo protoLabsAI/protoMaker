@@ -36,6 +36,7 @@ import type { KnowledgeStoreService } from './knowledge-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
 import type { FactStoreService } from './fact-store-service.js';
 import type { TrajectoryStoreService } from './trajectory-store-service.js';
+import type { DeviationRuleService } from './deviation-rule-service.js';
 import { DEFAULT_RULES } from './lead-engineer-rules.js';
 import { getWorkflowSettings } from '../lib/settings-helpers.js';
 import { FeatureStateMachine } from './lead-engineer-state-machine.js';
@@ -118,6 +119,7 @@ export class LeadEngineerService {
   private handoffService?: LeadHandoffService;
   private factStoreService?: FactStoreService;
   private trajectoryStoreService?: TrajectoryStoreService;
+  private deviationRuleService?: DeviationRuleService;
   private antagonisticReviewService?: IPlanReviewService;
   private hitlFormService?: HITLFormService;
   private authorityService?: AuthorityService;
@@ -178,6 +180,9 @@ export class LeadEngineerService {
   }
   setTrajectoryStoreService(s: TrajectoryStoreService): void {
     this.trajectoryStoreService = s;
+  }
+  setDeviationRuleService(s: DeviationRuleService): void {
+    this.deviationRuleService = s;
   }
   setAntagonisticReviewService(s: IPlanReviewService): void {
     this.antagonisticReviewService = s;
@@ -470,6 +475,7 @@ export class LeadEngineerService {
         antagonisticReviewService: this.antagonisticReviewService,
         hitlFormService: this.hitlFormService,
         trajectoryStoreService: this.trajectoryStoreService,
+        deviationRuleService: this.deviationRuleService,
       };
 
       const workflowSettings = await getWorkflowSettings(

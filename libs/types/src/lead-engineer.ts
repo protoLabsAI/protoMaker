@@ -496,8 +496,23 @@ export interface AcceptanceCriterion {
   verifyCommand?: string;
 }
 
+/**
+ * Category of deviation rule, matching the GSD model.
+ * - auto-fix-bugs: bugs discovered during implementation
+ * - auto-fix-critical: missing critical functionality blocking the stated goal
+ * - auto-fix-blocking: blocking issues (imports, type errors) in files within scope
+ * - escalate-architecture: architecture changes, new deps, or scope expansion
+ */
+export type DeviationRuleCategory =
+  | 'auto-fix-bugs'
+  | 'auto-fix-critical'
+  | 'auto-fix-blocking'
+  | 'escalate-architecture';
+
 /** A rule that defines acceptable deviations from the original plan */
 export interface DeviationRule {
+  /** Category of this deviation rule */
+  category?: DeviationRuleCategory;
   /** Description of what kind of deviation is allowed */
   condition: string;
   /** How to handle or adapt when this deviation occurs */

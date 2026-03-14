@@ -17,6 +17,7 @@ import type { FactStoreService } from './fact-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import type { TrajectoryStoreService } from './trajectory-store-service.js';
+import type { DeviationRuleService } from './deviation-rule-service.js';
 import {
   EXECUTE_TIMEOUT_MS,
   MERGE_RETRY_DELAY_MS,
@@ -86,6 +87,7 @@ export interface ProcessorServiceContext {
   antagonisticReviewService?: IPlanReviewService;
   hitlFormService?: HITLFormService;
   trajectoryStoreService?: TrajectoryStoreService;
+  deviationRuleService?: DeviationRuleService;
 }
 
 // ────────────────────────── Feature State Machine Types ──────────────────────────

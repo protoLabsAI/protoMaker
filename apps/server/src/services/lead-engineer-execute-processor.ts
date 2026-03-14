@@ -12,6 +12,7 @@ import { createLogger } from '@protolabsai/utils';
 import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
 import type {
   ContextMetrics,
+  DeviationRule,
   EventType,
   PipelinePhase,
   VerifiedTrajectory,
@@ -142,6 +143,25 @@ export class ExecuteProcessor implements StateProcessor {
       /* non-fatal — fall back to default */
     }
     return DEFAULT_THRESHOLD;
+  }
+
+  /**
+   * Resolve the default deviation rules for this project from workflow settings.
+   * Returns an empty array if none are configured (caller falls back to built-in defaults).
+   */
+  private async resolveDefaultDeviationRules(projectPath: string): Promise<DeviationRule[]> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = settings.workflow?.pipeline?.defaultDeviationRules;
+        if (Array.isArray(configured) && configured.length > 0) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — fall back to built-in defaults */
+    }
+    return [];
   }
 
   /**
@@ -1266,7 +1286,11 @@ export class ExecuteProcessor implements StateProcessor {
    * Execute the feature and wait for a completion event.
    * Uses executeFeature() directly (not through process()) to avoid recursion.
    */
-  private waitForCompletion(ctx: StateContext): Promise<{ success: boolean; error?: string }> {
+  private async waitForCompletion(
+    ctx: StateContext
+  ): Promise<{ success: boolean; error?: string }> {
+    const defaultDeviationRules = await this.resolveDefaultDeviationRules(ctx.projectPath);
+
     return new Promise((resolve) => {
       let unsubscribe: (() => void) | null = null;
       let timedOut = false;
@@ -1340,6 +1364,19 @@ export class ExecuteProcessor implements StateProcessor {
 
       // Build recovery context from plan output, review feedback, and sibling reflections
       const contextParts: string[] = [];
+
+      // Inject deviation rules (always — not just on retry — so the agent knows its authority bounds)
+      if (this.serviceContext.deviationRuleService) {
+        const rules = this.serviceContext.deviationRuleService.loadRules(
+          ctx.structuredPlan,
+          defaultDeviationRules
+        );
+        const formatted = this.serviceContext.deviationRuleService.formatForPrompt(rules);
+        if (formatted) {
+          contextParts.push(formatted);
+        }
+      }
+
       if (ctx.planOutput) {
         contextParts.push(`## Implementation Plan\n\n${ctx.planOutput}`);
       }

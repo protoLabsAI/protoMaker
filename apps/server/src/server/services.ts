@@ -113,6 +113,7 @@ import { CommandRegistryService } from '../services/command-registry-service.js'
 import { CheckpointService } from '../services/checkpoint-service.js';
 import { DailyStandupService } from '../services/daily-standup-service.js';
 import { ProjectSlugResolver } from '../services/project-slug-resolver.js';
+import { DeviationRuleService } from '../services/deviation-rule-service.js';
 
 const logger = createLogger('Server:Services');
 
@@ -290,6 +291,9 @@ export interface ServiceContainer {
 
   // Project slug resolver (resolves default projectSlug for a given projectPath)
   projectSlugResolver: ProjectSlugResolver;
+
+  // Deviation rule evaluation (agent scope constraints)
+  deviationRuleService: DeviationRuleService;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -716,6 +720,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const projectSlugResolver = new ProjectSlugResolver(settingsService);
   featureLoader.setProjectSlugResolver(projectSlugResolver);
 
+  // Deviation Rule Service — evaluates agent scope against per-feature constraints
+  const deviationRuleService = new DeviationRuleService();
+
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });
 
@@ -916,6 +923,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     commandRegistryService,
     checkpointService,
     projectSlugResolver,
+    deviationRuleService,
     driftCheckInterval: null,
   };
 }
