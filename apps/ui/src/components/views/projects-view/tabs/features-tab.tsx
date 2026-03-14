@@ -250,13 +250,6 @@ function FeatureRow({ feature, indented = false }: { feature: Feature; indented?
               </a>
             )}
           </div>
-
-          {/* Assignee */}
-          {feature.assignee && (
-            <span className="text-[10px] text-muted-foreground">
-              Assigned to {feature.assignee}
-            </span>
-          )}
         </div>
       )}
     </div>

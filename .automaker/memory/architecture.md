@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 490
-  referenced: 88
-  successfulFeatures: 88
+  loaded: 520
+  referenced: 94
+  successfulFeatures: 94
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -811,3 +811,84 @@ usageStats:
 - **Problem solved:** WebSocket subscription needs to be set up when component mounts or project changes, and cleaned up properly.
 - **Why this works:** Minimizes subscription churn. If dependencies included the invalidation function (which changes on every render if defined inline), subscription would be recreated constantly.
 - **Trade-offs:** Requires care: must ensure unsubscribe function is properly returned and called. Fewer subscriptions means better resource efficiency.
+
+#### [Pattern] CRDT layer implemented as fire-and-forget secondary write on top of disk primary store. Removal had zero data durability impact, indicating CRDT was used for distributed mesh sync only, not critical persistence. (2026-03-14)
+- **Problem solved:** Removed dual-write to CRDT without requiring data migration or schema reconciliation
+- **Why this works:** Disk is sufficient as source of truth; CRDT likely served only mesh distribution/replication concerns
+- **Trade-offs:** Simpler code and deployment vs loss of distributed mesh sync capability; reduced infrastructure footprint vs centralization risk
+
+#### [Gotcha] Optional infrastructure parameter (store?: CRDTStore) in factory function created call-site coupling: routes.ts had to be updated even though notes/* changes were internal. (2026-03-14)
+- **Situation:** Dropping store parameter from createNotesRoutes() factory required updating the aggregator that calls it
+- **Root cause:** Dependency injection leaks implementation detail up the call stack; optional parameters still bind callers to knowledge of that parameter
+- **How to avoid:** Explicit DI is clearer than service locator, but creates brittle coupling to optional dependencies
+
+#### [Pattern] Dual-write removal required zero data migration, suggesting CRDT was a write-only sink—written to but never queried by main API. Dead write code path persisted until removal. (2026-03-14)
+- **Problem solved:** Six call sites calling saveWorkspaceWithCrdt() removed cleanly without data reconciliation step
+- **Why this works:** If clients read from CRDT, removing the write would cause divergence requiring migration; zero migration suggests CRDT wasn't a read path
+- **Trade-offs:** Cleaner removal now vs potential regret if mesh-sync is needed later and CRDT path must be rebuilt
+
+### Replaced Automerge.Doc CRDT cache with plain Map<string, Record<string, Project>> backed by disk. Automerge was solving conflict resolution; actual requirement was lazy-loaded read cache with disk as single source of truth. (2026-03-14)
+- **Context:** ProjectService was maintaining in-memory Automerge documents that were redundant—disk was already the authoritative copy, and there was no multi-writer concurrency.
+- **Why:** CRDT adds operational complexity (merge semantics, change tracking) unnecessary when: (1) writes are serialized to disk, (2) conflicts cannot occur, (3) cache exists only for read performance. Plain cache is simpler and faster.
+- **Rejected:** Keeping Automerge for future distributed sync—rejected because no current use case demands it, and the overhead complicates every write path (e.g., _toAutomergeValue, Automerge.change wrapping).
+- **Trade-offs:** Lost CRDT conflict-free replicas capability (becomes blocking if true peer-sync is needed later). Gained: simpler code, faster writes, no Automerge dependency in consumer service, clearer intent (disk is source of truth).
+- **Breaking if changed:** Any code expecting CRDT merge semantics or peer-to-peer sync would break. This refactor commits to single-writer, disk-authoritative model.
+
+#### [Gotcha] Conditional CRDT logic (_isCrdtEnabled guard) was the only decision point in write paths. Removing it eliminated entire parallel code flow without branching left behind. (2026-03-14)
+- **Situation:** Discovery during refactoring: the _isCrdtEnabled() check appeared in every write method. Its absence meant either: (a) CRDT path was experimental/deprecated, or (b) feature flag was ineffective.
+- **Root cause:** Optional features integrated into core logic create hidden complexity—not in the feature itself, but in maintaining two paths. The CRDT flag was likely added during exploration, left in place, but never used.
+- **How to avoid:** Simpler code path, but removes ability to re-enable CRDT without full refactor. Forces commitment to disk-based design.
+
+#### [Pattern] Write-through cache pattern: all mutations follow disk → in-memory cache → broadcast event. Cache is never the source of truth; disk is. This avoids cache coherency problems. (2026-03-14)
+- **Problem solved:** After write to disk, cache is updated atomically, then subscribers notified. No async cache invalidation or eventual consistency.
+- **Why this works:** In single-writer scenarios (e.g., one server process writes to project files), write-through is safer than write-behind or lazy invalidation. Eliminates stale-read races: any subsequent read will hit the updated cache.
+- **Trade-offs:** Write latency includes disk I/O (slower), but correctness is guaranteed. Read performance is consistent (always hits cache after first load).
+
+#### [Pattern] Lazy-initialized read cache: projects loaded from disk into memory on first access via _ensureDoc/getProject, not on service startup. Cache entry persists until process restart or explicit invalidation. (2026-03-14)
+- **Problem solved:** Large projects directory (many .json files) would be expensive to load all-at-once. Most projects are read-rarely after initial load.
+- **Why this works:** Startup time and memory footprint scale with project count. Lazy loading defers I/O until needed. If a project is never accessed, its bytes never enter memory.
+- **Trade-offs:** First read of a project incurs disk I/O penalty (~10-100ms), but amortized over subsequent reads. Memory usage is proportional to active projects, not total projects.
+
+#### [Pattern] Config-driven conditional service initialization via early return in start() method (2026-03-14)
+- **Problem solved:** Service must support both single-instance (dev local) and multi-instance (prod) deployments without code branching in consumers
+- **Why this works:** Allows safe injection into handlers/routes regardless of whether mesh coordination is enabled. Service becomes a no-op when hivemind.enabled=false, preventing WebSocket server, timers, and peer connections without requiring conditional logic at call sites
+- **Trade-offs:** Simpler injection contract vs. potential confusion about what the service actually does at runtime. Dead code paths when disabled increase bundle size but eliminate conditional logic complexity
+
+#### [Gotcha] Variable name (crdtSyncService) preserved while type renamed (CrdtSyncService → PeerMeshService) (2026-03-14)
+- **Situation:** Partial refactoring where only class/type name changed, not variable/instance names throughout codebase
+- **Root cause:** Conservative approach minimizes diff surface area and git blame impact for this refactoring PR
+- **How to avoid:** Smaller PR and easier review vs. persistent semantic mismatch that could confuse maintainers. Someone searching codebase for 'crdtSync' will find variable but not type definition
+
+### Single-method configuration guard: only start() method checks hivemind.enabled; other PeerMeshService methods have no guards (2026-03-14)
+- **Context:** start() initializes timers, WebSocket server, and peer connections. Once running, subsequent calls assume service is active
+- **Why:** Assume single initialization lifecycle: start() called once at app boot. Other methods (sync, broadcast, etc.) are call-site methods that run during steady state
+- **Rejected:** Wrapping every public method with enabled check, or validating config state at each entry point
+- **Trade-offs:** Simpler implementation vs. risk of undefined behavior if methods are called when service is disabled. No runtime detection of misconfigured service state
+- **Breaking if changed:** If service lifecycle is violated (start() called but service disabled, or methods called before start()), behavior is unpredictable. Particularly risky if tests or consumers call methods directly without going through start()
+
+#### [Pattern] Idempotency via started=true flag even on early return when feature is disabled (2026-03-14)
+- **Problem solved:** start() method sets started=true regardless of whether feature is enabled, preventing re-initialization
+- **Why this works:** Ensures duplicate start() calls are no-ops whether service is enabled or disabled. Protects against timing bugs where start() is called multiple times
+- **Trade-offs:** Clean idempotency contract vs. masking potential initialization bugs (if start() is called twice, you won't know if service initialization was prevented by config or already completed)
+
+### Moved CRDT_SYNCED_EVENT_TYPES and CrdtSyncWireMessage to peer-mesh-service.ts as local type definitions instead of deleting or keeping in shared types (2026-03-14)
+- **Context:** Removing CRDT types from libs/types while service still needed them
+- **Why:** Maximizes scope reduction in shared package while keeping types at point of use; makes future removal of this service/method easier since types are colocated with single consumer
+- **Rejected:** Delete types entirely (breaks compilation) or keep in shared package (defeats cleanup goal); spread across multiple files (increases coupling)
+- **Trade-offs:** Easier to eventually remove peer-mesh-service cleanly, but if new consumers emerge they must duplicate or move types back to shared; improves libs/types clarity at cost of slightly lower reusability
+- **Breaking if changed:** If another service needs these types, they must duplicate definitions or types must be moved back to shared; moving types back later requires git history navigation
+
+#### [Pattern] Identified setCompactionDiagnosticsProvider as dead code by confirming zero callers across entire codebase before removal (2026-03-14)
+- **Problem solved:** Method was unused CRDT infrastructure; needed confidence it was safe to delete
+- **Why this works:** Global codebase analysis (grep) provides certainty that removal won't break hidden dynamic calls or external consumers; reduces risk of silent breakage
+- **Trade-offs:** Requires codebase search tool and discipline to verify, but gives high confidence for removal; enables aggressive cleanup without fear of breaking things
+
+#### [Gotcha] Documentation tables listing CRDT-synced domains silently became stale when setCrdtStore() was removed from services weeks prior. Table still listed 'ava-channel', 'calendar', 'todos' as active CRDT synced domains despite code removal. (2026-03-14)
+- **Situation:** When services are refactored incrementally across multiple PRs, their documentation references can persist in tabular/list formats without being noticed or updated.
+- **Root cause:** Documentation drift occurs when item removal from code isn't paired with corresponding list/table updates in docs. Tables are 'fire-and-forget' once published.
+- **How to avoid:** Using explicit deprecation comments in code catches some references but misses documentation tables; requiring doc updates to be part of removal PRs is more expensive upfront but prevents drift.
+
+#### [Pattern] Documentation file structure (naming, location, presence) kept in strict sync with code structure: service rename (CrdtSyncService → PeerMeshService) prompted file rename (crdt-sync-service.md → peer-mesh-service.md); service deletion (AvaChannelService) prompted file archival, not deletion. (2026-03-14)
+- **Problem solved:** When refactoring services across multiple PRs, documentation must remain discoverable and accurately reflect the current codebase structure.
+- **Why this works:** File naming conventions that mirror service names allow developers to quickly find relevant docs via filename patterns. Archiving deleted services instead of deleting files preserves history and provides deprecation paths.
+- **Trade-offs:** Renaming/moving files requires updating cross-references and navigation indexes (higher cost) but keeps docs discoverable via IDE search and naming convention; archiving preserves git history and allows gradual migration.

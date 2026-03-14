@@ -52,7 +52,6 @@ const UpdateFeatureInputSchema = z.object({
     .enum(['small', 'medium', 'large', 'architectural'])
     .optional()
     .describe('Complexity tier'),
-  assignee: z.string().nullable().optional().describe('Assignee name, or null to clear'),
   priority: z.number().int().min(0).max(4).optional().describe('Priority (0=none,1=urgent,4=low)'),
 });
 
@@ -117,7 +116,7 @@ export function createBoardTools(deps: BoardDeps): SharedTool[] {
     name: 'update_feature',
     description:
       'Update a feature on the Automaker board. Can change status, title, description, ' +
-      'complexity, assignee, or priority.',
+      'complexity, or priority.',
     inputSchema: UpdateFeatureInputSchema,
     outputSchema: FeatureOutputSchema,
     metadata: { category: 'board', tags: ['board', 'features', 'update'] },

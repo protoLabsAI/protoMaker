@@ -159,11 +159,6 @@ export interface Feature {
    * Populated by dependency resolver when getBlockingInfo detects unsatisfied dependencies.
    */
   blockingReason?: string;
-  /**
-   * True if this feature is blocked by a dependency assigned to a human.
-   * Set by dependency resolver when human-assigned blockers are detected.
-   */
-  blockedByHuman?: boolean;
   spec?: string;
   model?: string;
   imagePaths?: Array<string | FeatureImagePath | { path: string; [key: string]: unknown }>;
@@ -278,13 +273,6 @@ export interface Feature {
     autoAssigned: boolean;
     suggestedAt: string;
   };
-  /**
-   * Who this feature is assigned to.
-   * - If set to a human name (e.g., 'josh'), auto-mode will skip this feature
-   * - If set to 'agent' or undefined/null, auto-mode can pick it up
-   * - Used to reserve features for human implementation while allowing agents to work on others
-   */
-  assignee?: string | null;
   /**
    * Due date for this feature (ISO 8601 date string, YYYY-MM-DD).
    * Used to track deadlines and help with scheduling and prioritization.

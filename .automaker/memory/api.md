@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 516
-  referenced: 129
-  successfulFeatures: 129
+  loaded: 531
+  referenced: 133
+  successfulFeatures: 133
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -240,3 +240,15 @@ usageStats:
 - **Problem solved:** Feature implementation discovered UI was already structured correctly.
 - **Why this works:** Indicates the original API design was extensible—endpoint accepted parameters for future use. Enables this fallback to work as a pure backend change.
 - **Trade-offs:** Good forward design at cost of carrying unused parameters early. Paid off here.
+
+### Preserved syncProjectToCrdt() method signature and external API despite implementation change from Automerge.change() to plain cache update. No refactoring of callers needed. (2026-03-14)
+- **Context:** Method name claims CRDT behavior but now updates plain Map. Could have renamed to syncProjectToCache() but that would require updating all call sites.
+- **Why:** Pragmatic backward-compatibility: method still does its job (keeps cache in sync with disk), caller contract is unchanged. Rename overhead not justified if behavior is equivalent from caller's perspective.
+- **Rejected:** Immediate rename to syncProjectToCache()—would create churn across codebase for cosmetic change. True if behavior matches caller expectations.
+- **Trade-offs:** Technical debt: misleading method name. Benefit: no caller refactoring, lower risk of merge conflicts in parallel changes, faster deployment.
+- **Breaking if changed:** If any caller inspects the implementation expecting Automerge.Doc API calls (e.g., getHeads(), getPatch()), it breaks. Unlikely—most callers just invoke the method for side effects.
+
+#### [Pattern] Preserved compactionDiagnostics: null field shape in SyncServerStatus instead of removing field entirely for backward compatibility (2026-03-14)
+- **Problem solved:** Removing CompactionDiagnosticsSnapshot but some clients might access this field
+- **Why this works:** Clients accessing the field would get undefined instead of a type error if field is removed; null is explicit and type-safe for 'this feature disabled' semantics
+- **Trade-offs:** API surface slightly larger (has unused field) but no runtime errors in clients; forward-compatible since consumers can ignore null; easier migration than breaking changes

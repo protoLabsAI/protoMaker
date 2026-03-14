@@ -18,13 +18,8 @@ function makeDeps(
     findByTitle: vi.fn().mockResolvedValue(null),
   } as unknown as FrictionTrackerDependencies['featureLoader'];
 
-  const avaChannelService = {
-    postMessage: vi.fn().mockResolvedValue({ id: 'msg-001' }),
-  } as unknown as FrictionTrackerDependencies['avaChannelService'];
-
   return {
     featureLoader,
-    avaChannelService,
     projectPath: '/test/project',
     instanceId: 'instance-test',
     ...overrides,
@@ -121,24 +116,6 @@ describe('FrictionTrackerService', () => {
 
       // Only one filing despite 5 occurrences
       expect(deps.featureLoader.create).toHaveBeenCalledOnce();
-    });
-
-    it('broadcasts friction_report to ava channel on filing', async () => {
-      for (let i = 0; i < 3; i++) {
-        await service.recordFailure('merge_conflict');
-      }
-
-      expect(deps.avaChannelService.postMessage).toHaveBeenCalledOnce();
-      const [content, source] = vi.mocked(deps.avaChannelService.postMessage).mock.calls[0];
-      expect(source).toBe('system');
-      expect(content).toContain('[friction_report]');
-
-      const json = content.replace('[friction_report]', '').trim();
-      const report: FrictionReport = JSON.parse(json);
-      expect(report.pattern).toBe('merge_conflict');
-      expect(report.instanceId).toBe('instance-test');
-      expect(report.featureId).toBe('feature-abc123');
-      expect(report.filedAt).toBeTruthy();
     });
 
     it('derives feature title from the pattern', async () => {
@@ -436,20 +413,6 @@ describe('FrictionTrackerService', () => {
 
       // The dedup guard should be rolled back so the next attempt can retry
       expect(service.isPeerRecentlyFiled('validation')).toBe(false);
-    });
-
-    it('continues without throwing when avaChannelService.postMessage fails', async () => {
-      vi.mocked(deps.avaChannelService.postMessage).mockRejectedValueOnce(
-        new Error('discord down')
-      );
-
-      // Should not throw
-      for (let i = 0; i < 3; i++) {
-        await service.recordFailure('quota');
-      }
-
-      // Feature was still filed (create was called)
-      expect(deps.featureLoader.create).toHaveBeenCalledOnce();
     });
   });
 });

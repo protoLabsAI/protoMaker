@@ -1,0 +1,212 @@
+{
+  "slug": "agent-manifest-hardening",
+  "title": "Agent Manifest Hardening",
+  "goal": "Address remaining gaps from the agent manifest audit: type safety, API correctness, lifecycle management, Linux compatibility, testing, and documentation accuracy.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-api-and-lifecycle-fixes",
+      "title": "API and Lifecycle Fixes",
+      "description": "Fix runtime correctness issues in the API and service lifecycle",
+      "phases": [
+        {
+          "number": 1,
+          "name": "fix-built-in-role-capabilities-in-api-agents-get",
+          "title": "Fix built-in role capabilities in /api/agents/get",
+          "description": "When /api/agents/get falls back to a synthetic built-in agent, getResolvedCapabilities returns null because the agent isn't in the manifest cache. Add direct ROLE_CAPABILITIES lookup as fallback so built-in roles always return their capabilities.",
+          "filesToModify": [
+            "apps/server/src/routes/agents.ts"
+          ],
+          "acceptanceCriteria": [
+            "GET a built-in role returns non-null capabilities object",
+            "GET a project-manifest agent still works as before",
+            "Existing tests pass"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442384743-ufeyb3iqy",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 2,
+          "name": "dispose-agentmanifestservice-on-shutdown",
+          "title": "Dispose AgentManifestService on shutdown",
+          "description": "Add getAgentManifestService().dispose() to the graceful shutdown sequence in shutdown.ts. This closes fs.watch handles and prevents leaked watchers in test environments.",
+          "filesToModify": [
+            "apps/server/src/server/shutdown.ts"
+          ],
+          "acceptanceCriteria": [
+            "dispose() called during graceful shutdown",
+            "Server shuts down cleanly without open handle warnings",
+            "Existing tests pass"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442384744-36efhmsjs",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 3,
+          "name": "add-auto-assignment-to-pipeline-execution-path",
+          "title": "Add auto-assignment to pipeline execution path",
+          "description": "The pipeline execution path (executePipelineSteps) calls loadRolePromptPrefix but has no matchFeature auto-assignment step before it. Add the same auto-assignment logic used in the single-agent path.",
+          "filesToModify": [
+            "apps/server/src/services/auto-mode/execution-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Features entering pipeline path get auto-assigned role",
+            "Pipeline role prompt reflects the auto-assigned role",
+            "Single-agent path behavior unchanged"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442384747-az1sctfby",
+          "executionStatus": "pending"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773442384740-lutmro9c6"
+    },
+    {
+      "number": 2,
+      "slug": "02-type-safety-and-scoring",
+      "title": "Type Safety and Scoring",
+      "description": "Improve type soundness and make confidence scores meaningful",
+      "phases": [
+        {
+          "number": 1,
+          "name": "type-the-builtin-flag-on-projectagent",
+          "title": "Type the _builtIn flag on ProjectAgent",
+          "description": "Add _builtIn?: boolean to the ProjectAgent type in agent-manifest.ts. Remove the unsafe casts in routes/agents.ts and the UI's agent-suggestion.tsx.",
+          "filesToModify": [
+            "libs/types/src/agent-manifest.ts",
+            "apps/server/src/routes/agents.ts",
+            "apps/ui/src/components/views/board-view/components/kanban-card/agent-suggestion.tsx"
+          ],
+          "acceptanceCriteria": [
+            "No more 'as unknown as' casts for _builtIn",
+            "TypeScript compiles cleanly",
+            "UI displays built-in badge correctly"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442384750-tdkrsggjc",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 2,
+          "name": "calculate-confidence-from-match-score",
+          "title": "Calculate confidence from match score",
+          "description": "Replace the hardcoded confidence: 1.0 with a normalized score. Use a sigmoid or linear scale based on the raw match score (e.g., score / (score + 10) for diminishing returns). Return the score from matchFeature alongside the agent.",
+          "filesToModify": [
+            "apps/server/src/services/agent-manifest-service.ts",
+            "apps/server/src/services/auto-mode/execution-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "Confidence reflects actual match strength",
+            "Low-score matches show lower confidence",
+            "High-score matches approach 1.0",
+            "Existing match ordering unchanged"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442384752-yya9ihx3p",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 3,
+          "name": "remove-or-implement-manifestpaths-setting",
+          "title": "Remove or implement manifestPaths setting",
+          "description": "The manifestPaths field in AgentConfig is declared but never consumed by AgentManifestService. Either implement support for additional manifest directories or remove the field to avoid dead configuration.",
+          "filesToModify": [
+            "libs/types/src/workflow-settings.ts",
+            "docs/agents/agent-manifests.md"
+          ],
+          "acceptanceCriteria": [
+            "No dead configuration fields",
+            "If implemented: additional paths are searched for manifests",
+            "If removed: docs updated to reflect removal"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442384755-7uv1aivld",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773442384748-4cae3u118"
+    },
+    {
+      "number": 3,
+      "slug": "03-testing-and-documentation",
+      "title": "Testing and Documentation",
+      "description": "Add missing tests and fix documentation inaccuracies",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-route-tests-for-api-agents-endpoints",
+          "title": "Add route tests for /api/agents endpoints",
+          "description": "Add integration-style tests for the three agent API endpoints: list, get, and match. Test input validation, built-in role handling, manifest merging, and error cases.",
+          "filesToModify": [
+            "apps/server/tests/unit/routes/agents.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Tests cover list, get, and match endpoints",
+            "Tests verify built-in role fallback in get",
+            "Tests verify input validation (missing projectPath, agentName)",
+            "All tests pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442384758-on077v85x",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 2,
+          "name": "add-linux-compatible-file-watching",
+          "title": "Add Linux-compatible file watching",
+          "description": "fs.watch with recursive:true is a no-op on Linux. Replace with chokidar or implement a polling fallback for the staging server. Only affects the agent manifest watcher, not the entire codebase.",
+          "filesToModify": [
+            "apps/server/src/services/agent-manifest-service.ts",
+            "apps/server/package.json"
+          ],
+          "acceptanceCriteria": [
+            "Manifest cache invalidates on file changes on Linux",
+            "No regression on macOS",
+            "Watcher properly cleaned up on dispose()"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442384760-akoo3m57i",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 3,
+          "name": "fix-documentation-inaccuracies",
+          "title": "Fix documentation inaccuracies",
+          "description": "Fix three doc issues: (1) prompt injection section shows wrong order (should be role prompt then context+memory), (2) manifestPaths documented but not implemented, (3) description field listed as Required but defaults to empty string.",
+          "filesToModify": [
+            "docs/agents/agent-manifests.md"
+          ],
+          "acceptanceCriteria": [
+            "Prompt injection section matches actual code behavior",
+            "manifestPaths either documented as implemented or removed",
+            "description field correctly shown as optional",
+            "VitePress builds without errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442384761-x2istybc0",
+          "executionStatus": "completed"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773442384757-thlazdzjx"
+    }
+  ],
+  "prd": {
+    "situation": "The Project-Level Agent Extensions system shipped in v0.53.0 with 12 features covering types, manifest service, execution wiring, and settings UI. A post-ship audit identified 2 critical issues (fixed directly) and 9 remaining gaps across type safety, API correctness, lifecycle, platform compatibility, testing, and docs.",
+    "problem": "Several issues reduce reliability and correctness: (1) /api/agents/get returns null capabilities for built-in roles, (2) AgentManifestService not disposed on shutdown leaks fs.watch handles, (3) pipeline execution path has no auto-assignment, (4) _builtIn flag is untyped, (5) confidence score hardcoded to 1.0, (6) manifestPaths setting declared but never consumed, (7) fs.watch recursive:true is a no-op on Linux, (8) no route or integration tests, (9) docs have inaccuracies.",
+    "approach": "Three milestones: (1) Fix API correctness and lifecycle issues, (2) Improve type safety and scoring, (3) Add tests and fix docs. Each phase is independently testable and touches distinct files.",
+    "results": "All audit items resolved. Built-in role capabilities returned correctly. Service properly disposed on shutdown. Pipeline path has auto-assignment. Types are sound. Confidence reflects actual match score. Linux-compatible file watching. Route tests exist. Docs match implementation.",
+    "constraints": [
+      "No breaking API changes",
+      "Existing tests must continue to pass",
+      "Changes must be backward-compatible with existing .automaker/agents.yml files"
+    ]
+  },
+  "createdAt": "2026-03-13T22:43:34.040Z",
+  "updatedAt": "2026-03-14T00:16:19.234Z"
+}

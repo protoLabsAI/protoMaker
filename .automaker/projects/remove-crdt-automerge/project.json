@@ -1,0 +1,221 @@
+{
+  "slug": "remove-crdt-automerge",
+  "title": "Remove CRDT/Automerge",
+  "goal": "Replace the over-engineered Automerge/CRDT layer with simple disk-backed storage. Eliminate ~1100 lines of hand-rolled peer mesh and Automerge binary sync that adds complexity, zero debuggability, and solves a multi-instance problem we don't have yet.",
+  "status": "active",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-ava-channel-disk-persistence",
+      "title": "Ava Channel Disk Persistence",
+      "description": "Add disk-backed daily shard files to AvaChannelService before CRDT is removed. This is the only domain where CRDT is the primary store.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "disk-backed-daily-shards-for-avachannelservice",
+          "title": "Disk-backed daily shards for AvaChannelService",
+          "description": "Replace CRDT-backed storage in AvaChannelService with disk-backed daily shard files at .automaker/ava-channel/YYYY-MM-DD.json. On write: append to in-memory shard AND persist to disk. On startup: load today's shard from disk if it exists. Remove CRDTStore dependency from constructor. Update ava-channel-reactor-service.ts to remove CRDT store injection. Update tests.",
+          "filesToModify": [
+            "apps/server/src/services/ava-channel-service.ts",
+            "apps/server/src/services/ava-channel-reactor-service.ts",
+            "apps/server/tests/unit/services/ava-channel-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "AvaChannelService writes messages to .automaker/ava-channel/YYYY-MM-DD.json on every post",
+            "On server restart, today's messages are reloaded from disk",
+            "No CRDTStore import in ava-channel-service.ts",
+            "Existing 30-day archival retention still works",
+            "Tests pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773464187635-taxvrpeqx",
+          "executionStatus": "in-review"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773464187634-ne2alz9p5"
+    },
+    {
+      "number": 2,
+      "slug": "02-strip-crdt-from-consumer-services",
+      "title": "Strip CRDT from Consumer Services",
+      "description": "Remove all CRDT reads, writes, and setCrdtStore() injection from notes, calendar, todos, metrics, and project-service.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "remove-crdt-dual-write-from-notes-routes",
+          "title": "Remove CRDT dual-write from notes routes",
+          "description": "Remove all CRDT imports and the saveWorkspaceWithCrdt helper from apps/server/src/routes/notes/index.ts. Replace CRDT reads with disk-only reads. Remove the duplicate NotesWorkspaceDocument type definition. All reads and writes go directly to .automaker/notes/workspace.json.",
+          "filesToModify": [
+            "apps/server/src/routes/notes/index.ts"
+          ],
+          "acceptanceCriteria": [
+            "No @protolabsai/crdt or @automerge imports in notes/index.ts",
+            "Notes read/write uses disk path directly",
+            "Duplicate NotesWorkspaceDocument type removed",
+            "TypeScript compiles with no errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773464187637-13yn30666",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "remove-setcrdtstore-from-calendarservice-todoservice-and-metrics-route",
+          "title": "Remove setCrdtStore() from CalendarService, TodoService, and metrics route",
+          "description": "Remove optional CRDT injection from: (1) calendar-service.ts — remove setCrdtStore(), remove private crdtStore field, remove CRDT paths; (2) todo-service.ts — same pattern; (3) metrics/dora.ts — remove optional crdtStore param and CRDT snapshot merge.",
+          "filesToModify": [
+            "apps/server/src/services/calendar-service.ts",
+            "apps/server/src/services/todo-service.ts",
+            "apps/server/src/routes/metrics/dora.ts"
+          ],
+          "acceptanceCriteria": [
+            "No @protolabsai/crdt imports in these three files",
+            "setCrdtStore() method removed from CalendarService and TodoService",
+            "Calendar and todos still read/write from disk",
+            "TypeScript compiles with no errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773464187639-cvx9w9nn1",
+          "executionStatus": "in-review"
+        },
+        {
+          "number": 3,
+          "name": "refactor-projectservice-remove-automerge-doc-in-memory-usage",
+          "title": "Refactor ProjectService — remove Automerge.Doc in-memory usage",
+          "description": "Replace Automerge.Doc<ProjectsDoc> in-memory cache in project-service.ts with a plain Map<string, Record<string, Project>>. The disk path is already the source of truth. This removes the last @automerge/automerge import from apps/server/src/.",
+          "filesToModify": [
+            "apps/server/src/services/project-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "No @automerge imports in project-service.ts",
+            "Project CRUD operations still work correctly",
+            "TypeScript compiles with no errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773464187641-rmcq6z16r",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "pending",
+      "epicId": "feature-1773464187636-k65unapez"
+    },
+    {
+      "number": 3,
+      "slug": "03-delete-crdt-infrastructure",
+      "title": "Delete CRDT Infrastructure",
+      "description": "Remove module wiring, delete crdt-store.module.ts and crdt-sync.module.ts, clean up startup/services container, rename CrdtSyncService to PeerMeshService.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "remove-crdt-module-wiring-from-startup-and-services-container",
+          "title": "Remove CRDT module wiring from startup and services container",
+          "description": "Remove CRDT initialization from startup.ts and services.ts (CRDTStore and CrdtSyncService startup calls, setCrdtStore() injection calls). Delete crdt-store.module.ts and crdt-sync.module.ts entirely.",
+          "filesToModify": [
+            "apps/server/src/server/startup.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/src/services/crdt-store.module.ts",
+            "apps/server/src/services/crdt-sync.module.ts"
+          ],
+          "acceptanceCriteria": [
+            "Server starts without errors",
+            "No CRDTStore or crdtSyncService references in startup.ts or services.ts",
+            "crdt-store.module.ts and crdt-sync.module.ts deleted",
+            "TypeScript compiles with no errors"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773464187643-wt1ewpnv8",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 2,
+          "name": "rename-crdtsyncservice-to-peermeshservice",
+          "title": "Rename CrdtSyncService to PeerMeshService",
+          "description": "Rename crdt-sync-service.ts to peer-mesh-service.ts. Update class name from CrdtSyncService to PeerMeshService. Update all import references across the codebase. Rename test file to peer-mesh-service.test.ts.",
+          "filesToModify": [
+            "apps/server/src/services/crdt-sync-service.ts",
+            "apps/server/src/server/startup.ts",
+            "apps/server/src/server/services.ts",
+            "apps/server/tests/unit/crdt-sync-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "crdt-sync-service.ts renamed to peer-mesh-service.ts",
+            "Class exported as PeerMeshService",
+            "All imports updated",
+            "TypeScript compiles with no errors"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773464187644-a4yujksw4",
+          "executionStatus": "pending"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773464187642-xcp5l2g9u"
+    },
+    {
+      "number": 4,
+      "slug": "04-remove-dependencies-and-types",
+      "title": "Remove Dependencies and Types",
+      "description": "Delete libs/crdt package, remove @automerge npm deps, clean up CRDT type exports from libs/types, delete stale test files.",
+      "phases": [
+        {
+          "number": 1,
+          "name": "delete-libs-crdt-package-and-remove-automerge-dependencies",
+          "title": "Delete libs/crdt package and remove @automerge dependencies",
+          "description": "Delete the entire libs/crdt/ directory. Remove @protolabsai/crdt and all @automerge/* packages from package.json files. Delete the .automaker/crdt/ runtime directory.",
+          "filesToModify": [
+            "libs/crdt/",
+            "apps/server/package.json",
+            "package.json"
+          ],
+          "acceptanceCriteria": [
+            "libs/crdt/ directory deleted",
+            "No @automerge/* in any package.json",
+            "No @protolabsai/crdt in any package.json",
+            ".automaker/crdt/ deleted",
+            "npm install succeeds"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773464187648-vi80dszpz",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 2,
+          "name": "remove-crdt-types-from-libs-types-and-clean-up-tests",
+          "title": "Remove CRDT types from libs/types and clean up tests",
+          "description": "Remove CRDT_SYNCED_EVENT_TYPES and CrdtSyncWireMessage from libs/types/src/events.ts. Remove unused CRDT types from hivemind.ts. Update libs/types/src/index.ts. Delete crdt-store-module.test.ts. Update ava-channel-service.test.ts to remove CRDT mock setup. Run full typecheck.",
+          "filesToModify": [
+            "libs/types/src/events.ts",
+            "libs/types/src/hivemind.ts",
+            "libs/types/src/index.ts",
+            "apps/server/tests/unit/services/crdt-store-module.test.ts",
+            "apps/server/tests/unit/services/ava-channel-service.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "No CRDT_SYNCED_EVENT_TYPES or CrdtSyncWireMessage in libs/types",
+            "crdt-store-module.test.ts deleted",
+            "npm run typecheck passes",
+            "npm run test:all passes",
+            "npm run build:server succeeds"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773464187649-d6m4z6jbl",
+          "executionStatus": "pending"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773464187647-ss7vk103t"
+    }
+  ],
+  "prd": {
+    "situation": "The server runs two overlapping sync layers: CrdtSyncService (JSON event relay on :4444, misleadingly named) and CRDTStore (Automerge binary sync on :4445). Disk is already the primary store for all data domains. CRDT writes are fire-and-forget secondaries with zero observable benefit in single-instance mode.",
+    "problem": "The CRDT layer is a debugging black hole: no document inspector, no state visibility, no log toggle, silent failure paths, and a skipped core test due to automerge-repo race conditions. It adds two extra WebSocket servers, 4 @automerge npm packages, a 1600-line libs/crdt package, and ~400 lines of module wiring — all for sync guarantees we're not exploiting.",
+    "approach": "Remove Automerge entirely. Add disk persistence to Ava Channel (the one domain that currently uses CRDT as primary storage). Refactor ProjectService to replace Automerge.Doc with plain JS objects. Strip CRDT reads/writes from notes, calendar, todos, metrics. Delete crdt-store.module, crdt-sync.module, libs/crdt package, and all @automerge deps. Keep CrdtSyncService but rename it to PeerMeshService.",
+    "results": "Server starts with 2 fewer WebSocket ports. No @automerge packages in the dependency tree. All data domains continue working with disk-backed storage. Ava channel messages persist across restarts. Full typecheck and test suite pass. Codebase is ~2000 lines lighter.",
+    "constraints": "Ava Channel messages must persist across server restarts (disk-backed daily shards required before CRDT removal). Peer mesh must be preserved as PeerMeshService. No data loss for notes, calendar, todos. Full typecheck and test suite must pass.",
+    "generatedAt": "2026-03-14T04:54:00.000Z"
+  },
+  "createdAt": "2026-03-14T04:56:20.838Z",
+  "updatedAt": "2026-03-14T06:42:11.628Z",
+  "researchStatus": "running"
+}

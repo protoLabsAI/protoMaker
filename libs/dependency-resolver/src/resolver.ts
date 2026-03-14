@@ -332,30 +332,24 @@ export function getBlockingDependenciesFromMap(
 export interface BlockingInfo {
   /** True if the feature is blocked by unsatisfied dependencies */
   isBlocked: boolean;
-  /** Array of feature IDs that are blocking this feature and are assigned to humans */
-  humanBlockers: string[];
-  /** Array of feature IDs that are blocking this feature and are NOT assigned to humans */
-  agentBlockers: string[];
+  /** Array of feature IDs that are blocking this feature */
+  blockers: string[];
 }
 
 /**
- * Gets detailed blocking information for a feature, identifying whether
- * blocking dependencies are assigned to humans or agents.
- *
- * A dependency is considered "assigned to a human" if:
- * - assignee field is set AND assignee !== 'agent'
+ * Gets detailed blocking information for a feature, identifying
+ * which dependencies are unsatisfied.
  *
  * @param feature - Feature to check
  * @param allFeatures - All features in the project
- * @returns BlockingInfo with categorized blockers
+ * @returns BlockingInfo with blocker IDs
  */
 export function getBlockingInfo(feature: Feature, allFeatures: Feature[]): BlockingInfo {
   if (!feature.dependencies || feature.dependencies.length === 0) {
-    return { isBlocked: false, humanBlockers: [], agentBlockers: [] };
+    return { isBlocked: false, blockers: [] };
   }
 
-  const humanBlockers: string[] = [];
-  const agentBlockers: string[] = [];
+  const blockers: string[] = [];
 
   for (const depId of feature.dependencies) {
     const dep = allFeatures.find((f) => f.id === depId);
@@ -379,24 +373,13 @@ export function getBlockingInfo(feature: Feature, allFeatures: Feature[]): Block
     }
 
     if (isBlocking) {
-      // Categorize blocker: human-assigned vs agent-assigned
-      // A feature is human-assigned if assignee is set and NOT 'agent'
-      const isHumanAssigned = dep.assignee !== undefined && dep.assignee !== 'agent';
-
-      if (isHumanAssigned) {
-        humanBlockers.push(depId);
-      } else {
-        agentBlockers.push(depId);
-      }
+      blockers.push(depId);
     }
   }
 
-  const isBlocked = humanBlockers.length > 0 || agentBlockers.length > 0;
-
   return {
-    isBlocked,
-    humanBlockers,
-    agentBlockers,
+    isBlocked: blockers.length > 0,
+    blockers,
   };
 }
 

@@ -11,7 +11,7 @@ How to run multiple protoLabs instances in a synchronized hivemind mesh using Ta
 
 ## Architecture
 
-The Studio Mesh uses a primary/worker WebSocket topology. One instance runs the sync server (primary), and all others connect as clients (workers). All CRDT changes propagate through the primary in real time.
+The Studio Mesh uses a primary/worker WebSocket topology. One instance runs the sync server (primary), and all others connect as clients (workers). Feature and project events propagate through the primary in real time.
 
 ```
                           Tailscale mesh
@@ -26,20 +26,18 @@ The Studio Mesh uses a primary/worker WebSocket topology. One instance runs the 
                     └─────────────────────────┘
 ```
 
-### Synced domains
+### Synced data
 
-The mesh synchronizes these CRDT document domains:
+The mesh synchronizes feature and project events via `PeerMeshService`:
 
-| Domain        | Document ID     | Description                               |
-| ------------- | --------------- | ----------------------------------------- |
-| `projects`    | `<projectSlug>` | Project plans, PRD content, phase claims  |
-| `settings`    | `shared`        | Shared workflow settings (no credentials) |
-| `capacity`    | `<instanceId>`  | Per-instance capacity metrics             |
-| `ava-channel` | `YYYY-MM-DD`    | Daily-sharded Ava communication log       |
-| `calendar`    | `shared`        | Shared calendar events                    |
-| `todos`       | `workspace`     | Shared todo lists with permission tiers   |
+| Data type      | Mechanism                             | Description                                      |
+| -------------- | ------------------------------------- | ------------------------------------------------ |
+| Feature events | `CrdtSyncWireMessage` broadcast       | `feature:created/updated/deleted/status-changed` |
+| Project events | `CrdtSyncWireMessage` broadcast       | `project:created/updated/deleted`                |
+| Settings       | `CrdtSettingsEvent` (primary→workers) | Shared workflow settings (no credentials)        |
+| Peer capacity  | Heartbeat `PeerMessage`               | Per-instance capacity metrics                    |
 
-Features are **instance-local** and never synced via the mesh. Each instance creates features locally from claimed project phases.
+Features are **instance-local** and never pushed across the mesh. Each instance creates features locally from claimed project phases. Notes, calendar, and todos are disk-based per-instance with no cross-instance replication.
 
 ### Event types bridged across the mesh
 
@@ -61,11 +59,9 @@ protolab:
 
 ### Instance Attribution
 
-Every CRDT operation and sync message carries `instanceId`. This value is set in `proto.config.yaml` and included in:
+Every sync message carries `instanceId`. This value is set in `proto.config.yaml` and included in:
 
-- All CRDT document mutations (`_meta.instanceId`)
-- All sync wire messages (`heartbeat`, `project_event`, `identity`) — includes `name`, `role`, `tags`
-- Ava Channel messages (`instanceId` and `instanceName` fields)
+- All sync wire messages (`heartbeat`, `feature_event`, `project_event`, `identity`) — includes `name`, `role`, `tags`
 - The `sync:partition-recovered` and `sync:peer-unreachable` events
 
 ### Authority Tiers (Roadmap)

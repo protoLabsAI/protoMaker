@@ -1,18 +1,18 @@
 # Project Service
 
-Manages project orchestration data: CRUD operations for projects, milestones, and phases, with optional CRDT-backed multi-instance synchronization.
+Manages project orchestration data: CRUD operations for projects, milestones, and phases.
 
 ## Overview
 
-`ProjectService` is the persistence and coordination layer for protoLabs project documents. Projects are stored as Markdown and JSON files under `.automaker/projects/{slug}/`. When `proto.config.yaml` is present, the service wraps each project in an Automerge document for conflict-free multi-instance sync.
+`ProjectService` is the persistence and coordination layer for protoLabs project documents. Projects are stored as Markdown and JSON files under `.automaker/projects/{slug}/`. An in-memory cache (`Map<string, Project>`) accelerates reads; all writes go to disk first.
 
 Key responsibilities:
 
 - **Project CRUD** — create, read, update, delete projects and their sub-structure
 - **Milestone and phase management** — full lifecycle for milestones and phases within a project
-- **Automerge documents** — per-project CRDT state keyed by `projectPath`
-- **Remote sync** — emits CRDT events for changes; receives remote changes via EventBus
-- **Human-readable output** — generates Markdown files alongside the CRDT state for git history
+- **In-memory cache** — lazy-loaded read cache backed by disk as source of truth
+- **Event broadcasting** — emits project events via EventBus for multi-instance sync
+- **Human-readable output** — generates Markdown files alongside JSON for git history
 
 ## Storage Layout
 

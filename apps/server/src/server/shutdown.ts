@@ -70,22 +70,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   hitlFormService.shutdown();
   actionableItemBridge.shutdown();
   agentDiscordRouter.stop();
-  // Shut down Ava Channel Reactor
-  if (services._avaChannelReactorStop) {
-    try {
-      services._avaChannelReactorStop();
-    } catch (err) {
-      logger.warn('[SHUTDOWN] Ava Channel Reactor stop failed:', err);
-    }
-  }
-  // Shut down CRDT document store (closes Automerge sync server + flushes)
-  if (services._crdtStoreCleanup) {
-    try {
-      await services._crdtStoreCleanup();
-    } catch (err) {
-      logger.warn('[SHUTDOWN] CRDT store cleanup failed:', err);
-    }
-  }
   await crdtSyncService.shutdown();
   // Dispose AgentManifestService fs.watch handles to prevent leaked watchers
   try {

@@ -1,0 +1,200 @@
+{
+  "slug": "project-pipeline-unification",
+  "title": "Project Pipeline Unification",
+  "goal": "Unify all feature creation paths to consistently set projectSlug, enabling project timelines, milestone completion detection, and project-scoped queries across all entry points.",
+  "status": "completed",
+  "milestones": [
+    {
+      "number": 1,
+      "slug": "01-centralized-project-resolution",
+      "title": "Centralized Project Resolution",
+      "description": "Add automatic projectSlug resolution to FeatureLoader.create() so all 18+ entry points get projectSlug without individual changes",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-project-slug-resolver-service",
+          "title": "Add project slug resolver service",
+          "description": "Create a lightweight service that resolves projectPath to a default projectSlug. For single-project installs, returns the sole project slug. For multi-project, uses a configurable default or returns undefined. Wire into ServiceContainer.",
+          "filesToModify": [
+            "apps/server/src/services/project-slug-resolver.ts",
+            "apps/server/src/server/services.ts"
+          ],
+          "acceptanceCriteria": [
+            "resolveDefaultSlug(projectPath) returns correct slug for single-project installs",
+            "Returns undefined when no default can be determined",
+            "Service is registered in ServiceContainer"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442385549-6kz6e0757",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 2,
+          "name": "wire-projectslug-auto-assignment-into-featureloader-create",
+          "title": "Wire projectSlug auto-assignment into FeatureLoader.create",
+          "description": "In FeatureLoader.create(), if the incoming feature data has no projectSlug, call the resolver to get one. This is the single choke point that all 18+ creation paths flow through, so fixing it here fixes everything.",
+          "filesToModify": [
+            "apps/server/src/services/feature-loader.ts"
+          ],
+          "acceptanceCriteria": [
+            "Features created without projectSlug get it auto-assigned",
+            "Features created WITH projectSlug keep their explicit value",
+            "Features where resolver returns undefined remain without projectSlug",
+            "All existing tests pass"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442385550-7sv1s084r",
+          "executionStatus": "completed"
+        },
+        {
+          "number": 3,
+          "name": "backfill-projectslug-on-existing-features",
+          "title": "Backfill projectSlug on existing features",
+          "description": "Write a one-time migration that scans all features, identifies their project association (by epicId chain, milestoneSlug, or project membership), and sets projectSlug. Expose as a POST /api/features/backfill-project-slug endpoint for admin use.",
+          "filesToModify": [
+            "apps/server/src/routes/features/routes/backfill-project-slug.ts",
+            "apps/server/src/server/routes.ts"
+          ],
+          "acceptanceCriteria": [
+            "Backfill correctly identifies project for features with epicId or milestoneSlug",
+            "Idempotent - safe to run multiple times",
+            "Reports count of features updated",
+            "Does not overwrite existing projectSlug values"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442385551-12xqjeis9",
+          "executionStatus": "pending"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773442385547-7741v7veu"
+    },
+    {
+      "number": 2,
+      "slug": "02-event-pipeline-enrichment",
+      "title": "Event Pipeline Enrichment",
+      "description": "Ensure all event emission paths include projectSlug so the ledger, timeline, and completion detector work correctly",
+      "phases": [
+        {
+          "number": 1,
+          "name": "enrich-feature-events-with-projectslug-at-emission",
+          "title": "Enrich feature events with projectSlug at emission",
+          "description": "In FeatureLoader.update() where feature:status-changed is emitted, the full feature object is already included (line 734). Verify that projectSlug flows through. Also check feature:started, feature:completed, and feature:error emission points in execution-service, auto-mode-service, and feature-state-manager to ensure they include projectSlug.",
+          "filesToModify": [
+            "apps/server/src/services/auto-mode/execution-service.ts",
+            "apps/server/src/services/auto-mode/feature-state-manager.ts",
+            "apps/server/src/services/auto-mode-service.ts",
+            "apps/server/src/services/completion-detector-service.ts"
+          ],
+          "acceptanceCriteria": [
+            "All feature:* events include projectSlug in payload",
+            "Event ledger entries have projectSlug for all feature events",
+            "No regressions in existing event handling"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442385553-lleurzuwq",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "backfill-projectslug-on-existing-ledger-entries",
+          "title": "Backfill projectSlug on existing ledger entries",
+          "description": "Write a migration that reads the events.jsonl file, enriches entries missing projectSlug by looking up the feature's current projectSlug, and rewrites the file. This makes historical timeline data visible.",
+          "filesToModify": [
+            "apps/server/src/routes/ledger/routes/backfill.ts",
+            "apps/server/src/server/routes.ts"
+          ],
+          "acceptanceCriteria": [
+            "Ledger entries with featureId get projectSlug from current feature data",
+            "Original entries are preserved (backup created)",
+            "Idempotent",
+            "Timeline shows historical activity after backfill"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442385555-5i0o330ay",
+          "executionStatus": "in-progress"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773442385552-kdk6si5dz"
+    },
+    {
+      "number": 3,
+      "slug": "03-timeline-reliability",
+      "title": "Timeline Reliability",
+      "description": "Make the project timeline robust and useful across all project types",
+      "phases": [
+        {
+          "number": 1,
+          "name": "add-fallback-timeline-from-feature-activity",
+          "title": "Add fallback timeline from feature activity",
+          "description": "When the event ledger has no entries for a project, fall back to constructing timeline events from the project's features directly (creation dates, status changes from feature.json metadata). This ensures timelines work even before the ledger enrichment.",
+          "filesToModify": [
+            "apps/server/src/routes/projects/routes/timeline.ts"
+          ],
+          "acceptanceCriteria": [
+            "Timeline shows activity for projects with features but no ledger entries",
+            "Ledger-based entries take priority when available",
+            "Empty projects still show 'No activity yet'"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442385559-dzob9i1nv",
+          "executionStatus": "in-progress"
+        },
+        {
+          "number": 2,
+          "name": "verify-completion-detector-with-projectslug",
+          "title": "Verify completion detector with projectSlug",
+          "description": "The completion detector guards on feature.projectSlug && feature.milestoneSlug before checking milestone completion. Verify this works end-to-end now that features have projectSlug. Add a test that creates features with projectSlug, marks them done, and confirms milestone:completed event fires.",
+          "filesToModify": [
+            "apps/server/tests/unit/services/completion-detector.test.ts"
+          ],
+          "acceptanceCriteria": [
+            "Milestone completion detection fires when all milestone features are done",
+            "Test covers the full flow: feature done -> milestone:completed event",
+            "Test verifies projectSlug is required"
+          ],
+          "complexity": "medium",
+          "featureId": "feature-1773442385561-u5ea4b0cy",
+          "executionStatus": "pending"
+        },
+        {
+          "number": 3,
+          "name": "add-project-timeline-to-project-detail-view",
+          "title": "Add project timeline to project detail view",
+          "description": "Ensure the project detail page in the UI properly renders the timeline component. Verify the timeline refreshes on new events via WebSocket, and add a manual refresh button.",
+          "filesToModify": [
+            "apps/ui/src/components/views/projects/project-detail.tsx"
+          ],
+          "acceptanceCriteria": [
+            "Project detail view shows timeline with real activity",
+            "Timeline auto-refreshes on WebSocket events",
+            "Manual refresh button works",
+            "Loading and empty states render correctly"
+          ],
+          "complexity": "small",
+          "featureId": "feature-1773442385562-2h865jyrt",
+          "executionStatus": "pending"
+        }
+      ],
+      "status": "completed",
+      "epicId": "feature-1773442385556-ejdmlve66"
+    }
+  ],
+  "prd": {
+    "situation": "Features are created through 18+ entry points: REST API, MCP tools, signal intake (Discord/GitHub/Twitch), project orchestration, bug routing, ceremonies, friction tracking, and more. Only 5 of these set the projectSlug field. The remaining 13 create orphan features with no project association. The event ledger, project timeline, completion detector, and project-scoped queries all depend on projectSlug to function.",
+    "problem": "Project timelines show 'No activity yet' for all projects because 97% of features (458/460) lack projectSlug. This breaks: (1) project timeline display, (2) milestone completion detection (guards on projectSlug), (3) project-scoped board queries, (4) event ledger project correlation. The root cause is fragmented feature creation — each entry point independently builds a Feature object, and most skip projectSlug because they only have projectPath, not project context.",
+    "approach": "Three-phase approach: (1) Add a centralized projectSlug resolver that maps projectPath to a default project slug, and wire it into FeatureLoader.create() so ALL creation paths get projectSlug automatically. (2) Backfill existing features with the correct projectSlug. (3) Ensure all event emission paths include projectSlug in their payloads so the event ledger, timeline, and completion detector work correctly.",
+    "results": "All project timelines show real activity. Milestone completion detection fires correctly. Event ledger entries have projectSlug for all feature events. Project-scoped board queries return complete results. New features created through any entry point automatically get projectSlug set.",
+    "constraints": [
+      "Must not break existing features or projects",
+      "Must handle features that genuinely don't belong to any project (system improvements, ad-hoc)",
+      "Backfill must be idempotent and safe to re-run",
+      "No changes to the Feature type schema beyond what already exists",
+      "Must work for single-project installs (automaker) and multi-project installs"
+    ]
+  },
+  "createdAt": "2026-03-13T22:49:31.382Z",
+  "updatedAt": "2026-03-14T02:17:57.017Z",
+  "completedAt": "2026-03-14T02:17:57.017Z"
+}

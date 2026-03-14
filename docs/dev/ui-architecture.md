@@ -211,10 +211,6 @@ function MyComponent() {
 
 Planning is embedded in board dialogs rather than a dedicated view. Desired: `/planning/:projectSlug` route with visual PRD editor, milestone/phase cards, and inline feature creation.
 
-### My Tasks Filter
-
-No assignee-based filtering on the board. Desired: "My Tasks" button to filter features by assigned user.
-
 ### Priority and Due Date Badges
 
 Features have `priority` and `dueDate` fields but these aren't displayed on board cards. Desired: colored priority badges and overdue highlighting.

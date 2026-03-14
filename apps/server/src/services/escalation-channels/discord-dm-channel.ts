@@ -13,7 +13,7 @@
  */
 
 import type { EscalationSignal, EscalationChannel, EscalationSeverity } from '@protolabsai/types';
-import { EscalationSeverity as Severity, EscalationSource } from '@protolabsai/types';
+import { EscalationSeverity as Severity } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { DiscordBotService } from '../discord-bot-service.js';
 import type { EventEmitter } from '../../lib/events.js';
@@ -114,19 +114,11 @@ export class DiscordDMChannel implements EscalationChannel {
 
   /**
    * Check if this channel can handle the signal
-   * Handles emergency and critical severity, plus medium severity for human_blocked_dependency
+   * Handles emergency and critical severity
    */
   canHandle(signal: EscalationSignal): boolean {
     // Always handle emergency and critical
     if (signal.severity === Severity.emergency || signal.severity === Severity.critical) {
-      return true;
-    }
-
-    // Also handle medium severity human_blocked_dependency signals
-    if (
-      signal.severity === Severity.medium &&
-      signal.source === EscalationSource.human_blocked_dependency
-    ) {
       return true;
     }
 
@@ -143,22 +135,8 @@ export class DiscordDMChannel implements EscalationChannel {
 
     const message = this.formatMessage(signal);
 
-    // Determine recipients based on signal source
-    let recipients: string[];
-    if (signal.source === EscalationSource.human_blocked_dependency) {
-      // Extract blocking assignees from signal context
-      recipients = this.extractBlockingAssignees(signal);
-      if (recipients.length === 0) {
-        logger.warn(
-          `No blocking assignees found in human_blocked_dependency signal: ${signal.deduplicationKey}`
-        );
-        // Fall back to configured recipients
-        recipients = this.config.recipients;
-      }
-    } else {
-      // Use configured recipients for other signals
-      recipients = this.config.recipients;
-    }
+    // Use configured recipients for all signals
+    const recipients = this.config.recipients;
 
     // Send to all recipients
     const sendPromises = recipients.map(async (username) => {
@@ -187,27 +165,6 @@ export class DiscordDMChannel implements EscalationChannel {
       signalDeduplicationKey: signal.deduplicationKey,
       messageId: '',
     });
-  }
-
-  /**
-   * Extract blocking assignees from human_blocked_dependency signal context
-   */
-  private extractBlockingAssignees(signal: EscalationSignal): string[] {
-    const ctx = signal.context;
-    const assignees: string[] = [];
-
-    // Extract from humanBlockerDetails string format: "featureId (assigned to username)"
-    if (typeof ctx.humanBlockerDetails === 'string') {
-      const matches = ctx.humanBlockerDetails.matchAll(/assigned to (\w+)/g);
-      for (const match of matches) {
-        if (match[1] && match[1] !== 'unknown') {
-          assignees.push(match[1]);
-        }
-      }
-    }
-
-    // Deduplicate assignees
-    return Array.from(new Set(assignees));
   }
 
   /**

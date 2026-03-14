@@ -90,7 +90,6 @@ import { createSensorRoutes } from '../routes/sensors/index.js';
 import { createProjectPmRoutes } from '../routes/project-pm/index.js';
 import { createLedgerRoutes } from '../routes/ledger/index.js';
 import { createBackfillLedgerProjectSlugHandler } from '../routes/ledger/routes/backfill.js';
-import { createAvaChannelRoutes } from '../routes/ava-channel/index.js';
 import { createHivemindRoutes } from '../routes/hivemind/index.js';
 import { createDoraRoutes } from '../routes/dora/index.js';
 import { createAgentRoutes } from '../routes/agents.js';
@@ -161,7 +160,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     projectPmService,
     crdtSyncService,
     todoService,
-    avaChannelService,
   } = services;
 
   // Run stale validation cleanup every hour to prevent memory leaks from crashed validations
@@ -403,7 +401,7 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
   app.use('/api/chat', createChatRoutes(services));
   app.use('/api/codex', createCodexRoutes());
   app.use('/api/ai', createAIRoutes());
-  app.use('/api/notes', createNotesRoutes(events, services._crdtStore));
+  app.use('/api/notes', createNotesRoutes(events));
   app.use('/api/todos', createTodoRoutes(todoService));
   app.use('/api/sitrep', createSitrepRoutes({ featureLoader, autoModeService, repoRoot }));
   // Knowledge store routes (chunked retrieval)
@@ -438,10 +436,6 @@ export function registerRoutes(app: Express, services: ServiceContainer): void {
     createBackfillLedgerProjectSlugHandler(featureLoader, services.dataDir)
   );
   logger.info('Ledger routes mounted at /api/ledger');
-
-  // Ava Channel routes (private coordination channel for Ava instances)
-  app.use('/api/ava-channel', createAvaChannelRoutes(avaChannelService, featureLoader));
-  logger.info('Ava channel routes mounted at /api/ava-channel');
 
   // Hivemind routes (peer discovery and instance status for the unified dashboard)
   app.use('/api/hivemind', createHivemindRoutes(crdtSyncService));

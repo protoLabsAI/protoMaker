@@ -18,8 +18,6 @@ import {
   DEFAULT_MAX_CONCURRENCY,
   MAX_SYSTEM_CONCURRENCY,
   normalizeFeatureStatus,
-  EscalationSource,
-  EscalationSeverity,
 } from '@protolabsai/types';
 import {
   createLogger,
@@ -28,11 +26,7 @@ import {
   DEFAULT_BACKUP_COUNT,
   classifyError,
 } from '@protolabsai/utils';
-import {
-  resolveDependencies,
-  areDependenciesSatisfied,
-  getBlockingInfo,
-} from '@protolabsai/dependency-resolver';
+import { resolveDependencies, areDependenciesSatisfied } from '@protolabsai/dependency-resolver';
 import { getFeaturesDir } from '@protolabsai/platform';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
 import type { FeatureLoader } from './feature-loader.js';
@@ -829,20 +823,13 @@ export class FeatureScheduler {
             (feature.planSpec.tasksCompleted ?? 0) < (feature.planSpec.tasksTotal ?? 0));
 
         logger.debug(
-          `[loadPendingFeatures] Feature ${feature.id}: status="${feature.status}", assignee="${feature.assignee ?? 'null'}", isEpic=${feature.isEpic ?? false}, branchName="${feature.branchName ?? 'null'}", eligible=${isEligibleStatus}`
+          `[loadPendingFeatures] Feature ${feature.id}: status="${feature.status}", isEpic=${feature.isEpic ?? false}, branchName="${feature.branchName ?? 'null'}", eligible=${isEligibleStatus}`
         );
 
         if (isEligibleStatus) {
           if (feature.isEpic) {
             logger.info(
               `[loadPendingFeatures] Skipping epic feature ${feature.id} - ${feature.title}`
-            );
-            continue;
-          }
-
-          if (feature.assignee && feature.assignee !== 'agent') {
-            logger.info(
-              `[loadPendingFeatures] Skipping feature ${feature.id} - assigned to "${feature.assignee}" (not agent)`
             );
             continue;
           }
@@ -1093,92 +1080,6 @@ export class FeatureScheduler {
         logger.info(
           `[loadPendingFeatures] ${blockedFeatures.length} features blocked by dependencies: ${blockedFeatures.map((b) => `${b.feature.id} (${b.reason})`).join('; ')}`
         );
-      }
-
-      // ── Human-blocked dependency detection and escalation ──
-      const humanBlockedFeatures: Array<{ feature: Feature; humanBlockers: string[] }> = [];
-      const agentBlockedFeatures: Array<{ feature: Feature; agentBlockers: string[] }> = [];
-
-      for (const blocked of blockedFeatures) {
-        const blockingInfo = getBlockingInfo(blocked.feature, allFeatures);
-
-        if (blockingInfo.humanBlockers.length > 0) {
-          humanBlockedFeatures.push({
-            feature: blocked.feature,
-            humanBlockers: blockingInfo.humanBlockers,
-          });
-
-          const humanBlockerDetails = blockingInfo.humanBlockers
-            .map((blockerId) => {
-              const blocker = allFeatures.find((f) => f.id === blockerId);
-              return blocker
-                ? `${blockerId} (assigned to ${blocker.assignee || 'unknown'})`
-                : blockerId;
-            })
-            .join(', ');
-
-          logger.warn(
-            `[loadPendingFeatures] Feature ${blocked.feature.id} human-blocked by ${humanBlockerDetails}`
-          );
-
-          this.events.emit('escalation:signal-received', {
-            source: EscalationSource.human_blocked_dependency,
-            severity: EscalationSeverity.medium,
-            type: 'feature_human_blocked',
-            context: {
-              featureId: blocked.feature.id,
-              featureTitle: blocked.feature.title || blocked.feature.description,
-              humanBlockers: blockingInfo.humanBlockers,
-              humanBlockerDetails,
-              projectPath,
-              branchName,
-            },
-            deduplicationKey: `human-blocked-${blocked.feature.id}-${blockingInfo.humanBlockers.join('-')}`,
-            timestamp: new Date().toISOString(),
-          });
-        } else if (blockingInfo.agentBlockers.length > 0) {
-          agentBlockedFeatures.push({
-            feature: blocked.feature,
-            agentBlockers: blockingInfo.agentBlockers,
-          });
-        }
-      }
-
-      // Update project state with human-blocked count (via coordinator key lookup)
-      // This is optional — callers that need this data pass the coordinator externally
-      if (humanBlockedFeatures.length > 0 || agentBlockedFeatures.length > 0) {
-        logger.info(
-          `[loadPendingFeatures] Blocked feature breakdown: ${humanBlockedFeatures.length} human-blocked, ${agentBlockedFeatures.length} agent-blocked`
-        );
-      }
-
-      // ── Pipeline stall detection ──
-      const totalPendingCount = orderedFeatures.length;
-      const allFeaturesHumanBlocked =
-        humanBlockedFeatures.length > 0 &&
-        humanBlockedFeatures.length === totalPendingCount &&
-        readyFeatures.length === 0;
-
-      if (allFeaturesHumanBlocked) {
-        logger.error(
-          `[loadPendingFeatures] PIPELINE STALLED: All ${totalPendingCount} remaining features are human-blocked. No agent work can proceed.`
-        );
-
-        this.events.emit('escalation:signal-received', {
-          source: EscalationSource.human_blocked_dependency,
-          severity: EscalationSeverity.critical,
-          type: 'pipeline_stalled_human_blocked',
-          context: {
-            totalFeatures: totalPendingCount,
-            humanBlockedCount: humanBlockedFeatures.length,
-            humanBlockedFeatureIds: humanBlockedFeatures.map((hb) => hb.feature.id),
-            projectPath,
-            branchName,
-            message: `All ${totalPendingCount} remaining features are blocked by human-assigned dependencies. Pipeline is stalled.`,
-          },
-          deduplicationKey: `pipeline-stalled-${projectPath}-${branchName ?? 'main'}`,
-          timestamp: new Date().toISOString(),
-        });
       }
 
       // Sort by priority (lower number = higher priority, picked up first)

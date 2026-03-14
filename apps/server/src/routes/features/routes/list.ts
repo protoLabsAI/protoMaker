@@ -28,7 +28,6 @@ interface CompactFeature {
   prUrl?: string;
   epicId?: string;
   isEpic?: boolean;
-  assignee?: string | null;
   dependencies?: string[];
   updatedAt?: unknown;
 }
@@ -45,7 +44,6 @@ function toCompactFeature(feature: Feature): CompactFeature {
     prUrl: feature.prUrl,
     epicId: feature.epicId,
     isEpic: feature.isEpic,
-    assignee: feature.assignee,
     dependencies: feature.dependencies,
     updatedAt: feature.updatedAt,
   };

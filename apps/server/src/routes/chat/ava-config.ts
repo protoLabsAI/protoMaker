@@ -63,7 +63,7 @@ export interface AvaConfig {
  * Default configuration used when no per-project config file exists.
  *
  * Enabled by default (~20 tools): briefing, health, notes, calendar, discord,
- * avaChannel, metrics, settings, delegation, boardRead.
+ * metrics, settings, delegation, boardRead.
  *
  * Disabled by default (project-tactical): boardWrite, agentControl, autoMode,
  * prWorkflow, promotion, contextFiles, orchestration, projectMgmt,
@@ -81,7 +81,6 @@ export const DEFAULT_AVA_CONFIG: AvaConfig = {
     notes: true,
     calendar: true,
     discord: true,
-    avaChannel: true,
     metrics: true,
     settings: true,
     delegation: true,

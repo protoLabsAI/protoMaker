@@ -309,12 +309,6 @@ export const FeatureDetail = memo(function FeatureDetail({ feature }: FeatureDet
                 <p className="text-sm mt-1">{feature.description}</p>
               </div>
             )}
-            {feature.assignee && (
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Assignee: </span>
-                <span className="text-sm">{feature.assignee}</span>
-              </div>
-            )}
             {feature.assignedInstance && (
               <div>
                 <span className="text-sm font-medium text-muted-foreground">

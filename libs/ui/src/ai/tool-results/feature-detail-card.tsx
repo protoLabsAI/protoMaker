@@ -22,7 +22,6 @@ interface Feature {
   error?: string;
   isEpic?: boolean;
   epicId?: string;
-  assignee?: string | null;
   prNumber?: number;
   prUrl?: string;
   branchName?: string;
@@ -145,11 +144,6 @@ export function FeatureDetailCard({ output, state }: ToolResultRendererProps) {
         {complexityLabel && (
           <span className="rounded bg-muted/80 px-1.5 py-0.5 text-muted-foreground">
             {complexityLabel}
-          </span>
-        )}
-        {feature.assignee && (
-          <span className="rounded bg-muted/80 px-1.5 py-0.5 text-muted-foreground">
-            @{feature.assignee}
           </span>
         )}
         {feature.prNumber && feature.prUrl && (

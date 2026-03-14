@@ -14,7 +14,6 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@protolabsai/crdt": ["../../libs/crdt/src/index.ts"],
       "@protolabsai/dependency-resolver": ["../../libs/dependency-resolver/src/index.ts"],
       "@protolabsai/error-tracking": ["../../libs/error-tracking/src/index.ts"],
       "@protolabsai/flows": ["../../libs/flows/src/index.ts"],

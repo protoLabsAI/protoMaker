@@ -464,7 +464,6 @@ export function createChatRoutes(services: ServiceContainer): Router {
                 ? services.sensorRegistryService
                 : undefined,
               canUseTool,
-              avaChannelService: services.avaChannelService,
               discordBotService: services.discordBotService,
               calendarService: services.calendarService,
               healthMonitorService: services.healthMonitorService,

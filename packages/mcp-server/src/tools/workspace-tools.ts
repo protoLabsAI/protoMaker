@@ -8,7 +8,7 @@ export const workspaceTools: Tool[] = [
   {
     name: 'query_board',
     description:
-      'Query features with compound filters. Supports filtering by status, epic, assignee, complexity, blocked state, dependencies, date range, and text search. Returns compact results to minimize context usage.',
+      'Query features with compound filters. Supports filtering by status, epic, complexity, blocked state, dependencies, date range, and text search. Returns compact results to minimize context usage.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -35,10 +35,6 @@ export const workspaceTools: Tool[] = [
         epicId: {
           type: 'string',
           description: 'Filter by parent epic ID',
-        },
-        assignee: {
-          type: ['string', 'null'],
-          description: 'Filter by assignee. Use null for unassigned features.',
         },
         complexity: {
           type: 'string',

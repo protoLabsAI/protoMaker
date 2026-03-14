@@ -4,10 +4,6 @@
  * Storage: single JSON file at {projectPath}/.automaker/todos/workspace.json
  * Follows the same pattern as the Notes workspace service.
  *
- * When a CRDTStore is registered via setCrdtStore(), all read/write operations
- * are routed through the CRDT layer so todos sync across all hivemind instances.
- * Falls back to filesystem when CRDT is not active.
- *
  * Permission tiers (enforced by this service):
  *   (1) user lists (ownerType='user') — user read/write, all Avas read-only
  *   (2) ava-instance lists (ownerType='ava-instance') — writable by the owning
@@ -25,13 +21,9 @@ import { EventEmitter } from 'events';
 import { createLogger, atomicWriteJson, readJsonFile } from '@protolabsai/utils';
 import { getTodoWorkspacePath, ensureTodoDir } from '@protolabsai/platform';
 import type { TodoItem, TodoList, TodoWorkspace } from '@protolabsai/types';
-import type { CRDTStore, TodosDocument } from '@protolabsai/crdt';
 import { randomUUID } from 'crypto';
 
 const logger = createLogger('TodoService');
-
-/** Document id used for the shared todos workspace in the CRDT store */
-const TODOS_DOC_ID = 'workspace';
 
 /**
  * Caller identity passed to write operations for permission enforcement.
@@ -66,18 +58,6 @@ export type UpdateTodoItem = Partial<
 >;
 
 export class TodoService extends EventEmitter {
-  private crdtStore: CRDTStore | null = null;
-
-  /**
-   * Register a CRDTStore instance for syncing todos across instances.
-   * When set, all read/write operations go through the CRDT layer.
-   * Falls back to filesystem when not set.
-   */
-  setCrdtStore(store: CRDTStore): void {
-    this.crdtStore = store;
-    logger.info('[TodoService] CRDT store registered — todos will sync across instances');
-  }
-
   // ---------------------------------------------------------------------------
   // Permission enforcement
   // ---------------------------------------------------------------------------
@@ -128,28 +108,8 @@ export class TodoService extends EventEmitter {
   // Workspace I/O
   // ---------------------------------------------------------------------------
 
-  /** Load the workspace — from CRDT if available, otherwise from disk. */
+  /** Load the workspace from disk. */
   private async loadWorkspace(projectPath: string): Promise<TodoWorkspace> {
-    if (this.crdtStore) {
-      try {
-        const handle = await this.crdtStore.getOrCreate<TodosDocument>('todos', TODOS_DOC_ID, {
-          lists: {},
-          listOrder: [],
-          updatedAt: new Date().toISOString(),
-        });
-        const doc = handle.doc();
-        if (doc) {
-          return {
-            version: 1,
-            lists: doc.lists ?? {},
-            listOrder: doc.listOrder ?? [],
-          };
-        }
-      } catch (err) {
-        logger.warn('[TodoService] CRDT read failed, falling back to filesystem:', err);
-      }
-    }
-
     const filePath = getTodoWorkspacePath(projectPath);
     const existing = await readJsonFile<TodoWorkspace | null>(filePath, null);
 
@@ -164,21 +124,8 @@ export class TodoService extends EventEmitter {
     return workspace;
   }
 
-  /** Persist the workspace — to CRDT if available, otherwise to disk. */
+  /** Persist the workspace to disk. */
   private async saveWorkspace(projectPath: string, workspace: TodoWorkspace): Promise<void> {
-    if (this.crdtStore) {
-      try {
-        await this.crdtStore.change<TodosDocument>('todos', TODOS_DOC_ID, (doc) => {
-          doc.lists = workspace.lists as TodosDocument['lists'];
-          doc.listOrder = workspace.listOrder;
-          doc.updatedAt = new Date().toISOString();
-        });
-        return;
-      } catch (err) {
-        logger.warn('[TodoService] CRDT write failed, falling back to filesystem:', err);
-      }
-    }
-
     await ensureTodoDir(projectPath);
     const filePath = getTodoWorkspacePath(projectPath);
     await atomicWriteJson(filePath, workspace, { indent: 2, createDirs: true });

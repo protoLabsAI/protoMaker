@@ -82,7 +82,6 @@ export interface CompactFeature {
   prUrl?: string;
   epicId?: string;
   isEpic?: boolean;
-  assignee?: string | null;
   dependencies?: string[];
   updatedAt?: unknown;
 }

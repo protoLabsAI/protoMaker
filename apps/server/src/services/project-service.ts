@@ -6,8 +6,6 @@
  */
 
 import path from 'path';
-import { existsSync } from 'node:fs';
-import * as Automerge from '@automerge/automerge';
 import type {
   Project,
   Feature,
@@ -48,14 +46,11 @@ import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ProjectService');
 
-/** Automerge document shape — one per projectPath, keyed by project slug */
-type ProjectsDoc = { projects: Record<string, Project> };
-
 export class ProjectService {
   private calendarService?: CalendarService;
-  private readonly _docs = new Map<string, Automerge.Doc<ProjectsDoc>>();
+  /** In-memory cache: projectPath → { [slug]: Project } */
+  private readonly _docs = new Map<string, Record<string, Project>>();
   private readonly _initPromises = new Map<string, Promise<void>>();
-  private readonly _crdtEnabled = new Map<string, boolean>();
   private readonly _crdtEvents: EventEmitter | null;
 
   constructor(
@@ -108,7 +103,7 @@ export class ProjectService {
   /**
    * Find the project phase linked to the given featureId and update its
    * executionStatus to mirror the feature's new status. Writes project.json
-   * to disk and emits project:updated via CRDT sync.
+   * to disk and updates in-memory cache.
    *
    * No-op when no phase has a matching featureId.
    */
@@ -146,19 +141,14 @@ export class ProjectService {
       const jsonPath = getProjectJsonPath(projectPath, slug);
       await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
 
-      // Update CRDT doc and emit project:updated so peer instances see the update
-      if (this._isCrdtEnabled(projectPath)) {
-        const doc = await this._ensureDoc(projectPath);
-        const newDoc = Automerge.change(doc, (d) => {
-          (d.projects as Record<string, unknown>)[slug] = this._toAutomergeValue(project);
-        });
-        this._docs.set(projectPath, newDoc);
-        this._crdtEvents?.broadcast('project:updated', {
-          projectSlug: slug,
-          projectPath,
-          project,
-        });
-      }
+      // Update in-memory cache and emit event so peer instances see the update
+      const doc = await this._ensureDoc(projectPath);
+      doc[slug] = project;
+      this._crdtEvents?.broadcast('project:updated', {
+        projectSlug: slug,
+        projectPath,
+        project,
+      });
 
       logger.debug(
         `Synced phase executionStatus for feature ${featureId}: ${featureStatus} → ${executionStatus} (project: ${slug})`
@@ -170,21 +160,9 @@ export class ProjectService {
     logger.debug(`No phase linked to feature ${featureId} in ${projectPath}, skipping sync`);
   }
 
-  // ─── CRDT helpers ──────────────────────────────────────────────────────────
+  // ─── Cache helpers ──────────────────────────────────────────────────────────
 
-  private _isCrdtEnabled(projectPath: string): boolean {
-    const cached = this._crdtEnabled.get(projectPath);
-    if (cached !== undefined) return cached;
-    const enabled = existsSync(path.join(projectPath, 'proto.config.yaml'));
-    this._crdtEnabled.set(projectPath, enabled);
-    return enabled;
-  }
-
-  private _toAutomergeValue(project: Project): Record<string, unknown> {
-    return JSON.parse(JSON.stringify(project)) as Record<string, unknown>;
-  }
-
-  private async _ensureDoc(projectPath: string): Promise<Automerge.Doc<ProjectsDoc>> {
+  private async _ensureDoc(projectPath: string): Promise<Record<string, Project>> {
     if (this._docs.has(projectPath)) return this._docs.get(projectPath)!;
     if (!this._initPromises.has(projectPath)) {
       this._initPromises.set(projectPath, this._initDoc(projectPath));
@@ -195,20 +173,14 @@ export class ProjectService {
 
   private async _initDoc(projectPath: string): Promise<void> {
     const slugs = await this._listSlugsFromDisk(projectPath);
-    let doc = Automerge.from<ProjectsDoc>({ projects: {} });
-    const projects: Project[] = [];
+    const projects: Record<string, Project> = {};
     for (const slug of slugs) {
       const p = await this._readFromDisk(projectPath, slug);
-      if (p) projects.push(p);
+      if (p) projects[p.slug] = p;
     }
-    doc = Automerge.change(doc, (d) => {
-      for (const p of projects) {
-        (d.projects as Record<string, unknown>)[p.slug] = this._toAutomergeValue(p);
-      }
-    });
-    this._docs.set(projectPath, doc);
+    this._docs.set(projectPath, projects);
     logger.info(
-      `[CRDT] Initialized projects doc for ${projectPath} with ${projects.length} projects`
+      `Initialized projects cache for ${projectPath} with ${Object.keys(projects).length} projects`
     );
   }
 
@@ -242,13 +214,13 @@ export class ProjectService {
 
   /**
    * Persist a project received from a remote instance.
-   * Writes to disk + updates local Automerge doc WITHOUT emitting events
+   * Writes to disk + updates local in-memory cache WITHOUT emitting events
    * (the caller re-emits via the local EventBus to prevent loops).
    */
   async persistRemoteProject(projectPath: string, project: Project): Promise<void> {
     const slug = project.slug;
     if (!slug) {
-      logger.warn('[CRDT] Received remote project without slug, skipping');
+      logger.warn('[Sync] Received remote project without slug, skipping');
       return;
     }
 
@@ -259,21 +231,16 @@ export class ProjectService {
     const jsonPath = getProjectJsonPath(projectPath, slug);
     await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
 
-    // Update local Automerge doc (no event emission)
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const newDoc = Automerge.change(doc, (d) => {
-        (d.projects as Record<string, unknown>)[slug] = this._toAutomergeValue(project);
-      });
-      this._docs.set(projectPath, newDoc);
-    }
+    // Update local in-memory cache (no event emission)
+    const doc = await this._ensureDoc(projectPath);
+    doc[slug] = project;
 
-    logger.info(`[CRDT] Persisted remote project: ${slug}`);
+    logger.info(`[Sync] Persisted remote project: ${slug}`);
   }
 
   /**
    * Delete a project received from a remote instance.
-   * Removes from disk + local Automerge doc WITHOUT emitting events.
+   * Removes from disk + local in-memory cache WITHOUT emitting events.
    */
   async persistRemoteDelete(projectPath: string, projectSlug: string): Promise<void> {
     const projectDir = getProjectDir(projectPath, projectSlug);
@@ -283,70 +250,52 @@ export class ProjectService {
       // Directory may not exist locally — that's fine
     }
 
-    // Update local Automerge doc (no event emission)
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const newDoc = Automerge.change(doc, (d) => {
-        delete (d.projects as Record<string, Project | undefined>)[projectSlug];
-      });
-      this._docs.set(projectPath, newDoc);
-    }
+    // Update local in-memory cache (no event emission)
+    const doc = await this._ensureDoc(projectPath);
+    delete doc[projectSlug];
 
-    logger.info(`[CRDT] Persisted remote project delete: ${projectSlug}`);
+    logger.info(`[Sync] Persisted remote project delete: ${projectSlug}`);
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
   /**
-   * Sync a pre-built Project into the CRDT doc and emit an event.
+   * Sync a pre-built Project into the in-memory cache and emit an event.
    *
    * Use this when code outside of ProjectService (e.g. the create/update route
    * handlers) has already written project.json to disk and just needs the
-   * in-memory Automerge doc to reflect that change. Calling this ensures
+   * in-memory cache to reflect that change. Calling this ensures
    * getProject() returns the project immediately, without a server restart.
-   *
-   * No-ops when CRDT is not enabled for the given projectPath.
    */
   async syncProjectToCrdt(
     projectPath: string,
     project: Project,
     eventType: 'project:created' | 'project:updated' = 'project:updated'
   ): Promise<void> {
-    if (!this._isCrdtEnabled(projectPath)) return;
     const doc = await this._ensureDoc(projectPath);
-    const newDoc = Automerge.change(doc, (d) => {
-      (d.projects as Record<string, unknown>)[project.slug] = this._toAutomergeValue(project);
-    });
-    this._docs.set(projectPath, newDoc);
+    doc[project.slug] = project;
     this._crdtEvents?.broadcast(eventType, {
       projectSlug: project.slug,
       projectPath,
       project,
     });
-    logger.debug(`[CRDT] Synced project ${project.slug} into doc (${eventType})`);
+    logger.debug(`Synced project ${project.slug} into cache (${eventType})`);
   }
 
   /**
    * List all projects in a project path
    */
   async listProjects(projectPath: string): Promise<string[]> {
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      return Object.keys(doc.projects || {}).sort();
-    }
-    return this._listSlugsFromDisk(projectPath);
+    const doc = await this._ensureDoc(projectPath);
+    return Object.keys(doc).sort();
   }
 
   /**
    * Get a project by slug
    */
   async getProject(projectPath: string, projectSlug: string): Promise<Project | null> {
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const raw = (doc.projects || {})[projectSlug];
-      return raw ? (raw as Project) : null;
-    }
-    return this._readFromDisk(projectPath, projectSlug);
+    const doc = await this._ensureDoc(projectPath);
+    return doc[projectSlug] ?? null;
   }
 
   /**
@@ -401,19 +350,14 @@ export class ProjectService {
       }
     }
 
-    // Update CRDT doc and emit event
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const newDoc = Automerge.change(doc, (d) => {
-        (d.projects as Record<string, unknown>)[project.slug] = this._toAutomergeValue(project);
-      });
-      this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.broadcast('project:created', {
-        projectSlug: project.slug,
-        projectPath,
-        project,
-      });
-    }
+    // Update in-memory cache and emit event
+    const doc = await this._ensureDoc(projectPath);
+    doc[project.slug] = project;
+    this._crdtEvents?.broadcast('project:created', {
+      projectSlug: project.slug,
+      projectPath,
+      project,
+    });
 
     logger.info(`Created project: ${project.slug}`);
     return project;
@@ -521,19 +465,14 @@ export class ProjectService {
       }
     }
 
-    // Update CRDT doc and emit event so peers receive the milestone update
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const newDoc = Automerge.change(doc, (d) => {
-        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
-      });
-      this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.broadcast('project:updated', {
-        projectSlug,
-        projectPath,
-        project: updated,
-      });
-    }
+    // Update in-memory cache and emit event so peers receive the milestone update
+    const doc = await this._ensureDoc(projectPath);
+    doc[projectSlug] = updated;
+    this._crdtEvents?.broadcast('project:updated', {
+      projectSlug,
+      projectPath,
+      project: updated,
+    });
 
     logger.info(`Saved ${milestones.length} milestones for project: ${projectSlug}`);
     return updated;
@@ -566,24 +505,19 @@ export class ProjectService {
     const jsonPath = getProjectJsonPath(projectPath, projectSlug);
     await secureFs.writeFile(jsonPath, JSON.stringify(project, null, 2));
 
-    // Update CRDT doc and emit event so peers receive the claim update
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const newDoc = Automerge.change(doc, (d) => {
-        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(project);
-      });
-      this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.broadcast('project:updated', {
-        projectSlug,
-        projectPath,
-        project,
-      });
-    }
+    // Update in-memory cache and emit event so peers receive the claim update
+    const doc = await this._ensureDoc(projectPath);
+    doc[projectSlug] = project;
+    this._crdtEvents?.broadcast('project:updated', {
+      projectSlug,
+      projectPath,
+      project,
+    });
   }
 
   /**
    * Read the latest state of a single phase.
-   * Used by WorkIntakeService to verify claims survived Automerge merge.
+   * Used by WorkIntakeService to verify claims survived merge.
    */
   async getPhase(
     projectPath: string,
@@ -646,19 +580,14 @@ export class ProjectService {
       }
     }
 
-    // Update CRDT doc and emit event
-    if (this._isCrdtEnabled(projectPath)) {
-      const doc = await this._ensureDoc(projectPath);
-      const newDoc = Automerge.change(doc, (d) => {
-        (d.projects as Record<string, unknown>)[projectSlug] = this._toAutomergeValue(updated);
-      });
-      this._docs.set(projectPath, newDoc);
-      this._crdtEvents?.broadcast('project:updated', {
-        projectSlug,
-        projectPath,
-        project: updated,
-      });
-    }
+    // Update in-memory cache and emit event
+    const doc = await this._ensureDoc(projectPath);
+    doc[projectSlug] = updated;
+    this._crdtEvents?.broadcast('project:updated', {
+      projectSlug,
+      projectPath,
+      project: updated,
+    });
 
     logger.info(`Updated project: ${projectSlug}`);
     return updated;
@@ -729,15 +658,10 @@ export class ProjectService {
       await secureFs.rm(projectDir, { recursive: true, force: true });
       logger.info(`Deleted project: ${projectSlug} (stats preserved)`);
 
-      // Update CRDT doc and emit event
-      if (this._isCrdtEnabled(projectPath)) {
-        const doc = await this._ensureDoc(projectPath);
-        const newDoc = Automerge.change(doc, (d) => {
-          delete (d.projects as Record<string, Project | undefined>)[projectSlug];
-        });
-        this._docs.set(projectPath, newDoc);
-        this._crdtEvents?.broadcast('project:deleted', { projectSlug, projectPath });
-      }
+      // Update in-memory cache and emit event
+      const doc = await this._ensureDoc(projectPath);
+      delete doc[projectSlug];
+      this._crdtEvents?.broadcast('project:deleted', { projectSlug, projectPath });
 
       return true;
     } catch (error) {

@@ -268,7 +268,6 @@ import { gitOpsTools } from './tools/git-ops-tools.js';
 import { worktreeGitTools } from './tools/worktree-git-tools.js';
 import { promotionTools } from './tools/promotion-tools.js';
 import { leadEngineerTools } from './tools/lead-engineer-tools.js';
-import { avaChannelTools } from './tools/ava-channel-tools.js';
 import { knowledgeTools } from './tools/knowledge-tools.js';
 
 // Aggregate all tools
@@ -294,7 +293,6 @@ const tools: Tool[] = [
   ...worktreeGitTools,
   ...promotionTools,
   ...leadEngineerTools,
-  ...avaChannelTools,
   ...knowledgeTools,
 ];
 
@@ -345,7 +343,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.isEpic) featureData.isEpic = args.isEpic;
       if (args.epicId) featureData.epicId = args.epicId;
       if (args.complexity) featureData.complexity = args.complexity;
-      if (args.assignee !== undefined) featureData.assignee = args.assignee;
       if (args.dueDate !== undefined) featureData.dueDate = args.dueDate;
       if (args.priority !== undefined) featureData.priority = args.priority;
       if (args.isFoundation !== undefined) featureData.isFoundation = args.isFoundation;
@@ -362,7 +359,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.description) updates.description = args.description;
       if (args.status) updates.status = args.status;
       if (args.complexity) updates.complexity = args.complexity;
-      if (args.assignee !== undefined) updates.assignee = args.assignee;
       if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
       if (args.priority !== undefined) updates.priority = args.priority;
       if (args.isFoundation !== undefined) updates.isFoundation = args.isFoundation;
@@ -1537,13 +1533,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.epicId !== undefined) {
         qFeatures = qFeatures.filter((f) => f.epicId === args.epicId);
       }
-      if (args.assignee !== undefined) {
-        if (args.assignee === null) {
-          qFeatures = qFeatures.filter((f) => !f.assignee);
-        } else {
-          qFeatures = qFeatures.filter((f) => f.assignee === args.assignee);
-        }
-      }
       if (args.complexity) {
         qFeatures = qFeatures.filter((f) => f.complexity === args.complexity);
       }
@@ -1602,7 +1591,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
           branchName: f.branchName,
           epicId: f.epicId,
           isEpic: f.isEpic,
-          assignee: f.assignee,
           dependencies: f.dependencies,
           prNumber: f.prNumber,
         })),
@@ -1945,43 +1933,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
 
       return { success: true, handoff: latest };
     }
-
-    // Ava Channel (private coordination channel)
-    case 'send_channel_message':
-      return apiCall('/ava-channel/send', {
-        projectPath: args.projectPath,
-        message: args.message,
-        context: args.context,
-        instanceId: args.instanceId,
-        intent: args.intent,
-        expectsResponse: args.expectsResponse,
-      });
-
-    case 'read_channel_messages':
-      return apiCall(
-        '/ava-channel/messages',
-        {
-          projectPath: args.projectPath,
-          limit: args.limit,
-          since: args.since,
-          until: args.until,
-          instanceId: args.instanceId,
-        },
-        'GET'
-      );
-
-    case 'file_system_improvement':
-      return apiCall('/ava-channel/file-improvement', {
-        projectPath: args.projectPath,
-        title: args.title,
-        description: args.description,
-        frictionSummary: args.frictionSummary,
-        discussionContext: args.discussionContext,
-        complexity: args.complexity,
-        priority: args.priority,
-        instanceId: args.instanceId,
-        discussantCount: args.discussantCount,
-      });
 
     // Knowledge Store
     case 'knowledge_search':

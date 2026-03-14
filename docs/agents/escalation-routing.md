@@ -56,21 +56,20 @@ interface EscalationSignal {
 
 ## Signal sources
 
-| Source                        | Description                                  |
-| ----------------------------- | -------------------------------------------- |
-| `pr_feedback`                 | PR feedback requiring attention              |
-| `agent_failure`               | Agent execution failure                      |
-| `ci_failure`                  | CI/CD pipeline failure                       |
-| `health_check`                | Health check failure or degradation          |
-| `lead_engineer_escalation`    | Lead Engineer escalation                     |
-| `sla_breach`                  | SLA breach detected                          |
-| `board_anomaly`               | Board state anomaly detected                 |
-| `human_mention`               | Human explicitly mentioned in a comment      |
-| `agent_needs_input`           | Agent needs human input (elicitation)        |
-| `human_blocked_dependency`    | Feature blocked by human-assigned dependency |
-| `lead_engineer`               | Lead Engineer action executor escalation     |
-| `lead_engineer_state_machine` | Lead Engineer state machine escalation       |
-| `auto_mode_health_sweep`      | Auto-mode health sweep detected issue        |
+| Source                        | Description                              |
+| ----------------------------- | ---------------------------------------- |
+| `pr_feedback`                 | PR feedback requiring attention          |
+| `agent_failure`               | Agent execution failure                  |
+| `ci_failure`                  | CI/CD pipeline failure                   |
+| `health_check`                | Health check failure or degradation      |
+| `lead_engineer_escalation`    | Lead Engineer escalation                 |
+| `sla_breach`                  | SLA breach detected                      |
+| `board_anomaly`               | Board state anomaly detected             |
+| `human_mention`               | Human explicitly mentioned in a comment  |
+| `agent_needs_input`           | Agent needs human input (elicitation)    |
+| `lead_engineer`               | Lead Engineer action executor escalation |
+| `lead_engineer_state_machine` | Lead Engineer state machine escalation   |
+| `auto_mode_health_sweep`      | Auto-mode health sweep detected issue    |
 
 **Type:** `EscalationSource` enum in `libs/types/src/escalation.ts`
 

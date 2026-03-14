@@ -33,10 +33,6 @@ export type {
 // Event Ledger types — append-only JSONL event persistence layer
 export type { EventLedgerCorrelationIds, EventLedgerEntry } from './event-ledger.js';
 
-// EventBus-CRDT bridge types
-export { CRDT_SYNCED_EVENT_TYPES } from './events.js';
-export type { CrdtSyncWireMessage } from './events.js';
-
 // Automation registry supplementary types (CreateAutomationInput, UpdateAutomationInput, FlowFactory)
 // Core types (Automation, AutomationRunRecord, etc.) are already exported from the base workspace types
 export type {
@@ -142,7 +138,6 @@ export type { EventBus, EventSubscription } from './event-bus.js';
 
 // Hivemind types (multi-instance mesh coordination)
 export type {
-  CompactionDiagnosticsSnapshot,
   InstanceCapacity,
   HivemindDomain,
   InstanceIdentity,
