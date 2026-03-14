@@ -213,42 +213,39 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
               </Button>
             </div>
           ) : (
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => startEdit('lead', project.lead ?? '')}
-              className="flex items-center gap-1.5 text-sm text-foreground/80 hover:text-foreground"
+              className="h-auto px-1 py-0 gap-1.5 text-sm text-foreground/80 hover:text-foreground"
             >
               <User className="w-3.5 h-3.5" />
               {project.lead || 'Set lead...'}
-            </button>
+            </Button>
           )}
         </PropertyRow>
 
         <PropertyRow label="Members">
           <div className="flex flex-col gap-1.5">
-            {/* Existing member tags */}
             {(project.members ?? []).length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {(project.members ?? []).map((member) => (
-                  <span
-                    key={member}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs text-foreground/80"
-                  >
+                  <Badge key={member} variant="muted" size="sm" className="gap-1 pr-1">
                     <Users className="w-3 h-3" />
                     {member}
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      className="h-auto w-auto p-0 ml-0.5 text-muted-foreground hover:text-foreground"
                       onClick={() => handleRemoveMember(member)}
-                      className="ml-0.5 text-muted-foreground hover:text-foreground"
                       aria-label={`Remove ${member}`}
                     >
                       <X className="w-3 h-3" />
-                    </button>
-                  </span>
+                    </Button>
+                  </Badge>
                 ))}
               </div>
             )}
-            {/* Add member input */}
             <div className="flex items-center gap-1.5">
               <Input
                 value={newMember}
@@ -278,15 +275,16 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
 
         <PropertyRow label="Color">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Preset palette */}
             {PRESET_COLORS.map((c) => (
-              <button
+              <Button
                 key={c}
                 type="button"
+                variant="ghost"
                 onClick={() => handleColorChange(c)}
-                className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-5 h-5 min-w-0 rounded-full p-0 transition-transform hover:scale-110"
                 style={{
                   backgroundColor: c,
+                  borderWidth: 2,
                   borderColor: project.color === c ? 'white' : 'transparent',
                   boxShadow: project.color === c ? `0 0 0 2px ${c}` : undefined,
                 }}
@@ -294,15 +292,15 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
                 aria-pressed={project.color === c}
               />
             ))}
-            {/* Custom color input */}
-            <button
+            <Button
               type="button"
+              variant="ghost"
               onClick={() => colorInputRef.current?.click()}
-              className="w-5 h-5 rounded-full border border-dashed border-border flex items-center justify-center hover:border-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-5 h-5 min-w-0 rounded-full p-0 border border-dashed border-border hover:border-foreground/50"
               aria-label="Custom color"
             >
               <Palette className="w-3 h-3 text-muted-foreground" />
-            </button>
+            </Button>
             <input
               ref={colorInputRef}
               type="color"
@@ -311,15 +309,16 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
               className="sr-only"
               aria-label="Custom color picker"
             />
-            {/* Clear color */}
             {project.color && (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => handleColorChange('')}
-                className="text-xs text-muted-foreground hover:text-foreground"
+                className="h-auto w-auto p-0 text-muted-foreground hover:text-foreground"
+                aria-label="Clear color"
               >
                 <X className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             )}
           </div>
         </PropertyRow>
@@ -337,13 +336,14 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
                 onBlur={() => saveEdit('startDate')}
               />
             ) : (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => startEdit('startDate', project.startDate ?? '')}
-                className="hover:text-foreground"
+                className="h-auto px-1 py-0 text-sm text-foreground/80 hover:text-foreground"
               >
                 {project.startDate || 'Set start date...'}
-              </button>
+              </Button>
             )}
           </span>
         </PropertyRow>
@@ -361,13 +361,14 @@ export function ProjectSidebar({ project, isOpen }: { project: Project; isOpen?:
                 onBlur={() => saveEdit('targetDate')}
               />
             ) : (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => startEdit('targetDate', project.targetDate ?? '')}
-                className="hover:text-foreground"
+                className="h-auto px-1 py-0 text-sm text-foreground/80 hover:text-foreground"
               >
                 {project.targetDate || 'Set target date...'}
-              </button>
+              </Button>
             )}
           </span>
         </PropertyRow>
