@@ -35,14 +35,7 @@ export class EscalateProcessor implements StateProcessor {
   }
 
   async process(ctx: StateContext): Promise<StateTransitionResult> {
-    // Move feature to blocked with reason and failure tracking
-    await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
-      status: 'blocked',
-      statusChangeReason: ctx.escalationReason || 'Escalated by lead engineer',
-      failureCount: (ctx.feature.failureCount ?? 0) + 1,
-    });
-
-    // Classify the failure for structured analysis
+    // Classify the failure for structured analysis before writing
     const failureAnalysis = this.failureClassifier.classify(
       ctx.escalationReason || 'Unknown escalation reason',
       ctx.retryCount
@@ -55,8 +48,11 @@ export class EscalateProcessor implements StateProcessor {
       confidence: failureAnalysis.confidence,
     });
 
-    // Persist the structured failure classification to the feature ledger
+    // Single write: blocked status + failure tracking + classification
     await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
+      status: 'blocked',
+      statusChangeReason: ctx.escalationReason || 'Escalated by lead engineer',
+      failureCount: (ctx.feature.failureCount ?? 0) + 1,
       failureClassification: {
         category: failureAnalysis.category,
         confidence: failureAnalysis.confidence,
@@ -238,10 +234,21 @@ export class EscalateProcessor implements StateProcessor {
 
   async exit(ctx: StateContext): Promise<void> {
     logger.info('[ESCALATE] Escalation completed');
+    // Derive the originating pipeline phase from context clues.
+    // MERGE state leaves mergeRetryCount > 0; REVIEW state leaves prNumber set;
+    // PLAN state has planRequired but no planOutput; otherwise EXECUTE.
+    let originatingPhase: PipelinePhase = 'EXECUTE';
+    if (ctx.mergeRetryCount > 0) {
+      originatingPhase = 'PUBLISH';
+    } else if (ctx.prNumber != null) {
+      originatingPhase = 'VERIFY';
+    } else if (ctx.planRequired && ctx.planOutput == null) {
+      originatingPhase = 'PLAN';
+    }
     this.serviceContext.events.emit('pipeline:phase-skipped' as EventType, {
       featureId: ctx.feature.id,
       projectPath: ctx.projectPath,
-      phase: 'EXECUTE' as PipelinePhase,
+      phase: originatingPhase,
       branch: 'ops' as const,
       reason: ctx.escalationReason || 'Feature escalated — pipeline halted',
       timestamp: new Date().toISOString(),

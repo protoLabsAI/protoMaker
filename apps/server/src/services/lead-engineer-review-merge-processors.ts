@@ -505,7 +505,12 @@ export class MergeProcessor implements StateProcessor {
       const errMsg = err instanceof Error ? err.message : String(err);
 
       // If checks are still pending, wait and retry
-      if (errMsg.includes('check') || errMsg.includes('pending') || errMsg.includes('required')) {
+      if (
+        errMsg.includes('required status check') ||
+        errMsg.includes('waiting for status') ||
+        errMsg.includes('pull request is not mergeable') ||
+        errMsg.includes('not yet mergeable')
+      ) {
         ctx.mergeRetryCount++;
         logger.info(
           `[MERGE] Checks pending on PR #${ctx.prNumber}, waiting ${MERGE_RETRY_DELAY_MS / 1000}s`
