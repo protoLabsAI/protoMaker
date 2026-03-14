@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CrdtSyncService } from '../../src/services/crdt-sync-service.js';
+import { PeerMeshService } from '../../src/services/peer-mesh-service.js';
 import type { EventEmitter } from '../../src/lib/events.js';
 
 // Mock loadProtoConfig from @protolabsai/platform
@@ -11,11 +11,11 @@ import { loadProtoConfig } from '@protolabsai/platform';
 
 const mockLoadProtoConfig = vi.mocked(loadProtoConfig);
 
-describe('CrdtSyncService', () => {
-  let service: CrdtSyncService;
+describe('PeerMeshService', () => {
+  let service: PeerMeshService;
 
   beforeEach(() => {
-    service = new CrdtSyncService();
+    service = new PeerMeshService();
     vi.useFakeTimers();
   });
 
@@ -37,6 +37,7 @@ describe('CrdtSyncService', () => {
     it('starts as primary when proto config has role:primary', async () => {
       mockLoadProtoConfig.mockResolvedValue({
         protolab: { role: 'primary', syncPort: 19876 },
+        hivemind: { enabled: true },
       } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
       await service.start('/fake/repo');
       const status = service.getSyncStatus();
@@ -49,7 +50,7 @@ describe('CrdtSyncService', () => {
     it('starts as worker when proto config has role:worker', async () => {
       mockLoadProtoConfig.mockResolvedValue({
         protolab: { role: 'worker', syncPort: 19876 },
-        hivemind: { peers: [] },
+        hivemind: { enabled: true, peers: [] },
       } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
       await service.start('/fake/repo');
       const status = service.getSyncStatus();
@@ -94,6 +95,7 @@ describe('CrdtSyncService', () => {
     it('shuts down primary server cleanly', async () => {
       mockLoadProtoConfig.mockResolvedValue({
         protolab: { role: 'primary', syncPort: 19877 },
+        hivemind: { enabled: true },
       } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
       await service.start('/fake/repo');
       await expect(service.shutdown()).resolves.toBeUndefined();
@@ -103,8 +105,8 @@ describe('CrdtSyncService', () => {
   });
 
   describe('primary-worker integration', () => {
-    let primary: CrdtSyncService;
-    let worker: CrdtSyncService;
+    let primary: PeerMeshService;
+    let worker: PeerMeshService;
 
     beforeEach(() => {
       // Use real timers for WebSocket integration tests
@@ -118,8 +120,8 @@ describe('CrdtSyncService', () => {
 
     it('worker connects to primary and primary tracks peer identity', async () => {
       const port = 19878;
-      primary = new CrdtSyncService();
-      worker = new CrdtSyncService();
+      primary = new PeerMeshService();
+      worker = new PeerMeshService();
 
       mockLoadProtoConfig
         .mockResolvedValueOnce({
@@ -129,6 +131,7 @@ describe('CrdtSyncService', () => {
             instanceId: 'primary-node',
             instanceUrl: `ws://localhost:${port}`,
           },
+          hivemind: { enabled: true },
         } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>)
         .mockResolvedValueOnce({
           protolab: {
@@ -137,6 +140,7 @@ describe('CrdtSyncService', () => {
             instanceUrl: 'ws://localhost:19999',
           },
           hivemind: {
+            enabled: true,
             peers: [`ws://localhost:${port}`],
             heartbeatIntervalMs: 60000,
             peerTtlMs: 120000,
@@ -166,7 +170,7 @@ describe('CrdtSyncService', () => {
     it('marks peers offline after TTL expires', async () => {
       mockLoadProtoConfig.mockResolvedValue({
         protolab: { role: 'primary', syncPort: 19879 },
-        hivemind: { peerTtlMs: 100, heartbeatIntervalMs: 10000 },
+        hivemind: { enabled: true, peerTtlMs: 100, heartbeatIntervalMs: 10000 },
       } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
       await service.start('/fake/repo');
 
@@ -193,7 +197,7 @@ describe('CrdtSyncService', () => {
     it('peer eviction on TTL — peer is marked offline and absent from onlinePeers (isOnline false)', async () => {
       mockLoadProtoConfig.mockResolvedValue({
         protolab: { role: 'primary', syncPort: 19884 },
-        hivemind: { peerTtlMs: 100, heartbeatIntervalMs: 10000 },
+        hivemind: { enabled: true, peerTtlMs: 100, heartbeatIntervalMs: 10000 },
       } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
       await service.start('/fake/repo');
 
@@ -231,7 +235,7 @@ describe('CrdtSyncService', () => {
     it('queues CRDT events in outboundQueue while not connected to primary', async () => {
       mockLoadProtoConfig.mockResolvedValue({
         protolab: { role: 'worker', instanceId: 'worker-offline' },
-        hivemind: { peers: [], heartbeatIntervalMs: 60000, peerTtlMs: 120000 },
+        hivemind: { enabled: true, peers: [], heartbeatIntervalMs: 60000, peerTtlMs: 120000 },
       } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
       await service.start('/fake/repo');
 
@@ -278,15 +282,15 @@ describe('CrdtSyncService', () => {
     });
 
     describe('reconnect replay integration', () => {
-      let primaryA: CrdtSyncService | null;
-      let primaryB: CrdtSyncService | null;
-      let partitionWorker: CrdtSyncService;
+      let primaryA: PeerMeshService | null;
+      let primaryB: PeerMeshService | null;
+      let partitionWorker: PeerMeshService;
 
       beforeEach(() => {
         vi.useRealTimers();
         primaryA = null;
         primaryB = null;
-        partitionWorker = new CrdtSyncService();
+        partitionWorker = new PeerMeshService();
       });
 
       afterEach(async () => {
@@ -307,8 +311,9 @@ describe('CrdtSyncService', () => {
         // Start primary A
         mockLoadProtoConfig.mockResolvedValueOnce({
           protolab: { role: 'primary', syncPort: port, instanceId: 'primary-a' },
+          hivemind: { enabled: true },
         } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
-        primaryA = new CrdtSyncService();
+        primaryA = new PeerMeshService();
         await primaryA.start('/fake/repo-primary-a');
 
         // Start worker pointed at primary A
@@ -319,6 +324,7 @@ describe('CrdtSyncService', () => {
             instanceUrl: 'ws://localhost:29999',
           },
           hivemind: {
+            enabled: true,
             peers: [`ws://localhost:${port}`],
             heartbeatIntervalMs: 60000,
             peerTtlMs: 120000,
@@ -369,8 +375,9 @@ describe('CrdtSyncService', () => {
         // Partition heals: restart primary on the same port
         mockLoadProtoConfig.mockResolvedValueOnce({
           protolab: { role: 'primary', syncPort: port, instanceId: 'primary-b' },
+          hivemind: { enabled: true },
         } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
-        primaryB = new CrdtSyncService();
+        primaryB = new PeerMeshService();
         await primaryB.start('/fake/repo-primary-b');
 
         // Wait for the reconnect interval to fire (RECONNECT_INTERVAL_MS = 5000ms) + buffer
@@ -387,13 +394,13 @@ describe('CrdtSyncService', () => {
 
   describe('registry sync', () => {
     describe('integration', () => {
-      let registryPrimary: CrdtSyncService;
-      let registryWorker: CrdtSyncService;
+      let registryPrimary: PeerMeshService;
+      let registryWorker: PeerMeshService;
 
       beforeEach(() => {
         vi.useRealTimers();
-        registryPrimary = new CrdtSyncService();
-        registryWorker = new CrdtSyncService();
+        registryPrimary = new PeerMeshService();
+        registryWorker = new PeerMeshService();
       });
 
       afterEach(async () => {
@@ -407,6 +414,7 @@ describe('CrdtSyncService', () => {
         // Configure primary with a known registry
         mockLoadProtoConfig.mockResolvedValueOnce({
           protolab: { role: 'primary', syncPort: port, instanceId: 'primary-rs' },
+          hivemind: { enabled: true },
         } as unknown as Awaited<ReturnType<typeof loadProtoConfig>>);
         registryPrimary.setRegistryProvider(() => ({
           'domain:doc-1': 'automerge://abc123',
@@ -418,6 +426,7 @@ describe('CrdtSyncService', () => {
         mockLoadProtoConfig.mockResolvedValueOnce({
           protolab: { role: 'worker', instanceId: 'worker-rs' },
           hivemind: {
+            enabled: true,
             peers: [`ws://localhost:${port}`],
             heartbeatIntervalMs: 60000,
             peerTtlMs: 120000,

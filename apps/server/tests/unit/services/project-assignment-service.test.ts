@@ -73,7 +73,7 @@ describe('ProjectAssignmentService', () => {
     eventEmitter = makeEventEmitter();
     service = new ProjectAssignmentService(
       projectService as unknown as import('@/services/project-service.js').ProjectService,
-      crdtSyncService as unknown as import('@/services/crdt-sync-service.js').CrdtSyncService,
+      crdtSyncService as unknown as import('@/services/peer-mesh-service.js').PeerMeshService,
       eventEmitter as unknown as import('@/lib/events.js').EventEmitter
     );
   });
