@@ -92,6 +92,11 @@ export class HITLFormService {
    * Create a new form request.
    */
   async create(input: HITLFormRequestInput): Promise<HITLFormRequest | null> {
+    // Feature flag gate — pipeline must be enabled
+    if (!this.settingsService) return null;
+    const settings = await this.settingsService.getGlobalSettings();
+    if (!settings.featureFlags?.pipeline) return null;
+
     if (!input.title || !input.steps?.length) {
       throw new Error('title and at least one step are required');
     }
