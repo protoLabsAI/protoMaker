@@ -714,6 +714,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
 
   // Project Slug Resolver — resolves default projectSlug for a given projectPath
   const projectSlugResolver = new ProjectSlugResolver(settingsService);
+  featureLoader.setProjectSlugResolver(projectSlugResolver);
 
   // Register Ava cron tasks (daily board health, PR triage, staging ping)
   void registerAvaCronTasks({ schedulerService, reactiveSpawnerService, projectPath: repoRoot });

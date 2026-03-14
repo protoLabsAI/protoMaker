@@ -37,6 +37,7 @@ import {
 import { addImplementedFeature, type ImplementedFeature } from '../lib/xml-extractor.js';
 import { debugLog } from '../lib/debug-log.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
+import type { ProjectSlugResolver } from './project-slug-resolver.js';
 import { featuresByStatus } from '../lib/prometheus.js';
 
 const execAsync = promisify(exec);
@@ -50,6 +51,7 @@ export class FeatureLoader implements FeatureStore {
   private events: EventEmitter | null = null;
   /** Instance ID stamped onto newly created features as createdByInstance */
   private instanceId: string | null = null;
+  private projectSlugResolver: ProjectSlugResolver | null = null;
 
   setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
     this.integrityWatchdog = watchdog;
@@ -65,6 +67,14 @@ export class FeatureLoader implements FeatureStore {
    */
   setInstanceId(instanceId: string): void {
     this.instanceId = instanceId;
+  }
+
+  /**
+   * Set the project slug resolver used to auto-assign projectSlug on feature creation.
+   * Call this once at startup when the resolver is available.
+   */
+  setProjectSlugResolver(resolver: ProjectSlugResolver): void {
+    this.projectSlugResolver = resolver;
   }
   /**
    * Normalize feature status to canonical values
@@ -547,6 +557,16 @@ export class FeatureLoader implements FeatureStore {
     // Auto-generate branchName from title if not provided
     const branchName = featureData.branchName || this.generateBranchName(featureData.title);
 
+    // Auto-assign projectSlug if not already provided
+    let resolvedProjectSlug = featureData.projectSlug;
+    if (!resolvedProjectSlug && this.projectSlugResolver) {
+      const slug = await this.projectSlugResolver.resolveDefaultSlug(projectPath);
+      if (slug) {
+        resolvedProjectSlug = slug;
+        logger.debug(`Auto-assigned projectSlug "${slug}" to new feature ${featureId}`);
+      }
+    }
+
     // Set lifecycle timestamps
     const createdAt = new Date().toISOString();
     const initialStatus = (featureData.status || 'backlog') as FeatureStatus;
@@ -574,6 +594,9 @@ export class FeatureLoader implements FeatureStore {
       ...(featureData.createdByInstance == null && this.instanceId != null
         ? { createdByInstance: this.instanceId }
         : {}),
+      // Apply resolved projectSlug (resolver result takes precedence over featureData when
+      // the caller did not supply one, ensuring auto-assignment for all creation paths).
+      ...(resolvedProjectSlug != null ? { projectSlug: resolvedProjectSlug } : {}),
     };
 
     // Write feature.json atomically with backup support
