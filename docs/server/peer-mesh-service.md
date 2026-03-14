@@ -1,10 +1,14 @@
-# CRDT Sync Service
+# Peer Mesh Service
 
 WebSocket-based multi-instance coordination layer that keeps feature events, project changes, settings, and peer capacity in sync across the Hivemind mesh.
 
+> **Renamed:** `CrdtSyncService` was renamed to `PeerMeshService` in March 2026 and made conditional on `hivemind.enabled`. The CRDT binary sync layer (Automerge / CRDTStore on `:4445`) was removed at the same time — the mesh now handles only event broadcasting, heartbeats, and leader election.
+
 ## Overview
 
-`CrdtSyncService` manages the low-level peer-to-peer sync transport between protoLabs instances. It reads `proto.config.yaml` at startup to determine whether this instance is the **primary** (runs a WebSocket server) or a **worker** (connects as a client).
+`PeerMeshService` manages the low-level peer-to-peer sync transport between protoLabs instances. It reads `proto.config.yaml` at startup to determine whether this instance is the **primary** (runs a WebSocket server) or a **worker** (connects as a client).
+
+**When `hivemind.enabled` is `false` in `proto.config.yaml`, this service is a no-op** — no WebSocket server is started, no timers fire, and no peer connections are attempted.
 
 Key responsibilities:
 
@@ -12,8 +16,6 @@ Key responsibilities:
 - **Feature event sync** — broadcasts `feature:created`, `feature:updated`, `feature:deleted`, and `feature:status-changed` to all peers
 - **Project event sync** — broadcasts project CRUD events so all instances stay consistent
 - **Settings broadcast** — primary pushes shared settings to workers (no credentials included)
-- **Registry sync** — primary sends CRDTStore document registry to resolve split-brain URLs
-- **Bug report forwarding** — `bug:reported` events on the EventBus are forwarded to the Ava Channel
 - **Network partition handling** — queues outbound events while disconnected; replays on reconnect
 
 ## Architecture
@@ -23,10 +25,10 @@ proto.config.yaml
   --> role: primary → start WebSocket server (default port 4444)
   --> role: worker  → connect as WebSocket client to primary URL
 
-CrdtSyncService
+PeerMeshService
   ├── Heartbeat loop (30s)    → broadcasts PeerMessage{type: 'heartbeat', capacity}
   ├── TTL check loop (10s)    → evicts peers absent > 120s
-  ├── EventBus bridge         → CRDT_SYNCED_EVENT_TYPES trigger CrdtFeatureEvent broadcasts
+  ├── EventBus bridge         → CRDT_SYNCED_EVENT_TYPES trigger CrdtSyncWireMessage broadcasts
   └── Reconnect loop (5s)     → workers auto-reconnect on disconnect
 ```
 
@@ -37,7 +39,7 @@ CrdtSyncService
 | `primary` | Runs `WebSocketServer`; relays messages between all workers  |
 | `worker`  | Connects to primary URL; receives relay of all peer messages |
 
-Role is determined by the `instance.syncRole` (or `role`) field in `proto.config.yaml`. If the file is absent, the instance starts as a standalone worker (no sync).
+Role is determined by the `instance.syncRole` (or `role`) field in `proto.config.yaml`. If the file is absent, or if `hivemind.enabled` is `false`, the instance starts as a standalone (no sync).
 
 ## Wire Message Types
 
@@ -61,12 +63,12 @@ interface PeerMessage {
 
 `capacity` is populated on every heartbeat by the registered `_capacityProvider` callback.
 
-### CrdtFeatureEvent
+### CrdtSyncWireMessage
 
 Synced event types: `feature:created`, `feature:updated`, `feature:deleted`, `feature:status-changed`, plus project equivalents.
 
 ```typescript
-interface CrdtFeatureEvent {
+interface CrdtSyncWireMessage {
   type: 'feature_event';
   instanceId: string;
   eventType: string;
@@ -76,7 +78,7 @@ interface CrdtFeatureEvent {
 }
 ```
 
-**Project scoping:** The `projectName` field prevents cross-project CRDT contamination. Workers reject events whose `projectName` doesn't match their own.
+**Project scoping:** The `projectName` field prevents cross-project event contamination. Workers reject events whose `projectName` doesn't match their own.
 
 ### CrdtSettingsEvent
 
@@ -87,19 +89,6 @@ interface CrdtSettingsEvent {
   type: 'settings_event';
   instanceId: string;
   settings: Record<string, unknown>;
-  timestamp: string;
-}
-```
-
-### CrdtRegistrySyncEvent
-
-Primary → workers on connect. Resolves split-brain where both instances independently created Automerge documents for the same `domain:id` with different URLs.
-
-```typescript
-interface CrdtRegistrySyncEvent {
-  type: 'registry_sync';
-  instanceId: string;
-  registry: Record<string, string>;
   timestamp: string;
 }
 ```
@@ -141,21 +130,17 @@ When a worker is disconnected from the mesh:
 
 `attachEventBus(bus)` wires the sync service into the local event system:
 
-1. **Outbound** — `bus.setRemoteBroadcaster()` intercepts calls to `broadcast()` for synced types, serializes as `CrdtFeatureEvent`, and sends to peers
+1. **Outbound** — `bus.setRemoteBroadcaster()` intercepts calls to `broadcast()` for synced types, serializes as `CrdtSyncWireMessage`, and sends to peers
 2. **Inbound** — incoming `feature_event` messages call `bus.emit()` (NOT `broadcast()`) to prevent feedback loops
-3. **Bug reports** — `bus.on('bug:reported')` forwards to the Ava Channel via `_avaChannelBugReportCallback`
 
 ## Callbacks (must be set before `start()`)
 
-| Method                                 | When called                                           |
-| -------------------------------------- | ----------------------------------------------------- |
-| `onSettingsReceived(cb)`               | A remote peer sent a `settings_event`                 |
-| `onRemoteFeatureEvent(cb)`             | A remote peer sent a `feature_event`                  |
-| `setCapacityProvider(fn)`              | Each heartbeat — returns current `InstanceCapacity`   |
-| `setCompactionDiagnosticsProvider(fn)` | Each `getSyncStatus()` call                           |
-| `attachAvaChannelBugReporter(cb)`      | `bug:reported` events on the EventBus                 |
-| `setRegistryProvider(fn)`              | Primary calls this to supply registry for new workers |
-| `onRegistryReceived(cb)`               | Worker receives a `registry_sync` from primary        |
+| Method                                 | When called                                         |
+| -------------------------------------- | --------------------------------------------------- |
+| `onSettingsReceived(cb)`               | A remote peer sent a `settings_event`               |
+| `onRemoteFeatureEvent(cb)`             | A remote peer sent a `feature_event`                |
+| `setCapacityProvider(fn)`              | Each heartbeat — returns current `InstanceCapacity` |
+| `setCompactionDiagnosticsProvider(fn)` | Each `getSyncStatus()` call                         |
 
 ## `getSyncStatus()` Response
 
@@ -174,14 +159,14 @@ interface SyncServerStatus {
 
 ## Key Files
 
-| File                                            | Role                                                   |
-| ----------------------------------------------- | ------------------------------------------------------ |
-| `apps/server/src/services/crdt-sync-service.ts` | Core sync service — WebSocket server/client lifecycle  |
-| `apps/server/src/services/crdt-sync.module.ts`  | NestJS module wiring — injects dependencies at startup |
-| `libs/types/src/events.ts`                      | `CrdtFeatureEvent` wire type with `projectName` field  |
+| File                                            | Role                                                  |
+| ----------------------------------------------- | ----------------------------------------------------- |
+| `apps/server/src/services/peer-mesh-service.ts` | Core sync service — WebSocket server/client lifecycle |
+| `apps/server/src/services/crdt-sync.module.ts`  | Module wiring — injects dependencies at startup       |
+| `libs/types/src/events.ts`                      | `CrdtSyncWireMessage` wire type with `projectName`    |
 
 ## See Also
 
-- [Distributed Sync](../dev/distributed-sync.md) — CRDT mesh architecture and leader election protocol
-- [Ava Channel Reactor](./ava-channel-reactor) — capacity heartbeats and fleet coordination built on top of CRDT sync
-- [Work Intake Service](./work-intake-service) — uses project-scoped events to coordinate phase claiming
+- [Distributed Sync](../dev/distributed-sync.md) — Peer mesh architecture and leader election protocol
+- [Work Intake Service](./work-intake-service) — phase claiming coordination
+- [Hivemind API](./hivemind-api) — peer status HTTP endpoints

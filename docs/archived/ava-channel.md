@@ -1,3 +1,7 @@
+> **Archived March 2026** — The Ava Channel (AvaChannelService, HTTP routes, CRDT-backed message store, and backchannel infrastructure) was removed. Multi-instance coordination now uses the PeerMeshService WebSocket layer only. See [Peer Mesh Service](../server/peer-mesh-service.md) and [Distributed Sync](../dev/distributed-sync.md).
+
+---
+
 # Ava Channel
 
 Private coordination channel for multi-instance Ava communication, CRDT-backed message storage, and automatic System Improvements ticket filing.

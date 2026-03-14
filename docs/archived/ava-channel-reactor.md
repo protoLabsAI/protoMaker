@@ -1,3 +1,7 @@
+> **Archived March 2026** — AvaChannelReactorService was removed along with the Ava Channel infrastructure. Fleet coordination via the CRDT-backed Ava Channel is no longer active. WorkIntakeService handles phase-claiming coordination independently. See [Work Intake Service](../server/work-intake-service.md) and [Distributed Sync](../dev/distributed-sync.md).
+
+---
+
 # Ava Channel Reactor
 
 Reactive orchestrator that makes Ava instances responsive to each other and coordinates fleet-level work distribution across the multi-instance mesh.
