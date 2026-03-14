@@ -2,18 +2,20 @@
  * POST /list endpoint - List all features for a project
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import type { Feature, FeatureStatus } from '@protolabsai/types';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { getErrorMessage, logError } from '../common.js';
 import { debugLog } from '../../../lib/debug-log.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
-interface ListRequest {
-  projectPath: string;
-  status?: FeatureStatus;
-  compact?: boolean;
-  projectSlug?: string;
-}
+const listFeaturesBodySchema = z.object({
+  projectPath: projectPathSchema,
+  status: z.string().optional(),
+  compact: z.boolean().optional().default(false),
+  projectSlug: z.string().optional(),
+});
 
 interface CompactFeature {
   id: string;
@@ -52,14 +54,18 @@ function toCompactFeature(feature: Feature): CompactFeature {
 export function createListHandler(featureLoader: FeatureLoader) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, status, compact = false, projectSlug } = req.body as ListRequest;
-
-      debugLog('FeaturesAPI', '/list called', { projectPath, status, compact, projectSlug });
-
-      if (!projectPath) {
-        res.status(400).json({ success: false, error: 'projectPath is required' });
+      const parsed = listFeaturesBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
         return;
       }
+      const { projectPath, status, compact, projectSlug } = parsed.data;
+
+      debugLog('FeaturesAPI', '/list called', { projectPath, status, compact, projectSlug });
 
       let features = await featureLoader.getAll(projectPath);
 
