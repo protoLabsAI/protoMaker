@@ -1,10 +1,51 @@
+/**
+ * MCP adapter — converts SharedTool instances to @modelcontextprotocol/sdk-compatible entries.
+ *
+ * ## Adapter Contract
+ *
+ * SharedTool (libs/tools internal) uses Zod schemas:
+ *   - inputSchema:  z.ZodType<TInput>
+ *   - outputSchema: z.ZodType<TOutput>
+ *   - execute(input, context): Promise<ToolResult<TOutput>>
+ *
+ * MCPToolEntry (@modelcontextprotocol/sdk) uses JSON Schema:
+ *   - inputSchema:  { type: 'object', properties?, required? }
+ *   - handler(input, context): Promise<ToolResult<unknown>>
+ *
+ * toMCPTool() bridges the two by converting Zod schemas to JSON Schema via
+ * zodToJsonSchema (Zod v3) or the native .toJSONSchema() method (Zod v4+).
+ *
+ * ## Usage
+ *
+ * ```typescript
+ * import { createBoardTools, toMCPTools } from '@protolabsai/tools';
+ *
+ * const boardTools = createBoardTools({ featureLoader });
+ * const mcpEntries = toMCPTools(boardTools);
+ * // Pass mcpEntries to an MCP server's tool registration
+ * ```
+ *
+ * ## Prerequisite: Zod schemas required
+ *
+ * Only tools created with defineSharedTool() (which carries Zod inputSchema and
+ * outputSchema) can be adapted. Raw async functions from domains/features/ that
+ * use TypeScript interfaces only will throw a type error when passed here.
+ * See the migration checklist in board-tools.ts for the list of tools that must
+ * be converted before they can use this adapter.
+ */
+
 import type { z } from 'zod';
 import { zodToJsonSchema as zodToJsonSchemaLib } from 'zod-to-json-schema';
 import type { SharedTool, ToolContext, ToolResult } from '../types.js';
 
 /**
- * MCP Tool Entry compatible with @modelcontextprotocol/sdk
- * Uses JSON Schema for input validation
+ * MCP Tool Entry compatible with @modelcontextprotocol/sdk.
+ *
+ * This interface mirrors the tool definition shape expected by the MCP SDK.
+ * It uses JSON Schema (not Zod) for input/output validation, which is the
+ * wire format MCP uses when communicating tool definitions to clients.
+ *
+ * Produced by toMCPTool() / toMCPTools() from SharedTool instances.
  */
 export interface MCPToolEntry {
   /**
