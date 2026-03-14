@@ -1,0 +1,47 @@
+---
+/**
+ * Projects listing page
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProjectCard from '@/components/ProjectCard.astro';
+
+const allProjects = await getCollection('projects');
+const projects = allProjects.sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
+---
+
+<BaseLayout
+  title="Projects"
+  description="A selection of products and tools I've designed and shipped."
+>
+  <div class="mx-auto max-w-5xl px-6 py-16">
+    <!-- Header -->
+    <header class="mb-12">
+      <h1 class="mb-3 text-4xl font-extrabold text-white">Projects</h1>
+      <p class="text-base" style="color: #a1a1aa;">
+        A selection of products and tools I've designed and shipped.
+      </p>
+    </header>
+
+    <!-- Grid -->
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
+      {
+        projects.map((project) => (
+          <ProjectCard
+            title={project.data.title}
+            description={project.data.description}
+            techStack={project.data.techStack}
+            slug={project.slug}
+            liveUrl={project.data.liveUrl}
+            repoUrl={project.data.repoUrl}
+            image={project.data.image}
+            imageAlt={project.data.imageAlt}
+            featured={project.data.featured}
+          />
+        ))
+      }
+    </div>
+  </div>
+</BaseLayout>

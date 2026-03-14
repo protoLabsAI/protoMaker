@@ -1,0 +1,71 @@
+---
+/**
+ * TestimonialCard — displays a single testimonial with author info.
+ */
+interface Props {
+  author: string;
+  role: string;
+  company: string;
+  quote: string;
+  avatar?: string;
+  link?: string;
+}
+
+const { author, role, company, quote, avatar, link } = Astro.props;
+---
+
+<figure
+  class="flex flex-col gap-4 rounded-xl border p-6"
+  style="background: var(--color-surface-2); border-color: var(--border-subtle);"
+>
+  <!-- Quote -->
+  <blockquote class="m-0 p-0">
+    <p class="text-sm leading-relaxed italic" style="color: #d4d4d8;">
+      &ldquo;{quote}&rdquo;
+    </p>
+  </blockquote>
+
+  <!-- Author -->
+  <figcaption class="flex items-center gap-3">
+    {
+      avatar ? (
+        <img
+          src={avatar}
+          alt={author}
+          width={40}
+          height={40}
+          class="rounded-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          style="background: var(--color-accent-dim);"
+          aria-hidden="true"
+        >
+          {author.charAt(0)}
+        </div>
+      )
+    }
+    <div>
+      {
+        link ? (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener"
+            class="text-sm font-semibold text-white no-underline hover:text-accent"
+          >
+            {author}
+          </a>
+        ) : (
+          <span class="text-sm font-semibold text-white">{author}</span>
+        )
+      }
+      <p class="text-xs" style="color: var(--color-muted);">
+        {role}, {company}
+      </p>
+    </div>
+  </figcaption>
+</figure>
