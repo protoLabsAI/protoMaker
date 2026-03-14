@@ -353,8 +353,8 @@ Keep it focused and actionable. If the feature description is too vague or uncle
     ctx: StateContext
   ): Promise<{ approved: boolean; reason?: string } | null> {
     const complexity = ctx.feature.complexity || 'medium';
-    if (complexity !== 'large' && complexity !== 'architectural') {
-      return null; // Skip for small/medium features
+    if (complexity === 'small') {
+      return null; // Skip for small features only
     }
 
     // Check if antagonistic review is enabled in workflow settings
@@ -380,6 +380,7 @@ Keep it focused and actionable. If the feature description is too vague or uncle
         complexity,
         planOutput: ctx.planOutput ?? '',
         projectPath: ctx.projectPath,
+        structuredPlan: ctx.structuredPlan,
       });
     }
 

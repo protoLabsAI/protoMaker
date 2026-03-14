@@ -65,7 +65,13 @@ export interface IPlanReviewService {
     complexity: string;
     planOutput: string;
     projectPath: string;
-  }): Promise<{ approved: boolean; reason?: string } | null>;
+    structuredPlan?: StructuredPlan;
+  }): Promise<{
+    approved: boolean;
+    reason?: string;
+    coveragePercent?: number;
+    gaps?: string[];
+  } | null>;
 }
 
 /**
