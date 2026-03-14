@@ -18,7 +18,6 @@ interface CompactFeature {
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
   epicId?: string;
   isEpic?: boolean;
-  assignee?: string | null;
   branchName?: string;
   prNumber?: number;
   costUsd?: number;

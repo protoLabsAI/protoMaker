@@ -703,7 +703,6 @@ const result = await queryBoard(context, {
   projectPath: '/path/to/project',
   status: ['backlog', 'in_progress'], // Single status or array
   epicId: 'epic-123', // Filter by parent epic
-  assignee: 'agent-name', // Filter by assignee (null = unassigned)
   complexity: 'medium', // small | medium | large | architectural
   isEpic: false, // Filter epics vs child features
   isBlocked: true, // Only features with unsatisfied deps

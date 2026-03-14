@@ -570,5 +570,20 @@
     "documentCount": 0,
     "createdAt": "2026-03-13T06:34:10.739Z",
     "deletedAt": "2026-03-13T06:34:22.188Z"
+  },
+  {
+    "slug": "rabbit-hole-self-hosted-deep-research-platform",
+    "title": "Rabbit Hole — Self-Hosted Deep Research Platform",
+    "goal": "Make rabbit-hole.io fully functional as a self-hosted deep research platform: remove broken auth/collab dependencies, wire the agent-to-canvas pipeline, expand search providers, and parallelize the research agent.",
+    "status": "active",
+    "milestoneCount": 4,
+    "phaseCount": 11,
+    "linkedPhaseCount": 11,
+    "featureCount": 15,
+    "updateCount": 0,
+    "linkCount": 0,
+    "documentCount": 1,
+    "createdAt": "2026-03-13T23:44:59.397Z",
+    "deletedAt": "2026-03-14T04:44:24.042Z"
   }
 ]

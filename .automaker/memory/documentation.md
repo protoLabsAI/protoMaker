@@ -5,9 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 365
-  referenced: 89
-  successfulFeatures: 89
+  loaded: 378
+  referenced: 93
+  successfulFeatures: 93
 ---
 <!-- domain: Documentation | Docs standards, structure, maintenance patterns -->
 
@@ -48,3 +48,16 @@ usageStats:
 - **Rejected:** Treating modes as equally valid would lead users to always enable HITL unnecessarily
 - **Trade-offs:** Gained: clearer guidance, faster adoption; Lost: requires users to actively opt-in to HITL rather than being the default
 - **Breaking if changed:** If antagonistic review scoring becomes unreliable, this guidance breaks and HITL becomes necessary again
+
+
+#### [Gotcha] notes-sync.md documented a CRDT hydration system (conflict resolution, deferred work) that was never fully shipped — the write path was not wired. Documentation described aspirational architecture rather than implementation reality. (2026-03-14)
+- **Situation:** Feature started but abandoned mid-implementation, with documentation written for the intended design rather than the actual (disk-only) implementation.
+- **Root cause:** Incomplete features leave 'ghost documentation' that describes behavior not actually implemented in code. This happens when feature design documents are written before full implementation and then the feature is shelved.
+- **How to avoid:** Rewriting docs to match disk-only reality (simpler, honest) loses the design intent documentation; keeping aspirational docs creates confusion about what's actually implemented. Middle ground would be 'see RFC #X for why this approach was abandoned.'
+
+### Archived format chosen: simple blockquote deprecation notice at top of document pointing to replacement service, no special header convention or formal deprecation structure required. (2026-03-14)
+- **Context:** When services are removed entirely (AvaChannelService), their documentation files need a graceful deprecation path rather than hard deletion.
+- **Why:** Blockquote notices are minimal, Git-viewable, and don't require special parsing tooling. They satisfy discoverability (someone landing on old doc sees the notice immediately) without ceremony.
+- **Rejected:** Formal deprecation headers (e.g., YAML frontmatter); separate 'DEPRECATED' directory with structured metadata; deprecation bot auto-adding standardized notices; removing files entirely.
+- **Trade-offs:** Simple blockquote is human-readable but not machine-parseable; formal headers would enable automation but add overhead; removal preserves git history cleanly but breaks existing links.
+- **Breaking if changed:** If archived docs are deleted entirely, future developers lose the deprecation context and may re-implement removed services. If deprecation format is inconsistent, navigation and tooling that tries to parse it breaks.

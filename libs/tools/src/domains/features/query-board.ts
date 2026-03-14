@@ -1,7 +1,7 @@
 /**
  * Query Board Tool
  *
- * Advanced board query with compound filters: status, epic, assignee,
+ * Advanced board query with compound filters: status, epic,
  * complexity, blocked status, date range. Returns compact results
  * to minimize agent context usage.
  */
@@ -13,7 +13,6 @@ export interface QueryBoardInput {
   projectPath: string;
   status?: FeatureStatus | FeatureStatus[];
   epicId?: string;
-  assignee?: string | null;
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
   isEpic?: boolean;
   isBlocked?: boolean;
@@ -42,7 +41,6 @@ function toCompact(feature: Feature): CompactFeature {
     prUrl: feature.prUrl,
     epicId: feature.epicId,
     isEpic: feature.isEpic,
-    assignee: feature.assignee,
     dependencies: feature.dependencies,
     updatedAt: feature.updatedAt,
   };
@@ -85,16 +83,6 @@ export async function queryBoard(
     if (filters.epicId !== undefined) {
       features = features.filter((f) => f.epicId === filters.epicId);
       appliedFilters.epicId = filters.epicId;
-    }
-
-    // Assignee filter (null means unassigned)
-    if (filters.assignee !== undefined) {
-      if (filters.assignee === null) {
-        features = features.filter((f) => !f.assignee);
-      } else {
-        features = features.filter((f) => f.assignee === filters.assignee);
-      }
-      appliedFilters.assignee = filters.assignee;
     }
 
     // Complexity filter

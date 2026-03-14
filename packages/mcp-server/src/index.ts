@@ -343,7 +343,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.isEpic) featureData.isEpic = args.isEpic;
       if (args.epicId) featureData.epicId = args.epicId;
       if (args.complexity) featureData.complexity = args.complexity;
-      if (args.assignee !== undefined) featureData.assignee = args.assignee;
       if (args.dueDate !== undefined) featureData.dueDate = args.dueDate;
       if (args.priority !== undefined) featureData.priority = args.priority;
       if (args.isFoundation !== undefined) featureData.isFoundation = args.isFoundation;
@@ -360,7 +359,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.description) updates.description = args.description;
       if (args.status) updates.status = args.status;
       if (args.complexity) updates.complexity = args.complexity;
-      if (args.assignee !== undefined) updates.assignee = args.assignee;
       if (args.dueDate !== undefined) updates.dueDate = args.dueDate;
       if (args.priority !== undefined) updates.priority = args.priority;
       if (args.isFoundation !== undefined) updates.isFoundation = args.isFoundation;
@@ -1535,13 +1533,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.epicId !== undefined) {
         qFeatures = qFeatures.filter((f) => f.epicId === args.epicId);
       }
-      if (args.assignee !== undefined) {
-        if (args.assignee === null) {
-          qFeatures = qFeatures.filter((f) => !f.assignee);
-        } else {
-          qFeatures = qFeatures.filter((f) => f.assignee === args.assignee);
-        }
-      }
       if (args.complexity) {
         qFeatures = qFeatures.filter((f) => f.complexity === args.complexity);
       }
@@ -1600,7 +1591,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
           branchName: f.branchName,
           epicId: f.epicId,
           isEpic: f.isEpic,
-          assignee: f.assignee,
           dependencies: f.dependencies,
           prNumber: f.prNumber,
         })),

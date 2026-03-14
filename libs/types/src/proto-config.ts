@@ -84,8 +84,6 @@ export const ProtoDefaultsSchema = z.object({
   branchPrefix: z.string().default('feature/'),
   /** Default complexity when not specified */
   complexity: z.enum(['small', 'medium', 'large']).default('medium'),
-  /** Default agent to assign new features to */
-  assignee: z.string().optional(),
   /** Whether to auto-create PRs after feature merge */
   autoPR: z.boolean().default(false),
 });

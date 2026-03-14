@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1458
-  referenced: 350
-  successfulFeatures: 350
+  loaded: 1488
+  referenced: 356
+  successfulFeatures: 356
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -971,3 +971,8 @@ usageStats:
 - **Situation:** Developer working from feature spec found the wrong directory initially, suggesting inconsistent naming convention in the codebase.
 - **Root cause:** The `projects/` dir contains reusable components (like `ProjectTimeline`), while `projects-view/` contains the view that imports them. Name similarity creates ambiguity.
 - **How to avoid:** Clear separation of concerns (component library vs. views) but naming doesn't signal this intent clearly to developers.
+
+#### [Gotcha] Deleting a libs/* package requires updating infrastructure code (Dockerfile) that explicitly references it. The Dockerfile contained 'COPY libs/crdt/package*.json ./libs/crdt/' which breaks the Docker build when the source directory is deleted, even if all application code changes are complete. (2026-03-14)
+- **Situation:** Removing libs/crdt/ directory was incomplete until the corresponding COPY line was removed from Dockerfile. This wasn't in the initial scope but was discovered during execution. The project has a CI step 'Validate Dockerfile dependencies' suggesting this has been missed before.
+- **Root cause:** Dockerfile is infrastructure-as-code that couples to source directory structure. The mismatch (code deleted but Dockerfile still references it) is invisible at the source level but breaks the build, causing silent failures that only surface during CI.
+- **How to avoid:** Requires broader awareness of infrastructure coupling when removing packages. Harder to scope but catches real build failures. Alternative would be to keep stale Dockerfile references and fail silently during Docker builds.

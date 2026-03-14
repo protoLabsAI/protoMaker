@@ -5,7 +5,6 @@
 # Guards:
 # - Only fires on create_feature MCP tool
 # - Skips epics (container features, no agent needed)
-# - Skips features assigned to humans (e.g., assignee: "josh")
 # - Skips features with status "backlog" that have dependencies (let auto-mode handle ordering)
 # - Requires AUTOMAKER_API_KEY and AUTOMAKER_API_URL
 
@@ -41,7 +40,6 @@ fi
 # Extract feature data
 FEATURE_ID=$(echo "$RESPONSE_TEXT" | jq -r '.feature.id // empty')
 IS_EPIC=$(echo "$RESPONSE_TEXT" | jq -r '.feature.isEpic // false')
-ASSIGNEE=$(echo "$RESPONSE_TEXT" | jq -r '.feature.assignee // empty')
 STATUS=$(echo "$RESPONSE_TEXT" | jq -r '.feature.status // "backlog"')
 DEPS=$(echo "$RESPONSE_TEXT" | jq -r '.feature.dependencies // [] | length')
 TITLE=$(echo "$RESPONSE_TEXT" | jq -r '.feature.title // "unknown"')
@@ -52,11 +50,6 @@ fi
 
 # Skip epics
 if [[ "$IS_EPIC" == "true" ]]; then
-  exit 0
-fi
-
-# Skip human-assigned features (non-empty assignee that isn't "agent")
-if [[ -n "$ASSIGNEE" && "$ASSIGNEE" != "agent" && "$ASSIGNEE" != "null" ]]; then
   exit 0
 fi
 

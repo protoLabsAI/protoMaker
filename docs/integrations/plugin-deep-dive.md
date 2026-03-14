@@ -114,7 +114,7 @@ Some tools compute results in the MCP process without a server endpoint:
 
 - `get_dependency_graph` -- fetches `list_features` and builds the graph client-side
 - `get_execution_order` -- topological sort over the dependency graph
-- `query_board` -- client-side filtering over `list_features` (status, epicId, assignee, complexity, search)
+- `query_board` -- client-side filtering over `list_features` (status, epicId, complexity, search)
 - `get_feature_handoff` -- reads directly from the filesystem via `fs/promises`
 
 ## Tool Categories

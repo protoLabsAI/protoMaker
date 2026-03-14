@@ -114,11 +114,6 @@ export const featureTools: Tool[] = [
           description:
             'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus. Features that fail 2+ times auto-escalate to opus.',
         },
-        assignee: {
-          type: 'string',
-          description:
-            "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up.",
-        },
         dueDate: {
           type: 'string',
           description:
@@ -177,11 +172,6 @@ export const featureTools: Tool[] = [
           enum: ['small', 'medium', 'large', 'architectural'],
           description:
             'Feature complexity level for model selection. small=haiku, medium/large=sonnet, architectural=opus.',
-        },
-        assignee: {
-          type: ['string', 'null'],
-          description:
-            "Who this feature is assigned to. If set to a human name (e.g., 'josh'), auto-mode will skip this feature. If set to 'agent' or undefined, auto-mode can pick it up. Pass null to unassign.",
         },
         dueDate: {
           type: ['string', 'null'],

@@ -5,11 +5,10 @@ relevantTo: [persistence]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 23
+  loaded: 25
   referenced: 6
   successfulFeatures: 6
 ---
-
 <!-- domain: Data Persistence | File I/O, atomic writes, backup and recovery patterns -->
 
 # persistence

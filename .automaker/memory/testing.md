@@ -166,3 +166,28 @@ usageStats:
 - **Problem solved:** Timeline verification test needed to run in CI/test env that may not have seed data.
 - **Why this works:** Allows test to run in any environment without blocking CI. The skip is informative and expected, not a test failure.
 - **Trade-offs:** Test runs but provides limited coverage in data-empty environments, but that's acceptable for a component existence/interaction check.
+
+#### [Gotcha] Manual curl testing required to verify disk-only path; automated test framework (Playwright) test infrastructure assumptions didn't match actual API auth requirements (session vs API key). (2026-03-14)
+- **Situation:** Attempted Playwright test failed with 401; required manual curl with session auth to verify API works
+- **Root cause:** Test utils likely abstract auth away for UI tests; but API endpoint enforces session-based auth that test setup didn't provide
+- **How to avoid:** Real integration test catches auth mismatches but slower/more fragile; unit mocks are fast but hide environment issues
+
+#### [Gotcha] Tests exercising mesh behavior must explicitly include hivemind.enabled:true in mock config (2026-03-14)
+- **Situation:** Test mocks were updated to add hivemind.enabled guard wherever real mesh behavior (TTL enforcement, leader election, partition recovery) is tested
+- **Root cause:** Without explicit config, tests would exercise the feature against its default disabled state, testing the no-op path instead of actual mesh logic
+- **How to avoid:** Tests are more explicit about prerequisites vs. higher ceremony to set up mesh behavior. Failing to add this config means test passes but tests wrong code path
+
+#### [Pattern] When removing a package, identify and delete test files that exclusively import from the removed package (rather than refactoring them). Used grep to find all imports of @protolabsai/crdt and deleted crdt-store-module.test.ts and project-sync.test.ts which tested code that no longer exists. (2026-03-14)
+- **Problem solved:** Two unit test files imported @protolabsai/crdt directly. Since the package was being hard-removed (not refactored elsewhere), the tests had no purpose and were deleted as part of cleanup.
+- **Why this works:** Test files for deleted functionality have no value and create lint/type-check noise. Deleting them is cleaner than leaving orphaned tests. This only works when the package is truly removed and not being replaced by alternative code.
+- **Trade-offs:** Deletion is clean and decisive but requires high confidence nothing still needs the package. Refactoring would be safer but masks the fact that code path is gone.
+
+#### [Gotcha] Worktree node_modules lacks @protolabsai/* packages by default; required manual build and symlink of @protolabsai/crdt to resolve test imports (2026-03-14)
+- **Situation:** Tests importing @protolabsai/crdt failed in worktree despite existing in main repo
+- **Root cause:** Worktrees inherit package.json and lockfile but npm hoisting doesn't automatically populate workspace packages in node_modules; these need explicit build + linking
+- **How to avoid:** Manual linking is fragile but works; better solution would be worktree setup script or npm workspace improvements; caught test discovery issues early
+
+#### [Pattern] Typecheck acceptance criterion automatically detected that peer-mesh-service.ts needed updating even though it wasn't in the original file list (2026-03-14)
+- **Problem solved:** Spec omitted peer-mesh-service.ts but removing types from shared package broke typecheck
+- **Why this works:** Typecheck enforces transitive impact detection across the codebase; it's a better source of truth than manual file lists for refactoring scope
+- **Trade-offs:** Slower feedback loop (typecheck takes time) but more complete; catches hidden dependencies automatically; acceptance criteria act as specification enforcement

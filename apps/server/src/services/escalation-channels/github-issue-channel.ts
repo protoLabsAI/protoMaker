@@ -60,7 +60,6 @@ function sourceToLabel(source: EscalationSource): string {
     board_anomaly: 'source:board-anomaly',
     human_mention: 'source:human-mention',
     agent_needs_input: 'source:agent-needs-input',
-    human_blocked_dependency: 'source:human-blocked-dependency',
     lead_engineer: 'source:lead-engineer',
     lead_engineer_state_machine: 'source:lead-engineer-state-machine',
     auto_mode_health_sweep: 'source:auto-mode-health-sweep',

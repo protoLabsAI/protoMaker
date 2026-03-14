@@ -177,7 +177,7 @@ export const ORCHESTRATION_PROFILE: ToolProfile = {
     list_features: 'Orchestrators need full board visibility.',
     get_feature: 'Deep inspection of any feature on demand.',
     create_feature: 'Ava creates features from PRDs and briefings.',
-    update_feature: 'Ava updates priority, assignee, status across the board.',
+    update_feature: 'Ava updates priority, status, complexity across the board.',
     delete_feature: 'Ava can prune stale or duplicate features.',
     query_board: 'Flexible board queries for planning and reporting.',
     set_dependencies: 'Ava manages the dependency graph for scheduling.',
