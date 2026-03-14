@@ -42,7 +42,7 @@ export class DeployProcessor implements StateProcessor {
     const fresh = await this.serviceContext.featureLoader.get(ctx.projectPath, ctx.feature.id);
     if (fresh) ctx.feature = fresh;
 
-    if (fresh && fresh.status !== 'done' && fresh.status !== 'verified') {
+    if (fresh && fresh.status !== 'done') {
       await this.serviceContext.featureLoader.update(ctx.projectPath, ctx.feature.id, {
         status: 'done',
       });
@@ -75,7 +75,7 @@ export class DeployProcessor implements StateProcessor {
     void this.generateReflection(ctx);
 
     return {
-      nextState: null,
+      nextState: 'DONE',
       shouldContinue: false,
       reason: 'Feature deployed and verified',
     };

@@ -293,6 +293,10 @@ export class FeatureStateMachine {
         }
 
         if (!result.shouldContinue || !result.nextState) {
+          // Capture the terminal state signaled by the processor (e.g. DONE from DEPLOY)
+          if (result.nextState) {
+            currentState = result.nextState;
+          }
           logger.info('Feature processing completed', {
             featureId: feature.id,
             finalState: currentState,
