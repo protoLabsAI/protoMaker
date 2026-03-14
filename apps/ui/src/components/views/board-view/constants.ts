@@ -68,7 +68,7 @@ export function getEmptyStateConfig(columnId: string): EmptyStateConfig {
 }
 
 export interface Column {
-  id: string;
+  id: ColumnId;
   title: string;
   colorClass: string;
 }
