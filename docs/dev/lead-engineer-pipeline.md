@@ -1,6 +1,8 @@
 # Lead Engineer Pipeline
 
-The Lead Engineer pipeline is a state machine that orchestrates AI-assisted feature implementation across three sequential phases: **INTAKE → PLAN → EXECUTE**. Each phase is handled by a dedicated `StateProcessor` that encapsulates the logic for that stage.
+The Lead Engineer pipeline is a state machine that orchestrates AI-assisted feature implementation across seven phases: **INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE** (plus ESCALATE from any state). Each phase is handled by a dedicated `StateProcessor` that encapsulates the logic for that stage.
+
+For the full system context (auto-mode, maintenance tasks, ceremonies, timing reference), see [System Architecture](./system-architecture.md).
 
 ## Architecture Overview
 
@@ -12,18 +14,58 @@ Feature Request
 │   INTAKE    │  Classify complexity, assign persona, validate dependencies
 └──────┬──────┘
        │
+  ┌────+────┐
+  │         │
+needs     simple
+plan     feature
+  │         │
+  ▼         │
+┌─────────────┐ │
+│    PLAN     │ │  Generate implementation plan, antagonistic review gate
+└──────┬──────┘ │
+       │        │
+       +────────+
+       │
        ▼
 ┌─────────────┐
-│    PLAN     │  Generate implementation plan, antagonistic review gate
+│   EXECUTE   │◄──┐  Run agent in worktree, monitor completion, handle retries
+└──────┬──────┘   │
+       │          │ changes requested (max 4 cycles)
+       ▼          │
+┌─────────────┐   │
+│   REVIEW    │───┘  Poll PR: CI status, review decision, thread count (30s interval)
+└──────┬──────┘
+       │ approved + CI passing
+       ▼
+┌─────────────┐
+│    MERGE    │  gh pr merge --merge, retry with 60s delay
+└──────┬──────┘
+       │ PR merged
+       ▼
+┌─────────────┐
+│   DEPLOY    │  Post-merge verification (typecheck, build), generate reflection
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│   EXECUTE   │  Run agent in worktree, monitor completion, handle retries
+│    DONE     │  Terminal. Cleanup checkpoint, save trajectory, emit completion.
+└─────────────┘
+
+Any state on unrecoverable error:
+┌─────────────┐
+│  ESCALATE   │  Classify failure, HITL form or auto-retry via fast-path rules
 └─────────────┘
 ```
 
 Each processor implements the `StateProcessor` interface with an `enter/process/exit` lifecycle.
+
+### Transition Limits
+
+| Limit                                  | Value | Purpose                             |
+| -------------------------------------- | ----- | ----------------------------------- |
+| Max state-to-state transitions         | 20    | Prevents infinite loops             |
+| Max same-state polls (REVIEW)          | 100   | Caps polling loops                  |
+| Checkpoint saved after each transition | --    | Enables resume after server restart |
 
 ---
 
@@ -228,6 +270,125 @@ Each execution is written to the trajectory store for the learning flywheel. Fac
 
 ---
 
+## REVIEW Phase (`ReviewProcessor`)
+
+### Responsibilities
+
+The `ReviewProcessor` monitors the PR through CI and code review:
+
+1. **Poll PR state** every 30 seconds via `PRFeedbackService` (fallback: `gh pr view`)
+2. **Detect external merges** via branch name + git merged-at timestamp
+3. **Route based on review decision** -- approved, changes requested, or pending
+
+### Review Decision Routing
+
+| Decision                  | Action                                                              | Budget                         |
+| ------------------------- | ------------------------------------------------------------------- | ------------------------------ |
+| **Approved + CI passing** | Transition to MERGE, save REVIEW handoff                            | --                             |
+| **Changes requested**     | Capture feedback via `gh pr view ... reviews`, loop back to EXECUTE | Max 4 remediation cycles       |
+| **Pending/commented**     | Continue polling every 30s                                          | 45 min timeout before escalate |
+
+### Concurrency Guard
+
+If `PRFeedbackService` is already remediating the same feature (e.g., from a CodeRabbit webhook), the ReviewProcessor defers to avoid a concurrency race.
+
+### Review Start Tracking
+
+A `Map<featureId, startTime>` prevents the pending timeout from resetting on each re-check. The timer starts on first entry to REVIEW and persists across polling cycles.
+
+### Escalation Triggers
+
+- No PR found for the feature
+- Invalid or missing PR number
+- Max remediation cycles (4) exhausted
+- Max PR iterations (2) exhausted (CodeRabbit review loops)
+- Pending review >45 minutes with no decision
+
+---
+
+## MERGE Phase (`MergeProcessor`)
+
+### Responsibilities
+
+The `MergeProcessor` merges the approved PR:
+
+1. **Merge PR** via `gh pr merge N --merge` (always merge commits, never squash on promotion PRs)
+2. **Detect success** by parsing stdout for "Merging" + status code
+3. **Update feature status** to `done` on the board
+4. **Emit `feature:pr-merged`** event (consumed by Board Janitor rules, PRMergePoller)
+
+### Retry Behavior
+
+If the merge command fails (e.g., branch protection, CI still running), the processor retries with a 60-second delay between attempts.
+
+### Merge Strategy
+
+Feature PRs to dev use `--squash` by default (configurable via `prMergeStrategy` in workflow settings). Promotion PRs (dev->staging, staging->main) always use `--merge` to preserve the DAG.
+
+---
+
+## DEPLOY Phase (`DeployProcessor`)
+
+### Responsibilities
+
+The `DeployProcessor` runs post-merge verification and captures learnings:
+
+1. **Verify feature status** -- if not already `done`, update it
+2. **Run post-merge verification** with 120-second timeout per command:
+   - `npm run typecheck` (always)
+   - `npm run build:packages` (if HEAD~1..HEAD touched `libs/`)
+3. **Handle verification failure** -- create a bug-fix feature on the board with failure details
+4. **Emit `feature:completed`** event (triggers board janitor, capacity rules, PRMergePoller)
+5. **Generate reflection** via `simpleQuery()` with haiku (fire-and-forget, non-blocking, ~$0.001)
+6. **Save trajectory** to `.automaker/trajectory/{featureId}/attempt-N.json` for the learning flywheel
+
+### Reflection Feed-Forward
+
+The reflection generated here is loaded by `ExecuteProcessor` for subsequent sibling features:
+
+- **Sibling matching**: same `epicId` or same `projectSlug`
+- **Recency cap**: top 3 most recently completed siblings
+- **Injection**: added to agent context as "Learnings from Prior Features"
+
+---
+
+## ESCALATE Phase (`EscalateProcessor`)
+
+### Responsibilities
+
+The `EscalateProcessor` handles failures from any state:
+
+1. **Move feature to `blocked`** and increment `failureCount`
+2. **Classify failure** via `FailureClassifierService`:
+   - Pattern-matches the escalation reason string
+   - Returns: `category`, `isRetryable`, `maxRetries`, `confidence`, `explanation`, `recoveryStrategy`
+   - Persists classification to `feature.failureClassification`
+3. **Emit `escalation:signal-received`** with structured failure data (triggers fast-path rules)
+4. **Create HITL form** when failure is non-retryable OR max retries exhausted:
+   - Resolution options: retry, provide_context, skip, close
+   - Deduplication: skips if form already pending for this feature
+5. **Save trajectory** to `.automaker/trajectory/{featureId}/attempt-N.json`
+
+### Auto-Recovery via Fast-Path Rules
+
+The `classifiedRecovery` rule listens for `escalation:signal-received` events:
+
+- If `isRetryable` AND `confidence >= 0.7` AND `retryCount < maxRetries`: reset feature to backlog automatically
+- Otherwise: leave blocked for HITL intervention
+
+### HITL Form Response Handling
+
+The `hitlFormResponse` rule processes user decisions:
+
+| Resolution        | Action                                               |
+| ----------------- | ---------------------------------------------------- |
+| `retry`           | Reset `failureCount`, move to backlog                |
+| `provide_context` | Add context to `statusChangeReason`, move to backlog |
+| `skip`            | Move to done (marks complete without implementing)   |
+| `close`           | Clear `awaitingGatePhase`, keep blocked              |
+
+---
+
 ## Configuration
 
 Workflow settings that affect the lead engineer pipeline:
@@ -258,11 +419,16 @@ See [Workflow Settings](../server/workflow-settings.md) for the full configurati
 
 ## Related Files
 
-| File                                                          | Role                                  |
-| ------------------------------------------------------------- | ------------------------------------- |
-| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor` |
-| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                    |
-| `apps/server/src/services/antagonistic-review-service.ts`     | Plan review gate                      |
-| `libs/types/src/workflow-settings.ts`                         | Configuration types                   |
-| `docs/protolabs/antagonistic-review.md`                       | Antagonistic review system            |
-| `docs/server/workflow-settings.md`                            | Settings reference                    |
+| File                                                          | Role                                    |
+| ------------------------------------------------------------- | --------------------------------------- |
+| `apps/server/src/services/lead-engineer-service.ts`           | State machine orchestrator              |
+| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor`   |
+| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                      |
+| `apps/server/src/services/lead-engineer-rules.ts`             | 17 fast-path rules (pure functions)     |
+| `apps/server/src/services/pr-feedback-service.ts`             | PR polling and remediation for REVIEW   |
+| `apps/server/src/services/antagonistic-review-service.ts`     | Plan review gate                        |
+| `apps/server/src/services/git-workflow-service.ts`            | Post-completion git workflow for DEPLOY |
+| `libs/types/src/workflow-settings.ts`                         | Configuration types                     |
+| `libs/types/src/lead-engineer.ts`                             | State machine types                     |
+| `docs/dev/system-architecture.md`                             | Full system architecture with timing    |
+| `docs/server/workflow-settings.md`                            | Settings reference                      |

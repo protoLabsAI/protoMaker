@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 531
-  referenced: 133
-  successfulFeatures: 133
+  loaded: 518
+  referenced: 131
+  successfulFeatures: 131
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -241,14 +241,9 @@ usageStats:
 - **Why this works:** Indicates the original API design was extensible—endpoint accepted parameters for future use. Enables this fallback to work as a pure backend change.
 - **Trade-offs:** Good forward design at cost of carrying unused parameters early. Paid off here.
 
-### Preserved syncProjectToCrdt() method signature and external API despite implementation change from Automerge.change() to plain cache update. No refactoring of callers needed. (2026-03-14)
-- **Context:** Method name claims CRDT behavior but now updates plain Map. Could have renamed to syncProjectToCache() but that would require updating all call sites.
-- **Why:** Pragmatic backward-compatibility: method still does its job (keeps cache in sync with disk), caller contract is unchanged. Rename overhead not justified if behavior is equivalent from caller's perspective.
-- **Rejected:** Immediate rename to syncProjectToCache()—would create churn across codebase for cosmetic change. True if behavior matches caller expectations.
-- **Trade-offs:** Technical debt: misleading method name. Benefit: no caller refactoring, lower risk of merge conflicts in parallel changes, faster deployment.
-- **Breaking if changed:** If any caller inspects the implementation expecting Automerge.Doc API calls (e.g., getHeads(), getPatch()), it breaks. Unlikely—most callers just invoke the method for side effects.
-
-#### [Pattern] Preserved compactionDiagnostics: null field shape in SyncServerStatus instead of removing field entirely for backward compatibility (2026-03-14)
-- **Problem solved:** Removing CompactionDiagnosticsSnapshot but some clients might access this field
-- **Why this works:** Clients accessing the field would get undefined instead of a type error if field is removed; null is explicit and type-safe for 'this feature disabled' semantics
-- **Trade-offs:** API surface slightly larger (has unused field) but no runtime errors in clients; forward-compatible since consumers can ignore null; easier migration than breaking changes
+### Wrap the `git diff --name-only --diff-filter=U` capture in try/catch rather than letting failures propagate. Conflicting file capture is best-effort and non-critical to the happy path. (2026-03-14)
+- **Context:** If git diff fails for any reason during conflict handling, the code should still successfully abort the merge and transition to blocked state.
+- **Why:** Conflict handling is already in an error path. If the operation to capture which files conflicted fails, that shouldn't prevent us from safely aborting and blocking the feature. Best-effort data enrichment shouldn't break the core operation.
+- **Rejected:** Alternative: Let git diff exceptions propagate and crash the feature transition. Rejected: would make the system fragile to unexpected git states.
+- **Trade-offs:** Easier: robust error handling. Harder: developers might not see which files conflicted if git diff fails (though the conflict itself is still blocked).
+- **Breaking if changed:** Removing the try/catch would make a git diff failure during conflict handling crash the entire feature execution, leaving the system in an undefined state.
