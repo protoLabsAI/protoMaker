@@ -650,6 +650,4 @@ rm .automaker/memory/old-api-v1-patterns.md
 
 **Related Docs:**
 
-- [Architecture Overview](./architecture.md)
-- [Adding Agent Teammates](./adding-teammates.md)
-- [MCP Integration](./mcp-integration.md)
+- [Architecture Overview](../concepts/agent-architecture.md)

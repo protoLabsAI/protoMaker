@@ -58,7 +58,7 @@ Phase 1 → Phase 2a   (2a and 2b unblock together)
 
 ### Relationship to the pipeline
 
-The project lifecycle operates at the **project level**. The [8-phase pipeline](./idea-to-production.md) operates at the **feature level**. They connect at these points:
+The project lifecycle operates at the **project level**. The [8-phase pipeline](./pipeline.md) operates at the **feature level**. They connect at these points:
 
 | Project lifecycle state | Pipeline phases triggered      |
 | ----------------------- | ------------------------------ |
@@ -122,7 +122,7 @@ Returns display-ready `TimelineEvent` objects for a project, sorted newest-first
 | `since`       | ISO 8601 timestamp — return events after this time               |
 | `type`        | Display event type filter (e.g. `feature:done`, `standup`)       |
 
-See [Event Ledger](./event-ledger) for full query API and event types.
+See the event ledger service for full query API and event types.
 
 ## Lead Engineer auto-start
 
@@ -252,8 +252,5 @@ After creation, project files are organized as:
 
 ## Related documentation
 
-- [Idea to Production](./idea-to-production.md) — The 8-phase pipeline reference (feature level)
-- [Feature Status System](./feature-status-system.md) — The 6-status board lifecycle
-- [PR Remediation Loop](./pr-remediation-loop.md) — CI failure handling during REVIEW
-- [Event Ledger](./event-ledger.md) — Append-only lifecycle event persistence and timeline API
-- [Engine Architecture](../archived/engine-architecture.md) — ADR for the Lead Engineer design
+- [Idea to Production](./pipeline.md) — The 8-phase pipeline reference (feature level)
+- [Feature Status System](./feature-lifecycle.md) — The 6-status board lifecycle

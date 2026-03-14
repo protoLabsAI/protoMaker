@@ -360,6 +360,4 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 ## Next steps
 
 - [Escalation routing](./escalation-routing) -- Escalation channel architecture and configuration
-- [Inbox system](./inbox-system) -- Unified actionable items inbox
-- [Feature status system](./feature-status-system) -- Canonical status details
-- [PR remediation loop](./pr-remediation-loop) -- CI failure handling
+- [Feature status system](./feature-lifecycle) -- Canonical status details

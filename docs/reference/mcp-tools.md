@@ -2,7 +2,7 @@
 
 Complete catalog of **159 MCP tools** exposed by the protoLabs server. See `packages/mcp-server/src/tools/` for the full definitions.
 
-For installation and configuration, see [Claude Plugin Setup](./claude-plugin.md). For commands and examples, see [Plugin Commands](./plugin-commands.md).
+For installation and configuration, see [Claude Plugin Setup](../integrations/claude-plugin.md). For commands and examples, see [Plugin Commands](../integrations/plugin-commands.md).
 
 ## Feature Management (7 tools)
 
@@ -220,7 +220,7 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 
 ## Calendar (4 tools)
 
-Manages calendar events across custom, feature, milestone, and Google sources. The calendar assistant agent (`/calendar-assistant`) has exclusive write access. See [Calendar API](../internal/server/calendar-api) for full endpoint documentation.
+Manages calendar events across custom, feature, milestone, and Google sources. The calendar assistant agent (`/calendar-assistant`) has exclusive write access.
 
 | Tool                    | Description                 | Required Params                       | Optional Params                                           |
 | ----------------------- | --------------------------- | ------------------------------------- | --------------------------------------------------------- |
@@ -369,6 +369,5 @@ Manages calendar events across custom, feature, milestone, and Google sources. T
 
 ## Related Documentation
 
-- [Claude Plugin Setup](./claude-plugin.md) -- Installation, configuration, Docker deployment
-- [Plugin Commands](./plugin-commands.md) -- Commands, subagents, examples
-- [MCP Integration](/agents/mcp-integration) -- How MCP tools interact with agents
+- [Claude Plugin Setup](../integrations/claude-plugin.md) -- Installation, configuration, Docker deployment
+- [Plugin Commands](../integrations/plugin-commands.md) -- Commands, subagents, examples

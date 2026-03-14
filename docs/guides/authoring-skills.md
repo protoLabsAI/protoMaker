@@ -764,5 +764,4 @@ env | grep API_KEY
 
 ## Learn More
 
-- [Agent Prompts](./authoring-prompts.md) - Writing effective agent prompts
-- [SDK Integration](./sdk-integration.md) - How agents load and use skills
+- [Agent Prompts](./writing-prompts.md) - Writing effective agent prompts

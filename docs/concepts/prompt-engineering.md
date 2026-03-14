@@ -88,7 +88,7 @@ At execution time, additional context is appended:
 - **Sibling reflections** — learnings from recently completed sibling features
 - **Recovery context** — previous error output on retry
 
-See [Context System](./context-system.md) for the full context loading flow.
+See [Context System](../guides/context-files.md) for the full context loading flow.
 
 ## Prompt registry
 
@@ -311,6 +311,6 @@ These are rendered by `buildSystemPrompt()` in the agent factory. Templates can 
 
 ## Related documentation
 
-- [Agent Philosophy](./philosophy.md) — Why the prompt system is designed this way
-- [Context System](./context-system.md) — How context files and memory flow into prompts
+- [Agent Philosophy](./agent-philosophy.md) — Why the prompt system is designed this way
+- [Context System](../guides/context-files.md) — How context files and memory flow into prompts
 - [Langfuse Integration](../integrations/langfuse.md) — Tracing and cost tracking

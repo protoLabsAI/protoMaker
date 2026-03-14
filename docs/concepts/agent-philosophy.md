@@ -1,6 +1,6 @@
 # Agent philosophy
 
-Why protoLabs uses named personas, domain-scoped delegation, model tiers, worktree isolation, and event-driven coordination. This document explains the _why_ behind the multi-agent system. For the _how_, see [Architecture Overview](./architecture.md).
+Why protoLabs uses named personas, domain-scoped delegation, model tiers, worktree isolation, and event-driven coordination. This document explains the _why_ behind the multi-agent system. For the _how_, see [Architecture Overview](./agent-architecture.md).
 
 ## Why named personas
 
@@ -202,8 +202,7 @@ Every persona agent receives the `CONTINUOUS_IMPROVEMENT` prompt fragment. When 
 
 ## Related documentation
 
-- [Architecture Overview](./architecture.md) — Technical implementation details
+- [Architecture Overview](./agent-architecture.md) — Technical implementation details
 - [Reliability & Recovery](./reliability.md) — Failure handling, escalation, health sweeps
 - [Prompt Engineering](./prompt-engineering.md) — How prompts are composed and customized
-- [Engine Architecture](../archived/engine-architecture.md) — ADR for the Lead Engineer design
 - [Idea to Production](./pipeline.md) — Full 8-phase pipeline reference

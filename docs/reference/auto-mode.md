@@ -200,9 +200,3 @@ Settings read from `workflowSettings` in `.automaker/settings.json`:
 | `apps/server/src/services/lead-engineer-service.ts`           | Claude Agent SDK invocation                      |
 | `apps/server/src/services/stream-observer-service.ts`         | Agent output monitoring (loop detection)         |
 | `apps/server/src/services/recovery-service.ts`                | Crash recovery and resume logic                  |
-
-## See Also
-
-- [Ava Channel Reactor](./ava-channel-reactor) — fleet coordination and work distribution
-- [Work Intake Service](./work-intake-service) — pull-based phase claiming from shared projects
-- [DORA Metrics](./dora-metrics) — lead time and deployment frequency tracking

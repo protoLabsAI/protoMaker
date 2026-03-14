@@ -223,4 +223,3 @@ protoLabs stores data in two locations:
 
 - **[Idea to Production](../concepts/pipeline.md)** — The full 8-phase pipeline reference
 - **[Project Lifecycle](../concepts/project-lifecycle.md)** — Board-driven project state machine
-- **[Engine Architecture](../archived/engine-architecture.md)** — ADR for the Lead Engineer design

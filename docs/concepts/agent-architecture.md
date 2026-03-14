@@ -208,10 +208,7 @@ const contextResult = await loadContextFiles({
 
 ## Related Documentation
 
-- **[Adding Agent Teammates](./adding-teammates.md)** - How to create new authority agents (PM, EM, Designer, QA)
-- **[Creating Agent Teams](./creating-agent-teams.md)** - Building multi-agent coordination systems
-- **[MCP Integration](./mcp-integration.md)** - How MCP tools interact with agents
-- **[Context System](./context-system.md)** - Deep dive into context loading and memory
+- **[Context System](../guides/context-files.md)** - Deep dive into context loading and memory
 
 ## Key Architectural Decisions
 
@@ -243,6 +240,6 @@ const contextResult = await loadContextFiles({
 
 **Next Steps:**
 
-- Read [Adding Agent Teammates](./adding-teammates.md) to add a new authority agent
-- Read [Creating Agent Teams](./creating-agent-teams.md) to build multi-agent coordination
-- Read [MCP Integration](./mcp-integration.md) to understand tool-agent interaction
+- Read [Context System](../guides/context-files.md) for a deep dive into context loading and memory
+- Read [Agent Philosophy](./agent-philosophy.md) for the reasoning behind the architecture
+- Read [Prompt Engineering](./prompt-engineering.md) to understand prompt composition
