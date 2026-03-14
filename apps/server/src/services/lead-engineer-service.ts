@@ -638,7 +638,10 @@ export class LeadEngineerService {
 
     for (const feature of reviewFeaturesWithPR) {
       try {
-        const { stdout } = await execAsync(`gh pr view ${feature.prNumber} --json state,mergedAt`);
+        const { stdout } = await execAsync(`gh pr view ${feature.prNumber} --json state,mergedAt`, {
+          cwd: projectPath,
+          timeout: 15000,
+        });
         const prData = JSON.parse(stdout.trim()) as { state: string; mergedAt?: string | null };
 
         if (prData.state !== 'MERGED') continue;
@@ -693,7 +696,10 @@ export class LeadEngineerService {
   private async onEvent(type: EventType, payload: unknown): Promise<void> {
     const p = payload as Record<string, unknown> | null;
     const nested = p?.payload as Record<string, unknown> | null;
-    const projectPath = (p?.projectPath ?? nested?.projectPath) as string | undefined;
+    const ctx = p?.context as Record<string, unknown> | undefined;
+    const projectPath = (p?.projectPath ?? nested?.projectPath ?? ctx?.projectPath) as
+      | string
+      | undefined;
 
     if (projectPath) {
       const session = this.sessions.get(projectPath);
@@ -710,7 +716,7 @@ export class LeadEngineerService {
       return;
     }
 
-    const featureId = (p?.featureId ?? nested?.featureId) as string | undefined;
+    const featureId = (p?.featureId ?? nested?.featureId ?? ctx?.featureId) as string | undefined;
     if (featureId) {
       for (const session of this.sessions.values()) {
         if (session.flowState !== 'running') continue;

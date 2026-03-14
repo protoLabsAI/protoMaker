@@ -29,6 +29,8 @@ export interface LeadFeatureSnapshot {
   complexity?: 'small' | 'medium' | 'large' | 'architectural';
   startedAt?: string;
   completedAt?: string;
+  statusChangeReason?: string;
+  reviewStartedAt?: string;
 }
 
 /** Running agent snapshot */
@@ -209,7 +211,10 @@ export interface LEWorldState {
  * Comprehensive state of a managed project.
  * Extends LEWorldState for backward compatibility during migration to domain-typed world states.
  */
-export interface LeadWorldState extends Omit<LEWorldState, 'domain'> {}
+export interface LeadWorldState extends Omit<LEWorldState, 'domain'> {
+  /** ISO timestamp of the last auto-mode restart triggered by rules (debounce window) */
+  lastAutoModeRestartAt?: string;
+}
 
 // ────────────────────────── Rule Actions ──────────────────────────
 
