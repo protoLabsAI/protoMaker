@@ -14,7 +14,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { EventEmitter } from 'node:events';
+import type { EventEmitter } from '../lib/events.js';
 import { createLogger } from '@protolabsai/utils';
 
 const logger = createLogger('ErrorBudgetService');
@@ -56,9 +56,12 @@ function ensureDir(dir: string): void {
 // Service
 // ---------------------------------------------------------------------------
 
-export class ErrorBudgetService extends EventEmitter {
+export class ErrorBudgetService {
   /** DATA_DIR — runtime data directory for error-budget.json. */
   private readonly dataDir: string;
+
+  /** Shared app event bus. Null for read-only ephemeral instances. */
+  private readonly events: EventEmitter | null;
 
   /** Rolling window in milliseconds (default: 7 days). */
   private readonly windowMs: number;
@@ -74,6 +77,7 @@ export class ErrorBudgetService extends EventEmitter {
 
   constructor(
     dataDir: string,
+    events?: EventEmitter | null,
     options: {
       /** Rolling window in days (default: 7) */
       windowDays?: number;
@@ -81,8 +85,8 @@ export class ErrorBudgetService extends EventEmitter {
       threshold?: number;
     } = {}
   ) {
-    super();
     this.dataDir = dataDir;
+    this.events = events ?? null;
     this.windowMs = (options.windowDays ?? 7) * 24 * 60 * 60 * 1000;
     this.threshold = options.threshold ?? 0.2;
   }
@@ -203,6 +207,7 @@ export class ErrorBudgetService extends EventEmitter {
    * the service was in the exhausted state.
    */
   private _checkAndEmitBudgetEvents(failRate: number): void {
+    if (!this.events) return;
     const { total, failed } = this.getWindowCounts();
 
     if (!this._isExhaustedState && failRate >= EXHAUSTION_BURN_RATE) {
@@ -210,7 +215,7 @@ export class ErrorBudgetService extends EventEmitter {
       logger.warn(
         `[ErrorBudget] Budget exhausted: failRate=${failRate.toFixed(3)} >= ${EXHAUSTION_BURN_RATE} — emitting error_budget:exhausted`
       );
-      this.emit('error_budget:exhausted', {
+      this.events.emit('error_budget:exhausted', {
         projectPath: this.dataDir,
         failRate,
         threshold: EXHAUSTION_BURN_RATE,
@@ -222,7 +227,7 @@ export class ErrorBudgetService extends EventEmitter {
       logger.info(
         `[ErrorBudget] Budget recovered: failRate=${failRate.toFixed(3)} < ${RECOVERY_BURN_RATE} — emitting error_budget:recovered`
       );
-      this.emit('error_budget:recovered', {
+      this.events.emit('error_budget:recovered', {
         projectPath: this.dataDir,
         failRate,
         threshold: EXHAUSTION_BURN_RATE,

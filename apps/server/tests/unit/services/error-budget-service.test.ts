@@ -142,7 +142,7 @@ describe('ErrorBudgetService', () => {
   // ──────────────────────────── isExhausted / threshold ────────────────────────────
 
   it('isExhausted() returns false when fail rate is below threshold', () => {
-    const svc = new ErrorBudgetService(tmpDir, { threshold: 0.2 });
+    const svc = new ErrorBudgetService(tmpDir, null, { threshold: 0.2 });
     svc.recordMerge('f1', false);
     svc.recordMerge('f2', false);
     svc.recordMerge('f3', false);
@@ -153,7 +153,7 @@ describe('ErrorBudgetService', () => {
   });
 
   it('isExhausted() returns true when fail rate meets threshold', () => {
-    const svc = new ErrorBudgetService(tmpDir, { threshold: 0.2 });
+    const svc = new ErrorBudgetService(tmpDir, null, { threshold: 0.2 });
     // 1/5 = 20% >= 20%
     svc.recordMerge('f1', false);
     svc.recordMerge('f2', false);
@@ -164,7 +164,7 @@ describe('ErrorBudgetService', () => {
   });
 
   it('isExhausted() returns true when fail rate exceeds threshold', () => {
-    const svc = new ErrorBudgetService(tmpDir, { threshold: 0.2 });
+    const svc = new ErrorBudgetService(tmpDir, null, { threshold: 0.2 });
     // 2/4 = 50% > 20%
     svc.recordMerge('f1', false);
     svc.recordMerge('f2', false);
@@ -174,7 +174,7 @@ describe('ErrorBudgetService', () => {
   });
 
   it('custom threshold is respected', () => {
-    const svc = new ErrorBudgetService(tmpDir, { threshold: 0.5 });
+    const svc = new ErrorBudgetService(tmpDir, null, { threshold: 0.5 });
     svc.recordMerge('f1', true);
     svc.recordMerge('f2', false);
     // 1/2 = 50% — exactly at threshold
@@ -185,7 +185,7 @@ describe('ErrorBudgetService', () => {
 
   it('records outside the rolling window are excluded from fail rate', () => {
     // Use a 1-day window
-    const svc = new ErrorBudgetService(tmpDir, { windowDays: 1, threshold: 0.2 });
+    const svc = new ErrorBudgetService(tmpDir, null, { windowDays: 1, threshold: 0.2 });
 
     // Manually write an old record to disk (8 days ago)
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
@@ -211,7 +211,7 @@ describe('ErrorBudgetService', () => {
   });
 
   it('mixes old and recent records, only counting recent ones', () => {
-    const svc = new ErrorBudgetService(tmpDir, { windowDays: 7, threshold: 0.2 });
+    const svc = new ErrorBudgetService(tmpDir, null, { windowDays: 7, threshold: 0.2 });
 
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
     const budgetPath = path.join(tmpDir, 'metrics', 'error-budget.json');
@@ -239,12 +239,12 @@ describe('ErrorBudgetService', () => {
   // ──────────────────────────── Persistence ────────────────────────────
 
   it('persists state to disk and reads it back correctly', () => {
-    const svc1 = new ErrorBudgetService(tmpDir, { threshold: 0.2 });
+    const svc1 = new ErrorBudgetService(tmpDir, null, { threshold: 0.2 });
     svc1.recordMerge('f1', false);
     svc1.recordMerge('f2', true);
 
     // Create a new instance reading from the same directory
-    const svc2 = new ErrorBudgetService(tmpDir, { threshold: 0.2 });
+    const svc2 = new ErrorBudgetService(tmpDir, null, { threshold: 0.2 });
     const state = svc2.getState();
     expect(state.totalMerges).toBe(2);
     expect(state.failedMerges).toBe(1);
@@ -261,7 +261,7 @@ describe('ErrorBudgetService', () => {
   // ──────────────────────────── getState snapshot ────────────────────────────
 
   it('getState() returns exhausted=true when budget is exhausted', () => {
-    const svc = new ErrorBudgetService(tmpDir, { threshold: 0.2 });
+    const svc = new ErrorBudgetService(tmpDir, null, { threshold: 0.2 });
     svc.recordMerge('f1', false);
     svc.recordMerge('f2', false);
     svc.recordMerge('f3', false);
@@ -273,7 +273,7 @@ describe('ErrorBudgetService', () => {
   });
 
   it('getState() reflects custom windowDays option', () => {
-    const svc = new ErrorBudgetService(tmpDir, { windowDays: 14 });
+    const svc = new ErrorBudgetService(tmpDir, null, { windowDays: 14 });
     const state = svc.getState();
     expect(state.windowDays).toBe(14);
   });
@@ -282,9 +282,10 @@ describe('ErrorBudgetService', () => {
 
   it('emits error_budget:exhausted when burn rate reaches 1.0 (all merges failed)', () => {
     // Use threshold=0.2 for isExhausted() but the NEW exhausted event fires at 1.0 burn rate
-    const svc = new ErrorBudgetService(tmpDir);
+    const mockEvents = new EventEmitter() as unknown as import('@/lib/events.js').EventEmitter;
+    const svc = new ErrorBudgetService(tmpDir, mockEvents);
     const exhaustedListener = vi.fn();
-    svc.on('error_budget:exhausted', exhaustedListener);
+    mockEvents.on('error_budget:exhausted', exhaustedListener);
 
     // Drive all merges to failed → failRate = 1.0
     svc.recordMerge('f1', true);
@@ -302,9 +303,10 @@ describe('ErrorBudgetService', () => {
   });
 
   it('does not emit error_budget:exhausted twice without recovery in between', () => {
-    const svc = new ErrorBudgetService(tmpDir);
+    const mockEvents = new EventEmitter() as unknown as import('@/lib/events.js').EventEmitter;
+    const svc = new ErrorBudgetService(tmpDir, mockEvents);
     const exhaustedListener = vi.fn();
-    svc.on('error_budget:exhausted', exhaustedListener);
+    mockEvents.on('error_budget:exhausted', exhaustedListener);
 
     // First exhaustion: all merges fail
     svc.recordMerge('f1', true);
@@ -316,11 +318,12 @@ describe('ErrorBudgetService', () => {
   });
 
   it('emits error_budget:recovered when burn rate drops below 0.8 after exhaustion', () => {
-    const svc = new ErrorBudgetService(tmpDir);
+    const mockEvents = new EventEmitter() as unknown as import('@/lib/events.js').EventEmitter;
+    const svc = new ErrorBudgetService(tmpDir, mockEvents);
     const exhaustedListener = vi.fn();
     const recoveredListener = vi.fn();
-    svc.on('error_budget:exhausted', exhaustedListener);
-    svc.on('error_budget:recovered', recoveredListener);
+    mockEvents.on('error_budget:exhausted', exhaustedListener);
+    mockEvents.on('error_budget:recovered', recoveredListener);
 
     // Drive to 100% failure → exhausted
     svc.recordMerge('f1', true);
@@ -344,11 +347,12 @@ describe('ErrorBudgetService', () => {
   });
 
   it('does not emit error_budget:recovered if never exhausted', () => {
-    const svc = new ErrorBudgetService(tmpDir);
+    const mockEvents = new EventEmitter() as unknown as import('@/lib/events.js').EventEmitter;
+    const svc = new ErrorBudgetService(tmpDir, mockEvents);
     const exhaustedListener = vi.fn();
     const recoveredListener = vi.fn();
-    svc.on('error_budget:exhausted', exhaustedListener);
-    svc.on('error_budget:recovered', recoveredListener);
+    mockEvents.on('error_budget:exhausted', exhaustedListener);
+    mockEvents.on('error_budget:recovered', recoveredListener);
 
     // Start with successful merges so failRate never reaches 1.0
     // 1 failed / 4 total = 25% — below 100% exhaustion threshold

@@ -328,7 +328,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   metricsCollectionService.initialize();
 
   // Error Budget Service — rolling change fail rate tracker (persists to DATA_DIR/metrics/error-budget.json)
-  const errorBudgetService = new ErrorBudgetService(dataDir);
+  const errorBudgetService = new ErrorBudgetService(dataDir, events);
   // Wire error budget into the event pipeline: record merges and CI failures
   events.subscribe((type, payload) => {
     const p = payload as Record<string, unknown>;
