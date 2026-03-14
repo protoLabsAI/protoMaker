@@ -4,10 +4,6 @@
  * Stores custom calendar events in .automaker/calendar.json and aggregates:
  * - Custom events from calendar.json
  * - Features with dueDate from FeatureLoader
- *
- * When a CRDTStore is registered via setCrdtStore(), all create/update/delete
- * operations are routed through the CRDT layer so events sync across all
- * hivemind instances. Falls back to filesystem when CRDT is not active.
  */
 
 import path from 'path';
@@ -22,8 +18,6 @@ import type {
   CalendarEventType,
   CalendarQueryOptions,
 } from '@protolabsai/types';
-import type { CRDTStore, CalendarDocument } from '@protolabsai/crdt';
-
 const logger = createLogger('CalendarService');
 
 // Re-export shared types for consumers that import from this module
