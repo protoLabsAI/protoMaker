@@ -36,32 +36,46 @@ The trust boundary controls automatic vs. human-reviewed approval of incoming PR
 
 ```typescript
 interface TrustBoundaryConfig {
-  autoApprove: AutoApproveRule[];
-  requireReview: RequireReviewRule[];
+  /** Whether trust boundary evaluation is enabled (default: true) */
+  enabled: boolean;
+  /** Auto-approval rules (all conditions must match) */
+  autoApprove: AutoApproveRule;
+  /** Review requirement rules (any condition triggers review) */
+  requireReview: RequireReviewRule;
+  /** Risk auto-approve threshold (work items with risk <= this level skip approval) */
+  riskAutoApproveThreshold?: RiskLevel;
 }
 ```
 
-### Auto-Approve Rules (AND logic)
+### Auto-Approve Rule (AND logic)
 
-All conditions in a rule must match for auto-approval:
+All conditions must match for auto-approval:
 
 ```typescript
 interface AutoApproveRule {
-  complexity?: PRDComplexity[]; // e.g. ['small']
-  category?: PRDCategory[]; // e.g. ['ops', 'bug', 'improvement']
+  /** Maximum complexity level that can be auto-approved (default: 'small') */
+  maxComplexity?: PRDComplexity;
+  /** Categories eligible for auto-approval (default: ['ops', 'improvement', 'bug']) */
+  categories?: PRDCategory[];
+  /** Maximum estimated cost in dollars (default: undefined = no limit) */
+  maxEstimatedCost?: number;
 }
 ```
 
 **Default**: Auto-approve when complexity is `small` AND category is `ops`, `improvement`, or `bug`.
 
-### Require-Review Rules (OR logic)
+### Require-Review Rule (OR logic)
 
 Any matching condition triggers a review requirement:
 
 ```typescript
 interface RequireReviewRule {
-  complexity?: PRDComplexity[];
-  category?: PRDCategory[];
+  /** Categories that always require review (default: ['idea', 'architectural']) */
+  categories?: PRDCategory[];
+  /** Minimum complexity level that requires review (default: 'large') */
+  minComplexity?: PRDComplexity;
+  /** Minimum estimated cost that requires review (default: undefined = no limit) */
+  minEstimatedCost?: number;
 }
 ```
 
@@ -84,9 +98,9 @@ interface WorkflowSettings {
     supervisorEnabled: boolean; // Enable supervisor oversight. Default: true
     maxAgentRuntimeMinutes: number; // Timeout per agent run. Default: 45
     maxAgentCostUsd: number; // Max cost per feature in USD. Default: 15
-    antagonisticPlanReview: boolean; // Run antagonistic review for large/arch plans. Default: true
-    maxAgentRetries: number; // Agent re-run retry budget. Default: 3
-    maxInfraRetries: number; // Transient infra retry budget. Default: 3
+    antagonisticPlanReview?: boolean; // Run antagonistic review for large/arch plans. Default: true
+    maxAgentRetries?: number; // Agent re-run retry budget. Default: 3
+    maxInfraRetries?: number; // Transient infra retry budget. Default: 3
   };
 }
 ```
@@ -114,17 +128,17 @@ When `true`, plans for `large` and `architectural` features are submitted to the
 
 ```typescript
 interface WorkflowSettings {
-  preFlightChecks: {
-    enabled: boolean; // Default: true
-  };
+  preFlightChecks?: boolean; // Default: true
 }
 ```
 
-When enabled, the EXECUTE processor runs three checks before launching the agent:
+When enabled (`true`), the EXECUTE processor runs three checks before launching the agent:
 
 1. **Worktree currency** — syncs worktree with `git fetch` + `git rebase origin/dev`
 2. **Package builds** — validates required packages compile successfully
 3. **Dependency merge** — verifies all blocking upstream features are merged
+
+Pre-flight failures are classified as infrastructure failures and do **not** count against the feature's agent retry budget.
 
 ---
 
@@ -134,7 +148,6 @@ When enabled, the EXECUTE processor runs three checks before launching the agent
 interface WorkflowSettings {
   retro: {
     enabled: boolean; // Generate retros automatically. Default: true
-    triggerOnFeatureDone: boolean; // Trigger retro after each feature. Default: true
   };
 }
 ```
@@ -146,8 +159,8 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   cleanup: {
-    enabled: boolean; // Auto-cleanup stale worktrees. Default: true
-    staleWorktreeHours: number; // Hours before a worktree is considered stale. Default: 4
+    autoCleanupEnabled: boolean; // Auto-cleanup stale worktrees/features. Default: true
+    staleThresholdHours: number; // Hours before orphaned in-progress features are reset. Default: 4
   };
 }
 ```
@@ -159,9 +172,9 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   signalIntake: {
-    defaultCategory: PRDCategory; // Category assigned to uncategorized signals. Default: 'feature'
-    autoResearch: boolean; // Auto-research incoming signals. Default: true
-    autoApprove: boolean; // Apply trust boundary auto-approve logic. Default: true
+    defaultCategory: 'ops' | 'gtm'; // Category for unclassified signals. Default: 'ops'
+    autoResearch: boolean; // Auto-trigger research on new signals. Default: false
+    autoApprovePRD: boolean; // Auto-approve PRDs without user review. Default: false
   };
 }
 ```
@@ -173,8 +186,8 @@ interface WorkflowSettings {
 ```typescript
 interface WorkflowSettings {
   bugs: {
-    enabled: boolean; // Enable bug tracking. Default: true
-    createGitHubIssue: boolean; // Mirror bugs as GitHub issues. Default: false
+    enabled: boolean; // Enable bug tracking pipeline. Default: false
+    createGithubIssues?: boolean; // Also create GitHub issues. Default: true
   };
 }
 ```
@@ -185,13 +198,12 @@ interface WorkflowSettings {
 
 ```typescript
 interface WorkflowSettings {
-  postMergeVerification: {
-    enabled: boolean; // Run typecheck + build after merge. Default: true
-    runTypecheck: boolean; // Default: true
-    runBuild: boolean; // Default: true
-  };
+  postMergeVerification?: boolean; // Run verification commands after merge. Default: true
+  postMergeVerificationCommands?: string[]; // Commands to run. Default: ['npm run typecheck']
 }
 ```
+
+When enabled, runs verification commands after merge to catch regressions. On failure, a bug-fix feature is created on the board. `npm run build:packages` is added automatically when `libs/` files were touched.
 
 ---
 
@@ -201,7 +213,7 @@ interface WorkflowSettings {
 
 ```typescript
 interface WorkflowSettings {
-  maxPendingReviews: number; // Pause feature pickup when queue is full. Default: 5
+  maxPendingReviews?: number; // Pause feature pickup when queue is full. Default: 5
 }
 ```
 
@@ -211,15 +223,35 @@ When the number of features awaiting human review reaches `maxPendingReviews`, t
 
 ```typescript
 interface WorkflowSettings {
-  errorBudgetWindow: number; // Rolling window in days. Default: 7
-  errorBudgetThreshold: number; // CFR threshold (0.0–1.0). Default: 0.2
+  errorBudgetWindow?: number; // Rolling window in days. Default: 7
+  errorBudgetThreshold?: number; // CFR threshold (0.0–1.0). Default: 0.2
+  errorBudgetAutoFreeze?: boolean; // Pause pickup when budget exhausted. Default: true
 }
 ```
 
-The error budget tracks the Change Failure Rate (CFR) over a rolling window. When CFR exceeds the threshold, the system can pause new work or trigger alerts.
+The error budget tracks the Change Failure Rate (CFR) over a rolling window. When CFR exceeds the threshold, the system pauses new feature pickup (running agents are unaffected). Pickup resumes automatically when the budget recovers (burn rate drops below 0.8).
 
 - `errorBudgetWindow: 7` → calculate CFR over the last 7 days
 - `errorBudgetThreshold: 0.2` → alert/pause when 20%+ of changes cause failures
+
+---
+
+## Agent Configuration
+
+Per-project agent assignment and model override settings, stored under `agentConfig` in `.automaker/settings.json`:
+
+```typescript
+interface AgentConfig {
+  /** Per-role model overrides */
+  roleModelOverrides?: Record<string, PhaseModelEntry>;
+  /** Enable match-rule auto-assignment. Default: true */
+  autoAssignEnabled?: boolean;
+  /** Per-role system prompt overrides */
+  rolePromptOverrides?: Record<string, CustomPrompt>;
+}
+```
+
+See [Agent Manifests](../agents/agent-manifests.md) for full configuration details.
 
 ---
 
@@ -238,19 +270,18 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     maxAgentRetries: 3,
     maxInfraRetries: 3,
   },
-  retro: { enabled: true, triggerOnFeatureDone: true },
-  cleanup: { enabled: true, staleWorktreeHours: 4 },
+  retro: { enabled: true },
+  cleanup: { autoCleanupEnabled: true, staleThresholdHours: 4 },
   signalIntake: {
-    defaultCategory: 'feature',
-    autoResearch: true,
-    autoApprove: true,
+    defaultCategory: 'ops',
+    autoResearch: false,
+    autoApprovePRD: false,
   },
-  bugs: { enabled: true, createGitHubIssue: false },
-  postMergeVerification: { enabled: true, runTypecheck: true, runBuild: true },
-  preFlightChecks: { enabled: true },
-  maxPendingReviews: 5,
-  errorBudgetWindow: 7,
-  errorBudgetThreshold: 0.2,
+  bugs: { enabled: false, createGithubIssues: true },
+  postMergeVerification: true,
+  postMergeVerificationCommands: ['npm run typecheck'],
+  preFlightChecks: true,
+  phaseTemperatures: { PLAN: 1.0, EXECUTE: 0, REVIEW: 0.5 },
 };
 ```
 
@@ -261,3 +292,4 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
 - [Lead Engineer Pipeline](../dev/lead-engineer-pipeline.md) — how processors use these settings
 - [DORA Metrics](./dora-metrics.md) — error budget and CFR tracking
 - [Antagonistic Review](../protolabs/antagonistic-review.md) — the plan review gate
+- [Agent Manifests](../agents/agent-manifests.md) — per-role model and prompt overrides

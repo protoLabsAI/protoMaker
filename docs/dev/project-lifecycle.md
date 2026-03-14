@@ -114,12 +114,13 @@ All endpoints are under `POST /api/projects/lifecycle/`:
 GET /api/projects/:slug/timeline
 ```
 
-Returns all `EventLedger` events for a project in chronological order. Supports optional filtering:
+Returns display-ready `TimelineEvent` objects for a project, sorted newest-first. Events are transformed from raw ledger entries (type labels normalised, titles extracted from payloads). When the ledger has no entries for the project, falls back to synthesising events from feature metadata.
 
-| Query param | Description                                        |
-| ----------- | -------------------------------------------------- |
-| `since`     | ISO 8601 timestamp — return events after this time |
-| `type`      | Event type filter (e.g. `ceremony:fired`)          |
+| Query param   | Description                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `projectPath` | Project root path — required to enable feature-metadata fallback |
+| `since`       | ISO 8601 timestamp — return events after this time               |
+| `type`        | Display event type filter (e.g. `feature:done`, `standup`)       |
 
 See [Event Ledger](./event-ledger) for full query API and event types.
 

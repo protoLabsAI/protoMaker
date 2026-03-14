@@ -40,7 +40,7 @@ startAutoLoop()
           --> On success: gitWorkflowService.merge()
           --> On failure: trackFailure() → circuit breaker check
     --> Release concurrency slot
-    --> Emit feature:status-changed
+    --> FeatureStateManager: persist status → FeatureLoader.update() auto-emits feature:status-changed
 ```
 
 ## Key Components
@@ -183,7 +183,7 @@ Settings read from `workflowSettings` in `.automaker/settings.json`:
 | `apps/server/src/services/auto-mode/execution-service.ts`     | Per-feature execution logic                      |
 | `apps/server/src/services/auto-mode/concurrency-manager.ts`   | Concurrency slot management                      |
 | `apps/server/src/services/auto-mode/auto-loop-coordinator.ts` | Per-worktree loop state                          |
-| `apps/server/src/services/auto-mode/feature-state-manager.ts` | Persist-before-emit status transitions           |
+| `apps/server/src/services/auto-mode/feature-state-manager.ts` | Status persistence, notifications, app_spec sync |
 | `apps/server/src/services/auto-mode/typed-event-bus.ts`       | Type-safe event wrappers                         |
 | `apps/server/src/services/feature-scheduler.ts`               | Loop tick and feature dispatch                   |
 | `apps/server/src/services/lead-engineer-service.ts`           | Claude Agent SDK invocation                      |

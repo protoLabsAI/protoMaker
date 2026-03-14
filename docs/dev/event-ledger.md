@@ -84,12 +84,15 @@ The event ledger is exposed via a REST endpoint on the projects router:
 GET /api/projects/:slug/timeline
 ```
 
+Raw `EventLedgerEntry` records are transformed into display-ready `TimelineEvent` objects before returning. This mapping normalises event types (e.g. `feature:status-changed` with `to: 'done'` becomes `feature:done`) and extracts human-readable titles and descriptions from unstructured payloads.
+
 **Query parameters:**
 
-| Parameter | Type     | Description                                         |
-| --------- | -------- | --------------------------------------------------- |
-| `since`   | ISO 8601 | Return only events after this timestamp (exclusive) |
-| `type`    | string   | Return only events of this `eventType`              |
+| Parameter     | Type     | Description                                                          |
+| ------------- | -------- | -------------------------------------------------------------------- |
+| `projectPath` | string   | Project root path — required for the feature-metadata fallback       |
+| `since`       | ISO 8601 | Return only events after this timestamp (exclusive)                  |
+| `type`        | string   | Filter by display event type (e.g. `feature:done`, `ceremony:fired`) |
 
 **Response:**
 
@@ -99,17 +102,43 @@ GET /api/projects/:slug/timeline
   "events": [
     {
       "id": "...",
-      "timestamp": "2025-03-01T10:00:00.000Z",
-      "eventType": "feature:status-changed",
-      "correlationIds": { "featureId": "feature-123" },
-      "payload": { "from": "backlog", "to": "in_progress" },
-      "source": "EventLedgerService"
+      "type": "feature:done",
+      "title": "Completed: Add user authentication",
+      "description": "PR #42",
+      "occurredAt": "2025-03-01T10:00:00.000Z",
+      "author": "auto-mode"
     }
   ]
 }
 ```
 
-Events are returned in chronological order (oldest first).
+Events are returned sorted newest-first.
+
+### Feature-metadata fallback
+
+When the ledger has no entries for the requested project (e.g. for projects that pre-date the ledger, or before enrichment begins), the endpoint automatically synthesises timeline events from feature metadata fields (`createdAt`, `startedAt`, `reviewStartedAt`, `completedAt`). This ensures the timeline is populated even before ledger enrichment starts.
+
+The fallback requires `?projectPath=` to be present in the query. When the ledger does return entries, the fallback is skipped entirely.
+
+### Display event types
+
+| Display type           | Ledger source                                                  |
+| ---------------------- | -------------------------------------------------------------- |
+| `feature:created`      | Feature metadata fallback (`createdAt`)                        |
+| `feature:started`      | `feature:started`, `feature:status-changed` (to started)       |
+| `feature:done`         | `feature:completed`, `feature:status-changed` (to done)        |
+| `pr:merged`            | `feature:pr-merged`, `feature:status-changed` (to review)      |
+| `escalation`           | `feature:error`, `escalation:signal-received`                  |
+| `decision`             | `pipeline:state-entered`                                       |
+| `milestone:completed`  | `milestone:completed`                                          |
+| `project:initiated`    | `project:lifecycle:initiated`                                  |
+| `project:prd-approved` | `project:lifecycle:prd-approved`                               |
+| `project:scaffolded`   | `project:scaffolded`                                           |
+| `project:launched`     | `project:lifecycle:launched`                                   |
+| `project:completed`    | `project:completed`                                            |
+| `standup`              | `ceremony:fired` (ceremonyType: standup)                       |
+| `retro`                | `ceremony:fired` (ceremonyType: milestone_retro/project_retro) |
+| `ceremony:fired`       | `ceremony:fired` (other ceremony types)                        |
 
 ## Initialization
 

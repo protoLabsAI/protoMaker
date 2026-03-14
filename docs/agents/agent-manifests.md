@@ -213,15 +213,19 @@ Configure agent behavior in `.automaker/settings.json`:
     "roleModelOverrides": {
       "react-specialist": { "model": "claude-opus-4-6" },
       "api-specialist": { "model": "claude-sonnet-4-6" }
+    },
+    "rolePromptOverrides": {
+      "frontend-engineer": { "value": "You are a senior React architect...", "enabled": true }
     }
   }
 }
 ```
 
-| Setting              | Default | Description                                               |
-| -------------------- | ------- | --------------------------------------------------------- |
-| `autoAssignEnabled`  | `true`  | Enable/disable match rule auto-assignment                 |
-| `roleModelOverrides` | `{}`    | Per-role model overrides (settings-level, below manifest) |
+| Setting               | Default | Description                                                                                   |
+| --------------------- | ------- | --------------------------------------------------------------------------------------------- |
+| `autoAssignEnabled`   | `true`  | Enable/disable match rule auto-assignment                                                     |
+| `roleModelOverrides`  | `{}`    | Per-role model overrides (settings-level, below manifest). Values are `{ model, provider? }`. |
+| `rolePromptOverrides` | `{}`    | Per-role system prompt overrides. Used when no manifest `promptFile` is present for the role. |
 
 ## API Reference
 
