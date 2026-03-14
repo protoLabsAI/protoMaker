@@ -55,9 +55,6 @@ function createMockContainer() {
       setRegistryProvider: vi.fn(),
       onRegistryReceived: vi.fn(),
     },
-    avaChannelService: {
-      setCrdtStore: vi.fn(),
-    },
     calendarService: {
       setCrdtStore: vi.fn(),
     },
@@ -138,7 +135,6 @@ describe('crdt-store.module', () => {
       await register(container);
 
       const mockStoreInstance = vi.mocked(CRDTStore).mock.results[0].value;
-      expect(container.avaChannelService.setCrdtStore).toHaveBeenCalledWith(mockStoreInstance);
       expect(container.calendarService.setCrdtStore).toHaveBeenCalledWith(mockStoreInstance);
       expect(container.todoService.setCrdtStore).toHaveBeenCalledWith(mockStoreInstance);
     });
