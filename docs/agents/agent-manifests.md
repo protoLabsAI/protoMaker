@@ -149,7 +149,20 @@ When auto-mode picks up a feature for execution, the system runs this flow:
 1. **Skip if manually assigned** --- If `feature.assignedRole` is already set, respect it
 2. **Skip if disabled** --- If `agentConfig.autoAssignEnabled` is `false` in project settings
 3. **Run match rules** --- Score all project agents against the feature
-4. **Assign best match** --- Set `assignedRole` and record a `routingSuggestion` with confidence and reasoning
+4. **Assign best match** --- Set `assignedRole` and record a `routingSuggestion`:
+
+   ```json
+   {
+     "role": "react-specialist",
+     "confidence": 0.85,
+     "reasoning": "category: frontend (+10), keywords: react (+5), component (+5)",
+     "autoAssigned": true,
+     "suggestedAt": "2026-03-13T10:00:00.000Z"
+   }
+   ```
+
+   Confidence is normalized via `rawScore / (rawScore + 10)`, giving diminishing returns as scores grow.
+
 5. **Proceed to execution** --- `getModelForFeature()` picks up the role's model override
 
 Auto-assignment is non-fatal. If matching fails or no agents match, the feature executes with default settings.
@@ -227,6 +240,7 @@ Returns all agents (built-in + project-defined) for a project.
 ```json
 {
   "success": true,
+  "projectPath": "/path/to/project",
   "count": 10,
   "agents": [
     { "name": "frontend-engineer", "extends": "frontend-engineer", "_builtIn": true },
@@ -278,12 +292,14 @@ Returns the best-matching agent for a given feature.
 ```json
 {
   "success": true,
+  "projectPath": "/path/to/project",
   "featureId": "feature-123",
-  "agent": { "name": "react-specialist", "extends": "frontend-engineer" }
+  "agent": { "name": "react-specialist", "extends": "frontend-engineer" },
+  "confidence": 0.85
 }
 ```
 
-Returns `"agent": null` if no agents match.
+Returns `"agent": null, "confidence": null` if no agents match.
 
 ## UI Integration
 
