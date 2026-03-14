@@ -6,6 +6,7 @@
  */
 
 import { createHmac, timingSafeEqual } from 'crypto';
+import { z } from 'zod';
 import type { Request, Response, NextFunction } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type {
@@ -22,8 +23,29 @@ import type {
 import type { SettingsService } from '../../../services/settings-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getPRWatcherService } from '../../../services/pr-watcher-service.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
 const logger = createLogger('GitHubWebhook');
+
+const webhookQuerySchema = z.object({
+  project: projectPathSchema,
+});
+
+/**
+ * Validates the basic structure of a GitHub webhook payload.
+ * Uses passthrough() to preserve all fields for downstream event-specific handlers.
+ * The repository field is present on all non-ping event types.
+ */
+const webhookPayloadSchema = z
+  .object({
+    repository: z
+      .object({
+        full_name: z.string(),
+      })
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
 
 /**
  * Verify GitHub webhook signature using HMAC-SHA256
@@ -309,16 +331,17 @@ export function createWebhookHandler(
 ): (req: Request, res: Response, next: NextFunction) => Promise<void> {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Extract project path from query parameter
-      const projectPath = req.query.project as string | undefined;
-
-      if (!projectPath) {
+      // Validate query parameter
+      const queryParsed = webhookQuerySchema.safeParse(req.query);
+      if (!queryParsed.success) {
         res.status(400).json({
           error: 'Missing project query parameter',
           message: 'Webhook URL must include ?project=/path/to/project',
+          details: queryParsed.error.issues,
         });
         return;
       }
+      const { project: projectPath } = queryParsed.data;
 
       // Load project settings to get webhook secret
       const projectSettings = await settingsService.getProjectSettings(projectPath);
@@ -385,8 +408,19 @@ export function createWebhookHandler(
 
       logger.info(`Processing GitHub ${eventType} event for project: ${projectPath}`);
 
-      // Process event based on type
-      const payload = req.body as GitHubWebhookPayload;
+      // Validate basic payload structure
+      const payloadParsed = webhookPayloadSchema.safeParse(req.body);
+      if (!payloadParsed.success) {
+        res.status(400).json({
+          error: 'Invalid webhook payload',
+          details: payloadParsed.error.issues,
+        });
+        return;
+      }
+
+      // Process event based on type (narrowing to specific payload types is safe
+      // after structural validation -- GitHub is the trusted sender)
+      const payload = payloadParsed.data as unknown as GitHubWebhookPayload;
 
       switch (eventType) {
         case 'ping':

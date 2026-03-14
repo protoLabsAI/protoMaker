@@ -369,3 +369,9 @@ usageStats:
 - **Rejected:** Alternative: await hydration during initialization. Rejected because adds latency to critical path (server startup), especially problematic in CI/deployments.
 - **Trade-offs:** Faster startup vs. potential data consistency gap: queries to notes workspace may see empty/stale data if hydration hasn't completed. Hydration failures are logged but don't crash server.
 - **Breaking if changed:** If consuming code assumes notes workspace is fully populated at server.ready(), it will race and may see incomplete data.
+
+
+#### [Pattern] featureMap mutated in-loop when feature.projectSlug is resolved. Descendant features (siblings with same parent) immediately see resolved ancestor values without re-lookup (2026-03-14)
+- **Problem solved:** Single backfill batch processes multiple features with shared ancestry. Without caching, each descendant re-resolves the same ancestors
+- **Why this works:** Reduces redundant ancestry traversals within one operation. More importantly, ensures within-batch consistency—all features agree on ancestor resolution outcome
+- **Trade-offs:** Easier: fewer lookups. Harder: requires careful state management to avoid bugs from mutation-during-iteration

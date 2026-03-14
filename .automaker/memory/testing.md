@@ -5,9 +5,9 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 91
-  referenced: 27
-  successfulFeatures: 27
+  loaded: 92
+  referenced: 28
+  successfulFeatures: 28
 ---
 <!-- domain: Testing Patterns | Unit test patterns, integration test strategies, test isolation -->
 
@@ -149,3 +149,20 @@ usageStats:
 - **Situation:** After code edits, npm run build:server returned cached results without recompiling the changed file.
 - **Root cause:** Turbo aggressively caches task outputs. Incremental changes don't trigger cache invalidation if task hash hasn't changed fundamentally.
 - **How to avoid:** Using tsc directly is faster for validation but doesn't test the full build pipeline (bundling, optimization). Full build catches more issues but is slower.
+
+### For documentation-only changes, targeted build verification (VitePress compilation) is sufficient; comprehensive behavioral test suites (Playwright) are cost-inefficient and unnecessary (2026-03-14)
+- **Context:** Docs-only changes to markdown files; question of whether to run full test suite or just build docs
+- **Why:** Docs changes don't affect application behavior or state. VitePress build validates syntax/structure/references; behavioral tests only add time without catching doc-specific issues.
+- **Rejected:** Running Playwright tests; running full CI pipeline; only manual verification
+- **Trade-offs:** Faster feedback loop (18s vs. minutes) vs. slightly reduced coverage (but coverage irrelevant for docs); build gate is proportional to change scope
+- **Breaking if changed:** If docs auto-generate code or have side effects, verification would need to expand; build-only gate assumes docs are passive
+
+#### [Gotcha] Idempotence guard: test explicitly verifies that an epic already in 'done' status is not written to again when its last child completes. Prevents unnecessary IO and duplicate history entries. (2026-03-14)
+- **Situation:** Without this check, re-running the epic completion check on an already-done epic could cause spurious file writes and duplicate status history.
+- **Root cause:** In a system with multiple status changes or replay scenarios, the same epic could be checked for completion multiple times. The check must be idempotent to avoid false writes.
+- **How to avoid:** Extra condition (`if (epic.status === 'done') return`) prevents unnecessary writes and history clutter, but requires explicit test coverage to ensure the guard works.
+
+#### [Pattern] Playwright test gracefully skips when precondition (projects in test env) is unavailable, rather than failing the test suite. (2026-03-14)
+- **Problem solved:** Timeline verification test needed to run in CI/test env that may not have seed data.
+- **Why this works:** Allows test to run in any environment without blocking CI. The skip is informative and expected, not a test failure.
+- **Trade-offs:** Test runs but provides limited coverage in data-empty environments, but that's acceptable for a component existence/interaction check.

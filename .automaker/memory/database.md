@@ -229,3 +229,8 @@ usageStats:
 - **Rejected:** Direct mutation of service state would be lost on restart; separate DB table fragments settings into multiple places; raw writes might overwrite concurrent updates
 - **Trade-offs:** Safer (respects concurrent updates); slower (full settings fetch → merge → write); couples ceremony state to GlobalSettings schema
 - **Breaking if changed:** If SettingsService.updateGlobalSettings() behavior changes (no longer deep-merges), concurrent updates to other settings will be lost
+
+#### [Pattern] Cycle guard in epicId traversal uses Set(visited) to track seen IDs. If ID revisited, breaks loop and returns null (skipped) (2026-03-14)
+- **Problem solved:** epicId creates parent-child links; data corruption/user error can create cycles (A→B→C→A). Without guard, infinite loop
+- **Why this works:** Defensive against circular data. Graceful degradation (mark as skipped) is safer than hanging or throwing. Typical for graph traversal in untrusted data
+- **Trade-offs:** Easier: robust to bad data. Harder: one Set allocation per feature, extra code

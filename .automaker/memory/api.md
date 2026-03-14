@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 504
-  referenced: 125
-  successfulFeatures: 125
+  loaded: 516
+  referenced: 129
+  successfulFeatures: 129
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -198,3 +198,45 @@ usageStats:
 - **Problem solved:** Need to add ceremony-specific metadata (labels, artifact URLs) to timeline events without fragmenting event type system.
 - **Why this works:** Single TimelineEvent type for all timeline entries. Optional fields make it extensible for future enrichment without creating subtype explosion.
 - **Trade-offs:** TimelineEvent becomes less semantically pure but more pragmatic. UI must handle optional fields, but avoids discriminated union complexity.
+
+#### [Gotcha] Fields with code-level defaults (e.g., empty string) should be marked Optional in API documentation, not Required. Technical optionality (has default) takes precedence over semantic intent (logically important). (2026-03-14)
+- **Situation:** `description` field defaulted to empty string in code but was documented as Required
+- **Root cause:** Documentation documents actual API contract, not developer intent. Readers use Required/Optional to determine if they must provide a value; code defaults override that choice.
+- **How to avoid:** More honest docs are less prescriptive; accepts that optional fields may be important conceptually but aren't enforced
+
+#### [Gotcha] Algorithmic behavior (confidence normalization formula: `rawScore / (rawScore + 10)`) was implemented in ExecutionService but never surfaced in API documentation, making the scoring system behavior opaque to API consumers. (2026-03-14)
+- **Situation:** The `/api/agents/match` endpoint returns a confidence score, but the formula that produces asymptotic confidence values (never reaching 1.0) was code-only knowledge.
+- **Root cause:** Implementation details and mathematical algorithms are often not explicitly translated to API contracts, treating them as internal concerns rather than contractual guarantees.
+- **How to avoid:** Faster implementation (algorithm details are internal) vs. predictable API behavior (users understand confidence ceilings and can reason about scoring).
+
+#### [Pattern] Required reading implementation code (agents.ts, execution-service.ts, feature-scheduler.ts) to discover actual API response schemas because documentation had drifted. This indicates a code-as-source-of-truth pattern rather than docs-first contracts. (2026-03-14)
+- **Problem solved:** Three response schema gaps (missing `confidence`, missing `projectPath`, undocumented `routingSuggestion` shape) were discovered by comparing code output against docs.
+- **Why this works:** API behavior evolves incrementally during feature work; documentation updates are separate tasks, so drift accumulates over time.
+- **Trade-offs:** Faster iteration without doc-first overhead vs. higher confidence that docs match implementation. Currently trading correctness for velocity.
+
+### New optional fields (`projectPath`, `confidence`) were added to existing API responses without explicit versioning or deprecation markers. Clients cannot determine if a field is guaranteed to exist or conditionally added. (2026-03-14)
+- **Context:** The `/api/agents/list` gained `projectPath` and `/api/agents/match` gained `confidence`, but without API versioning (e.g., `/v2/`) or response schema versioning.
+- **Why:** Backwards compatibility is maintained (old clients ignore new fields); requires no migration burden. Pragmatic choice for rapid iteration.
+- **Rejected:** API versioning (`/api/v2/agents/match`) or explicit schema versioning (responses include `_schema: '2024-03'`) would make field presence contracts explicit.
+- **Trade-offs:** Simpler deployment (no versioning overhead) vs. clarity (clients can't know if fields are required or optional without reading code).
+- **Breaking if changed:** Clients using strict schema validation or depending on absence of fields (e.g., `Object.keys() === ['success', 'agent']`) would break silently when fields are added.
+
+#### [Pattern] Response includes 'via' field showing resolution strategy per feature (milestoneSlug, epicMilestoneSlug, alreadySet, or skipped) (2026-03-14)
+- **Problem solved:** Multiple resolution paths exist. Clients/ops need to audit which strategy worked for each feature to debug wrong resolutions
+- **Why this works:** Transparency enables post-hoc validation, debugging, and audit trails. If a feature resolves to wrong project, 'via' immediately shows which strategy was used
+- **Trade-offs:** Easier: debug and audit. Harder: response more verbose; clients must understand multi-strategy logic
+
+#### [Gotcha] `updateProjectSettings(Partial<ProjectSettings>)` does shallow merge, but nested `workflow` object requires deep merge. Manually destructuring and casting `as ProjectSettings['workflow']` is required to preserve sibling properties in agentConfig. (2026-03-14)
+- **Situation:** Attempted direct nested object spread in updateProjectSettings call. TypeScript complained because partial merge doesn't capture full type constraints of nested object.
+- **Root cause:** Shallow merge API is simpler and faster than deep merge, but callers must handle nested updates themselves. Cast signals type safety at the point of merge, not in the API.
+- **How to avoid:** Shallow merge keeps API simple and predictable; callers explicitly control merge depth. Extra destructuring code per nested update.
+
+#### [Pattern] Implemented fallback chain for agent prompt resolution: manifest `promptFile` > settings `rolePromptOverrides` > none. Fallback evaluated at execution time in `loadRolePromptPrefix()`, not at config time. (2026-03-14)
+- **Problem solved:** Unifying two competing systems (manifest-defined prompts, settings-defined overrides) without breaking either source
+- **Why this works:** Manifest has single source of truth; overrides allow runtime customization without code changes. Checking manifest first preserves intent of code; fallback to settings enables local experimentation. Evaluated at execution time allows settings changes without restart.
+- **Trade-offs:** Runtime lookup cost; flexible override capability. Layered precedence may confuse when both exist (which one wins?).
+
+#### [Pattern] UI already sends `projectPath` as a query parameter to the timeline endpoint, enabling the fallback to load features without requiring client-side changes. (2026-03-14)
+- **Problem solved:** Feature implementation discovered UI was already structured correctly.
+- **Why this works:** Indicates the original API design was extensible—endpoint accepted parameters for future use. Enables this fallback to work as a pure backend change.
+- **Trade-offs:** Good forward design at cost of carrying unused parameters early. Paid off here.

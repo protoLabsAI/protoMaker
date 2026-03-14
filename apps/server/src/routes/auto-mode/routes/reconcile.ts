@@ -6,23 +6,34 @@
  * that have no running agent back to backlog.
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import { createLogger } from '@protolabsai/utils';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import type { SettingsService } from '../../../services/settings-service.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
 const logger = createLogger('Reconcile');
 
-interface ReconcileRequest {
-  projectPath?: string;
-}
+const reconcileBodySchema = z.object({
+  projectPath: projectPathSchema.optional(),
+});
 
 export function createReconcileHandler(
   autoModeService: AutoModeService,
   settingsService: SettingsService
 ) {
   return async (req: Request, res: Response): Promise<void> => {
-    const { projectPath } = req.body as ReconcileRequest;
+    const parsed = reconcileBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: parsed.error.issues,
+      });
+      return;
+    }
+    const { projectPath } = parsed.data;
 
     try {
       if (projectPath) {

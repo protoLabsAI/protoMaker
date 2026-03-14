@@ -2,14 +2,31 @@
  * GET / endpoint - List all sessions
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import { AgentService } from '../../../services/agent-service.js';
 import { getErrorMessage, logError } from '../common.js';
 
+const sessionsQuerySchema = z.object({
+  includeArchived: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
+});
+
 export function createIndexHandler(agentService: AgentService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const includeArchived = req.query.includeArchived === 'true';
+      const parsed = sessionsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
+        return;
+      }
+      const includeArchived = parsed.data.includeArchived ?? false;
       const sessionsRaw = await agentService.listSessions(includeArchived);
 
       // Transform to match frontend SessionListItem interface

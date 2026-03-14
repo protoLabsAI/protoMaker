@@ -5,9 +5,9 @@ relevantTo: [storage]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 18
-  referenced: 5
-  successfulFeatures: 5
+  loaded: 22
+  referenced: 6
+  successfulFeatures: 6
 ---
 <!-- domain: Storage Architecture | Feature storage, backup systems, data layout -->
 

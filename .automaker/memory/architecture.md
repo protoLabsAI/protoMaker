@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 467
-  referenced: 81
-  successfulFeatures: 81
+  loaded: 490
+  referenced: 88
+  successfulFeatures: 88
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -729,3 +729,85 @@ usageStats:
 - **Rejected:** Could only store assignedRole without metadata; would lose traceability and confidence signal needed for threshold tuning
 - **Trade-offs:** Adds payload to Feature; enables rich observability and potential future ML feedback loops on assignment quality
 - **Breaking if changed:** Removing metadata would eliminate ability to distinguish high-confidence from low-confidence auto-assignments, making manifest tuning impossible
+
+#### [Pattern] Use documentation guard notes (clarifying disclaimers) to prevent future accidental re-introduction of unimplemented features or configuration options into docs (2026-03-14)
+- **Problem solved:** `manifestPaths` was never in docs and never implemented in code, but could be accidentally documented as a feature later if not explicitly locked
+- **Why this works:** Documentation is the user-facing API contract. Preventing feature drift requires explicit barriers in docs themselves, not just code review or issue tracking.
+- **Trade-offs:** Adds documentation maintenance overhead but ensures users see exactly what's implemented and what isn't; prevents confusion from feature churn
+
+### Backfill route registered directly in routes.ts (not nested in createFeaturesRoutes factory) because projectService dependency is unavailable in the features router factory signature (2026-03-14)
+- **Context:** Endpoint requires projectService to build milestone→project mappings, but the modular features router is created without this dependency
+- **Why:** Avoids expanding createFeaturesRoutes factory surface. Keeps router contract minimal; services that don't own the features domain shouldn't be passed through it
+- **Rejected:** Add projectService to features router factory, but this couples an unrelated service into the features module contract and pollutes the factory signature
+- **Trade-offs:** Easier: features router stays focused. Harder: backfill endpoint lives outside modular structure, requiring explicit knowledge of its location in parent routes.ts
+- **Breaking if changed:** If routes.ts refactored away or projectService API changes, backfill endpoint architecture breaks. Moving the endpoint into features router requires restructuring factory dependencies.
+
+#### [Gotcha] Re-export barrel files don't necessarily export all types from their source packages. Local barrel at `apps/server/src/types/settings.ts` doesn't export `WorkflowSettings`, forcing direct imports from `@protolabsai/types` instead. (2026-03-14)
+- **Situation:** Attempted to use `import('../types/settings.js').WorkflowSettings` in type cast, which failed with 'not exported from file' error
+- **Root cause:** Barrel files are curated re-exports chosen by the barrel maintainer, not exhaustive. Using a barrel creates false expectation that all types from the package are available locally.
+- **How to avoid:** Direct package imports bypass the barrel convenience but guarantee type availability. Adds import scattered across codebase.
+
+#### [Pattern] Retained deprecated `personaOverrides` field in `GlobalSettings` type (with @deprecated JSDoc, optional) during migration rather than deleting it. Ensures old config files load without errors; migration deletes field from disk on first startup. (2026-03-14)
+- **Problem solved:** Moving global feature (personas) to project scope requires one-time data migration without breaking existing installations
+- **Why this works:** Smooth upgrade: old configs load immediately without modification, migration runs silently on next startup, field is gone after first load. Avoids upgrade friction and version compatibility matrix.
+- **Trade-offs:** Temporary type debt (deprecated field in schema) for transparent, automatic migration. Cleanup happens in data, not code.
+
+#### [Pattern] Migration logic placed in `getGlobalSettings()` (startup hook) rather than separate CLI or background job. Reads enabled personas, writes to current project's settings.json, deletes field from global settings in one atomic operation. (2026-03-14)
+- **Problem solved:** One-time migration from global to project scope needs to run exactly once per project, correctly targeting the current project
+- **Why this works:** Guaranteed execution on every startup (idempotent, runs until complete). No separate CLI to run, no background job scheduling, no version tracking. Simplest correctness guarantee.
+- **Trade-offs:** Startup path does extra I/O; guarantees migration happens correctly and automatically. No user action required.
+
+### Implemented exclusive fallback strategy: ledger entries take priority; fallback only fires when ledger returns zero results. Never merge both sources. (2026-03-14)
+- **Context:** Could have synthesized a unified event stream from both ledger + feature metadata, requiring deduplication logic.
+- **Why:** Simplicity and determinism. Ledger is source-of-truth when it has data. Fallback is strictly additive for gaps. No merge conflicts.
+- **Rejected:** Merge strategy combining ledger and feature events with deduplication logic
+- **Trade-offs:** Simpler code/logic vs. incomplete event history if both sources coexist. Assumes ledger backfill won't occur retroactively.
+- **Breaking if changed:** If ledger is retroactively populated with historical entries, fallback events become orphaned. Strategy assumes ledger is populated forward-only after this feature ships.
+
+### Synthetic event IDs use deterministic pattern `${featureId}:created` instead of UUIDs, creating a distinct format from ledger entry IDs (which are UUIDs). (2026-03-14)
+- **Context:** Needed to distinguish synthesized events from real ledger entries and avoid ID collisions.
+- **Why:** Deterministic IDs are regenerable and debuggable. Format prefix (`feature:created` vs UUID) prevents collisions and makes source obvious in logs. Allows safe merging if fallback ever needs to coexist with ledger data.
+- **Rejected:** Using UUIDs for synthetic events (would lose traceability and collision-avoidance semantics)
+- **Trade-offs:** Easier debugging/auditing vs. aesthetic inconsistency with ledger ID format. Requires API clients to handle two ID patterns.
+- **Breaking if changed:** If changed to UUIDs, loses the ledger-vs-synthetic distinction. Deduplication between sources becomes ambiguous.
+
+#### [Pattern] The `featureLoader` dependency was already available in the route factory context (`createProjectsRoutes`), requiring only that it be threaded as a second parameter to the handler factory. (2026-03-14)
+- **Problem solved:** Implementation didn't require building new infrastructure—just wiring existing dependency.
+- **Why this works:** Route factory pattern with dependency injection means new handlers can access dependencies without global state. Smooth integration when extending handlers.
+- **Trade-offs:** Requires parameter threading at call site vs. avoids global state and makes dependencies explicit.
+
+#### [Pattern] Fire-and-forget error handling for cascading side effects: epic auto-completion catches errors and logs as warnings, never blocks the primary feature update flow. (2026-03-14)
+- **Problem solved:** Adding async side effects to a core update operation (feature → epic completion check) without breaking the primary operation if the side effect fails.
+- **Why this works:** Epic completion is a secondary enhancement layered on top of feature updates. Failing the entire operation because epic auto-completion encountered an error would be overreach — the feature update itself was valid. Better to succeed the primary operation and log secondary failures.
+- **Trade-offs:** Feature update always succeeds even if epic fails to auto-complete (better resilience), but epic completion might silently fail and only appear in logs (potential observability gap if logs aren't monitored).
+
+### Reuse existing lifecycle logic (completedAt, status history) for auto-completed epics via the same update() path, rather than special-casing the auto-completion branch. (2026-03-14)
+- **Context:** Epic auto-completion needs to set completedAt timestamp and add a status history entry. The feature update() method already has this lifecycle logic.
+- **Why:** Eliminates duplication and ensures auto-completed epics follow the same lifecycle rules (timestamping, history tracking) as manually-completed epics. Single source of truth for lifecycle behavior.
+- **Rejected:** Direct file writes with custom logic: duplicates lifecycle logic and creates maintenance burden; separate update path for epics: harder to ensure consistency.
+- **Trade-offs:** Less code, auto-completed epics get identical treatment to manual updates (easier to understand), but auto-completion relies on update() lifecycle behavior (creates implicit coupling — lifecycle changes affect auto-completion automatically).
+- **Breaking if changed:** If update() lifecycle logic changes (e.g., how completedAt is set, what history entries are created), auto-completed epics are affected automatically. Requires careful review of lifecycle changes.
+
+### Load all features via getAll() to find epic siblings, accepting O(n) cost per completion event rather than optimizing the query. (2026-03-14)
+- **Context:** Need to check if all children of an epic are done. Could filter the directory listing or build an index, but chose simple getAll().
+- **Why:** getAll() is straightforward, matches existing patterns in the codebase, and works well for current scale. Premature optimization would add complexity without proven need.
+- **Rejected:** Directory filtering: more efficient but requires parallel reads and custom logic; in-memory index: requires cache invalidation logic.
+- **Trade-offs:** Simpler code and consistency with existing queries (easier maintenance), but scales linearly with total feature count (if 1000s of features, each completion triggers 1000s+ loads). Performance optimization is deferred to when needed.
+- **Breaking if changed:** If scale grows to 100k+ features and this becomes a bottleneck, would need to implement directory filtering or indexing — current code assumes getAll() performance is acceptable.
+
+### Three-layer refresh strategy: (1) WebSocket event subscription invalidates React Query cache on specific events, (2) Manual refresh button with 500ms spinner feedback, (3) Auto-poll fallback at 60-second interval. (2026-03-14)
+- **Context:** Timeline must stay fresh with minimal polling load and no stale data, but WebSocket can fail or miss events.
+- **Why:** Layers handle different failure modes: events for normal path (efficient), button for user-perceived staleness (UX control), poll for WebSocket failure recovery (resilience).
+- **Rejected:** Single-layer approach (e.g., only polling or only WebSocket) — would either waste resources or become stale under network degradation.
+- **Trade-offs:** More code/complexity but extremely resilient. User gets instant feedback (button spinner) + automatic background updates (events) + safety net (poll).
+- **Breaking if changed:** Removing any layer breaks a failure scenario: no events = stale until poll; no button = user can't force refresh; no poll = WebSocket outage leaves timeline frozen.
+
+#### [Pattern] Selective event subscription: Only subscribe to `feature:status-changed`, `milestone:completed`, `ceremony:fired`, `pr:merged`, `escalation:signal-received` rather than all events. (2026-03-14)
+- **Problem solved:** Timeline component needed to know when to refresh, but event bus carries many event types that don't affect timeline.
+- **Why this works:** Filtering at subscription level reduces CPU and network overhead. Event processing happens server-side per project, so irrelevant event deliveries are wasted bandwidth.
+- **Trade-offs:** Explicit allowlist is more maintainable and efficient, but requires updating subscription when new timeline-relevant event types are added.
+
+#### [Pattern] useEffect dependency on project ID only, not on subscribeToEvents or cache invalidation functions. Subscription is set up once per project change. (2026-03-14)
+- **Problem solved:** WebSocket subscription needs to be set up when component mounts or project changes, and cleaned up properly.
+- **Why this works:** Minimizes subscription churn. If dependencies included the invalidation function (which changes on every render if defined inline), subscription would be recreated constantly.
+- **Trade-offs:** Requires care: must ensure unsubscribe function is properly returned and called. Fewer subscriptions means better resource efficiency.

@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1435
-  referenced: 343
-  successfulFeatures: 343
+  loaded: 1458
+  referenced: 350
+  successfulFeatures: 350
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -946,3 +946,28 @@ usageStats:
 - **Situation:** Code checks `if (feature.assignedRole) { return }` — if a role exists, matching is skipped completely
 - **Root cause:** Treats assignedRole as a declaration of user intent ('I have chosen'), not as a preference hint. This respects the UX model where users set roles deliberately.
 - **How to avoid:** Current approach respects user autonomy completely; alternative would enable 'smart override' but risks surprising users when match overrides their choice
+
+#### [Gotcha] Diagram notation can implicitly encode assumptions about structure/ordering without explicit clarification. Using `{standard system prompt}` after context files suggested a separate prompt block, when actual implementation treats role prompt → context+memory as an ordered unit. (2026-03-14)
+- **Situation:** Prompt injection diagram in agent-manifests.md showed incorrect logical grouping without clarifying the actual injection order
+- **Root cause:** Visual diagrams use layout/labels to imply relationships but rarely state ordering constraints explicitly. Readers infer structure from position without verifying against code.
+- **How to avoid:** Visual compactness vs. needing explicit prose clarification; code clarity requires explanation in diagrams
+
+#### [Gotcha] Feature.title is optional (title?: string) but BackfillDetail response requires string. Caught at compile time, required ?? '' fallback (2026-03-14)
+- **Situation:** Domain model allows titleless features, but response API assumes all results have displayable titles
+- **Root cause:** Response contract prioritizes strong typing over optional fields for client usability. Fallback prevents type errors and provides graceful degradation
+- **How to avoid:** Easier: type-safe responses. Harder: introduces false data (empty string when feature genuinely lacks title)
+
+#### [Gotcha] UI renders unknown `TimelineEvent.type` values via a catch-all humaniser, so synthetic events with types like `feature:created` (not in the type union) render correctly without UI changes. (2026-03-14)
+- **Situation:** Synthetic events don't match the defined `TimelineEvent.type` union.
+- **Root cause:** The UI has defensive rendering for extensibility. Allows server to emit new event types without UI coordination.
+- **How to avoid:** Server-side extensibility vs. hidden coupling—UI must maintain its catch-all or new event types silently disappear.
+
+#### [Gotcha] Guard against features without epicId: the epic completion check only fires if feature has epicId, preventing false logic on standalone features. (2026-03-14)
+- **Situation:** A feature without epicId is standalone (not part of an epic). The check must skip these to avoid trying to complete a non-existent epic.
+- **Root cause:** Easy oversight: could write logic that treats all features as potential epic children. Explicit guard ensures only child features trigger the epic completion check.
+- **How to avoid:** Explicit check in update() adds one condition, but makes intent clear and prevents wasted epic lookups on standalone features.
+
+#### [Gotcha] File path confusion: Feature description referenced `projects/project-detail.tsx` but actual file is `projects-view/project-detail.tsx`. Both directories co-exist with different purposes. (2026-03-14)
+- **Situation:** Developer working from feature spec found the wrong directory initially, suggesting inconsistent naming convention in the codebase.
+- **Root cause:** The `projects/` dir contains reusable components (like `ProjectTimeline`), while `projects-view/` contains the view that imports them. Name similarity creates ambiguity.
+- **How to avoid:** Clear separation of concerns (component library vs. views) but naming doesn't signal this intent clearly to developers.

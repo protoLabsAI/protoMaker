@@ -3,6 +3,7 @@
  * Supports verifying either CLI auth or API key auth independently
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { createLogger } from '@protolabsai/utils';
@@ -14,6 +15,11 @@ import {
   validateApiKey,
   createTempEnvOverride,
 } from '../../../lib/auth-utils.js';
+
+const verifyClaudeAuthBodySchema = z.object({
+  authMethod: z.enum(['cli', 'api_key']).optional(),
+  apiKey: z.string().optional(),
+});
 
 const logger = createLogger('Setup');
 const rateLimiter = new AuthRateLimiter();
@@ -79,11 +85,18 @@ function containsAuthError(text: string): boolean {
 export function createVerifyClaudeAuthHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      // Get the auth method and optional API key from the request body
-      const { authMethod, apiKey } = req.body as {
-        authMethod?: 'cli' | 'api_key';
-        apiKey?: string;
-      };
+      // Validate and extract auth method and optional API key
+      const parsed = verifyClaudeAuthBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          authenticated: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
+        return;
+      }
+      const { authMethod, apiKey } = parsed.data;
 
       // Rate limiting to prevent abuse
       const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
