@@ -37,6 +37,7 @@ import type {
   EventHookDiscordAction,
   EventSeverity,
 } from '@protolabsai/types';
+import { EVENT_HOOK_SHELL_TIMEOUT_MS, EVENT_HOOK_HTTP_TIMEOUT_MS } from '../config/timeouts.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('EventHooks');
@@ -154,11 +155,11 @@ function classifySeverity(trigger: EventHookTrigger): EventSeverity {
   return 'low';
 }
 
-/** Default timeout for shell commands (30 seconds) */
-const DEFAULT_SHELL_TIMEOUT = 30000;
+/** Default timeout for shell commands — sourced from central config. */
+const DEFAULT_SHELL_TIMEOUT = EVENT_HOOK_SHELL_TIMEOUT_MS;
 
-/** Default timeout for HTTP requests (10 seconds) */
-const DEFAULT_HTTP_TIMEOUT = 10000;
+/** Default timeout for HTTP requests — sourced from central config. */
+const DEFAULT_HTTP_TIMEOUT = EVENT_HOOK_HTTP_TIMEOUT_MS;
 
 /**
  * Context available for variable substitution in hooks

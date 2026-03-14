@@ -33,11 +33,12 @@ import {
   withProcessingGuard,
   type AgentState,
 } from './agent-utils.js';
+import { PROJM_POLL_INTERVAL_MS } from '../../config/timeouts.js';
 
 const logger = createLogger('ProjMAgent');
 
 /** Polling interval for checking planned/approved features and milestone completion */
-const POLL_INTERVAL_MS = 15_000;
+const POLL_INTERVAL_MS = PROJM_POLL_INTERVAL_MS;
 
 /** Model used for milestone planning */
 const PLANNING_MODEL = resolveModelString('sonnet');

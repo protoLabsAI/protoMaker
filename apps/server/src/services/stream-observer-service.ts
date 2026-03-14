@@ -10,12 +10,13 @@
 
 import { createLogger } from '@protolabsai/utils';
 import { createHash } from 'node:crypto';
+import { STREAM_OBSERVER_STALL_TIMEOUT_MS } from '../config/timeouts.js';
 
 const logger = createLogger('StreamObserver');
 
 const LOOP_WINDOW = 8;
 const LOOP_THRESHOLD = 3;
-const STALL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const STALL_TIMEOUT_MS = STREAM_OBSERVER_STALL_TIMEOUT_MS;
 
 /**
  * Tools excluded from loop detection.

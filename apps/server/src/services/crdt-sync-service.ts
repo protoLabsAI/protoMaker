@@ -23,14 +23,20 @@ import type {
 } from '@protolabsai/types';
 import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
+import {
+  CRDT_HEARTBEAT_MS,
+  CRDT_TTL_MS,
+  CRDT_RECONNECT_INTERVAL_MS,
+  CRDT_TTL_CHECK_INTERVAL_MS,
+} from '../config/timeouts.js';
 
 const logger = createLogger('CrdtSyncService');
 
-const DEFAULT_HEARTBEAT_MS = 30_000;
-const DEFAULT_TTL_MS = 120_000;
+const DEFAULT_HEARTBEAT_MS = CRDT_HEARTBEAT_MS;
+const DEFAULT_TTL_MS = CRDT_TTL_MS;
 const DEFAULT_SYNC_PORT = 4444;
-const RECONNECT_INTERVAL_MS = 5_000;
-const TTL_CHECK_INTERVAL_MS = 10_000;
+const RECONNECT_INTERVAL_MS = CRDT_RECONNECT_INTERVAL_MS;
+const TTL_CHECK_INTERVAL_MS = CRDT_TTL_CHECK_INTERVAL_MS;
 
 interface PeerMessage {
   type: 'heartbeat' | 'goodbye' | 'identity' | 'promote';
