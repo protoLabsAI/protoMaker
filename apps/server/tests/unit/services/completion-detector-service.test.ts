@@ -701,6 +701,175 @@ describe('CompletionDetectorService', () => {
     });
   });
 
+  describe('projectSlug and milestoneSlug guards', () => {
+    it('should NOT emit milestone:completed when feature is missing projectSlug', async () => {
+      // feature has milestoneSlug but NO projectSlug — completion detector skips milestone check
+      const feature = createTestFeature({
+        id: 'f1',
+        status: 'done',
+        // intentionally NO projectSlug
+        milestoneSlug: 'ms-1',
+      });
+
+      const milestone = createTestMilestone({
+        slug: 'ms-1',
+        phases: [
+          {
+            number: 1,
+            name: 'p1',
+            title: 'Phase 1',
+            description: '',
+            featureId: 'f1',
+            complexity: 'small',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'Test Project',
+        slug: 'proj',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      featureLoader = createMockFeatureLoader([feature]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'f1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // milestone:completed should NOT fire — projectSlug is required
+      expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
+    });
+
+    it('should NOT emit milestone:completed when feature is missing milestoneSlug', async () => {
+      // feature has projectSlug but NO milestoneSlug — completion detector skips milestone check
+      const feature = createTestFeature({
+        id: 'f1',
+        status: 'done',
+        projectSlug: 'proj',
+        // intentionally NO milestoneSlug
+      });
+
+      const milestone = createTestMilestone({
+        slug: 'ms-1',
+        phases: [
+          {
+            number: 1,
+            name: 'p1',
+            title: 'Phase 1',
+            description: '',
+            featureId: 'f1',
+            complexity: 'small',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'Test Project',
+        slug: 'proj',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      featureLoader = createMockFeatureLoader([feature]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'f1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // milestone:completed should NOT fire — milestoneSlug is required
+      expect(events.emit).not.toHaveBeenCalledWith('milestone:completed', expect.anything());
+    });
+
+    it('full flow: feature with projectSlug marked done fires milestone:completed', async () => {
+      // Canonical end-to-end test verifying the guard passes when both projectSlug
+      // and milestoneSlug are present and all milestone features are done.
+      const feature1 = createTestFeature({
+        id: 'feat-a',
+        status: 'done',
+        projectSlug: 'my-project',
+        milestoneSlug: 'launch',
+      });
+      const feature2 = createTestFeature({
+        id: 'feat-b',
+        status: 'done',
+        projectSlug: 'my-project',
+        milestoneSlug: 'launch',
+      });
+
+      const milestone = createTestMilestone({
+        slug: 'launch',
+        title: 'Launch Milestone',
+        phases: [
+          {
+            number: 1,
+            name: 'feat-a',
+            title: 'Feature A',
+            description: '',
+            featureId: 'feat-a',
+            complexity: 'small',
+          },
+          {
+            number: 2,
+            name: 'feat-b',
+            title: 'Feature B',
+            description: '',
+            featureId: 'feat-b',
+            complexity: 'medium',
+          },
+        ],
+      });
+
+      const project: Partial<Project> = {
+        title: 'My Project',
+        slug: 'my-project',
+        status: 'active',
+        milestones: [milestone],
+      };
+
+      featureLoader = createMockFeatureLoader([feature1, feature2]);
+      projectService = createMockProjectService(project as Project);
+      service.initialize(events as any, featureLoader as any, projectService as any);
+
+      // feat-a moves to done — both features are now done, milestone should complete
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'feat-a',
+        previousStatus: 'in_progress',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Full flow verified: milestone:completed fires with correct shape
+      expect(events.emit).toHaveBeenCalledWith(
+        'milestone:completed',
+        expect.objectContaining({
+          projectPath: '/test/path',
+          projectTitle: 'My Project',
+          projectSlug: 'my-project',
+          milestoneSlug: 'launch',
+          milestoneTitle: 'Launch Milestone',
+        })
+      );
+    });
+  });
+
   describe('areMilestonePhasesDone guard', () => {
     it('should return false for empty phases', async () => {
       const feature1 = createTestFeature({
