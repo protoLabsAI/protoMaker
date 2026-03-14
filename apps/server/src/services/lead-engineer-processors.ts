@@ -8,7 +8,7 @@
 import { createLogger } from '@protolabsai/utils';
 import { resolveModelString, DEFAULT_MODELS } from '@protolabsai/model-resolver';
 import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
-import type { AgentRole, Feature } from '@protolabsai/types';
+import type { AgentRole, Feature, StructuredPlan } from '@protolabsai/types';
 import { getWorkflowSettings, getPhaseModelWithOverrides } from '../lib/settings-helpers.js';
 import { simpleQuery } from '../providers/simple-query-service.js';
 import type {
@@ -257,6 +257,18 @@ Keep it focused and actionable. If the feature description is too vague or uncle
       ctx.planOutput = `Feature: ${feature.title}\n\n${feature.description || 'Implement as described.'}`;
     }
 
+    // Attempt to generate a structured plan in parallel with validation
+    ctx.structuredPlan = (await this.generateStructuredPlan(ctx)) ?? undefined;
+    if (ctx.structuredPlan) {
+      logger.info('[PLAN] Structured plan generated successfully', {
+        featureId: feature.id,
+        taskCount: ctx.structuredPlan.tasks.length,
+        criteriaCount: ctx.structuredPlan.acceptanceCriteria.length,
+      });
+    } else {
+      logger.info('[PLAN] Structured plan generation failed or skipped — using freeform fallback');
+    }
+
     // Validate plan quality
     const gateResult = this.validatePlan(ctx);
 
@@ -436,6 +448,103 @@ Minor suggestions don't warrant rejection — only reject for issues that would 
       };
     }
 
+    // Validate structured plan fields if present
+    if (ctx.structuredPlan) {
+      if (!ctx.structuredPlan.goal || ctx.structuredPlan.goal.trim().length === 0) {
+        return { approved: false, shouldRetry: true, reason: 'Structured plan missing goal' };
+      }
+      if (!ctx.structuredPlan.tasks || ctx.structuredPlan.tasks.length === 0) {
+        return {
+          approved: false,
+          shouldRetry: true,
+          reason: 'Structured plan has no tasks',
+        };
+      }
+      if (
+        !ctx.structuredPlan.acceptanceCriteria ||
+        ctx.structuredPlan.acceptanceCriteria.length === 0
+      ) {
+        return {
+          approved: false,
+          shouldRetry: true,
+          reason: 'Structured plan has no acceptance criteria',
+        };
+      }
+    }
+
     return { approved: true, shouldRetry: false };
+  }
+
+  /**
+   * Attempt to generate a structured JSON plan from the feature description.
+   * Returns null on failure — callers fall back to the freeform planOutput.
+   */
+  private async generateStructuredPlan(ctx: StateContext): Promise<StructuredPlan | null> {
+    const { feature } = ctx;
+    try {
+      const result = await simpleQuery({
+        prompt: `Generate a structured implementation plan for this software feature.
+
+**Title:** ${feature.title || 'Untitled'}
+**Description:** ${feature.description || 'No description provided'}
+**Complexity:** ${feature.complexity || 'medium'}
+
+Return ONLY valid JSON matching this exact schema (no markdown, no explanation):
+{
+  "goal": "<one sentence describing the feature goal>",
+  "acceptanceCriteria": [
+    { "description": "<what must be true>", "verifyCommand": "<optional shell command>" }
+  ],
+  "tasks": [
+    {
+      "title": "<short task title>",
+      "description": "<what to do>",
+      "files": ["<file path>"],
+      "verifyCommand": "<optional shell command>"
+    }
+  ],
+  "deviationRules": [
+    { "condition": "<when this situation arises>", "action": "<what to do instead>" }
+  ]
+}
+
+Requirements:
+- goal: single clear sentence
+- acceptanceCriteria: at least 1 entry, each with a description
+- tasks: at least 1 entry, each with title, description, and files array
+- deviationRules: 0 or more entries (can be empty array)
+- verifyCommand fields are optional but encouraged when a shell check is obvious`,
+        model: resolveModelString('haiku'),
+        cwd: ctx.projectPath,
+        systemPrompt:
+          'You are a senior software engineer. Respond with only valid JSON. No markdown code fences, no explanation text.',
+        maxTurns: 1,
+        allowedTools: [],
+      });
+
+      const text = result.text.trim();
+      // Strip any accidental markdown fences
+      const jsonText = text.startsWith('```')
+        ? text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+        : text;
+
+      const parsed = JSON.parse(jsonText) as StructuredPlan;
+
+      // Basic shape validation before accepting
+      if (
+        typeof parsed.goal !== 'string' ||
+        !Array.isArray(parsed.acceptanceCriteria) ||
+        !Array.isArray(parsed.tasks) ||
+        !Array.isArray(parsed.deviationRules)
+      ) {
+        logger.warn('[PLAN] Structured plan JSON has unexpected shape — discarding');
+        return null;
+      }
+
+      return parsed;
+    } catch (err) {
+      logger.info('[PLAN] Could not generate structured plan, falling back to freeform', err);
+      return null;
+    }
   }
 }

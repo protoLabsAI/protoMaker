@@ -4,7 +4,7 @@
  * All types shared across the lead-engineer subsystem files.
  */
 
-import type { Feature, AgentRole } from '@protolabsai/types';
+import type { Feature, AgentRole, StructuredPlan } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import type { AutoModeService } from './auto-mode-service.js';
@@ -149,6 +149,8 @@ export interface StateContext {
   projectKnowledge?: string;
   /** ISO 8601 timestamp when processing started */
   startedAt?: string;
+  /** Structured plan produced by PlanProcessor, if parsing succeeded */
+  structuredPlan?: StructuredPlan;
 }
 
 /**
