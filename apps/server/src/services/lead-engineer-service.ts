@@ -637,6 +637,15 @@ export class LeadEngineerService {
 
         if (prData.state !== 'MERGED') continue;
 
+        // Skip if already handled (e.g., by ReviewProcessor or MergeProcessor)
+        const currentFeature = await this.featureLoader.get(projectPath, feature.id);
+        if (currentFeature?.status === 'done') {
+          logger.debug(
+            `[PRMergePoller] Feature "${feature.id}" already done, skipping duplicate processing`
+          );
+          continue;
+        }
+
         const prMergedAt = prData.mergedAt ?? new Date().toISOString();
 
         logger.info(

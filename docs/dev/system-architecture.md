@@ -2,7 +2,7 @@
 
 The complete runtime architecture of protoLabs Studio -- from signal entry through feature completion, with all timing, concurrency, and self-healing behaviors documented.
 
-This is the canonical reference for how the system works at runtime. For the design rationale, see [Engine Architecture](../archived/engine-architecture.md). For the 9-phase pipeline abstraction, see [Idea to Production](./idea-to-production.md).
+This is the canonical reference for how the system works at runtime. For the design rationale, see [Engine Architecture](../archived/engine-architecture.md). For the 8-phase pipeline abstraction, see [Idea to Production](./idea-to-production.md).
 
 ## System Diagram
 
@@ -504,6 +504,11 @@ Auto-mode:
   auto-mode:started -> auto_mode_feature_start ->
   auto_mode_feature_complete -> auto-mode:stopped | auto-mode:idle
 
+  Note: TypedEventBus performs dual emission for auto_mode_* events — each event
+  is emitted both as an 'auto-mode:event' envelope (for WebSocket streaming) and
+  as a direct type (e.g. auto_mode_stopped → 'auto-mode:stopped') for internal
+  subscribers such as Lead Engineer fast-path rules.
+
 Escalation:
   escalation:signal-received -> escalation:acknowledged
 ```
@@ -733,7 +738,7 @@ Services are wired in strict order via 15 register modules in `server/wiring.ts`
 
 ## Related Documentation
 
-- [Idea to Production](./idea-to-production.md) -- 9-phase pipeline abstraction
+- [Idea to Production](./idea-to-production.md) -- 8-phase pipeline abstraction
 - [Lead Engineer Pipeline](./lead-engineer-pipeline.md) -- Detailed processor logic (INTAKE, PLAN, EXECUTE)
 - [Project Lifecycle](./project-lifecycle.md) -- Project-level state machine
 - [Engine Architecture](../archived/engine-architecture.md) -- Design rationale ADR

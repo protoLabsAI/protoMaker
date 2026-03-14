@@ -8,7 +8,7 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createLogger } from '@protolabsai/utils';
-import type { EventType } from '@protolabsai/types';
+import type { EventType, PRMergeStrategy } from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -442,14 +442,15 @@ export class MergeProcessor implements StateProcessor {
       };
     }
 
+    // Resolve merge strategy: promotion PRs always use --merge
+    const mergeFlag = await this.resolveMergeFlag(ctx);
+
     logger.info(
-      `[MERGE] Attempting to merge PR #${ctx.prNumber} (attempt ${ctx.mergeRetryCount + 1}/${MAX_MERGE_RETRIES})`
+      `[MERGE] Attempting to merge PR #${ctx.prNumber} with ${mergeFlag} (attempt ${ctx.mergeRetryCount + 1}/${MAX_MERGE_RETRIES})`
     );
 
     try {
-      // Use --squash without --auto: we're in MERGE state after REVIEW approved,
-      // so checks should have passed. This ensures merge completes immediately.
-      await execAsync(`gh pr merge ${ctx.prNumber} --squash`, {
+      await execAsync(`gh pr merge ${ctx.prNumber} ${mergeFlag}`, {
         cwd: ctx.projectPath,
         timeout: 60000,
       });
@@ -527,5 +528,54 @@ export class MergeProcessor implements StateProcessor {
 
   async exit(_ctx: StateContext): Promise<void> {
     logger.info('[MERGE] Merge completed');
+  }
+
+  /**
+   * Resolve the gh CLI merge flag based on workflow settings and PR base branch.
+   * Promotion PRs (base is staging or main) always use --merge regardless of setting.
+   */
+  private async resolveMergeFlag(ctx: StateContext): Promise<string> {
+    // Check if this is a promotion PR — those must always use --merge
+    if (ctx.prNumber) {
+      try {
+        const { stdout } = await execAsync(
+          `gh pr view ${ctx.prNumber} --json baseRefName --jq '.baseRefName'`,
+          { cwd: ctx.projectPath, timeout: 15000 }
+        );
+        const baseBranch = stdout.trim();
+        if (baseBranch === 'staging' || baseBranch === 'main') {
+          logger.info(
+            `[MERGE] PR #${ctx.prNumber} targets ${baseBranch} — forcing --merge strategy`
+          );
+          return '--merge';
+        }
+      } catch (err) {
+        logger.warn(
+          '[MERGE] Failed to detect PR base branch, falling back to configured strategy:',
+          err
+        );
+      }
+    }
+
+    // Read prMergeStrategy from global settings
+    let strategy: PRMergeStrategy = 'squash';
+    if (this.serviceContext.settingsService) {
+      try {
+        const globalSettings = await this.serviceContext.settingsService.getGlobalSettings();
+        strategy = globalSettings.gitWorkflow?.prMergeStrategy ?? 'squash';
+      } catch (err) {
+        logger.warn(
+          '[MERGE] Failed to read global settings for merge strategy, defaulting to squash:',
+          err
+        );
+      }
+    }
+
+    const flagMap: Record<PRMergeStrategy, string> = {
+      squash: '--squash',
+      merge: '--merge',
+      rebase: '--rebase',
+    };
+    return flagMap[strategy] ?? '--squash';
   }
 }

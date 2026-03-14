@@ -92,13 +92,24 @@ function makeServiceContext(
 
 /**
  * Sets up the exec mock to simulate:
- *   1st call (gh pr merge): succeeds
- *   2nd call (gh pr view --json merged): returns `mergeResult`
+ *   1st call (gh pr view --json baseRefName): returns 'dev' (non-promotion branch)
+ *   2nd call (gh pr merge): succeeds
+ *   3rd call (gh pr view --json merged): returns `mergeResult`
  */
 function setupExecMock(mergeResult: string) {
   mockExec.mockReset();
   mockExec
-    // First call: gh pr merge
+    // First call: gh pr view --json baseRefName (promotion check)
+    .mockImplementationOnce(
+      (
+        _cmd: string,
+        _opts: unknown,
+        cb: (err: null, result: { stdout: string; stderr: string }) => void
+      ) => {
+        cb(null, { stdout: 'dev\n', stderr: '' });
+      }
+    )
+    // Second call: gh pr merge
     .mockImplementationOnce(
       (
         _cmd: string,
@@ -108,7 +119,7 @@ function setupExecMock(mergeResult: string) {
         cb(null, { stdout: '', stderr: '' });
       }
     )
-    // Second call: gh pr view --json merged
+    // Third call: gh pr view --json merged
     .mockImplementationOnce(
       (
         _cmd: string,

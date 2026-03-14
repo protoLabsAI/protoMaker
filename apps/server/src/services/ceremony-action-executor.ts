@@ -2,16 +2,13 @@
  * CeremonyActionExecutor — Processes retro completion events and generates structured actions.
  *
  * Subscribes to ceremony:fired events for milestone_retro and project_retro.
- * For each retro, uses Haiku to classify retro items into three action types:
+ * For each retro, uses Haiku to classify retro items into two action types:
  *
  * 1. context-update: Learning that mentions a pattern/convention →
  *    append new rule to .automaker/context/<slug>.md
  *
- * 2. improvement-feature: couldImprove item →
+ * 2. improvement-feature: couldImprove item or unresolved challenge →
  *    create backlog feature in the project with retro attribution
- *
- * 3. gate-tuning: Challenge with no resolution →
- *    emit gate:tuning-signal event for LeadEngineerRules to consume
  */
 
 import path from 'path';
@@ -41,7 +38,7 @@ interface CeremonyFiredPayload {
 // Classification types
 // ---------------------------------------------------------------------------
 
-type ActionType = 'context-update' | 'improvement-feature' | 'gate-tuning' | 'none';
+type ActionType = 'context-update' | 'improvement-feature' | 'none';
 
 interface ClassifiedItem {
   actionType: ActionType;
@@ -52,8 +49,6 @@ interface ClassifiedItem {
   rule?: string;
   /** For improvement-feature: formatted feature title */
   featureTitle?: string;
-  /** For gate-tuning: the signal description */
-  signalDescription?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,17 +60,15 @@ Given a retro item (a learning, improvement suggestion, or unresolved challenge)
 
 Action types:
 - context-update: The item mentions a pattern, convention, or rule that agents should follow. Extract the rule and a short context filename slug (e.g. "testing-patterns", "api-conventions").
-- improvement-feature: The item describes something that could be improved in the system or process. Extract a concise feature title (max 80 chars).
-- gate-tuning: The item is an unresolved challenge with no clear resolution — something that may need retry limit or escalation threshold changes. Extract a short signal description.
+- improvement-feature: The item describes something that could be improved in the system or process, or is an unresolved challenge that warrants follow-up work. Extract a concise feature title (max 80 chars).
 - none: The item does not clearly fit any of the above.
 
 Respond with ONLY valid JSON (no markdown, no code fences):
 {
-  "actionType": "<context-update|improvement-feature|gate-tuning|none>",
+  "actionType": "<context-update|improvement-feature|none>",
   "contextFile": "<slug-only, if context-update, else null>",
   "rule": "<rule text to append, if context-update, else null>",
-  "featureTitle": "<feature title, if improvement-feature, else null>",
-  "signalDescription": "<signal description, if gate-tuning, else null>"
+  "featureTitle": "<feature title, if improvement-feature, else null>"
 }`;
 
 // ---------------------------------------------------------------------------
@@ -105,7 +98,6 @@ async function classifyItem(anthropic: Anthropic, item: string): Promise<Classif
       contextFile?: string | null;
       rule?: string | null;
       featureTitle?: string | null;
-      signalDescription?: string | null;
     };
 
     return {
@@ -114,7 +106,6 @@ async function classifyItem(anthropic: Anthropic, item: string): Promise<Classif
       contextFile: parsed.contextFile ?? undefined,
       rule: parsed.rule ?? undefined,
       featureTitle: parsed.featureTitle ?? undefined,
-      signalDescription: parsed.signalDescription ?? undefined,
     };
   } catch (err) {
     logger.warn(
@@ -191,7 +182,7 @@ async function createImprovementFeature(
 /**
  * Extract classifiable text items from either MilestoneUpdateData or ProjectRetroData.
  * For unresolved challenges, prefixes the text with "UNRESOLVED:" so the classifier
- * can detect gate-tuning candidates.
+ * can identify them as improvement-feature candidates.
  */
 function extractItems(data: MilestoneUpdateData | ProjectRetroData): string[] {
   const items: string[] = [];
@@ -212,7 +203,7 @@ function extractItems(data: MilestoneUpdateData | ProjectRetroData): string[] {
       items.push(l);
     }
     for (const ch of milestone.challenges ?? []) {
-      // Challenges with no (or empty) resolution are gate-tuning candidates
+      // Challenges with no (or empty) resolution are improvement-feature candidates
       const text = ch.resolution?.trim() ? ch.challenge : `UNRESOLVED: ${ch.challenge}`;
       items.push(text);
     }

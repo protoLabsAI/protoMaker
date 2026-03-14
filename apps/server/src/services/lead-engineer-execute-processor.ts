@@ -867,7 +867,7 @@ export class ExecuteProcessor implements StateProcessor {
     // ── (b) Error budget ──────────────────────────────────────────────────────
     try {
       const { ErrorBudgetService } = await import('./error-budget-service.js');
-      const errorBudget = new ErrorBudgetService(projectPath, {
+      const errorBudget = new ErrorBudgetService(projectPath, null, {
         windowDays: errorBudgetWindowDays,
         threshold: errorBudgetThreshold,
       });

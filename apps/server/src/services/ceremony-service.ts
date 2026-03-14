@@ -16,7 +16,7 @@ import { createLogger } from '@protolabsai/utils';
 import { secureFs, getProjectDir, getDataDirectory, getAutomakerDir } from '@protolabsai/platform';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { createStandupFlow, createRetroFlow, createProjectRetroFlow } from '@protolabsai/flows';
-import type { CeremonyState } from '@protolabsai/types';
+import type { CeremonyState, MilestoneUpdateData, ProjectRetroData } from '@protolabsai/types';
 import { flowRegistry } from './automation-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { SettingsService } from './settings-service.js';
@@ -87,6 +87,7 @@ interface CeremonyFiredPayload {
   projectPath: string;
   milestoneSlug?: string;
   remainingMilestones?: number;
+  retroData?: MilestoneUpdateData | ProjectRetroData;
 }
 
 // ---------------------------------------------------------------------------
@@ -702,7 +703,7 @@ export class CeremonyService {
         projectTitle,
         discordChannelId,
       });
-      await flow.invoke({});
+      const retroResult = await flow.invoke({});
 
       // Persist ceremony report artifact
       void projectArtifactService
@@ -747,11 +748,43 @@ export class CeremonyService {
           summary: `Milestone ${milestoneNumber} retro for ${projectTitle}`,
         },
       });
+      // Calculate remaining milestones for state machine transition
+      let remainingMilestones = 0;
+      if (this.projectService) {
+        try {
+          const project = await this.projectService.getProject(projectPath, projectSlug);
+          const totalMilestones = project?.milestones?.length ?? milestoneNumber;
+          remainingMilestones = Math.max(0, totalMilestones - milestoneNumber);
+        } catch {
+          remainingMilestones = 0;
+        }
+      }
+
+      // Build retroData from flow result for CeremonyActionExecutor
+      const retroData: MilestoneUpdateData = {
+        milestoneId: milestoneSlug,
+        milestoneName: milestoneTitle,
+        projectId: projectSlug,
+        projectName: projectTitle,
+        completedAt: new Date().toISOString(),
+        accomplishments: (retroResult.features ?? [])
+          .filter((f) => f.status === 'done')
+          .map((f) => (f.title as string | undefined) || 'Untitled feature'),
+        learnings: retroResult.retroContent ? [retroResult.retroContent] : [],
+        metrics: {
+          shippedCount: retroResult.shippedCount ?? 0,
+          totalCostUsd: retroResult.totalCostUsd ?? 0,
+          failureCount: retroResult.failureCount ?? 0,
+        },
+      };
+
       this.emitter?.emit('ceremony:fired', {
         type: 'milestone_retro',
         projectSlug,
         milestoneSlug,
         projectPath,
+        remainingMilestones,
+        retroData,
       });
     } catch (err) {
       this.ceremonyCounts.discordPostFailures++;
@@ -936,7 +969,7 @@ export class CeremonyService {
         totalFeatures: payload.totalFeatures,
         discordChannelId,
       });
-      await flow.invoke({});
+      const projectRetroResult = await flow.invoke({});
 
       // Persist ceremony report artifact
       void projectArtifactService
@@ -988,7 +1021,30 @@ export class CeremonyService {
           summary: `${payload.totalMilestones} milestones, ${payload.totalFeatures} features`,
         },
       });
-      this.emitter?.emit('ceremony:fired', { type: 'project_retro', projectSlug, projectPath });
+      // Build retroData from flow result for CeremonyActionExecutor
+      const projectRetroData: ProjectRetroData = {
+        projectId: projectSlug,
+        projectName: projectTitle,
+        completedAt: new Date().toISOString(),
+        outcomes: projectRetroResult.retroDoc ? [projectRetroResult.retroDoc] : [],
+        wentWell: [],
+        couldImprove: [],
+        learnings: [],
+        metrics: {
+          totalMilestones: payload.totalMilestones,
+          totalFeatures: payload.totalFeatures,
+          totalCostUsd: payload.totalCostUsd,
+          failureCount: payload.failureCount,
+          shippedCount: projectRetroResult.shippedCount ?? 0,
+        },
+      };
+
+      this.emitter?.emit('ceremony:fired', {
+        type: 'project_retro',
+        projectSlug,
+        projectPath,
+        retroData: projectRetroData,
+      });
     } catch (err) {
       this.ceremonyCounts.discordPostFailures++;
       logger.warn(`Project retro flow failed: ${err instanceof Error ? err.message : String(err)}`);

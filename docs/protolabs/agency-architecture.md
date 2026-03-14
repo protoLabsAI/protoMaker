@@ -72,7 +72,7 @@ graph TB
 
 ## Pipeline
 
-For the complete 9-phase pipeline reference (TRIAGE through PUBLISH), see [Idea to Production](../dev/idea-to-production.md).
+For the complete 8-phase pipeline reference (TRIAGE through PUBLISH), see [Idea to Production](../dev/idea-to-production.md).
 
 ## Operations + Engineering Split
 

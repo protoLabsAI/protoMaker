@@ -539,60 +539,6 @@ export const hitlFormResponse: LeadFastPathRule = {
 };
 
 /**
- * rollbackTriggered — Feature in DONE/DEPLOY with health degradation signal → escalate.
- * Fires when the health monitor or DORA metrics emits a degradation signal for a
- * recently-deployed feature. Calls rollback logic and transitions feature to ESCALATE.
- */
-export const rollbackTriggered: LeadFastPathRule = {
-  name: 'rollbackTriggered',
-  description:
-    'Feature in done/deploy with health degradation signal → move to escalate for rollback',
-  triggers: ['feature:health-degraded', 'health:signal'],
-
-  evaluate(worldState, _eventType, payload): LeadRuleAction[] {
-    const event = payload as Record<string, unknown> | null;
-    if (!event) return [];
-
-    const featureId = event.featureId as string | undefined;
-    if (!featureId) return [];
-
-    const feature = worldState.features[featureId];
-    if (!feature) return [];
-
-    // Only trigger for features that have been deployed (done or deploy status)
-    if (feature.status !== 'done' && feature.status !== 'deploy') return [];
-
-    // Feature must have a merged PR to be rollbackable
-    if (!feature.prMergedAt || !feature.prNumber) return [];
-
-    return [
-      {
-        type: 'update_feature',
-        featureId,
-        updates: {
-          statusChangeReason: `Health degradation detected after deploy — rollback triggered for PR #${feature.prNumber}`,
-        },
-      },
-      {
-        type: 'move_feature',
-        featureId,
-        toStatus: 'blocked',
-      },
-      {
-        type: 'log',
-        level: 'warn',
-        message: `rollbackTriggered: feature ${featureId} (PR #${feature.prNumber}) escalated due to health degradation signal`,
-      },
-      {
-        type: 'escalate_llm',
-        reason: `Health degradation detected for deployed feature ${featureId} (PR #${feature.prNumber}). Rollback required.`,
-        context: { featureId, prNumber: feature.prNumber, prMergedAt: feature.prMergedAt },
-      },
-    ];
-  },
-};
-
-/**
  * missingCIChecks — PR waiting >30min for required CI checks that have never registered.
  * Surfaces a diagnostic warning with the missing check names and a suggested cause
  * (e.g., a CI workflow configured to only trigger on PRs targeting a different base branch).
@@ -769,7 +715,6 @@ export const DEFAULT_RULES: LeadFastPathRule[] = [
   classifiedRecovery,
   hitlFormResponse,
   missingCIChecks,
-  rollbackTriggered,
   reviewQueueSaturated,
   errorBudgetExhausted,
 ];
