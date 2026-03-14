@@ -809,9 +809,12 @@ describe('ExecutionService - match rule auto-assign', () => {
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
     mockMatchFeature.mockResolvedValue({
-      name: 'frontend-dev',
-      extends: 'developer',
-      description: 'Frontend specialist',
+      agent: {
+        name: 'frontend-dev',
+        extends: 'developer',
+        description: 'Frontend specialist',
+      },
+      confidence: 1.0,
     });
 
     await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
@@ -838,9 +841,12 @@ describe('ExecutionService - match rule auto-assign', () => {
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
     mockMatchFeature.mockResolvedValue({
-      name: 'backend-dev',
-      extends: 'developer',
-      description: 'Backend specialist',
+      agent: {
+        name: 'backend-dev',
+        extends: 'developer',
+        description: 'Backend specialist',
+      },
+      confidence: 0.8,
     });
 
     await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
@@ -861,9 +867,12 @@ describe('ExecutionService - match rule auto-assign', () => {
     const svc = makeService(callbacks, featureLoader, makeRecoveryService());
 
     mockMatchFeature.mockResolvedValue({
-      name: 'server-dev',
-      extends: 'developer',
-      description: 'Server specialist',
+      agent: {
+        name: 'server-dev',
+        extends: 'developer',
+        description: 'Server specialist',
+      },
+      confidence: 0.9,
     });
 
     await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
