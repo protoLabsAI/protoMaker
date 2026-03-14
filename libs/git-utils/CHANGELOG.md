@@ -1,5 +1,53 @@
 # @protolabsai/git-utils
 
+## 0.56.0
+
+### Minor Changes
+
+- ### Features
+  - always-on docs viewer with editable markdown and project settings
+  - always-on docs viewer with editable markdown and project settings
+
+  ### Bug Fixes
+  - auto-create epic-to-dev PRs when all child features complete
+  - auto-create epic-to-dev PRs when all child features complete
+  - use mergedAt instead of merged field in ReviewProcessor external merge check (#2517)
+  - use mergedAt instead of merged field in ReviewProcessor external merge check (#2517)
+  - use mergedAt instead of merged field in ReviewProcessor external merge check (#2517)
+  - use mergedAt instead of merged field in ReviewProcessor external merge check (#2517)
+
+  ### Refactors
+  - Deviation Rule Engine (#2522)
+  - Context Metrics and Warning System (#2521)
+  - Update docs after: GSD Pattern Adoption (#2520)
+  - Post-Execution Goal Verification (#2518)
+  - Auto-create epic branches when approve_project_prd creates epics (#2514)
+  - Types + Structured Plan Generator (#2513)
+  - Deviation Rule Engine (#2522)
+  - Context Metrics and Warning System (#2521)
+  - Update docs after: GSD Pattern Adoption (#2520)
+  - Post-Execution Goal Verification (#2518)
+  - Auto-create epic branches when approve_project_prd creates epics (#2514)
+  - Types + Structured Plan Generator (#2513)
+  - Deviation Rule Engine (#2522)
+  - Context Metrics and Warning System (#2521)
+  - Update docs after: GSD Pattern Adoption (#2520)
+  - Post-Execution Goal Verification (#2518)
+  - Auto-create epic branches when approve_project_prd creates epics (#2514)
+  - Types + Structured Plan Generator (#2513)
+  - Deviation Rule Engine (#2522)
+  - Context Metrics and Warning System (#2521)
+  - Update docs after: GSD Pattern Adoption (#2520)
+  - Post-Execution Goal Verification (#2518)
+  - Auto-create epic branches when approve_project_prd creates epics (#2514)
+  - Types + Structured Plan Generator (#2513)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.56.0
+  - @protolabsai/utils@0.56.0
+
 ## 0.55.1
 
 ### Patch Changes
