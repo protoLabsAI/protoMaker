@@ -8,6 +8,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock node:child_process before importing the service so execFile is intercepted
+const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
+vi.mock('node:child_process', () => ({
+  execFile: mockExecFile,
+}));
+
 import { CompletionDetectorService } from '@/services/completion-detector-service.js';
 import type { Feature, Milestone, Project } from '@protolabsai/types';
 import type { EventType } from '@protolabsai/types';
@@ -174,6 +181,82 @@ describe('CompletionDetectorService', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(featureLoader.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createEpicToDevPR shell safety', () => {
+    beforeEach(() => {
+      mockExecFile.mockReset();
+    });
+
+    it('passes epic title with special characters as a separate arg without shell evaluation', async () => {
+      const dangerousTitle = 'Epic $(rm -rf /) `malicious` and \\backslash';
+
+      // promisify(execFile) without [util.promisify.custom] captures the first non-error
+      // callback arg as the resolved value, so pass { stdout, stderr } as that arg.
+      type ExecFileCb = (err: null, result: { stdout: string; stderr: string }) => void;
+
+      // gh pr list → no existing PR
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: '[]', stderr: '' });
+        }
+      );
+      // gh pr create → returns PR URL
+      mockExecFile.mockImplementationOnce(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: 'https://github.com/org/repo/pull/42', stderr: '' });
+        }
+      );
+      // gh pr merge (auto-merge) → success
+      mockExecFile.mockImplementation(
+        (_cmd: string, _args: string[], _opts: object, cb: ExecFileCb) => {
+          cb(null, { stdout: '', stderr: '' });
+        }
+      );
+
+      const epic = createTestFeature({
+        id: 'epic-1',
+        title: dangerousTitle,
+        status: 'in_progress',
+        isEpic: true,
+        branchName: 'epic/test-branch',
+      });
+      const child = createTestFeature({ id: 'child-1', epicId: 'epic-1', status: 'done' });
+
+      featureLoader = createMockFeatureLoader([epic, child]);
+      service.initialize(events as any, featureLoader as any, projectService as any);
+
+      events._fire('feature:status-changed', {
+        projectPath: '/test/path',
+        featureId: 'child-1',
+        previousStatus: 'review',
+        newStatus: 'done',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Find the gh pr create call
+      const createCall = mockExecFile.mock.calls.find(
+        (c: unknown[]) =>
+          c[0] === 'gh' && Array.isArray(c[1]) && (c[1] as string[]).includes('create')
+      );
+      expect(createCall).toBeDefined();
+
+      const args = createCall![1] as string[];
+      const titleIndex = args.indexOf('--title');
+      expect(titleIndex).toBeGreaterThan(-1);
+
+      // Title is passed as a separate argument — shell metacharacters are literal
+      expect(args[titleIndex + 1]).toBe(`epic: ${dangerousTitle}`);
+      expect(args[titleIndex + 1]).toContain('$(rm -rf /)');
+      expect(args[titleIndex + 1]).toContain('`malicious`');
+      expect(args[titleIndex + 1]).toContain('\\backslash');
+
+      // Body is also a separate argument — no escaping needed
+      const bodyIndex = args.indexOf('--body');
+      expect(bodyIndex).toBeGreaterThan(-1);
+      expect(args[bodyIndex + 1]).toContain(dangerousTitle);
     });
   });
 

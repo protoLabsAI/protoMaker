@@ -377,6 +377,112 @@ describe('feature-loader.ts', () => {
 
       await expect(loader.update(testProjectPath, 'feature-123', {})).rejects.toThrow('not found');
     });
+
+    it('concurrent updates for the same feature are serialized — no fields lost', async () => {
+      // Simulate a real read-modify-write scenario: each update reads the latest
+      // persisted state so both fields end up in the final write.
+      let persisted: Record<string, unknown> = {
+        id: 'feature-123',
+        category: 'ui',
+        description: 'original',
+        fieldA: null,
+        fieldB: null,
+      };
+
+      vi.mocked(fs.readFile).mockImplementation(async (p: any) => {
+        if (String(p).endsWith('feature.json')) return JSON.stringify(persisted);
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+
+      vi.mocked(fs.writeFile).mockImplementation(async (_p: any, data: any) => {
+        persisted = JSON.parse(String(data));
+      });
+
+      // Fire both updates concurrently — without the mutex only one field would survive
+      await Promise.all([
+        loader.update(testProjectPath, 'feature-123', { title: 'fieldA-value' } as any),
+        loader.update(testProjectPath, 'feature-123', { description: 'fieldB-value' }),
+      ]);
+
+      // Both fields must be present in the final persisted state
+      expect(persisted.title).toBe('fieldA-value');
+      expect(persisted.description).toBe('fieldB-value');
+    });
+  });
+
+  describe('claim', () => {
+    it('two simultaneous claims — only one succeeds', async () => {
+      let persisted: Record<string, unknown> = {
+        id: 'feature-xyz',
+        category: 'ui',
+        description: 'test',
+        claimedBy: undefined,
+      };
+
+      vi.mocked(fs.readFile).mockImplementation(async (p: any) => {
+        if (String(p).endsWith('feature.json')) return JSON.stringify(persisted);
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+
+      vi.mocked(fs.writeFile).mockImplementation(async (_p: any, data: any) => {
+        persisted = JSON.parse(String(data));
+      });
+
+      const [r1, r2] = await Promise.all([
+        loader.claim(testProjectPath, 'feature-xyz', 'instance-A'),
+        loader.claim(testProjectPath, 'feature-xyz', 'instance-B'),
+      ]);
+
+      // Exactly one claim must succeed
+      const successCount = [r1, r2].filter(Boolean).length;
+      expect(successCount).toBe(1);
+
+      // The persisted claimedBy must be one of the two instances (not undefined)
+      expect(['instance-A', 'instance-B']).toContain(persisted.claimedBy);
+    });
+
+    it('same instance can re-claim its own feature', async () => {
+      let persisted: Record<string, unknown> = {
+        id: 'feature-xyz',
+        category: 'ui',
+        description: 'test',
+        claimedBy: 'instance-A',
+      };
+
+      vi.mocked(fs.readFile).mockImplementation(async (p: any) => {
+        if (String(p).endsWith('feature.json')) return JSON.stringify(persisted);
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+
+      vi.mocked(fs.writeFile).mockImplementation(async (_p: any, data: any) => {
+        persisted = JSON.parse(String(data));
+      });
+
+      const result = await loader.claim(testProjectPath, 'feature-xyz', 'instance-A');
+      expect(result).toBe(true);
+    });
+
+    it('different instance cannot claim an already-claimed feature', async () => {
+      let persisted: Record<string, unknown> = {
+        id: 'feature-xyz',
+        category: 'ui',
+        description: 'test',
+        claimedBy: 'instance-A',
+      };
+
+      vi.mocked(fs.readFile).mockImplementation(async (p: any) => {
+        if (String(p).endsWith('feature.json')) return JSON.stringify(persisted);
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      });
+
+      vi.mocked(fs.writeFile).mockImplementation(async (_p: any, data: any) => {
+        persisted = JSON.parse(String(data));
+      });
+
+      const result = await loader.claim(testProjectPath, 'feature-xyz', 'instance-B');
+      expect(result).toBe(false);
+      expect(persisted.claimedBy).toBe('instance-A');
+    });
   });
 
   describe('delete', () => {

@@ -8,12 +8,13 @@
  * Only resolves threads created by bots - human review threads are left untouched.
  */
 
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
 import { createGitExecEnv } from '@protolabsai/git-utils';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('CodeRabbitResolver');
 
 const execEnv = createGitExecEnv();
@@ -66,6 +67,35 @@ export interface ResolveThreadsResult {
 }
 
 export class CodeRabbitResolverService {
+  /**
+   * Parse GitHub owner and repo name from a repo string or git remote URL
+   */
+  private async parseOwnerRepo(
+    workDir: string,
+    repo?: string
+  ): Promise<{ owner: string; repoName: string }> {
+    if (repo) {
+      const [owner, repoName] = repo.split('/');
+      return { owner, repoName };
+    }
+
+    const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
+      cwd: workDir,
+      env: execEnv,
+    });
+
+    const remoteUrl = remoteOutput.trim();
+    const match =
+      remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
+      remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
+
+    if (!match) {
+      throw new Error(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
+    }
+
+    return { owner: match[1], repoName: match[2] };
+  }
+
   /**
    * Check if gh CLI is available
    */
@@ -123,30 +153,7 @@ export class CodeRabbitResolverService {
     repo?: string
   ): Promise<ReviewThread[]> {
     try {
-      // Extract owner/repo from the repo parameter or from git remote
-      let owner: string;
-      let repoName: string;
-
-      if (repo) {
-        [owner, repoName] = repo.split('/');
-      } else {
-        // Get from git remote
-        const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
-          cwd: workDir,
-          env: execEnv,
-        });
-
-        const remoteUrl = remoteOutput.trim();
-        const match =
-          remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
-          remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
-
-        if (!match) {
-          throw new Error(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
-        }
-
-        [, owner, repoName] = match;
-      }
+      const { owner, repoName } = await this.parseOwnerRepo(workDir, repo);
 
       // Query review threads using GraphQL
       const query = `
@@ -172,7 +179,7 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      const { stdout } = await execAsync(`gh api graphql -f query='${query.replace(/\n/g, ' ')}'`, {
+      const { stdout } = await execFileAsync('gh', ['api', 'graphql', '-f', `query=${query}`], {
         cwd: workDir,
         env: execEnv,
       });
@@ -230,7 +237,7 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      await execAsync(`gh api graphql -f query='${mutation.replace(/\n/g, ' ')}'`, {
+      await execFileAsync('gh', ['api', 'graphql', '-f', `query=${mutation}`], {
         env: execEnv,
       });
 
@@ -256,11 +263,13 @@ export class CodeRabbitResolverService {
   ): Promise<boolean> {
     try {
       // First, post the reply comment
+      // Use JSON.stringify slice to produce correct GraphQL string escaping
+      const escapedBody = JSON.stringify(body).slice(1, -1);
       const addReplyMutation = `
         mutation {
           addPullRequestReviewThreadReply(input: {
             pullRequestReviewThreadId: "${threadId}",
-            body: "${body.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"
+            body: "${escapedBody}"
           }) {
             comment {
               id
@@ -269,7 +278,7 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      await execAsync(`gh api graphql -f query='${addReplyMutation.replace(/\n/g, ' ')}'`, {
+      await execFileAsync('gh', ['api', 'graphql', '-f', `query=${addReplyMutation}`], {
         env: execEnv,
       });
 
@@ -298,30 +307,7 @@ export class CodeRabbitResolverService {
    */
   async getPullRequestId(workDir: string, prNumber: number, repo?: string): Promise<string | null> {
     try {
-      // Extract owner/repo from the repo parameter or from git remote
-      let owner: string;
-      let repoName: string;
-
-      if (repo) {
-        [owner, repoName] = repo.split('/');
-      } else {
-        // Get from git remote
-        const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
-          cwd: workDir,
-          env: execEnv,
-        });
-
-        const remoteUrl = remoteOutput.trim();
-        const match =
-          remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
-          remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
-
-        if (!match) {
-          throw new Error(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
-        }
-
-        [, owner, repoName] = match;
-      }
+      const { owner, repoName } = await this.parseOwnerRepo(workDir, repo);
 
       // Query for PR node ID
       const query = `
@@ -334,7 +320,7 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      const { stdout } = await execAsync(`gh api graphql -f query='${query.replace(/\n/g, ' ')}'`, {
+      const { stdout } = await execFileAsync('gh', ['api', 'graphql', '-f', `query=${query}`], {
         cwd: workDir,
         env: execEnv,
       });
