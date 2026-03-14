@@ -315,7 +315,9 @@ export class PeerMeshService {
     if (this.projectName) {
       logger.info(`[PeerMesh] Project name: ${this.projectName}`);
     } else {
-      logger.warn('[PeerMesh] No project name in proto.config.yaml — cross-project filtering disabled');
+      logger.warn(
+        '[PeerMesh] No project name in proto.config.yaml — cross-project filtering disabled'
+      );
     }
 
     const protolab = protoConfig?.['protolab'] as
@@ -640,7 +642,9 @@ export class PeerMeshService {
         if (!this.started) return;
         if (!this.partitionSince) {
           this.partitionSince = new Date().toISOString();
-          logger.warn(`[PeerMesh] Primary unreachable — partition detected at ${this.partitionSince}`);
+          logger.warn(
+            `[PeerMesh] Primary unreachable — partition detected at ${this.partitionSince}`
+          );
         }
         this._startReconnectLoop(url);
       });
@@ -709,7 +713,9 @@ export class PeerMeshService {
           this.outboundQueue = [];
         }
         if (this.partitionSince) {
-          logger.info(`[PeerMesh] Partition cleared — was disconnected since ${this.partitionSince}`);
+          logger.info(
+            `[PeerMesh] Partition cleared — was disconnected since ${this.partitionSince}`
+          );
           this.partitionSince = null;
           // Emit audit event so feature loader can reconcile dual-claimed features
           if (this._eventBus) {
@@ -788,7 +794,9 @@ export class PeerMeshService {
       return;
     }
 
-    logger.info(`[PeerMesh] Primary unreachable and no higher-priority peers — promoting to primary`);
+    logger.info(
+      `[PeerMesh] Primary unreachable and no higher-priority peers — promoting to primary`
+    );
     this.promotionPending = true;
 
     if (this.reconnectTimer) {
