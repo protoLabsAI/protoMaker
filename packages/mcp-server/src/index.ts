@@ -1944,7 +1944,6 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return { success: true, handoff: latest };
     }
 
-
     // Knowledge Store
     case 'knowledge_search':
       return apiCall('/knowledge/search', {
