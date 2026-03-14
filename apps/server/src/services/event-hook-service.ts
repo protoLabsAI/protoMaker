@@ -816,6 +816,13 @@ export class EventHookService {
     const channelId = this.substituteVariables(action.channelId, context);
     const message = this.substituteVariables(action.message, context);
 
+    if (!message || !message.trim()) {
+      logger.warn(
+        `Discord hook "${hookName}" skipped: message is empty after variable substitution`
+      );
+      return;
+    }
+
     logger.info(`Executing Discord hook "${hookName}" to channel ${channelId}`);
 
     try {

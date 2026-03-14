@@ -1491,6 +1491,11 @@ export class DiscordBotService {
   async sendToChannel(channelId: string, content: string): Promise<boolean> {
     if (!this.client) return false;
 
+    if (!content || !content.trim()) {
+      logger.warn(`sendToChannel called with empty content for channel ${channelId} — skipping`);
+      return false;
+    }
+
     try {
       const channel = (await this.client.channels.fetch(channelId)) as TextChannel;
       if (!channel?.isTextBased()) return false;
