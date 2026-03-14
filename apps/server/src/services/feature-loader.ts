@@ -758,8 +758,64 @@ export class FeatureLoader implements FeatureStore {
       });
     }
 
+    // Auto-complete epic when all child features reach 'done'
+    if (updates.status === 'done' && updatedFeature.epicId) {
+      await this.checkAndAutoCompleteEpic(projectPath, updatedFeature.epicId).catch((err) =>
+        logger.warn(`Epic auto-completion check failed for epic ${updatedFeature.epicId}:`, err)
+      );
+    }
+
     logger.info(`Updated feature ${featureId}`);
     return updatedFeature;
+  }
+
+  /**
+   * Check if all child features of an epic are done, and if so, auto-complete the epic.
+   * Called after any feature transitions to 'done' status.
+   *
+   * @param projectPath - Path to the project
+   * @param epicId - ID of the parent epic to check
+   */
+  private async checkAndAutoCompleteEpic(projectPath: string, epicId: string): Promise<void> {
+    // Get the epic itself
+    const epic = await this.get(projectPath, epicId);
+    if (!epic) {
+      logger.warn(`Epic ${epicId} not found, skipping auto-completion`);
+      return;
+    }
+
+    // Skip if epic is already done
+    if (epic.status === 'done') {
+      return;
+    }
+
+    // Get all features for this project
+    const allFeatures = await this.getAll(projectPath);
+
+    // Find all child features that belong to this epic
+    const childFeatures = allFeatures.filter((f) => f.epicId === epicId);
+
+    if (childFeatures.length === 0) {
+      // No children — don't auto-complete (epic might be freshly created)
+      return;
+    }
+
+    // Check if all children are done
+    const allDone = childFeatures.every((f) => f.status === 'done');
+
+    if (!allDone) {
+      return;
+    }
+
+    // All children are done — auto-complete the epic
+    logger.info(
+      `Auto-completing epic ${epicId} — all ${childFeatures.length} child features are done`
+    );
+
+    await this.update(projectPath, epicId, {
+      status: 'done',
+      statusChangeReason: 'All child features completed',
+    });
   }
 
   /**
