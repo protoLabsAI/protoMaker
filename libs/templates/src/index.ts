@@ -46,3 +46,7 @@ export { getCodingRules } from './coding-rules.js';
 
 // CI templates
 export { getDocsCI, getExtensionCI } from './ci.js';
+
+// Design tokens
+export { getDesignTokensCss, getDesignTokensThemeBlock, designTokens } from './design-tokens.js';
+export type { DesignTokens } from './design-tokens.js';
