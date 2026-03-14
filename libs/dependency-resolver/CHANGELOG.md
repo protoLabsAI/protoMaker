@@ -1,5 +1,72 @@
 # @protolabsai/dependency-resolver
 
+## 0.54.0
+
+### Minor Changes
+
+- ### Features
+  - add WebSocket auto-refresh and manual refresh button to project timeline (#2467)
+  - auto-complete epics when all child features are done (#2466)
+  - fall back to feature metadata when ledger is empty (#2464)
+  - unify agent prompt overrides — move personaOverrides to project-level agentConfig (#2462)
+  - POST /api/features/backfill-project-slug migration endpoint (#2459)
+  - normalize matchFeature confidence using diminishing-returns score (#2450)
+  - add \_builtIn to ProjectAgent type and remove unsafe casts (#2449)
+  - add WebSocket auto-refresh and manual refresh button to project timeline (#2467)
+  - auto-complete epics when all child features are done (#2466)
+  - fall back to feature metadata when ledger is empty (#2464)
+  - unify agent prompt overrides — move personaOverrides to project-level agentConfig (#2462)
+  - POST /api/features/backfill-project-slug migration endpoint (#2459)
+  - normalize matchFeature confidence using diminishing-returns score (#2450)
+  - add \_builtIn to ProjectAgent type and remove unsafe casts (#2449)
+
+  ### Bug Fixes
+  - add Traefik routing for docs.protolabs.studio (502 fix)
+  - event listener leak, unguarded promise, and backoff overflow safety
+  - align test mocks with MatchResult interface for auto-assign tests
+  - replace fs.watch recursive with mtime polling in AgentManifestService (#2453)
+  - eliminate double-counting in FeatureScheduler concurrency check (#2451)
+  - dispose AgentManifestService on graceful shutdown (#2447)
+  - return capabilities for built-in roles in /api/agents/get (#2446)
+  - guard LeadEngineerSessionStore against missing sessions property
+  - auto-assignment sequencing and manifest-aware model resolution
+  - remove 9 dead links from VitePress docs
+  - add Traefik routing for docs.protolabs.studio (502 fix)
+  - event listener leak, unguarded promise, and backoff overflow safety
+  - align test mocks with MatchResult interface for auto-assign tests
+  - replace fs.watch recursive with mtime polling in AgentManifestService (#2453)
+  - eliminate double-counting in FeatureScheduler concurrency check (#2451)
+  - dispose AgentManifestService on graceful shutdown (#2447)
+  - return capabilities for built-in roles in /api/agents/get (#2446)
+  - guard LeadEngineerSessionStore against missing sessions property
+  - auto-assignment sequencing and manifest-aware model resolution
+  - remove 9 dead links from VitePress docs
+
+  ### Refactors
+  - Update docs after: Project Pipeline Unification (#2468)
+  - Verify completion detector with projectSlug (#2465)
+  - Fix Discord bot sending empty messages to #dev channel (#2463)
+  - Backfill projectSlug on existing ledger entries (#2461)
+  - Enrich feature events with projectSlug at emission (#2460)
+  - Wire projectSlug auto-assignment into FeatureLoader.create (#2457)
+  - Add route tests for /api/agents endpoints (#2455)
+  - remove dead manifestPaths field from AgentConfig (#2454)
+  - Add auto-assignment to pipeline execution path (#2448)
+  - Update docs after: Project Pipeline Unification (#2468)
+  - Verify completion detector with projectSlug (#2465)
+  - Fix Discord bot sending empty messages to #dev channel (#2463)
+  - Backfill projectSlug on existing ledger entries (#2461)
+  - Enrich feature events with projectSlug at emission (#2460)
+  - Wire projectSlug auto-assignment into FeatureLoader.create (#2457)
+  - Add route tests for /api/agents endpoints (#2455)
+  - remove dead manifestPaths field from AgentConfig (#2454)
+  - Add auto-assignment to pipeline execution path (#2448)
+
+### Patch Changes
+
+- Updated dependencies
+  - @protolabsai/types@0.54.0
+
 ## 0.53.0
 
 ### Minor Changes
