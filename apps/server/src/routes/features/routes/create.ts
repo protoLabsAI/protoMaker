@@ -3,6 +3,7 @@
  */
 
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import type { Feature } from '@protolabsai/types';
@@ -10,6 +11,14 @@ import { getErrorMessage, logError } from '../common.js';
 import { TrustTierService } from '../../../services/trust-tier-service.js';
 import { QuarantineService } from '../../../services/quarantine-service.js';
 import type { QuarantineStage, SanitizationViolation } from '@protolabsai/types';
+
+export const CreateRequestSchema = z.object({
+  projectPath: z.string().min(1, 'projectPath is required'),
+  feature: z.custom<Partial<Feature>>(
+    (val): val is Partial<Feature> => val !== null && typeof val === 'object',
+    'feature must be an object'
+  ),
+});
 
 /**
  * Determine the feature source from request headers and authentication method
@@ -43,18 +52,7 @@ export function createCreateHandler(
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, feature } = req.body as {
-        projectPath: string;
-        feature: Partial<Feature>;
-      };
-
-      if (!projectPath || !feature) {
-        res.status(400).json({
-          success: false,
-          error: 'projectPath and feature are required',
-        });
-        return;
-      }
+      const { projectPath, feature }: z.infer<typeof CreateRequestSchema> = req.body;
 
       // Validate that feature has a description (title is optional — UI auto-generates it)
       if (!feature.description) {

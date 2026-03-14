@@ -8,19 +8,20 @@ import type { SettingsService } from '../../services/settings-service.js';
 import type { AuthorityService } from '../../services/authority-service.js';
 import type { EventEmitter } from '../../lib/events.js';
 import { validatePathParams } from '../../middleware/validate-paths.js';
+import { validateBody } from '../../middleware/validate-body.js';
 import { createListHandler } from './routes/list.js';
 import { createGetHandler } from './routes/get.js';
-import { createCreateHandler } from './routes/create.js';
-import { createUpdateHandler } from './routes/update.js';
-import { createBulkUpdateHandler } from './routes/bulk-update.js';
-import { createBulkDeleteHandler } from './routes/bulk-delete.js';
-import { createDeleteHandler } from './routes/delete.js';
+import { createCreateHandler, CreateRequestSchema } from './routes/create.js';
+import { createUpdateHandler, UpdateRequestSchema } from './routes/update.js';
+import { createBulkUpdateHandler, BulkUpdateRequestSchema } from './routes/bulk-update.js';
+import { createBulkDeleteHandler, BulkDeleteRequestSchema } from './routes/bulk-delete.js';
+import { createDeleteHandler, DeleteRequestSchema } from './routes/delete.js';
 import { createAgentOutputHandler, createRawOutputHandler } from './routes/agent-output.js';
 import { createGenerateTitleHandler } from './routes/generate-title.js';
 import { createHealthHandler } from './routes/health.js';
 import { createAssignAgentHandler } from './routes/assign-agent.js';
 import { createSummaryHandler } from './routes/summary.js';
-import { createRollbackHandler } from './routes/rollback.js';
+import { createRollbackHandler, RollbackRequestSchema } from './routes/rollback.js';
 import type { FeatureHealthService } from '../../services/feature-health-service.js';
 import type { TrustTierService } from '../../services/trust-tier-service.js';
 
@@ -39,26 +40,31 @@ export function createFeaturesRoutes(
   router.post(
     '/create',
     validatePathParams('projectPath'),
+    validateBody(CreateRequestSchema),
     createCreateHandler(featureLoader, trustTierService, events)
   );
   router.post(
     '/update',
     validatePathParams('projectPath'),
+    validateBody(UpdateRequestSchema),
     createUpdateHandler(featureLoader, settingsService, authorityService, healthService, events)
   );
   router.post(
     '/bulk-update',
     validatePathParams('projectPath'),
+    validateBody(BulkUpdateRequestSchema),
     createBulkUpdateHandler(featureLoader)
   );
   router.post(
     '/bulk-delete',
     validatePathParams('projectPath'),
+    validateBody(BulkDeleteRequestSchema),
     createBulkDeleteHandler(featureLoader, events)
   );
   router.post(
     '/delete',
     validatePathParams('projectPath'),
+    validateBody(DeleteRequestSchema),
     createDeleteHandler(featureLoader, events)
   );
   router.post(
@@ -79,7 +85,12 @@ export function createFeaturesRoutes(
     router.post('/health', validatePathParams('projectPath'), createHealthHandler(healthService));
   }
 
-  router.post('/rollback', validatePathParams('projectPath'), createRollbackHandler(featureLoader));
+  router.post(
+    '/rollback',
+    validatePathParams('projectPath'),
+    validateBody(RollbackRequestSchema),
+    createRollbackHandler(featureLoader)
+  );
 
   return router;
 }

@@ -3,15 +3,20 @@
  */
 
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import type { Feature } from '@protolabsai/types';
 import { getErrorMessage, logError } from '../common.js';
 
-interface BulkUpdateRequest {
-  projectPath: string;
-  featureIds: string[];
-  updates: Partial<Feature>;
-}
+export const BulkUpdateRequestSchema = z.object({
+  projectPath: z.string().min(1, 'projectPath is required'),
+  featureIds: z.array(z.string()).min(1, 'featureIds must be a non-empty array'),
+  updates: z.custom<Partial<Feature>>(
+    (val): val is Partial<Feature> =>
+      val !== null && typeof val === 'object' && Object.keys(val as object).length > 0,
+    'updates must be a non-empty object'
+  ),
+});
 
 interface BulkUpdateResult {
   featureId: string;
@@ -22,23 +27,8 @@ interface BulkUpdateResult {
 export function createBulkUpdateHandler(featureLoader: FeatureLoader) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, featureIds, updates } = req.body as BulkUpdateRequest;
-
-      if (!projectPath || !featureIds || !Array.isArray(featureIds) || featureIds.length === 0) {
-        res.status(400).json({
-          success: false,
-          error: 'projectPath and featureIds (non-empty array) are required',
-        });
-        return;
-      }
-
-      if (!updates || Object.keys(updates).length === 0) {
-        res.status(400).json({
-          success: false,
-          error: 'updates object with at least one field is required',
-        });
-        return;
-      }
+      const { projectPath, featureIds, updates }: z.infer<typeof BulkUpdateRequestSchema> =
+        req.body;
 
       const results: BulkUpdateResult[] = [];
       const updatedFeatures: Feature[] = [];
