@@ -149,22 +149,22 @@ workIntake:
 
 ### Key fields
 
-| Field                          | Description                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------------- |
-| `protolab.role`                | `primary` starts a WebSocket server; `worker` connects as a client                      |
-| `protolab.syncPort`            | Port the sync WebSocket server listens on (primary) or the port used in peer URLs       |
-| `protolab.instanceId`          | Unique identifier for this instance (used in CRDT attribution, heartbeats, Ava Channel) |
-| `protolab.instanceUrl`         | This instance's WebSocket URL (how other peers can reach it)                            |
-| `instance.name`                | Human-readable display name for this instance                                           |
-| `instance.role`                | Work focus: `fullstack`, `frontend`, `backend`, `infra`, `docs`, `qa`                   |
-| `instance.tags`                | Additional capability tags beyond the primary role                                      |
-| `hivemind.enabled`             | Enable the sync mesh (default: false for single-instance mode)                          |
-| `hivemind.peers`               | Ordered list of all peer URLs. Index 0 is highest priority for leader election          |
-| `hivemind.heartbeatIntervalMs` | How often heartbeats are sent (default: 30000)                                          |
-| `hivemind.peerTtlMs`           | How long before an unresponsive peer is marked offline (default: 120000)                |
-| `workIntake.enabled`           | Enable pull-based phase claiming from shared projects (default: true)                   |
-| `workIntake.tickIntervalMs`    | How often to check for claimable phases (default: 30000)                                |
-| `workIntake.claimTimeoutMs`    | Timeout before a stale claim becomes reclaimable (default: 1800000 / 30min)             |
+| Field                          | Description                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------- |
+| `protolab.role`                | `primary` starts a WebSocket server; `worker` connects as a client                 |
+| `protolab.syncPort`            | Port the sync WebSocket server listens on (primary) or the port used in peer URLs  |
+| `protolab.instanceId`          | Unique identifier for this instance (used in peer mesh attribution and heartbeats) |
+| `protolab.instanceUrl`         | This instance's WebSocket URL (how other peers can reach it)                       |
+| `instance.name`                | Human-readable display name for this instance                                      |
+| `instance.role`                | Work focus: `fullstack`, `frontend`, `backend`, `infra`, `docs`, `qa`              |
+| `instance.tags`                | Additional capability tags beyond the primary role                                 |
+| `hivemind.enabled`             | Enable the sync mesh (default: false for single-instance mode)                     |
+| `hivemind.peers`               | Ordered list of all peer URLs. Index 0 is highest priority for leader election     |
+| `hivemind.heartbeatIntervalMs` | How often heartbeats are sent (default: 30000)                                     |
+| `hivemind.peerTtlMs`           | How long before an unresponsive peer is marked offline (default: 120000)           |
+| `workIntake.enabled`           | Enable pull-based phase claiming from shared projects (default: true)              |
+| `workIntake.tickIntervalMs`    | How often to check for claimable phases (default: 30000)                           |
+| `workIntake.claimTimeoutMs`    | Timeout before a stale claim becomes reclaimable (default: 1800000 / 30min)        |
 
 ### Docker deployment
 
@@ -176,7 +176,7 @@ services:
     image: automaker-server
     ports:
       - '${API_PORT:-3008}:3008'
-      - '${SYNC_PORT:-4444}:4444' # CRDT sync WebSocket
+      - '${SYNC_PORT:-4444}:4444' # Peer mesh sync WebSocket
     volumes:
       - ./proto.config.yaml:/app/proto.config.yaml:ro
       - ./data:/data
@@ -281,7 +281,7 @@ When taking an instance out of the mesh for maintenance or upgrade:
 
 ## Path Remapping
 
-Each instance may have its project at a different filesystem path (e.g. `/Users/dev/project` on macOS vs `/home/deploy/project` in Docker). When a remote project event arrives, `crdt-sync.module.ts` remaps the `projectPath` in the payload to the local `repoRoot` before persisting. This ensures project data is written to the correct local directory regardless of the originating instance's path layout.
+Each instance may have its project at a different filesystem path (e.g. `/Users/dev/project` on macOS vs `/home/deploy/project` in Docker). When a remote project event arrives, the peer mesh module remaps the `projectPath` in the payload to the local `repoRoot` before persisting. This ensures project data is written to the correct local directory regardless of the originating instance's path layout.
 
 ## Work Intake Protocol
 
@@ -289,13 +289,13 @@ Work distribution uses a **pull-based intake model**. Each instance independentl
 
 The `WorkIntakeService` runs on a configurable tick when auto-mode is active. Each tick:
 
-1. Reads shared project docs (local Automerge replica)
+1. Reads shared project docs (synced via peer mesh)
 2. Finds claimable phases (unclaimed, deps satisfied, role affinity matches)
 3. Claims phases by writing to the shared project doc
 4. Creates **local** features from claimed phases
 5. On completion, updates phase `executionStatus` in the shared doc
 
-Phase claims use Automerge LWW for conflict resolution. If two instances race to claim the same phase, the loser detects `claimedBy !== myId` on verification read and backs off.
+Phase claims use a claim-and-verify protocol for conflict resolution. If two instances race to claim the same phase, the loser detects `claimedBy !== myId` on verification read and backs off.
 
 See [distributed-sync.md](../dev/distributed-sync.md) for the full protocol details, pure functions, and instance role descriptions.
 
@@ -318,7 +318,7 @@ done
 
 1. Identify the intended primary (check `proto.config.yaml` on each host -- index 0 in `peers` is canonical primary).
 2. Restart the instance that incorrectly promoted to primary. It will reconnect as a worker.
-3. CRDT state will automatically reconcile on reconnect -- Automerge CRDTs are merge-safe.
+3. Peer mesh state will automatically reconcile on reconnect -- events are replayed from the reconnecting peer.
 
 ### Stuck Peers
 

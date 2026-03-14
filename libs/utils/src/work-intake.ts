@@ -153,7 +153,7 @@ export function getClaimablePhases(
 // ---------------------------------------------------------------------------
 
 /**
- * Verify that a claim is still held by this instance after Automerge merge.
+ * Verify that a claim is still held by this instance after sync merge.
  * Returns true if the phase's claimedBy matches instanceId.
  */
 export function holdsClaim(phase: Phase, instanceId: string): boolean {

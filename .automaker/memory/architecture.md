@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 520
-  referenced: 94
-  successfulFeatures: 94
+  loaded: 494
+  referenced: 91
+  successfulFeatures: 91
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -812,83 +812,75 @@ usageStats:
 - **Why this works:** Minimizes subscription churn. If dependencies included the invalidation function (which changes on every render if defined inline), subscription would be recreated constantly.
 - **Trade-offs:** Requires care: must ensure unsubscribe function is properly returned and called. Fewer subscriptions means better resource efficiency.
 
-#### [Pattern] CRDT layer implemented as fire-and-forget secondary write on top of disk primary store. Removal had zero data durability impact, indicating CRDT was used for distributed mesh sync only, not critical persistence. (2026-03-14)
-- **Problem solved:** Removed dual-write to CRDT without requiring data migration or schema reconciliation
-- **Why this works:** Disk is sufficient as source of truth; CRDT likely served only mesh distribution/replication concerns
-- **Trade-offs:** Simpler code and deployment vs loss of distributed mesh sync capability; reduced infrastructure footprint vs centralization risk
+### Re-export timeout constants from lead-engineer-types.ts rather than moving all consumer imports to centralized config module (2026-03-14)
+- **Context:** Centralizing timeouts while REVIEW_PENDING_TIMEOUT_MS already had env var support via IIFE in lead-engineer-types.ts, and this file is a public API surface for downstream consumers
+- **Why:** Avoids touching all downstream consumers of lead-engineer-types, preserves existing public API contract, reduces scope of refactor
+- **Rejected:** Complete migration: move all consumers directly to timeouts.ts (would require changes across codebase, higher risk)
+- **Trade-offs:** Adds re-export indirection layer vs cleaner module boundaries; easier adoption vs slightly obfuscated origin
+- **Breaking if changed:** If re-exports removed, all code importing from lead-engineer-types loses access to these constants; if re-export points differ from actual consumer imports, circular references or duplicate definitions
 
-#### [Gotcha] Optional infrastructure parameter (store?: CRDTStore) in factory function created call-site coupling: routes.ts had to be updated even though notes/* changes were internal. (2026-03-14)
-- **Situation:** Dropping store parameter from createNotesRoutes() factory required updating the aggregator that calls it
-- **Root cause:** Dependency injection leaks implementation detail up the call stack; optional parameters still bind callers to knowledge of that parameter
-- **How to avoid:** Explicit DI is clearer than service locator, but creates brittle coupling to optional dependencies
+#### [Gotcha] lead-engineer-types.ts functions as de facto public API hub beyond just type definitions (2026-03-14)
+- **Situation:** File named for types but discovered to be re-exporting runtime constants that external services depend on
+- **Root cause:** Evolved module scope not reflected in module name; historical accumulation of exports without architectural refactoring
+- **How to avoid:** Clear naming vs pragmatic public API; architectural purity vs stability
 
-#### [Pattern] Dual-write removal required zero data migration, suggesting CRDT was a write-only sink—written to but never queried by main API. Dead write code path persisted until removal. (2026-03-14)
-- **Problem solved:** Six call sites calling saveWorkspaceWithCrdt() removed cleanly without data reconciliation step
-- **Why this works:** If clients read from CRDT, removing the write would cause divergence requiring migration; zero migration suggests CRDT wasn't a read path
-- **Trade-offs:** Cleaner removal now vs potential regret if mesh-sync is needed later and CRDT path must be rebuilt
+#### [Pattern] Centralized config module where each constant reads from named env var with previous hardcoded value as default (2026-03-14)
+- **Problem solved:** Need to consolidate scattered timeout constants while enabling runtime configuration
+- **Why this works:** Env var with default achieves three goals: backward compatible (no forced env var requirement), enables opt-in override (no config scaffolding needed), auditable (single module to review)
+- **Trade-offs:** More configuration surface vs safer defaults; runtime flexibility vs simpler code; easier to audit vs more indirection to understand actual values
 
-### Replaced Automerge.Doc CRDT cache with plain Map<string, Record<string, Project>> backed by disk. Automerge was solving conflict resolution; actual requirement was lazy-loaded read cache with disk as single source of truth. (2026-03-14)
-- **Context:** ProjectService was maintaining in-memory Automerge documents that were redundant—disk was already the authoritative copy, and there was no multi-writer concurrency.
-- **Why:** CRDT adds operational complexity (merge semantics, change tracking) unnecessary when: (1) writes are serialized to disk, (2) conflicts cannot occur, (3) cache exists only for read performance. Plain cache is simpler and faster.
-- **Rejected:** Keeping Automerge for future distributed sync—rejected because no current use case demands it, and the overhead complicates every write path (e.g., _toAutomergeValue, Automerge.change wrapping).
-- **Trade-offs:** Lost CRDT conflict-free replicas capability (becomes blocking if true peer-sync is needed later). Gained: simpler code, faster writes, no Automerge dependency in consumer service, clearer intent (disk is source of truth).
-- **Breaking if changed:** Any code expecting CRDT merge semantics or peer-to-peer sync would break. This refactor commits to single-writer, disk-authoritative model.
+#### [Pattern] Domain-based grouping of constants in central config (execution, polling, networking, cleanup) rather than alphabetical or usage-based (2026-03-14)
+- **Problem solved:** Organizing 10+ timeout constants from disparate services without clear original taxonomy
+- **Why this works:** Domain grouping aids discoverability (find all networking timeouts in one section), enables batch changes (adjust all polling intervals together), mirrors conceptual service responsibilities
+- **Trade-offs:** Better for configuration audits vs harder to find if grouping doesn't match how consumer thinks about them
 
-#### [Gotcha] Conditional CRDT logic (_isCrdtEnabled guard) was the only decision point in write paths. Removing it eliminated entire parallel code flow without branching left behind. (2026-03-14)
-- **Situation:** Discovery during refactoring: the _isCrdtEnabled() check appeared in every write method. Its absence meant either: (a) CRDT path was experimental/deprecated, or (b) feature flag was ineffective.
-- **Root cause:** Optional features integrated into core logic create hidden complexity—not in the feature itself, but in maintaining two paths. The CRDT flag was likely added during exploration, left in place, but never used.
-- **How to avoid:** Simpler code path, but removes ability to re-enable CRDT without full refactor. Forces commitment to disk-based design.
+### Use domain-prefixed exports (EM_POLL_INTERVAL_MS, PROJM_POLL_INTERVAL_MS, PR_FEEDBACK_POLL_INTERVAL_MS) for duplicate constant names rather than consolidating to single POLL_INTERVAL_MS (2026-03-14)
+- **Context:** Multiple services had identically-named constants (POLL_INTERVAL_MS, DRIFT_CHECK_INTERVAL_MS) with different values
+- **Why:** Preserves semantic clarity and prevents accidental coupling—each service's timing policy remains independent and explicit. Prevents bugs if one service's interval accidentally constrains another.
+- **Rejected:** Consolidate to single POLL_INTERVAL_MS with domain-specific overrides or config nesting; merge duplicate timing values
+- **Trade-offs:** More exports in config file (harder to scan) vs clearer intent and safer refactoring. Domain prefix adds verbosity but eliminates ambiguity.
+- **Breaking if changed:** Removing domain prefix requires updating all 11 service import sites; consolidating values would break services with different timing needs
 
-#### [Pattern] Write-through cache pattern: all mutations follow disk → in-memory cache → broadcast event. Cache is never the source of truth; disk is. This avoids cache coherency problems. (2026-03-14)
-- **Problem solved:** After write to disk, cache is updated atomically, then subscribers notified. No async cache invalidation or eventual consistency.
-- **Why this works:** In single-writer scenarios (e.g., one server process writes to project files), write-through is safer than write-behind or lazy invalidation. Eliminates stale-read races: any subsequent read will hit the updated cache.
-- **Trade-offs:** Write latency includes disk I/O (slower), but correctness is guaranteed. Read performance is consistent (always hits cache after first load).
+#### [Pattern] Each timeout constant reads from optional env var with previous hardcoded value as default: `process.env.CRDT_HEARTBEAT_MS ?? 5000` (2026-03-14)
+- **Problem solved:** Need runtime configurability for infrastructure timeouts without requiring explicit configuration in every deployment
+- **Why this works:** Provides optional runtime flexibility while maintaining backward compatibility—existing deployments work unchanged, new deployments can tune via env. Single code path, no branching logic.
+- **Trade-offs:** Eliminates need for config schema validation at startup; runtime env var values not validated at compile time. Requires .env.example documentation to surface all available tuning points.
 
-#### [Pattern] Lazy-initialized read cache: projects loaded from disk into memory on first access via _ensureDoc/getProject, not on service startup. Cache entry persists until process restart or explicit invalidation. (2026-03-14)
-- **Problem solved:** Large projects directory (many .json files) would be expensive to load all-at-once. Most projects are read-rarely after initial load.
-- **Why this works:** Startup time and memory footprint scale with project count. Lazy loading defers I/O until needed. If a project is never accessed, its bytes never enter memory.
-- **Trade-offs:** First read of a project incurs disk I/O penalty (~10-100ms), but amortized over subsequent reads. Memory usage is proportional to active projects, not total projects.
+### Establish decision boundary between centralized 'infrastructure timeouts' (CRDT_HEARTBEAT_MS, HEALTH_CHECK_INTERVAL_MS) vs local 'service-private' constants (IDEA_PROCESSING_DELAY_MS, CLAIM_VERIFY_DELAY_MS, NOTIFICATION_RATE_LIMIT_MS) (2026-03-14)
+- **Context:** Feature spec required centralizing timeouts, but not all timing constants are infrastructure policy
+- **Why:** Service-private constants are implementation details (debounces, rate limits within a single service). Centralizing them couples internal logic to global policy and makes service reuse harder. Infrastructure timeouts affect resource consumption and SLAs across the system.
+- **Rejected:** Centralize all timing constants for uniformity; keep everything local for autonomy
+- **Trade-offs:** Hybrid approach adds complexity to the centralization criteria, but better respects separation of concerns. Future contributors must understand which category a new constant belongs to.
+- **Breaking if changed:** Moving service-private constants to central config binds service behavior to global policy; removing centralized infrastructure timeouts reintroduces hardcoded values that are hard to adjust per environment
 
-#### [Pattern] Config-driven conditional service initialization via early return in start() method (2026-03-14)
-- **Problem solved:** Service must support both single-instance (dev local) and multi-instance (prod) deployments without code branching in consumers
-- **Why this works:** Allows safe injection into handlers/routes regardless of whether mesh coordination is enabled. Service becomes a no-op when hivemind.enabled=false, preventing WebSocket server, timers, and peer connections without requiring conditional logic at call sites
-- **Trade-offs:** Simpler injection contract vs. potential confusion about what the service actually does at runtime. Dead code paths when disabled increase bundle size but eliminate conditional logic complexity
+#### [Pattern] Services keep local constant names but assign from central config: `const HEARTBEAT_MS = timeouts.CRDT_HEARTBEAT_MS` instead of importing directly or renaming all usages (2026-03-14)
+- **Problem solved:** Minimize diff surface and review burden while centralizing source of truth
+- **Why this works:** Local naming (HEARTBEAT_MS) stays unchanged in service files; only import statement changes. Reduces cognitive load during code review—readers see familiar local names. Easier to track which uses depend on central config.
+- **Trade-offs:** Adds one level of indirection (reader must track local const to central source), but minimizes code churn and review complexity. Less explicit that value comes from config.
 
-#### [Gotcha] Variable name (crdtSyncService) preserved while type renamed (CrdtSyncService → PeerMeshService) (2026-03-14)
-- **Situation:** Partial refactoring where only class/type name changed, not variable/instance names throughout codebase
-- **Root cause:** Conservative approach minimizes diff surface area and git blame impact for this refactoring PR
-- **How to avoid:** Smaller PR and easier review vs. persistent semantic mismatch that could confuse maintainers. Someone searching codebase for 'crdtSync' will find variable but not type definition
+#### [Gotcha] worktree-lifecycle.module.ts also has DRIFT_CHECK_INTERVAL_MS (5 minutes) but was not included in migration—creates duplicate naming with different value from migrated worktree-lifecycle-service.ts (6 hours) (2026-03-14)
+- **Situation:** Feature spec listed worktree-lifecycle-service.ts but the related .module.ts file had its own constant with same name
+- **Root cause:** Likely conscious scope limitation (feature spec was specific about which files) or oversight. Module-level constants may have been overlooked.
+- **How to avoid:** Avoids scope creep and keeps feature focused, but leaves technical debt. Now two DRIFT_CHECK_INTERVAL_MS exist in same module with different purposes.
 
-### Single-method configuration guard: only start() method checks hivemind.enabled; other PeerMeshService methods have no guards (2026-03-14)
-- **Context:** start() initializes timers, WebSocket server, and peer connections. Once running, subsequent calls assume service is active
-- **Why:** Assume single initialization lifecycle: start() called once at app boot. Other methods (sync, broadcast, etc.) are call-site methods that run during steady state
-- **Rejected:** Wrapping every public method with enabled check, or validating config state at each entry point
-- **Trade-offs:** Simpler implementation vs. risk of undefined behavior if methods are called when service is disabled. No runtime detection of misconfigured service state
-- **Breaking if changed:** If service lifecycle is violated (start() called but service disabled, or methods called before start()), behavior is unpredictable. Particularly risky if tests or consumers call methods directly without going through start()
+#### [Gotcha] Friction tracker only fires on `blocked` status transitions, not `review`. Post-commit rebase conflicts that produced valid PRs silently transitioned to `review`, completely bypassing the friction tracking system and preventing signal accumulation. (2026-03-14)
+- **Situation:** Recurring merge_conflict failures were never being tracked despite happening repeatedly because conflicts resolved to `review` state instead of triggering the block path.
+- **Root cause:** The classifier pattern matching in friction tracker is keyed to specific state transitions. A feature becoming `blocked` invokes the pattern classifier, but `review` transitions skip it entirely. The system assumes all tracked failures flow through the `blocked` state.
+- **How to avoid:** Now requires explicit handling in execution-service to force `blocked` state for post-commit conflicts (more code), but gives accurate signal and prevents noise from legitimate review transitions.
 
-#### [Pattern] Idempotency via started=true flag even on early return when feature is disabled (2026-03-14)
-- **Problem solved:** start() method sets started=true regardless of whether feature is enabled, preventing re-initialization
-- **Why this works:** Ensures duplicate start() calls are no-ops whether service is enabled or disabled. Protects against timing bugs where start() is called multiple times
-- **Trade-offs:** Clean idempotency contract vs. masking potential initialization bugs (if start() is called twice, you won't know if service initialization was prevented by config or already completed)
+#### [Pattern] Accumulator pattern for failure context with a hard cap (10 entries). Failures are accumulated with full context (feature ID, conflicting files, branch name) before the pattern is resolved and an issue is filed. Context is cleared on resolution to prevent stale data from leaking into re-occurrences. (2026-03-14)
+- **Problem solved:** Needed to capture not just that a failure occurred, but contextual details about what failed and where, across multiple occurrences, to create a rich issue description.
+- **Why this works:** Batching/throttling prevents filing an issue on the first occurrence (noise). Waiting for 10 accumulations ensures signal is strong enough to justify a filed issue. Cap prevents unbounded memory growth. Clearing on resolution prevents old context from polluting new issues.
+- **Trade-offs:** Easier: accurate issue severity based on recurring signal. Harder: delayed feedback (issue only files after 10 occurrences) and extra state management (clearing on resolve).
 
-### Moved CRDT_SYNCED_EVENT_TYPES and CrdtSyncWireMessage to peer-mesh-service.ts as local type definitions instead of deleting or keeping in shared types (2026-03-14)
-- **Context:** Removing CRDT types from libs/types while service still needed them
-- **Why:** Maximizes scope reduction in shared package while keeping types at point of use; makes future removal of this service/method easier since types are colocated with single consumer
-- **Rejected:** Delete types entirely (breaks compilation) or keep in shared package (defeats cleanup goal); spread across multiple files (increases coupling)
-- **Trade-offs:** Easier to eventually remove peer-mesh-service cleanly, but if new consumers emerge they must duplicate or move types back to shared; improves libs/types clarity at cost of slightly lower reusability
-- **Breaking if changed:** If another service needs these types, they must duplicate definitions or types must be moved back to shared; moving types back later requires git history navigation
+### Conflicting files are captured at the lowest level (git-utils rebase.ts with `git diff --name-only --diff-filter=U`), then threaded through each layer's return type (RebaseResult → GitWorkflowResult → execution-service) before reaching the friction tracker. (2026-03-14)
+- **Context:** Needed to give developers actionable info about what files caused the conflict, but also needed that data at multiple levels of the call stack.
+- **Why:** Captures data at the source (lowest level where git operations happen), making it available to all callers without duplicating the git call. Each layer that cares about conflicts can access it.
+- **Rejected:** Alternative 1: Capture only at git-utils level, have callers query again if needed. Rejected: duplicates git calls and assumes callers know they need it. Alternative 2: Capture only at execution-service level. Rejected: other callers of git-workflow-service wouldn't have conflict data.
+- **Trade-offs:** Easier: all callers automatically have rich conflict data. Harder: more parameters on intermediate types, coupling between layers.
+- **Breaking if changed:** Removing conflict data from intermediate types (RebaseResult, GitWorkflowResult) means downstream callers lose the information. Friction tracker would only know a conflict happened, not which files caused it.
 
-#### [Pattern] Identified setCompactionDiagnosticsProvider as dead code by confirming zero callers across entire codebase before removal (2026-03-14)
-- **Problem solved:** Method was unused CRDT infrastructure; needed confidence it was safe to delete
-- **Why this works:** Global codebase analysis (grep) provides certainty that removal won't break hidden dynamic calls or external consumers; reduces risk of silent breakage
-- **Trade-offs:** Requires codebase search tool and discipline to verify, but gives high confidence for removal; enables aggressive cleanup without fear of breaking things
-
-#### [Gotcha] Documentation tables listing CRDT-synced domains silently became stale when setCrdtStore() was removed from services weeks prior. Table still listed 'ava-channel', 'calendar', 'todos' as active CRDT synced domains despite code removal. (2026-03-14)
-- **Situation:** When services are refactored incrementally across multiple PRs, their documentation references can persist in tabular/list formats without being noticed or updated.
-- **Root cause:** Documentation drift occurs when item removal from code isn't paired with corresponding list/table updates in docs. Tables are 'fire-and-forget' once published.
-- **How to avoid:** Using explicit deprecation comments in code catches some references but misses documentation tables; requiring doc updates to be part of removal PRs is more expensive upfront but prevents drift.
-
-#### [Pattern] Documentation file structure (naming, location, presence) kept in strict sync with code structure: service rename (CrdtSyncService → PeerMeshService) prompted file rename (crdt-sync-service.md → peer-mesh-service.md); service deletion (AvaChannelService) prompted file archival, not deletion. (2026-03-14)
-- **Problem solved:** When refactoring services across multiple PRs, documentation must remain discoverable and accurately reflect the current codebase structure.
-- **Why this works:** File naming conventions that mirror service names allow developers to quickly find relevant docs via filename patterns. Archiving deleted services instead of deleting files preserves history and provides deprecation paths.
-- **Trade-offs:** Renaming/moving files requires updating cross-references and navigation indexes (higher cost) but keeps docs discoverable via IDE search and naming convention; archiving preserves git history and allows gradual migration.
+#### [Gotcha] The `resolvePattern()` method in friction tracker must clear accumulated `failureContexts` for that pattern, otherwise stale context from the resolved failure bleeds into the next occurrence of the same pattern. (2026-03-14)
+- **Situation:** Without clearing, if the same merge_conflict pattern recurs after being resolved, the new issue filed would include context from the old, resolved issue, creating confusion.
+- **Root cause:** The accumulator map persists across pattern occurrences as a class member. If you file an issue and resolve the pattern without clearing the map, the next occurrence adds to the stale data.
+- **How to avoid:** Easier: cleaner issue descriptions. Harder: requires explicit state cleanup logic.

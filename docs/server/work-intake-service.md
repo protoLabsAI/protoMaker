@@ -6,10 +6,10 @@ Pull-based phase claiming that distributes work across the Hivemind mesh — ins
 
 `WorkIntakeService` is the distributed work distribution mechanism. It runs a configurable tick loop when auto-mode is active. Each tick:
 
-1. Reads shared project docs (local Automerge replica)
+1. Reads shared project docs (synced via peer mesh)
 2. Finds claimable phases using pure functions from `@protolabsai/utils`
 3. Claims phases by atomically writing to the shared project doc
-4. Verifies the claim survived Automerge merge (CRDT race condition check)
+4. Verifies the claim survived sync merge (race condition check)
 5. Creates **local** features from claimed phases
 6. On feature completion, updates `executionStatus: 'done'` in the shared doc
 
@@ -19,12 +19,12 @@ Pull-based phase claiming that distributes work across the Hivemind mesh — ins
 
 ```text
 WorkIntakeService.tick()
-  --> getProjects(projectPath)               // Read local Automerge replica
+  --> getProjects(projectPath)               // Read project docs (synced via peer mesh)
   --> getClaimablePhases(project, instanceId, role, tags)   // Pure function
   --> [for each claimable phase, by priority]
         --> updatePhaseClaim(projectSlug, milestoneSlug, phaseName, { claimedBy: instanceId })
         --> wait CLAIM_VERIFY_DELAY_MS (200ms)
-        --> getPhase(...)                     // Re-read after Automerge merge
+        --> getPhase(...)                     // Re-read after sync merge
         --> holdsClaim(phase, instanceId)?    // Did our claim win?
               YES --> materializeFeature()
                   --> createFeature(projectPath, feature)
@@ -150,8 +150,7 @@ When a phase has no role constraint, any instance can claim it.
 
 ## See Also
 
-- [Project Service](./project-service) — reads and writes phase state in Automerge docs
-- [CRDT Sync Service](./crdt-sync-service) — project change events that keep replicas in sync
-- [Ava Channel Reactor](./ava-channel-reactor) — calls `WorkIntakeService.tick()` on capacity heartbeats
+- [Project Service](./project-service) — reads and writes phase state
+- [Peer Mesh Service](./peer-mesh-service) — project change events that keep replicas in sync
 - [Auto Mode Service](./auto-mode-service) — executes the local features created by work intake
 - [Distributed Sync](../dev/distributed-sync.md#work-intake-protocol) — full protocol spec, pure functions, instance role descriptions

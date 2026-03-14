@@ -28,25 +28,7 @@ Key responsibilities:
           {phase-slug}.md
 ```
 
-The `projects.json` Automerge document is keyed by `projectPath` and holds all projects for that repo root in a single Automerge `Doc<{ projects: Record<string, Project> }>`.
-
-## CRDT Enablement
-
-CRDT is enabled per `projectPath` when `proto.config.yaml` exists at that path:
-
-```typescript
-private _isCrdtEnabled(projectPath: string): boolean {
-  return existsSync(path.join(projectPath, 'proto.config.yaml'));
-}
-```
-
-When CRDT is enabled:
-
-- All mutations go through Automerge `change()` for conflict-free merging
-- Events are emitted on `_crdtEvents` for the sync mesh to broadcast
-- Remote changes arrive via `applyRemoteChange(projectPath, change)`
-
-When CRDT is disabled (single-instance mode), the service reads/writes plain JSON/Markdown directly.
+All projects for a given repo root are stored as JSON and Markdown files on disk. An in-memory `Map<string, Project>` cache accelerates reads; all writes go to disk first, then broadcast events via the peer mesh for multi-instance sync.
 
 ## Key APIs
 
@@ -98,19 +80,6 @@ createFeaturesFromProject(
 
 Uses `phaseToFeatureDescription()` and `phaseToBranchName()` from `@protolabsai/utils` to materialize phases into feature records.
 
-## Automerge Document Management
-
-The service maintains one Automerge doc per `projectPath`, lazy-initialized on first access:
-
-```typescript
-type ProjectsDoc = { projects: Record<string, Project> };
-
-private readonly _docs = new Map<string, Automerge.Doc<ProjectsDoc>>();
-private readonly _initPromises = new Map<string, Promise<void>>();
-```
-
-`_ensureDoc(projectPath)` initializes the doc from disk the first time it is accessed. Subsequent calls return the cached doc. Init is deduplicated via `_initPromises`.
-
 ## Markdown Generation
 
 Every mutation triggers regeneration of the human-readable Markdown files via `@protolabsai/utils`:
@@ -148,7 +117,7 @@ When `CalendarService` is wired in via `setCalendarService()`, project milestone
 
 | File                                                 | Role                                                 |
 | ---------------------------------------------------- | ---------------------------------------------------- |
-| `apps/server/src/services/project-service.ts`        | Core service — CRUD, Automerge, Markdown generation  |
+| `apps/server/src/services/project-service.ts`        | Core service — CRUD, cache, Markdown generation      |
 | `apps/server/src/services/project-service.module.ts` | NestJS module wiring                                 |
 | `libs/platform/src/paths.ts`                         | Path helpers (`getProjectDir`, `getMilestoneDir`, …) |
 | `libs/utils/src/project-utils.ts`                    | `createProject`, Markdown generators, phase utils    |
@@ -157,5 +126,4 @@ When `CalendarService` is wired in via `setCalendarService()`, project milestone
 ## See Also
 
 - [Work Intake Service](./work-intake-service) — reads phase state and updates claim status
-- [CRDT Sync Service](./crdt-sync-service) — broadcasts project change events to peer instances
-- [Ava Channel Reactor](./ava-channel-reactor) — triggers work intake on capacity heartbeats
+- [Peer Mesh Service](./peer-mesh-service) — broadcasts project change events to peer instances

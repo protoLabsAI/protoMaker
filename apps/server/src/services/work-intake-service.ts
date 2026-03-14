@@ -2,7 +2,7 @@
  * WorkIntakeService — pull-based phase claiming from shared projects.
  *
  * Runs on a configurable tick when auto-mode is active. Each tick:
- *   1. Reads shared project docs (local Automerge replica)
+ *   1. Reads shared project docs (synced via peer mesh)
  *   2. Finds claimable phases using pure functions from @protolabsai/utils
  *   3. Claims phases by writing to the shared project doc
  *   4. Creates LOCAL features from claimed phases
@@ -30,7 +30,7 @@ const logger = createLogger('WorkIntakeService');
 const DEFAULT_TICK_INTERVAL_MS = WORK_INTAKE_TICK_INTERVAL_MS;
 /** Default timeout before a stale claim becomes reclaimable */
 const DEFAULT_CLAIM_TIMEOUT_MS = WORK_INTAKE_CLAIM_TIMEOUT_MS;
-/** Delay after claiming to verify the claim survived Automerge merge */
+/** Delay after claiming to verify the claim survived sync merge */
 const CLAIM_VERIFY_DELAY_MS = 200;
 
 export interface WorkIntakeConfig {
@@ -54,7 +54,7 @@ export interface WorkIntakeDependencies {
     phaseName: string,
     update: Partial<Phase>
   ) => Promise<void>;
-  /** Read the latest phase state (after Automerge merge) */
+  /** Read the latest phase state (after sync merge) */
   getPhase: (
     projectPath: string,
     projectSlug: string,
@@ -242,7 +242,7 @@ export class WorkIntakeService {
       executionStatus: 'claimed',
     });
 
-    // Wait for Automerge sync to settle
+    // Wait for peer mesh sync to settle
     await new Promise((resolve) => setTimeout(resolve, CLAIM_VERIFY_DELAY_MS));
 
     // Verify claim survived merge

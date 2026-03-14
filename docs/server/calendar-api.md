@@ -183,21 +183,7 @@ The calendar assistant agent (`/calendar-assistant`) has exclusive write access 
 
 ## Storage
 
-### CRDT mode (multi-instance)
-
-When a `CRDTStore` is registered (hivemind active), all custom event writes route through the CRDT layer so events sync across all instances automatically. The shared document is:
-
-```
-domain: 'calendar'
-id: 'shared'
-shape: { events: Record<string, CalendarEvent>, updatedAt: string }
-```
-
-`crdt-store.module.ts` calls `calendarService.setCrdtStore(store)` during startup to enable CRDT mode.
-
-### Filesystem mode (single-instance)
-
-When no CRDT store is registered, custom events are persisted in `.automaker/calendar.json`:
+Custom events are persisted in `.automaker/calendar.json`:
 
 ```json
 {
@@ -214,14 +200,7 @@ When no CRDT store is registered, custom events are persisted in `.automaker/cal
 }
 ```
 
-Writes use `atomicWriteJson` with 3-backup rotation and automatic recovery from corrupted files.
-
-### Storage routing summary
-
-| Mode       | When                     | Read                      | Write                            |
-| ---------- | ------------------------ | ------------------------- | -------------------------------- |
-| CRDT       | `setCrdtStore()` called  | `CRDTStore.getOrCreate()` | `CRDTStore.change()`             |
-| Filesystem | No CRDT store registered | `readJsonWithRecovery()`  | `atomicWriteJson` with 3 backups |
+Writes use `atomicWriteJson` with 3-backup rotation and automatic recovery from corrupted files. In multi-instance mode, calendar events are broadcast via the peer mesh for cross-instance sync.
 
 ## Reminder events
 
@@ -250,7 +229,7 @@ The wiring in `services.ts` connects these events to `ReactiveSpawnerService.spa
 
 ```
 CalendarService (singleton)
-  ├── Custom events     ← CRDTStore ('calendar','shared') or .automaker/calendar.json
+  ├── Custom events     ← .automaker/calendar.json
   ├── Feature due dates ← FeatureLoader
   └── Google events     ← GoogleCalendarSyncService
 ```

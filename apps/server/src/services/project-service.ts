@@ -210,7 +210,7 @@ export class ProjectService {
     }
   }
 
-  // ─── Remote sync (called by crdt-sync.module.ts) ─────────────────────────
+  // ─── Remote sync (called by peer-mesh module) ───────────────────────────
 
   /**
    * Persist a project received from a remote instance.

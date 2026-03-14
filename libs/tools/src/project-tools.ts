@@ -516,7 +516,7 @@ export function createProjectTools(deps: ProjectDeps): SharedTool[] {
           input.projectPath,
           input.projectSlug
         );
-        // JSON-roundtrip to strip Symbol keys (e.g. Automerge proxies)
+        // JSON-roundtrip to strip Symbol keys
         // that cause z.record(z.string(), z.unknown()) output validation to fail
         const plainFeatures = JSON.parse(JSON.stringify(features));
         const plainEpics = JSON.parse(JSON.stringify(epics));

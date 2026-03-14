@@ -94,8 +94,8 @@ interface CrdtSettingsEvent {
 }
 
 /**
- * Wire message carrying the CRDTStore document registry from primary to workers.
- * Resolves split-brain where both instances independently created Automerge
+ * Wire message carrying the document registry from primary to workers.
+ * Resolves split-brain where both instances independently created
  * documents for the same domain:id with different URLs.
  */
 interface CrdtRegistrySyncEvent {
@@ -156,7 +156,7 @@ export class PeerMeshService {
   private _avaChannelBugReportCallback:
     | ((content: string, featureId?: string) => Promise<void>)
     | null = null;
-  /** Returns the CRDTStore registry (primary broadcasts this to workers). */
+  /** Returns the document registry (primary broadcasts this to workers). */
   private _registryProvider: (() => Record<string, string>) | null = null;
   /** Called when a worker receives a registry from the primary. */
   private _registryReceivedCallback: ((registry: Record<string, string>) => void) | null = null;
@@ -208,7 +208,7 @@ export class PeerMeshService {
   }
 
   /**
-   * Register a provider that returns the local CRDTStore document registry.
+   * Register a provider that returns the local document registry.
    * The primary uses this to broadcast the registry to connecting workers.
    */
   setRegistryProvider(provider: () => Record<string, string>): void {
@@ -218,7 +218,7 @@ export class PeerMeshService {
   /**
    * Register a callback invoked when a worker receives a registry_sync message
    * from the primary. The callback should merge the remote registry into the
-   * local CRDTStore to resolve split-brain document URLs.
+   * local store to resolve split-brain document URLs.
    */
   onRegistryReceived(callback: (registry: Record<string, string>) => void): void {
     this._registryReceivedCallback = callback;
@@ -940,7 +940,7 @@ export class PeerMeshService {
       }
       case 'identity': {
         this._upsertPeer(msg, ws, now);
-        // Primary broadcasts its CRDTStore registry to the newly connected peer
+        // Primary broadcasts its document registry to the newly connected peer
         // so the peer can adopt the primary's document URLs (prevents split-brain).
         if (this.role === 'primary' && this._registryProvider) {
           const registryMsg: CrdtRegistrySyncEvent = {

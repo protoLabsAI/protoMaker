@@ -1,7 +1,7 @@
 /**
  * Ava Channel types — private multi-instance communication channel.
  *
- * Messages are stored as append-only Automerge list CRDTs, sharded by day
+ * Messages are stored as append-only lists, sharded by day
  * (doc:ava-channel/YYYY-MM-DD). No messageType enum — the content IS the protocol.
  */
 
@@ -252,7 +252,7 @@ export interface HealthAlert {
 
 /**
  * Broadcast by each reactor instance every hour carrying local DORA metrics.
- * Peers merge these into the aggregate CRDTStore entry under domain='metrics', id='dora'.
+ * Peers merge these into the aggregate metrics entry under domain='metrics', id='dora'.
  */
 export interface DoraReport {
   /** Originating instance ID */
