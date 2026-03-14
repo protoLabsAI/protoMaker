@@ -1475,7 +1475,7 @@ export class AutoModeService {
         status === 'interrupted' ||
         status === 'running' ||
         status.startsWith('pipeline_');
-      return isTransient && !this.runningFeatures.has(f.id);
+      return isTransient && !this.runningFeatures.has(f.id) && !this.concurrencyManager.has(f.id);
     });
 
     for (const feature of stuckFeatures) {

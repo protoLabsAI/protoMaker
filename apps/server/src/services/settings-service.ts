@@ -132,6 +132,7 @@ function applySharedSettings(base: ProjectSettings, shared: SharedSettings): Pro
 export class SettingsService {
   private dataDir: string;
   private instanceIdInitPromise: Promise<string> | null = null;
+  private _globalSettingsWriteChain: Promise<unknown> = Promise.resolve();
 
   /**
    * Create a new SettingsService instance
@@ -603,6 +604,20 @@ export class SettingsService {
    * @returns Promise resolving to complete updated GlobalSettings
    */
   async updateGlobalSettings(updates: Partial<GlobalSettings>): Promise<GlobalSettings> {
+    const execute = async (): Promise<GlobalSettings> => {
+      return this._performUpdateGlobalSettings(updates);
+    };
+    const pending = this._globalSettingsWriteChain.then(execute, execute);
+    this._globalSettingsWriteChain = pending.then(
+      () => undefined,
+      () => undefined
+    );
+    return pending;
+  }
+
+  private async _performUpdateGlobalSettings(
+    updates: Partial<GlobalSettings>
+  ): Promise<GlobalSettings> {
     await ensureDataDir(this.dataDir);
     const settingsPath = getGlobalSettingsPath(this.dataDir);
 

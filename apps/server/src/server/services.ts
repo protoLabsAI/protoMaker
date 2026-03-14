@@ -825,7 +825,7 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   const dailyStandupService = new DailyStandupService();
 
   // Initialize Completion Detector Service
-  completionDetectorService.initialize(
+  await completionDetectorService.initialize(
     events,
     featureLoader,
     projectService,
