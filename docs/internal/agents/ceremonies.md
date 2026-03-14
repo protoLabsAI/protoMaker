@@ -147,7 +147,7 @@ Artifacts are stored at:
 
 Each artifact includes the ceremony type, milestone/project metadata, and a completion timestamp. Artifact persistence is non-blocking and non-fatal — a failure to save an artifact does not affect ceremony delivery.
 
-See [Project Artifacts](../dev/project-lifecycle#project-artifacts) for the full artifacts API.
+See [Project Artifacts](../../concepts/project-lifecycle#project-artifacts) for the full artifacts API.
 
 ## Audit log and observability
 

@@ -268,7 +268,7 @@ Wired into `auto-release.yml` as the "Rewrite and post release notes to Discord"
 - `DISCORD_DEV_WEBHOOK` — optional, required only for `--post-discord` flag
 - Git tags must exist locally (`git fetch origin --tags` if needed)
 
-See [release.md](../dev/release.md) for full documentation including voice guidelines and programmatic usage.
+The release workflow is documented in the internal development docs.
 
 ## Deploy Staging (`deploy-staging.yml`)
 

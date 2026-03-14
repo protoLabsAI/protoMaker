@@ -608,6 +608,4 @@ gh pr create --base main
 
 ## Learn More
 
-- [Git Workflow](../dev/git-workflow.md) - Branch strategies and PR process
-- [Shared Packages](../dev/shared-packages.md) - Dependency resolution package details
-- [MCP Tools Reference](../integrations/mcp-tools-reference.md) - All orchestration tools
+- [MCP Tools Reference](../reference/mcp-tools.md) - All orchestration tools

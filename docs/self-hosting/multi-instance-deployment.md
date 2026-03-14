@@ -297,7 +297,7 @@ The `WorkIntakeService` runs on a configurable tick when auto-mode is active. Ea
 
 Phase claims use a claim-and-verify protocol for conflict resolution. If two instances race to claim the same phase, the loser detects `claimedBy !== myId` on verification read and backs off.
 
-See [distributed-sync.md](../dev/distributed-sync.md) for the full protocol details, pure functions, and instance role descriptions.
+The distributed sync protocol uses a claim-and-verify pattern for conflict-free multi-instance coordination.
 
 ## Runbook: Common Sync Issues
 

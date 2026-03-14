@@ -219,7 +219,7 @@ If the role needs to run autonomously (event-driven, not just on-demand), create
 ## Related Documentation
 
 - [Authority Agent Guide](../agents/adding-teammates.md) — Full guide for event-driven authority agents
-- [Agent Architecture](../agents/architecture.md) — How the agent system works
+- [Agent Architecture](../../concepts/agent-architecture.md) — How the agent system works
 - [Agent Teams](../agents/creating-agent-teams.md) — Multi-agent coordination patterns
 - [Org Chart](../authority/org-chart.md) — Authority system, trust levels, permissions
 - [Role Definitions](/authority/roles) — Detailed role descriptions

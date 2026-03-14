@@ -386,6 +386,6 @@ model: 'custom-model-v1';
 
 ## Learn More
 
-- [Agent SDK Integration](../agents/sdk-integration.md) - How models are used in agents
-- [Monorepo Architecture](../dev/monorepo-architecture.md) - Package structure
+- [Agent SDK Integration](../internal/agents/sdk-integration.md) - How models are used in agents
+- [Monorepo Architecture](../internal/dev/monorepo-architecture.md) - Package structure
 - [Claude Model Docs](https://docs.anthropic.com/claude/docs/models-overview) - Official model documentation

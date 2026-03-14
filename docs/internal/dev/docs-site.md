@@ -54,7 +54,7 @@ Content here. Standard markdown with all GitHub-flavored extensions.
 Use relative paths from the current file:
 
 ```markdown
-See the [Agent Architecture](../agents/architecture.md) for details.
+See the [Agent Architecture](../../concepts/agent-architecture.md) for details.
 ```
 
 ### Add images

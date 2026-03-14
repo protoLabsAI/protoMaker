@@ -237,6 +237,6 @@ Response:
 
 ## Related Documentation
 
-- [Workflow Settings](../server/workflow-settings.md) — full WorkflowSettings reference
+- [Workflow Settings](../reference/workflow-settings.md) — full WorkflowSettings reference
 - [Metrics](./metrics.md) — error budget state, autonomy rate, and WIP saturation metrics
 - [Lead Engineer Pipeline](./lead-engineer-pipeline.md) — how processors read these settings

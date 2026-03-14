@@ -239,7 +239,7 @@ PR created → CI runs + CodeRabbit reviews
 4. CI re-runs, CodeRabbit re-reviews
 5. On `approved` + CI passing → MERGE
 
-For the full PR remediation reference, see [PR Remediation Loop](../dev/pr-remediation-loop.md).
+The PR remediation loop handles CI failures automatically by analyzing feedback and pushing fixes.
 
 ## Trajectory store
 
@@ -415,8 +415,6 @@ Lead Engineer State Machine
 
 ## Related documentation
 
-- [Agent Philosophy](./philosophy.md) — Why the system is designed this way
-- [PR Remediation Loop](../dev/pr-remediation-loop.md) — Detailed CI failure handling
-- [Engine Architecture](../archived/engine-architecture.md) — Lead Engineer state machine ADR
-- [Idea to Production](../dev/idea-to-production.md) — Full pipeline with escalation points
+- [Agent Philosophy](./agent-philosophy.md) — Why the system is designed this way
+- [Idea to Production](./pipeline.md) — Full pipeline with escalation points
 - [Langfuse Integration](../integrations/langfuse.md) — Tracing and cost tracking

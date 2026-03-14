@@ -120,6 +120,6 @@ langfuse_add_to_dataset --datasetName "good-implementations" --traceId "trace-uu
 
 ## Related Documentation
 
-- [Observability Package](../dev/observability-package.md) — `@protolabsai/observability` library internals (contributor reference)
-- [Providers](../server/providers.md) — AI provider architecture
-- [Prompt Engineering](../agents/prompt-engineering.md) — How prompts are composed and customized
+- [Observability Package](../internal/dev/observability-package.md) — `@protolabsai/observability` library internals (contributor reference)
+- [Providers](../internal/server/providers.md) — AI provider architecture
+- [Prompt Engineering](../concepts/prompt-engineering.md) — How prompts are composed and customized

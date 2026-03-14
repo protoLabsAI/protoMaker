@@ -199,6 +199,4 @@ Knowledge compounds across all instances via git. Operations are ephemeral by de
 - **Learning flow** (agent memory) writes to `.automaker/memory/` — git-tracked, shared across instances
 - **Onboarding flow** (setupLab) scans a repo, analyzes gaps, and initializes `.automaker/` — builds understanding from scratch
 
-This architecture is the foundation for [Hivemind](../dev/instance-state.md#hivemind-multi-instance-mesh), where multiple instances form a domain-scoped mesh, each owning a slice of the codebase.
-
-See [Instance State Architecture](../dev/instance-state.md) for the full design.
+This architecture is the foundation for Hivemind, where multiple instances form a domain-scoped mesh, each owning a slice of the codebase.

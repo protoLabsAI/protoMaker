@@ -438,7 +438,7 @@ interface WorkflowSettings {
 }
 ```
 
-See [Workflow Settings](../server/workflow-settings.md) for the full configuration reference.
+See [Workflow Settings](../../reference/workflow-settings.md) for the full configuration reference.
 
 ---
 

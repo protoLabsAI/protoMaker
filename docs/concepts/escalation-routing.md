@@ -187,6 +187,5 @@ Channel registration happens in `apps/server/src/services/escalation-channels/es
 
 ## Related
 
-- [Idea to production](../dev/idea-to-production) -- How escalation fits in the pipeline
+- [Idea to production](./pipeline) -- How escalation fits in the pipeline
 - [Reliability and recovery](./reliability) -- Agent failure handling patterns
-- [Inbox system](../dev/inbox-system) -- Actionable items created from escalations

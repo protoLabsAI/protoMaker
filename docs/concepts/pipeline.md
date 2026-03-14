@@ -254,7 +254,7 @@ Terminal state. Cleanup checkpoint, index engineering learnings via KnowledgeSto
 
 ## Escalation routing
 
-When the Lead Engineer can't resolve a situation, signals are routed through the `EscalationRouter` to appropriate channels based on severity and signal type. See [Escalation routing](../agents/escalation-routing) for the full architecture.
+When the Lead Engineer can't resolve a situation, signals are routed through the `EscalationRouter` to appropriate channels based on severity and signal type. See [Escalation routing](./escalation-routing) for the full architecture.
 
 | Trigger                | Action                        |
 | ---------------------- | ----------------------------- |
@@ -359,7 +359,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 ## Next steps
 
-- [Escalation routing](../agents/escalation-routing) -- Escalation channel architecture and configuration
+- [Escalation routing](./escalation-routing) -- Escalation channel architecture and configuration
 - [Inbox system](./inbox-system) -- Unified actionable items inbox
 - [Feature status system](./feature-status-system) -- Canonical status details
 - [PR remediation loop](./pr-remediation-loop) -- CI failure handling

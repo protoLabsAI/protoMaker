@@ -220,7 +220,7 @@ When `createEpics: true`, each milestone becomes an epic feature. Phase 1 of eac
 
 ## Calendar (4 tools)
 
-Manages calendar events across custom, feature, milestone, and Google sources. The calendar assistant agent (`/calendar-assistant`) has exclusive write access. See [Calendar API](../server/calendar-api) for full endpoint documentation.
+Manages calendar events across custom, feature, milestone, and Google sources. The calendar assistant agent (`/calendar-assistant`) has exclusive write access. See [Calendar API](../internal/server/calendar-api) for full endpoint documentation.
 
 | Tool                    | Description                 | Required Params                       | Optional Params                                           |
 | ----------------------- | --------------------------- | ------------------------------------- | --------------------------------------------------------- |

@@ -127,7 +127,7 @@ resolveModelString('opus'); // → 'claude-opus-4-6'
 resolveModelString('haiku'); // → 'claude-haiku-4-5-20251001'
 ```
 
-See [Model Resolver Guide](../server/model-resolver.md) for details.
+See [Model Resolver Guide](../../reference/model-resolver.md) for details.
 
 ### @protolabsai/dependency-resolver
 

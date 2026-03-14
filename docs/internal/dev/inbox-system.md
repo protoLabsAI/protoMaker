@@ -211,6 +211,6 @@ The `use-browser-notifications.ts` hook (mounted at app root) provides two notif
 ## Related
 
 - [Actionable items (server reference)](../server/actionable-items) -- REST API and HITL form details
-- [Escalation routing](../agents/escalation-routing) -- How escalation signals create inbox items
+- [Escalation routing](../../concepts/escalation-routing) -- How escalation signals create inbox items
 - [Agile ceremonies](../agents/ceremonies) -- How ceremony events create inbox items
 - [Idea to production](./idea-to-production) -- Pipeline gates that create inbox items

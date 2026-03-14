@@ -258,5 +258,5 @@ Snapshots are appended to `.automaker/metrics/agentic.json` on each significant 
 ## Related Documentation
 
 - [Flow Control](./flow-control.md) — WIP limits, error budget freeze, cost caps, and runtime timeouts
-- [Workflow Settings](../server/workflow-settings.md) — full WorkflowSettings reference
+- [Workflow Settings](../../reference/workflow-settings.md) — full WorkflowSettings reference
 - [Observability Package](./observability-package.md) — Langfuse tracing and cost tracking

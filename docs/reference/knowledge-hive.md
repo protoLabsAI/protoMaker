@@ -649,4 +649,4 @@ const deleted = knowledgeStoreService.pruneStaleChunks(projectPath);
 ## Next Steps
 
 - **[RAG Techniques](./rag-techniques.md)** — Deep dive into RAG technique decisions
-- **[Memory System](../agents/memory-system.md)** — How learnings are written and retrieved
+- **[Memory System](../guides/agent-memory.md)** — How learnings are written and retrieved

@@ -234,7 +234,7 @@ In addition to automations, the scheduler module runs a one-time startup scan:
 | --------------------------------- | ----------------------------------- | ---------------------------------------------------- |
 | `scanWorktreesForCrashRecovery()` | Server startup (via `setImmediate`) | Detect and recover stranded work from crashed agents |
 
-This runs once after `resumeInterruptedFeatures()` completes. See [Reliability & Recovery](../agents/reliability.md#crash-recovery-scan) for details.
+This runs once after `resumeInterruptedFeatures()` completes. See [Reliability & Recovery](../../concepts/reliability.md#crash-recovery-scan) for details.
 
 ## Failure Alerting
 

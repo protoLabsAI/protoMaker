@@ -251,7 +251,7 @@ interface AgentConfig {
 }
 ```
 
-See [Agent Manifests](../agents/agent-manifests.md) for full configuration details.
+See [Agent Manifests](../guides/agent-manifests.md) for full configuration details.
 
 ---
 
@@ -289,7 +289,4 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
 
 ## Related Documentation
 
-- [Lead Engineer Pipeline](../dev/lead-engineer-pipeline.md) — how processors use these settings
-- [DORA Metrics](./dora-metrics.md) — error budget and CFR tracking
-- [Antagonistic Review](../protolabs/antagonistic-review.md) — the plan review gate
-- [Agent Manifests](../agents/agent-manifests.md) — per-role model and prompt overrides
+- [Agent Manifests](../guides/agent-manifests.md) — per-role model and prompt overrides
