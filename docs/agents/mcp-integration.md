@@ -108,7 +108,7 @@ export function createRunFeatureHandler(
 // 4. LeadEngineerService processes feature through state machine
 // apps/server/src/services/lead-engineer-service.ts
 async process(projectPath: string, featureId: string): Promise<PipelineResult> {
-  // State machine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE
+  // State machine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
   // EXECUTE phase:
   //   - Creates worktree for isolation
   //   - Loads context files (.automaker/context/, CLAUDE.md)

@@ -130,18 +130,20 @@ When `launch_project` is called, the server emits a `project:lifecycle:launched`
 
 The Lead Engineer is **not an LLM agent** — it's a service that evaluates fast-path rules (pure functions) on every relevant event. It only invokes LLM agents when a situation exceeds what rules can handle.
 
-**Fast-path rules** (defined in `lead-engineer-rules.ts`):
+**Fast-path rules** (defined in `lead-engineer-rules.ts`, 16 rules total):
 
-| Rule                 | What it does                                                  |
-| -------------------- | ------------------------------------------------------------- |
-| `mergedNotDone`      | Moves features to done when their PR is merged                |
-| `orphanedInProgress` | Resets in-progress features with no running agent (>4h stale) |
-| `staleDeps`          | Clears dependencies on features that are already done         |
-| `autoModeHealth`     | Restarts auto-mode if it stopped unexpectedly                 |
-| `staleReview`        | Enables auto-merge on PRs stuck in review (>24h)              |
-| `stuckAgent`         | Sends nudge messages to agents idle >2h                       |
-| `capacityRestart`    | Restarts auto-mode when capacity frees up                     |
-| `projectCompleting`  | Detects when all features are done and triggers completion    |
+| Rule                 | What it does                                                                   |
+| -------------------- | ------------------------------------------------------------------------------ |
+| `mergedNotDone`      | Moves features to done when their PR is merged                                 |
+| `orphanedInProgress` | Resets in-progress features with no running agent (>4h); blocks if 3+ failures |
+| `staleDeps`          | Unblocks features when all dependencies are done                               |
+| `autoModeHealth`     | Restarts auto-mode if it stopped unexpectedly                                  |
+| `staleReview`        | Enables auto-merge on PRs stuck in review (>30min)                             |
+| `stuckAgent`         | Aborts agents running >2h and resumes with wrap-up prompt                      |
+| `capacityRestart`    | Restarts auto-mode when capacity frees up                                      |
+| `projectCompleting`  | Detects when all features are done and triggers completion                     |
+| `classifiedRecovery` | Auto-retries escalated features with retryable failures                        |
+| `hitlFormResponse`   | Routes HITL form responses (retry/context/skip/close)                          |
 
 The Lead Engineer maintains a comprehensive world state (`LeadWorldState`) refreshed every 5 minutes and on significant events.
 
@@ -238,7 +240,7 @@ After creation, project files are organized as:
 | ---------------------------------------------------------------- | ------------------------------------------------------ |
 | `apps/server/src/services/project-lifecycle-service.ts`          | Service orchestrating the lifecycle                    |
 | `apps/server/src/services/lead-engineer-service.ts`              | Lead Engineer production orchestrator                  |
-| `apps/server/src/services/lead-engineer-rules.ts`                | 14 fast-path rules (pure functions, no LLM)            |
+| `apps/server/src/services/lead-engineer-rules.ts`                | 16 fast-path rules (pure functions, no LLM)            |
 | `apps/server/src/services/event-ledger-service.ts`               | Append-only JSONL event persistence                    |
 | `apps/server/src/services/project-artifact-service.ts`           | Project artifact persistence                           |
 | `apps/server/src/routes/projects/lifecycle/`                     | Route handlers                                         |

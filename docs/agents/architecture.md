@@ -96,7 +96,7 @@ User → UI/CLI → AgentService.sendMessage()
 ```
 Feature (backlog) → FeatureScheduler.runLoop()
   → PipelineRunner.run() → LeadEngineerService.process()
-  → State machine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DONE
+  → State machine: INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
   → EXECUTE phase:
     → Create worktree for isolation
     → Load context files (.automaker/context/, CLAUDE.md)

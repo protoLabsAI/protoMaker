@@ -132,9 +132,13 @@ The `PlanProcessor` generates an actionable implementation plan before the agent
 
 ### Plan Generation
 
-The plan is generated using a structured prompt that includes the feature description, project context, existing codebase structure, and any blocker/dependency notes. The model used mirrors the complexity tier from INTAKE.
+The plan is generated using a structured prompt that includes the feature description, project context, existing codebase structure, and any blocker/dependency notes. The model selection follows the complexity tier: architectural uses opus, large uses sonnet, and all others use haiku.
+
+**Structured plans**: In addition to the freeform plan text, the PlanProcessor attempts to generate a machine-parseable `StructuredPlan` containing a goal statement, ordered tasks with file lists, acceptance criteria (with optional verify commands), and deviation rules. If structured plan generation fails, the processor falls back to the freeform plan. When present, the structured plan's acceptance criteria feed into post-merge goal verification in the DEPLOY phase.
 
 **Retry behavior**: If validation fails, the processor retries up to 2 times. After max retries, the feature description itself is used as the plan (with a warning logged).
+
+**Structured plan validation**: When a structured plan is generated, it must have a non-empty goal, at least one task, and at least one acceptance criterion. Missing any of these triggers a retry.
 
 ### Antagonistic Review Gate
 
@@ -323,7 +327,12 @@ If the merge command fails (e.g., branch protection, CI still running), the proc
 
 ### Merge Strategy
 
-Feature PRs to dev use `--squash` by default (configurable via `prMergeStrategy` in workflow settings). Promotion PRs (dev->staging, staging->main) always use `--merge` to preserve the DAG.
+The merge strategy is resolved per-PR:
+
+1. **Promotion PRs** (base branch is `staging` or `main`) always use `--merge` to preserve the DAG
+2. **Feature PRs** use the `prMergeStrategy` from global settings (default: `--squash`)
+
+Supported strategies: `squash`, `merge`, `rebase`. Configure via `gitWorkflow.prMergeStrategy` in global settings.
 
 ---
 
@@ -331,7 +340,7 @@ Feature PRs to dev use `--squash` by default (configurable via `prMergeStrategy`
 
 ### Responsibilities
 
-The `DeployProcessor` runs post-merge verification and captures learnings:
+The `DeployProcessor` runs post-merge verification, goal verification, and captures learnings:
 
 1. **Verify feature status** -- if not already `done`, update it
 2. **Run post-merge verification** with 120-second timeout per command:
@@ -340,7 +349,8 @@ The `DeployProcessor` runs post-merge verification and captures learnings:
 3. **Handle verification failure** -- create a bug-fix feature on the board with failure details
 4. **Emit `feature:completed`** event (triggers board janitor, capacity rules, PRMergePoller)
 5. **Generate reflection** via `simpleQuery()` with haiku (fire-and-forget, non-blocking, ~$0.001)
-6. **Save trajectory** to `.automaker/trajectory/{featureId}/attempt-N.json` for the learning flywheel
+6. **Run goal verification** -- evaluates structured plan acceptance criteria against the merged diff (fire-and-forget, advisory only)
+7. **Save trajectory** to `.automaker/trajectory/{featureId}/attempt-N.json` for the learning flywheel
 
 ### Reflection Feed-Forward
 
@@ -349,6 +359,21 @@ The reflection generated here is loaded by `ExecuteProcessor` for subsequent sib
 - **Sibling matching**: same `epicId` or same `projectSlug`
 - **Recency cap**: top 3 most recently completed siblings
 - **Injection**: added to agent context as "Learnings from Prior Features"
+
+### Goal Verification
+
+When the PLAN phase produced a `StructuredPlan` with acceptance criteria, the DeployProcessor runs a goal-backward verification step:
+
+1. **Collect criteria** from `ctx.structuredPlan.acceptanceCriteria`
+2. **Get merged diff** via `git diff HEAD~1 HEAD` (truncated to 8000 chars)
+3. **Evaluate** each criterion against the diff using a haiku LLM call
+4. **Create follow-up features** for any unmet criteria (category: bug, complexity: small, status: backlog)
+5. **Persist result** to `.automaker/trajectory/{featureId}/goal-verification.json`
+6. **Emit** `feature:goal-verification:complete` with pass/fail summary
+
+Goal verification is fire-and-forget and advisory only -- it never blocks the DONE transition. If no acceptance criteria exist, the step is skipped entirely.
+
+**Result type:** `GoalVerificationResult` in `libs/types/src/lead-engineer.ts`
 
 ---
 
@@ -419,16 +444,17 @@ See [Workflow Settings](../server/workflow-settings.md) for the full configurati
 
 ## Related Files
 
-| File                                                          | Role                                    |
-| ------------------------------------------------------------- | --------------------------------------- |
-| `apps/server/src/services/lead-engineer-service.ts`           | State machine orchestrator              |
-| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor`   |
-| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                      |
-| `apps/server/src/services/lead-engineer-rules.ts`             | 17 fast-path rules (pure functions)     |
-| `apps/server/src/services/pr-feedback-service.ts`             | PR polling and remediation for REVIEW   |
-| `apps/server/src/services/antagonistic-review-service.ts`     | Plan review gate                        |
-| `apps/server/src/services/git-workflow-service.ts`            | Post-completion git workflow for DEPLOY |
-| `libs/types/src/workflow-settings.ts`                         | Configuration types                     |
-| `libs/types/src/lead-engineer.ts`                             | State machine types                     |
-| `docs/dev/system-architecture.md`                             | Full system architecture with timing    |
-| `docs/server/workflow-settings.md`                            | Settings reference                      |
+| File                                                          | Role                                               |
+| ------------------------------------------------------------- | -------------------------------------------------- |
+| `apps/server/src/services/lead-engineer-service.ts`           | State machine orchestrator                         |
+| `apps/server/src/services/lead-engineer-processors.ts`        | `IntakeProcessor` and `PlanProcessor`              |
+| `apps/server/src/services/lead-engineer-execute-processor.ts` | `ExecuteProcessor`                                 |
+| `apps/server/src/services/lead-engineer-deploy-processor.ts`  | `DeployProcessor` (post-merge + goal verification) |
+| `apps/server/src/services/lead-engineer-rules.ts`             | 16 fast-path rules (pure functions)                |
+| `apps/server/src/services/pr-feedback-service.ts`             | PR polling and remediation for REVIEW              |
+| `apps/server/src/services/antagonistic-review-service.ts`     | Plan review gate                                   |
+| `apps/server/src/services/git-workflow-service.ts`            | Post-completion git workflow for DEPLOY            |
+| `libs/types/src/workflow-settings.ts`                         | Configuration types                                |
+| `libs/types/src/lead-engineer.ts`                             | State machine types                                |
+| `docs/dev/system-architecture.md`                             | Full system architecture with timing               |
+| `docs/server/workflow-settings.md`                            | Settings reference                                 |
