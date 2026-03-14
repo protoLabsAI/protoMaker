@@ -104,14 +104,14 @@ Once satisfied, merge the PR. The feature automatically moves to **done**.
 
 ## Pipeline Overview
 
-For complex work (ideas, projects, multi-feature efforts), protoLabs runs a 9-phase pipeline:
+For complex work (ideas, projects, multi-feature efforts), protoLabs runs an 8-phase pipeline:
 
 ```
-Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → VERIFY → PUBLISH
-                                          ⬆ GATE                                 ⬆ GATE
+Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → PUBLISH
+                                          ⬆ GATE                              ⬆ GATE
 ```
 
-**Fast path** (most common): Create a feature directly on the board → EXECUTE → VERIFY → PUBLISH. Use this when you know exactly what needs building.
+**Fast path** (most common): Create a feature directly on the board → EXECUTE → PUBLISH. Use this when you know exactly what needs building.
 
 **Full path**: Submit an idea → PM Agent researches → SPARC PRD → human review → ProjM decomposes into milestones → agents implement each feature.
 
@@ -221,6 +221,6 @@ protoLabs stores data in two locations:
 
 ### Go Deeper
 
-- **[Idea to Production](../dev/idea-to-production.md)** — The full 9-phase pipeline reference
+- **[Idea to Production](../dev/idea-to-production.md)** — The full 8-phase pipeline reference
 - **[Project Lifecycle](../dev/project-lifecycle.md)** — Board-driven project state machine
 - **[Engine Architecture](../archived/engine-architecture.md)** — ADR for the Lead Engineer design

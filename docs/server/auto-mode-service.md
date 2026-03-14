@@ -88,6 +88,17 @@ interface ProjectAutoLoopState {
 }
 ```
 
+### TypedEventBus
+
+Wraps the shared event bus with a `emitAutoModeEvent()` method that enforces consistent auto-mode event shapes.
+
+Every call to `emitAutoModeEvent(eventType, data)` produces two emissions:
+
+1. **Envelope** — `auto-mode:event` with payload `{ type: eventType, ...data }` (consumed by WebSocket streaming to UI clients)
+2. **Direct** — the event type itself, normalized from `auto_mode_*` to `auto-mode:*` (e.g., `auto_mode_stopped` → `auto-mode:stopped`)
+
+The direct emission lets internal subscribers (such as Lead Engineer fast-path rules) listen on `auto-mode:stopped` without subscribing to the envelope and filtering by type.
+
 ### Circuit Breaker
 
 After `CONSECUTIVE_FAILURE_THRESHOLD` (2) failures within `FAILURE_WINDOW_MS` (60s), the loop pauses for `COOLDOWN_PERIOD_MS` (5 minutes), then auto-resumes.

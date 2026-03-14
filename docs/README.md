@@ -98,7 +98,7 @@
 | [Environment Setup](./dev/environment-setup.md)         | Dev environment prerequisites and setup            |
 | [Branch Strategy](./dev/branch-strategy.md)             | Three-branch flow (dev, staging, main)             |
 | [Git Workflow](./dev/git-workflow.md)                   | Git conventions, PR process, worktrees             |
-| [Idea to Production](./dev/idea-to-production.md)       | The canonical 9-phase pipeline reference           |
+| [Idea to Production](./dev/idea-to-production.md)       | The canonical 8-phase pipeline reference           |
 | [Inbox System](./dev/inbox-system.md)                   | Unified actionable items inbox                     |
 | [Project Lifecycle](./dev/project-lifecycle.md)         | Project state machine                              |
 | [PR Remediation Loop](./dev/pr-remediation-loop.md)     | Autonomous PR review feedback handling             |

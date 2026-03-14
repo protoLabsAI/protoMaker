@@ -58,14 +58,14 @@ Phase 1 → Phase 2a   (2a and 2b unblock together)
 
 ### Relationship to the pipeline
 
-The project lifecycle operates at the **project level**. The [9-phase pipeline](./idea-to-production.md) operates at the **feature level**. They connect at these points:
+The project lifecycle operates at the **project level**. The [8-phase pipeline](./idea-to-production.md) operates at the **feature level**. They connect at these points:
 
 | Project lifecycle state | Pipeline phases triggered      |
 | ----------------------- | ------------------------------ |
 | `idea`                  | TRIAGE, RESEARCH               |
 | `idea-approved`         | SPEC, SPEC_REVIEW              |
 | `prd-approved`          | DESIGN, PLAN                   |
-| `started`               | EXECUTE, VERIFY, PUBLISH       |
+| `started`               | EXECUTE, PUBLISH               |
 | `completed`             | (terminal — all features done) |
 
 ## MCP tools
@@ -250,7 +250,7 @@ After creation, project files are organized as:
 
 ## Related documentation
 
-- [Idea to Production](./idea-to-production.md) — The 9-phase pipeline reference (feature level)
+- [Idea to Production](./idea-to-production.md) — The 8-phase pipeline reference (feature level)
 - [Feature Status System](./feature-status-system.md) — The 6-status board lifecycle
 - [PR Remediation Loop](./pr-remediation-loop.md) — CI failure handling during REVIEW
 - [Event Ledger](./event-ledger.md) — Append-only lifecycle event persistence and timeline API
