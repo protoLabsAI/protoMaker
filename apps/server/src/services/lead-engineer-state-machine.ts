@@ -2,13 +2,12 @@
  * Lead Engineer — Feature State Machine
  *
  * Orchestrates a single feature through INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY.
- * Enhanced with goal gates, checkpointing, and pipeline event emission.
+ * Enhanced with goal gates and pipeline event emission.
  */
 
 import { createLogger } from '@protolabsai/utils';
-import type { Feature, GoalGateResult, EventType } from '@protolabsai/types';
+import type { Feature, EventType } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
-import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import { IntakeProcessor, PlanProcessor } from './lead-engineer-processors.js';
 import { ExecuteProcessor } from './lead-engineer-execute-processor.js';
 import { ReviewProcessor, MergeProcessor } from './lead-engineer-review-merge-processors.js';
@@ -91,19 +90,16 @@ const DEFAULT_GOAL_GATES: Map<string, GoalGateValidator> = new Map([
  *
  * Enhanced with:
  * - Goal gates: validate pre/post conditions on each transition
- * - Checkpointing: persist state after each successful transition
  * - Pipeline events: emit typed events for observability
  */
 export class FeatureStateMachine {
   private readonly processors: Map<FeatureProcessingState, StateProcessor>;
   private readonly goalGates: Map<string, GoalGateValidator>;
-  private checkpointService?: PipelineCheckpointService;
   private events?: EventEmitter;
 
   constructor(
     serviceContext: ProcessorServiceContext,
     opts?: {
-      checkpointService?: PipelineCheckpointService;
       events?: EventEmitter;
       goalGatesEnabled?: boolean;
     }
@@ -118,7 +114,6 @@ export class FeatureStateMachine {
     this.processors.set('ESCALATE', new EscalateProcessor(serviceContext));
 
     this.goalGates = opts?.goalGatesEnabled === false ? new Map() : new Map(DEFAULT_GOAL_GATES);
-    this.checkpointService = opts?.checkpointService;
     this.events = opts?.events;
   }
 
@@ -155,7 +150,6 @@ export class FeatureStateMachine {
     let sameStateCount = 0;
     const MAX_SAME_STATE_TRANSITIONS = 100;
     const completedStates: string[] = [];
-    const goalGateResults: GoalGateResult[] = [];
 
     if (resumeFromCheckpoint) {
       logger.info('Resuming feature processing from checkpoint', {
@@ -189,14 +183,6 @@ export class FeatureStateMachine {
         const entryGate = this.goalGates.get(`${currentState.toLowerCase()}-entry`);
         if (entryGate) {
           const gateResult = entryGate.evaluate(ctx);
-          const goalResult: GoalGateResult = {
-            gateId: entryGate.gateId,
-            state: currentState,
-            passed: gateResult.passed,
-            reason: gateResult.reason,
-            retryTarget: entryGate.retryTarget,
-          };
-          goalGateResults.push(goalResult);
 
           this.emitPipelineEvent('pipeline:goal-gate-evaluated', {
             featureId: feature.id,
@@ -233,14 +219,6 @@ export class FeatureStateMachine {
         const exitGate = this.goalGates.get(`${currentState.toLowerCase()}-exit`);
         if (exitGate && result.nextState && result.nextState !== 'ESCALATE') {
           const gateResult = exitGate.evaluate(ctx);
-          const goalResult: GoalGateResult = {
-            gateId: exitGate.gateId,
-            state: currentState,
-            passed: gateResult.passed,
-            reason: gateResult.reason,
-            retryTarget: exitGate.retryTarget,
-          };
-          goalGateResults.push(goalResult);
 
           this.emitPipelineEvent('pipeline:goal-gate-evaluated', {
             featureId: feature.id,
@@ -270,27 +248,6 @@ export class FeatureStateMachine {
           reason: result.reason,
           shouldContinue: result.shouldContinue,
         });
-
-        // Save checkpoint after successful transition
-        if (this.checkpointService && result.nextState) {
-          try {
-            await this.checkpointService.save(
-              projectPath,
-              feature.id,
-              result.nextState,
-              ctx,
-              completedStates,
-              goalGateResults
-            );
-            this.emitPipelineEvent('pipeline:checkpoint-saved', {
-              featureId: feature.id,
-              state: result.nextState,
-              checkpointId: `${feature.id}-${result.nextState}`,
-            });
-          } catch (err) {
-            logger.error('Failed to save checkpoint', { error: err });
-          }
-        }
 
         if (!result.shouldContinue || !result.nextState) {
           // Capture the terminal state signaled by the processor (e.g. DONE from DEPLOY)
@@ -349,18 +306,6 @@ export class FeatureStateMachine {
         } catch (err) {
           logger.error('ESCALATE processor failed after max transitions:', err);
         }
-      }
-    }
-
-    // Clean up checkpoint on terminal states
-    if (
-      this.checkpointService &&
-      (currentState === 'DONE' || currentState === 'DEPLOY' || currentState === 'ESCALATE')
-    ) {
-      try {
-        await this.checkpointService.delete(projectPath, feature.id);
-      } catch {
-        // Non-critical
       }
     }
 

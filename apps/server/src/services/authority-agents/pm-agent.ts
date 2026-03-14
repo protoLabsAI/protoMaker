@@ -432,11 +432,7 @@ export class PMAuthorityAgent {
             ttlSeconds: 600,
           });
 
-          if (!form) {
-            logger.debug(
-              `HITL form creation blocked (featureFlags.pipeline=false), skipping clarification for ${featureId}`
-            );
-          } else {
+          if (form) {
             logger.info(`HITL form created for idea clarification: ${form.id}`);
           }
           const response = form ? await this.waitForFormResponse(form.id, 600_000) : null;

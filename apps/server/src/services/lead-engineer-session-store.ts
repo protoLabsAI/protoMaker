@@ -1,8 +1,8 @@
 /**
  * Lead Engineer — Session Store
  *
- * Handles session persistence (save/restore/remove),
- * project completion detection, and orphaned checkpoint reconciliation.
+ * Handles session persistence (save/restore/remove)
+ * and project completion detection.
  */
 
 import path from 'node:path';
@@ -10,7 +10,6 @@ import { createLogger, atomicWriteJson, readJsonWithRecovery } from '@protolabsa
 import type { LeadEngineerSession } from '@protolabsai/types';
 import type { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
-import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import type { PersistedSessionData } from './lead-engineer-types.js';
 
 const logger = createLogger('LeadEngineerService');
@@ -125,39 +124,5 @@ export class LeadEngineerSessionStore {
     } catch {
       return false;
     }
-  }
-
-  async reconcileCheckpoints(
-    projectPath: string,
-    checkpointService: PipelineCheckpointService
-  ): Promise<{ deleted: string[] }> {
-    const deleted: string[] = [];
-
-    try {
-      const checkpoints = await checkpointService.listAll(projectPath);
-      if (checkpoints.length === 0) return { deleted };
-
-      const features = await this.deps.featureLoader.getAll(projectPath);
-      const featureMap = new Map(features.map((f) => [f.id, f]));
-
-      for (const checkpoint of checkpoints) {
-        const feature = featureMap.get(checkpoint.featureId);
-        const isOrphaned = !feature || feature.status === 'backlog';
-
-        if (isOrphaned) {
-          try {
-            await checkpointService.delete(projectPath, checkpoint.featureId);
-            deleted.push(checkpoint.featureId);
-            logger.info(`[RECONCILE-CP] Deleted orphaned checkpoint for ${checkpoint.featureId}`);
-          } catch (err) {
-            logger.warn(`[RECONCILE-CP] Failed to delete checkpoint:`, err);
-          }
-        }
-      }
-    } catch (err) {
-      logger.error(`[RECONCILE-CP] Failed to reconcile checkpoints:`, err);
-    }
-
-    return { deleted };
   }
 }

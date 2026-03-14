@@ -90,28 +90,8 @@ export class HITLFormService {
 
   /**
    * Create a new form request.
-   * Returns null if featureFlags.pipeline is false (default) — the caller should
-   * handle null as a no-op since HITL is disabled.
    */
   async create(input: HITLFormRequestInput): Promise<HITLFormRequest | null> {
-    // Gate: featureFlags.pipeline must be enabled
-    if (this.settingsService) {
-      try {
-        const globalSettings = await this.settingsService.getGlobalSettings();
-        if (!(globalSettings.featureFlags?.pipeline ?? false)) {
-          logger.debug('HITLFormService.create() blocked: featureFlags.pipeline is false');
-          return null;
-        }
-      } catch (err) {
-        logger.warn('Failed to read feature flags for HITL gate, blocking form creation:', err);
-        return null;
-      }
-    } else {
-      // No settingsService wired — block by default (pipeline=false is the default)
-      logger.debug('HITLFormService.create() blocked: settingsService not available');
-      return null;
-    }
-
     if (!input.title || !input.steps?.length) {
       throw new Error('title and at least one step are required');
     }

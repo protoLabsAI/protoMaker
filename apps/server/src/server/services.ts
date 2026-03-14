@@ -51,7 +51,6 @@ import {
 } from '../services/built-in-integrations.js';
 import { ReconciliationService } from '../services/reconciliation-service.js';
 import { GitHubStateChecker } from '../services/github-state-checker.js';
-import { PipelineCheckpointService } from '../services/pipeline-checkpoint-service.js';
 import { ProjectService } from '../services/project-service.js';
 import { getSpecGenerationMonitor } from '../services/spec-generation-monitor.js';
 import { FeatureHealthService } from '../services/feature-health-service.js';
@@ -63,7 +62,6 @@ import { EventStreamBuffer } from '../lib/event-stream-buffer.js';
 import { AntagonisticReviewService } from '../services/antagonistic-review-service.js';
 import { AgentScoringService } from '../services/agent-scoring-service.js';
 import { gitWorkflowService } from '../services/git-workflow-service.js';
-import { PipelineOrchestrator } from '../services/pipeline-orchestrator.js';
 import { TrustTierService } from '../services/trust-tier-service.js';
 import { LedgerService } from '../services/ledger-service.js';
 import { ArchivalService } from '../services/archival-service.js';
@@ -203,7 +201,6 @@ export interface ServiceContainer {
 
   // Signal & pipeline
   signalIntakeService: SignalIntakeService;
-  pipelineOrchestrator: PipelineOrchestrator;
   channelRouter: ChannelRouter;
 
   // Docs detection
@@ -230,7 +227,6 @@ export interface ServiceContainer {
 
   // Lead Engineer
   leadEngineerService: LeadEngineerService;
-  pipelineCheckpointService: PipelineCheckpointService;
   factStoreService: FactStoreService;
   trajectoryStoreService: TrajectoryStoreService;
   leadHandoffService: LeadHandoffService;
@@ -458,14 +454,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     settingsService
   );
 
-  // Pipeline Orchestrator — unified phase tracking across ops + gtm branches
-  const pipelineOrchestrator = new PipelineOrchestrator(events, featureLoader, settingsService);
-  // Hydrate the pipeline feature flag from settings (async, non-blocking).
-  // Defaults to disabled (false) until the HITL pipeline overhaul ships.
-  void settingsService.getGlobalSettings().then((s) => {
-    pipelineOrchestrator.setEnabled(s.featureFlags?.pipeline ?? false);
-  });
-
   // Channel Router — routes HITL interactions to the originating channel
   const channelRouter = new ChannelRouter();
 
@@ -540,8 +528,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     metricsService,
     dataDir
   );
-  const pipelineCheckpointService = new PipelineCheckpointService();
-
   // ContextFidelityService for shaping prior context on retries
   const contextFidelityService = new ContextFidelityService();
 
@@ -772,8 +758,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   leadEngineerService.setAuthorityService(authorityService);
 
   // Wire contextFidelityService into leadEngineerService
-  leadEngineerService.setCheckpointService(pipelineCheckpointService);
-  autoModeService.setPipelineCheckpointService(pipelineCheckpointService);
   leadEngineerService.setContextFidelityService(contextFidelityService);
   leadEngineerService.setKnowledgeStoreService(knowledgeStoreService);
   leadEngineerService.setHITLFormService(hitlFormService);
@@ -804,9 +788,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   } catch (err) {
     logger.warn('[Affinity] Failed to load project preferences — affinity filtering skipped:', err);
   }
-
-  // Wire pipelineOrchestrator processors
-  pipelineOrchestrator.setProcessors({ ops: pmAgent, gtm: gtmAgent, projm: projmAgent });
 
   // Initialize Ceremony Service
   ceremonyService.initialize(
@@ -884,7 +865,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     eventStreamBuffer,
     briefingCursorService,
     signalIntakeService,
-    pipelineOrchestrator,
     channelRouter,
     docsUpdateDetector,
     authorityService,
@@ -901,7 +881,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     ceremonyService,
     dailyStandupService,
     leadEngineerService,
-    pipelineCheckpointService,
     factStoreService,
     trajectoryStoreService,
     leadHandoffService,
