@@ -56,13 +56,25 @@ Before writing, identify which type your page is. Never mix types.
 - Same-section links: relative (`./architecture`)
 - Code blocks: always specify language (` ```typescript `, ` ```bash `)
 
+## Three Documentation Surfaces
+
+| Surface | Location | Audience | When to Write Here |
+|---------|----------|----------|-------------------|
+| **Public docs** | `docs/` | End users, developers adopting protoLabs | Tutorials, how-to guides, API reference, getting started |
+| **Internal docs** | `docs/internal/` | Automaker team, contributors, operators | Architecture decisions, runbooks, internal APIs, team processes |
+| **In-app viewer** | Per-project `docsPath` | Users of any project | Project-specific docs alongside code |
+
+**Rule of thumb:** If the audience is someone using protoLabs, it's public. If the audience is someone building protoLabs, it's internal. If the audience is someone working on their own project, it's in-app.
+
 ## When Updating Docs
 
-- New service → add a page in `server/`
+- New service → add a page in `server/` (public) or `docs/internal/` (if internal-only)
 - New config option → add to the relevant env var table
 - New API route → add to server reference
 - Changed behavior → update the existing page, don't create a new one
 - Removed feature → delete the page, update `docs/README.md`
+- Architecture decision → add to `docs/internal/`
+- Operational runbook → add to `docs/internal/`
 
 ## Common Mistakes
 
