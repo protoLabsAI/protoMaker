@@ -11,7 +11,7 @@
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@protolabsai/utils';
-import { createGitExecEnv } from '@protolabsai/git-utils';
+import { createGitExecEnv, parseGitHubRemote } from '@protolabsai/git-utils';
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
@@ -79,21 +79,11 @@ export class CodeRabbitResolverService {
       return { owner, repoName };
     }
 
-    const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
-      cwd: workDir,
-      env: execEnv,
-    });
-
-    const remoteUrl = remoteOutput.trim();
-    const match =
-      remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
-      remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
-
-    if (!match) {
-      throw new Error(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
+    const parsed = await parseGitHubRemote(workDir);
+    if (!parsed) {
+      throw new Error(`Could not parse GitHub owner/repo from remote in: ${workDir}`);
     }
-
-    return { owner: match[1], repoName: match[2] };
+    return parsed;
   }
 
   /**
@@ -155,11 +145,11 @@ export class CodeRabbitResolverService {
     try {
       const { owner, repoName } = await this.parseOwnerRepo(workDir, repo);
 
-      // Query review threads using GraphQL
+      // Query review threads using GraphQL with variables to avoid injection
       const query = `
-        query {
-          repository(owner: "${owner}", name: "${repoName}") {
-            pullRequest(number: ${prNumber}) {
+        query($owner: String!, $name: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $name) {
+            pullRequest(number: $prNumber) {
               reviewThreads(first: 100) {
                 nodes {
                   id
@@ -179,10 +169,25 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      const { stdout } = await execFileAsync('gh', ['api', 'graphql', '-f', `query=${query}`], {
-        cwd: workDir,
-        env: execEnv,
-      });
+      const { stdout } = await execFileAsync(
+        'gh',
+        [
+          'api',
+          'graphql',
+          '-f',
+          `query=${query}`,
+          '-f',
+          `owner=${owner}`,
+          '-f',
+          `name=${repoName}`,
+          '-F',
+          `prNumber=${prNumber}`,
+        ],
+        {
+          cwd: workDir,
+          env: execEnv,
+        }
+      );
 
       const data = JSON.parse(stdout);
       const threads = data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];
@@ -227,8 +232,8 @@ export class CodeRabbitResolverService {
   private async resolveThread(threadId: string): Promise<boolean> {
     try {
       const mutation = `
-        mutation {
-          resolveReviewThread(input: { threadId: "${threadId}" }) {
+        mutation($threadId: ID!) {
+          resolveReviewThread(input: { threadId: $threadId }) {
             thread {
               id
               isResolved
@@ -237,9 +242,13 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      await execFileAsync('gh', ['api', 'graphql', '-f', `query=${mutation}`], {
-        env: execEnv,
-      });
+      await execFileAsync(
+        'gh',
+        ['api', 'graphql', '-f', `query=${mutation}`, '-f', `threadId=${threadId}`],
+        {
+          env: execEnv,
+        }
+      );
 
       return true;
     } catch (error) {
@@ -263,13 +272,12 @@ export class CodeRabbitResolverService {
   ): Promise<boolean> {
     try {
       // First, post the reply comment
-      // Use JSON.stringify slice to produce correct GraphQL string escaping
-      const escapedBody = JSON.stringify(body).slice(1, -1);
+      // Use GraphQL variables for threadId and body to avoid injection / escaping issues
       const addReplyMutation = `
-        mutation {
+        mutation($threadId: ID!, $body: String!) {
           addPullRequestReviewThreadReply(input: {
-            pullRequestReviewThreadId: "${threadId}",
-            body: "${escapedBody}"
+            pullRequestReviewThreadId: $threadId,
+            body: $body
           }) {
             comment {
               id
@@ -278,9 +286,22 @@ export class CodeRabbitResolverService {
         }
       `;
 
-      await execFileAsync('gh', ['api', 'graphql', '-f', `query=${addReplyMutation}`], {
-        env: execEnv,
-      });
+      await execFileAsync(
+        'gh',
+        [
+          'api',
+          'graphql',
+          '-f',
+          `query=${addReplyMutation}`,
+          '-f',
+          `threadId=${threadId}`,
+          '-f',
+          `body=${body}`,
+        ],
+        {
+          env: execEnv,
+        }
+      );
 
       logger.debug(`Posted reply comment on thread ${threadId}`);
 
@@ -309,21 +330,36 @@ export class CodeRabbitResolverService {
     try {
       const { owner, repoName } = await this.parseOwnerRepo(workDir, repo);
 
-      // Query for PR node ID
+      // Query for PR node ID using variables to avoid injection
       const query = `
-        query {
-          repository(owner: "${owner}", name: "${repoName}") {
-            pullRequest(number: ${prNumber}) {
+        query($owner: String!, $name: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $name) {
+            pullRequest(number: $prNumber) {
               id
             }
           }
         }
       `;
 
-      const { stdout } = await execFileAsync('gh', ['api', 'graphql', '-f', `query=${query}`], {
-        cwd: workDir,
-        env: execEnv,
-      });
+      const { stdout } = await execFileAsync(
+        'gh',
+        [
+          'api',
+          'graphql',
+          '-f',
+          `query=${query}`,
+          '-f',
+          `owner=${owner}`,
+          '-f',
+          `name=${repoName}`,
+          '-F',
+          `prNumber=${prNumber}`,
+        ],
+        {
+          cwd: workDir,
+          env: execEnv,
+        }
+      );
 
       const data = JSON.parse(stdout);
       return data.data?.repository?.pullRequest?.id || null;

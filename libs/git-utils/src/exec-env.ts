@@ -6,6 +6,11 @@
  * description.
  */
 
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
 /**
  * Build an environment object suitable for spawning git and gh CLI processes.
  *
@@ -48,6 +53,44 @@ export function createGitExecEnv(): NodeJS.ProcessEnv {
     PATH: extendedPath,
     HUSKY: '0',
   };
+}
+
+/**
+ * Extract a clean title from a feature description for use in commit messages
+ * and PR titles.
+ *
+ * Takes the first line of the description, strips common markdown formatting,
+ * and truncates to 72 characters.
+ */
+/**
+ * Parse GitHub owner and repository name from a working directory's git remote URL.
+ *
+ * @param workDir - Working directory containing the git repository
+ * @returns Owner and repo name, or null if the remote URL cannot be parsed
+ */
+export async function parseGitHubRemote(
+  workDir: string
+): Promise<{ owner: string; repoName: string } | null> {
+  try {
+    const execEnv = createGitExecEnv();
+    const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
+      cwd: workDir,
+      env: execEnv,
+    });
+
+    const remoteUrl = remoteOutput.trim();
+    const match =
+      remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
+      remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
+
+    if (!match) {
+      return null;
+    }
+
+    return { owner: match[1], repoName: match[2] };
+  } catch {
+    return null;
+  }
 }
 
 /**
