@@ -12,10 +12,9 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Button } from '@protolabsai/ui/atoms';
 import { KanbanColumn, KanbanCard, EmptyStateCard } from './components';
 import { Feature, useAppStore, formatShortcut } from '@/store/app-store';
-import { Archive, Settings2, CheckSquare, GripVertical, Plus } from 'lucide-react';
+import { Archive, CheckSquare, GripVertical, Plus } from 'lucide-react';
 import { useResponsiveKanban } from '@/hooks/use-responsive-kanban';
-import { getColumnsWithPipeline, type ColumnId } from './constants';
-import type { PipelineConfig } from '@protolabsai/types';
+import { COLUMNS, type ColumnId } from './constants';
 import { cn } from '@/lib/utils';
 interface KanbanBoardProps {
   activeFeature: Feature | null;
@@ -51,8 +50,6 @@ interface KanbanBoardProps {
   onAddFeature: () => void;
   onShowCompletedModal: () => void;
   completedCount: number;
-  pipelineConfig: PipelineConfig | null;
-  onOpenPipelineSettings?: () => void;
   // Selection mode props
   isSelectionMode?: boolean;
   selectionTarget?: 'backlog' | 'waiting_approval' | null;
@@ -288,8 +285,6 @@ export function KanbanBoard({
   onAddFeature,
   onShowCompletedModal,
   completedCount,
-  pipelineConfig,
-  onOpenPipelineSettings,
   isSelectionMode = false,
   selectionTarget = null,
   selectedFeatureIds = new Set(),
@@ -300,8 +295,7 @@ export function KanbanBoard({
   isReadOnly = false,
   className,
 }: KanbanBoardProps) {
-  // Generate columns including pipeline steps
-  const columns = useMemo(() => getColumnsWithPipeline(pipelineConfig), [pipelineConfig]);
+  const columns = COLUMNS;
 
   // Get the keyboard shortcut for adding features
   const keyboardShortcuts = useAppStore((state) => state.keyboardShortcuts);
@@ -450,28 +444,6 @@ export function KanbanBoard({
                           </>
                         )}
                       </Button>
-                    ) : column.id === 'in_progress' ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={onOpenPipelineSettings}
-                        title="Pipeline Settings"
-                        data-testid="pipeline-settings-button"
-                      >
-                        <Settings2 className="w-3.5 h-3.5" />
-                      </Button>
-                    ) : column.isPipelineStep ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={onOpenPipelineSettings}
-                        title="Edit Pipeline Step"
-                        data-testid="edit-pipeline-step-button"
-                      >
-                        <Settings2 className="w-3.5 h-3.5" />
-                      </Button>
                     ) : undefined
                   }
                   footerAction={
@@ -512,14 +484,7 @@ export function KanbanBoard({
                             onAiSuggest={column.id === 'backlog' ? onAiSuggest : undefined}
                             opacity={effectiveCardOpacity}
                             glassmorphism={effectiveGlassmorphism}
-                            customConfig={
-                              column.isPipelineStep
-                                ? {
-                                    title: `${column.title} Empty`,
-                                    description: `Features will appear here during the ${column.title.toLowerCase()} phase of the pipeline.`,
-                                  }
-                                : undefined
-                            }
+                            customConfig={undefined}
                           />
                         )}
                         {shouldVirtualize ? (

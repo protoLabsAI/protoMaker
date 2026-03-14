@@ -4,12 +4,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@protolabsai/ui/atoms';
 import { getBlockingDependencies } from '@protolabsai/dependency-resolver';
 import type { Feature } from '@/store/types';
-import type { PipelineConfig, FeatureStatusWithPipeline } from '@protolabsai/types';
+import type { FeatureStatusWithPipeline } from '@protolabsai/types';
 import { ListHeader } from './list-header';
 import { ListRow, sortFeatures } from './list-row';
 import { createRowActionHandlers, type RowActionHandlers } from './row-actions';
 import { getStatusOrder } from './status-badge';
-import { getColumnsWithPipeline } from '../../constants';
+import { COLUMNS } from '../../constants';
 import type { SortConfig, SortColumn } from '../../hooks/use-list-view-state';
 
 /** Empty set constant to avoid creating new instances on each render */
@@ -57,8 +57,6 @@ export interface ListViewProps {
   actionHandlers: ListViewActionHandlers;
   /** Set of feature IDs that are currently running */
   runningAutoTasks: string[];
-  /** Pipeline configuration for custom statuses */
-  pipelineConfig?: PipelineConfig | null;
   /** Callback to add a new feature */
   onAddFeature?: () => void;
   /** Whether selection mode is enabled */
@@ -172,7 +170,6 @@ const EmptyState = memo(function EmptyState({ onAddFeature }: { onAddFeature?: (
  *     // ...
  *   }}
  *   runningAutoTasks={runningAutoTasks}
- *   pipelineConfig={pipelineConfig}
  *   onAddFeature={handleAddFeature}
  * />
  * ```
@@ -184,7 +181,6 @@ export const ListView = memo(function ListView({
   onSortChange,
   actionHandlers,
   runningAutoTasks,
-  pipelineConfig = null,
   onAddFeature,
   isSelectionMode = false,
   selectedFeatureIds = EMPTY_SET,
@@ -197,7 +193,7 @@ export const ListView = memo(function ListView({
 
   // Generate status groups from columnFeaturesMap
   const statusGroups = useMemo<StatusGroup[]>(() => {
-    const columns = getColumnsWithPipeline(pipelineConfig);
+    const columns = COLUMNS;
     const groups: StatusGroup[] = [];
 
     for (const column of columns) {
@@ -217,7 +213,7 @@ export const ListView = memo(function ListView({
 
     // Sort groups by status order
     return groups.sort((a, b) => getStatusOrder(a.id) - getStatusOrder(b.id));
-  }, [columnFeaturesMap, pipelineConfig, sortConfig]);
+  }, [columnFeaturesMap, sortConfig]);
 
   // Calculate total feature count
   const totalFeatures = useMemo(
