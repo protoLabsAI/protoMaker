@@ -1,0 +1,72 @@
+---
+/**
+ * SEO — Meta tag component for Astro pages.
+ *
+ * Renders <title>, description, Open Graph, Twitter Card, and canonical tags
+ * from strongly-typed props. Drop inside <head> on every page.
+ *
+ * Usage:
+ *   import SEO from '@protolabsai/templates/components/SEO.astro';
+ *   <SEO title="Home" description="..." image="/og.png" />
+ */
+
+interface Props {
+  /** Page title — used in <title> and og:title */
+  title: string;
+  /** Short description — used in meta description and og:description */
+  description?: string;
+  /** Absolute URL to the OG / Twitter card image */
+  image?: string;
+  /** Canonical URL for this page */
+  canonical?: string;
+  /** og:type — defaults to "website" */
+  type?: 'website' | 'article' | 'profile';
+  /** Twitter card style — defaults to "summary_large_image" */
+  twitterCard?: 'summary' | 'summary_large_image' | 'app' | 'player';
+  /** Twitter / X handle, e.g. "@protoLabsAI" */
+  twitterSite?: string;
+  /** Robots directive — defaults to "index, follow" */
+  robots?: string;
+  /** Optional site name shown in og:site_name */
+  siteName?: string;
+  /** Additional author meta value */
+  author?: string;
+}
+
+const {
+  title,
+  description,
+  image,
+  canonical,
+  type = 'website',
+  twitterCard = 'summary_large_image',
+  twitterSite,
+  robots = 'index, follow',
+  siteName,
+  author,
+} = Astro.props;
+
+const resolvedCanonical = canonical ?? Astro.url?.href;
+---
+
+<!-- Primary meta -->
+<title>{title}</title>
+{description && <meta name="description" content={description} />}
+{robots && <meta name="robots" content={robots} />}
+{author && <meta name="author" content={author} />}
+{resolvedCanonical && <link rel="canonical" href={resolvedCanonical} />}
+
+<!-- Open Graph -->
+<meta property="og:title" content={title} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:type" content={type} />
+{resolvedCanonical && <meta property="og:url" content={resolvedCanonical} />}
+{image && <meta property="og:image" content={image} />}
+{siteName && <meta property="og:site_name" content={siteName} />}
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card" content={twitterCard} />
+<meta name="twitter:title" content={title} />
+{description && <meta name="twitter:description" content={description} />}
+{image && <meta name="twitter:image" content={image} />}
+{twitterSite && <meta name="twitter:site" content={twitterSite} />}

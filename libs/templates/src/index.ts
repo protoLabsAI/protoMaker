@@ -50,3 +50,29 @@ export { getDocsCI, getExtensionCI } from './ci.js';
 // Design tokens
 export { getDesignTokensCss, getDesignTokensThemeBlock, designTokens } from './design-tokens.js';
 export type { DesignTokens } from './design-tokens.js';
+
+// Astro component string templates (for project scaffolding — write to disk)
+export {
+  getNavComponent,
+  getNavMobileMenuComponent,
+  getFooterComponent,
+  getSEOComponent,
+  getButtonComponent,
+  getBadgeComponent,
+  getCardComponent,
+  getAstroComponents,
+} from './components.js';
+
+// Shared component prop interfaces (for typed usage in consuming Astro projects)
+// Astro components are imported directly: import Nav from '@protolabsai/templates/components/Nav.astro'
+export type {
+  NavLink,
+  FooterLink,
+  FooterColumn,
+  SocialPlatform,
+  SocialLink,
+  ButtonVariant,
+  ButtonSize,
+  BadgeColor,
+  CardGlow,
+} from './components/index.js';

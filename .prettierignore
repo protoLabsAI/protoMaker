@@ -60,3 +60,6 @@ blob-report/
 # Electron
 dist-electron/
 server-bundle/
+
+# Astro components — no prettier-plugin-astro installed in this monorepo
+*.astro

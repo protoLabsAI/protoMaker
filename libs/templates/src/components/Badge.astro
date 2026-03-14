@@ -1,0 +1,87 @@
+---
+/**
+ * Badge — Inline color-coded label with brand token variants.
+ *
+ * Zero client-side JavaScript.
+ *
+ * Usage:
+ *   import Badge from '@protolabsai/templates/components/Badge.astro';
+ *   <Badge color="purple">New</Badge>
+ *   <Badge color="green">Stable</Badge>
+ */
+
+type BadgeColor = 'default' | 'purple' | 'green' | 'yellow' | 'blue' | 'red';
+
+interface Props {
+  /** Color variant */
+  color?: BadgeColor;
+  /** Extra CSS class names */
+  class?: string;
+}
+
+const { color = 'default', class: className = '' } = Astro.props;
+
+const colorClass: Record<BadgeColor, string> = {
+  default: 'badge--default',
+  purple: 'badge--purple',
+  green: 'badge--green',
+  yellow: 'badge--yellow',
+  blue: 'badge--blue',
+  red: 'badge--red',
+};
+
+const classes = ['badge', colorClass[color as BadgeColor], className]
+  .filter(Boolean)
+  .join(' ');
+---
+
+<span class={classes}>
+  <slot />
+</span>
+
+<style>
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: var(--font-family-sans, 'Geist', system-ui, sans-serif);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  /* ── Color variants ─────────────────────── */
+
+  .badge--default {
+    background: rgba(255, 255, 255, 0.08);
+    color: #a1a1aa;
+  }
+
+  .badge--purple {
+    background: rgba(167, 139, 250, 0.15);
+    color: var(--color-accent, #a78bfa);
+  }
+
+  .badge--green {
+    background: rgba(74, 222, 128, 0.15);
+    color: var(--color-success, #4ade80);
+  }
+
+  .badge--yellow {
+    background: rgba(250, 204, 21, 0.15);
+    color: var(--color-warning, #facc15);
+  }
+
+  .badge--blue {
+    background: rgba(96, 165, 250, 0.15);
+    color: var(--color-info, #60a5fa);
+  }
+
+  .badge--red {
+    background: rgba(248, 113, 113, 0.15);
+    color: var(--color-danger, #f87171);
+  }
+</style>
