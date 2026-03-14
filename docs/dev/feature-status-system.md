@@ -303,22 +303,21 @@ interface LeadWorldState {
 The Lead Engineer tracks a richer internal state machine than the 6-status board. `FeatureState` is the full pipeline:
 
 ```
-INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → VERIFY → DONE
-                                                                  ↑
-                                                             ESCALATE ←── any state
+INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
+                                                       ↑
+                                                  ESCALATE ←── any state
 ```
 
-| State      | Description                                       |
-| ---------- | ------------------------------------------------- |
-| `INTAKE`   | Feature created, awaiting triage                  |
-| `PLAN`     | Requirements analysis and spec generation         |
-| `EXECUTE`  | Implementation in progress                        |
-| `REVIEW`   | PR open, awaiting reviewer approval               |
-| `MERGE`    | PR approved and CI passing, ready to merge        |
-| `DEPLOY`   | Merged to main, deployment in progress            |
-| `VERIFY`   | Post-deploy health checks and criteria validation |
-| `DONE`     | Fully deployed and verified                       |
-| `ESCALATE` | Blocked; needs human intervention                 |
+| State      | Description                                  |
+| ---------- | -------------------------------------------- |
+| `INTAKE`   | Feature created, awaiting triage             |
+| `PLAN`     | Requirements analysis and spec generation    |
+| `EXECUTE`  | Implementation in progress                   |
+| `REVIEW`   | PR open, awaiting reviewer approval          |
+| `MERGE`    | PR approved and CI passing, ready to merge   |
+| `DEPLOY`   | Merged to main, deployment in progress       |
+| `DONE`     | Fully deployed and verified (terminal state) |
+| `ESCALATE` | Blocked; needs human intervention            |
 
 ### Fast-Path Rules
 

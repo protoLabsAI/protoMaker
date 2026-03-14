@@ -163,7 +163,7 @@ authority:idea-injected → PM research → authority:pm-prd-ready
     → feature:pr-merged → (reflection, memory update)
 ```
 
-See [Idea to Production Pipeline](../dev/idea-to-production.md) for the full 9-phase event chain.
+See [Idea to Production Pipeline](../dev/idea-to-production.md) for the full 8-phase event chain.
 
 ## Self-improvement loop
 
@@ -206,4 +206,4 @@ Every persona agent receives the `CONTINUOUS_IMPROVEMENT` prompt fragment. When 
 - [Reliability & Recovery](./reliability.md) — Failure handling, escalation, health sweeps
 - [Prompt Engineering](./prompt-engineering.md) — How prompts are composed and customized
 - [Engine Architecture](../archived/engine-architecture.md) — ADR for the Lead Engineer design
-- [Idea to Production](../dev/idea-to-production.md) — Full 9-phase pipeline reference
+- [Idea to Production](../dev/idea-to-production.md) — Full 8-phase pipeline reference

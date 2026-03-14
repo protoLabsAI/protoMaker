@@ -4,11 +4,11 @@ The complete lifecycle of work in protoLabs Studio, from initial signal through 
 
 ## Overview
 
-Every piece of work flows through a 9-phase pipeline with two human gates. The pipeline has two branches (ops and gtm), three authority agents, a Lead Engineer state machine, and fast-path supervisor rules.
+Every piece of work flows through an 8-phase pipeline with two human gates. The pipeline has two branches (ops and gtm), three authority agents, a Lead Engineer state machine, and fast-path supervisor rules.
 
 ```
-Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → VERIFY → PUBLISH
-                                         ^ GATE                                 ^ GATE
+Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → EXECUTE → PUBLISH
+                                         ^ GATE                               ^ GATE
 ```
 
 GTM branch skips DESIGN and PLAN (content doesn't need architectural decomposition).
@@ -46,7 +46,7 @@ Work enters through four channels, all routed by `SignalIntakeService`:
 
 The `intent` field is threaded onto all `signal:routed` events. The interrupt fast-path uses `HITLFormService` (wired via `setHITLFormService()` at server startup).
 
-## The 9 phases
+## The 8 phases
 
 Defined in `libs/types/src/pipeline-phase.ts`.
 
@@ -104,19 +104,13 @@ GTM branch skips this phase entirely.
 
 **Gate:** auto | **Agent:** Lead Engineer + persona agents | **workItemState:** `in_progress`
 
-The Lead Engineer state machine takes over. See the Lead Engineer section below for the full sub-state machine (INTAKE, PLAN, EXECUTE, REVIEW, MERGE, DONE).
+The Lead Engineer state machine takes over. See the Lead Engineer section below for the full sub-state machine (INTAKE, PLAN, EXECUTE, REVIEW, MERGE, DEPLOY, DONE).
 
-### Phase 8: VERIFY
+### Phase 8: PUBLISH
 
-**Gate:** review | **Agent:** PR feedback service | **workItemState:** `testing`
+**Gate:** review (ops) / manual (gtm) | **Agent:** PR feedback service | **workItemState:** `done`
 
-**Second human gate.** PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. Emits `pr:approved`.
-
-### Phase 9: PUBLISH
-
-**Gate:** auto (ops) / manual (gtm) | **workItemState:** `done`
-
-PR merges to target branch (dev, epic, or main). Board status updates to `done`. Emits `feature:pr-merged`.
+**Second human gate.** PR is created, CI runs, CodeRabbit reviews. The pipeline can hold here for human review if issues are found. On clean pass, auto-proceeds. PR merges to target branch (dev, epic, or main). Board status updates to `done`. Emits `feature:pr-merged`.
 
 ## Gate system
 
@@ -140,8 +134,7 @@ Three gate modes control phase transitions:
 | SPEC_REVIEW → DESIGN | **review** |
 | DESIGN → PLAN        | auto       |
 | PLAN → EXECUTE       | auto       |
-| EXECUTE → VERIFY     | auto       |
-| VERIFY → PUBLISH     | **review** |
+| EXECUTE → PUBLISH    | **review** |
 | PUBLISH → done       | auto       |
 
 ### Gate hold state
@@ -296,7 +289,6 @@ backlog → in_progress → review → done
 | DESIGN         | approved      | backlog      |
 | PLAN           | planned       | backlog      |
 | EXECUTE        | in_progress   | in_progress  |
-| VERIFY         | testing       | review       |
 | PUBLISH        | done          | done         |
 
 ## Dependency resolution
@@ -318,7 +310,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 **Components:**
 
 - `PipelinePillSelector` -- horizontal row of chips, each showing feature title + status dot (violet=active, amber=gated, emerald=done). Auto-hides when <=1 pipeline active.
-- `PipelineProgressBar` -- unchanged, always shows the selected pipeline's 9-phase stepper.
+- `PipelineProgressBar` -- unchanged, always shows the selected pipeline's 8-phase stepper.
 - `usePipelineProgress` hook -- tracks a `Map<featureId, PipelineEntry>` internally. WebSocket events upsert by `featureId`. Exposes `pipelines` array + `selectedFeatureId` + `setSelectedFeatureId`.
 
 **Gate interaction:** Clicking the amber gate indicator on the progress bar or a gated pipeline-stage node opens the pending HITL form for the selected pipeline's feature (if one exists). The `Advance`/`Reject` buttons in the progress bar resolve the selected pipeline's gate.
@@ -327,7 +319,7 @@ The flow graph view tracks all concurrent pipelines, not just one. When multiple
 
 | File                                                                     | Purpose                           |
 | ------------------------------------------------------------------------ | --------------------------------- |
-| `libs/types/src/pipeline-phase.ts`                                       | 9 phases, gate modes, transitions |
+| `libs/types/src/pipeline-phase.ts`                                       | 8 phases, gate modes, transitions |
 | `libs/types/src/feature.ts`                                              | Feature status, pipelineState     |
 | `libs/types/src/authority.ts`                                            | WorkItemState (15 states)         |
 | `libs/types/src/lead-engineer.ts`                                        | Lead Engineer types               |
