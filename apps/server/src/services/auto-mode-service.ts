@@ -35,9 +35,6 @@ import type {
   Feature,
   ExecutionRecord,
   ModelProvider,
-  PipelineStep,
-  FeatureStatusWithPipeline,
-  PipelineConfig,
   ThinkingLevel,
   PlanningMode,
   ExecutionContext,
@@ -109,7 +106,6 @@ import { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import type { AuthorityService } from './authority-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
-import { pipelineService } from './pipeline-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -149,26 +145,6 @@ const execFileAsync = promisify(execFile);
 
 // Model selection for features is handled by AutoModeService.getModelForFeature() class method
 // which reads the user-configured agentExecutionModel from settings.
-
-/**
- * Information about pipeline status when resuming a feature.
- * Used to determine how to handle features stuck in pipeline execution.
- *
- * @property {boolean} isPipeline - Whether the feature is in a pipeline step
- * @property {string | null} stepId - ID of the current pipeline step (e.g., 'step_123')
- * @property {number} stepIndex - Index of the step in the sorted pipeline steps (-1 if not found)
- * @property {number} totalSteps - Total number of steps in the pipeline
- * @property {PipelineStep | null} step - The pipeline step configuration, or null if step not found
- * @property {PipelineConfig | null} config - The full pipeline configuration, or null if no pipeline
- */
-interface PipelineStatusInfo {
-  isPipeline: boolean;
-  stepId: string | null;
-  stepIndex: number;
-  totalSteps: number;
-  step: PipelineStep | null;
-  config: PipelineConfig | null;
-}
 
 interface AutoModeConfig {
   maxConcurrency: number;
@@ -1397,7 +1373,6 @@ export class AutoModeService {
   /**
    * Mark a single running feature as interrupted.
    * Called during shutdown to persist the interrupted state before aborting agents.
-   * Preserves pipeline_* statuses (pipeline resume needs the step info).
    */
   private async markFeatureInterrupted(featureId: string, reason: string): Promise<void> {
     try {
@@ -1408,14 +1383,6 @@ export class AutoModeService {
       if (!feature) return;
 
       const previousStatus = feature.status || 'in_progress';
-
-      // Don't overwrite pipeline_* statuses — pipeline resume needs the step info
-      if (previousStatus.startsWith('pipeline_')) {
-        logger.info(
-          `[Shutdown] Preserving pipeline status "${previousStatus}" for feature ${featureId}`
-        );
-        return;
-      }
 
       // Don't mark terminal statuses
       if (
@@ -1458,7 +1425,7 @@ export class AutoModeService {
 
   /**
    * Reconcile feature states after server restart.
-   * Finds features stuck in transient states (in_progress, interrupted, pipeline_*)
+   * Finds features stuck in transient states (in_progress, interrupted)
    * with no running agent and resets them to backlog.
    * Emits events for each reconciled feature and a batch summary.
    */
@@ -1471,10 +1438,7 @@ export class AutoModeService {
     const stuckFeatures = features.filter((f) => {
       const status = f.status || '';
       const isTransient =
-        status === 'in_progress' ||
-        status === 'interrupted' ||
-        status === 'running' ||
-        status.startsWith('pipeline_');
+        status === 'in_progress' || status === 'interrupted' || status === 'running';
       return isTransient && !this.runningFeatures.has(f.id) && !this.concurrencyManager.has(f.id);
     });
 
@@ -1562,19 +1526,7 @@ export class AutoModeService {
       return;
     }
 
-    // Check if feature is stuck in a pipeline step
-    const pipelineInfo = await this.detectPipelineStatus(
-      projectPath,
-      featureId,
-      (feature.status || '') as FeatureStatusWithPipeline
-    );
-
-    if (pipelineInfo.isPipeline) {
-      // Feature stuck in pipeline - use pipeline resume
-      return this.resumePipelineFeature(projectPath, feature, useWorktrees, pipelineInfo);
-    }
-
-    // Normal resume flow for non-pipeline features
+    // Normal resume flow
     // Use contextExists() which includes stale-session detection: if agent-output.md
     // is older than STALE_SESSION_THRESHOLD_MS (default 5 min), it's renamed to .stale
     // and we start fresh without incrementing failureCount.
@@ -1592,538 +1544,6 @@ export class AutoModeService {
     // No context (or stale context was renamed to .stale) — start fresh.
     // executeFeature will handle adding to runningFeatures.
     return this.executeFeature(projectPath, featureId, useWorktrees, false);
-  }
-
-  /**
-   * Resume a feature that crashed during pipeline execution.
-   * Handles multiple edge cases to ensure robust recovery:
-   * - No context file: Restart entire pipeline from beginning
-   * - Step deleted from config: Complete feature without remaining pipeline steps
-   * - Valid step exists: Resume from the crashed step and continue
-   *
-   * @param {string} projectPath - Absolute path to the project directory
-   * @param {Feature} feature - The feature object (already loaded to avoid redundant reads)
-   * @param {boolean} useWorktrees - Whether to use git worktrees for isolation
-   * @param {PipelineStatusInfo} pipelineInfo - Information about the pipeline status from detectPipelineStatus()
-   * @returns {Promise<void>} Resolves when resume operation completes or throws on error
-   * @throws {Error} If pipeline config is null but stepIndex is valid (should never happen)
-   * @private
-   */
-  private async resumePipelineFeature(
-    projectPath: string,
-    feature: Feature,
-    useWorktrees: boolean,
-    pipelineInfo: PipelineStatusInfo
-  ): Promise<void> {
-    const featureId = feature.id;
-    logger.info(`Resuming feature ${featureId} from pipeline step ${pipelineInfo.stepId}`);
-
-    // Check for context file — use contextExists() for stale-session detection.
-    // If agent-output.md is older than STALE_SESSION_THRESHOLD_MS (default 5 min),
-    // contextExists() renames it to .stale and returns false, triggering a fresh start.
-    const featureDir = getFeatureDir(projectPath, featureId);
-    const contextPath = path.join(featureDir, 'agent-output.md');
-
-    const hasContext = await this.contextExists(projectPath, featureId);
-
-    // Edge Case 1: No context file (or stale context renamed to .stale) — restart pipeline
-    if (!hasContext) {
-      logger.warn(`No context found for pipeline feature ${featureId}, restarting from beginning`);
-
-      // Reset status to in_progress and start fresh
-      await this.updateFeatureStatus(projectPath, featureId, 'in_progress');
-
-      return this.executeFeature(projectPath, featureId, useWorktrees, false);
-    }
-
-    // Edge Case 2: Step no longer exists in pipeline config
-    if (pipelineInfo.stepIndex === -1) {
-      logger.warn(
-        `Step ${pipelineInfo.stepId} no longer exists in pipeline, completing feature without pipeline`
-      );
-
-      const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
-
-      // Derive worktree path for the guard check
-      const branchName = feature.branchName;
-      const worktreePath = branchName
-        ? await this.findExistingWorktreeForBranch(projectPath, branchName)
-        : null;
-      const pipelineWorkDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
-
-      // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(pipelineWorkDir, featureId, branchName ?? 'main');
-
-      await this.updateFeatureStatus(projectPath, featureId, finalStatus);
-
-      // Run git workflow (commit, push, PR) if enabled
-      let gitWorkflowResult: Awaited<
-        ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
-      > = null;
-      if (this.settingsService) {
-        try {
-          const settings = await this.settingsService.getGlobalSettings();
-
-          // Look up epic branch name if feature belongs to an epic
-          let epicBranchName: string | undefined;
-          if (feature.epicId && !feature.isEpic) {
-            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
-            epicBranchName = epicFeature?.branchName;
-            if (epicBranchName) {
-              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
-            }
-          }
-
-          gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
-            projectPath,
-            featureId,
-            feature,
-            pipelineWorkDir,
-            settings,
-            epicBranchName,
-            this.events
-          );
-          if (gitWorkflowResult) {
-            // Check if git workflow encountered conflicts
-            if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
-              this.emitAutoModeEvent('auto_mode_progress', {
-                featureId,
-                featureName: feature.title,
-                message: `⚠️ Git workflow warning: ${gitWorkflowResult.error}`,
-                projectPath,
-              });
-            }
-
-            this.emitAutoModeEvent('auto_mode_git_workflow', {
-              featureId,
-              committed: gitWorkflowResult.commitHash,
-              pushed: gitWorkflowResult.pushed,
-              prUrl: gitWorkflowResult.prUrl,
-              prNumber: gitWorkflowResult.prNumber,
-              error: gitWorkflowResult.error,
-              projectPath,
-            });
-          }
-        } catch (error) {
-          logger.error('Error running post-completion git workflow:', error);
-          this.emitAutoModeEvent('auto_mode_progress', {
-            featureId,
-            featureName: feature.title,
-            message: `⚠️ Git workflow failed: ${error instanceof Error ? error.message : String(error)}`,
-            projectPath,
-          });
-          // Store the error on the feature for UI visibility (non-blocking)
-          this.featureLoader
-            .update(projectPath, featureId, {
-              gitWorkflowError: {
-                message: error instanceof Error ? error.message : String(error),
-                timestamp: new Date().toISOString(),
-              },
-            })
-            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
-        }
-      }
-
-      this.emitAutoModeEvent('auto_mode_feature_complete', {
-        featureId,
-        featureName: feature.title,
-        branchName: feature.branchName ?? null,
-        passes: true,
-        message:
-          'Pipeline step no longer exists - feature completed without remaining pipeline steps',
-        projectPath,
-      });
-
-      return;
-    }
-
-    // Normal case: Valid pipeline step exists, has context
-    // Resume from the stuck step (re-execute the step that crashed)
-    if (!pipelineInfo.config) {
-      throw new Error('Pipeline config is null but stepIndex is valid - this should not happen');
-    }
-
-    return this.resumeFromPipelineStep(
-      projectPath,
-      feature,
-      useWorktrees,
-      pipelineInfo.stepIndex,
-      pipelineInfo.config
-    );
-  }
-
-  /**
-   * Resume pipeline execution from a specific step index.
-   * Re-executes the step that crashed (to handle partial completion),
-   * then continues executing all remaining pipeline steps in order.
-   *
-   * This method handles the complete pipeline resume workflow:
-   * - Validates feature and step index
-   * - Locates or creates git worktree if needed
-   * - Executes remaining steps starting from the crashed step
-   * - Updates feature status to verified/waiting_approval when complete
-   * - Emits progress events throughout execution
-   *
-   * @param {string} projectPath - Absolute path to the project directory
-   * @param {Feature} feature - The feature object (already loaded to avoid redundant reads)
-   * @param {boolean} useWorktrees - Whether to use git worktrees for isolation
-   * @param {number} startFromStepIndex - Zero-based index of the step to resume from
-   * @param {PipelineConfig} pipelineConfig - Pipeline config passed from detectPipelineStatus to avoid re-reading
-   * @returns {Promise<void>} Resolves when pipeline execution completes successfully
-   * @throws {Error} If feature not found, step index invalid, or pipeline execution fails
-   * @private
-   */
-  private async resumeFromPipelineStep(
-    projectPath: string,
-    feature: Feature,
-    useWorktrees: boolean,
-    startFromStepIndex: number,
-    pipelineConfig: PipelineConfig
-  ): Promise<void> {
-    const featureId = feature.id;
-
-    const sortedSteps = [...pipelineConfig.steps].sort((a, b) => a.order - b.order);
-
-    // Validate step index
-    if (startFromStepIndex < 0 || startFromStepIndex >= sortedSteps.length) {
-      throw new Error(`Invalid step index: ${startFromStepIndex}`);
-    }
-
-    // Get steps to execute (from startFromStepIndex onwards)
-    const stepsToExecute = sortedSteps.slice(startFromStepIndex);
-
-    logger.info(
-      `Resuming pipeline for feature ${featureId} from step ${startFromStepIndex + 1}/${sortedSteps.length}`
-    );
-
-    // Add to running features immediately
-    const abortController = new AbortController();
-    const pipelineRunningFeature: RunningFeature = {
-      featureId,
-      projectPath,
-      worktreePath: null, // Will be set below
-      branchName: feature.branchName ?? null,
-      abortController,
-      isAutoMode: false,
-      startTime: Date.now(),
-      retryCount: 0,
-      previousErrors: [],
-    };
-    this.concurrencyManager.acquire(featureId, projectPath, null, feature.branchName ?? null);
-    this.runningFeatures.set(featureId, pipelineRunningFeature);
-    activeAgentsCount.set(this.runningFeatures.size);
-
-    try {
-      // Validate project path
-      validateWorkingDirectory(projectPath);
-
-      // Derive workDir from feature.branchName
-      let worktreePath: string | null = null;
-      const branchName = feature.branchName;
-
-      if (useWorktrees && branchName) {
-        worktreePath = await this.findExistingWorktreeForBranch(projectPath, branchName);
-        if (worktreePath) {
-          logger.debug(`Using existing worktree for branch "${branchName}": ${worktreePath}`);
-        } else {
-          // Auto-create worktree if it doesn't exist
-          logger.info(`Auto-creating worktree for branch "${branchName}"`);
-          worktreePath = await this.createWorktreeForBranch(projectPath, branchName, feature);
-          if (worktreePath) {
-            logger.info(`Created worktree for branch "${branchName}": ${worktreePath}`);
-          } else {
-            const reason = `Pipeline worktree creation failed for branch "${branchName}" (feature ${featureId}). Blocking feature to prevent main working tree corruption.`;
-            logger.error(reason);
-            await this.featureLoader.update(projectPath, featureId, {
-              status: 'blocked',
-              statusChangeReason: reason,
-            });
-            this.events.emit('feature:error', {
-              projectPath,
-              featureId,
-              error: reason,
-              projectSlug: feature.projectSlug,
-            });
-            return;
-          }
-        }
-      } else if (useWorktrees && !branchName) {
-        const reason = `Feature ${featureId} has no branchName but useWorktrees is enabled (pipeline resume). Blocking feature — assign a branch name first.`;
-        logger.error(reason);
-        await this.featureLoader.update(projectPath, featureId, {
-          status: 'blocked',
-          statusChangeReason: reason,
-        });
-        this.events.emit('feature:error', {
-          projectPath,
-          featureId,
-          error: reason,
-          projectSlug: feature.projectSlug,
-        });
-        return;
-      }
-
-      const workDir = worktreePath ? path.resolve(worktreePath) : path.resolve(projectPath);
-
-      // Defense-in-depth: if worktrees are enabled, workDir must NOT be the project path
-      if (useWorktrees && path.resolve(workDir) === path.resolve(projectPath)) {
-        const reason = `Pipeline worktree safety check failed for feature ${featureId}: workDir resolved to projectPath ("${projectPath}"). Blocking feature to prevent main working tree corruption.`;
-        logger.error(reason);
-        await this.featureLoader.update(projectPath, featureId, {
-          status: 'blocked',
-          statusChangeReason: reason,
-        });
-        this.events.emit('feature:error', {
-          projectPath,
-          featureId,
-          error: reason,
-          projectSlug: feature.projectSlug,
-        });
-        return;
-      }
-
-      // CRITICAL: Rebase worktree onto latest origin/main before pipeline execution
-      if (worktreePath) {
-        try {
-          logger.info(`Rebasing worktree onto latest origin/main: ${worktreePath}`);
-          const rebaseResult = await rebaseWorktreeOnMain(worktreePath);
-
-          if (!rebaseResult.success) {
-            if (rebaseResult.hasConflicts) {
-              const reason =
-                `Pre-flight rebase onto origin/main has conflicts — branch "${branchName}" must be manually rebased before the agent can proceed. ` +
-                `Blocking feature to prevent repeated merge_conflict failures.`;
-              logger.warn(`⚠️  ${reason} Feature: ${featureId}`);
-              await this.featureLoader.update(projectPath, featureId, {
-                status: 'blocked',
-                statusChangeReason: reason,
-              });
-              this.events.emit('feature:error', {
-                projectPath,
-                featureId,
-                error: reason,
-                projectSlug: feature.projectSlug,
-              });
-              return;
-            } else {
-              logger.warn(
-                `Rebase failed (${rebaseResult.error}). Agent will execute on current base. ` +
-                  `Feature: ${featureId}`
-              );
-            }
-          } else {
-            logger.info(`✓ Worktree successfully rebased onto latest origin/main`);
-          }
-        } catch (rebaseError) {
-          logger.error(
-            `Unexpected error during pre-execution rebase for ${featureId}:`,
-            rebaseError
-          );
-        }
-      }
-
-      validateWorkingDirectory(workDir);
-
-      // Get model and provider for this feature
-      const modelResult = await this.getModelForFeature(feature, projectPath);
-      const provider = ProviderFactory.getProviderNameForModel(modelResult.model);
-
-      // Update running feature with worktree info and model
-      const runningFeature = this.runningFeatures.get(featureId);
-      if (runningFeature) {
-        runningFeature.worktreePath = worktreePath;
-        runningFeature.branchName = branchName ?? null;
-        runningFeature.model = modelResult.model;
-        runningFeature.provider = provider;
-      }
-
-      // Emit resume event
-      this.emitAutoModeEvent('auto_mode_feature_start', {
-        featureId,
-        projectPath,
-        branchName: branchName ?? null,
-        feature: {
-          id: featureId,
-          title: feature.title || 'Resuming Pipeline',
-          description: feature.description,
-        },
-        model: modelResult.model,
-        provider,
-      });
-
-      this.emitAutoModeEvent('auto_mode_progress', {
-        featureId,
-        projectPath,
-        branchName: branchName ?? null,
-        content: `Resuming from pipeline step ${startFromStepIndex + 1}/${sortedSteps.length}`,
-      });
-
-      // Load autoLoadClaudeMd setting
-      const autoLoadClaudeMd = await getAutoLoadClaudeMdSetting(
-        projectPath,
-        this.settingsService,
-        '[AutoMode]'
-      );
-
-      // Execute remaining pipeline steps (starting from crashed step)
-      await this.executionService.executePipelineSteps(
-        projectPath,
-        featureId,
-        feature,
-        stepsToExecute,
-        workDir,
-        abortController,
-        autoLoadClaudeMd
-      );
-
-      // Determine final status
-      const finalStatus = feature.skipTests ? 'waiting_approval' : 'verified';
-
-      // Ensure worktree is clean before marking as verified
-      await ensureCleanWorktree(workDir, featureId, branchName ?? 'main');
-
-      await this.updateFeatureStatus(projectPath, featureId, finalStatus);
-
-      logger.info('Pipeline resume completed successfully');
-
-      // Run git workflow (commit, push, PR) if enabled
-      let gitWorkflowResult: Awaited<
-        ReturnType<typeof gitWorkflowService.runPostCompletionWorkflow>
-      > = null;
-      if (this.settingsService) {
-        try {
-          const settings = await this.settingsService.getGlobalSettings();
-
-          // Look up epic branch name if feature belongs to an epic
-          let epicBranchName: string | undefined;
-          if (feature.epicId && !feature.isEpic) {
-            const epicFeature = await this.featureLoader.get(projectPath, feature.epicId);
-            epicBranchName = epicFeature?.branchName;
-            if (epicBranchName) {
-              logger.info(`Feature ${featureId} belongs to epic, PR will target ${epicBranchName}`);
-            }
-          }
-
-          gitWorkflowResult = await gitWorkflowService.runPostCompletionWorkflow(
-            projectPath,
-            featureId,
-            feature,
-            workDir,
-            settings,
-            epicBranchName,
-            this.events
-          );
-          if (gitWorkflowResult) {
-            // Check if git workflow encountered conflicts
-            if (gitWorkflowResult.error && gitWorkflowResult.error.includes('conflict')) {
-              this.emitAutoModeEvent('auto_mode_progress', {
-                featureId,
-                featureName: feature.title,
-                message: `⚠️ Git workflow warning: ${gitWorkflowResult.error}`,
-                projectPath,
-              });
-            }
-
-            this.emitAutoModeEvent('auto_mode_git_workflow', {
-              featureId,
-              committed: gitWorkflowResult.commitHash,
-              pushed: gitWorkflowResult.pushed,
-              prUrl: gitWorkflowResult.prUrl,
-              prNumber: gitWorkflowResult.prNumber,
-              prAlreadyExisted: gitWorkflowResult.prAlreadyExisted,
-              projectPath,
-            });
-          }
-        } catch (gitError) {
-          logger.warn(`Git workflow failed for ${featureId}:`, gitError);
-          // Store the error on the feature for UI visibility (non-blocking)
-          this.featureLoader
-            .update(projectPath, featureId, {
-              gitWorkflowError: {
-                message: gitError instanceof Error ? gitError.message : String(gitError),
-                timestamp: new Date().toISOString(),
-              },
-            })
-            .catch((e) => logger.warn(`Failed to persist git workflow error for ${featureId}:`, e));
-        }
-      }
-
-      // Transition feature to 'review' or 'done' based on git workflow results
-      // (mirrors the pattern in executeFeature)
-      if (gitWorkflowResult?.prUrl) {
-        const updates: Record<string, unknown> = {
-          prUrl: gitWorkflowResult.prUrl,
-          prNumber: gitWorkflowResult.prNumber,
-        };
-
-        if (gitWorkflowResult.prCreatedAt) {
-          updates.prCreatedAt = gitWorkflowResult.prCreatedAt;
-        }
-
-        if (gitWorkflowResult.merged && gitWorkflowResult.prMergedAt) {
-          updates.status = 'done';
-          updates.prMergedAt = gitWorkflowResult.prMergedAt;
-
-          if (gitWorkflowResult.prCreatedAt) {
-            const createdAt = new Date(gitWorkflowResult.prCreatedAt);
-            const mergedAt = new Date(gitWorkflowResult.prMergedAt);
-            updates.prReviewDurationMs = mergedAt.getTime() - createdAt.getTime();
-          }
-        } else {
-          updates.status = 'review';
-        }
-
-        await this.featureLoader.update(projectPath, featureId, updates);
-      }
-
-      const gitInfo = gitWorkflowResult?.commitHash
-        ? ` | Committed: ${gitWorkflowResult.commitHash}${gitWorkflowResult.pushed ? ', pushed' : ''}${gitWorkflowResult.prUrl ? `, PR: ${gitWorkflowResult.prUrl}` : ''}`
-        : '';
-
-      this.emitAutoModeEvent('auto_mode_feature_complete', {
-        featureId,
-        featureName: feature.title,
-        branchName: feature.branchName ?? null,
-        passes: true,
-        message: `Pipeline resumed and completed successfully${gitInfo}`,
-        projectPath,
-      });
-    } catch (error) {
-      const errorInfo = classifyError(error);
-
-      if (errorInfo.isAbort) {
-        this.emitAutoModeEvent('auto_mode_feature_complete', {
-          featureId,
-          featureName: feature.title,
-          branchName: feature.branchName ?? null,
-          passes: false,
-          message: 'Pipeline resume stopped by user',
-          projectPath,
-        });
-      } else {
-        logger.error(`Pipeline resume failed for feature ${featureId}:`, error);
-        await this.updateFeatureStatus(projectPath, featureId, 'backlog');
-        this.emitAutoModeEvent('auto_mode_error', {
-          featureId,
-          featureName: feature.title,
-          branchName: feature.branchName ?? null,
-          error: errorInfo.message,
-          errorType: errorInfo.type,
-          projectPath,
-        });
-      }
-    } finally {
-      abortController.abort();
-
-      // Only delete if the current entry is still the one we created
-      const current = this.runningFeatures.get(featureId);
-      if (current === pipelineRunningFeature) {
-        this.concurrencyManager.release(featureId);
-        this.runningFeatures.delete(featureId);
-        this.typedEventBus.clearFeature(featureId);
-        activeAgentsCount.set(this.runningFeatures.size);
-      }
-    }
   }
 
   /**
@@ -3773,107 +3193,6 @@ You can use the Read tool to view these images at any time during implementation
   }
 
   /**
-   * Detect if a feature is stuck in a pipeline step and extract step information.
-   * Parses the feature status to determine if it's a pipeline status (e.g., 'pipeline_step_xyz'),
-   * loads the pipeline configuration, and validates that the step still exists.
-   *
-   * This method handles several scenarios:
-   * - Non-pipeline status: Returns default PipelineStatusInfo with isPipeline=false
-   * - Invalid pipeline status format: Returns isPipeline=true but null step info
-   * - Step deleted from config: Returns stepIndex=-1 to signal missing step
-   * - Valid pipeline step: Returns full step information and config
-   *
-   * @param {string} projectPath - Absolute path to the project directory
-   * @param {string} featureId - Unique identifier of the feature
-   * @param {FeatureStatusWithPipeline} currentStatus - Current feature status (may include pipeline step info)
-   * @returns {Promise<PipelineStatusInfo>} Information about the pipeline status and step
-   * @private
-   */
-  private async detectPipelineStatus(
-    projectPath: string,
-    featureId: string,
-    currentStatus: FeatureStatusWithPipeline
-  ): Promise<PipelineStatusInfo> {
-    // Check if status is pipeline format using PipelineService
-    const isPipeline = pipelineService.isPipelineStatus(currentStatus);
-
-    if (!isPipeline) {
-      return {
-        isPipeline: false,
-        stepId: null,
-        stepIndex: -1,
-        totalSteps: 0,
-        step: null,
-        config: null,
-      };
-    }
-
-    // Extract step ID using PipelineService
-    const stepId = pipelineService.getStepIdFromStatus(currentStatus);
-
-    if (!stepId) {
-      logger.warn(`Feature ${featureId} has invalid pipeline status format: ${currentStatus}`);
-      return {
-        isPipeline: true,
-        stepId: null,
-        stepIndex: -1,
-        totalSteps: 0,
-        step: null,
-        config: null,
-      };
-    }
-
-    // Load pipeline config
-    const config = await pipelineService.getPipelineConfig(projectPath);
-
-    if (!config || config.steps.length === 0) {
-      // Pipeline config doesn't exist or empty - feature stuck with invalid pipeline status
-      logger.warn(`Feature ${featureId} has pipeline status but no pipeline config exists`);
-      return {
-        isPipeline: true,
-        stepId,
-        stepIndex: -1,
-        totalSteps: 0,
-        step: null,
-        config: null,
-      };
-    }
-
-    // Find the step directly from config (already loaded, avoid redundant file read)
-    const sortedSteps = [...config.steps].sort((a, b) => a.order - b.order);
-    const stepIndex = sortedSteps.findIndex((s) => s.id === stepId);
-    const step = stepIndex === -1 ? null : sortedSteps[stepIndex];
-
-    if (!step) {
-      // Step not found in current config - step was deleted/changed
-      logger.warn(
-        `Feature ${featureId} stuck in step ${stepId} which no longer exists in pipeline config`
-      );
-      return {
-        isPipeline: true,
-        stepId,
-        stepIndex: -1,
-        totalSteps: sortedSteps.length,
-        step: null,
-        config,
-      };
-    }
-
-    logger.debug(
-      `Detected pipeline status for feature ${featureId}: step ${stepIndex + 1}/${sortedSteps.length} (${step.name})`
-    );
-
-    return {
-      isPipeline: true,
-      stepId,
-      stepIndex,
-      totalSteps: sortedSteps.length,
-      step,
-      config,
-    };
-  }
-
-  /**
    * Emit an auto-mode event wrapped in the correct format for the client.
    * All auto-mode events are sent as type "auto-mode:event" with the actual
    * event type and data in the payload.
@@ -4059,12 +3378,8 @@ You can use the Read tool to view these images at any time during implementation
             continue;
           }
 
-          // Check if feature was interrupted (in_progress, interrupted, or pipeline_*)
-          if (
-            feature.status === 'in_progress' ||
-            feature.status === 'interrupted' ||
-            (feature.status && feature.status.startsWith('pipeline_'))
-          ) {
+          // Check if feature was interrupted (in_progress or interrupted)
+          if (feature.status === 'in_progress' || feature.status === 'interrupted') {
             // Verify it has existing context (agent-output.md)
             const featureDir = getFeatureDir(projectPath, feature.id);
             const contextPath = path.join(featureDir, 'agent-output.md');

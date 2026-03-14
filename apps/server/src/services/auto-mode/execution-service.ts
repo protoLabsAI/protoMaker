@@ -69,7 +69,6 @@ import { PromptBuilder } from '../../lib/prompt-builder.js';
 import { FeatureLoader } from '../feature-loader.js';
 import type { SettingsService } from '../settings-service.js';
 import type { AuthorityService } from '../authority-service.js';
-import { pipelineService } from '../pipeline-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -932,23 +931,6 @@ export class ExecutionService {
             return;
           }
         }
-      }
-
-      // Check for pipeline steps and execute them
-      const pipelineConfig = await pipelineService.getPipelineConfig(projectPath);
-      const sortedSteps = [...(pipelineConfig?.steps || [])].sort((a, b) => a.order - b.order);
-
-      if (sortedSteps.length > 0) {
-        // Execute pipeline steps sequentially
-        await this.executePipelineSteps(
-          projectPath,
-          featureId,
-          feature,
-          sortedSteps,
-          workDir,
-          abortController,
-          autoLoadClaudeMd
-        );
       }
 
       // Ensure worktree is clean before post-completion workflow
