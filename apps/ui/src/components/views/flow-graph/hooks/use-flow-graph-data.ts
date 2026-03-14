@@ -13,27 +13,20 @@ import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '@/store/app-store';
 import { useRunningAgents } from '@/hooks/queries/use-running-agents';
 import { useIntegrationStatus, useEngineStatus } from '@/hooks/queries/use-metrics';
-import { usePipelineTracker } from './use-pipeline-tracker';
 import {
   NODE_IDS,
   ENGINE_SERVICES,
   INTEGRATION_POSITIONS,
   STATIC_EDGES,
-  PIPELINE_STAGES,
-  PIPELINE_EDGES,
-  BRIDGE_EDGES,
   DYNAMIC_ZONE_START_Y,
   DYNAMIC_ZONE_CENTER_X,
-  PIPELINE_PHASE_TO_SERVICE,
 } from '../constants';
-import { usePipelineProgress } from './use-pipeline-progress';
 import type {
   EngineServiceNodeData,
   EngineServiceId,
   IntegrationNodeData,
   FeatureNodeData,
   AgentNodeData,
-  PipelineStageNodeData,
   ToolExecution,
 } from '../types';
 import { getHttpApiClient } from '@/lib/http-api-client';
@@ -254,7 +247,6 @@ export function useFlowGraphData(
   const { data: runningAgentsData } = useRunningAgents();
   const { data: integrationStatus } = useIntegrationStatus(projectPath);
   const { data: engineStatusData } = useEngineStatus(projectPath);
-  const { stageAggregates } = usePipelineTracker({ projectPath });
 
   const engineStatus = engineStatusData as EngineStatusResponse | undefined;
 
@@ -382,19 +374,6 @@ export function useFlowGraphData(
     };
   }, [scheduleToolUpdate]);
 
-  // Pipeline progress overlay
-  const { selected: selectedPipeline } = usePipelineProgress();
-  const currentPhase = selectedPipeline?.currentPhase ?? null;
-  const branch = selectedPipeline?.branch ?? null;
-  const awaitingGate = selectedPipeline?.awaitingGate ?? false;
-  const pipelineState = selectedPipeline?.pipelineState ?? null;
-
-  // Determine which service node should be highlighted by the pipeline
-  const highlightedServiceId = useMemo(() => {
-    if (!currentPhase || !branch) return null;
-    return PIPELINE_PHASE_TO_SERVICE[currentPhase]?.[branch] ?? null;
-  }, [currentPhase, branch]);
-
   const allRunningAgents = runningAgentsData?.agents ?? [];
   const runningAgents = useMemo(
     () =>
@@ -419,29 +398,10 @@ export function useFlowGraphData(
   const nodes = useMemo(() => {
     const result: Node[] = [];
 
-    // 1. Engine service nodes (filter out content-pipeline when GTM is disabled)
-    const services = gtmEnabled
-      ? ENGINE_SERVICES
-      : ENGINE_SERVICES.filter((s) => s.serviceId !== 'content-pipeline');
-    for (const svc of services) {
+    // 1. Engine service nodes
+    for (const svc of ENGINE_SERVICES) {
       const { status, throughput, statusLine } = getServiceStatus(svc.serviceId, engineStatus);
       const graphId = SERVICE_TO_GRAPH_MAP[svc.serviceId];
-      const pipelineHighlight =
-        highlightedServiceId === svc.serviceId
-          ? awaitingGate
-            ? ('gate-waiting' as const)
-            : ('processing' as const)
-          : undefined;
-      // Resolve Langfuse trace/span for this service's pipeline phase
-      let pipelineTraceId: string | undefined;
-      let pipelineSpanId: string | undefined;
-      if (pipelineHighlight && pipelineState) {
-        pipelineTraceId = pipelineState.traceId;
-        const phase = currentPhase;
-        if (phase && pipelineState.phaseSpanIds?.[phase]) {
-          pipelineSpanId = pipelineState.phaseSpanIds[phase];
-        }
-      }
       const data: EngineServiceNodeData = {
         label: svc.label,
         serviceId: svc.serviceId,
@@ -450,9 +410,6 @@ export function useFlowGraphData(
         statusLine,
         graphId,
         onNodeClick,
-        pipelineHighlight,
-        pipelineTraceId,
-        pipelineSpanId,
       };
       result.push({
         id: svc.nodeId,
@@ -518,25 +475,7 @@ export function useFlowGraphData(
       });
     }
 
-    // 3. Pipeline stage nodes (always enabled)
-    for (const stage of PIPELINE_STAGES) {
-      const aggregate = stageAggregates.find((a) => a.stageId === stage.stageId);
-      const pipelineData: PipelineStageNodeData = {
-        stageId: stage.stageId,
-        label: stage.label,
-        status: aggregate?.status || 'idle',
-        workItems: aggregate?.workItems || [],
-      };
-      result.push({
-        id: stage.nodeId,
-        type: 'pipeline-stage',
-        position: stage.position,
-        data: pipelineData,
-        draggable: false,
-      });
-    }
-
-    // 4. Dynamic feature nodes (below pipeline)
+    // 3. Dynamic feature nodes (below production lane)
     const featureSpacing = 200;
     const featureStartX =
       DYNAMIC_ZONE_CENTER_X - ((activeFeatures.length - 1) * featureSpacing) / 2;
@@ -561,7 +500,7 @@ export function useFlowGraphData(
       });
     });
 
-    // 5. Dynamic agent nodes (below their feature)
+    // 4. Dynamic agent nodes (below their feature)
     runningAgents.forEach((agent) => {
       const parentFeatureNode = result.find((n) => n.id === `feature-${agent.featureId}`);
       const toolData = toolExecutionsByFeature.get(agent.featureId);
@@ -594,23 +533,15 @@ export function useFlowGraphData(
   }, [
     engineStatus,
     integrationStatus,
-    stageAggregates,
     activeFeatures,
     runningAgents,
-    highlightedServiceId,
-    awaitingGate,
-    pipelineState,
-    gtmEnabled,
     toolExecutionsByFeature,
+    onNodeClick,
   ]);
 
-  // Build edges: static service flow + pipeline + bridge + dynamic
+  // Build edges: static service flow + dynamic
   const edges = useMemo(() => {
-    // Filter out the GTM edge when content pipeline is disabled
-    const staticEdges = gtmEnabled
-      ? STATIC_EDGES
-      : STATIC_EDGES.filter((e) => e.id !== 'e-triage-content');
-    const result: Edge[] = [...staticEdges, ...PIPELINE_EDGES, ...BRIDGE_EDGES];
+    const result: Edge[] = [...STATIC_EDGES];
 
     // Auto-mode -> active features (workflow edges)
     for (const feature of activeFeatures) {
@@ -636,7 +567,7 @@ export function useFlowGraphData(
     }
 
     return result;
-  }, [activeFeatures, runningAgents, nodes, gtmEnabled]);
+  }, [activeFeatures, runningAgents, nodes]);
 
   return { nodes, edges, gtmEnabled };
 }
