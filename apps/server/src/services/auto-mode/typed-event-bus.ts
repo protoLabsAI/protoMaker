@@ -10,7 +10,7 @@
  * - Rate-limits `auto_mode_progress` events to prevent WebSocket overload
  */
 
-import type { EventEmitter } from '../../lib/events.js';
+import type { EventEmitter, EventType } from '../../lib/events.js';
 
 /** Default minimum interval (ms) between progress events for the same feature. */
 const DEFAULT_PROGRESS_INTERVAL_MS = 100;
@@ -61,5 +61,14 @@ export class TypedEventBus {
       type: eventType,
       ...data,
     });
+
+    // Also emit the direct event type so subscribers (e.g. lead-engineer rules)
+    // can listen on e.g. 'auto-mode:stopped' instead of filtering 'auto-mode:event'.
+    // Normalize: auto_mode_stopped → auto-mode:stopped, auto_mode_idle → auto-mode:idle
+    if (eventType.startsWith('auto_mode_')) {
+      const directType =
+        `auto-mode:${eventType.slice('auto_mode_'.length).replace(/_/g, '-')}` as EventType;
+      this.events.emit(directType, data);
+    }
   }
 }
