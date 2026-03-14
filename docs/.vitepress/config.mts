@@ -45,6 +45,9 @@ export default defineConfig({
     ],
   ],
 
+  // Exclude internal and archived docs from the public build
+  srcExclude: ['internal/**', 'archived/**'],
+
   // Dead links are now fixed — keep false to catch future link rot.
   ignoreDeadLinks: false,
 
