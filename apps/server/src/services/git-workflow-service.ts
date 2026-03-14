@@ -24,7 +24,11 @@ import { githubMergeService } from './github-merge-service.js';
 import { codeRabbitResolverService } from './coderabbit-resolver-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { buildPROwnershipWatermark } from '../routes/github/utils/pr-ownership.js';
-import { createGitExecEnv, extractTitleFromDescription } from '@protolabsai/git-utils';
+import {
+  createGitExecEnv,
+  extractTitleFromDescription,
+  parseGitHubRemote,
+} from '@protolabsai/git-utils';
 import type { ActionableItemService } from './actionable-item-service.js';
 
 const execAsync = promisify(exec);
@@ -881,34 +885,6 @@ export class GitWorkflowService {
   }
 
   /**
-   * Parse GitHub owner and repo name from a git remote URL in the given working directory
-   */
-  private async parseOwnerRepo(
-    workDir: string
-  ): Promise<{ owner: string; repoName: string } | null> {
-    try {
-      const { stdout: remoteOutput } = await execAsync('git remote get-url origin', {
-        cwd: workDir,
-        env: execEnv,
-      });
-
-      const remoteUrl = remoteOutput.trim();
-      const match =
-        remoteUrl.match(/github\.com[:/]([^/]+)\/([^/\s]+?)(?:\.git)?$/) ||
-        remoteUrl.match(/^([^/]+)\/([^/\s]+)$/);
-
-      if (!match) {
-        logger.warn(`Could not parse GitHub owner/repo from remote: ${remoteUrl}`);
-        return null;
-      }
-
-      return { owner: match[1], repoName: match[2] };
-    } catch {
-      return null;
-    }
-  }
-
-  /**
    * Check if PR has unresolved critical review threads.
    * Critical threads must be manually reviewed and block auto-merge.
    *
@@ -918,18 +894,18 @@ export class GitWorkflowService {
    */
   private async checkForCriticalThreads(workDir: string, prNumber: number): Promise<boolean> {
     try {
-      const parsed = await this.parseOwnerRepo(workDir);
+      const parsed = await parseGitHubRemote(workDir);
       if (!parsed) {
         return false;
       }
 
       const { owner, repoName } = parsed;
 
-      // Query review threads using GraphQL
+      // Query review threads using GraphQL with variables to avoid injection
       const query = `
-        query {
-          repository(owner: "${owner}", name: "${repoName}") {
-            pullRequest(number: ${prNumber}) {
+        query($owner: String!, $name: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $name) {
+            pullRequest(number: $prNumber) {
               reviewThreads(first: 100) {
                 nodes {
                   id
@@ -946,10 +922,25 @@ export class GitWorkflowService {
         }
       `;
 
-      const { stdout } = await execFileAsync('gh', ['api', 'graphql', '-f', `query=${query}`], {
-        cwd: workDir,
-        env: execEnv,
-      });
+      const { stdout } = await execFileAsync(
+        'gh',
+        [
+          'api',
+          'graphql',
+          '-f',
+          `query=${query}`,
+          '-f',
+          `owner=${owner}`,
+          '-f',
+          `name=${repoName}`,
+          '-F',
+          `prNumber=${prNumber}`,
+        ],
+        {
+          cwd: workDir,
+          env: execEnv,
+        }
+      );
 
       const data = JSON.parse(stdout);
       const threads = data.data?.repository?.pullRequest?.reviewThreads?.nodes || [];

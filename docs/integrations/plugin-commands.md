@@ -2,7 +2,7 @@
 
 Commands reference, subagents, and step-by-step examples for the protoLabs Claude Code plugin.
 
-For installation and configuration, see [Claude Plugin Setup](./claude-plugin.md). For the full MCP tool catalog, see [MCP Tools Reference](./mcp-tools-reference.md).
+For installation and configuration, see [Claude Plugin Setup](./claude-plugin.md). For the full MCP tool catalog, see [MCP Tools Reference](../reference/mcp-tools.md).
 
 ## Commands Reference
 
@@ -620,5 +620,5 @@ Your agent prompt here...
 - [Plugin Quickstart](./plugin-quickstart.md) -- 5-minute setup guide
 - [Plugin Deep Dive](./plugin-deep-dive.md) -- Architecture, hooks, tools, and extension points
 - [Claude Plugin Setup](./claude-plugin.md) -- Installation, configuration, Docker deployment
-- [MCP Tools Reference](./mcp-tools-reference.md) -- Full MCP tool catalog
-- [Context System](/agents/context-system) -- Best practices for context files
+- [MCP Tools Reference](../reference/mcp-tools.md) -- Full MCP tool catalog
+- [Context System](/guides/context-files) -- Best practices for context files

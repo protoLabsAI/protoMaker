@@ -96,7 +96,7 @@ The feature moves to the **review** column. The agent's PR includes:
 - CodeRabbit AI review (if configured)
 - CI check results (build, test, format, lint)
 
-Review the PR on GitHub. If changes are needed, comment on the PR — the agent can address feedback automatically (see [PR Remediation Loop](../dev/pr-remediation-loop.md)).
+Review the PR on GitHub. If changes are needed, comment on the PR — the agent can address feedback automatically (see [PR Remediation Loop](../concepts/reliability.md)).
 
 ### Step 5: Merge
 
@@ -115,7 +115,7 @@ Signal → TRIAGE → RESEARCH → SPEC → SPEC_REVIEW → DESIGN → PLAN → 
 
 **Full path**: Submit an idea → PM Agent researches → SPARC PRD → human review → ProjM decomposes into milestones → agents implement each feature.
 
-For the complete pipeline reference, see [Idea to Production](../dev/idea-to-production.md).
+For the complete pipeline reference, see [Idea to Production](../concepts/pipeline.md).
 
 ## Key Concepts
 
@@ -156,7 +156,7 @@ Features can depend on other features. A dependent feature won't start until its
 
 ### Context Files
 
-Files in `.automaker/context/` are automatically injected into every agent's prompt. Use them for coding standards, architectural rules, and project-specific conventions. See [Context System](../agents/context-system.md).
+Files in `.automaker/context/` are automatically injected into every agent's prompt. Use them for coding standards, architectural rules, and project-specific conventions. See [Context System](../guides/context-files.md).
 
 ## Core Architecture
 
@@ -204,23 +204,22 @@ protoLabs stores data in two locations:
 
 ### Understand the Agent System
 
-- **[Agent Philosophy](../agents/philosophy.md)** — Why named personas, model tiers, and worktree isolation
-- **[Architecture Overview](../agents/architecture.md)** — Technical implementation of the agent system
-- **[Reliability & Recovery](../agents/reliability.md)** — How failures are handled automatically
+- **[Agent Philosophy](../concepts/agent-philosophy.md)** — Why named personas, model tiers, and worktree isolation
+- **[Architecture Overview](../concepts/agent-architecture.md)** — Technical implementation of the agent system
+- **[Reliability & Recovery](../concepts/reliability.md)** — How failures are handled automatically
 
 ### Customize Agent Behavior
 
-- **[Prompt Engineering](../agents/prompt-engineering.md)** — How prompts are composed and how to modify them
-- **[Context System](../agents/context-system.md)** — Add project-specific rules for agents
+- **[Prompt Engineering](../concepts/prompt-engineering.md)** — How prompts are composed and how to modify them
+- **[Context System](../guides/context-files.md)** — Add project-specific rules for agents
 
 ### Deploy and Integrate
 
 - **[Installation (Fedora/RHEL)](./installation-fedora)** — Install the desktop app on Linux
-- **[Deployment Options](../infra/deployment)** — Docker, systemd, and staging setups
+- **[Deployment Options](../self-hosting/deployment)** — Docker, systemd, and staging setups
 - **[MCP Plugin](../integrations/claude-plugin)** — Control protoLabs from Claude Code CLI
 
 ### Go Deeper
 
-- **[Idea to Production](../dev/idea-to-production.md)** — The full 8-phase pipeline reference
-- **[Project Lifecycle](../dev/project-lifecycle.md)** — Board-driven project state machine
-- **[Engine Architecture](../archived/engine-architecture.md)** — ADR for the Lead Engineer design
+- **[Idea to Production](../concepts/pipeline.md)** — The full 8-phase pipeline reference
+- **[Project Lifecycle](../concepts/project-lifecycle.md)** — Board-driven project state machine
