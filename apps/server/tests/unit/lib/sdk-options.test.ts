@@ -492,4 +492,122 @@ describe('sdk-options.ts', () => {
       });
     });
   });
+
+  describe('createWorktreeWriteGuard', () => {
+    const PROJECT_PATH = '/home/dev/myproject';
+    const WORKTREE_PATH = '/home/dev/myproject/.worktrees/feature-xyz';
+
+    async function makeHook(workDir: string, projectPath: string) {
+      const { createWorktreeWriteGuard } = await import('@/lib/sdk-options.js');
+      return createWorktreeWriteGuard(workDir, projectPath);
+    }
+
+    function bashInput(command: string) {
+      return {
+        hook_event_name: 'PreToolUse',
+        tool_name: 'Bash',
+        tool_input: { command },
+      };
+    }
+
+    function writeInput(toolName: string, filePath: string) {
+      return {
+        hook_event_name: 'PreToolUse',
+        tool_name: toolName,
+        tool_input: { file_path: filePath },
+      };
+    }
+
+    it('returns undefined when workDir equals projectPath (no worktree)', async () => {
+      const hook = await makeHook(PROJECT_PATH, PROJECT_PATH);
+      expect(hook).toBeUndefined();
+    });
+
+    it('returns a hook function when in a worktree', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      expect(hook).toBeTypeOf('function');
+    });
+
+    it('allows Write to a path inside the worktree', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(writeInput('Write', `${WORKTREE_PATH}/src/foo.ts`));
+      expect(result).toEqual({});
+    });
+
+    it('blocks Write targeting the main project path', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(writeInput('Write', `${PROJECT_PATH}/src/foo.ts`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks Edit targeting the main project path', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(writeInput('Edit', `${PROJECT_PATH}/apps/server/src/routes.ts`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('allows safe Bash commands that reference only the worktree', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`ls ${WORKTREE_PATH}/src`));
+      expect(result).toEqual({});
+    });
+
+    it('allows cd to project for builds (non-destructive)', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`cd ${PROJECT_PATH} && npm run build:packages`));
+      expect(result).toEqual({});
+    });
+
+    it('blocks rm targeting the main project path', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`rm ${PROJECT_PATH}/src/some-file.ts`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks rm -rf targeting the main project path', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`rm -rf ${PROJECT_PATH}/dist/`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks git rm targeting the main project path', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`git rm ${PROJECT_PATH}/src/deleted-file.ts`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks cd to project followed by git checkout', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`cd ${PROJECT_PATH} && git checkout -- .`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks cd to project followed by git reset', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`cd ${PROJECT_PATH} && git reset --hard`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks cd to project followed by git clean', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`cd ${PROJECT_PATH} && git clean -fd`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('blocks cd to project followed by rm', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!(bashInput(`cd ${PROJECT_PATH} && rm some-file.ts`));
+      expect((result as { decision: string }).decision).toBe('block');
+    });
+
+    it('passes through non-PreToolUse hook events unmodified', async () => {
+      const hook = await makeHook(WORKTREE_PATH, PROJECT_PATH);
+      const result = await hook!({
+        hook_event_name: 'PostToolUse',
+        tool_name: 'Bash',
+        tool_input: { command: `rm ${PROJECT_PATH}/src/file.ts` },
+      });
+      expect(result).toEqual({});
+    });
+  });
 });
