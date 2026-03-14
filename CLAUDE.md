@@ -182,21 +182,19 @@ Every documentation page follows this structure:
 
 The single most important documentation metric. Measures: time from a new user's first contact with docs to their first successful result (agent running, feature created, etc.). Every quickstart decision should minimize this number. Target: under 5 minutes.
 
-### Three Documentation Surfaces
+### Two Documentation Surfaces
 
 1. **External VitePress site** (`docs/`) — Public-facing product documentation. Deployed statically. See `docs/dev/docs-standard.md` for the full standard (naming, IA, maintenance procedures, VitePress config).
-2. **Internal project docs** (`docs/internal/`) — Internal development documentation for the automaker team. Architecture decisions, operational runbooks, internal APIs, team processes. NOT included in the public VitePress build. Written for contributors and operators, not end users.
-3. **In-app docs viewer** — Per-project markdown viewer/editor at the configured `docsPath`. Reads `.md` files from the project directory. Used for project-specific documentation that lives alongside the code.
+2. **Internal docs via in-app viewer** (`docs/internal/`) — Internal development documentation for the automaker team, viewed and edited through the in-app docs viewer. Architecture decisions, operational runbooks, internal APIs, team processes. NOT included in the public VitePress build. The in-app docs viewer's `docsPath` setting points here (`docs/internal`), making internal docs browsable and editable directly within protoLabs Studio.
 
 ### Documentation Surfaces Are Not the Same
 
-| Surface       | Audience                                 | Location               | Content Type                                 |
-| ------------- | ---------------------------------------- | ---------------------- | -------------------------------------------- |
-| Public docs   | End users, developers adopting protoLabs | `docs/` (VitePress)    | Tutorials, how-to guides, API reference      |
-| Internal docs | Automaker team, contributors, operators  | `docs/internal/`       | Architecture, runbooks, decisions, processes |
-| In-app viewer | Users of any project                     | Per-project `docsPath` | Project-specific docs alongside code         |
+| Surface       | Audience                                 | Location            | Content Type                                 |
+| ------------- | ---------------------------------------- | ------------------- | -------------------------------------------- |
+| Public docs   | End users, developers adopting protoLabs | `docs/` (VitePress) | Tutorials, how-to guides, API reference      |
+| Internal docs | Automaker team, contributors, operators  | `docs/internal/`    | Architecture, runbooks, decisions, processes |
 
-Don't conflate them. A page about "how to deploy to staging" is internal. A page about "how to set up auto-mode" is public.
+The in-app docs viewer is the interface for internal docs. A page about "how to deploy to staging" is internal. A page about "how to set up auto-mode" is public.
 
 ## Important Guidelines
 
