@@ -291,12 +291,6 @@ export interface ServiceContainer {
   // Project slug resolver (resolves default projectSlug for a given projectPath)
   projectSlugResolver: ProjectSlugResolver;
 
-  // CRDT document store (set by crdt-store.module, used by dependent modules)
-  _crdtStore?: import('@protolabsai/crdt').CRDTStore;
-
-  // CRDT document store cleanup (set by crdt-store.module, called on shutdown)
-  _crdtStoreCleanup?: () => Promise<void>;
-
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
 }

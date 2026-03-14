@@ -70,14 +70,6 @@ async function gracefulShutdown(server: http.Server, services: ServiceContainer)
   hitlFormService.shutdown();
   actionableItemBridge.shutdown();
   agentDiscordRouter.stop();
-  // Shut down CRDT document store (closes Automerge sync server + flushes)
-  if (services._crdtStoreCleanup) {
-    try {
-      await services._crdtStoreCleanup();
-    } catch (err) {
-      logger.warn('[SHUTDOWN] CRDT store cleanup failed:', err);
-    }
-  }
   await crdtSyncService.shutdown();
   // Dispose AgentManifestService fs.watch handles to prevent leaked watchers
   try {

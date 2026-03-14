@@ -90,7 +90,6 @@ export async function runStartup(
     worktreeLifecycleService,
     agentService,
     knowledgeStoreService,
-    crdtSyncService,
     projectAssignmentService,
     dataDir,
     repoRoot,
@@ -135,14 +134,6 @@ export async function runStartup(
   await agentService.initialize();
   logger.info('Agent service initialized');
 
-  // Start CRDT sync service (multi-instance coordination)
-  try {
-    await crdtSyncService.start(repoRoot);
-    logger.info('[CRDT] Sync service started');
-  } catch (err) {
-    logger.warn('[CRDT] Sync service failed to start (single-instance mode):', err);
-  }
-
   // Claim preferred projects at boot (reads projectPreferences from proto.config.yaml)
   try {
     const claimed = await projectAssignmentService.claimPreferredProjects(repoRoot);
@@ -153,20 +144,6 @@ export async function runStartup(
     }
   } catch (err) {
     logger.warn('[ASSIGN] Failed to claim preferred projects at boot:', err);
-  }
-
-  // Initialize CRDT document store and inject into services
-  // Must run after CrdtSyncService.start() so proto.config.yaml is loaded
-  try {
-    const { register: registerCrdtStore } = await import('../services/crdt-store.module.js');
-    const result = await registerCrdtStore(services);
-    if (result) {
-      services._crdtStore = result.store;
-      services._crdtStoreCleanup = result.close;
-      logger.info('[CRDT] Document store initialized and injected into services');
-    }
-  } catch (err) {
-    logger.warn('[CRDT] Document store failed to initialize (filesystem fallback):', err);
   }
 
   // Initialize Knowledge Store Service for all known projects
