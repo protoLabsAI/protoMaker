@@ -1,5 +1,17 @@
 # @protolabsai/mcp-server
 
+## 0.54.1
+
+### Patch Changes
+
+- ### Refactors
+  - System Improvement: recurring merge_conflict failures (#2481)
+  - System Improvement: recurring merge_conflict failures (#2479)
+  - System Improvement: recurring merge_conflict failures (#2481)
+  - System Improvement: recurring merge_conflict failures (#2479)
+- Updated dependencies
+  - @protolabsai/tools@0.54.1
+
 ## 0.54.0
 
 ### Minor Changes
