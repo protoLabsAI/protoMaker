@@ -52,6 +52,31 @@ export class FeatureLoader implements FeatureStore {
   /** Instance ID stamped onto newly created features as createdByInstance */
   private instanceId: string | null = null;
   private projectSlugResolver: ProjectSlugResolver | null = null;
+  /**
+   * Per-feature promise chains that serialize concurrent update()/claim() calls.
+   * Keyed by "projectPath::featureId" to prevent read-modify-write races.
+   */
+  private readonly updateQueues: Map<string, Promise<unknown>> = new Map();
+
+  /**
+   * Serialize an async operation on a specific feature.
+   * Any concurrent call for the same key is queued behind the current one,
+   * preventing interleaved read-modify-write sequences.
+   */
+  private withMutex<T>(projectPath: string, featureId: string, fn: () => Promise<T>): Promise<T> {
+    const key = `${projectPath}::${featureId}`;
+    const prev = this.updateQueues.get(key) ?? Promise.resolve();
+    const next = prev
+      .then(() => fn())
+      .finally(() => {
+        // Only clean up if no new waiter was added while fn() was running
+        if (this.updateQueues.get(key) === next) {
+          this.updateQueues.delete(key);
+        }
+      });
+    this.updateQueues.set(key, next);
+    return next;
+  }
 
   setIntegrityWatchdog(watchdog: DataIntegrityWatchdogService): void {
     this.integrityWatchdog = watchdog;
@@ -614,7 +639,8 @@ export class FeatureLoader implements FeatureStore {
   }
 
   /**
-   * Update a feature (partial updates supported)
+   * Update a feature (partial updates supported).
+   * Concurrent calls for the same feature are serialized to prevent lost updates.
    * @param projectPath - Path to the project
    * @param featureId - ID of the feature to update
    * @param updates - Partial feature updates
@@ -624,6 +650,32 @@ export class FeatureLoader implements FeatureStore {
    * @param options - Optional flags, e.g. skipEventEmission for batch operations
    */
   async update(
+    projectPath: string,
+    featureId: string,
+    updates: Partial<Feature>,
+    descriptionHistorySource?: 'enhance' | 'edit',
+    enhancementMode?: 'improve' | 'technical' | 'simplify' | 'acceptance' | 'ux-reviewer',
+    preEnhancementDescription?: string,
+    options?: { skipEventEmission?: boolean }
+  ): Promise<Feature> {
+    return this.withMutex(projectPath, featureId, () =>
+      this._updateCore(
+        projectPath,
+        featureId,
+        updates,
+        descriptionHistorySource,
+        enhancementMode,
+        preEnhancementDescription,
+        options
+      )
+    );
+  }
+
+  /**
+   * Internal update implementation — runs inside the per-feature mutex.
+   * Do NOT call this directly from outside the class; use update() instead.
+   */
+  private async _updateCore(
     projectPath: string,
     featureId: string,
     updates: Partial<Feature>,
@@ -1044,19 +1096,24 @@ export class FeatureLoader implements FeatureStore {
 
   /**
    * Atomically claim a feature for an instance.
+   * The check-then-act sequence (read claimedBy → conditionally write) runs inside
+   * the per-feature mutex so two concurrent callers cannot both observe the feature
+   * as unclaimed and both succeed.
    * Returns true if successfully claimed (was unclaimed or claimed by same instance).
    * Returns false if already claimed by a different instance.
    */
   async claim(projectPath: string, featureId: string, instanceId: string): Promise<boolean> {
-    const feature = await this.get(projectPath, featureId);
-    if (!feature) return false;
+    return this.withMutex(projectPath, featureId, async () => {
+      const feature = await this.get(projectPath, featureId);
+      if (!feature) return false;
 
-    if (feature.claimedBy && feature.claimedBy !== instanceId) {
-      return false;
-    }
+      if (feature.claimedBy && feature.claimedBy !== instanceId) {
+        return false;
+      }
 
-    await this.update(projectPath, featureId, { claimedBy: instanceId });
-    return true;
+      await this._updateCore(projectPath, featureId, { claimedBy: instanceId });
+      return true;
+    });
   }
 
   /**
