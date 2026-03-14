@@ -112,6 +112,8 @@ export class FeatureScheduler {
   private runner: PipelineRunner;
   private callbacks: SchedulerCallbacks;
   private featureHealthAuditor: FeatureHealthAuditor | null = null;
+  /** Count of features skipped due to creation cooldown during the last loadPendingFeatures call. */
+  private lastCooldownSkippedCount = 0;
   /**
    * Instance identity for project-affinity filtering.
    * When null, no affinity filtering is applied (single-instance backward compat).
@@ -280,6 +282,18 @@ export class FeatureScheduler {
         );
 
         if (pendingFeatures.length === 0) {
+          // If features were skipped due to creation cooldown, don't emit idle —
+          // they'll become eligible once the cooldown window passes.
+          if (this.lastCooldownSkippedCount > 0) {
+            logger.info(
+              `[AutoLoop] ${this.lastCooldownSkippedCount} feature(s) in creation cooldown, waiting...`
+            );
+            await this.callbacks.sleep(
+              SLEEP_INTERVAL_NORMAL_MS,
+              projectState.abortController.signal
+            );
+            continue;
+          }
           const inProgress = await this.callbacks.hasInProgressFeatures(projectPath, branchName);
           if (projectRunningCount === 0 && !inProgress && !projectState.hasEmittedIdleEvent) {
             this.callbacks.emitAutoModeEvent('auto_mode_idle', {
@@ -605,6 +619,7 @@ export class FeatureScheduler {
     projectPath: string,
     branchName: string | null = null
   ): Promise<Feature[]> {
+    this.lastCooldownSkippedCount = 0;
     const featuresDir = getFeaturesDir(projectPath);
 
     const primaryBranch = await this.getCurrentBranch(projectPath);
@@ -684,7 +699,7 @@ export class FeatureScheduler {
       // ── Merged PR reconciliation ──
       const staleViaLinkedPr = allFeatures.filter(
         (f) =>
-          (f.status === 'blocked' || f.status === 'review') &&
+          (f.status === 'backlog' || f.status === 'blocked' || f.status === 'review') &&
           f.branchName &&
           mergedPrBranches.has(f.branchName)
       );
@@ -845,6 +860,7 @@ export class FeatureScheduler {
                 logger.info(
                   `[loadPendingFeatures] Skipping feature ${feature.id} - within creation cooldown (${remainingSec}s remaining)`
                 );
+                this.lastCooldownSkippedCount++;
                 continue;
               }
             }

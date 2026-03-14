@@ -77,6 +77,7 @@ describe('project-orchestration-service.ts', () => {
       mockFeatureLoader = {
         create: mockCreate,
         update: mockUpdate,
+        getAll: vi.fn().mockResolvedValue([]),
       };
     });
 
@@ -197,6 +198,40 @@ describe('project-orchestration-service.ts', () => {
       expect(phaseCreateArgs).toMatchObject({
         phaseSlug: 'phase-setup',
       });
+    });
+
+    it('reuses existing features by branchName instead of creating duplicates', async () => {
+      const existingEpic = {
+        id: 'existing-epic-id',
+        branchName: 'epic/foundation',
+        projectSlug: PROJECT_SLUG,
+        isEpic: true,
+        dependencies: [],
+      };
+      const existingPhase = {
+        id: 'existing-phase-id',
+        branchName: 'feature/foundation-setup',
+        projectSlug: PROJECT_SLUG,
+        isEpic: false,
+        dependencies: [],
+      };
+
+      mockFeatureLoader.getAll = vi.fn().mockResolvedValue([existingEpic, existingPhase]);
+
+      const result = await orchestrateProjectFeatures(
+        makeProject() as any,
+        { projectPath: PROJECT_PATH, projectSlug: PROJECT_SLUG },
+        mockFeatureLoader
+      );
+
+      // Only the second phase (core) should be created — epic and first phase already exist
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+      const createdArgs = mockCreate.mock.calls[0][1];
+      expect(createdArgs.title).toBe('Core Implementation');
+
+      // But the maps should still include the reused features
+      expect(result.milestoneEpicMap['milestone-foundation']).toBe('existing-epic-id');
+      expect(result.phaseFeatureMap['milestone-foundation:phase-setup']).toBe('existing-phase-id');
     });
   });
 });

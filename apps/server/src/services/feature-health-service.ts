@@ -180,7 +180,7 @@ export class FeatureHealthService {
     _featureMap: Map<string, Feature>
   ): HealthIssue[] {
     const issues: HealthIssue[] = [];
-    const doneStatuses = new Set(['done', 'completed', 'verified', 'review']);
+    const doneStatuses = new Set(['done', 'completed', 'verified']);
 
     const epics = features.filter((f) => f.isEpic);
 
@@ -192,13 +192,16 @@ export class FeatureHealthService {
 
       const allChildrenDone = children.every((c) => doneStatuses.has(c.status ?? ''));
       if (allChildrenDone) {
+        const hasGitBranch = !!epic.branchName;
         issues.push({
           type: 'epic_children_done',
           featureId: epic.id,
           featureTitle: epic.title ?? epic.id,
           message: `Epic has ${children.length} children, all done, but epic status is '${epic.status}'`,
-          autoFixable: true,
-          fix: 'Set epic status to done',
+          autoFixable: !hasGitBranch,
+          fix: hasGitBranch
+            ? 'Delegate to CompletionDetectorService for epic-to-dev PR creation'
+            : 'Set epic status to done',
         });
       }
     }

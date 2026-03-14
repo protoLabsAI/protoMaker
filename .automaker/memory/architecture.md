@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 497
-  referenced: 92
-  successfulFeatures: 92
+  loaded: 510
+  referenced: 101
+  successfulFeatures: 101
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -884,3 +884,149 @@ usageStats:
 - **Situation:** Without clearing, if the same merge_conflict pattern recurs after being resolved, the new issue filed would include context from the old, resolved issue, creating confusion.
 - **Root cause:** The accumulator map persists across pattern occurrences as a class member. If you file an issue and resolve the pattern without clearing the map, the next occurrence adds to the stale data.
 - **How to avoid:** Easier: cleaner issue descriptions. Harder: requires explicit state cleanup logic.
+
+#### [Gotcha] Nested mutex acquisition causes deadlock: calling a mutex-wrapped method from inside its own mutex lock hangs forever because the second call tries to enqueue behind itself (2026-03-14)
+- **Situation:** claim() needed to call update() atomically, but update() acquires the same per-feature mutex that claim() already holds
+- **Root cause:** Promise-chain mutex works by chaining onto prev.then(), but if the caller already holds the chain, enqueuing another call creates a cycle waiting for itself
+- **How to avoid:** Required extraction of _updateCore() helper, splitting public API from internal implementation, but made deadlock impossible
+
+#### [Pattern] Promise-chain mutex via Map<key, Promise>: prev.then(() => fn()) serializes all calls for the same key by chaining microtasks, not blocking threads (2026-03-14)
+- **Problem solved:** JavaScript is single-threaded; traditional mutex/lock primitives don't apply; need lightweight serialization of async I/O operations
+- **Why this works:** Promise chains are idiomatic in Node.js: leverages event loop, no active waiting, GC-friendly, and orders calls by microtask queue semantics without OS involvement
+- **Trade-offs:** Simple and standard JS idiom, but promise chain depth grows with queue length; ordering guaranteed by JS spec, no manual queue management
+
+### Mutex scoped to projectPath::featureId (per-feature) instead of global, allowing updates to different features to run concurrently (2026-03-14)
+- **Context:** Many features may be updated simultaneously; global lock would serialize all operations even on unrelated features
+- **Why:** Reduces artificial bottleneck: only features being modified concurrently need ordering; unrelated operations proceed in parallel for better throughput
+- **Rejected:** Global mutex (single Promise queue for all features) — simpler to implement but creates contention bottleneck even for independent features
+- **Trade-offs:** Requires Map maintenance and key composition (projectPath::featureId string), but eliminates unnecessary serialization of unrelated operations
+- **Breaking if changed:** Reverting to global would restore full serialization, killing concurrent updates entirely; per-feature scoping is essential for scaling
+
+#### [Pattern] Extract _Core() helper method containing original implementation; withMutex() wraps public API while _Core() allows internal callers to skip re-locking (2026-03-14)
+- **Problem solved:** claim() needs to invoke update logic atomically inside its own mutex context, but calling update() would attempt to acquire the same lock it already holds
+- **Why this works:** Decouples lock acquisition (public API concern) from business logic (shared implementation), allowing both mutex-wrapped and non-wrapped callers to reuse the same code
+- **Trade-offs:** Adds an internal method, complicating the public API surface slightly, but guarantees correctness and prevents accidental misuse by external callers
+
+#### [Gotcha] TOCTOU race in claim(): two concurrent callers both observe claimedBy as undefined, both succeed in writing their claim, final state is non-deterministic (2026-03-14)
+- **Situation:** get-check-write sequence in claim() spans multiple async boundaries without atomicity; if each step yields control, another caller can interleave
+- **Root cause:** Without mutex wrapping the entire sequence, the check (is claimedBy undefined?) and the write (set claimedBy) are not atomic; a second caller can read the old state between them
+- **How to avoid:** Mutex must enclose entire get+check+write, increasing lock hold time slightly, but guarantees exactly one claim succeeds
+
+#### [Gotcha] Two parallel tool definition patterns exist in the same codebase: factory-pattern tools (libs/tools) use defineSharedTool with Zod schemas; domain functions (domains/features) use raw async functions with TypeScript interfaces. These are not interchangeable. (2026-03-14)
+- **Situation:** Audit discovered 23 tools with Zod definitions across factories, but 8 domain functions cannot be adapted without migration.
+- **Root cause:** Different layers evolved independently. Domain functions were injected via ToolContext without schema requirements; factories had explicit contract enforcement. No unified pattern existed.
+- **How to avoid:** Domain layer keeps async function simplicity but sacrifices adapter compatibility. Factory tools require upfront schema definition but gain universal adapter access.
+
+### Zod schemas are a strict prerequisite for adapter compatibility (MCP, LangGraph). The adapter converts Zod → JSON Schema because MCP's wire protocol requires JSON Schema, not TypeScript type information. (2026-03-14)
+- **Context:** toMCPTool() and toLangGraphTool() cannot work with tools that only have TypeScript interfaces. This creates a hard architectural boundary.
+- **Why:** Zod provides serializable contracts at runtime. JSON Schema is the wire format MCP expects. TypeScript interfaces only exist at compile time and cannot be runtime-serialized reliably.
+- **Rejected:** Could use reflection or TS AST analysis to generate schemas from interfaces at build time (complex tooling, fragile, loses validation semantics) or accept unvalidated inputs (unsafe).
+- **Trade-offs:** Requires explicit schema definition upfront (more code) but guarantees type-safe serialization and enables multiple adapters without per-adapter schema logic.
+- **Breaking if changed:** If you remove Zod requirement, adapters must either lose type safety or implement their own schema reflection (complexity explosion). Removing the prerequisite cascades to all adapter implementations.
+
+#### [Pattern] Gap analysis documentation (8-item migration checklist) surfaces implicit technical debt as explicit action items, linked to a reference implementation (request-user-input.ts proves the pattern is viable in domain layer). (2026-03-14)
+- **Problem solved:** Before audit, developers could not know why their domain tool could not be adapted without attempting it. Failures would be discovered at integration time, not design time.
+- **Why this works:** Makes blockers predictable and prevents surprise failures downstream. The reference implementation proves the solution is possible; the checklist makes the work explicit and prioritizable.
+- **Trade-offs:** Additional documentation overhead but prevents integration-time surprises and creates a clear migration path. Developers know exactly which 8 tools block which adapters.
+
+#### [Gotcha] request-user-input.ts in domains/hitl/ is the ONLY domain tool that already uses defineSharedTool with Zod, proving the factory pattern is viable in domain layers but is not being consistently followed elsewhere. (2026-03-14)
+- **Situation:** 8 other domain functions use raw async signatures; request-user-input.ts uses defineSharedTool. This inconsistency exists within the same domains/ directory tree.
+- **Root cause:** Likely built later with explicit adapter requirements in mind, or by someone aware of the factory pattern. Earlier domain functions were written before the need for adapter compatibility was clear.
+- **How to avoid:** The split in patterns shows patterns can coexist but creates a mental model burden — developers must learn when each applies. request-user-input.ts serves as proof of correctness for the migration.
+
+### Use structural interface (AgentDeps) instead of importing concrete service class for tool dependencies (2026-03-14)
+- **Context:** libs/tools needs to reference methods from agent service, but mcp-server imports libs/tools, creating circular dependency risk
+- **Why:** Structural typing breaks circular dependency chain without sacrificing type safety. libs/tools depends only on the interface contract, not the concrete implementation.
+- **Rejected:** Import concrete AgentService class directly from mcp-server package
+- **Trade-offs:** Requires maintaining interface separately, but enables clean layered architecture where libs/tools doesn't import server packages
+- **Breaking if changed:** If AgentDeps interface methods don't match actual service signatures (typos, missing methods, parameter mismatches), all tools fail at runtime with opaque method-not-found errors
+
+#### [Pattern] Designate canonical reference implementation for cross-module tool definitions (2026-03-14)
+- **Problem solved:** Agent tools need to be defined consistently in both libs/tools and mcp-server, but no enforcement mechanism prevents drift
+- **Why this works:** Single source of truth (mcp-server implementation) prevents definitions diverging when server's actual capabilities change. libs/tools mirrors it.
+- **Trade-offs:** Requires discipline to consult canonical reference, but prevents silent type-safety violations
+
+### Extract parseGitHubRemote to shared @protolabsai/git-utils library instead of duplicating parseOwnerRepo in each service (2026-03-14)
+- **Context:** Both coderabbit-resolver-service and git-workflow-service implemented identical regex parsing of git remote URLs
+- **Why:** Creates single point of truth for URL parsing that can be security-reviewed once, audit-logged centrally, and updated without coordination. Both services already imported from this package, making extraction clean. Reduces surface area of injection-vulnerable code.
+- **Rejected:** Keep duplicate implementations in each service (standard DRY refactoring rejection) - but this also means security fixes must be duplicated/coordinated
+- **Trade-offs:** Adds a public export to shared library (potential coupling); makes library aware of GitHub-specific parsing (less generic); but eliminates 40+ lines of duplicate regex logic
+- **Breaking if changed:** If the shared library is removed, both services lose access to parseGitHubRemote and must re-implement or fail; the library export must be maintained through package versioning
+
+### Per-session Promise chain serialization using Map<string, Promise<void>> with enqueueForSession() helper (2026-03-14)
+- **Context:** Prevent concurrent race conditions when multiple events fire for the same session's world state
+- **Why:** Serialization ensures atomic updates to session world state; Map allows parallel processing across different sessions (scalability); Promise chaining naturally handles both sync and async tasks
+- **Rejected:** Global event queue (simple but would serialize all sessions, killing parallelism); mutex/locks (more verbose, less JS-idiomatic)
+- **Trade-offs:** Adds memory overhead of per-session chain pointers (minimal); enables true session-level parallelism; requires explicit cleanup on stop/destroy
+- **Breaking if changed:** Removing this chain would reintroduce race conditions where concurrent evaluateAndExecute calls corrupt session world state; two concurrent events could partially apply and leave inconsistent state
+
+#### [Gotcha] onEvent() is synchronous (returns void) but queues async work on the Promise chain; observers cannot await the result (2026-03-14)
+- **Situation:** Service API contracts that events are processed synchronously, but actual processing happens asynchronously on chain
+- **Root cause:** Sync API prevents blocking callers; async execution prevents blocking event loop; mismatch requires explicit chain flushing in tests
+- **How to avoid:** Fire-and-forget API is convenient but requires discipline in testing/observing; enables non-blocking event handling
+
+### Event whitelist approach: !type.startsWith('lead-engineer:') instead of blacklist of specific events (2026-03-14)
+- **Context:** Prevent cascading loops where internal events re-trigger rule evaluation
+- **Why:** Whitelist is more robust as new lead-engineer:* events are added; blacklist would require updating test suite and service code for each new event type; startsWith() pattern-matches entire namespace
+- **Rejected:** Blacklist ['lead-engineer:started', ...] (requires maintenance as events proliferate); allowlist with explicit checks (verbose)
+- **Trade-offs:** Whitelist is slightly slower (string prefix check) but more maintainable; requires conscious awareness of event naming conventions
+- **Breaking if changed:** If whitelist is removed, any lead-engineer:* event firing during evaluation would re-trigger evaluateAndExecute, causing cascading loops and potential infinite recursion
+
+#### [Pattern] Skip rule evaluation when world state refresh fails (worldStateRefreshFailed Set) until next successful refresh (2026-03-14)
+- **Problem solved:** World state refresh can throw errors (e.g., file system access, parsing); using stale/partial state for rule evaluation is dangerous
+- **Why this works:** Prevents rule evaluation on inconsistent data; Set is cleared only on successful refresh (guarantees eventual consistency); skipping is safer than retrying indefinitely
+- **Trade-offs:** Defers evaluation until state is consistent (may miss events); avoids cascading errors from bad state; adds per-session failure tracking
+
+#### [Pattern] Resource counters must use finally blocks instead of scattered symmetric decrements across success/error paths (2026-03-14)
+- **Problem solved:** activeWorkflows counter was decremented in happy path, catch block, but the early return for missing branchName had no decrement. This leaked counter state and broke subsequent workflow processing.
+- **Why this works:** finally block executes regardless of normal return, throw, or early return paths. Any new code path added later is automatically protected. Scattered decrements require explicit tracking and inevitably miss cases (as happened here).
+- **Trade-offs:** finally is slightly less explicit about increment/decrement pairing than synchronized blocks, but provides automatic correctness for any future code path added to the function
+
+#### [Gotcha] Queue advancement operations must execute in both success AND error paths—it is not a success-only operation (2026-03-14)
+- **Situation:** agent-service called setImmediate(() => processNextInQueue()) only after successful agent execution. Errors threw before calling it, permanently freezing the queue for that session's remaining prompts.
+- **Root cause:** Queue advancement is a state machine transition, decoupled from error handling. Errors must still allow the next queued item to be processed; the error propagates but queue machinery must continue. Treating it as success-only couples error handling to queue semantics.
+- **How to avoid:** Requires queue advancement call in both paths (or extract to finally), adding 1-2 lines of code. Benefit: queue remains live across error states.
+
+#### [Gotcha] Async callbacks that follow a synchronous guard check must re-validate that guard condition before mutating state (2026-03-14)
+- **Situation:** feature-scheduler checked isFeatureRunning synchronously, then spawned async isWorktreeLocked operation. While that async operation was pending, the feature transitioned to running state. The callback then executed and removed it from startingFeatures despite it being active.
+- **Root cause:** Time-of-check-time-of-use race: synchronous check passes, state changes during the async gap, callback executes with stale assumptions. Async boundaries break single-threaded reasoning; state must be re-validated before acting.
+- **How to avoid:** Requires condition duplicated in callback (checked twice: once before async, once in callback), adding defensive code. Benefit: prevents phantom cleanup and race-condition-induced state corruption.
+
+#### [Gotcha] String-based error classification from unstructured error messages requires increasingly specific pattern matching to avoid false positives (2026-03-14)
+- **Situation:** Error patterns like 'worktree' and 'timed out' were matching incidentally in error messages, causing incorrect fatal infrastructure failure classification
+- **Root cause:** Unstructured error messages from external systems cannot be safely matched with substring checks; false positives in error classification break state machine correctness
+- **How to avoid:** Specific string matching is maintainable within current codebase but remains brittle to upstream error message format changes; structured errors would be robust but impose integration burden
+
+#### [Pattern] Merge sequential state updates into atomic writes to prevent intermediate state visibility in state machines (2026-03-14)
+- **Problem solved:** Two sequential featureLoader.update() calls (status + failureCount + failureClassification) could be read partially by other processes, leaving system in inconsistent state
+- **Why this works:** State machine correctness depends on related state changes being visible as a unit; partial updates allow other processes to observe intermediate inconsistent states and make incorrect decisions
+- **Trade-offs:** Atomic merged writes are simpler and correct but couple state concerns; separate writes are more modular but require external transaction guarantees
+
+### Derive phase implicitly from context state signals instead of explicitly storing and updating phase on state entry (2026-03-14)
+- **Context:** EscalateProcessor.exit() needs to report originating phase but phase was hardcoded, requiring manual tracking across state transitions
+- **Why:** Implicit derivation avoids dual source of truth; phase is already encoded in observable context (mergeRetryCount > 0 means PUBLISH, prNumber means VERIFY, etc.), so explicitly storing it duplicates information
+- **Rejected:** Could explicitly store phase value at each state entry, making it unambiguous but adding state management complexity and synchronization requirements
+- **Trade-offs:** Implicit derivation is DRY and avoids state redundancy but depends on context signals being unambiguous; explicit storage is redundant but more defensive to ambiguous state
+- **Breaking if changed:** If multiple phases could produce the same context state (e.g., mergeRetryCount > 0 AND prNumber != null), derivation logic becomes ambiguous and reports wrong phase
+
+#### [Gotcha] Retry logic decision points must use explicit error string enumeration instead of broad keyword matching to avoid unintended retries (2026-03-14)
+- **Situation:** MergeProcessor used includes('check') || includes('pending') || includes('required') which matched incidentally in unrelated error messages, causing unintended merge retries
+- **Root cause:** Retry logic decisions are critical state machine transitions; false positives cause infinite retries or incorrect escalations. Keyword matching cannot distinguish intentional matches from incidental ones
+- **How to avoid:** Enumeration is verbose and requires maintenance for new error messages; keyword matching is concise but unsafe and fails unsafe (unintended retries)
+
+#### [Pattern] Use execution context flags (isRecursive parameter) to conditionally skip guards during continuation, rather than delete/re-add patterns on shared tracking state (2026-03-14)
+- **Problem solved:** Recursive feature execution where a feature needs to re-enter itself while maintaining a duplicate execution guard (runningFeatures map)
+- **Why this works:** Delete/re-add creates a critical race window: featureId is absent from runningFeatures between deletion and re-entry, allowing concurrent calls to see it as 'not running' and bypass the duplicate guard. A conditional flag skips the guard without state manipulation, eliminating the gap entirely
+- **Trade-offs:** Flag approach requires one extra parameter but guarantees state consistency; delete/re-add seems simpler initially but introduces subtle, hard-to-reproduce concurrency vulnerabilities
+
+#### [Gotcha] Any gap in tracking state visibility during async continuation creates a race condition vulnerability, even if the gap is microseconds long (2026-03-14)
+- **Situation:** Features need to track running state (runningFeatures.has(featureId)) to prevent concurrent duplicate execution, but recursive calls were deleting before re-entry
+- **Root cause:** In event-loop systems, 'delete then re-add immediately' is not atomic. Concurrent checks can execute in the gap between operations. The assumption that synchronous delete/re-add is safe ignores that other microtasks and I/O can yield control to event loop during the gap
+- **How to avoid:** Using conditional parameter passing adds one layer of explicitness but prevents entire class of race conditions; state mutation during continuation is simpler to reason about initially but creates fragile timing assumptions
+
+### 'review' status should not be classified as TERMINAL_STATUSES because auto-mode legitimately needs to restart execution when features fail CI review (2026-03-14)
+- **Context:** Features that reach 'review' status can fail validation and need re-execution, but TERMINAL_STATUSES blocks re-entry to execution
+- **Why:** Terminal status semantics assumed review is a final state, but in auto-mode flow, review is a transient checkpoint that can legitimately flow back to execution based on feedback. Blocking re-execution defeats auto-mode's core retry capability for failed reviews
+- **Rejected:** Keep review as terminal and implement separate retry logic outside the status machine; create bypass flags instead of removing from TERMINAL_STATUSES
+- **Trade-offs:** Removing review from terminal makes state machine more flexible and auto-mode simpler, but requires external logic to prevent infinite loop if a feature perpetually fails review; keeping it terminal prevents loops but requires special-case handling in auto-mode retry
+- **Breaking if changed:** If review is marked terminal, auto-mode cannot restart work on features that failed CI review, breaking the fundamental validation feedback loop that auto-mode depends on

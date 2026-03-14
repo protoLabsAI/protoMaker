@@ -5,7 +5,7 @@ relevantTo: [pattern]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 3
+  loaded: 4
   referenced: 2
   successfulFeatures: 2
 ---

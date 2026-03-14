@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 521
-  referenced: 132
-  successfulFeatures: 132
+  loaded: 534
+  referenced: 141
+  successfulFeatures: 141
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -247,3 +247,15 @@ usageStats:
 - **Rejected:** Alternative: Let git diff exceptions propagate and crash the feature transition. Rejected: would make the system fragile to unexpected git states.
 - **Trade-offs:** Easier: robust error handling. Harder: developers might not see which files conflicted if git diff fails (though the conflict itself is still blocked).
 - **Breaking if changed:** Removing the try/catch would make a git diff failure during conflict handling crash the entire feature execution, leaving the system in an undefined state.
+
+### MCPToolEntry interface uses JSON Schema (not Zod) because it represents the wire format MCP clients expect. The adapter is responsible for the Zod→JSON Schema conversion boundary. (2026-03-14)
+- **Context:** SharedTool carries Zod types (compile-time + runtime validation); MCP SDK expects JSON Schema objects (serializable, wire-compatible). These two schemas serve different purposes.
+- **Why:** Zod is an internal implementation detail for the libs/tools layer. When crossing the adapter boundary to external systems (MCP, LangGraph), the contract must be in a portable format. JSON Schema is the standard wire format.
+- **Rejected:** Could expose Zod schemas directly to MCP (creates coupling, Zod is not part of MCP SDK contract) or skip the conversion and validate raw JSON (loses type safety benefits).
+- **Trade-offs:** Requires conversion logic in toMCPTool() but keeps Zod internal to libs/tools. Clients never see Zod; adapters handle translation. Cleaner boundaries at cost of a conversion step.
+- **Breaking if changed:** If you remove the conversion and pass Zod schemas directly to MCP, external clients must understand Zod (dependency leak). If you remove Zod entirely from SharedTool, you lose runtime validation before schema conversion.
+
+#### [Pattern] Enforce symmetrical input and output schema definitions for every tool (2026-03-14)
+- **Problem solved:** Tools define what they accept but sometimes output validation is skipped as optional
+- **Why this works:** Input schema validates data from tool consumer; output schema validates data from tool provider. Without output schema, return values are unvalidated, breaking type safety on consumer side.
+- **Trade-offs:** More schema code to maintain, but ensures bidirectional type coverage

@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1465
-  referenced: 354
-  successfulFeatures: 354
+  loaded: 1478
+  referenced: 363
+  successfulFeatures: 363
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -976,3 +976,8 @@ usageStats:
 - **Situation:** Feature depends on prior work (PR #2474) that should have been available but wasn't
 - **Root cause:** Worktree isolation or branch state didn't include the merged dependency—common when features are split across PRs with dependency ordering issues
 - **How to avoid:** Fresh creation saved time vs merge conflict resolution, but introduced divergence risk. Team had to manually reconcile which constants from PR #2474 to include.
+
+#### [Gotcha] Manual string escaping of GraphQL arguments (JSON.stringify().slice(1, -1)) is unreliable across edge cases like newlines, quotes, special chars in body text (2026-03-14)
+- **Situation:** Original replyAndResolveThread passed body via JSON.stringify(body).slice(1, -1), which fails on bodies containing quotes, backslashes, or control characters
+- **Root cause:** Escaping is context-dependent (GraphQL string context != JSON context). The slice pattern assumes stable JSON wrapper format which breaks under pressure.
+- **How to avoid:** Switching to CLI variables eliminates custom escaping logic entirely (simpler); but requires understanding that gh cli handles escaping, not the application
