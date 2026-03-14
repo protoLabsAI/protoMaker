@@ -17,6 +17,7 @@ import { execSync } from 'node:child_process';
 import { createLogger } from '@protolabsai/utils';
 import type { HITLFormRequest } from '@protolabsai/types';
 import type { EventEmitter } from '../../lib/events.js';
+import type { PipelineOrchestrator } from '../pipeline-orchestrator.js';
 import type { FeatureLoader } from '../feature-loader.js';
 
 const logger = createLogger('GitHubChannelHandler');
@@ -83,6 +84,7 @@ export class GitHubChannelHandler implements ChannelHandler {
   private unsubscribe?: () => void;
 
   constructor(
+    private pipelineOrchestrator: PipelineOrchestrator,
     private events: EventEmitter,
     private featureLoader: FeatureLoader
   ) {}
@@ -228,11 +230,28 @@ export class GitHubChannelHandler implements ChannelHandler {
     const action = hasApprove ? 'advance' : 'reject';
 
     logger.info(
-      `Received gate action for feature ${pending.featureId} on issue #${issueNumber}: ${action}`
+      `Resolving gate for feature ${pending.featureId} on issue #${issueNumber}: ${action}`
     );
 
-    this.pendingApprovals.delete(pendingKey);
-    logger.info(`Gate action recorded (${action}) for feature ${pending.featureId}`);
+    try {
+      const resolved = await this.pipelineOrchestrator.resolveGate(
+        pending.projectPath,
+        pending.featureId,
+        action,
+        'user'
+      );
+
+      if (resolved) {
+        this.pendingApprovals.delete(pendingKey);
+        logger.info(`Gate resolved (${action}) for feature ${pending.featureId}`);
+      } else {
+        logger.warn(
+          `resolveGate returned false for feature ${pending.featureId} — gate may not be awaiting`
+        );
+      }
+    } catch (err) {
+      logger.error(`Failed to resolve gate for feature ${pending.featureId}:`, err);
+    }
   }
 
   /**

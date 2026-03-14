@@ -39,7 +39,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@protolabsai/templates": "*",
     "@clack/prompts": "^1.0.1",
     "picocolors": "^1.1.1",
     "yaml": "^2.6.1"

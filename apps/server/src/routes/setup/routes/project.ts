@@ -4,7 +4,6 @@ import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 import { createLogger } from '@protolabsai/utils';
 import { ensureAutomakerDir, writeProtoConfig, type ProtoConfig } from '@protolabsai/platform';
-import { getBaseClaudeMd, getAgentGuidelinesSection, getCodingRules } from '@protolabsai/templates';
 import { SettingsService } from '../../../services/settings-service.js';
 import type { RepoResearchResult } from '@protolabsai/types';
 import { generateSpecMd, researchRepo } from '../../../services/repo-research-service.js';
@@ -241,17 +240,32 @@ export function createSetupProjectHandler(
 
 /**
  * Generate a CLAUDE.md file tailored to the detected tech stack.
- * Uses @protolabsai/templates for base structure and agent guidelines,
- * with research-driven conditional sections for stack-specific content.
  */
 function generateClaudeMd(projectName: string, research?: RepoResearchResult): string {
   if (!research) {
-    return getBaseClaudeMd({ projectName }) + getAgentGuidelinesSection();
+    // Fallback to generic template
+    return `# ${projectName}
+
+This file provides guidance to Claude Code when working with code in this repository.
+
+## Project Overview
+
+${projectName} is a project managed with Automaker ProtoLab.
+
+## Important Guidelines
+
+- Follow coding standards and best practices for this project
+- Document significant architectural decisions
+- Keep code clean, tested, and maintainable
+`;
   }
 
-  const sections: string[] = [getBaseClaudeMd({ projectName })];
+  const sections: string[] = [`# ${projectName}\n`];
+  sections.push(
+    'This file provides guidance to Claude Code when working with code in this repository.\n'
+  );
 
-  // Tech stack overview (research-driven)
+  // Tech stack overview
   const stack: string[] = [];
   if (research.codeQuality.hasTypeScript)
     stack.push(`TypeScript ${research.codeQuality.tsVersion ?? ''}`);
@@ -272,7 +286,7 @@ function generateClaudeMd(projectName: string, research?: RepoResearchResult): s
     sections.push(`## Tech Stack\n\n${stack.map((s) => `- ${s.trim()}`).join('\n')}\n`);
   }
 
-  // Monorepo info (research-driven)
+  // Monorepo info
   if (research.monorepo.isMonorepo) {
     const lines = [`## Monorepo Structure\n`];
     lines.push(`- **Package manager**: ${research.monorepo.packageManager}`);
@@ -286,7 +300,7 @@ function generateClaudeMd(projectName: string, research?: RepoResearchResult): s
     sections.push(lines.join('\n') + '\n');
   }
 
-  // Common commands (research-driven)
+  // Common commands
   const commands: string[] = [];
   if (research.monorepo.packageManager === 'pnpm') {
     commands.push('pnpm install        # Install dependencies');
@@ -309,7 +323,7 @@ function generateClaudeMd(projectName: string, research?: RepoResearchResult): s
 
   sections.push(`## Common Commands\n\n\`\`\`bash\n${commands.join('\n')}\n\`\`\`\n`);
 
-  // Testing (research-driven)
+  // Testing
   if (research.testing.hasVitest || research.testing.hasJest || research.testing.hasPlaywright) {
     const lines = [`## Testing\n`];
     if (research.testing.hasVitest) lines.push(`- **Unit/integration**: Vitest`);
@@ -322,7 +336,7 @@ function generateClaudeMd(projectName: string, research?: RepoResearchResult): s
     sections.push(lines.join('\n') + '\n');
   }
 
-  // Import patterns (research-driven)
+  // Import patterns
   if (research.monorepo.isMonorepo && research.monorepo.packages.length > 0) {
     const pkgNames = research.monorepo.packages.map((p) => p.name).filter((n) => n.startsWith('@'));
     if (pkgNames.length > 0) {
@@ -335,16 +349,11 @@ function generateClaudeMd(projectName: string, research?: RepoResearchResult): s
     }
   }
 
-  // Agent guidelines from templates package
-  sections.push(getAgentGuidelinesSection());
-
   return sections.join('\n');
 }
 
 /**
  * Generate coding-rules.md from detected code quality tools.
- * Uses @protolabsai/templates for common rule sets, with research-driven
- * fallback for mixed or unusual stacks.
  * Returns null if no relevant tools are detected.
  */
 function generateCodingRules(research: RepoResearchResult): string | null {
@@ -359,15 +368,6 @@ function generateCodingRules(research: RepoResearchResult): string | null {
     return null;
   }
 
-  // Use pre-built rule sets for common stacks
-  if (research.frontend.framework === 'react' && !python.hasPythonServices) {
-    return getCodingRules('react');
-  }
-  if (codeQuality.hasTypeScript && !python.hasPythonServices) {
-    return getCodingRules('typescript');
-  }
-
-  // Fallback: build rules conditionally for mixed stacks (e.g., Python + TS)
   const sections: string[] = ['# Coding Rules\n'];
   sections.push('Rules for AI agents working on this codebase.\n');
 

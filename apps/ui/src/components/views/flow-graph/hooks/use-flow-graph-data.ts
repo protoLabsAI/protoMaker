@@ -18,6 +18,8 @@ import {
   ENGINE_SERVICES,
   INTEGRATION_POSITIONS,
   STATIC_EDGES,
+  PIPELINE_STAGES,
+  BRIDGE_EDGES,
   DYNAMIC_ZONE_START_Y,
   DYNAMIC_ZONE_CENTER_X,
 } from '../constants';
@@ -398,8 +400,11 @@ export function useFlowGraphData(
   const nodes = useMemo(() => {
     const result: Node[] = [];
 
-    // 1. Engine service nodes
-    for (const svc of ENGINE_SERVICES) {
+    // 1. Engine service nodes (filter out content-pipeline when GTM is disabled)
+    const services = gtmEnabled
+      ? ENGINE_SERVICES
+      : ENGINE_SERVICES.filter((s) => s.serviceId !== 'content-pipeline');
+    for (const svc of services) {
       const { status, throughput, statusLine } = getServiceStatus(svc.serviceId, engineStatus);
       const graphId = SERVICE_TO_GRAPH_MAP[svc.serviceId];
       const data: EngineServiceNodeData = {
@@ -475,7 +480,7 @@ export function useFlowGraphData(
       });
     }
 
-    // 3. Dynamic feature nodes (below production lane)
+    // 3. Dynamic feature nodes (below engine services)
     const featureSpacing = 200;
     const featureStartX =
       DYNAMIC_ZONE_CENTER_X - ((activeFeatures.length - 1) * featureSpacing) / 2;
@@ -535,13 +540,24 @@ export function useFlowGraphData(
     integrationStatus,
     activeFeatures,
     runningAgents,
+    gtmEnabled,
     toolExecutionsByFeature,
-    onNodeClick,
   ]);
 
   // Build edges: static service flow + dynamic
   const edges = useMemo(() => {
-    const result: Edge[] = [...STATIC_EDGES];
+    // Filter out the GTM edge when content pipeline is disabled
+    // Also filter out edges referencing deleted pipeline stage nodes
+    const pipelineNodeIds = new Set(PIPELINE_STAGES.map((s) => s.nodeId));
+    const staticEdges = STATIC_EDGES.filter((e) => {
+      if (!gtmEnabled && e.id === 'e-triage-content') return false;
+      if (pipelineNodeIds.has(e.source) || pipelineNodeIds.has(e.target)) return false;
+      return true;
+    });
+    const bridgeEdges = BRIDGE_EDGES.filter(
+      (e) => !pipelineNodeIds.has(e.source) && !pipelineNodeIds.has(e.target)
+    );
+    const result: Edge[] = [...staticEdges, ...bridgeEdges];
 
     // Auto-mode -> active features (workflow edges)
     for (const feature of activeFeatures) {
@@ -567,7 +583,7 @@ export function useFlowGraphData(
     }
 
     return result;
-  }, [activeFeatures, runningAgents, nodes]);
+  }, [activeFeatures, runningAgents, nodes, gtmEnabled]);
 
   return { nodes, edges, gtmEnabled };
 }

@@ -120,6 +120,7 @@ import { RecoveryService, getRecoveryService } from './recovery-service.js';
 import type { LeadEngineerService } from './lead-engineer-service.js';
 import { gitWorkflowService } from './git-workflow-service.js';
 import type { KnowledgeStoreService } from './knowledge-store-service.js';
+import type { PipelineCheckpointService } from './pipeline-checkpoint-service.js';
 import {
   AutoLoopCoordinator,
   type LoopState,
@@ -201,6 +202,8 @@ export class AutoModeService {
   private leadEngineerService!: LeadEngineerService;
   // Knowledge Store service for learning deduplication (optional)
   private knowledgeStoreService: KnowledgeStoreService | null = null;
+  // Pipeline Checkpoint service for crash recovery checkpoint cleanup (optional)
+  private pipelineCheckpointService: PipelineCheckpointService | null = null;
   // ExecutionService handles feature execution logic
   private executionService!: ExecutionService;
   // FeatureScheduler owns the loop, feature loading, and concurrency resolution
@@ -312,9 +315,7 @@ export class AutoModeService {
           logger.info(
             `Stopping agent for completed feature ${data.featureId} (→ ${data.newStatus})`
           );
-          this.stopFeature(data.featureId).catch((err) =>
-            logger.error(`Failed to stop agent for completed feature ${data.featureId}:`, err)
-          );
+          void this.stopFeature(data.featureId);
         }
       }
     });
@@ -352,6 +353,14 @@ export class AutoModeService {
    */
   setKnowledgeStoreService(service: KnowledgeStoreService): void {
     this.knowledgeStoreService = service;
+  }
+
+  /**
+   * Wire up the Pipeline Checkpoint service for crash recovery checkpoint cleanup.
+   * When set, reconcileFeatureStates() will also delete checkpoints for reset features.
+   */
+  setPipelineCheckpointService(service: PipelineCheckpointService): void {
+    this.pipelineCheckpointService = service;
   }
 
   // Work Intake service for pull-based phase claiming (optional, set by work-intake.module)
@@ -1440,6 +1449,17 @@ export class AutoModeService {
           status: 'backlog',
           startedAt: undefined,
         });
+
+        // Delete checkpoint for this feature (crash recovery cleanup)
+        if (this.pipelineCheckpointService) {
+          try {
+            await this.pipelineCheckpointService.delete(projectPath, feature.id);
+            logger.debug(`[RECONCILE] Deleted checkpoint for feature ${feature.id}`);
+          } catch (cpError) {
+            // Checkpoint deletion should not block reconciliation
+            logger.warn(`[RECONCILE] Failed to delete checkpoint for ${feature.id}:`, cpError);
+          }
+        }
 
         reconciled.push({
           featureId: feature.id,
