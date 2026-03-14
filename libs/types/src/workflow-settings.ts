@@ -6,6 +6,7 @@
  */
 
 import type { PhaseModelEntry } from './agent-settings.js';
+import type { DeviationRule } from './lead-engineer.js';
 import type { PipelineGateConfig } from './pipeline-phase.js';
 import type { RiskLevel } from './policy.js';
 import type { CustomPrompt } from './prompts.js';
@@ -200,6 +201,20 @@ export interface WorkflowSettings {
      * (default: 3)
      */
     maxInfraRetries?: number;
+    /**
+     * Fraction of the context window (0.0–1.0) at which the stream observer
+     * injects a wrap-up advisory into the agent's conversation.
+     * The advisory prompts the agent to finalize current work or decompose
+     * remaining tasks into smaller follow-up features.
+     * (default: 0.7)
+     */
+    contextWarningThreshold?: number;
+    /**
+     * Default deviation rules injected into the agent system prompt when the
+     * structured plan does not define its own deviationRules.
+     * When absent, the built-in four-category defaults are used.
+     */
+    defaultDeviationRules?: DeviationRule[];
   };
   retro: {
     /** Enable automatic retrospective generation on project completion (default: true) */
@@ -361,6 +376,7 @@ export const DEFAULT_WORKFLOW_SETTINGS: WorkflowSettings = {
     antagonisticPlanReview: true,
     maxAgentRetries: 3,
     maxInfraRetries: 3,
+    contextWarningThreshold: 0.7,
   },
   retro: {
     enabled: true,

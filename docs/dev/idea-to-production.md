@@ -194,51 +194,63 @@ Defined in `apps/server/src/services/lead-engineer-service.ts`. This is the per-
 ```
 INTAKE → PLAN → EXECUTE → REVIEW → MERGE → DEPLOY → DONE
                     |         |
-                 (retry)   (CI fail → back to EXECUTE)
+                 (retry)   (changes requested → back to EXECUTE)
                     |
-                 BLOCKED → ESCALATE (to Ava)
+                 ESCALATE (blocked, needs intervention)
 ```
 
 ### INTAKE
 
-Check dependencies, assign persona agent based on file-path domain detection:
+Check dependencies, assign persona agent based on feature domain detection:
 
-| File pattern                            | Agent                |
-| --------------------------------------- | -------------------- |
-| `apps/ui/`, components                  | Frontend agent       |
-| `apps/server/src/routes/`, services     | Backend agent        |
-| `libs/flows/`, providers, observability | Infrastructure agent |
-| `scripts/`, Docker, `.github/`          | DevOps agent         |
-| Mixed or unclear                        | Backend (default)    |
+| Domain keywords            | Agent               |
+| -------------------------- | ------------------- |
+| test, qa                   | qa-engineer         |
+| docs, documentation        | docs-engineer       |
+| ui, frontend, component    | frontend-engineer   |
+| api, backend, service      | backend-engineer    |
+| deploy, ci, infrastructure | devops-engineer     |
+| architectural complexity   | engineering-manager |
+| Mixed or unclear           | backend-engineer    |
 
-Model selection by complexity: small → Haiku, medium/large → Sonnet, architectural → Opus.
+Model selection by complexity: small → Haiku, medium/large → Sonnet, architectural → Opus. Features with 2+ prior failures auto-escalate to Opus. User-configured `agentExecutionModel` in workflow settings takes priority over complexity-based defaults.
 
-If dependencies unmet → BLOCKED. If plan needed (large/architectural) → PLAN. Otherwise → EXECUTE.
+If dependencies unmet → ESCALATE. If plan needed (large/architectural or 3+ files) → PLAN. Otherwise → EXECUTE.
 
 ### PLAN (complex features only)
 
-Generate task breakdown. For architectural features, an antagonistic gate challenges the plan before execution. Optional human approval gate (`awaitingGate`).
+Generate implementation plan via LLM. The processor also attempts to generate a `StructuredPlan` with machine-parseable goal, tasks, acceptance criteria, and deviation rules. For large/architectural features, an antagonistic review gate challenges the plan before execution (configurable via `pipeline.antagonisticPlanReview`). Up to 2 plan retries before escalation.
 
 ### EXECUTE
 
-Persona agent runs in isolated worktree. On success → REVIEW. On failure: retry with context (max 3 attempts per complexity tier), then escalate model (haiku → sonnet → opus). After exhausting retries → BLOCKED/ESCALATE.
+Persona agent runs in isolated worktree. On success → REVIEW. On failure: retry with context (max 3 agent retries + 3 infra retries tracked separately). Infrastructure failures (git push, lock files) do not consume the agent retry budget. After exhausting retries → ESCALATE.
 
 ### REVIEW
 
-PR created, CI runs, CodeRabbit reviews. `PRFeedbackService` polls GitHub every 60 seconds:
+PR created, CI runs, CodeRabbit reviews. ReviewProcessor polls PR state every 30 seconds via PRFeedbackService (fallback: gh CLI):
 
-- On `changes_requested`: collect feedback, send to agent for remediation (max 2 feedback cycles)
+- On `changes_requested`: collect review feedback, loop back to EXECUTE (max 4 remediation cycles, max 2 PR iterations)
 - On `approved` + CI passing → MERGE
-- On CI failure → back to EXECUTE with failure context
-- Max 4 total remediation cycles before escalation
+- On pending >45 minutes → ESCALATE with diagnostic
+- External merge detection: if the branch has a merged PR on GitHub, transition directly to DONE
 
 ### MERGE
 
-Verify CI, merge PR (squash/merge/rebase per settings). Emit `feature:pr-merged`. Board status → `done`.
+Merge PR via `gh pr merge`. Strategy: promotion PRs (targeting staging/main) always use `--merge`; feature PRs use `prMergeStrategy` from global settings (default: squash). Retries with 60-second delay on failure. On success → DEPLOY.
+
+### DEPLOY
+
+Post-merge verification and learnings capture:
+
+1. Run `npm run typecheck` (+ `build:packages` if libs/ touched) with 120s timeout per command
+2. On verification failure, create a bug-fix feature on the board
+3. Generate reflection via haiku LLM call (fire-and-forget)
+4. Run goal verification against structured plan acceptance criteria (fire-and-forget, advisory)
+5. Emit `feature:completed`
 
 ### DONE
 
-Terminal state. Cleanup checkpoint, store metrics, update Langfuse traces.
+Terminal state. Cleanup checkpoint, index engineering learnings via KnowledgeStoreService.
 
 ## Escalation routing
 
@@ -254,19 +266,23 @@ When the Lead Engineer can't resolve a situation, signals are routed through the
 
 ## Fast-path supervisor rules
 
-Defined in `apps/server/src/services/lead-engineer-rules.ts`. Pure functions (no LLM) that react to events:
+Defined in `apps/server/src/services/lead-engineer-rules.ts`. 16 pure functions (no LLM) that react to events. Key rules:
 
-| Rule               | Trigger                          | Action                             |
-| ------------------ | -------------------------------- | ---------------------------------- |
-| mergedNotDone      | PR merged, status still review   | Move to done                       |
-| orphanedInProgress | In-progress >4h, no agent        | Reset to backlog                   |
-| staleDeps          | Blocked + all deps done          | Unblock                            |
-| autoModeHealth     | Backlog >0 + auto-mode off       | Restart auto-mode                  |
-| staleReview        | Review >30min, no auto-merge     | Enable auto-merge                  |
-| stuckAgent         | Agent running >2h                | Abort and resume                   |
-| prApproved         | PR approved                      | Enable auto-merge, resolve threads |
-| capacityRestart    | Feature completed + more backlog | Restart auto-mode                  |
-| projectCompleting  | All features done                | Trigger project completion         |
+| Rule                 | Trigger                          | Action                                    |
+| -------------------- | -------------------------------- | ----------------------------------------- |
+| mergedNotDone        | PR merged, status still review   | Move to done                              |
+| orphanedInProgress   | In-progress >4h, no agent        | Reset to backlog (block if 3+ failures)   |
+| staleDeps            | Blocked + all deps done          | Unblock                                   |
+| autoModeHealth       | Backlog >0 + auto-mode off       | Restart auto-mode                         |
+| staleReview          | Review >30min, no auto-merge     | Enable auto-merge                         |
+| stuckAgent           | Agent running >2h                | Abort and resume with wrap-up prompt      |
+| prApproved           | PR approved                      | Enable auto-merge, resolve threads        |
+| capacityRestart      | Feature completed + more backlog | Restart auto-mode                         |
+| projectCompleting    | All features done                | Trigger project completion                |
+| classifiedRecovery   | Escalation with retryable error  | Auto-retry if confidence >=0.7            |
+| hitlFormResponse     | HITL form submitted              | Retry / provide context / skip / close    |
+| reviewQueueSaturated | Review count >= max (5)          | Log warning, scheduler pauses pickup      |
+| errorBudgetExhausted | Budget exhausted                 | Log warning, restrict to bug-fix features |
 
 ## Feature status system
 

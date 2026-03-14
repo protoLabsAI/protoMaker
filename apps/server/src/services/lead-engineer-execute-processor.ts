@@ -10,7 +10,14 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
-import type { EventType, PipelinePhase, StructuredPlan } from '@protolabsai/types';
+import type {
+  ContextMetrics,
+  DeviationRule,
+  EventType,
+  PipelinePhase,
+  StructuredPlan,
+  VerifiedTrajectory,
+} from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -18,7 +25,6 @@ import type {
   StateTransitionResult,
 } from './lead-engineer-types.js';
 import { EXECUTE_TIMEOUT_MS, MAX_AGENT_RETRIES, MAX_INFRA_RETRIES } from './lead-engineer-types.js';
-import type { VerifiedTrajectory } from '@protolabsai/types';
 
 const execAsync = promisify(exec);
 const logger = createLogger('LeadEngineerService');
@@ -118,6 +124,90 @@ export class ExecuteProcessor implements StateProcessor {
       /* non-fatal — fall back to constant */
     }
     return MAX_INFRA_RETRIES;
+  }
+
+  /**
+   * Resolve the context warning threshold for this project.
+   * Returns the configured fraction (0.0–1.0); defaults to 0.7.
+   */
+  private async resolveContextWarningThreshold(projectPath: string): Promise<number> {
+    const DEFAULT_THRESHOLD = 0.7;
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = settings.workflow?.pipeline?.contextWarningThreshold;
+        if (typeof configured === 'number' && configured > 0 && configured <= 1) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — fall back to default */
+    }
+    return DEFAULT_THRESHOLD;
+  }
+
+  /**
+   * Resolve the default deviation rules for this project from workflow settings.
+   * Returns an empty array if none are configured (caller falls back to built-in defaults).
+   */
+  private async resolveDefaultDeviationRules(projectPath: string): Promise<DeviationRule[]> {
+    try {
+      if (this.serviceContext.settingsService) {
+        const settings = await this.serviceContext.settingsService.getProjectSettings(projectPath);
+        const configured = settings.workflow?.pipeline?.defaultDeviationRules;
+        if (Array.isArray(configured) && configured.length > 0) {
+          return configured;
+        }
+      }
+    } catch {
+      /* non-fatal — fall back to built-in defaults */
+    }
+    return [];
+  }
+
+  /**
+   * Estimate ContextMetrics for a completed execution based on cost data.
+   *
+   * Since the agent SDK surfaces only total_cost_usd (not per-turn token counts),
+   * we estimate token volumes using approximate sonnet-4 pricing. These estimates
+   * are suitable for trend analysis in trajectories but are not exact.
+   *
+   * Pricing assumptions (claude-sonnet-4-6):
+   *   Input:  $3.00 / 1M tokens
+   *   Output: $15.00 / 1M tokens
+   *   Typical split: ~70% of cost is input tokens
+   */
+  private estimateContextMetrics(
+    executionCostUsd: number,
+    contextWarningThreshold: number
+  ): ContextMetrics {
+    const MAX_CONTEXT_TOKENS = 200_000;
+    const INPUT_PRICE_PER_TOKEN = 3.0 / 1_000_000;
+    const INPUT_COST_FRACTION = 0.7;
+
+    const estimatedInputCost = executionCostUsd * INPUT_COST_FRACTION;
+    const estimatedInputTokens =
+      INPUT_PRICE_PER_TOKEN > 0 ? Math.round(estimatedInputCost / INPUT_PRICE_PER_TOKEN) : 0;
+    const estimatedOutputCost = executionCostUsd * (1 - INPUT_COST_FRACTION);
+    const OUTPUT_PRICE_PER_TOKEN = 15.0 / 1_000_000;
+    const estimatedOutputTokens =
+      OUTPUT_PRICE_PER_TOKEN > 0 ? Math.round(estimatedOutputCost / OUTPUT_PRICE_PER_TOKEN) : 0;
+    const contextUsagePercent = Math.min(1.0, estimatedInputTokens / MAX_CONTEXT_TOKENS);
+
+    if (contextUsagePercent >= contextWarningThreshold) {
+      logger.info(
+        `[EXECUTE] Context usage estimated at ${Math.round(contextUsagePercent * 100)}% ` +
+          `(threshold: ${Math.round(contextWarningThreshold * 100)}%, ` +
+          `~${estimatedInputTokens.toLocaleString()} input tokens, $${executionCostUsd.toFixed(4)})`
+      );
+    }
+
+    return {
+      inputTokens: estimatedInputTokens,
+      outputTokens: estimatedOutputTokens,
+      estimatedCostUsd: executionCostUsd,
+      contextUsagePercent,
+    };
   }
 
   async enter(ctx: StateContext): Promise<void> {
@@ -628,6 +718,17 @@ export class ExecuteProcessor implements StateProcessor {
       if (updated.prNumber) ctx.prNumber = updated.prNumber;
     }
 
+    // ── Context metrics: estimate from cost and inject wrap-up advisory if threshold exceeded ──
+    try {
+      const contextWarningThreshold = await this.resolveContextWarningThreshold(ctx.projectPath);
+      const executionCostUsd = ctx.feature.costUsd ?? 0;
+      if (executionCostUsd > 0) {
+        ctx.contextMetrics = this.estimateContextMetrics(executionCostUsd, contextWarningThreshold);
+      }
+    } catch (err) {
+      logger.warn('[EXECUTE] Failed to compute context metrics (non-fatal):', err);
+    }
+
     // ── Kill criteria: cost cap ───────────────────────────────────────────────
     const maxCostUsd = await this.resolveMaxCostUsdPerFeature(ctx.projectPath);
     if (maxCostUsd !== undefined) {
@@ -757,6 +858,14 @@ export class ExecuteProcessor implements StateProcessor {
           verified: true,
           timestamp: new Date().toISOString(),
           attemptNumber,
+          ...(ctx.contextMetrics && {
+            contextMetrics: {
+              inputTokens: ctx.contextMetrics.inputTokens,
+              outputTokens: ctx.contextMetrics.outputTokens,
+              estimatedCostUsd: ctx.contextMetrics.estimatedCostUsd,
+              contextUsagePercent: ctx.contextMetrics.contextUsagePercent,
+            },
+          }),
         };
 
         this.serviceContext.trajectoryStoreService.saveTrajectory(
@@ -1228,7 +1337,11 @@ export class ExecuteProcessor implements StateProcessor {
    * Execute the feature and wait for a completion event.
    * Uses executeFeature() directly (not through process()) to avoid recursion.
    */
-  private waitForCompletion(ctx: StateContext): Promise<{ success: boolean; error?: string }> {
+  private async waitForCompletion(
+    ctx: StateContext
+  ): Promise<{ success: boolean; error?: string }> {
+    const defaultDeviationRules = await this.resolveDefaultDeviationRules(ctx.projectPath);
+
     return new Promise((resolve) => {
       let unsubscribe: (() => void) | null = null;
       let timedOut = false;
@@ -1302,6 +1415,19 @@ export class ExecuteProcessor implements StateProcessor {
 
       // Build recovery context from plan output, review feedback, and sibling reflections
       const contextParts: string[] = [];
+
+      // Inject deviation rules (always — not just on retry — so the agent knows its authority bounds)
+      if (this.serviceContext.deviationRuleService) {
+        const rules = this.serviceContext.deviationRuleService.loadRules(
+          ctx.structuredPlan,
+          defaultDeviationRules
+        );
+        const formatted = this.serviceContext.deviationRuleService.formatForPrompt(rules);
+        if (formatted) {
+          contextParts.push(formatted);
+        }
+      }
+
       if (ctx.structuredPlan) {
         // Structured plan takes priority — provides explicit task checklist, file scope, and verification commands
         contextParts.push(this.formatStructuredPlan(ctx.structuredPlan));
@@ -1320,6 +1446,20 @@ export class ExecuteProcessor implements StateProcessor {
         contextParts.push(
           `## Learnings from Prior Features\n\nApply relevant lessons:\n\n${ctx.siblingReflections.join('\n\n---\n\n')}`
         );
+      }
+      // Inject context window advisory when previous execution consumed a large portion of the
+      // context window. This prompt instructs the agent to prioritize wrapping up rather than
+      // starting new work that may not fit in the remaining context.
+      if (ctx.contextMetrics && ctx.retryCount > 0) {
+        const threshold = ctx.contextMetrics.contextUsagePercent;
+        // Resolve threshold from settings (synchronous approximation using stored metrics)
+        // The actual threshold was applied when contextMetrics was computed.
+        if (threshold >= 0.7) {
+          const percentDisplay = Math.round(threshold * 100);
+          contextParts.push(
+            `## Context Window Advisory\n\nThe previous execution consumed approximately ${percentDisplay}% of the available context window (~${ctx.contextMetrics.inputTokens.toLocaleString()} input tokens, estimated cost $${ctx.contextMetrics.estimatedCostUsd.toFixed(4)}). Please prioritize completing and committing any in-progress work immediately. If significant work remains, decompose it into smaller follow-up features rather than attempting to finish everything in this session.`
+          );
+        }
       }
       const recoveryContext = contextParts.length > 0 ? contextParts.join('\n\n') : undefined;
 

@@ -367,11 +367,11 @@ export class ReviewProcessor implements StateProcessor {
 
     try {
       const { stdout } = await execAsync(
-        `gh pr list --head "${branchName}" --state merged --json number,merged --jq '.[0].merged // false'`,
+        `gh pr list --head "${branchName}" --state merged --json number,mergedAt --jq '.[0].mergedAt // ""'`,
         { cwd: ctx.projectPath, timeout: 15000 }
       );
       const result = stdout.trim();
-      if (result === 'true') {
+      if (result !== '' && result !== 'null') {
         // Also store the PR number if we don't have one yet
         if (!ctx.prNumber) {
           try {
@@ -457,11 +457,12 @@ export class MergeProcessor implements StateProcessor {
 
       // Verify merge actually completed
       const { stdout: mergeCheck } = await execAsync(
-        `gh pr view ${ctx.prNumber} --json merged --jq '.merged'`,
+        `gh pr view ${ctx.prNumber} --json mergedAt --jq '.mergedAt // ""'`,
         { cwd: ctx.projectPath, timeout: 15000 }
       );
 
-      if (mergeCheck.trim() !== 'true') {
+      const mergeCheckResult = mergeCheck.trim();
+      if (mergeCheckResult === '' || mergeCheckResult === 'null') {
         ctx.mergeRetryCount++;
         logger.warn(`[MERGE] PR #${ctx.prNumber} merge command succeeded but PR not yet merged`);
         await new Promise((r) => setTimeout(r, MERGE_RETRY_DELAY_MS));

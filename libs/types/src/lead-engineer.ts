@@ -409,6 +409,26 @@ export interface PipelineResult {
   retryAfterMs?: number;
 }
 
+// ────────────────────────── Context Metrics ──────────────────────────
+
+/**
+ * Cumulative token usage and context window utilization for an agent execution session.
+ * Tracked by StreamObserver and included in trajectory storage for analysis.
+ */
+export interface ContextMetrics {
+  /** Total input tokens consumed across all turns in the session */
+  inputTokens: number;
+  /** Total output tokens produced across all turns in the session */
+  outputTokens: number;
+  /** Estimated cost in USD for this session */
+  estimatedCostUsd: number;
+  /**
+   * Fraction of the model's context window consumed (0.0–1.0).
+   * Derived from inputTokens / maxContextTokens.
+   */
+  contextUsagePercent: number;
+}
+
 // ────────────────────────── Phase Handoffs ──────────────────────────
 
 /**
@@ -476,8 +496,23 @@ export interface AcceptanceCriterion {
   verifyCommand?: string;
 }
 
+/**
+ * Category of deviation rule, matching the GSD model.
+ * - auto-fix-bugs: bugs discovered during implementation
+ * - auto-fix-critical: missing critical functionality blocking the stated goal
+ * - auto-fix-blocking: blocking issues (imports, type errors) in files within scope
+ * - escalate-architecture: architecture changes, new deps, or scope expansion
+ */
+export type DeviationRuleCategory =
+  | 'auto-fix-bugs'
+  | 'auto-fix-critical'
+  | 'auto-fix-blocking'
+  | 'escalate-architecture';
+
 /** A rule that defines acceptable deviations from the original plan */
 export interface DeviationRule {
+  /** Category of this deviation rule */
+  category?: DeviationRuleCategory;
   /** Description of what kind of deviation is allowed */
   condition: string;
   /** How to handle or adapt when this deviation occurs */
@@ -509,6 +544,41 @@ export interface StructuredPlan {
   tasks: PlanTask[];
   /** Rules for handling deviations from the plan */
   deviationRules: DeviationRule[];
+}
+
+// ────────────────────────── Goal Verification ──────────────────────────
+
+/** A single criterion evaluated during goal-backward verification */
+export interface GoalCriterionResult {
+  /** The original criterion text */
+  criterion: string;
+  /** Whether the criterion was satisfied by the merged changes */
+  met: boolean;
+  /** Brief explanation of why it was or wasn't met */
+  reason: string;
+}
+
+/**
+ * Result of the goal-backward verification step run by DeployProcessor
+ * after post-merge typecheck passes.
+ *
+ * Stored at: .automaker/trajectory/{featureId}/goal-verification.json
+ */
+export interface GoalVerificationResult {
+  /** Feature ID this verification belongs to */
+  featureId: string;
+  /** ISO timestamp when verification ran */
+  timestamp: string;
+  /** Per-criterion pass/fail results */
+  criteria: GoalCriterionResult[];
+  /** Number of criteria that were met */
+  metCount: number;
+  /** Total number of criteria evaluated */
+  totalCount: number;
+  /** True when all criteria were met */
+  allMet: boolean;
+  /** IDs of follow-up features created for unmet criteria (empty if all met) */
+  followUpFeatureIds: string[];
 }
 
 // ────────────────────────── Phase Handoff ──────────────────────────
