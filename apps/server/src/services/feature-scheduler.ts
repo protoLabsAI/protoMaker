@@ -448,6 +448,11 @@ export class FeatureScheduler {
                       );
                       scheduleStartingTimeout(STARTING_TIMEOUT_MS);
                     } else {
+                      // Re-check runningFeatures: startup may have completed while the async lock check was in flight
+                      if (this.callbacks.isFeatureRunning(featureForTimeout.id)) {
+                        projectState.startingFeatures.delete(featureForTimeout.id);
+                        return;
+                      }
                       logger.warn(
                         `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms (no pipeline activity, no lock), cleaning up`
                       );
@@ -455,6 +460,11 @@ export class FeatureScheduler {
                     }
                   })
                   .catch(() => {
+                    // Re-check runningFeatures: startup may have completed while the async lock check was in flight
+                    if (this.callbacks.isFeatureRunning(featureForTimeout.id)) {
+                      projectState.startingFeatures.delete(featureForTimeout.id);
+                      return;
+                    }
                     logger.warn(
                       `[AutoLoop] Feature ${featureForTimeout.id} stuck in starting state for ${delayMs}ms, cleaning up`
                     );

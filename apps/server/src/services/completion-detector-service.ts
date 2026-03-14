@@ -136,21 +136,21 @@ export class CompletionDetectorService {
     })();
   }
 
-  initialize(
+  async initialize(
     emitter: EventEmitter,
     featureLoader: FeatureLoader,
     projectService: ProjectService,
     dataDir?: string,
     settingsService?: SettingsService
-  ): void {
+  ): Promise<void> {
     this.emitter = emitter;
     this.featureLoader = featureLoader;
     this.projectService = projectService;
     this.settingsService = settingsService ?? null;
     this.dataDir = dataDir ?? null;
 
-    // Load ledger asynchronously to pre-populate dedup Sets from disk
-    void this.loadLedger();
+    // Await ledger load so dedup Sets are populated before any events are processed
+    await this.loadLedger();
 
     this.unsubscribe = emitter.subscribe((type, payload) => {
       // Auto-mode completion (agent finished successfully)
@@ -252,16 +252,15 @@ export class CompletionDetectorService {
     const epic = allFeatures.find((f) => f.id === epicId);
     if (!epic || epic.status === 'done' || epic.status === 'review') return;
 
-    // Claim dedup slot before async work to prevent race conditions
-    this.emittedEpics.add(dedupeKey);
-    this.appendLedgerEntry('epic', dedupeKey);
-    this.completionCounts.epics++;
-
-    // If the epic has a branch, create the epic-to-dev PR instead of marking done
+    // If the epic has a branch, create the epic-to-dev PR instead of marking done.
+    // Dedup is claimed only after a successful PR creation so that failures are retryable.
     if (epic.branchName) {
       const result = await this.createEpicToDevPR(projectPath, epicId, epic);
       if (result) {
-        // PR created successfully — move epic to review
+        // PR created successfully — claim dedup and move epic to review
+        this.emittedEpics.add(dedupeKey);
+        this.appendLedgerEntry('epic', dedupeKey);
+        this.completionCounts.epics++;
         await this.featureLoader!.update(projectPath, epicId, {
           status: 'review',
           prNumber: result.prNumber,
@@ -280,7 +279,8 @@ export class CompletionDetectorService {
         );
         return;
       }
-      // PR creation failed — fall through to block the epic
+      // PR creation failed — block the epic but do NOT claim dedup so the next
+      // feature:done event can retry the PR creation
       await this.featureLoader!.update(projectPath, epicId, {
         status: 'blocked',
         statusChangeReason: `All child features done but epic-to-dev PR creation failed for branch ${epic.branchName}. Manual intervention required — create PR from ${epic.branchName} to dev.`,
@@ -290,6 +290,11 @@ export class CompletionDetectorService {
       );
       return;
     }
+
+    // No branch — claim dedup then mark done directly (manual or non-git epic)
+    this.emittedEpics.add(dedupeKey);
+    this.appendLedgerEntry('epic', dedupeKey);
+    this.completionCounts.epics++;
 
     // No branch — mark done directly (manual or non-git epic)
     logger.info(`All children of epic "${epic.title}" are done — marking epic done (no branch)`);

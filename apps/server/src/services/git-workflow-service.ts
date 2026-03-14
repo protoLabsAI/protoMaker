@@ -418,14 +418,14 @@ export class GitWorkflowService {
       prUrl: null,
     };
 
-    // Check if feature has a branch name (required for push/PR)
-    const branchName = feature.branchName;
-    if (!branchName) {
-      logger.debug(`Feature ${featureId} has no branchName, skipping git workflow`);
-      return null;
-    }
-
     try {
+      // Check if feature has a branch name (required for push/PR)
+      const branchName = feature.branchName;
+      if (!branchName) {
+        logger.debug(`Feature ${featureId} has no branchName, skipping git workflow`);
+        return null;
+      }
+
       // Step 1: Commit changes
       let commitHash: string | null;
       commitHash = await this.commitChanges(workDir, feature, projectPath);
@@ -444,7 +444,6 @@ export class GitWorkflowService {
             logger.info(
               `No changes to commit and no commits ahead of base for feature ${featureId}`
             );
-            this.activeWorkflows--;
             return null;
           }
           // Agent pre-committed AND pre-pushed — format all changed files and push a fix commit.
@@ -722,14 +721,14 @@ export class GitWorkflowService {
         }
       }
 
-      this.activeWorkflows--;
       return result;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error(`Git workflow failed for feature ${featureId}: ${errorMsg}`);
       result.error = errorMsg;
-      this.activeWorkflows--;
       return result;
+    } finally {
+      this.activeWorkflows--;
     }
   }
 
