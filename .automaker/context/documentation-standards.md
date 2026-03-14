@@ -56,15 +56,16 @@ Before writing, identify which type your page is. Never mix types.
 - Same-section links: relative (`./architecture`)
 - Code blocks: always specify language (` ```typescript `, ` ```bash `)
 
-## Three Documentation Surfaces
+## Two Documentation Surfaces
 
 | Surface | Location | Audience | When to Write Here |
 |---------|----------|----------|-------------------|
 | **Public docs** | `docs/` | End users, developers adopting protoLabs | Tutorials, how-to guides, API reference, getting started |
 | **Internal docs** | `docs/internal/` | Automaker team, contributors, operators | Architecture decisions, runbooks, internal APIs, team processes |
-| **In-app viewer** | Per-project `docsPath` | Users of any project | Project-specific docs alongside code |
 
-**Rule of thumb:** If the audience is someone using protoLabs, it's public. If the audience is someone building protoLabs, it's internal. If the audience is someone working on their own project, it's in-app.
+The in-app docs viewer is the interface for internal docs — its `docsPath` points to `docs/internal/`. Internal docs are browsable and editable directly within protoLabs Studio.
+
+**Rule of thumb:** If the audience is someone using protoLabs, it's public (`docs/`). If the audience is someone building protoLabs, it's internal (`docs/internal/`).
 
 ## When Updating Docs
 
@@ -73,8 +74,8 @@ Before writing, identify which type your page is. Never mix types.
 - New API route → add to server reference
 - Changed behavior → update the existing page, don't create a new one
 - Removed feature → delete the page, update `docs/README.md`
-- Architecture decision → add to `docs/internal/`
-- Operational runbook → add to `docs/internal/`
+- Architecture decision → `docs/internal/` (viewable in-app)
+- Operational runbook → `docs/internal/` (viewable in-app)
 
 ## Common Mistakes
 
