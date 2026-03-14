@@ -256,29 +256,6 @@ export function InboxView() {
     [ceremonyEntries]
   );
 
-  const handleGateAction = useCallback(
-    async (e: React.MouseEvent, item: ActionableItem, action: 'advance' | 'reject') => {
-      e.stopPropagation();
-      if (!projectPath) return;
-      const featureId = item.actionPayload?.featureId as string | undefined;
-      if (!featureId) return;
-      try {
-        const api = getHttpApiClient();
-        await api.engine.pipelineGateResolve(projectPath, featureId, action);
-        useActionableItemsStore.getState().dismissItem(item.id);
-        await api.actionableItems.dismiss(projectPath, item.id);
-        toast.success(
-          action === 'advance'
-            ? 'Gate advanced — pipeline continues'
-            : 'Gate rejected — feature blocked'
-        );
-      } catch {
-        toast.error('Failed to resolve gate');
-      }
-    },
-    [projectPath]
-  );
-
   const handleItemClick = useCallback(
     async (item: ActionableItem) => {
       if (!projectPath) return;
@@ -597,30 +574,6 @@ export function InboxView() {
                       </div>
 
                       <div className="flex items-center gap-1 flex-shrink-0">
-                        {/* Gate actions */}
-                        {item.actionType === 'gate' && item.status === 'pending' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs px-2 text-green-600 border-green-600/30 hover:bg-green-600/10"
-                              onClick={(e) => handleGateAction(e, item, 'advance')}
-                              title="Advance gate"
-                            >
-                              Advance
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs px-2 text-red-500 border-red-500/30 hover:bg-red-500/10"
-                              onClick={(e) => handleGateAction(e, item, 'reject')}
-                              title="Reject gate"
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-
                         {/* Snooze */}
                         {item.status === 'pending' && (
                           <div className="relative">

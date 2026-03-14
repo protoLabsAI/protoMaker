@@ -18,9 +18,10 @@ import { getHttpApiClient } from '@/lib/http-api-client';
 import type { EventType } from '@protolabsai/types';
 import { ProjectHeader } from './components/project-header';
 import { ProjectSidebar } from './components/project-sidebar';
-import { PmChatPanel } from './components/pm-chat-panel';
 import { useProject, useProjectDelete } from './hooks/use-project';
 import { useAppStore } from '@/store/app-store';
+import { useAvaChannelStore } from '@/store/ava-channel-store';
+import { useChatStore } from '@/store/chat-store';
 import { PrdTab } from './tabs/prd-tab';
 import { FeaturesTab } from './tabs/features-tab';
 import { ResourcesTab } from './tabs/resources-tab';
@@ -44,9 +45,17 @@ export function ProjectDetail({
   const deleteMutation = useProjectDelete();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('features');
-  const [pmChatOpen, setPmChatOpen] = useState(false);
+  const setPendingProjectSlug = useAvaChannelStore((s) => s.setPendingProjectSlug);
+  const setLastActiveTab = useAvaChannelStore((s) => s.setLastActiveTab);
+  const setChatModalOpen = useChatStore((s) => s.setChatModalOpen);
   const queryClient = useQueryClient();
   const [isRefreshingTimeline, setIsRefreshingTimeline] = useState(false);
+
+  const handleOpenPmChat = () => {
+    setPendingProjectSlug(projectSlug);
+    setLastActiveTab('projects');
+    setChatModalOpen(true);
+  };
 
   // ── Timeline refresh ─────────────────────────────────────────────────────────
 
@@ -124,7 +133,7 @@ export function ProjectDetail({
         onDelete={handleDelete}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
         sidebarOpen={sidebarOpen}
-        onOpenPmChat={() => setPmChatOpen(true)}
+        onOpenPmChat={handleOpenPmChat}
       />
 
       <div className="flex-1 flex min-h-0">
@@ -236,13 +245,6 @@ export function ProjectDetail({
           </div>
         </div>
       </div>
-
-      <PmChatPanel
-        project={project as Project}
-        projectPath={projectPath}
-        open={pmChatOpen}
-        onClose={() => setPmChatOpen(false)}
-      />
     </div>
   );
 }

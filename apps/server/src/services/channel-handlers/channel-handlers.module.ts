@@ -7,7 +7,8 @@ import type { ServiceContainer } from '../../server/services.js';
  * on the channel router being set.
  */
 export function register(container: ServiceContainer): void {
-  const { hitlFormService, channelRouter } = container;
+  const { pipelineOrchestrator, hitlFormService, channelRouter } = container;
 
+  pipelineOrchestrator.setChannelRouter(channelRouter);
   hitlFormService.setChannelRouter(channelRouter);
 }
