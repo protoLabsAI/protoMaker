@@ -169,20 +169,6 @@ export async function runStartup(
     logger.warn('[CRDT] Document store failed to initialize (filesystem fallback):', err);
   }
 
-  // Initialize Ava Channel Reactor (depends on crdt-store.module having run first)
-  try {
-    const { register: registerAvaChannelReactor } =
-      await import('../services/ava-channel-reactor.module.js');
-    const result = await registerAvaChannelReactor(services);
-    if (result) {
-      services.avaChannelReactorService = result.service;
-      services._avaChannelReactorStop = result.stop;
-      logger.info('[REACTOR] Ava Channel Reactor started');
-    }
-  } catch (err) {
-    logger.warn('[REACTOR] Ava Channel Reactor failed to start:', err);
-  }
-
   // Initialize Knowledge Store Service for all known projects
   if (knowledgeStoreService) {
     try {

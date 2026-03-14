@@ -33,7 +33,6 @@ import type { MetricsService } from '../../services/metrics-service.js';
 import type { ProjectService } from '../../services/project-service.js';
 import type { ProjectLifecycleService } from '../../services/project-lifecycle-service.js';
 import type { SettingsService } from '../../services/settings-service.js';
-import type { AvaChannelService } from '../../services/ava-channel-service.js';
 import type { DiscordBotService } from '../../services/discord-bot-service.js';
 import type { CalendarService } from '../../services/calendar-service.js';
 import type { HealthMonitorService } from '../../services/health-monitor-service.js';
@@ -105,8 +104,6 @@ export interface AvaToolsServices {
    * Undefined means full trust (bypassPermissions).
    */
   canUseTool?: CanUseTool;
-  /** Ava channel service — optional, used for avaChannel tool group */
-  avaChannelService?: AvaChannelService;
   /** Discord bot service — optional, used for discord tool group */
   discordBotService?: DiscordBotService;
   /** Calendar service — optional, used for calendar tool group */
@@ -151,8 +148,6 @@ export interface AvaToolsConfig {
   userPresenceDetection?: boolean;
   /** When true, all destructive tools skip HITL confirmation (needsApproval: false) */
   autoApproveTools?: boolean;
-  /** Enable Ava channel tools (send to Ava Discord channel) */
-  avaChannel?: boolean;
   /** Enable Discord tools (discord messaging) */
   discord?: boolean;
   /** Enable calendar tools (calendar events) */
@@ -1513,108 +1508,6 @@ export function buildAvaTools(
           inProgress: inProgress.slice(0, 10),
           recentDone: recentDone.slice(0, 5),
         };
-      },
-    });
-  }
-
-  // -----------------------------------------------------------------------
-  // Ava Channel tools
-  // -----------------------------------------------------------------------
-  if (config.avaChannel && services.avaChannelService) {
-    const avaChannel = services.avaChannelService;
-
-    tools['send_channel_message'] = makeTool({
-      description:
-        'Send a message to the Ava backchannel (cross-instance communication channel). Messages are visible to all connected instances. Set expectsResponse:true when you need peers to reply (e.g. status checks, questions). Set intent to classify the message type.',
-      inputSchema: z.object({
-        content: z.string().describe('Message content to send'),
-        intent: z
-          .enum(['inform', 'request', 'coordination', 'escalation'])
-          .optional()
-          .describe(
-            'Message intent. inform=FYI (default), request=expects a reply, coordination=work-steal/capacity, escalation=urgent'
-          ),
-        expectsResponse: z
-          .boolean()
-          .optional()
-          .describe('Set to true if peers should respond to this message (default: false)'),
-      }),
-      execute: async ({ content, intent, expectsResponse }) => {
-        const msg = await avaChannel.postMessage(content, 'ava', {
-          intent: intent ?? 'inform',
-          expectsResponse: expectsResponse ?? false,
-        });
-        return { success: true, messageId: msg.id, timestamp: msg.timestamp };
-      },
-    });
-
-    tools['read_channel_messages'] = makeTool({
-      description:
-        'Read recent messages from the Ava backchannel. Returns messages ordered by time.',
-      inputSchema: z.object({
-        hours: z.number().optional().describe('How many hours back to read (default: 24)'),
-        instanceId: z.string().optional().describe('Filter messages by instance ID'),
-      }),
-      execute: async ({ hours, instanceId }) => {
-        const messages = await avaChannel.getRecentMessages(hours ?? 24, instanceId);
-        return {
-          count: messages.length,
-          messages: messages.slice(0, 50).map((m) => ({
-            id: m.id,
-            content: m.content,
-            source: m.source,
-            timestamp: m.timestamp,
-            instanceId: m.instanceId,
-          })),
-        };
-      },
-    });
-
-    tools['file_system_improvement'] = makeTool({
-      description:
-        'File a system improvement ticket on the board. Requires a title, description, and friction summary. Used for self-improvement when Ava identifies friction or bugs.',
-      inputSchema: z.object({
-        title: z.string().describe('Short title for the improvement'),
-        description: z.string().describe('Detailed description of what needs to change'),
-        frictionSummary: z.string().describe('Summary of the friction or pain point observed'),
-        complexity: z
-          .enum(['small', 'medium', 'large', 'architectural'])
-          .optional()
-          .describe('Estimated complexity'),
-        priority: z
-          .number()
-          .int()
-          .min(0)
-          .max(4)
-          .optional()
-          .describe('Priority: 1=urgent, 2=high, 3=normal, 4=low'),
-      }),
-      needsApproval: destructiveNeedsApproval,
-      execute: async ({ title, description, frictionSummary, complexity, priority }) => {
-        try {
-          const port = parseInt(process.env.PORT || '3008', 10);
-          const response = await fetch(
-            `http://localhost:${port}/api/ava-channel/file-improvement`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                projectPath,
-                title,
-                description,
-                frictionSummary,
-                complexity,
-                priority,
-                discussantCount: 2,
-              }),
-            }
-          );
-          return (await response.json()) as Record<string, unknown>;
-        } catch (err) {
-          return {
-            error: `Failed to file improvement: ${err instanceof Error ? err.message : String(err)}`,
-          };
-        }
       },
     });
   }

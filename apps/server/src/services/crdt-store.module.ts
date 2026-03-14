@@ -12,7 +12,6 @@
  * proto.config.yaml enables hivemind mode.
  *
  * Services injected:
- *   - AvaChannelService.setCrdtStore()
  *   - CalendarService.setCrdtStore()
  *   - TodoService.setCrdtStore()
  *
@@ -145,11 +144,10 @@ export async function register(container: ServiceContainer): Promise<CrdtStoreMo
   }
 
   // Inject into services that have setCrdtStore() hooks
-  container.avaChannelService.setCrdtStore(store);
   container.calendarService.setCrdtStore(store);
   container.todoService.setCrdtStore(store);
 
-  logger.info('CRDTStore injected into AvaChannelService, CalendarService, TodoService');
+  logger.info('CRDTStore injected into CalendarService, TodoService');
 
   // Hydrate notes workspace from disk — fire-and-forget, non-blocking
   void hydrateNotesWorkspace(store, repoRoot);

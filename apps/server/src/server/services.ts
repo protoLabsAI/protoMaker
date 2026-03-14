@@ -107,10 +107,8 @@ import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
 import { CrdtSyncService } from '../services/crdt-sync-service.js';
 import { ProjectAssignmentService } from '../services/project-assignment-service.js';
-import { AvaChannelService } from '../services/ava-channel-service.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
-import type { AvaChannelReactorService } from '../services/ava-channel-reactor-service.js';
 import { CommandRegistryService } from '../services/command-registry-service.js';
 import { CheckpointService } from '../services/checkpoint-service.js';
 import { DailyStandupService } from '../services/daily-standup-service.js';
@@ -266,9 +264,6 @@ export interface ServiceContainer {
   // CRDT sync service (multi-instance coordination)
   crdtSyncService: CrdtSyncService;
 
-  // Ava Channel (private multi-instance Ava communication)
-  avaChannelService: AvaChannelService;
-
   // Todo workspace (per-project todo lists synced via CRDT)
   todoService: TodoService;
 
@@ -301,12 +296,6 @@ export interface ServiceContainer {
 
   // CRDT document store cleanup (set by crdt-store.module, called on shutdown)
   _crdtStoreCleanup?: () => Promise<void>;
-
-  // Ava Channel Reactor (set by ava-channel-reactor.module, called on shutdown)
-  avaChannelReactorService?: AvaChannelReactorService;
-
-  // Ava Channel Reactor stop function (set by ava-channel-reactor.module, called on shutdown)
-  _avaChannelReactorStop?: () => void;
 
   // Drift detection interval (set by wireServices, cleared by shutdown)
   driftCheckInterval: ReturnType<typeof setInterval> | null;
@@ -675,18 +664,9 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Project Assignment Service — manages project-to-instance assignment
   const projectAssignmentService = new ProjectAssignmentService(projectService, crdtSyncService);
 
-  // Ava Channel Service — private multi-instance Ava communication channel
-  const avaChannelService = new AvaChannelService(join(dataDir, 'ava-channel-archive'), {
-    instanceId: crdtSyncService.getInstanceId(),
-  });
-  avaChannelService.setEventEmitter((type, payload) =>
-    events.emit(type as import('@protolabsai/types').EventType, payload)
-  );
-
-  // Friction Tracker Service — self-improvement loop (requires featureLoader + avaChannelService)
+  // Friction Tracker Service — self-improvement loop (requires featureLoader)
   const frictionTrackerService = new FrictionTrackerService({
     featureLoader,
-    avaChannelService,
     projectPath: repoRoot,
     instanceId: crdtSyncService.getInstanceId(),
   });
@@ -934,7 +914,6 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
     projectPmService,
     crdtSyncService,
     todoService,
-    avaChannelService,
     doraMetricsService,
     metricsCollectionService,
     errorBudgetService,

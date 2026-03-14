@@ -5,8 +5,7 @@
  * hits blocked status, the FailureClassifierService classification is logged here.
  * When a pattern reaches 3 occurrences **within a rolling time window**, the
  * service files a System Improvement feature via FeatureLoader.create() and
- * broadcasts a friction_report message to #backchannel (AvaChannel) so peer
- * instances can de-duplicate.
+ * logs a friction_report so peer instances can de-duplicate.
  *
  * Sliding-window counters: failures older than COUNTER_WINDOW_MS reset the
  * counter for that pattern, preventing unrelated failures spread across weeks
@@ -19,7 +18,6 @@
 import type { FrictionReport } from '@protolabsai/types';
 import { createLogger } from '@protolabsai/utils';
 import type { FeatureLoader } from './feature-loader.js';
-import type { AvaChannelService } from './ava-channel-service.js';
 
 const logger = createLogger('FrictionTrackerService');
 
@@ -66,7 +64,6 @@ export interface FailureContext {
 
 export interface FrictionTrackerDependencies {
   featureLoader: FeatureLoader;
-  avaChannelService: AvaChannelService;
   /** Project path for filing System Improvement features */
   projectPath: string;
   /** This instance's ID (used in friction_report broadcasts) */
@@ -343,18 +340,6 @@ export class FrictionTrackerService {
       instanceId: this.deps.instanceId ?? 'unknown',
     };
 
-    try {
-      await this.deps.avaChannelService.postMessage(
-        `[friction_report] ${JSON.stringify(report)}`,
-        'system',
-        {
-          intent: 'inform',
-          expectsResponse: false,
-        }
-      );
-      logger.info(`Broadcast friction_report for pattern="${pattern}" featureId=${featureId}`);
-    } catch (err) {
-      logger.error(`Failed to broadcast friction_report for pattern="${pattern}":`, err);
-    }
+    logger.info(`Filed friction_report for pattern="${pattern}" featureId=${featureId}`);
   }
 }

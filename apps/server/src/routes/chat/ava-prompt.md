@@ -42,7 +42,6 @@ The following tool groups are available in the UI chat, gated by per-project `av
 | `contextFiles`    | `list_context_files`, `get_context_file`, `update_context_file`                                    |
 | `projects`        | `list_projects`, `get_project`, `create_project`, `update_project`                                 |
 | `briefing`        | `get_briefing` — daily situation report, board summary, running agents                             |
-| `avaChannel`      | `send_ava_message`, `get_ava_channel_history` — Discord #ava channel bridge                        |
 | `discord`         | `send_discord_message`, `get_channel_history`, `list_channels`                                     |
 | `calendar`        | `list_calendar_events`, `create_calendar_event`, `update_calendar_event`, `delete_calendar_event`  |
 | `health`          | `get_system_health`, `get_server_status`, `list_recent_errors`                                     |
