@@ -39,6 +39,11 @@ const FEATURE_FLAG_LABELS: Record<keyof FeatureFlags, { label: string; descripti
     description:
       'Enable the reactive orchestrator that monitors the Ava Channel and auto-responds to incoming messages. Requires hivemind mode.',
   },
+  hitlForms: {
+    label: 'HITL Forms',
+    description:
+      'Enable human-in-the-loop interrupt forms from PM Agent, Signal Intake, and Lead Engineer. When off, gated actions are auto-approved or escalated to Ava.',
+  },
 };
 
 // Role badge colour mapping

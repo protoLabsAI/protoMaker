@@ -92,6 +92,18 @@ export class HITLFormService {
    * Create a new form request.
    */
   async create(input: HITLFormRequestInput): Promise<HITLFormRequest | null> {
+    // Gate: HITL forms are disabled unless the hitlForms feature flag is enabled
+    if (this.settingsService) {
+      const settings = await this.settingsService.getGlobalSettings();
+      const hitlEnabled = settings?.featureFlags?.hitlForms ?? false;
+      if (!hitlEnabled) {
+        return null;
+      }
+    } else {
+      // No settings service wired — default to disabled
+      return null;
+    }
+
     if (!input.title || !input.steps?.length) {
       throw new Error('title and at least one step are required');
     }

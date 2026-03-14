@@ -207,6 +207,12 @@ export interface FeatureFlags {
    * Requires hivemind to be enabled in proto.config.yaml. Off by default.
    */
   reactorEnabled: boolean;
+  /**
+   * HITL Forms — enables human-in-the-loop interrupt forms from PM Agent,
+   * Signal Intake, and Lead Engineer. When disabled, HITL-gated actions
+   * are auto-approved or escalated to Ava instead. Off by default.
+   */
+  hitlForms: boolean;
 }
 
 /** Default feature flags — all off by default, opt-in per environment */
@@ -216,6 +222,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   systemView: false,
   userPresenceDetection: false,
   reactorEnabled: false,
+  hitlForms: false,
 };
 
 // ============================================================================
