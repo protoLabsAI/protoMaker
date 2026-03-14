@@ -21,10 +21,35 @@ import type {
   InstanceRole,
   SyncRole,
   SyncServerStatus,
-  CrdtSyncWireMessage,
-  CompactionDiagnosticsSnapshot,
 } from '@protolabsai/types';
-import { CRDT_SYNCED_EVENT_TYPES } from '@protolabsai/types';
+import type { EventType } from '@protolabsai/types';
+
+/**
+ * Event types that propagate across PeerMesh instances.
+ * Features are LOCAL to each instance (never cross the wire).
+ * Only projects and shared coordination events are synced.
+ */
+const CRDT_SYNCED_EVENT_TYPES: ReadonlySet<EventType> = new Set<EventType>([
+  'project:created',
+  'project:updated',
+  'project:deleted',
+  'categories:updated',
+]);
+
+/**
+ * Wire message carrying a local EventBus event to remote instances.
+ * Transported as JSON over the sync WebSocket channel.
+ */
+interface CrdtSyncWireMessage {
+  type: 'feature_event';
+  /** Originating instance ID — receivers skip re-emit if it matches self */
+  instanceId: string;
+  eventType: EventType;
+  payload: unknown;
+  timestamp: string;
+  /** Project name from proto.config.yaml — receivers reject events for foreign projects */
+  projectName?: string;
+}
 import type { EventEmitter } from '../lib/events.js';
 import {
   CRDT_HEARTBEAT_MS,
@@ -120,7 +145,6 @@ export class PeerMeshService {
     | ((eventType: string, payload: Record<string, unknown>) => void)
     | null = null;
   private _capacityProvider: (() => InstanceCapacity) | null = null;
-  private _compactionDiagnosticsProvider: (() => CompactionDiagnosticsSnapshot) | null = null;
   /** ISO timestamp when this instance last lost sync connectivity (network partition) */
   private partitionSince: string | null = null;
   /** Event messages queued for replay while disconnected from the sync mesh */
@@ -168,15 +192,6 @@ export class PeerMeshService {
    */
   setCapacityProvider(provider: () => InstanceCapacity): void {
     this._capacityProvider = provider;
-  }
-
-  /**
-   * Register a callback that provides compaction diagnostics for the health endpoint.
-   * The callback is invoked on each getSyncStatus() call.
-   * Must be called before or after start(); safe to call multiple times.
-   */
-  setCompactionDiagnosticsProvider(provider: () => CompactionDiagnosticsSnapshot): void {
-    this._compactionDiagnosticsProvider = provider;
   }
 
   /**
@@ -475,10 +490,6 @@ export class PeerMeshService {
         cpuPercent: p.identity.capacity.cpuPercent,
       }));
 
-    const compactionDiagnostics = this._compactionDiagnosticsProvider
-      ? this._compactionDiagnosticsProvider()
-      : null;
-
     return {
       role: this.role,
       syncPort: this.role === 'primary' ? this.syncPort : null,
@@ -492,7 +503,7 @@ export class PeerMeshService {
       peerCapacitySummary,
       partitionSince: this.partitionSince,
       queuedChanges: this.outboundQueue.length,
-      compactionDiagnostics,
+      compactionDiagnostics: null,
     };
   }
 
