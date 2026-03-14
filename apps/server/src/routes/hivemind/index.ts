@@ -6,9 +6,9 @@
  */
 
 import { Router } from 'express';
-import type { CrdtSyncService } from '../../services/crdt-sync-service.js';
+import type { PeerMeshService } from '../../services/peer-mesh-service.js';
 
-export function createHivemindRoutes(crdtSyncService: CrdtSyncService): Router {
+export function createHivemindRoutes(crdtSyncService: PeerMeshService): Router {
   const router = Router();
 
   /**

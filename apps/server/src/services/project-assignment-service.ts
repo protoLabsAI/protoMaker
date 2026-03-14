@@ -16,7 +16,7 @@ import { createLogger } from '@protolabsai/utils';
 import { loadProtoConfig } from '@protolabsai/platform';
 import type { Project, UpdateProjectInput } from '@protolabsai/types';
 import type { ProjectService } from './project-service.js';
-import type { CrdtSyncService } from './crdt-sync-service.js';
+import type { PeerMeshService } from './peer-mesh-service.js';
 import type { EventEmitter } from '../lib/events.js';
 
 const logger = createLogger('ProjectAssignmentService');
@@ -40,7 +40,7 @@ export class ProjectAssignmentService {
 
   constructor(
     private readonly projectService: ProjectService,
-    private readonly crdtSyncService: CrdtSyncService,
+    private readonly crdtSyncService: PeerMeshService,
     private readonly eventEmitter?: EventEmitter
   ) {}
 

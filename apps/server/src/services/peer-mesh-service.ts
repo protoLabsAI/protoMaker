@@ -1,10 +1,13 @@
 /**
- * CrdtSyncService — sync server lifecycle for multi-instance coordination.
+ * PeerMeshService — sync server lifecycle for multi-instance coordination.
  *
  * Reads proto.config.yaml to determine instance role (primary/worker) and
  * sync port. The primary instance starts a WebSocket sync server; workers
  * connect as clients. Implements heartbeat protocol using HivemindPeer types,
  * peer TTL enforcement, and leader election when the primary goes unreachable.
+ *
+ * When hivemind.enabled is false in proto.config.yaml, this service is a no-op:
+ * no timers, no WebSocket server, no peer connections are started.
  */
 
 import os from 'node:os';
@@ -30,7 +33,7 @@ import {
   CRDT_TTL_CHECK_INTERVAL_MS,
 } from '../config/timeouts.js';
 
-const logger = createLogger('CrdtSyncService');
+const logger = createLogger('PeerMeshService');
 
 const DEFAULT_HEARTBEAT_MS = CRDT_HEARTBEAT_MS;
 const DEFAULT_TTL_MS = CRDT_TTL_MS;
@@ -84,7 +87,7 @@ interface TrackedPeer extends HivemindPeer {
   priority?: number;
 }
 
-export class CrdtSyncService {
+export class PeerMeshService {
   private role: SyncRole = 'worker';
   private syncPort = DEFAULT_SYNC_PORT;
   private config: HivemindConfig | null = null;
@@ -255,7 +258,7 @@ export class CrdtSyncService {
       if (!this._avaChannelBugReportCallback) return;
       this._avaChannelBugReportCallback(payload.content, payload.featureId).catch(
         (err: unknown) => {
-          logger.error('[CRDT] Failed to post bug report to Ava Channel:', err);
+          logger.error('[PeerMesh] Failed to post bug report to Ava Channel:', err);
         }
       );
     });
@@ -296,7 +299,7 @@ export class CrdtSyncService {
    */
   async start(repoRoot: string): Promise<void> {
     if (this.started) {
-      logger.warn('CrdtSyncService already started, skipping');
+      logger.warn('PeerMeshService already started, skipping');
       return;
     }
 
@@ -305,14 +308,14 @@ export class CrdtSyncService {
     try {
       protoConfig = (await loadProtoConfig(repoRoot)) as Record<string, unknown> | null;
     } catch (err) {
-      logger.warn('[CRDT] Failed to load proto.config.yaml, using defaults:', err);
+      logger.warn('[PeerMesh] Failed to load proto.config.yaml, using defaults:', err);
     }
 
     this.projectName = (protoConfig?.['name'] as string) || null;
     if (this.projectName) {
-      logger.info(`[CRDT] Project name: ${this.projectName}`);
+      logger.info(`[PeerMesh] Project name: ${this.projectName}`);
     } else {
-      logger.warn('[CRDT] No project name in proto.config.yaml — cross-project filtering disabled');
+      logger.warn('[PeerMesh] No project name in proto.config.yaml — cross-project filtering disabled');
     }
 
     const protolab = protoConfig?.['protolab'] as
@@ -353,6 +356,15 @@ export class CrdtSyncService {
       peers: hivemind?.peers ?? [],
     };
 
+    // Guard: if hivemind is not enabled, skip all mesh logic (no timers, no WebSocket server)
+    if (!this.config.enabled) {
+      logger.info(
+        `[PeerMesh] hivemind.enabled=false — peer mesh is disabled. No WebSocket server, heartbeats, or peer connections will be started.`
+      );
+      this.started = true; // Mark as started so subsequent calls are no-ops
+      return;
+    }
+
     // Determine self priority from peers list
     const peers = this.config.peers ?? [];
     if (this.instanceUrl) {
@@ -360,7 +372,7 @@ export class CrdtSyncService {
     }
 
     logger.info(
-      `[CRDT] Starting as ${this.role} | instanceId=${this.instanceId} | syncPort=${this.syncPort} | priority=${this.selfPriority}`
+      `[PeerMesh] Starting as ${this.role} | instanceId=${this.instanceId} | syncPort=${this.syncPort} | priority=${this.selfPriority}`
     );
 
     if (this.role === 'primary') {
@@ -370,14 +382,14 @@ export class CrdtSyncService {
       if (this.primaryUrl) {
         this._connectToPrimary(this.primaryUrl);
       } else {
-        logger.warn('[CRDT] No primary URL configured — worker will not connect');
+        logger.warn('[PeerMesh] No primary URL configured — worker will not connect');
       }
     }
 
     this._startHeartbeat();
     this._startTtlCheck();
     this.started = true;
-    logger.info(`[CRDT] Service started (role=${this.role})`);
+    logger.info(`[PeerMesh] Service started (role=${this.role})`);
   }
 
   /**
@@ -386,7 +398,7 @@ export class CrdtSyncService {
   async shutdown(): Promise<void> {
     if (!this.started) return;
 
-    logger.info('[CRDT] Shutting down...');
+    logger.info('[PeerMesh] Shutting down...');
     this._clearTimers();
 
     const goodbye: SyncMessage = {
@@ -438,7 +450,7 @@ export class CrdtSyncService {
     this.outboundQueue = [];
     this.partitionSince = null;
     this.started = false;
-    logger.info('[CRDT] Shutdown complete');
+    logger.info('[PeerMesh] Shutdown complete');
   }
 
   /**
@@ -502,13 +514,13 @@ export class CrdtSyncService {
       const server = new WebSocketServer({ port: this.syncPort });
 
       server.on('listening', () => {
-        logger.info(`[CRDT] Primary sync server listening on port ${this.syncPort}`);
+        logger.info(`[PeerMesh] Primary sync server listening on port ${this.syncPort}`);
         this.wsServer = server;
         resolve();
       });
 
       server.on('error', (err) => {
-        logger.error('[CRDT] Sync server error:', err);
+        logger.error('[PeerMesh] Sync server error:', err);
         if (!this.wsServer) {
           reject(err);
         }
@@ -516,7 +528,7 @@ export class CrdtSyncService {
 
       server.on('connection', (ws, req) => {
         const remoteAddr = req.socket.remoteAddress ?? 'unknown';
-        logger.info(`[CRDT] New peer connected from ${remoteAddr}`);
+        logger.info(`[PeerMesh] New peer connected from ${remoteAddr}`);
 
         // Send our identity immediately
         const identity: SyncMessage = {
@@ -542,14 +554,14 @@ export class CrdtSyncService {
           for (const [id, peer] of this.peers.entries()) {
             if (peer.ws === ws) {
               peer.identity.status = 'offline';
-              logger.info(`[CRDT] Peer ${id} disconnected`);
+              logger.info(`[PeerMesh] Peer ${id} disconnected`);
               break;
             }
           }
         });
 
         ws.on('error', (err) => {
-          logger.warn('[CRDT] Peer WebSocket error:', err.message);
+          logger.warn('[PeerMesh] Peer WebSocket error:', err.message);
         });
       });
     });
@@ -568,12 +580,12 @@ export class CrdtSyncService {
         return; // Already connected
       }
 
-      logger.info(`[CRDT] Connecting to primary at ${url}`);
+      logger.info(`[PeerMesh] Connecting to primary at ${url}`);
       const ws = new WebSocket(url);
       this.pendingWs = ws;
 
       ws.on('open', () => {
-        logger.info(`[CRDT] Connected to primary sync server at ${url}`);
+        logger.info(`[PeerMesh] Connected to primary sync server at ${url}`);
         this.wsClient = ws;
         this.pendingWs = null;
         this.lastPrimaryContact = Date.now();
@@ -615,20 +627,20 @@ export class CrdtSyncService {
         if (!this.partitionSince) {
           this.partitionSince = new Date().toISOString();
           logger.warn(
-            `[CRDT] Lost connection to primary — partition detected at ${this.partitionSince}`
+            `[PeerMesh] Lost connection to primary — partition detected at ${this.partitionSince}`
           );
         }
         this._startReconnectLoop(url);
       });
 
       ws.on('error', (err) => {
-        logger.warn(`[CRDT] Primary connection error: ${err.message}`);
+        logger.warn(`[PeerMesh] Primary connection error: ${err.message}`);
         if (this.pendingWs === ws) this.pendingWs = null;
         if (this.wsClient === ws) this.wsClient = null;
         if (!this.started) return;
         if (!this.partitionSince) {
           this.partitionSince = new Date().toISOString();
-          logger.warn(`[CRDT] Primary unreachable — partition detected at ${this.partitionSince}`);
+          logger.warn(`[PeerMesh] Primary unreachable — partition detected at ${this.partitionSince}`);
         }
         this._startReconnectLoop(url);
       });
@@ -667,11 +679,11 @@ export class CrdtSyncService {
       }
 
       // Otherwise try to reconnect
-      logger.info(`[CRDT] Attempting reconnect to ${url}`);
+      logger.info(`[PeerMesh] Attempting reconnect to ${url}`);
       const ws = new WebSocket(url);
       this.pendingWs = ws;
       ws.on('open', () => {
-        logger.info(`[CRDT] Reconnected to primary at ${url}`);
+        logger.info(`[PeerMesh] Reconnected to primary at ${url}`);
         this.wsClient = ws;
         this.pendingWs = null;
         this.lastPrimaryContact = Date.now();
@@ -685,7 +697,7 @@ export class CrdtSyncService {
           : 0;
         if (this.outboundQueue.length > 0) {
           logger.info(
-            `[CRDT] Partition recovered after ${partitionDuration}ms — replaying ${this.outboundQueue.length} queued changes`
+            `[PeerMesh] Partition recovered after ${partitionDuration}ms — replaying ${this.outboundQueue.length} queued changes`
           );
           for (const queued of this.outboundQueue) {
             try {
@@ -697,7 +709,7 @@ export class CrdtSyncService {
           this.outboundQueue = [];
         }
         if (this.partitionSince) {
-          logger.info(`[CRDT] Partition cleared — was disconnected since ${this.partitionSince}`);
+          logger.info(`[PeerMesh] Partition cleared — was disconnected since ${this.partitionSince}`);
           this.partitionSince = null;
           // Emit audit event so feature loader can reconcile dual-claimed features
           if (this._eventBus) {
@@ -734,7 +746,7 @@ export class CrdtSyncService {
             if (!this.partitionSince) {
               this.partitionSince = new Date().toISOString();
               logger.warn(
-                `[CRDT] Lost connection to primary — partition detected at ${this.partitionSince}`
+                `[PeerMesh] Lost connection to primary — partition detected at ${this.partitionSince}`
               );
             }
             this._startReconnectLoop(url);
@@ -772,11 +784,11 @@ export class CrdtSyncService {
     });
 
     if (hasHigherPriorityPeer) {
-      logger.info('[CRDT] Higher-priority peer is online, skipping promotion');
+      logger.info('[PeerMesh] Higher-priority peer is online, skipping promotion');
       return;
     }
 
-    logger.info(`[CRDT] Primary unreachable and no higher-priority peers — promoting to primary`);
+    logger.info(`[PeerMesh] Primary unreachable and no higher-priority peers — promoting to primary`);
     this.promotionPending = true;
 
     if (this.reconnectTimer) {
@@ -799,9 +811,9 @@ export class CrdtSyncService {
 
     try {
       await this._startServer();
-      logger.info('[CRDT] Successfully promoted to primary');
+      logger.info('[PeerMesh] Successfully promoted to primary');
     } catch (err) {
-      logger.error('[CRDT] Failed to start server during promotion:', err);
+      logger.error('[PeerMesh] Failed to start server during promotion:', err);
       this.role = 'worker';
     } finally {
       this.promotionPending = false;
@@ -882,7 +894,7 @@ export class CrdtSyncService {
         const lastSeen = new Date(peer.lastSeen).getTime();
         if (now - lastSeen > ttl) {
           logger.warn(
-            `[CRDT] ALERT: Peer ${id} unreachable for >${ttl}ms (last seen ${peer.lastSeen}) — marking offline`
+            `[PeerMesh] ALERT: Peer ${id} unreachable for >${ttl}ms (last seen ${peer.lastSeen}) — marking offline`
           );
           peer.identity.status = 'offline';
           if (this._eventBus) {
@@ -921,7 +933,7 @@ export class CrdtSyncService {
           try {
             ws.send(JSON.stringify(registryMsg));
             logger.info(
-              `[CRDT] Sent registry sync to peer ${msg.instanceId} (${Object.keys(registryMsg.registry).length} entries)`
+              `[PeerMesh] Sent registry sync to peer ${msg.instanceId} (${Object.keys(registryMsg.registry).length} entries)`
             );
           } catch {
             // Best effort
@@ -933,12 +945,12 @@ export class CrdtSyncService {
         const peer = this.peers.get(msg.instanceId);
         if (peer) {
           peer.identity.status = 'offline';
-          logger.info(`[CRDT] Peer ${msg.instanceId} announced graceful departure`);
+          logger.info(`[PeerMesh] Peer ${msg.instanceId} announced graceful departure`);
         }
         break;
       }
       case 'promote': {
-        logger.info(`[CRDT] Instance ${msg.instanceId} has promoted to primary`);
+        logger.info(`[PeerMesh] Instance ${msg.instanceId} has promoted to primary`);
         // Update primary URL if we're a worker
         if (this.role === 'worker' && msg.url) {
           this.primaryUrl = msg.url;
@@ -959,14 +971,14 @@ export class CrdtSyncService {
         // If the sender includes a projectName and it doesn't match ours, drop the event.
         if (this.projectName && msg.projectName && msg.projectName !== this.projectName) {
           logger.warn(
-            `[CRDT] Rejecting feature event from foreign project "${msg.projectName}" (local: "${this.projectName}")`,
+            `[PeerMesh] Rejecting feature event from foreign project "${msg.projectName}" (local: "${this.projectName}")`,
             { eventType: msg.eventType, instanceId: msg.instanceId }
           );
           break;
         }
 
         logger.info(
-          `[CRDT] Received remote feature event: ${msg.eventType} from ${msg.instanceId}`
+          `[PeerMesh] Received remote feature event: ${msg.eventType} from ${msg.instanceId}`
         );
 
         // Persist the remote feature change locally before emitting.
@@ -974,7 +986,7 @@ export class CrdtSyncService {
           try {
             this._remoteFeatureCallback(msg.eventType, msg.payload as Record<string, unknown>);
           } catch (err) {
-            logger.error(`[CRDT] Error persisting remote feature event: ${err}`);
+            logger.error(`[PeerMesh] Error persisting remote feature event: ${err}`);
           }
         }
 
@@ -990,7 +1002,7 @@ export class CrdtSyncService {
       case 'registry_sync': {
         if (msg.instanceId === this.instanceId) break;
         logger.info(
-          `[CRDT] Received registry sync from ${msg.instanceId} (${Object.keys(msg.registry).length} entries)`
+          `[PeerMesh] Received registry sync from ${msg.instanceId} (${Object.keys(msg.registry).length} entries)`
         );
         if (this._registryReceivedCallback) {
           this._registryReceivedCallback(msg.registry);
@@ -1001,7 +1013,7 @@ export class CrdtSyncService {
         // Ignore settings from this instance to prevent feedback loops.
         if (msg.instanceId === this.instanceId) break;
 
-        logger.debug(`[CRDT] Received remote settings update from ${msg.instanceId}`);
+        logger.debug(`[PeerMesh] Received remote settings update from ${msg.instanceId}`);
 
         if (this._settingsCallback) {
           this._settingsCallback(msg.settings);

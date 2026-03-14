@@ -105,7 +105,7 @@ import {
 import { changelogService } from '../services/changelog-service.js';
 import { ProjectPMService } from '../services/project-pm-service.js';
 import * as projectPmModule from '../services/project-pm.module.js';
-import { CrdtSyncService } from '../services/crdt-sync-service.js';
+import { PeerMeshService } from '../services/peer-mesh-service.js';
 import { ProjectAssignmentService } from '../services/project-assignment-service.js';
 import { WorkIntakeService } from '../services/work-intake-service.js';
 import { TodoService } from '../services/todo-service.js';
@@ -261,8 +261,8 @@ export interface ServiceContainer {
   // Content flow (singleton)
   contentFlowService: typeof contentFlowService;
 
-  // CRDT sync service (multi-instance coordination)
-  crdtSyncService: CrdtSyncService;
+  // Peer mesh service (multi-instance coordination)
+  crdtSyncService: PeerMeshService;
 
   // Todo workspace (per-project todo lists synced via CRDT)
   todoService: TodoService;
@@ -652,8 +652,8 @@ export async function createServices(dataDir: string, repoRoot: string): Promise
   // Todo Service — per-project workspace, CRDT-synced when hivemind active
   const todoService = new TodoService();
 
-  // CRDT Sync Service — multi-instance coordination via WebSocket sync server
-  const crdtSyncService = new CrdtSyncService();
+  // Peer Mesh Service — multi-instance coordination via WebSocket sync server
+  const crdtSyncService = new PeerMeshService();
 
   // Project Assignment Service — manages project-to-instance assignment
   const projectAssignmentService = new ProjectAssignmentService(projectService, crdtSyncService);
