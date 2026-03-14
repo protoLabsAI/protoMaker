@@ -52,6 +52,7 @@
     "@protolabsai/model-resolver": "^0.56.0",
     "@protolabsai/observability": "^0.56.0",
     "@protolabsai/platform": "^0.56.0",
+    "@protolabsai/templates": "^0.56.0",
     "@protolabsai/prompts": "^0.56.0",
     "@protolabsai/tools": "^0.56.0",
     "@protolabsai/types": "^0.56.0",

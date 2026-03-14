@@ -6,6 +6,11 @@
 
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
+import {
+  getBaseClaudeMd,
+  getAgentGuidelinesSection,
+  getCodingRules as getTemplateCodingRules,
+} from '@protolabsai/templates';
 import type { RepoResearchResult, ProtolabConfig } from '../types.js';
 
 export interface InitOptions {
@@ -117,13 +122,8 @@ async function fileExists(filePath: string): Promise<boolean> {
 async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
   const sections: string[] = [];
 
-  // Base template
-  sections.push(`# ${research.projectName}\n`);
-  sections.push(
-    'This file provides guidance to Claude Code when working with code in this repository.\n'
-  );
-  sections.push(`## Project Overview\n`);
-  sections.push(`${research.projectName} is managed with Automaker ProtoLab.\n`);
+  // Base template from shared templates package
+  sections.push(getBaseClaudeMd({ projectName: research.projectName }));
 
   // Tech stack overview
   const stack: string[] = [];
@@ -224,12 +224,8 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
     sections.push('```\n');
   }
 
-  // Important guidelines
-  sections.push('## Important Guidelines\n');
-  sections.push('- Follow the coding standards defined in coding-rules.md');
-  sections.push('- Write tests for new functionality');
-  sections.push('- Keep code clean, typed, and maintainable');
-  sections.push('- Use the established patterns in the codebase\n');
+  // Agent guidelines from shared templates package
+  sections.push(getAgentGuidelinesSection());
 
   return sections.join('\n');
 }
@@ -239,6 +235,71 @@ async function generateClaudeMd(research: RepoResearchResult): Promise<string> {
  * Combines typescript.md + react.md/python.md based on stack.
  */
 async function generateCodingRules(research: RepoResearchResult): Promise<string> {
+  // For pure React projects (no Python), use the pre-built React template
+  if (research.frontend.framework === 'react' && !research.python.hasPythonServices) {
+    return appendProjectSpecificRules(getTemplateCodingRules('react'), research);
+  }
+
+  // For pure TypeScript projects (no React, no Python), use the TypeScript template
+  if (
+    research.codeQuality.hasTypeScript &&
+    research.frontend.framework !== 'react' &&
+    !research.python.hasPythonServices
+  ) {
+    return appendProjectSpecificRules(getTemplateCodingRules('typescript'), research);
+  }
+
+  // Mixed stacks (e.g., TypeScript + Python, React + Python) need conditional assembly
+  return buildMixedStackCodingRules(research);
+}
+
+/**
+ * Append project-specific tool rules (testing, linting, pre-commit hooks)
+ * that depend on research results to a base template.
+ */
+function appendProjectSpecificRules(base: string, research: RepoResearchResult): string {
+  const additions: string[] = [];
+
+  // Testing — only add if the template's generic "Testing" section doesn't cover the specifics
+  const hasSpecificTestTools =
+    research.testing.hasPlaywright || research.testing.hasJest || research.testing.hasPytest;
+  if (hasSpecificTestTools) {
+    additions.push('## Testing Details\n');
+    if (research.testing.hasPlaywright) additions.push('- Use Playwright for end-to-end tests');
+    if (research.testing.hasJest) additions.push('- Use Jest for unit tests');
+    if (research.testing.hasPytest) additions.push('- Use pytest for Python tests');
+    additions.push('- Aim for >80% coverage on business logic\n');
+  }
+
+  // ESLint version-specific note
+  if (research.codeQuality.hasESLint) {
+    const version = research.codeQuality.eslintVersion;
+    const isV9 = version && parseInt(version, 10) >= 9;
+    if (isV9) {
+      additions.push('## Linting\n');
+      additions.push('- ESLint v9+ (flat config) is configured — fix all lint warnings');
+      additions.push('- Run `npm run lint` to check\n');
+    }
+  }
+
+  // Pre-commit hooks
+  if (research.codeQuality.hasHusky || research.codeQuality.hasLintStaged) {
+    additions.push('## Pre-commit Hooks\n');
+    additions.push('- Husky + lint-staged runs on commit — ensure code passes before committing\n');
+  }
+
+  if (additions.length === 0) {
+    return base;
+  }
+
+  return base + '\n' + additions.join('\n');
+}
+
+/**
+ * Build coding rules by assembling sections conditionally for mixed stacks
+ * (e.g., TypeScript + Python projects) that no single template covers.
+ */
+function buildMixedStackCodingRules(research: RepoResearchResult): string {
   const sections: string[] = [];
 
   sections.push('# Coding Rules\n');
