@@ -194,13 +194,25 @@ export function createWorktreeWriteGuard(
         // Only check commands that don't reference the worktree path.
         // The worktree is a subdir of projectPath (.worktrees/branch),
         // so regex matches on projectPath would false-positive on worktree paths.
+        const escapedProjectPath = escapeRegExp(resolvedProjectPath);
         const writePatterns = [
           // Direct file writes via redirection
-          new RegExp(`>\\s*${escapeRegExp(resolvedProjectPath)}/`),
+          new RegExp(`>\\s*${escapedProjectPath}/`),
           // git operations in projectPath (git -C projectPath ...)
-          new RegExp(`git\\s+-C\\s+['"]?${escapeRegExp(resolvedProjectPath)}['"]?`),
+          new RegExp(`git\\s+-C\\s+['"]?${escapedProjectPath}['"]?`),
           // cp/mv targeting projectPath
-          new RegExp(`(?:cp|mv)\\s+.*${escapeRegExp(resolvedProjectPath)}/`),
+          new RegExp(`(?:cp|mv)\\s+.*${escapedProjectPath}/`),
+          // rm / rmdir targeting projectPath directly (file deletions that bleed to main tree)
+          new RegExp(`\\brm(?:dir)?\\s+(?:-[\\w]+\\s+)*['"]?${escapedProjectPath}/`),
+          // git rm targeting projectPath directly
+          new RegExp(`git\\s+rm\\s+(?:-[\\w]+\\s+)*['"]?${escapedProjectPath}/`),
+          // cd into projectPath followed by any destructive git or filesystem command.
+          // Agents must cd to the main repo for builds (npm run build) but must NEVER
+          // run destructive operations (rm, git rm, git checkout, git reset, git clean)
+          // from the main repo context — those belong in the worktree.
+          new RegExp(
+            `cd\\s+['"]?${escapedProjectPath}['"]?\\s*(?:&&|;)[\\s\\S]*?\\b(?:git\\s+(?:rm|checkout|reset|clean)|rm(?:dir)?)\\b`
+          ),
         ];
 
         for (const pattern of writePatterns) {
