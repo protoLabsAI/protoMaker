@@ -7,28 +7,21 @@
 
 import { execSync } from 'child_process';
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { FeatureLoader } from '../../../services/feature-loader.js';
 import { createLogger } from '@protolabsai/utils';
+
+export const RollbackRequestSchema = z.object({
+  projectPath: z.string().min(1, 'projectPath is required'),
+  featureId: z.string().min(1, 'featureId is required'),
+});
 
 const logger = createLogger('features/rollback');
 
 export function createRollbackHandler(featureLoader: FeatureLoader) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { featureId, projectPath } = req.body as {
-        featureId: unknown;
-        projectPath: unknown;
-      };
-
-      if (typeof featureId !== 'string' || featureId.trim().length === 0) {
-        res.status(400).json({ success: false, error: 'featureId must be a non-empty string' });
-        return;
-      }
-
-      if (typeof projectPath !== 'string' || projectPath.trim().length === 0) {
-        res.status(400).json({ success: false, error: 'projectPath must be a non-empty string' });
-        return;
-      }
+      const { featureId, projectPath }: z.infer<typeof RollbackRequestSchema> = req.body;
 
       const feature = await featureLoader.get(projectPath, featureId);
       if (!feature) {
