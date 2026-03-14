@@ -38,6 +38,12 @@ export interface ExecuteFeatureOptions {
   retryCount?: number;
   previousErrors?: string[];
   recoveryContext?: string;
+  /**
+   * When true, skip the duplicate-execution guard at the top of executeFeature.
+   * Used for recursive calls (e.g. continuation after plan approval) so that
+   * the featureId stays in runningFeatures throughout the handoff with no gap.
+   */
+  isRecursive?: boolean;
 }
 
 // ---------------------------------------------------------------------------

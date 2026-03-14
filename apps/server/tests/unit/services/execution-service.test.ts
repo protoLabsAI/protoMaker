@@ -963,3 +963,128 @@ describe('ExecutionService - match rule auto-assign', () => {
     await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID)).resolves.not.toThrow();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Concurrency and runningFeatures tracking tests
+// ---------------------------------------------------------------------------
+
+describe('ExecutionService - concurrency and runningFeatures', () => {
+  const PROJECT_PATH = '/tmp/test-project';
+  const FEATURE_ID = 'feature-concurrency-test-1';
+
+  beforeEach(() => {
+    vi.stubEnv('AUTOMAKER_MOCK_AGENT', 'true');
+    mockMatchFeature.mockReset();
+    mockMatchFeature.mockResolvedValue(null);
+    mockGetWorkflowSettings.mockReset();
+    mockGetWorkflowSettings.mockResolvedValue({});
+  });
+
+  it('throws when feature is already running (no isRecursive flag)', async () => {
+    const feature = makeFeature({ id: FEATURE_ID });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const runningFeatures = new Map<string, any>();
+
+    const svc = new ExecutionService(
+      makeEvents() as any,
+      null,
+      featureLoader,
+      null,
+      makeRecoveryService(),
+      null,
+      runningFeatures,
+      new Map(),
+      90,
+      95,
+      callbacks
+    );
+
+    // Seed the map to simulate an in-progress execution
+    runningFeatures.set(FEATURE_ID, {
+      featureId: FEATURE_ID,
+      projectPath: PROJECT_PATH,
+      worktreePath: null,
+      branchName: null,
+      abortController: new AbortController(),
+      isAutoMode: false,
+      startTime: Date.now(),
+      retryCount: 0,
+      previousErrors: [],
+    });
+
+    await expect(svc.executeFeature(PROJECT_PATH, FEATURE_ID)).rejects.toThrow(/already running/);
+  });
+
+  it('skips duplicate check when isRecursive is true', async () => {
+    const feature = makeFeature({ id: FEATURE_ID });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const runningFeatures = new Map<string, any>();
+
+    const svc = new ExecutionService(
+      makeEvents() as any,
+      null,
+      featureLoader,
+      null,
+      makeRecoveryService(),
+      null,
+      runningFeatures,
+      new Map(),
+      90,
+      95,
+      callbacks
+    );
+
+    // Seed the map to simulate in-progress execution
+    runningFeatures.set(FEATURE_ID, {
+      featureId: FEATURE_ID,
+      projectPath: PROJECT_PATH,
+      worktreePath: null,
+      branchName: null,
+      abortController: new AbortController(),
+      isAutoMode: false,
+      startTime: Date.now(),
+      retryCount: 0,
+      previousErrors: [],
+    });
+
+    // Should NOT throw when isRecursive: true
+    await expect(
+      svc.executeFeature(PROJECT_PATH, FEATURE_ID, false, false, undefined, { isRecursive: true })
+    ).resolves.not.toThrow();
+  });
+
+  it('review status does not block execution (not in TERMINAL_STATUSES)', async () => {
+    const feature = makeFeature({ id: FEATURE_ID, status: 'review' });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    // Should NOT return early — review is not terminal
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    // The feature must have been set to in_progress (execution proceeded)
+    expect(callbacks.updateFeatureStatus).toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      'in_progress'
+    );
+  });
+
+  it('done status blocks execution (remains in TERMINAL_STATUSES)', async () => {
+    const feature = makeFeature({ id: FEATURE_ID, status: 'done' });
+    const callbacks = makeCallbacks(feature);
+    const featureLoader = makeFeatureLoader(feature);
+    const svc = makeService(callbacks, featureLoader, makeRecoveryService());
+
+    await svc.executeFeature(PROJECT_PATH, FEATURE_ID);
+
+    // Should return early — done is terminal, so updateFeatureStatus never called with in_progress
+    expect(callbacks.updateFeatureStatus).not.toHaveBeenCalledWith(
+      PROJECT_PATH,
+      FEATURE_ID,
+      'in_progress'
+    );
+  });
+});
