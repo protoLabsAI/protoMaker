@@ -536,4 +536,6 @@ export interface PhaseHandoff {
   verdict: 'APPROVE' | 'WARN' | 'BLOCK';
   /** ISO timestamp when this handoff was created */
   createdAt: string;
+  /** Structured plan from PlanProcessor, carried through PLAN-to-EXECUTE transition */
+  structuredPlan?: StructuredPlan;
 }

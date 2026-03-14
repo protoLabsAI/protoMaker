@@ -10,7 +10,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import { createLogger } from '@protolabsai/utils';
 import { getAutomakerDir, getFeatureDir } from '@protolabsai/platform';
-import type { EventType, PipelinePhase } from '@protolabsai/types';
+import type { EventType, PipelinePhase, StructuredPlan } from '@protolabsai/types';
 import type {
   ProcessorServiceContext,
   StateContext,
@@ -720,6 +720,7 @@ export class ExecuteProcessor implements StateProcessor {
             : 'Unknown',
           verdict,
           createdAt: new Date().toISOString(),
+          structuredPlan: ctx.structuredPlan,
         });
       } catch (err) {
         logger.warn('[EXECUTE] Failed to save handoff (non-fatal):', err);
@@ -1175,6 +1176,55 @@ export class ExecuteProcessor implements StateProcessor {
   }
 
   /**
+   * Format a StructuredPlan into clear markdown instructions for the executor agent.
+   * Includes goal, task checklist with file scope per task, aggregate file scope, and
+   * verification commands from acceptance criteria.
+   */
+  private formatStructuredPlan(plan: StructuredPlan): string {
+    const parts: string[] = [];
+
+    parts.push(`## Implementation Plan\n\n**Goal:** ${plan.goal}`);
+
+    if (plan.tasks.length > 0) {
+      parts.push(`\n### Task Checklist\n`);
+      plan.tasks.forEach((task, i) => {
+        parts.push(`${i + 1}. **${task.title}**`);
+        parts.push(`   ${task.description}`);
+        if (task.files.length > 0) {
+          parts.push(`   Files: ${task.files.join(', ')}`);
+        }
+        if (task.verifyCommand) {
+          parts.push(`   Verify: \`${task.verifyCommand}\``);
+        }
+      });
+    }
+
+    const allFiles = [...new Set(plan.tasks.flatMap((t) => t.files))];
+    if (allFiles.length > 0) {
+      parts.push(
+        `\n### File Scope\n\nModify only these files:\n${allFiles.map((f) => `- ${f}`).join('\n')}`
+      );
+    }
+
+    if (plan.acceptanceCriteria.length > 0) {
+      parts.push(
+        `\n### Acceptance Criteria\n\n${plan.acceptanceCriteria.map((c) => `- [ ] ${c.description}`).join('\n')}`
+      );
+    }
+
+    const verifyCommands = plan.acceptanceCriteria
+      .filter((c) => c.verifyCommand)
+      .map((c) => c.verifyCommand as string);
+    if (verifyCommands.length > 0) {
+      parts.push(
+        `\n### Verification Commands\n\nRun before completing:\n${verifyCommands.map((c) => `\`\`\`\n${c}\n\`\`\``).join('\n')}`
+      );
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
    * Execute the feature and wait for a completion event.
    * Uses executeFeature() directly (not through process()) to avoid recursion.
    */
@@ -1252,7 +1302,10 @@ export class ExecuteProcessor implements StateProcessor {
 
       // Build recovery context from plan output, review feedback, and sibling reflections
       const contextParts: string[] = [];
-      if (ctx.planOutput) {
+      if (ctx.structuredPlan) {
+        // Structured plan takes priority — provides explicit task checklist, file scope, and verification commands
+        contextParts.push(this.formatStructuredPlan(ctx.structuredPlan));
+      } else if (ctx.planOutput) {
         contextParts.push(`## Implementation Plan\n\n${ctx.planOutput}`);
       }
       if (ctx.reviewFeedback) {
