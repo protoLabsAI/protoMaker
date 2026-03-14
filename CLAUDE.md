@@ -584,15 +584,24 @@ feat-a    feat-b    feat-c   Feature PRs (target epic branch)
 **Automatic Behavior:**
 
 - Feature PRs automatically target their epic's branch (not dev)
-- Epic PRs target dev
+- Epic PRs target dev (never main directly)
 - Features without an epic target dev directly
+- When the last child feature's PR merges to the epic branch, `CompletionDetectorService` automatically creates the epic-to-dev PR with `--merge` auto-merge enabled
+- When the epic-to-dev PR merges (detected by GitHub webhook), the epic is marked `done` and the epic branch is deleted
+- If the epic-to-dev PR has conflicts, the epic is marked `blocked` with a reason explaining manual intervention is needed
+
+**Epic Lifecycle:**
+
+```
+children in_progress → children done → epic PR created (review) → epic PR merges → epic done
+```
 
 **Merge Order:**
 
-1. Merge all feature PRs into the epic branch
-2. Once all features complete, merge the epic PR into main
+1. Merge all feature PRs into the epic branch (squash OK)
+2. Epic-to-dev PR is auto-created and auto-merged with `--merge` strategy (never squash)
 
-This keeps main clean while allowing incremental feature development within epics.
+This keeps dev clean while allowing incremental feature development within epics.
 
 ### Creating a Project via MCP
 
