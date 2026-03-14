@@ -55,9 +55,9 @@ You should see your Kanban board. If you see a connection error, check that the 
 
 ## Next Steps
 
-| Want to...                         | Read                                            |
-| ---------------------------------- | ----------------------------------------------- |
-| See all commands and examples      | [Plugin Commands](./plugin-commands.md)         |
-| Understand the plugin architecture | [Plugin Deep Dive](./plugin-deep-dive.md)       |
-| Configure Docker, GitHub, Discord  | [Claude Plugin Setup](./claude-plugin.md)       |
-| Browse the full tool catalog       | [MCP Tools Reference](./mcp-tools-reference.md) |
+| Want to...                         | Read                                             |
+| ---------------------------------- | ------------------------------------------------ |
+| See all commands and examples      | [Plugin Commands](./plugin-commands.md)          |
+| Understand the plugin architecture | [Plugin Deep Dive](./plugin-deep-dive.md)        |
+| Configure Docker, GitHub, Discord  | [Claude Plugin Setup](./claude-plugin.md)        |
+| Browse the full tool catalog       | [MCP Tools Reference](../reference/mcp-tools.md) |
