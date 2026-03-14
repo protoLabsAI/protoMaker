@@ -466,6 +466,51 @@ export interface LeadEngineerService {
   refreshWorldState(projectPath: string): Promise<LeadWorldState>;
 }
 
+// ────────────────────────── Structured Plan ──────────────────────────
+
+/** A single acceptance criterion for a feature plan */
+export interface AcceptanceCriterion {
+  /** Human-readable description of what must be true for acceptance */
+  description: string;
+  /** Optional verification command to confirm criterion is met */
+  verifyCommand?: string;
+}
+
+/** A rule that defines acceptable deviations from the original plan */
+export interface DeviationRule {
+  /** Description of what kind of deviation is allowed */
+  condition: string;
+  /** How to handle or adapt when this deviation occurs */
+  action: string;
+}
+
+/** A single implementation task within a structured plan */
+export interface PlanTask {
+  /** Short title describing this task */
+  title: string;
+  /** Detailed description of what needs to be done */
+  description: string;
+  /** Files to create or modify for this task */
+  files: string[];
+  /** Shell command to verify this task is complete */
+  verifyCommand?: string;
+}
+
+/**
+ * Structured implementation plan produced by PlanProcessor.
+ * Contains machine-parseable goal, acceptance criteria, tasks, and deviation rules.
+ */
+export interface StructuredPlan {
+  /** High-level goal statement for the feature */
+  goal: string;
+  /** Ordered list of acceptance criteria that must be satisfied */
+  acceptanceCriteria: AcceptanceCriterion[];
+  /** Ordered list of implementation tasks */
+  tasks: PlanTask[];
+  /** Rules for handling deviations from the plan */
+  deviationRules: DeviationRule[];
+}
+
 // ────────────────────────── Phase Handoff ──────────────────────────
 
 /**
