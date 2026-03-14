@@ -31,7 +31,7 @@ Day-to-day team communication.
 
 ### ENGINEERING
 
-Domain-specific technical discussion. Each channel maps to a team role in the [agent hierarchy](/infra/architecture).
+Domain-specific technical discussion. Each channel maps to a team role in the [agent hierarchy](/self-hosting/architecture).
 
 | Channel      | Purpose                                               | Team Role  |
 | ------------ | ----------------------------------------------------- | ---------- |
@@ -409,5 +409,5 @@ When a channel is no longer needed:
 
 ## Related Documentation
 
-- [Infrastructure](/infra/) - Deployment and system architecture
+- [Self-Hosting](/self-hosting/) - Deployment and system architecture
 - [Claude Plugin](./claude-plugin) - MCP tools and plugin setup

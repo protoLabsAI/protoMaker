@@ -462,4 +462,4 @@ Invoke via: `Task(subagent_type: "protolabs:my-agent", prompt: "...")`
 - [Plugin Quickstart](./plugin-quickstart.md) -- 5-minute setup guide
 - [Claude Plugin Setup](./claude-plugin.md) -- Installation, configuration, Docker deployment
 - [Plugin Commands](./plugin-commands.md) -- Commands reference, subagents, examples
-- [MCP Tools Reference](./mcp-tools-reference.md) -- Full MCP tool catalog
+- [MCP Tools Reference](../reference/mcp-tools.md) -- Full MCP tool catalog

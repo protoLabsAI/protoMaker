@@ -127,7 +127,7 @@ Output: `apps/ui/release/`
 
 ### Docker
 
-See [Docker Architecture](../infra/docker.md) and [Docker Compose](../infra/docker-compose.md) for containerized deployment.
+See [Docker Architecture](../self-hosting/docker.md) and [Docker Compose](../self-hosting/docker-compose.md) for containerized deployment.
 
 ## Testing
 

@@ -27,6 +27,8 @@ export { createClaudeCodeTool } from './claude-code-tool.js';
 export type { ClaudeCodeDeps } from './claude-code-tool.js';
 export { createProjectTools } from './project-tools.js';
 export type { ProjectDeps } from './project-tools.js';
+export { createAgentTools } from './agent-tools.js';
+export type { AgentDeps } from './agent-tools.js';
 
 // Tool profiles — named capability sets for agent roles
 export {

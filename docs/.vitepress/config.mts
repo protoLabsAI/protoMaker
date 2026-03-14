@@ -61,13 +61,14 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Get Started', link: '/getting-started/' },
-      { text: 'Guides', link: '/agents/' },
-      { text: 'Self-Hosting', link: '/infra/' },
+      { text: 'Guides', link: '/guides/' },
+      { text: 'Concepts', link: '/concepts/' },
+      { text: 'Reference', link: '/reference/' },
       {
         text: 'More',
         items: [
-          { text: 'Reference', link: '/dev/' },
-          { text: 'ProtoLabs', link: '/protolabs/' },
+          { text: 'Integrations', link: '/integrations/' },
+          { text: 'Self-Hosting', link: '/self-hosting/' },
           { text: 'Consulting', link: 'https://protolabs.consulting' },
         ],
       },
@@ -80,18 +81,22 @@ export default defineConfig({
           items: generateSidebar('getting-started', '/getting-started'),
         },
       ],
-      '/agents/': [
+      '/guides/': [
         {
-          text: 'Agent System',
-          items: generateSidebar('agents', '/agents'),
+          text: 'How-To Guides',
+          items: generateSidebar('guides', '/guides'),
         },
+      ],
+      '/concepts/': [
         {
-          text: 'Integrations',
-          items: generateSidebar('integrations', '/integrations'),
+          text: 'Concepts',
+          items: generateSidebar('concepts', '/concepts'),
         },
+      ],
+      '/reference/': [
         {
-          text: 'Authority',
-          items: generateSidebar('authority', '/authority'),
+          text: 'Reference',
+          items: generateSidebar('reference', '/reference'),
         },
       ],
       '/integrations/': [
@@ -100,44 +105,10 @@ export default defineConfig({
           items: generateSidebar('integrations', '/integrations'),
         },
       ],
-      '/authority/': [
+      '/self-hosting/': [
         {
-          text: 'Authority System',
-          items: generateSidebar('authority', '/authority'),
-        },
-      ],
-      '/infra/': [
-        {
-          text: 'Infrastructure',
-          items: generateSidebar('infra', '/infra'),
-        },
-      ],
-      '/dev/': [
-        {
-          text: 'Development',
-          items: generateSidebar('dev', '/dev'),
-        },
-        {
-          text: 'Server Reference',
-          items: generateSidebar('server', '/server'),
-        },
-      ],
-      '/server/': [
-        {
-          text: 'Server Reference',
-          items: generateSidebar('server', '/server'),
-        },
-      ],
-      '/protolabs/': [
-        {
-          text: 'ProtoLabs',
-          items: generateSidebar('protolabs', '/protolabs'),
-        },
-      ],
-      '/templates/': [
-        {
-          text: 'Templates',
-          items: generateSidebar('templates', '/templates'),
+          text: 'Self-Hosting',
+          items: generateSidebar('self-hosting', '/self-hosting'),
         },
       ],
     },
