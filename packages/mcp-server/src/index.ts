@@ -86,7 +86,7 @@ function sleep(ms: number): Promise<void> {
 async function apiCall(
   endpoint: string,
   body: Record<string, unknown>,
-  method: 'GET' | 'POST' = 'POST'
+  method: 'GET' | 'POST' | 'PUT' = 'POST'
 ): Promise<unknown> {
   const options: RequestInit = {
     method,
@@ -106,7 +106,7 @@ async function apiCall(
       }
     });
     url += `?${params.toString()}`;
-  } else if (method === 'POST') {
+  } else if (method === 'POST' || method === 'PUT') {
     options.body = JSON.stringify(body);
   }
 
@@ -619,10 +619,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
         research: args.research,
       });
 
-    case 'health_check': {
-      const response = await fetch(`${API_URL}/api/health`);
-      return response.json();
-    }
+    case 'health_check':
+      return apiCall('/health', {}, 'GET');
 
     case 'get_server_logs': {
       // Strategy: ask the server to read its own log file via API.
@@ -906,23 +904,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return settingsResult;
     }
 
-    case 'update_settings': {
-      const settingsBody = (args.settings || {}) as Record<string, unknown>;
-      const options: RequestInit = {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': API_KEY,
-        },
-        body: JSON.stringify(settingsBody),
-      };
-      const response = await fetch(`${API_URL}/api/settings/global`, options);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`API error ${response.status}: ${text}`);
-      }
-      return response.json();
-    }
+    case 'update_settings':
+      return apiCall('/settings/global', (args.settings || {}) as Record<string, unknown>, 'PUT');
 
     case 'list_events':
       return apiCall('/event-history/list', {
@@ -1724,45 +1707,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return apiCall('/promotions/batches', {}, 'GET');
 
     // Lead Engineer Handoffs
-    case 'get_feature_handoff': {
-      const fsModule = await import('fs/promises');
-      const pathModule = await import('path');
-
-      const projectPath = args.projectPath as string;
-      const featureId = args.featureId as string;
-      const handoffDir = pathModule.join(projectPath, '.automaker', 'features', featureId);
-
-      let files: string[] = [];
-      try {
-        const entries = await fsModule.readdir(handoffDir);
-        files = entries.filter((f: string) => f.startsWith('handoff-') && f.endsWith('.json'));
-      } catch {
-        return { success: true, handoff: null, message: 'No handoffs found for this feature' };
-      }
-
-      if (files.length === 0) {
-        return { success: true, handoff: null, message: 'No handoffs found for this feature' };
-      }
-
-      // Find the latest handoff by createdAt
-      let latest: Record<string, unknown> | null = null;
-      for (const file of files) {
-        try {
-          const content = await fsModule.readFile(pathModule.join(handoffDir, file), 'utf-8');
-          const handoff = JSON.parse(content) as Record<string, unknown>;
-          if (
-            !latest ||
-            new Date(handoff.createdAt as string) > new Date(latest.createdAt as string)
-          ) {
-            latest = handoff;
-          }
-        } catch {
-          // Skip corrupt files
-        }
-      }
-
-      return { success: true, handoff: latest };
-    }
+    case 'get_feature_handoff':
+      return apiCall('/features/handoff', {
+        projectPath: args.projectPath,
+        featureId: args.featureId,
+      });
 
     // Knowledge Store
     case 'knowledge_search':
