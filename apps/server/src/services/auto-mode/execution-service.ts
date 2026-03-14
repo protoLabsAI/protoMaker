@@ -303,7 +303,7 @@ export class ExecutionService {
     providedWorktreePath?: string,
     options?: ExecuteFeatureOptions
   ): Promise<void> {
-    if (this.runningFeatures.has(featureId)) {
+    if (this.runningFeatures.has(featureId) && !options?.isRecursive) {
       const existing = this.runningFeatures.get(featureId);
       const runtime = existing ? Math.floor((Date.now() - existing.startTime) / 1000) : 0;
       logger.warn(
@@ -362,7 +362,7 @@ export class ExecutionService {
       // Guard: refuse to execute features in terminal states.
       // This prevents zombie loops where done/verified features keep getting restarted
       // by health checks, reconciliation, or stale retry timers.
-      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed', 'review']);
+      const TERMINAL_STATUSES = new Set(['done', 'verified', 'completed']);
       if (TERMINAL_STATUSES.has(feature.status ?? '')) {
         logger.warn(
           `Refusing to execute feature ${featureId} — already in terminal status "${feature.status}". ` +
@@ -395,9 +395,10 @@ export class ExecutionService {
           continuationPrompt = continuationPrompt.replace(/\{\{userFeedback\}\}/g, '');
           continuationPrompt = continuationPrompt.replace(/\{\{approvedPlan\}\}/g, planContent);
 
-          // Recursively call executeFeature with the continuation prompt
-          // Remove from running features temporarily, it will be added back
-          this.runningFeatures.delete(featureId);
+          // Recursively call executeFeature with the continuation prompt.
+          // Pass isRecursive: true so the duplicate-execution guard is skipped —
+          // runningFeatures stays populated throughout with no gap that would
+          // allow a concurrent auto-loop tick to launch a duplicate agent.
           return this.executeFeature(
             projectPath,
             featureId,
@@ -406,6 +407,7 @@ export class ExecutionService {
             providedWorktreePath,
             {
               continuationPrompt,
+              isRecursive: true,
             }
           );
         }
