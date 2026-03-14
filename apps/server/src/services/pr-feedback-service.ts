@@ -35,6 +35,12 @@ import {
 } from './pr-status-checker.js';
 import { FeedbackAggregator } from './feedback-aggregator.js';
 import { ThreadResolver } from './thread-resolver.js';
+import {
+  PR_FEEDBACK_POLL_INTERVAL_MS,
+  PR_FEEDBACK_CI_POLL_INTERVAL_MS,
+  PR_FEEDBACK_CI_MAX_WAIT_MS,
+  PR_FEEDBACK_MISSING_CI_CHECK_THRESHOLD_MS,
+} from '../config/timeouts.js';
 
 const logger = createLogger('PRFeedbackRemediation');
 
@@ -63,7 +69,7 @@ interface PersistedPRTracking {
 }
 
 /** How often to poll for PR reviews */
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = PR_FEEDBACK_POLL_INTERVAL_MS;
 
 /** Max iterations before escalating to CTO - prevents infinite feedback loops */
 const MAX_PR_ITERATIONS = 2;
@@ -72,20 +78,17 @@ const MAX_PR_ITERATIONS = 2;
 const MAX_TOTAL_REMEDIATION_CYCLES = 4;
 
 /** How often to poll for CI check status (60s) */
-const CI_POLL_INTERVAL_MS = 60_000;
+const CI_POLL_INTERVAL_MS = PR_FEEDBACK_CI_POLL_INTERVAL_MS;
 
 /** Max time to wait for CI checks to complete (10 minutes) */
-const CI_MAX_WAIT_MS = 10 * 60 * 1000;
+const CI_MAX_WAIT_MS = PR_FEEDBACK_CI_MAX_WAIT_MS;
 
 /**
  * How long a PR can wait before we alert on required CI checks that never registered.
  * A check is considered "permanently missing" when it has been absent this long.
  * Configurable via MISSING_CI_CHECK_THRESHOLD_MINUTES env variable (default: 30).
  */
-const MISSING_CI_CHECK_THRESHOLD_MS = (() => {
-  const minutes = parseInt(process.env.MISSING_CI_CHECK_THRESHOLD_MINUTES ?? '30', 10);
-  return (isNaN(minutes) || minutes <= 0 ? 30 : minutes) * 60 * 1000;
-})();
+const MISSING_CI_CHECK_THRESHOLD_MS = PR_FEEDBACK_MISSING_CI_CHECK_THRESHOLD_MS;
 
 export class PRFeedbackService {
   private readonly events: EventEmitter;

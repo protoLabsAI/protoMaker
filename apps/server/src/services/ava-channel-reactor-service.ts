@@ -39,17 +39,24 @@ import {
   type MessageClassification,
 } from './ava-channel-classifiers.js';
 import type { AvaChannelService } from './ava-channel-service.js';
+import {
+  AVA_REACTOR_RESUBSCRIBE_BASE_MS,
+  AVA_REACTOR_RESUBSCRIBE_MAX_MS,
+  AVA_REACTOR_HEARTBEAT_INTERVAL_MS,
+  AVA_REACTOR_DORA_REPORT_INTERVAL_MS,
+  AVA_REACTOR_HEALTH_ALERT_PAUSE_MS,
+} from '../config/timeouts.js';
 
 const logger = createLogger('AvaChannelReactor');
 
 /** Base delay for exponential backoff on subscription errors */
-const RESUBSCRIBE_BASE_MS = 5_000;
+const RESUBSCRIBE_BASE_MS = AVA_REACTOR_RESUBSCRIBE_BASE_MS;
 /** Maximum delay for exponential backoff */
-const RESUBSCRIBE_MAX_MS = 60_000;
+const RESUBSCRIBE_MAX_MS = AVA_REACTOR_RESUBSCRIBE_MAX_MS;
 /** Capacity heartbeat broadcast interval */
-const HEARTBEAT_INTERVAL_MS = 60_000;
+const HEARTBEAT_INTERVAL_MS = AVA_REACTOR_HEARTBEAT_INTERVAL_MS;
 /** DORA report broadcast interval (1 hour) */
-const DORA_REPORT_INTERVAL_MS = 60 * 60 * 1000;
+const DORA_REPORT_INTERVAL_MS = AVA_REACTOR_DORA_REPORT_INTERVAL_MS;
 /** Maximum features to steal per work-steal cycle */
 const MAX_STEAL_PER_CYCLE = 2;
 /** Memory threshold (%) above which a health_alert is broadcast */
@@ -57,7 +64,7 @@ const HEALTH_ALERT_MEMORY_THRESHOLD = 85;
 /** CPU threshold (%) above which a health_alert is broadcast */
 const HEALTH_ALERT_CPU_THRESHOLD = 90;
 /** Duration (ms) to pause work-stealing from a degraded peer */
-const HEALTH_ALERT_PAUSE_MS = 5 * 60 * 1000;
+const HEALTH_ALERT_PAUSE_MS = AVA_REACTOR_HEALTH_ALERT_PAUSE_MS;
 /** Number of blocked features in a project that triggers a project_blocked broadcast */
 const PROJECT_BLOCKED_THRESHOLD = 3;
 

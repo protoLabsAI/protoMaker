@@ -30,11 +30,12 @@ import {
   withProcessingGuard,
   type AgentState,
 } from './agent-utils.js';
+import { EM_POLL_INTERVAL_MS } from '../../config/timeouts.js';
 
 const logger = createLogger('EMAgent');
 
 /** Polling interval for checking ready features */
-const POLL_INTERVAL_MS = 10_000;
+const POLL_INTERVAL_MS = EM_POLL_INTERVAL_MS;
 
 /** Default WIP limit per project */
 const DEFAULT_WIP_LIMIT = 3;
