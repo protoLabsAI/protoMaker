@@ -35,9 +35,6 @@ import type {
   Feature,
   ExecutionRecord,
   ModelProvider,
-  PipelineStep,
-  FeatureStatusWithPipeline,
-  PipelineConfig,
   ThinkingLevel,
   PlanningMode,
   ExecutionContext,
@@ -109,7 +106,6 @@ import { FeatureLoader } from './feature-loader.js';
 import type { SettingsService } from './settings-service.js';
 import type { AuthorityService } from './authority-service.js';
 import type { DataIntegrityWatchdogService } from './data-integrity-watchdog-service.js';
-import { pipelineService } from './pipeline-service.js';
 import {
   getAutoLoadClaudeMdSetting,
   filterClaudeMdFromContext,
@@ -149,26 +145,6 @@ const execFileAsync = promisify(execFile);
 
 // Model selection for features is handled by AutoModeService.getModelForFeature() class method
 // which reads the user-configured agentExecutionModel from settings.
-
-/**
- * Information about pipeline status when resuming a feature.
- * Used to determine how to handle features stuck in pipeline execution.
- *
- * @property {boolean} isPipeline - Whether the feature is in a pipeline step
- * @property {string | null} stepId - ID of the current pipeline step (e.g., 'step_123')
- * @property {number} stepIndex - Index of the step in the sorted pipeline steps (-1 if not found)
- * @property {number} totalSteps - Total number of steps in the pipeline
- * @property {PipelineStep | null} step - The pipeline step configuration, or null if step not found
- * @property {PipelineConfig | null} config - The full pipeline configuration, or null if no pipeline
- */
-interface PipelineStatusInfo {
-  isPipeline: boolean;
-  stepId: string | null;
-  stepIndex: number;
-  totalSteps: number;
-  step: PipelineStep | null;
-  config: PipelineConfig | null;
-}
 
 interface AutoModeConfig {
   maxConcurrency: number;
@@ -1562,19 +1538,7 @@ export class AutoModeService {
       return;
     }
 
-    // Check if feature is stuck in a pipeline step
-    const pipelineInfo = await this.detectPipelineStatus(
-      projectPath,
-      featureId,
-      (feature.status || '') as FeatureStatusWithPipeline
-    );
-
-    if (pipelineInfo.isPipeline) {
-      // Feature stuck in pipeline - use pipeline resume
-      return this.resumePipelineFeature(projectPath, feature, useWorktrees, pipelineInfo);
-    }
-
-    // Normal resume flow for non-pipeline features
+    // Normal resume flow
     // Use contextExists() which includes stale-session detection: if agent-output.md
     // is older than STALE_SESSION_THRESHOLD_MS (default 5 min), it's renamed to .stale
     // and we start fresh without incrementing failureCount.
