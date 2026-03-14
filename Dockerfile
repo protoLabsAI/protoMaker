@@ -204,65 +204,6 @@ ENTRYPOINT ["/usr/bin/dumb-init", "--", "/usr/local/bin/docker-entrypoint.sh"]
 
 # Start server
 CMD ["node", "apps/server/dist/apps/server/src/index.js"]
-
-# =============================================================================
-# DOCS BUILD STAGE (standalone — no workspace deps needed)
-# =============================================================================
-FROM node:22-slim AS docs-builder
-
-WORKDIR /app
-
-# Install vitepress directly (avoids workspace lockfile complexity)
-RUN npm init -y > /dev/null 2>&1 && npm install vitepress@1.6.4 --save-dev
-
-# Copy docs source
-COPY docs ./docs
-
-# Build docs site
-RUN npx vitepress build docs
-
-# =============================================================================
-# DOCS PRODUCTION STAGE
-# =============================================================================
-FROM nginx:alpine AS docs
-
-ARG GIT_COMMIT_SHA=unknown
-LABEL automaker.git.commit.sha="${GIT_COMMIT_SHA}"
-
-# Copy built docs site
-COPY --from=docs-builder /app/docs/.vitepress/dist /usr/share/nginx/html
-
-# Nginx config with gzip, security headers, and static asset caching
-RUN printf 'server {\n\
-    listen 80;\n\
-    server_name localhost;\n\
-    root /usr/share/nginx/html;\n\
-    index index.html;\n\
-\n\
-    gzip on;\n\
-    gzip_vary on;\n\
-    gzip_proxied any;\n\
-    gzip_min_length 1024;\n\
-    gzip_types text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml;\n\
-\n\
-    add_header X-Content-Type-Options "nosniff" always;\n\
-    add_header X-Frame-Options "DENY" always;\n\
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;\n\
-\n\
-    location / {\n\
-        try_files $uri $uri/ $uri.html /index.html;\n\
-    }\n\
-\n\
-    location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?)$ {\n\
-        expires 7d;\n\
-        add_header Cache-Control "public, immutable";\n\
-    }\n\
-}\n' > /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
-
 # =============================================================================
 # UI BUILD STAGE
 # =============================================================================

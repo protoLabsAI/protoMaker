@@ -189,7 +189,7 @@ The agent then decides whether to accept each feedback item. Accepted items trig
 
 ## Available MCP tools
 
-Four MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference](../reference/mcp-tools.md#github-operations-4-tools) for full details.
+Seven MCP tools cover GitHub and CodeRabbit operations. See [MCP Tools Reference](../reference/mcp-tools.md#github-operations-7-tools) for full details.
 
 | Tool                 | Description                                       |
 | -------------------- | ------------------------------------------------- |

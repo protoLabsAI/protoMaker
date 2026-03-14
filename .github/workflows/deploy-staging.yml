@@ -173,14 +173,6 @@ jobs:
             exit 1
           fi
 
-          # Check docs health (runs independently via docker-compose.docs.yml)
-          DOCS_PORT=$(grep -oP 'DOCS_PORT=\K\d+' .env 2>/dev/null || echo "3009")
-          if curl -sf "http://localhost:${DOCS_PORT}/" > /dev/null; then
-            echo "Docs site is healthy on port ${DOCS_PORT}"
-          else
-            echo "Docs not responding on port ${DOCS_PORT} (runs independently — non-fatal)"
-          fi
-
       - name: Smoke tests
         id: smoke
         working-directory: ${{ env.DEPLOY_DIR }}
@@ -264,15 +256,13 @@ jobs:
           COMMIT="${COMMIT:0:8}"
           STATUS="${{ job.status }}"
 
-          DOCS_STATUS=$(curl -sf http://localhost:3009/ > /dev/null 2>&1 && echo "docs ok" || echo "docs down")
-
           ROLLBACK_OUTCOME="${{ steps.rollback.outcome }}"
           RESTART_EXHAUSTED="${RESTART_EXHAUSTED:-false}"
 
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           if [ "$STATUS" = "success" ]; then
-            MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy (${DOCS_STATUS})"
+            MSG="Staging deployed: \`${COMMIT}\` (v${VERSION}) - all healthy"
             WEBHOOK="${DISCORD_DEPLOY_WEBHOOK:-}"
           else
             case "$ROLLBACK_OUTCOME" in

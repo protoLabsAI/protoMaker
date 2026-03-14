@@ -448,4 +448,4 @@ docker build --platform linux/amd64 -t discord-mcp:amd64 .
 - [Plugin Commands](./plugin-commands.md) — Commands reference, subagents, examples
 - [MCP Tools Reference](../reference/mcp-tools.md) — Full MCP tool catalog
 - [Context System](/guides/context-files) — Best practices for context files
-- [protoLabs README](../README.md) — Main project documentation
+- [Getting Started](../getting-started/index.md) — Main project documentation

@@ -489,10 +489,10 @@ Overview paragraph.
 
 ## Rules
 
-| Rule    | File                       | Description         |
-| ------- | -------------------------- | ------------------- |
-| Topic A | [topic-a.md](./topic-a.md) | When to use topic A |
-| Topic B | [topic-b.md](./topic-b.md) | When to use topic B |
+| Rule    | File       | Description         |
+| ------- | ---------- | ------------------- |
+| Topic A | topic-a.md | When to use topic A |
+| Topic B | topic-b.md | When to use topic B |
 
 ## Quick Reference
 

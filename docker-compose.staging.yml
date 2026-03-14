@@ -137,8 +137,8 @@ services:
         max-size: '100m'
         max-file: '10'
 
-  # Documentation Site — runs independently via docker-compose.docs.yml
-  # See deploy-docs.yml workflow for its deploy lifecycle.
+  # Documentation Site — hosted on Cloudflare Pages (docs.protolabs.studio).
+  # Deployed via .github/workflows/deploy-docs.yml, not Docker.
 
 volumes:
   automaker-data:

@@ -287,7 +287,7 @@ Auto-deploys to the staging server when code is pushed to the `staging` branch (
 9. **Cleanup** — Prune rollback tags and unused images
 10. **Notify Discord** — Posts deploy result to `#deployments` via webhook
 
-See [staging-deployment.md](./staging-deployment.md#automated-deploys) for full setup.
+See [staging-deployment.md](./staging-deployment.md#deployment-steps) for full setup.
 
 ## Deploy Production (`deploy-main.yml`)
 

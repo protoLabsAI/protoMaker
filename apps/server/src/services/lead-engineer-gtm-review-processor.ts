@@ -18,6 +18,7 @@ import type {
   StateProcessor,
   StateTransitionResult,
 } from './lead-engineer-types.js';
+import { MAX_TOTAL_REMEDIATION_CYCLES } from './lead-engineer-types.js';
 
 const logger = createLogger('GtmReviewProcessor');
 
@@ -71,10 +72,22 @@ export class GtmReviewProcessor implements StateProcessor {
     }
 
     // Score below threshold — send back to EXECUTE for revision
+    // Check remediation budget to prevent unbounded revision loops
+    if (ctx.remediationAttempts >= MAX_TOTAL_REMEDIATION_CYCLES) {
+      ctx.escalationReason = `Max content remediation cycles exceeded (${MAX_TOTAL_REMEDIATION_CYCLES})`;
+      return {
+        nextState: 'ESCALATE',
+        shouldContinue: true,
+        reason: ctx.escalationReason,
+      };
+    }
+
+    ctx.remediationAttempts++;
     ctx.reviewFeedback = this.extractFeedback(output);
     logger.info(`[GTM REVIEW] Score below threshold, requesting revision`, {
       featureId: ctx.feature.id,
       score,
+      remediationAttempts: ctx.remediationAttempts,
     });
 
     return {

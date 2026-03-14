@@ -85,38 +85,47 @@ The `generateSidebar()` function in `config.mts` reads each directory, extracts 
 - **Dark mode** — System preference detection with manual toggle
 - **Multiple sidebars** — Each section (agents, infra, dev, etc.) has its own sidebar
 - **Edit on GitHub** — Every page links to its source file for quick edits
-- **Auto-deploy** — Docs deploy automatically via Docker on every push to `main`
+- **Auto-deploy** — Docs deploy automatically via Cloudflare Pages on every push
 
 ## Deploying
 
-The build output is in `docs/.vitepress/dist/`. Deploy as a static site to any hosting.
+The build output is in `docs/.vitepress/dist/`. Hosted on Cloudflare Pages at `docs.protolabs.studio`.
 
-### Staging (Docker — automatic)
+### Cloudflare Pages (automatic)
 
-The docs site deploys automatically with every push to `main` via the staging CD pipeline. It runs as a lightweight nginx container alongside the UI and server:
+The docs site deploys via Wrangler CLI in `.github/workflows/deploy-docs.yml`. The workflow:
 
-| Service | Port | Container          |
-| ------- | ---- | ------------------ |
-| UI      | 3007 | `automaker-ui`     |
-| API     | 3008 | `automaker-server` |
-| Docs    | 3009 | `automaker-docs`   |
+1. Triggers on `docs/**` changes pushed to dev, staging, or main
+2. Builds VitePress on `ubuntu-latest` (no self-hosted runner needed)
+3. Deploys to Cloudflare Pages project `protolabs-docs` via `wrangler pages deploy`
+4. Production branch is `staging` (user-facing surface)
 
-The `docs` stage in the `Dockerfile` builds VitePress and serves the output via `nginx:alpine`. No manual deployment needed — it rebuilds on every deploy.
+PR preview deployments are automatic — a comment with the preview URL is posted on every PR that touches docs.
 
-To build/test the docs container locally:
+### Required GitHub secrets
+
+- `CLOUDFLARE_API_TOKEN` — API token with `Cloudflare Pages:Edit` permission
+- `CLOUDFLARE_ACCOUNT_ID` — Cloudflare account ID
+
+### Custom domain setup
+
+The custom domain `docs.protolabs.studio` is added via:
 
 ```bash
-docker build --target docs -t automaker-docs .
-docker run --rm -p 3009:80 automaker-docs
+npx wrangler pages project add-domain protolabs-docs docs.protolabs.studio
 ```
 
-### Manual / Other Hosting
+Cloudflare manages DNS and SSL automatically.
+
+### Local development
 
 ```bash
-npm run docs:build
+# Dev server with hot reload
+npm run docs:dev
 
-# Output in docs/.vitepress/dist/
-# Deploy to GitHub Pages, Netlify, Vercel, Cloudflare Pages, etc.
+# Build and preview locally
+npm run docs:build
+npm run docs:preview
 ```
 
 ## For SetupLab Projects

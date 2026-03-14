@@ -1413,6 +1413,17 @@ export class ExecuteProcessor implements StateProcessor {
               if (unsubscribe) unsubscribe();
               safeResolve({ success: true });
             }
+          } else if (newStatus === 'blocked') {
+            // Feature externally blocked (by rules, UI, or MCP) — resolve immediately
+            // instead of wasting up to 30 minutes on the timeout
+            clearTimeout(timeout);
+            if (!timedOut) {
+              if (unsubscribe) unsubscribe();
+              safeResolve({
+                success: false,
+                error: 'Feature moved to blocked during execution',
+              });
+            }
           }
         } else if (type === 'feature:stopped') {
           clearTimeout(timeout);
@@ -1469,6 +1480,21 @@ export class ExecuteProcessor implements StateProcessor {
           `## Learnings from Prior Features\n\nApply relevant lessons:\n\n${ctx.siblingReflections.join('\n\n---\n\n')}`
         );
       }
+
+      // Inject HITL-provided recovery context from provide_context form response
+      if (
+        ctx.feature.statusChangeReason?.startsWith('Retried with additional context via HITL form:')
+      ) {
+        const hitlContext = ctx.feature.statusChangeReason
+          .replace('Retried with additional context via HITL form: ', '')
+          .trim();
+        if (hitlContext) {
+          contextParts.push(
+            `## User-Provided Recovery Context\n\nThe operator provided this guidance for retry:\n\n${hitlContext}`
+          );
+        }
+      }
+
       // Inject context window advisory when previous execution consumed a large portion of the
       // context window. This prompt instructs the agent to prioritize wrapping up rather than
       // starting new work that may not fit in the remaining context.

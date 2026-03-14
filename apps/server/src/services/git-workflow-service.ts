@@ -1627,12 +1627,17 @@ export class GitWorkflowService {
         });
 
         // Enable auto-merge so PRs don't sit BLOCKED waiting for manual intervention
+        // Use --merge for promotion/epic PRs to preserve DAG integrity
+        const mergeFlag =
+          baseBranch === 'staging' || baseBranch === 'main' || baseBranch.startsWith('epic/')
+            ? '--merge'
+            : '--squash';
         try {
-          await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', '--squash'], {
+          await execFileAsync('gh', ['pr', 'merge', String(prNumber), '--auto', mergeFlag], {
             cwd: workDir,
             env: execEnv,
           });
-          logger.info(`Auto-merge enabled on PR #${prNumber}`);
+          logger.info(`Auto-merge enabled on PR #${prNumber} (${mergeFlag})`);
         } catch (autoMergeError) {
           logger.warn(`Failed to enable auto-merge on PR #${prNumber}:`, autoMergeError);
         }

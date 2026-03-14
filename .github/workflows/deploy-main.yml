@@ -8,7 +8,6 @@ on:
       - main
     paths-ignore:
       - '*.md'
-      - 'docs/**'
       - 'site/**'
       - 'designs/**'
       - '.changeset/**'

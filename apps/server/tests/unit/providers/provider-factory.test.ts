@@ -1,4 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock Langfuse so getProviderForModel() returns raw providers, not TracedProvider wrappers.
+// TracedProvider uses composition (not inheritance), so instanceof checks against concrete
+// provider classes (ClaudeProvider, CursorProvider, etc.) fail when wrapping is active.
+vi.mock('@/lib/langfuse-singleton.js', () => ({
+  getLangfuseInstance: () => ({ isAvailable: () => false }),
+}));
+
 import { ProviderFactory } from '@/providers/provider-factory.js';
 import { ClaudeProvider } from '@/providers/claude-provider.js';
 import { CursorProvider } from '@/providers/cursor-provider.js';
