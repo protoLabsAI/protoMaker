@@ -2,8 +2,9 @@
  * POST /create endpoint - Create a new project plan
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
-import type { Project, Milestone, Phase, SPARCPrd } from '@protolabsai/types';
+import type { Project, Milestone, Phase } from '@protolabsai/types';
 import {
   ensureProjectStructure,
   ensureMilestoneDir,
@@ -27,34 +28,58 @@ import {
 } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
 import type { ProjectService } from '../../../services/project-service.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
-interface CreateProjectRequest {
-  projectPath: string;
-  title: string;
-  goal: string;
-  slug?: string;
-  color?: string;
-  priority?: 'urgent' | 'high' | 'medium' | 'low' | 'none';
-  prd?: SPARCPrd;
-  researchSummary?: string;
-  milestones?: Array<{
-    title: string;
-    description: string;
-    dependencies?: string[];
-    phases: Array<{
-      title: string;
-      description: string;
-      filesToModify?: string[];
-      acceptanceCriteria?: string[];
-      complexity?: 'small' | 'medium' | 'large';
-      dependencies?: string[];
-    }>;
-  }>;
-}
+const sparcPrdSchema = z.object({
+  situation: z.string(),
+  problem: z.string(),
+  approach: z.string(),
+  results: z.string(),
+  constraints: z.string(),
+  generatedAt: z.string(),
+  approvedAt: z.string().optional(),
+});
+
+const phaseInputSchema = z.object({
+  title: z.string().min(1, 'phase title must not be empty'),
+  description: z.string(),
+  filesToModify: z.array(z.string()).optional(),
+  acceptanceCriteria: z.array(z.string()).optional(),
+  complexity: z.enum(['small', 'medium', 'large']).optional(),
+  dependencies: z.array(z.string()).optional(),
+});
+
+const milestoneInputSchema = z.object({
+  title: z.string().min(1, 'milestone title must not be empty'),
+  description: z.string(),
+  dependencies: z.array(z.string()).optional(),
+  phases: z.array(phaseInputSchema),
+});
+
+const createProjectBodySchema = z.object({
+  projectPath: projectPathSchema,
+  title: z.string().min(1, 'title must not be empty'),
+  goal: z.string().min(1, 'goal must not be empty'),
+  slug: z.string().optional(),
+  color: z.string().optional(),
+  priority: z.enum(['urgent', 'high', 'medium', 'low', 'none']).optional(),
+  prd: sparcPrdSchema.optional(),
+  researchSummary: z.string().optional(),
+  milestones: z.array(milestoneInputSchema).optional(),
+});
 
 export function createCreateHandler(projectService: ProjectService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
+      const parsed = createProjectBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
+        return;
+      }
       const {
         projectPath,
         title,
@@ -65,20 +90,7 @@ export function createCreateHandler(projectService: ProjectService) {
         prd,
         researchSummary,
         milestones: milestoneInputs,
-      } = req.body as CreateProjectRequest;
-
-      if (!projectPath) {
-        res.status(400).json({ success: false, error: 'projectPath is required' });
-        return;
-      }
-      if (!title) {
-        res.status(400).json({ success: false, error: 'title is required' });
-        return;
-      }
-      if (!goal) {
-        res.status(400).json({ success: false, error: 'goal is required' });
-        return;
-      }
+      } = parsed.data;
 
       // Generate slug from title if not provided
       const projectSlug = slug || generateProjectSlug(title);

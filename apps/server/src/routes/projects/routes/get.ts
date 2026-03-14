@@ -2,6 +2,7 @@
  * POST /get endpoint - Get a project plan with all its milestones and phases
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import type { Project, Milestone, Phase } from '@protolabsai/types';
 import {
@@ -16,23 +17,26 @@ import {
 import { secureFs } from '@protolabsai/platform';
 import { parseProjectFile, parseMilestoneFile, parsePhaseFile } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
+import { projectPathSchema } from '../../../lib/validation.js';
+
+const getProjectBodySchema = z.object({
+  projectPath: projectPathSchema,
+  projectSlug: z.string().min(1, 'projectSlug must not be empty'),
+});
 
 export function createGetHandler() {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, projectSlug } = req.body as {
-        projectPath: string;
-        projectSlug: string;
-      };
-
-      if (!projectPath) {
-        res.status(400).json({ success: false, error: 'projectPath is required' });
+      const parsed = getProjectBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
         return;
       }
-      if (!projectSlug) {
-        res.status(400).json({ success: false, error: 'projectSlug is required' });
-        return;
-      }
+      const { projectPath, projectSlug } = parsed.data;
 
       // Check if project exists
       const exists = await projectPlanExists(projectPath, projectSlug);

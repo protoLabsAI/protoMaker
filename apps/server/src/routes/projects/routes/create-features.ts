@@ -7,6 +7,7 @@
  * - Dependencies are translated to feature dependencies
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import { projectPlanExists } from '@protolabsai/platform';
 import { FeatureLoader } from '../../../services/feature-loader.js';
@@ -14,14 +15,15 @@ import { orchestrateProjectFeatures } from '../../../services/project-orchestrat
 import type { ProjectService } from '../../../services/project-service.js';
 import type { EventEmitter } from '../../../lib/events.js';
 import { getErrorMessage, logError } from '../common.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
-interface CreateFeaturesRequest {
-  projectPath: string;
-  projectSlug: string;
-  createEpics?: boolean;
-  setupDependencies?: boolean;
-  initialStatus?: 'backlog' | 'in-progress';
-}
+const createFeaturesBodySchema = z.object({
+  projectPath: projectPathSchema,
+  projectSlug: z.string().min(1, 'projectSlug must not be empty'),
+  createEpics: z.boolean().optional().default(true),
+  setupDependencies: z.boolean().optional().default(true),
+  initialStatus: z.enum(['backlog', 'in-progress']).optional().default('backlog'),
+});
 
 export function createCreateFeaturesHandler(
   featureLoader: FeatureLoader,
@@ -30,23 +32,17 @@ export function createCreateFeaturesHandler(
 ) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const {
-        projectPath,
-        projectSlug,
-        createEpics = true,
-        setupDependencies = true,
-        initialStatus = 'backlog',
-      } = req.body as CreateFeaturesRequest;
-
-      // Validate required fields
-      if (!projectPath) {
-        res.status(400).json({ success: false, error: 'projectPath is required' });
+      const parsed = createFeaturesBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
         return;
       }
-      if (!projectSlug) {
-        res.status(400).json({ success: false, error: 'projectSlug is required' });
-        return;
-      }
+      const { projectPath, projectSlug, createEpics, setupDependencies, initialStatus } =
+        parsed.data;
 
       // Check if project exists
       const exists = await projectPlanExists(projectPath, projectSlug);

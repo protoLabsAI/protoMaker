@@ -2,6 +2,7 @@
  * POST /update endpoint - Update a project plan
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import type { UpdateProjectInput } from '@protolabsai/types';
 import { getPrdFilePath, getResearchFilePath } from '@protolabsai/platform';
@@ -9,30 +10,30 @@ import { secureFs } from '@protolabsai/platform';
 import { generatePrdFile } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
 import type { ProjectService } from '../../../services/project-service.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
-interface UpdateProjectRequest {
-  projectPath: string;
-  projectSlug: string;
-  updates: UpdateProjectInput;
-}
+const updateProjectBodySchema = z.object({
+  projectPath: projectPathSchema,
+  projectSlug: z.string().min(1, 'projectSlug must not be empty'),
+  updates: z.record(z.string(), z.unknown()).refine((val) => Object.keys(val).length > 0, {
+    message: 'updates must not be empty',
+  }),
+});
 
 export function createUpdateHandler(projectService: ProjectService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, projectSlug, updates } = req.body as UpdateProjectRequest;
-
-      if (!projectPath) {
-        res.status(400).json({ success: false, error: 'projectPath is required' });
+      const parsed = updateProjectBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: parsed.error.issues,
+        });
         return;
       }
-      if (!projectSlug) {
-        res.status(400).json({ success: false, error: 'projectSlug is required' });
-        return;
-      }
-      if (!updates) {
-        res.status(400).json({ success: false, error: 'updates is required' });
-        return;
-      }
+      const { projectPath, projectSlug } = parsed.data;
+      const updates = parsed.data.updates as UpdateProjectInput;
 
       // Use ProjectService to apply the update — reads from CRDT-aware getProject(),
       // writes project.json + project.md, and syncs the CRDT doc in one call.

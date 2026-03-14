@@ -2,30 +2,35 @@
  * POST /start endpoint - Start auto mode loop for a project
  */
 
+import { z } from 'zod';
 import type { Request, Response } from 'express';
 import type { AutoModeService } from '../../../services/auto-mode-service.js';
 import { createLogger } from '@protolabsai/utils';
 import { getErrorMessage, logError } from '../common.js';
+import { projectPathSchema } from '../../../lib/validation.js';
 
 const logger = createLogger('AutoMode');
+
+const startAutoModeBodySchema = z.object({
+  projectPath: projectPathSchema,
+  branchName: z.string().nullable().optional(),
+  maxConcurrency: z.number().int().min(1).max(20).optional(),
+  forceStart: z.boolean().optional(),
+});
 
 export function createStartHandler(autoModeService: AutoModeService) {
   return async (req: Request, res: Response): Promise<void> => {
     try {
-      const { projectPath, branchName, maxConcurrency, forceStart } = req.body as {
-        projectPath: string;
-        branchName?: string | null;
-        maxConcurrency?: number;
-        forceStart?: boolean;
-      };
-
-      if (!projectPath) {
+      const parsed = startAutoModeBodySchema.safeParse(req.body);
+      if (!parsed.success) {
         res.status(400).json({
           success: false,
-          error: 'projectPath is required',
+          error: 'Validation failed',
+          details: parsed.error.issues,
         });
         return;
       }
+      const { projectPath, branchName, maxConcurrency, forceStart } = parsed.data;
 
       // Normalize branchName: undefined becomes null
       const normalizedBranchName = branchName ?? null;
