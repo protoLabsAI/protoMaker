@@ -17,27 +17,25 @@ import type { FactStoreService } from './fact-store-service.js';
 import type { LeadHandoffService } from './lead-handoff-service.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import type { TrajectoryStoreService } from './trajectory-store-service.js';
+import {
+  EXECUTE_TIMEOUT_MS,
+  MERGE_RETRY_DELAY_MS,
+  REVIEW_POLL_DELAY_MS,
+  REVIEW_PENDING_TIMEOUT_MS,
+} from '../config/timeouts.js';
+
+// Re-export for consumers that import timing constants from this module.
+export {
+  EXECUTE_TIMEOUT_MS,
+  MERGE_RETRY_DELAY_MS,
+  REVIEW_POLL_DELAY_MS,
+  REVIEW_PENDING_TIMEOUT_MS,
+};
 
 // ────────────────────────── Budget / timing constants ──────────────────────────
 
-export const EXECUTE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 export const MAX_PR_ITERATIONS = 2;
 export const MAX_TOTAL_REMEDIATION_CYCLES = 4;
-export const MERGE_RETRY_DELAY_MS = 60 * 1000; // 60 seconds
-export const REVIEW_POLL_DELAY_MS = 30 * 1000; // 30 seconds
-
-/**
- * Maximum time a feature can remain in the REVIEW state (waiting for CI/approval)
- * before auto-escalating to ESCALATE with an actionable error message.
- *
- * Configurable via REVIEW_PENDING_TIMEOUT_MINUTES env variable (default: 45 minutes).
- * The previous implicit timeout was ~9 minutes due to polling interaction with
- * external timing constraints; this raises it to a safe configurable value.
- */
-export const REVIEW_PENDING_TIMEOUT_MS = (() => {
-  const minutes = parseInt(process.env.REVIEW_PENDING_TIMEOUT_MINUTES ?? '45', 10);
-  return (isNaN(minutes) || minutes <= 0 ? 45 : minutes) * 60 * 1000;
-})();
 
 // ────────────────────────── Retry limits ──────────────────────────
 
