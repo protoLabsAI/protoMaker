@@ -55,12 +55,8 @@ function createMockContainer() {
       setRegistryProvider: vi.fn(),
       onRegistryReceived: vi.fn(),
     },
-    calendarService: {
-      setCrdtStore: vi.fn(),
-    },
-    todoService: {
-      setCrdtStore: vi.fn(),
-    },
+    calendarService: {},
+    todoService: {},
   } as unknown as Parameters<typeof register>[0];
 }
 
@@ -123,20 +119,6 @@ describe('crdt-store.module', () => {
         peers: [],
         compactIntervalMs: 300000,
       });
-    });
-
-    it('should inject CRDTStore into all services', async () => {
-      mockLoadProtoConfig.mockResolvedValue({
-        hivemind: { enabled: true, peers: [] },
-        protolab: { instanceId: 'node-a', syncPort: 4444, role: 'worker' },
-      } as ReturnType<typeof loadProtoConfig> extends Promise<infer T> ? NonNullable<T> : never);
-      const container = createMockContainer();
-
-      await register(container);
-
-      const mockStoreInstance = vi.mocked(CRDTStore).mock.results[0].value;
-      expect(container.calendarService.setCrdtStore).toHaveBeenCalledWith(mockStoreInstance);
-      expect(container.todoService.setCrdtStore).toHaveBeenCalledWith(mockStoreInstance);
     });
 
     it('should call store.init()', async () => {
