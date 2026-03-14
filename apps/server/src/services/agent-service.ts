@@ -737,6 +737,9 @@ export class AgentService {
         message: errorMessage,
       });
 
+      // Process next item in queue after error, same as success path
+      setImmediate(() => this.processNextInQueue(sessionId));
+
       throw error;
     }
   }
