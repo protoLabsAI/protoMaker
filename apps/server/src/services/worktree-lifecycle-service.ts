@@ -20,14 +20,15 @@ import * as secureFs from '../lib/secure-fs.js';
 import type { EventEmitter } from '../lib/events.js';
 import type { FeatureLoader } from './feature-loader.js';
 import { isWorktreeLocked } from '../lib/worktree-lock.js';
+import { WORKTREE_CLEANUP_DELAY_MS, WORKTREE_DRIFT_CHECK_INTERVAL_MS } from '../config/timeouts.js';
 
 const logger = createLogger('WorktreeLifecycle');
 
 /** Delay after PR merge before cleanup (allow CI/webhooks to settle) */
-const CLEANUP_DELAY_MS = 10_000;
+const CLEANUP_DELAY_MS = WORKTREE_CLEANUP_DELAY_MS;
 
 /** Periodic drift detection interval (6 hours) */
-const DRIFT_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const DRIFT_CHECK_INTERVAL_MS = WORKTREE_DRIFT_CHECK_INTERVAL_MS;
 
 /** Worktree drift detection results */
 export interface WorktreeDrift {

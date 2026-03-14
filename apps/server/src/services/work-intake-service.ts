@@ -22,12 +22,14 @@ import {
 import type { Project, Phase, Milestone, InstanceRole } from '@protolabsai/types';
 import type { EventEmitter } from '../lib/events.js';
 
+import { WORK_INTAKE_TICK_INTERVAL_MS, WORK_INTAKE_CLAIM_TIMEOUT_MS } from '../config/timeouts.js';
+
 const logger = createLogger('WorkIntakeService');
 
 /** Default tick interval for checking claimable phases */
-const DEFAULT_TICK_INTERVAL_MS = 30_000;
+const DEFAULT_TICK_INTERVAL_MS = WORK_INTAKE_TICK_INTERVAL_MS;
 /** Default timeout before a stale claim becomes reclaimable */
-const DEFAULT_CLAIM_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const DEFAULT_CLAIM_TIMEOUT_MS = WORK_INTAKE_CLAIM_TIMEOUT_MS;
 /** Delay after claiming to verify the claim survived Automerge merge */
 const CLAIM_VERIFY_DELAY_MS = 200;
 

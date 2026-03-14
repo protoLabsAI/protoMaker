@@ -25,15 +25,13 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import v8 from 'v8';
 import { getReactiveSpawnerService } from './reactive-spawner-service.js';
+import { HEALTH_CHECK_INTERVAL_MS, STUCK_FEATURE_THRESHOLD_MS } from '../config/timeouts.js';
 
 const execAsync = promisify(exec);
 const logger = createLogger('HealthMonitor');
 
 /** Default interval for health checks (30 seconds for faster memory monitoring) */
-const DEFAULT_CHECK_INTERVAL_MS = 30 * 1000;
-
-/** Threshold for considering a feature stuck (30 minutes) */
-const STUCK_FEATURE_THRESHOLD_MS = 30 * 60 * 1000;
+const DEFAULT_CHECK_INTERVAL_MS = HEALTH_CHECK_INTERVAL_MS;
 
 /** Maximum memory usage before warning (80% of heap) */
 const MEMORY_WARNING_THRESHOLD = 0.8;

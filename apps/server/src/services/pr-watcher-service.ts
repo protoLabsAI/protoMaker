@@ -12,14 +12,15 @@
 import { createLogger } from '@protolabsai/utils';
 import { githubMergeService } from './github-merge-service.js';
 import type { EventEmitter } from '../lib/events.js';
+import { PR_WATCHER_POLL_INTERVAL_MS, PR_WATCHER_TIMEOUT_MS } from '../config/timeouts.js';
 
 const logger = createLogger('PRWatcherService');
 
 /** Default polling interval: 30 seconds */
-const DEFAULT_POLL_INTERVAL_MS = 30_000;
+const DEFAULT_POLL_INTERVAL_MS = PR_WATCHER_POLL_INTERVAL_MS;
 
 /** Auto-expire watches after 30 minutes */
-const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
+const DEFAULT_TIMEOUT_MS = PR_WATCHER_TIMEOUT_MS;
 
 interface WatchEntry {
   /** The chat session ID that initiated the watch (used to route the notification) */

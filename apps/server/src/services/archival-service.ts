@@ -18,10 +18,11 @@ import type { FeatureLoader } from './feature-loader.js';
 import type { LedgerService } from './ledger-service.js';
 import type { SettingsService } from './settings-service.js';
 import type { EventEmitter } from '../lib/events.js';
+import { ARCHIVAL_CHECK_INTERVAL_MS } from '../config/timeouts.js';
 
 const logger = createLogger('ArchivalService');
 
-const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const CHECK_INTERVAL_MS = ARCHIVAL_CHECK_INTERVAL_MS;
 const DEFAULT_RETENTION_HOURS = 2;
 
 export class ArchivalService {
