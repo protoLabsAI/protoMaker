@@ -827,6 +827,10 @@ export type {
   LeadEngineerService,
   PhaseHandoff,
   PipelineResult,
+  AcceptanceCriterion,
+  DeviationRule,
+  PlanTask,
+  StructuredPlan,
 } from './lead-engineer.js';
 
 // Notes types (Tiptap-based project notes workspace)

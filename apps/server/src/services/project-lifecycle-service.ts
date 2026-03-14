@@ -5,8 +5,10 @@
  * idea -> dedup -> PRD -> review -> milestones -> features -> auto-mode
  */
 
+import { exec } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import type {
   LifecycleInitiateResult,
   LifecycleApproveResult,
@@ -27,6 +29,7 @@ import { orchestrateProjectFeatures } from './project-orchestration-service.js';
 import type { EventEmitter } from '../lib/events.js';
 import { streamingQuery } from '../providers/simple-query-service.js';
 
+const execAsync = promisify(exec);
 const logger = createLogger('ProjectLifecycle');
 
 /** Model used for deep project research */
@@ -161,6 +164,26 @@ export class ProjectLifecycleService {
       this.events
     );
 
+    // Push epic branches to remote so child features can branch from them.
+    // Each epic branch is created from origin/dev HEAD. If the branch already
+    // exists on the remote, the push is a no-op (error is swallowed).
+    const epicBranchNames =
+      Object.values(result.milestoneEpicMap).length > 0
+        ? await this.getEpicBranchNames(projectPath, result.milestoneEpicMap)
+        : [];
+
+    for (const epicBranch of epicBranchNames) {
+      try {
+        await execAsync(`git push origin origin/dev:refs/heads/${epicBranch}`, {
+          cwd: projectPath,
+        });
+        logger.info(`Pushed epic branch to remote: ${epicBranch}`);
+      } catch (err) {
+        // Branch may already exist on the remote — this is expected and safe to ignore
+        logger.debug(`Epic branch push skipped (may already exist): ${epicBranch}`, err);
+      }
+    }
+
     await this.projectService.updateProject(projectPath, projectSlug, {
       status: 'active',
     });
@@ -178,6 +201,27 @@ export class ProjectLifecycleService {
       featuresCreated: result.featuresCreated,
       epicsCreated: Object.keys(result.milestoneEpicMap).length,
     };
+  }
+
+  /**
+   * Resolve epic feature IDs to their branch names via the feature loader.
+   */
+  private async getEpicBranchNames(
+    projectPath: string,
+    milestoneEpicMap: Record<string, string>
+  ): Promise<string[]> {
+    const branchNames: string[] = [];
+    for (const epicId of Object.values(milestoneEpicMap)) {
+      try {
+        const epicFeature = await this.featureLoader.get(projectPath, epicId);
+        if (epicFeature?.branchName) {
+          branchNames.push(epicFeature.branchName);
+        }
+      } catch {
+        logger.warn(`Failed to load epic feature ${epicId} for branch push`);
+      }
+    }
+    return branchNames;
   }
 
   /**
