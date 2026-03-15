@@ -1,161 +1,124 @@
 /**
- * POST /chat — multi-turn chat endpoint with tool use.
+ * POST /api/chat — Streaming chat endpoint.
  *
- * Accepts an array of messages and returns a single assistant reply.
- * Tools are sourced from the ToolRegistry and automatically converted to
- * the Anthropic API format.
+ * Powered by the Vercel AI SDK (`ai` + `@ai-sdk/anthropic`).
  *
- * ## Request body
- * ```json
- * {
- *   "messages": [{ "role": "user", "content": "What's the weather in Paris?" }],
- *   "model": "claude-3-5-haiku-20241022",
- *   "profile": "chat"
- * }
- * ```
+ * Request body:
+ *   {
+ *     messages:  ModelMessage[]   — conversation history (required)
+ *     model?:    string          — model alias or full ID (default: env MODEL or claude-opus-4-6)
+ *     system?:   string          — system prompt override
+ *     maxSteps?: number          — max agent loop iterations (default: 5)
+ *   }
  *
- * ## Response
- * ```json
- * {
- *   "role": "assistant",
- *   "content": "The current weather in Paris is 22°C and partly cloudy.",
- *   "model": "claude-3-5-haiku-20241022",
- *   "usage": { "input_tokens": 412, "output_tokens": 38 }
- * }
- * ```
+ * Response:
+ *   text/event-stream  — Vercel AI SDK UI message stream, compatible with `useChat`.
  *
- * ## Tool use
- * The route runs a standard agentic loop: it calls the model, detects
- * `tool_use` blocks, executes each tool via the ToolRegistry, feeds the
- * results back, and repeats until the model returns `stop_reason: "end_turn"`.
+ * Multi-step agentic loop:
+ *   Claude may call tools across multiple steps. `stepCountIs(maxSteps)` stops the
+ *   loop after the specified number of steps, preventing runaway inference.
  *
- * ## Tool profiles (optional)
- * Supply `"profile": "chat" | "execution" | "review"` in the request body to
- * restrict which tools are available. Defaults to all registered tools.
- * See `src/tools/registry.ts` for profile definitions.
+ * Tool support:
+ *   Define tools below. Each tool is executed server-side and its result is streamed
+ *   back within the same response so the client stays in sync with every step.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-import type { Request, Response } from 'express';
+import { Router, type Request, type Response } from 'express';
 import {
-  registry,
-  getAnthropicTools,
-  getAnthropicToolsForProfile,
-  type ToolProfile,
-} from '../tools/registry.js';
+  streamText,
+  createUIMessageStream,
+  pipeUIMessageStreamToResponse,
+  stepCountIs,
+  tool,
+  type ModelMessage,
+} from 'ai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { z } from 'zod';
 
-const anthropic = new Anthropic();
+const router = Router();
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-interface ChatRequest {
-  messages: ChatMessage[];
-  model?: string;
-  /** Optional tool profile — restricts available tools to a named subset. */
-  profile?: ToolProfile;
-}
+// ─── Tool definitions ─────────────────────────────────────────────────────────
+//
+// Add your domain tools here.  Each entry in the `tools` object below is
+// automatically exposed to the model and streamed back to `useChat` on the
+// client.  For reusable, cross-adapter tools (MCP / LangGraph / Express) see
+// packages/tools/src/examples/.
 
 /**
- * Express route handler for the chat endpoint.
- *
- * Mount with:
- * ```typescript
- * import express from 'express';
- * import { chatHandler } from './routes/chat.js';
- *
- * const app = express();
- * app.use(express.json());
- * app.post('/chat', chatHandler);
- * ```
+ * getCurrentTime — Demo tool that returns the current UTC timestamp.
+ * Replace (or augment) with real tools for your application.
  */
-export async function chatHandler(req: Request, res: Response): Promise<void> {
-  const { messages, model = 'claude-3-5-haiku-20241022', profile } = req.body as ChatRequest;
+const getCurrentTime = tool({
+  description: 'Return the current date and time in UTC as an ISO 8601 string.',
+  inputSchema: z.object({}),
+  execute: async (): Promise<{ time: string }> => ({
+    time: new Date().toISOString(),
+  }),
+});
 
-  if (!messages || !Array.isArray(messages) || messages.length === 0) {
-    res.status(400).json({ error: 'messages must be a non-empty array' });
+// ─── Request schema ───────────────────────────────────────────────────────────
+
+interface ChatRequestBody {
+  messages: ModelMessage[];
+  model?: string;
+  system?: string;
+  maxSteps?: number;
+}
+
+// ─── POST / ───────────────────────────────────────────────────────────────────
+
+router.post('/', async (req: Request, res: Response): Promise<void> => {
+  const { messages, model: modelId, system, maxSteps = 5 } = req.body as ChatRequestBody;
+
+  // Validate required fields
+  if (!Array.isArray(messages) || messages.length === 0) {
+    res.status(400).json({ error: '"messages" must be a non-empty array' });
     return;
   }
 
-  // Resolve tools based on optional profile
-  const tools = profile ? getAnthropicToolsForProfile(profile) : getAnthropicTools();
+  // Resolve model: explicit request body > MODEL env var > hardcoded default
+  const resolvedModelId = modelId ?? process.env['MODEL'] ?? 'claude-opus-4-6';
 
-  // Build the conversation history for the Anthropic API
-  const conversationMessages: Anthropic.MessageParam[] = messages.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
+  // Create a scoped Anthropic provider (reads ANTHROPIC_API_KEY automatically)
+  const provider = createAnthropic({
+    apiKey: process.env['ANTHROPIC_API_KEY'],
+  });
 
-  try {
-    let response = await anthropic.messages.create({
-      model,
-      max_tokens: 4096,
-      tools,
-      messages: conversationMessages,
-    });
+  // Build and pipe the UI message stream to the HTTP response.
+  // createUIMessageStream wraps the async generator and handles backpressure;
+  // pipeUIMessageStreamToResponse sets the correct headers and flushes to the client.
+  pipeUIMessageStreamToResponse({
+    response: res,
+    stream: createUIMessageStream({
+      execute: async ({ writer }) => {
+        const result = streamText({
+          model: provider(resolvedModelId),
+          system,
+          messages,
 
-    // Agentic tool loop — keep running until the model stops using tools
-    while (response.stop_reason === 'tool_use') {
-      const toolUseBlocks = response.content.filter(
-        (block): block is Anthropic.ToolUseBlock => block.type === 'tool_use'
-      );
+          // ── Tools available to the model ─────────────────────────────────
+          tools: {
+            getCurrentTime,
+          },
 
-      // Append the assistant's tool-use turn to the conversation
-      conversationMessages.push({
-        role: 'assistant',
-        content: response.content,
-      });
+          // ── Agent loop limit ─────────────────────────────────────────────
+          // stopWhen: stepCountIs(n) stops after n model steps, preventing
+          // runaway tool-call chains.  Clients may pass maxSteps to override.
+          stopWhen: stepCountIs(Math.max(1, maxSteps)),
+        });
 
-      // Execute each tool in parallel via the ToolRegistry
-      const toolResults: Anthropic.ToolResultBlockParam[] = await Promise.all(
-        toolUseBlocks.map(async (toolUse) => {
-          const result = await registry.execute(
-            toolUse.name,
-            toolUse.input as Record<string, unknown>
-          );
+        // Merge the streamText events (text deltas, tool calls, step
+        // boundaries, usage data) into the UI message stream writer so the
+        // client's useChat hook receives a fully-formed UIMessage stream.
+        writer.merge(result.toUIMessageStream());
+      },
 
-          return {
-            type: 'tool_result' as const,
-            tool_use_id: toolUse.id,
-            content: result.success
-              ? JSON.stringify(result.data)
-              : `Error: ${result.error ?? 'Tool execution failed'}`,
-          };
-        })
-      );
+      onError: (error) => {
+        console.error('[POST /api/chat] Stream error:', error);
+        return error instanceof Error ? error.message : 'Internal server error';
+      },
+    }),
+  });
+});
 
-      // Feed tool results back to the model
-      conversationMessages.push({
-        role: 'user',
-        content: toolResults,
-      });
-
-      // Continue the conversation
-      response = await anthropic.messages.create({
-        model,
-        max_tokens: 4096,
-        tools,
-        messages: conversationMessages,
-      });
-    }
-
-    // Extract the final text response
-    const textContent = response.content
-      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n');
-
-    res.json({
-      role: 'assistant',
-      content: textContent,
-      model: response.model,
-      usage: response.usage,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[chat] Error:', message);
-    res.status(500).json({ error: 'Chat failed', message });
-  }
-}
+export default router;

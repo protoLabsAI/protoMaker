@@ -1,6 +1,7 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import { getDefaultModel } from './model-resolver.js';
+import chatRouter from './routes/chat.js';
 
 // ─── App factory ──────────────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ export function createApp(): express.Application {
     const { modelId, provider } = getDefaultModel();
     res.json({ status: 'ok', model: modelId, provider });
   });
+
+  app.use('/api/chat', chatRouter);
 
   return app;
 }
