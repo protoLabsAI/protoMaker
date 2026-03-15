@@ -53,6 +53,7 @@ import type {
 import { GtmReviewProcessor } from './lead-engineer-gtm-review-processor.js';
 import type { HITLFormService } from './hitl-form-service.js';
 import type { AuthorityService } from './authority-service.js';
+import type { SchedulerService } from './scheduler-service.js';
 
 export type { FeatureProcessingState, StateContext };
 export type { ProcessorServiceContext } from './lead-engineer-types.js';
@@ -107,6 +108,8 @@ export class LeadEngineerService {
   private supervisorIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private prMergeIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private activeFeatures = new Set<string>();
+
+  private schedulerService?: SchedulerService;
 
   private discordBotService?: {
     sendToChannel(channelId: string, content: string): Promise<boolean>;
@@ -192,6 +195,9 @@ export class LeadEngineerService {
   }
   setAuthorityService(s: AuthorityService): void {
     this.authorityService = s;
+  }
+  setSchedulerService(s: SchedulerService): void {
+    this.schedulerService = s;
   }
 
   // ────────────────────────── Bidirectional Integration ──────────────────────────
@@ -329,29 +335,37 @@ export class LeadEngineerService {
         .catch((err) => logger.warn(`Failed to start auto-mode for ${projectSlug}:`, err));
     }
 
-    this.refreshIntervals.set(
-      projectPath,
-      setInterval(async () => {
-        const s = this.sessions.get(projectPath);
-        if (!s || s.flowState !== 'running') return;
-        try {
-          s.worldState = await this.worldStateBuilder.build(
-            projectPath,
-            projectSlug,
-            s.worldState.maxConcurrency
-          );
-          this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
-            s,
-            DEFAULT_RULES,
-            'lead-engineer:rule-evaluated',
-            {},
-            MAX_RULE_LOG_ENTRIES
-          );
-        } catch (err) {
-          logger.error(`WorldState refresh failed for ${projectSlug}:`, err);
-        }
-      }, WORLD_STATE_REFRESH_MS)
-    );
+    const refreshHandler = async () => {
+      const s = this.sessions.get(projectPath);
+      if (!s || s.flowState !== 'running') return;
+      try {
+        s.worldState = await this.worldStateBuilder.build(
+          projectPath,
+          projectSlug,
+          s.worldState.maxConcurrency
+        );
+        this.getActionExecutor(undefined, projectPath).evaluateAndExecute(
+          s,
+          DEFAULT_RULES,
+          'lead-engineer:rule-evaluated',
+          {},
+          MAX_RULE_LOG_ENTRIES
+        );
+      } catch (err) {
+        logger.error(`WorldState refresh failed for ${projectSlug}:`, err);
+      }
+    };
+
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        `lead-engineer:${projectPath}:refresh`,
+        `Lead Engineer World State Refresh (${projectSlug})`,
+        WORLD_STATE_REFRESH_MS,
+        refreshHandler
+      );
+    } else {
+      this.refreshIntervals.set(projectPath, setInterval(refreshHandler, WORLD_STATE_REFRESH_MS));
+    }
 
     const workflowSettings = await getWorkflowSettings(
       projectPath,
@@ -362,26 +376,45 @@ export class LeadEngineerService {
 
     if (workflowSettings.pipeline.supervisorEnabled) {
       const executor = this.getActionExecutor(workflowSettings);
-      this.supervisorIntervals.set(
-        projectPath,
-        setInterval(() => {
-          const s = this.sessions.get(projectPath);
-          if (s?.flowState === 'running') executor.supervisorCheck(s, workflowSettings);
-        }, SUPERVISOR_CHECK_MS)
-      );
+      const supervisorHandler = () => {
+        const s = this.sessions.get(projectPath);
+        if (s?.flowState === 'running') executor.supervisorCheck(s, workflowSettings);
+      };
+
+      if (this.schedulerService) {
+        this.schedulerService.registerInterval(
+          `lead-engineer:${projectPath}:supervisor`,
+          `Lead Engineer Supervisor (${projectSlug})`,
+          SUPERVISOR_CHECK_MS,
+          supervisorHandler
+        );
+      } else {
+        this.supervisorIntervals.set(
+          projectPath,
+          setInterval(supervisorHandler, SUPERVISOR_CHECK_MS)
+        );
+      }
     }
 
-    this.prMergeIntervals.set(
-      projectPath,
-      setInterval(() => {
-        const s = this.sessions.get(projectPath);
-        if (s?.flowState === 'running') {
-          this.checkMergedPRs(projectPath).catch((err) =>
-            logger.error(`PR merge poll failed for ${projectSlug}:`, err)
-          );
-        }
-      }, PR_MERGE_POLL_MS)
-    );
+    const prMergeHandler = () => {
+      const s = this.sessions.get(projectPath);
+      if (s?.flowState === 'running') {
+        this.checkMergedPRs(projectPath).catch((err) =>
+          logger.error(`PR merge poll failed for ${projectSlug}:`, err)
+        );
+      }
+    };
+
+    if (this.schedulerService) {
+      this.schedulerService.registerInterval(
+        `lead-engineer:${projectPath}:pr-merge-poll`,
+        `Lead Engineer PR Merge Poll (${projectSlug})`,
+        PR_MERGE_POLL_MS,
+        prMergeHandler
+      );
+    } else {
+      this.prMergeIntervals.set(projectPath, setInterval(prMergeHandler, PR_MERGE_POLL_MS));
+    }
 
     await this.sessionStore.save(session);
     this.events.emit('lead-engineer:started', { projectPath, projectSlug });
@@ -596,20 +629,26 @@ export class LeadEngineerService {
   }
 
   private clearIntervals(projectPath: string): void {
-    const r = this.refreshIntervals.get(projectPath);
-    if (r) {
-      clearInterval(r);
-      this.refreshIntervals.delete(projectPath);
-    }
-    const s = this.supervisorIntervals.get(projectPath);
-    if (s) {
-      clearInterval(s);
-      this.supervisorIntervals.delete(projectPath);
-    }
-    const p = this.prMergeIntervals.get(projectPath);
-    if (p) {
-      clearInterval(p);
-      this.prMergeIntervals.delete(projectPath);
+    if (this.schedulerService) {
+      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:refresh`);
+      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:supervisor`);
+      this.schedulerService.unregisterInterval(`lead-engineer:${projectPath}:pr-merge-poll`);
+    } else {
+      const r = this.refreshIntervals.get(projectPath);
+      if (r) {
+        clearInterval(r);
+        this.refreshIntervals.delete(projectPath);
+      }
+      const s = this.supervisorIntervals.get(projectPath);
+      if (s) {
+        clearInterval(s);
+        this.supervisorIntervals.delete(projectPath);
+      }
+      const p = this.prMergeIntervals.get(projectPath);
+      if (p) {
+        clearInterval(p);
+        this.prMergeIntervals.delete(projectPath);
+      }
     }
   }
 
