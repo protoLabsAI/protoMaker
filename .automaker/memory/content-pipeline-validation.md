@@ -1,14 +1,15 @@
 ---
 tags: []
-summary: "relevantTo: []"
+summary: 'relevantTo: []'
 relevantTo: []
 importance: 0.5
 relatedFiles: []
 usageStats:
-  loaded: 316
-  referenced: 17
-  successfulFeatures: 17
+  loaded: 323
+  referenced: 23
+  successfulFeatures: 23
 ---
+
 <!-- domain: Content Pipeline | Validation patterns for content processing pipelines -->
 
 # Content Pipeline Validation Report

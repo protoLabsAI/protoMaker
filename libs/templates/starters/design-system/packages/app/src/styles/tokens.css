@@ -1,0 +1,20 @@
+/* ── Playground chrome tokens ───────────────────────────────────────────────
+   These control the playground UI itself (sidebar, toolbar, etc.).
+   Your design system tokens go in a separate file loaded by the preview.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --pg-bg: #f8fafc;
+  --pg-fg: #0f172a;
+  --pg-fg-secondary: #475569;
+  --pg-muted: #94a3b8;
+  --pg-border: #e2e8f0;
+  --pg-border-subtle: #f1f5f9;
+  --pg-sidebar: #ffffff;
+  --pg-toolbar: #ffffff;
+  --pg-input-bg: #f8fafc;
+  --pg-code-bg: #f1f5f9;
+  --pg-accent: #3b82f6;
+  --pg-selected-bg: #eff6ff;
+  --pg-item-fg: #374151;
+}

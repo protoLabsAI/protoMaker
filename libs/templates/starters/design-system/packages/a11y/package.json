@@ -1,0 +1,52 @@
+{
+  "name": "@@PROJECT_NAME-a11y",
+  "version": "0.1.0",
+  "description": "Accessibility auditing for design systems — axe-core WCAG checking + AI semantic analysis. Zero internal dependencies.",
+  "type": "module",
+  "main": "./dist/audit.js",
+  "types": "./dist/audit.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/audit.js",
+      "types": "./dist/audit.d.ts"
+    },
+    "./axe-wrapper": {
+      "import": "./dist/axe-wrapper.js",
+      "types": "./dist/axe-wrapper.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "axe-core": "^4.0.0",
+    "jsdom": "^24.0.0"
+  },
+  "peerDependenciesMeta": {
+    "axe-core": {
+      "optional": true
+    },
+    "jsdom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "axe",
+    "axe-core",
+    "design-system",
+    "audit"
+  ],
+  "license": "MIT"
+}
