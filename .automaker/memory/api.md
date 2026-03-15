@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 551
-  referenced: 151
-  successfulFeatures: 151
+  loaded: 525
+  referenced: 131
+  successfulFeatures: 131
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -199,92 +199,21 @@ usageStats:
 - **Why this works:** Single TimelineEvent type for all timeline entries. Optional fields make it extensible for future enrichment without creating subtype explosion.
 - **Trade-offs:** TimelineEvent becomes less semantically pure but more pragmatic. UI must handle optional fields, but avoids discriminated union complexity.
 
-#### [Gotcha] Fields with code-level defaults (e.g., empty string) should be marked Optional in API documentation, not Required. Technical optionality (has default) takes precedence over semantic intent (logically important). (2026-03-14)
-- **Situation:** `description` field defaulted to empty string in code but was documented as Required
-- **Root cause:** Documentation documents actual API contract, not developer intent. Readers use Required/Optional to determine if they must provide a value; code defaults override that choice.
-- **How to avoid:** More honest docs are less prescriptive; accepts that optional fields may be important conceptually but aren't enforced
+#### [Gotcha] Service method getResolvedCapabilities() has an undocumented constraint: it only searches the project manifest. Its name suggests it 'resolves' all agent capabilities, but internally calls getAgent() which has this manifest-only limitation. (2026-03-13)
+- **Situation:** Caller at route layer assumed the method would return capabilities for any agent that listAgents() could find, but that assumption violated for synthetic agents.
+- **Root cause:** Method naming is optimistic ('Resolved') without surfacing the implementation detail of what sources it searches. No type or error signal distinguishes manifest hits from manifest misses.
+- **How to avoid:** Current approach has simpler signature but hides important contract details. Explicit approach would be noisier but prevent assumptions about coverage.
 
-#### [Gotcha] Algorithmic behavior (confidence normalization formula: `rawScore / (rawScore + 10)`) was implemented in ExecutionService but never surfaced in API documentation, making the scoring system behavior opaque to API consumers. (2026-03-14)
-- **Situation:** The `/api/agents/match` endpoint returns a confidence score, but the formula that produces asymptotic confidence values (never reaching 1.0) was code-only knowledge.
-- **Root cause:** Implementation details and mathematical algorithms are often not explicitly translated to API contracts, treating them as internal concerns rather than contractual guarantees.
-- **How to avoid:** Faster implementation (algorithm details are internal) vs. predictable API behavior (users understand confidence ceilings and can reason about scoring).
+### Made _builtIn an optional, API-layer-only field on ProjectAgent type. Never appears in user-authored manifests. Explicitly documented in JSDoc. (2026-03-13)
+- **Context:** Need to track whether an agent is built-in (system-provided) vs. user-defined, but this should not be an editable field in user manifests.
+- **Why:** Separates concerns: type documents reality and responsibility boundary. API layer is responsible for populating this flag when returning built-in agents. Users should never attempt to set this field. Using an optional field signals 'computed by API, not by user'.
+- **Rejected:** Making it required or allowing it in user manifests would blur the line between 'what the system considers built-in' (API responsibility) and 'what the user claims is built-in' (user action). Rejected putting it in manifest parsing logic.
+- **Trade-offs:** Optional field means implicit contract that API must set it; no compile-time enforcement. Gains clarity about responsibility boundaries at cost of runtime discipline.
+- **Breaking if changed:** If this field is removed, the type loses ability to explicitly track built-in status at the API boundary. Code would revert to unsafe casts like 'as unknown as ProjectAgent[]' to satisfy the type system.
 
-#### [Pattern] Required reading implementation code (agents.ts, execution-service.ts, feature-scheduler.ts) to discover actual API response schemas because documentation had drifted. This indicates a code-as-source-of-truth pattern rather than docs-first contracts. (2026-03-14)
-- **Problem solved:** Three response schema gaps (missing `confidence`, missing `projectPath`, undocumented `routingSuggestion` shape) were discovered by comparing code output against docs.
-- **Why this works:** API behavior evolves incrementally during feature work; documentation updates are separate tasks, so drift accumulates over time.
-- **Trade-offs:** Faster iteration without doc-first overhead vs. higher confidence that docs match implementation. Currently trading correctness for velocity.
-
-### New optional fields (`projectPath`, `confidence`) were added to existing API responses without explicit versioning or deprecation markers. Clients cannot determine if a field is guaranteed to exist or conditionally added. (2026-03-14)
-- **Context:** The `/api/agents/list` gained `projectPath` and `/api/agents/match` gained `confidence`, but without API versioning (e.g., `/v2/`) or response schema versioning.
-- **Why:** Backwards compatibility is maintained (old clients ignore new fields); requires no migration burden. Pragmatic choice for rapid iteration.
-- **Rejected:** API versioning (`/api/v2/agents/match`) or explicit schema versioning (responses include `_schema: '2024-03'`) would make field presence contracts explicit.
-- **Trade-offs:** Simpler deployment (no versioning overhead) vs. clarity (clients can't know if fields are required or optional without reading code).
-- **Breaking if changed:** Clients using strict schema validation or depending on absence of fields (e.g., `Object.keys() === ['success', 'agent']`) would break silently when fields are added.
-
-#### [Pattern] Response includes 'via' field showing resolution strategy per feature (milestoneSlug, epicMilestoneSlug, alreadySet, or skipped) (2026-03-14)
-- **Problem solved:** Multiple resolution paths exist. Clients/ops need to audit which strategy worked for each feature to debug wrong resolutions
-- **Why this works:** Transparency enables post-hoc validation, debugging, and audit trails. If a feature resolves to wrong project, 'via' immediately shows which strategy was used
-- **Trade-offs:** Easier: debug and audit. Harder: response more verbose; clients must understand multi-strategy logic
-
-#### [Gotcha] `updateProjectSettings(Partial<ProjectSettings>)` does shallow merge, but nested `workflow` object requires deep merge. Manually destructuring and casting `as ProjectSettings['workflow']` is required to preserve sibling properties in agentConfig. (2026-03-14)
-- **Situation:** Attempted direct nested object spread in updateProjectSettings call. TypeScript complained because partial merge doesn't capture full type constraints of nested object.
-- **Root cause:** Shallow merge API is simpler and faster than deep merge, but callers must handle nested updates themselves. Cast signals type safety at the point of merge, not in the API.
-- **How to avoid:** Shallow merge keeps API simple and predictable; callers explicitly control merge depth. Extra destructuring code per nested update.
-
-#### [Pattern] Implemented fallback chain for agent prompt resolution: manifest `promptFile` > settings `rolePromptOverrides` > none. Fallback evaluated at execution time in `loadRolePromptPrefix()`, not at config time. (2026-03-14)
-- **Problem solved:** Unifying two competing systems (manifest-defined prompts, settings-defined overrides) without breaking either source
-- **Why this works:** Manifest has single source of truth; overrides allow runtime customization without code changes. Checking manifest first preserves intent of code; fallback to settings enables local experimentation. Evaluated at execution time allows settings changes without restart.
-- **Trade-offs:** Runtime lookup cost; flexible override capability. Layered precedence may confuse when both exist (which one wins?).
-
-#### [Pattern] UI already sends `projectPath` as a query parameter to the timeline endpoint, enabling the fallback to load features without requiring client-side changes. (2026-03-14)
-- **Problem solved:** Feature implementation discovered UI was already structured correctly.
-- **Why this works:** Indicates the original API design was extensible—endpoint accepted parameters for future use. Enables this fallback to work as a pure backend change.
-- **Trade-offs:** Good forward design at cost of carrying unused parameters early. Paid off here.
-
-### Wrap the `git diff --name-only --diff-filter=U` capture in try/catch rather than letting failures propagate. Conflicting file capture is best-effort and non-critical to the happy path. (2026-03-14)
-- **Context:** If git diff fails for any reason during conflict handling, the code should still successfully abort the merge and transition to blocked state.
-- **Why:** Conflict handling is already in an error path. If the operation to capture which files conflicted fails, that shouldn't prevent us from safely aborting and blocking the feature. Best-effort data enrichment shouldn't break the core operation.
-- **Rejected:** Alternative: Let git diff exceptions propagate and crash the feature transition. Rejected: would make the system fragile to unexpected git states.
-- **Trade-offs:** Easier: robust error handling. Harder: developers might not see which files conflicted if git diff fails (though the conflict itself is still blocked).
-- **Breaking if changed:** Removing the try/catch would make a git diff failure during conflict handling crash the entire feature execution, leaving the system in an undefined state.
-
-### MCPToolEntry interface uses JSON Schema (not Zod) because it represents the wire format MCP clients expect. The adapter is responsible for the Zod→JSON Schema conversion boundary. (2026-03-14)
-- **Context:** SharedTool carries Zod types (compile-time + runtime validation); MCP SDK expects JSON Schema objects (serializable, wire-compatible). These two schemas serve different purposes.
-- **Why:** Zod is an internal implementation detail for the libs/tools layer. When crossing the adapter boundary to external systems (MCP, LangGraph), the contract must be in a portable format. JSON Schema is the standard wire format.
-- **Rejected:** Could expose Zod schemas directly to MCP (creates coupling, Zod is not part of MCP SDK contract) or skip the conversion and validate raw JSON (loses type safety benefits).
-- **Trade-offs:** Requires conversion logic in toMCPTool() but keeps Zod internal to libs/tools. Clients never see Zod; adapters handle translation. Cleaner boundaries at cost of a conversion step.
-- **Breaking if changed:** If you remove the conversion and pass Zod schemas directly to MCP, external clients must understand Zod (dependency leak). If you remove Zod entirely from SharedTool, you lose runtime validation before schema conversion.
-
-#### [Pattern] Enforce symmetrical input and output schema definitions for every tool (2026-03-14)
-- **Problem solved:** Tools define what they accept but sometimes output validation is skipped as optional
-- **Why this works:** Input schema validates data from tool consumer; output schema validates data from tool provider. Without output schema, return values are unvalidated, breaking type safety on consumer side.
-- **Trade-offs:** More schema code to maintain, but ensures bidirectional type coverage
-
-### Granular API: separate getDesignTokensCss() (full preset) from getDesignTokensThemeBlock() (@theme block only) (2026-03-14)
-- **Context:** Different projects need different integration patterns—some want to replace entire CSS file, others want to merge @theme block into existing file
-- **Why:** Full preset includes resets and utilities; @theme block is composable into existing CSS. Splitting allows both patterns without forcing consumers to parse or filter.
-- **Rejected:** Single function returning full preset would force consumers who want partial integration to extract the @theme block themselves or duplicate the tokens
-- **Trade-offs:** Slightly higher API surface, but consumers get exactly what they need without workarounds. Maintenance burden is minimal (both generated from same source).
-- **Breaking if changed:** Removing getDesignTokensThemeBlock() breaks any consumer merging into existing CSS; must rebuild their CSS if removed
-
-#### [Pattern] String-based exports (CSS strings as functions) rather than pre-built Tailwind config objects (2026-03-14)
-- **Problem solved:** Could have exported ready-made Tailwind theme config or preset plugin directly, but chose to export raw CSS/token strings
-- **Why this works:** Strings are format-agnostic and composable—consumers can integrate into Tailwind v4 CSS-first, PostCSS, or even non-Tailwind pipelines. Pre-built objects would lock to one integration method.
-- **Trade-offs:** Consumer has to understand how to integrate the string (more responsibility), but maximum flexibility. Upside: works with Tailwind v3, v4, PostCSS plugins, etc.
-
-#### [Pattern] Discriminated union (CodingRulesType) enables extensible function dispatch without modifying getCodingRules() logic (2026-03-15)
-- **Problem solved:** Each new framework variant ('react', 'astro-react', etc.) is a distinct type case, not a parameter to existing rules
-- **Why this works:** Allows adding new framework types without changing getCodingRules() signature or adding conditionals; compiler enforces exhaustiveness when new types are added
-- **Trade-offs:** Requires updating getStarterFeatures() switch statement for new types, but compiler catches missing cases. More type definitions, clearer contracts
-
-### ScaffoldResult.filesCreated only includes top-level entries (from readdir), not recursive file listing. Caller gets partial visibility into what was created. (2026-03-15)
-- **Context:** Report what files were created during scaffolding for logging/UI display.
-- **Why:** Reduces verbosity for large starters (100+ files). Top-level entries sufficient for 'success' indication without overwhelming output.
-- **Rejected:** Recursive file listing - would be complete but massive for Astro projects with nested directories.
-- **Trade-offs:** Cleaner reporting vs. incomplete insight. Caller can't easily verify all files were copied.
-- **Breaking if changed:** If a subdirectory fails to copy, caller won't detect it from filesCreated. Need separate verification (e.g., check output dir size) to detect partial failures.
-
-#### [Pattern] Hook (useCreateProject) conditionally orchestrates two async operations: initiate() then conditional scaffoldStarterKit(). Scaffold only runs if starterKit param provided. (2026-03-15)
-- **Problem solved:** Two server calls needed: project creation, then optional template scaffolding. Hook must coordinate.
-- **Why this works:** Keeps project initialization decoupled from scaffolding logic. Hook consumer decides whether to scaffold. Allows scaffold to be optional/future-feature without core hook changes.
-- **Trade-offs:** Conditional logic in hook adds complexity vs. simpler hook doing one thing. Hook consumer has control (testable) vs. implicit behavior. Two separate routes vs. unified project-creation endpoint.
+### Exposed confidence as a sibling field to agent in API response ({agent, confidence}) instead of nesting it (agent.confidence or {agent: {..., confidence}}). (2026-03-13)
+- **Context:** The routes/agents.ts endpoint needed to reflect the new MatchResult structure when returning the match result to clients.
+- **Why:** Flat structure makes confidence discoverable in API schema documentation and easier for clients to destructure. Separating agent and confidence fields mirrors the internal MatchResult type structure, reducing impedance mismatch.
+- **Rejected:** Nested under agent object (agent.confidence) - couples confidence lifecycle to agent object, harder to version separately. Alternative: confidence as optional field on agent at call-site (agent?.confidence ?? null) - less explicit about what changed in the API.
+- **Trade-offs:** Slightly flatter API surface (one more top-level field), but clearer separation of concerns between agent identity and quality metric.
+- **Breaking if changed:** Clients expecting agent to be a bare ProjectAgent object with no confidence field will work (no field removed), but new clients expect separate confidence field to exist.

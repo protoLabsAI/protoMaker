@@ -5,9 +5,9 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1505
-  referenced: 378
-  successfulFeatures: 378
+  loaded: 1459
+  referenced: 351
+  successfulFeatures: 351
 ---
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
@@ -947,62 +947,22 @@ usageStats:
 - **Root cause:** Treats assignedRole as a declaration of user intent ('I have chosen'), not as a preference hint. This respects the UX model where users set roles deliberately.
 - **How to avoid:** Current approach respects user autonomy completely; alternative would enable 'smart override' but risks surprising users when match overrides their choice
 
-#### [Gotcha] Diagram notation can implicitly encode assumptions about structure/ordering without explicit clarification. Using `{standard system prompt}` after context files suggested a separate prompt block, when actual implementation treats role prompt → context+memory as an ordered unit. (2026-03-14)
-- **Situation:** Prompt injection diagram in agent-manifests.md showed incorrect logical grouping without clarifying the actual injection order
-- **Root cause:** Visual diagrams use layout/labels to imply relationships but rarely state ordering constraints explicitly. Readers infer structure from position without verifying against code.
-- **How to avoid:** Visual compactness vs. needing explicit prose clarification; code clarity requires explanation in diagrams
+#### [Gotcha] fs.watch handles in Node.js leak file descriptors if not explicitly closed — causes 'too many open files' warnings in test suites (2026-03-13)
+- **Situation:** AgentManifestService uses fs.watch internally; without dispose(), watchers remain open after server shutdown
+- **Root cause:** File system watchers are OS resources that require explicit cleanup. Node.js doesn't auto-close them even when service objects are garbage collected.
+- **How to avoid:** Explicit dispose() call required. Gains: clean test output and no resource leaks. Cost: must know which services need disposal.
 
-#### [Gotcha] Feature.title is optional (title?: string) but BackfillDetail response requires string. Caught at compile time, required ?? '' fallback (2026-03-14)
-- **Situation:** Domain model allows titleless features, but response API assumes all results have displayable titles
-- **Root cause:** Response contract prioritizes strong typing over optional fields for client usability. Fallback prevents type errors and provides graceful degradation
-- **How to avoid:** Easier: type-safe responses. Harder: introduces false data (empty string when feature genuinely lacks title)
+#### [Gotcha] Frontend ROLE_LABELS and backend's notion of built-in roles must stay in sync, but this dependency is implicit with no validation test. (2026-03-13)
+- **Situation:** Two separate codebases (frontend and backend) each maintain a list of which roles are considered built-in. They have no automatic sync mechanism.
+- **Root cause:** Frontend needs to know ROLE_LABELS for UI labeling. Backend tracks built-in roles separately for API logic. Avoiding coupling between them, but creating a hidden coupling.
+- **How to avoid:** Loose coupling and bundle efficiency vs. risk of silent desync. Current test suite verifies the badge renders when flag is set, but doesn't verify ROLE_LABELS and backend built-ins match.
 
-#### [Gotcha] UI renders unknown `TimelineEvent.type` values via a catch-all humaniser, so synthetic events with types like `feature:created` (not in the type union) render correctly without UI changes. (2026-03-14)
-- **Situation:** Synthetic events don't match the defined `TimelineEvent.type` union.
-- **Root cause:** The UI has defensive rendering for extensibility. Allows server to emit new event types without UI coordination.
-- **How to avoid:** Server-side extensibility vs. hidden coupling—UI must maintain its catch-all or new event types silently disappear.
+#### [Gotcha] Dual-ownership race condition in async state transitions: When a feature moves from synchronous tracking (startingFeatures Set) to asynchronous tracking (ConcurrencyManager lease), there's an inevitable window where both tracking systems claim the same entity. Simply adding their counts causes double-counting, not because either system is wrong, but because they're measuring overlapping states during the transition. (2026-03-13)
+- **Situation:** Feature lifecycle: startingFeatures set → ConcurrencyManager lease acquired → dispatchResultPromise resolves → cleared from startingFeatures. Capacity check runs during the 'lease acquired but not yet cleared from Set' window, seeing: 1 running (from lease) + 1 starting (from Set) = 2/2 at capacity, blocking the second slot.
+- **Root cause:** Making the transition atomic would require blocking on async operations or redesigning how capacity is reserved. The Set exists as a synchronous guard to prevent double-starts within a single loop iteration—it must outlive the lease acquisition to maintain that guard. Two separate tracking systems naturally create this coordination gap.
+- **How to avoid:** Filter solution (checking isFeatureRunning to exclude already-leased features) is slightly more expensive than set arithmetic but maintains the architectural separation: Set = scheduler's synchronous view, lease = system's asynchronous running state. Merging them would lose the cheap synchronous guard.
 
-#### [Gotcha] Guard against features without epicId: the epic completion check only fires if feature has epicId, preventing false logic on standalone features. (2026-03-14)
-- **Situation:** A feature without epicId is standalone (not part of an epic). The check must skip these to avoid trying to complete a non-existent epic.
-- **Root cause:** Easy oversight: could write logic that treats all features as potential epic children. Explicit guard ensures only child features trigger the epic completion check.
-- **How to avoid:** Explicit check in update() adds one condition, but makes intent clear and prevents wasted epic lookups on standalone features.
-
-#### [Gotcha] File path confusion: Feature description referenced `projects/project-detail.tsx` but actual file is `projects-view/project-detail.tsx`. Both directories co-exist with different purposes. (2026-03-14)
-- **Situation:** Developer working from feature spec found the wrong directory initially, suggesting inconsistent naming convention in the codebase.
-- **Root cause:** The `projects/` dir contains reusable components (like `ProjectTimeline`), while `projects-view/` contains the view that imports them. Name similarity creates ambiguity.
-- **How to avoid:** Clear separation of concerns (component library vs. views) but naming doesn't signal this intent clearly to developers.
-
-#### [Gotcha] Central config file from PR #2474 was not merged into worktree, forcing fresh creation of apps/server/src/config/timeouts.ts from scratch (2026-03-14)
-- **Situation:** Feature depends on prior work (PR #2474) that should have been available but wasn't
-- **Root cause:** Worktree isolation or branch state didn't include the merged dependency—common when features are split across PRs with dependency ordering issues
-- **How to avoid:** Fresh creation saved time vs merge conflict resolution, but introduced divergence risk. Team had to manually reconcile which constants from PR #2474 to include.
-
-#### [Gotcha] Manual string escaping of GraphQL arguments (JSON.stringify().slice(1, -1)) is unreliable across edge cases like newlines, quotes, special chars in body text (2026-03-14)
-- **Situation:** Original replyAndResolveThread passed body via JSON.stringify(body).slice(1, -1), which fails on bodies containing quotes, backslashes, or control characters
-- **Root cause:** Escaping is context-dependent (GraphQL string context != JSON context). The slice pattern assumes stable JSON wrapper format which breaks under pressure.
-- **How to avoid:** Switching to CLI variables eliminates custom escaping logic entirely (simpler); but requires understanding that gh cli handles escaping, not the application
-
-#### [Gotcha] prettier-plugin-astro in portfolio's .prettierrc.mjs causes monorepo prettier to fail when it discovers the portfolio's config in scope, even though the plugin is not installed at monorepo root (2026-03-14)
-- **Situation:** Formatting portfolio Astro files within monorepo CI that has its own prettier config
-- **Root cause:** Root cause: prettier loads .prettierrc.mjs files from all subdirectories in the search path. If .prettierrc.mjs requires 'prettier-plugin-astro' but it's not installed at the monorepo root, require() fails.
-- **How to avoid:** Easier: portfolio can use its own prettier config. Harder: monorepo CI must use --no-config for non-Astro files to avoid the scope issue.
-
-#### [Gotcha] Monorepo root prettier config cannot handle .astro files from nested starter kits because prettier-plugin-astro is not installed at monorepo root. Keeping plugins localized to starters avoids this but creates config drift risk. (2026-03-15)
-- **Situation:** Ran prettier on starters/docs/*.astro files and got plugin-not-found errors at monorepo level
-- **Root cause:** prettier loads config from closest tsconfig/package.json. Root config applies to all packages. Astro plugin not in root dependencies. Local prettier in starter would require separate tool invocation.
-- **How to avoid:** Easier: no monorepo changes. Harder: different starters can have different formatter behavior. Potential for unintended file diffs when formatting.
-
-#### [Gotcha] Prettier config in starter kit (.prettierrc.mjs) declares prettier-plugin-astro dependency. When running prettier from monorepo root on worktree files, plugin resolution fails ('Cannot find package prettier-plugin-astro'). Workaround: use --parser markdown flag to bypass config lookup entirely and force explicit parser. (2026-03-15)
-- **Situation:** Portfolio starter kit needs markdown formatting after docs/ creation. Prettier invoked from main repo root where plugin is not installed.
-- **Root cause:** Monorepo tool configurations don't automatically resolve dependencies in worktree contexts. The worktree is an isolated git branch without the parent's node_modules.
-- **How to avoid:** --parser markdown bypasses ALL config rules (ignores .prettierrc settings), so it only applies markdown formatting, not the full config. Cleaner for static content, but loses custom rules.
-
-#### [Gotcha] applySubstitutions() wraps each file patch (package.json name, astro.config.mjs URL/title) in try-catch with silent empty catches. Missing files don't error - they just don't get patched. (2026-03-15)
-- **Situation:** Different starter kits may have different required files. Some might not have package.json or astro.config.mjs.
-- **Root cause:** Defensive: avoids failing entire scaffold if optional files are missing. Supports future starter types with different file structures.
-- **How to avoid:** More forgiving (easier to add new starters) but harder to debug. Users won't know if their project name or site URL got substituted.
-
-#### [Gotcha] Direct import coupling to @protolabsai/templates package (scaffoldDocsStarter, scaffoldPortfolioStarter). Kit types hardcoded as 'docs' | 'portfolio'. (2026-03-15)
-- **Situation:** Templates are external package. Kit types are switch statement in route. Adding new template types requires server code change.
-- **Root cause:** Templates package is source of truth. Hardcoded types prevent invalid scaffold calls. Type-safe at compile time.
-- **How to avoid:** Type safety + compile-time guarantees vs. runtime flexibility. Tight coupling to templates package vs. abstract template interface. Easier onboarding (types obvious) vs. harder to extend (code change needed).
+#### [Gotcha] Chokidar v3 native file watchers (fsevents/inotify) do not work with Node.js 22. Chokidar v4 fix exists but requires network installation in monorepo context; polling becomes the only reliable zero-dependency alternative. (2026-03-13)
+- **Situation:** fs.watch({ recursive: true }) is a no-op on Linux pre-Node.js 22, and chokidar v3 (available in monorepo) has broken native bindings with Node.js 22 (the project's required version).
+- **Root cause:** Native watchers require compiled bindings that were not maintained in chokidar v3. Rather than force a major version upgrade and network installation, polling avoids transitive dependency issues.
+- **How to avoid:** Polling uses more CPU and has latency (2s interval), but eliminates dependency management risk and works on all platforms. Deterministic vs reactive trade-off accepted.

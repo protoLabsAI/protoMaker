@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 537
-  referenced: 116
-  successfulFeatures: 116
+  loaded: 491
+  referenced: 89
+  successfulFeatures: 89
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -730,630 +730,109 @@ usageStats:
 - **Trade-offs:** Adds payload to Feature; enables rich observability and potential future ML feedback loops on assignment quality
 - **Breaking if changed:** Removing metadata would eliminate ability to distinguish high-confidence from low-confidence auto-assignments, making manifest tuning impossible
 
-#### [Pattern] Use documentation guard notes (clarifying disclaimers) to prevent future accidental re-introduction of unimplemented features or configuration options into docs (2026-03-14)
-- **Problem solved:** `manifestPaths` was never in docs and never implemented in code, but could be accidentally documented as a feature later if not explicitly locked
-- **Why this works:** Documentation is the user-facing API contract. Preventing feature drift requires explicit barriers in docs themselves, not just code review or issue tracking.
-- **Trade-offs:** Adds documentation maintenance overhead but ensures users see exactly what's implemented and what isn't; prevents confusion from feature churn
-
-### Backfill route registered directly in routes.ts (not nested in createFeaturesRoutes factory) because projectService dependency is unavailable in the features router factory signature (2026-03-14)
-- **Context:** Endpoint requires projectService to build milestone→project mappings, but the modular features router is created without this dependency
-- **Why:** Avoids expanding createFeaturesRoutes factory surface. Keeps router contract minimal; services that don't own the features domain shouldn't be passed through it
-- **Rejected:** Add projectService to features router factory, but this couples an unrelated service into the features module contract and pollutes the factory signature
-- **Trade-offs:** Easier: features router stays focused. Harder: backfill endpoint lives outside modular structure, requiring explicit knowledge of its location in parent routes.ts
-- **Breaking if changed:** If routes.ts refactored away or projectService API changes, backfill endpoint architecture breaks. Moving the endpoint into features router requires restructuring factory dependencies.
-
-#### [Gotcha] Re-export barrel files don't necessarily export all types from their source packages. Local barrel at `apps/server/src/types/settings.ts` doesn't export `WorkflowSettings`, forcing direct imports from `@protolabsai/types` instead. (2026-03-14)
-- **Situation:** Attempted to use `import('../types/settings.js').WorkflowSettings` in type cast, which failed with 'not exported from file' error
-- **Root cause:** Barrel files are curated re-exports chosen by the barrel maintainer, not exhaustive. Using a barrel creates false expectation that all types from the package are available locally.
-- **How to avoid:** Direct package imports bypass the barrel convenience but guarantee type availability. Adds import scattered across codebase.
-
-#### [Pattern] Retained deprecated `personaOverrides` field in `GlobalSettings` type (with @deprecated JSDoc, optional) during migration rather than deleting it. Ensures old config files load without errors; migration deletes field from disk on first startup. (2026-03-14)
-- **Problem solved:** Moving global feature (personas) to project scope requires one-time data migration without breaking existing installations
-- **Why this works:** Smooth upgrade: old configs load immediately without modification, migration runs silently on next startup, field is gone after first load. Avoids upgrade friction and version compatibility matrix.
-- **Trade-offs:** Temporary type debt (deprecated field in schema) for transparent, automatic migration. Cleanup happens in data, not code.
-
-#### [Pattern] Migration logic placed in `getGlobalSettings()` (startup hook) rather than separate CLI or background job. Reads enabled personas, writes to current project's settings.json, deletes field from global settings in one atomic operation. (2026-03-14)
-- **Problem solved:** One-time migration from global to project scope needs to run exactly once per project, correctly targeting the current project
-- **Why this works:** Guaranteed execution on every startup (idempotent, runs until complete). No separate CLI to run, no background job scheduling, no version tracking. Simplest correctness guarantee.
-- **Trade-offs:** Startup path does extra I/O; guarantees migration happens correctly and automatically. No user action required.
-
-### Implemented exclusive fallback strategy: ledger entries take priority; fallback only fires when ledger returns zero results. Never merge both sources. (2026-03-14)
-- **Context:** Could have synthesized a unified event stream from both ledger + feature metadata, requiring deduplication logic.
-- **Why:** Simplicity and determinism. Ledger is source-of-truth when it has data. Fallback is strictly additive for gaps. No merge conflicts.
-- **Rejected:** Merge strategy combining ledger and feature events with deduplication logic
-- **Trade-offs:** Simpler code/logic vs. incomplete event history if both sources coexist. Assumes ledger backfill won't occur retroactively.
-- **Breaking if changed:** If ledger is retroactively populated with historical entries, fallback events become orphaned. Strategy assumes ledger is populated forward-only after this feature ships.
-
-### Synthetic event IDs use deterministic pattern `${featureId}:created` instead of UUIDs, creating a distinct format from ledger entry IDs (which are UUIDs). (2026-03-14)
-- **Context:** Needed to distinguish synthesized events from real ledger entries and avoid ID collisions.
-- **Why:** Deterministic IDs are regenerable and debuggable. Format prefix (`feature:created` vs UUID) prevents collisions and makes source obvious in logs. Allows safe merging if fallback ever needs to coexist with ledger data.
-- **Rejected:** Using UUIDs for synthetic events (would lose traceability and collision-avoidance semantics)
-- **Trade-offs:** Easier debugging/auditing vs. aesthetic inconsistency with ledger ID format. Requires API clients to handle two ID patterns.
-- **Breaking if changed:** If changed to UUIDs, loses the ledger-vs-synthetic distinction. Deduplication between sources becomes ambiguous.
-
-#### [Pattern] The `featureLoader` dependency was already available in the route factory context (`createProjectsRoutes`), requiring only that it be threaded as a second parameter to the handler factory. (2026-03-14)
-- **Problem solved:** Implementation didn't require building new infrastructure—just wiring existing dependency.
-- **Why this works:** Route factory pattern with dependency injection means new handlers can access dependencies without global state. Smooth integration when extending handlers.
-- **Trade-offs:** Requires parameter threading at call site vs. avoids global state and makes dependencies explicit.
-
-#### [Pattern] Fire-and-forget error handling for cascading side effects: epic auto-completion catches errors and logs as warnings, never blocks the primary feature update flow. (2026-03-14)
-- **Problem solved:** Adding async side effects to a core update operation (feature → epic completion check) without breaking the primary operation if the side effect fails.
-- **Why this works:** Epic completion is a secondary enhancement layered on top of feature updates. Failing the entire operation because epic auto-completion encountered an error would be overreach — the feature update itself was valid. Better to succeed the primary operation and log secondary failures.
-- **Trade-offs:** Feature update always succeeds even if epic fails to auto-complete (better resilience), but epic completion might silently fail and only appear in logs (potential observability gap if logs aren't monitored).
-
-### Reuse existing lifecycle logic (completedAt, status history) for auto-completed epics via the same update() path, rather than special-casing the auto-completion branch. (2026-03-14)
-- **Context:** Epic auto-completion needs to set completedAt timestamp and add a status history entry. The feature update() method already has this lifecycle logic.
-- **Why:** Eliminates duplication and ensures auto-completed epics follow the same lifecycle rules (timestamping, history tracking) as manually-completed epics. Single source of truth for lifecycle behavior.
-- **Rejected:** Direct file writes with custom logic: duplicates lifecycle logic and creates maintenance burden; separate update path for epics: harder to ensure consistency.
-- **Trade-offs:** Less code, auto-completed epics get identical treatment to manual updates (easier to understand), but auto-completion relies on update() lifecycle behavior (creates implicit coupling — lifecycle changes affect auto-completion automatically).
-- **Breaking if changed:** If update() lifecycle logic changes (e.g., how completedAt is set, what history entries are created), auto-completed epics are affected automatically. Requires careful review of lifecycle changes.
-
-### Load all features via getAll() to find epic siblings, accepting O(n) cost per completion event rather than optimizing the query. (2026-03-14)
-- **Context:** Need to check if all children of an epic are done. Could filter the directory listing or build an index, but chose simple getAll().
-- **Why:** getAll() is straightforward, matches existing patterns in the codebase, and works well for current scale. Premature optimization would add complexity without proven need.
-- **Rejected:** Directory filtering: more efficient but requires parallel reads and custom logic; in-memory index: requires cache invalidation logic.
-- **Trade-offs:** Simpler code and consistency with existing queries (easier maintenance), but scales linearly with total feature count (if 1000s of features, each completion triggers 1000s+ loads). Performance optimization is deferred to when needed.
-- **Breaking if changed:** If scale grows to 100k+ features and this becomes a bottleneck, would need to implement directory filtering or indexing — current code assumes getAll() performance is acceptable.
-
-### Three-layer refresh strategy: (1) WebSocket event subscription invalidates React Query cache on specific events, (2) Manual refresh button with 500ms spinner feedback, (3) Auto-poll fallback at 60-second interval. (2026-03-14)
-- **Context:** Timeline must stay fresh with minimal polling load and no stale data, but WebSocket can fail or miss events.
-- **Why:** Layers handle different failure modes: events for normal path (efficient), button for user-perceived staleness (UX control), poll for WebSocket failure recovery (resilience).
-- **Rejected:** Single-layer approach (e.g., only polling or only WebSocket) — would either waste resources or become stale under network degradation.
-- **Trade-offs:** More code/complexity but extremely resilient. User gets instant feedback (button spinner) + automatic background updates (events) + safety net (poll).
-- **Breaking if changed:** Removing any layer breaks a failure scenario: no events = stale until poll; no button = user can't force refresh; no poll = WebSocket outage leaves timeline frozen.
-
-#### [Pattern] Selective event subscription: Only subscribe to `feature:status-changed`, `milestone:completed`, `ceremony:fired`, `pr:merged`, `escalation:signal-received` rather than all events. (2026-03-14)
-- **Problem solved:** Timeline component needed to know when to refresh, but event bus carries many event types that don't affect timeline.
-- **Why this works:** Filtering at subscription level reduces CPU and network overhead. Event processing happens server-side per project, so irrelevant event deliveries are wasted bandwidth.
-- **Trade-offs:** Explicit allowlist is more maintainable and efficient, but requires updating subscription when new timeline-relevant event types are added.
-
-#### [Pattern] useEffect dependency on project ID only, not on subscribeToEvents or cache invalidation functions. Subscription is set up once per project change. (2026-03-14)
-- **Problem solved:** WebSocket subscription needs to be set up when component mounts or project changes, and cleaned up properly.
-- **Why this works:** Minimizes subscription churn. If dependencies included the invalidation function (which changes on every render if defined inline), subscription would be recreated constantly.
-- **Trade-offs:** Requires care: must ensure unsubscribe function is properly returned and called. Fewer subscriptions means better resource efficiency.
-
-### Re-export timeout constants from lead-engineer-types.ts rather than moving all consumer imports to centralized config module (2026-03-14)
-- **Context:** Centralizing timeouts while REVIEW_PENDING_TIMEOUT_MS already had env var support via IIFE in lead-engineer-types.ts, and this file is a public API surface for downstream consumers
-- **Why:** Avoids touching all downstream consumers of lead-engineer-types, preserves existing public API contract, reduces scope of refactor
-- **Rejected:** Complete migration: move all consumers directly to timeouts.ts (would require changes across codebase, higher risk)
-- **Trade-offs:** Adds re-export indirection layer vs cleaner module boundaries; easier adoption vs slightly obfuscated origin
-- **Breaking if changed:** If re-exports removed, all code importing from lead-engineer-types loses access to these constants; if re-export points differ from actual consumer imports, circular references or duplicate definitions
-
-#### [Gotcha] lead-engineer-types.ts functions as de facto public API hub beyond just type definitions (2026-03-14)
-- **Situation:** File named for types but discovered to be re-exporting runtime constants that external services depend on
-- **Root cause:** Evolved module scope not reflected in module name; historical accumulation of exports without architectural refactoring
-- **How to avoid:** Clear naming vs pragmatic public API; architectural purity vs stability
-
-#### [Pattern] Centralized config module where each constant reads from named env var with previous hardcoded value as default (2026-03-14)
-- **Problem solved:** Need to consolidate scattered timeout constants while enabling runtime configuration
-- **Why this works:** Env var with default achieves three goals: backward compatible (no forced env var requirement), enables opt-in override (no config scaffolding needed), auditable (single module to review)
-- **Trade-offs:** More configuration surface vs safer defaults; runtime flexibility vs simpler code; easier to audit vs more indirection to understand actual values
-
-#### [Pattern] Domain-based grouping of constants in central config (execution, polling, networking, cleanup) rather than alphabetical or usage-based (2026-03-14)
-- **Problem solved:** Organizing 10+ timeout constants from disparate services without clear original taxonomy
-- **Why this works:** Domain grouping aids discoverability (find all networking timeouts in one section), enables batch changes (adjust all polling intervals together), mirrors conceptual service responsibilities
-- **Trade-offs:** Better for configuration audits vs harder to find if grouping doesn't match how consumer thinks about them
-
-### Use domain-prefixed exports (EM_POLL_INTERVAL_MS, PROJM_POLL_INTERVAL_MS, PR_FEEDBACK_POLL_INTERVAL_MS) for duplicate constant names rather than consolidating to single POLL_INTERVAL_MS (2026-03-14)
-- **Context:** Multiple services had identically-named constants (POLL_INTERVAL_MS, DRIFT_CHECK_INTERVAL_MS) with different values
-- **Why:** Preserves semantic clarity and prevents accidental coupling—each service's timing policy remains independent and explicit. Prevents bugs if one service's interval accidentally constrains another.
-- **Rejected:** Consolidate to single POLL_INTERVAL_MS with domain-specific overrides or config nesting; merge duplicate timing values
-- **Trade-offs:** More exports in config file (harder to scan) vs clearer intent and safer refactoring. Domain prefix adds verbosity but eliminates ambiguity.
-- **Breaking if changed:** Removing domain prefix requires updating all 11 service import sites; consolidating values would break services with different timing needs
-
-#### [Pattern] Each timeout constant reads from optional env var with previous hardcoded value as default: `process.env.CRDT_HEARTBEAT_MS ?? 5000` (2026-03-14)
-- **Problem solved:** Need runtime configurability for infrastructure timeouts without requiring explicit configuration in every deployment
-- **Why this works:** Provides optional runtime flexibility while maintaining backward compatibility—existing deployments work unchanged, new deployments can tune via env. Single code path, no branching logic.
-- **Trade-offs:** Eliminates need for config schema validation at startup; runtime env var values not validated at compile time. Requires .env.example documentation to surface all available tuning points.
-
-### Establish decision boundary between centralized 'infrastructure timeouts' (CRDT_HEARTBEAT_MS, HEALTH_CHECK_INTERVAL_MS) vs local 'service-private' constants (IDEA_PROCESSING_DELAY_MS, CLAIM_VERIFY_DELAY_MS, NOTIFICATION_RATE_LIMIT_MS) (2026-03-14)
-- **Context:** Feature spec required centralizing timeouts, but not all timing constants are infrastructure policy
-- **Why:** Service-private constants are implementation details (debounces, rate limits within a single service). Centralizing them couples internal logic to global policy and makes service reuse harder. Infrastructure timeouts affect resource consumption and SLAs across the system.
-- **Rejected:** Centralize all timing constants for uniformity; keep everything local for autonomy
-- **Trade-offs:** Hybrid approach adds complexity to the centralization criteria, but better respects separation of concerns. Future contributors must understand which category a new constant belongs to.
-- **Breaking if changed:** Moving service-private constants to central config binds service behavior to global policy; removing centralized infrastructure timeouts reintroduces hardcoded values that are hard to adjust per environment
-
-#### [Pattern] Services keep local constant names but assign from central config: `const HEARTBEAT_MS = timeouts.CRDT_HEARTBEAT_MS` instead of importing directly or renaming all usages (2026-03-14)
-- **Problem solved:** Minimize diff surface and review burden while centralizing source of truth
-- **Why this works:** Local naming (HEARTBEAT_MS) stays unchanged in service files; only import statement changes. Reduces cognitive load during code review—readers see familiar local names. Easier to track which uses depend on central config.
-- **Trade-offs:** Adds one level of indirection (reader must track local const to central source), but minimizes code churn and review complexity. Less explicit that value comes from config.
-
-#### [Gotcha] worktree-lifecycle.module.ts also has DRIFT_CHECK_INTERVAL_MS (5 minutes) but was not included in migration—creates duplicate naming with different value from migrated worktree-lifecycle-service.ts (6 hours) (2026-03-14)
-- **Situation:** Feature spec listed worktree-lifecycle-service.ts but the related .module.ts file had its own constant with same name
-- **Root cause:** Likely conscious scope limitation (feature spec was specific about which files) or oversight. Module-level constants may have been overlooked.
-- **How to avoid:** Avoids scope creep and keeps feature focused, but leaves technical debt. Now two DRIFT_CHECK_INTERVAL_MS exist in same module with different purposes.
-
-#### [Gotcha] Friction tracker only fires on `blocked` status transitions, not `review`. Post-commit rebase conflicts that produced valid PRs silently transitioned to `review`, completely bypassing the friction tracking system and preventing signal accumulation. (2026-03-14)
-- **Situation:** Recurring merge_conflict failures were never being tracked despite happening repeatedly because conflicts resolved to `review` state instead of triggering the block path.
-- **Root cause:** The classifier pattern matching in friction tracker is keyed to specific state transitions. A feature becoming `blocked` invokes the pattern classifier, but `review` transitions skip it entirely. The system assumes all tracked failures flow through the `blocked` state.
-- **How to avoid:** Now requires explicit handling in execution-service to force `blocked` state for post-commit conflicts (more code), but gives accurate signal and prevents noise from legitimate review transitions.
-
-#### [Pattern] Accumulator pattern for failure context with a hard cap (10 entries). Failures are accumulated with full context (feature ID, conflicting files, branch name) before the pattern is resolved and an issue is filed. Context is cleared on resolution to prevent stale data from leaking into re-occurrences. (2026-03-14)
-- **Problem solved:** Needed to capture not just that a failure occurred, but contextual details about what failed and where, across multiple occurrences, to create a rich issue description.
-- **Why this works:** Batching/throttling prevents filing an issue on the first occurrence (noise). Waiting for 10 accumulations ensures signal is strong enough to justify a filed issue. Cap prevents unbounded memory growth. Clearing on resolution prevents old context from polluting new issues.
-- **Trade-offs:** Easier: accurate issue severity based on recurring signal. Harder: delayed feedback (issue only files after 10 occurrences) and extra state management (clearing on resolve).
-
-### Conflicting files are captured at the lowest level (git-utils rebase.ts with `git diff --name-only --diff-filter=U`), then threaded through each layer's return type (RebaseResult → GitWorkflowResult → execution-service) before reaching the friction tracker. (2026-03-14)
-- **Context:** Needed to give developers actionable info about what files caused the conflict, but also needed that data at multiple levels of the call stack.
-- **Why:** Captures data at the source (lowest level where git operations happen), making it available to all callers without duplicating the git call. Each layer that cares about conflicts can access it.
-- **Rejected:** Alternative 1: Capture only at git-utils level, have callers query again if needed. Rejected: duplicates git calls and assumes callers know they need it. Alternative 2: Capture only at execution-service level. Rejected: other callers of git-workflow-service wouldn't have conflict data.
-- **Trade-offs:** Easier: all callers automatically have rich conflict data. Harder: more parameters on intermediate types, coupling between layers.
-- **Breaking if changed:** Removing conflict data from intermediate types (RebaseResult, GitWorkflowResult) means downstream callers lose the information. Friction tracker would only know a conflict happened, not which files caused it.
-
-#### [Gotcha] The `resolvePattern()` method in friction tracker must clear accumulated `failureContexts` for that pattern, otherwise stale context from the resolved failure bleeds into the next occurrence of the same pattern. (2026-03-14)
-- **Situation:** Without clearing, if the same merge_conflict pattern recurs after being resolved, the new issue filed would include context from the old, resolved issue, creating confusion.
-- **Root cause:** The accumulator map persists across pattern occurrences as a class member. If you file an issue and resolve the pattern without clearing the map, the next occurrence adds to the stale data.
-- **How to avoid:** Easier: cleaner issue descriptions. Harder: requires explicit state cleanup logic.
-
-#### [Gotcha] Nested mutex acquisition causes deadlock: calling a mutex-wrapped method from inside its own mutex lock hangs forever because the second call tries to enqueue behind itself (2026-03-14)
-- **Situation:** claim() needed to call update() atomically, but update() acquires the same per-feature mutex that claim() already holds
-- **Root cause:** Promise-chain mutex works by chaining onto prev.then(), but if the caller already holds the chain, enqueuing another call creates a cycle waiting for itself
-- **How to avoid:** Required extraction of _updateCore() helper, splitting public API from internal implementation, but made deadlock impossible
-
-#### [Pattern] Promise-chain mutex via Map<key, Promise>: prev.then(() => fn()) serializes all calls for the same key by chaining microtasks, not blocking threads (2026-03-14)
-- **Problem solved:** JavaScript is single-threaded; traditional mutex/lock primitives don't apply; need lightweight serialization of async I/O operations
-- **Why this works:** Promise chains are idiomatic in Node.js: leverages event loop, no active waiting, GC-friendly, and orders calls by microtask queue semantics without OS involvement
-- **Trade-offs:** Simple and standard JS idiom, but promise chain depth grows with queue length; ordering guaranteed by JS spec, no manual queue management
-
-### Mutex scoped to projectPath::featureId (per-feature) instead of global, allowing updates to different features to run concurrently (2026-03-14)
-- **Context:** Many features may be updated simultaneously; global lock would serialize all operations even on unrelated features
-- **Why:** Reduces artificial bottleneck: only features being modified concurrently need ordering; unrelated operations proceed in parallel for better throughput
-- **Rejected:** Global mutex (single Promise queue for all features) — simpler to implement but creates contention bottleneck even for independent features
-- **Trade-offs:** Requires Map maintenance and key composition (projectPath::featureId string), but eliminates unnecessary serialization of unrelated operations
-- **Breaking if changed:** Reverting to global would restore full serialization, killing concurrent updates entirely; per-feature scoping is essential for scaling
-
-#### [Pattern] Extract _Core() helper method containing original implementation; withMutex() wraps public API while _Core() allows internal callers to skip re-locking (2026-03-14)
-- **Problem solved:** claim() needs to invoke update logic atomically inside its own mutex context, but calling update() would attempt to acquire the same lock it already holds
-- **Why this works:** Decouples lock acquisition (public API concern) from business logic (shared implementation), allowing both mutex-wrapped and non-wrapped callers to reuse the same code
-- **Trade-offs:** Adds an internal method, complicating the public API surface slightly, but guarantees correctness and prevents accidental misuse by external callers
-
-#### [Gotcha] TOCTOU race in claim(): two concurrent callers both observe claimedBy as undefined, both succeed in writing their claim, final state is non-deterministic (2026-03-14)
-- **Situation:** get-check-write sequence in claim() spans multiple async boundaries without atomicity; if each step yields control, another caller can interleave
-- **Root cause:** Without mutex wrapping the entire sequence, the check (is claimedBy undefined?) and the write (set claimedBy) are not atomic; a second caller can read the old state between them
-- **How to avoid:** Mutex must enclose entire get+check+write, increasing lock hold time slightly, but guarantees exactly one claim succeeds
-
-#### [Gotcha] Two parallel tool definition patterns exist in the same codebase: factory-pattern tools (libs/tools) use defineSharedTool with Zod schemas; domain functions (domains/features) use raw async functions with TypeScript interfaces. These are not interchangeable. (2026-03-14)
-- **Situation:** Audit discovered 23 tools with Zod definitions across factories, but 8 domain functions cannot be adapted without migration.
-- **Root cause:** Different layers evolved independently. Domain functions were injected via ToolContext without schema requirements; factories had explicit contract enforcement. No unified pattern existed.
-- **How to avoid:** Domain layer keeps async function simplicity but sacrifices adapter compatibility. Factory tools require upfront schema definition but gain universal adapter access.
-
-### Zod schemas are a strict prerequisite for adapter compatibility (MCP, LangGraph). The adapter converts Zod → JSON Schema because MCP's wire protocol requires JSON Schema, not TypeScript type information. (2026-03-14)
-- **Context:** toMCPTool() and toLangGraphTool() cannot work with tools that only have TypeScript interfaces. This creates a hard architectural boundary.
-- **Why:** Zod provides serializable contracts at runtime. JSON Schema is the wire format MCP expects. TypeScript interfaces only exist at compile time and cannot be runtime-serialized reliably.
-- **Rejected:** Could use reflection or TS AST analysis to generate schemas from interfaces at build time (complex tooling, fragile, loses validation semantics) or accept unvalidated inputs (unsafe).
-- **Trade-offs:** Requires explicit schema definition upfront (more code) but guarantees type-safe serialization and enables multiple adapters without per-adapter schema logic.
-- **Breaking if changed:** If you remove Zod requirement, adapters must either lose type safety or implement their own schema reflection (complexity explosion). Removing the prerequisite cascades to all adapter implementations.
-
-#### [Pattern] Gap analysis documentation (8-item migration checklist) surfaces implicit technical debt as explicit action items, linked to a reference implementation (request-user-input.ts proves the pattern is viable in domain layer). (2026-03-14)
-- **Problem solved:** Before audit, developers could not know why their domain tool could not be adapted without attempting it. Failures would be discovered at integration time, not design time.
-- **Why this works:** Makes blockers predictable and prevents surprise failures downstream. The reference implementation proves the solution is possible; the checklist makes the work explicit and prioritizable.
-- **Trade-offs:** Additional documentation overhead but prevents integration-time surprises and creates a clear migration path. Developers know exactly which 8 tools block which adapters.
-
-#### [Gotcha] request-user-input.ts in domains/hitl/ is the ONLY domain tool that already uses defineSharedTool with Zod, proving the factory pattern is viable in domain layers but is not being consistently followed elsewhere. (2026-03-14)
-- **Situation:** 8 other domain functions use raw async signatures; request-user-input.ts uses defineSharedTool. This inconsistency exists within the same domains/ directory tree.
-- **Root cause:** Likely built later with explicit adapter requirements in mind, or by someone aware of the factory pattern. Earlier domain functions were written before the need for adapter compatibility was clear.
-- **How to avoid:** The split in patterns shows patterns can coexist but creates a mental model burden — developers must learn when each applies. request-user-input.ts serves as proof of correctness for the migration.
-
-### Use structural interface (AgentDeps) instead of importing concrete service class for tool dependencies (2026-03-14)
-- **Context:** libs/tools needs to reference methods from agent service, but mcp-server imports libs/tools, creating circular dependency risk
-- **Why:** Structural typing breaks circular dependency chain without sacrificing type safety. libs/tools depends only on the interface contract, not the concrete implementation.
-- **Rejected:** Import concrete AgentService class directly from mcp-server package
-- **Trade-offs:** Requires maintaining interface separately, but enables clean layered architecture where libs/tools doesn't import server packages
-- **Breaking if changed:** If AgentDeps interface methods don't match actual service signatures (typos, missing methods, parameter mismatches), all tools fail at runtime with opaque method-not-found errors
-
-#### [Pattern] Designate canonical reference implementation for cross-module tool definitions (2026-03-14)
-- **Problem solved:** Agent tools need to be defined consistently in both libs/tools and mcp-server, but no enforcement mechanism prevents drift
-- **Why this works:** Single source of truth (mcp-server implementation) prevents definitions diverging when server's actual capabilities change. libs/tools mirrors it.
-- **Trade-offs:** Requires discipline to consult canonical reference, but prevents silent type-safety violations
-
-### Extract parseGitHubRemote to shared @protolabsai/git-utils library instead of duplicating parseOwnerRepo in each service (2026-03-14)
-- **Context:** Both coderabbit-resolver-service and git-workflow-service implemented identical regex parsing of git remote URLs
-- **Why:** Creates single point of truth for URL parsing that can be security-reviewed once, audit-logged centrally, and updated without coordination. Both services already imported from this package, making extraction clean. Reduces surface area of injection-vulnerable code.
-- **Rejected:** Keep duplicate implementations in each service (standard DRY refactoring rejection) - but this also means security fixes must be duplicated/coordinated
-- **Trade-offs:** Adds a public export to shared library (potential coupling); makes library aware of GitHub-specific parsing (less generic); but eliminates 40+ lines of duplicate regex logic
-- **Breaking if changed:** If the shared library is removed, both services lose access to parseGitHubRemote and must re-implement or fail; the library export must be maintained through package versioning
-
-### Per-session Promise chain serialization using Map<string, Promise<void>> with enqueueForSession() helper (2026-03-14)
-- **Context:** Prevent concurrent race conditions when multiple events fire for the same session's world state
-- **Why:** Serialization ensures atomic updates to session world state; Map allows parallel processing across different sessions (scalability); Promise chaining naturally handles both sync and async tasks
-- **Rejected:** Global event queue (simple but would serialize all sessions, killing parallelism); mutex/locks (more verbose, less JS-idiomatic)
-- **Trade-offs:** Adds memory overhead of per-session chain pointers (minimal); enables true session-level parallelism; requires explicit cleanup on stop/destroy
-- **Breaking if changed:** Removing this chain would reintroduce race conditions where concurrent evaluateAndExecute calls corrupt session world state; two concurrent events could partially apply and leave inconsistent state
-
-#### [Gotcha] onEvent() is synchronous (returns void) but queues async work on the Promise chain; observers cannot await the result (2026-03-14)
-- **Situation:** Service API contracts that events are processed synchronously, but actual processing happens asynchronously on chain
-- **Root cause:** Sync API prevents blocking callers; async execution prevents blocking event loop; mismatch requires explicit chain flushing in tests
-- **How to avoid:** Fire-and-forget API is convenient but requires discipline in testing/observing; enables non-blocking event handling
-
-### Event whitelist approach: !type.startsWith('lead-engineer:') instead of blacklist of specific events (2026-03-14)
-- **Context:** Prevent cascading loops where internal events re-trigger rule evaluation
-- **Why:** Whitelist is more robust as new lead-engineer:* events are added; blacklist would require updating test suite and service code for each new event type; startsWith() pattern-matches entire namespace
-- **Rejected:** Blacklist ['lead-engineer:started', ...] (requires maintenance as events proliferate); allowlist with explicit checks (verbose)
-- **Trade-offs:** Whitelist is slightly slower (string prefix check) but more maintainable; requires conscious awareness of event naming conventions
-- **Breaking if changed:** If whitelist is removed, any lead-engineer:* event firing during evaluation would re-trigger evaluateAndExecute, causing cascading loops and potential infinite recursion
-
-#### [Pattern] Skip rule evaluation when world state refresh fails (worldStateRefreshFailed Set) until next successful refresh (2026-03-14)
-- **Problem solved:** World state refresh can throw errors (e.g., file system access, parsing); using stale/partial state for rule evaluation is dangerous
-- **Why this works:** Prevents rule evaluation on inconsistent data; Set is cleared only on successful refresh (guarantees eventual consistency); skipping is safer than retrying indefinitely
-- **Trade-offs:** Defers evaluation until state is consistent (may miss events); avoids cascading errors from bad state; adds per-session failure tracking
-
-#### [Pattern] Resource counters must use finally blocks instead of scattered symmetric decrements across success/error paths (2026-03-14)
-- **Problem solved:** activeWorkflows counter was decremented in happy path, catch block, but the early return for missing branchName had no decrement. This leaked counter state and broke subsequent workflow processing.
-- **Why this works:** finally block executes regardless of normal return, throw, or early return paths. Any new code path added later is automatically protected. Scattered decrements require explicit tracking and inevitably miss cases (as happened here).
-- **Trade-offs:** finally is slightly less explicit about increment/decrement pairing than synchronized blocks, but provides automatic correctness for any future code path added to the function
-
-#### [Gotcha] Queue advancement operations must execute in both success AND error paths—it is not a success-only operation (2026-03-14)
-- **Situation:** agent-service called setImmediate(() => processNextInQueue()) only after successful agent execution. Errors threw before calling it, permanently freezing the queue for that session's remaining prompts.
-- **Root cause:** Queue advancement is a state machine transition, decoupled from error handling. Errors must still allow the next queued item to be processed; the error propagates but queue machinery must continue. Treating it as success-only couples error handling to queue semantics.
-- **How to avoid:** Requires queue advancement call in both paths (or extract to finally), adding 1-2 lines of code. Benefit: queue remains live across error states.
-
-#### [Gotcha] Async callbacks that follow a synchronous guard check must re-validate that guard condition before mutating state (2026-03-14)
-- **Situation:** feature-scheduler checked isFeatureRunning synchronously, then spawned async isWorktreeLocked operation. While that async operation was pending, the feature transitioned to running state. The callback then executed and removed it from startingFeatures despite it being active.
-- **Root cause:** Time-of-check-time-of-use race: synchronous check passes, state changes during the async gap, callback executes with stale assumptions. Async boundaries break single-threaded reasoning; state must be re-validated before acting.
-- **How to avoid:** Requires condition duplicated in callback (checked twice: once before async, once in callback), adding defensive code. Benefit: prevents phantom cleanup and race-condition-induced state corruption.
-
-#### [Gotcha] String-based error classification from unstructured error messages requires increasingly specific pattern matching to avoid false positives (2026-03-14)
-- **Situation:** Error patterns like 'worktree' and 'timed out' were matching incidentally in error messages, causing incorrect fatal infrastructure failure classification
-- **Root cause:** Unstructured error messages from external systems cannot be safely matched with substring checks; false positives in error classification break state machine correctness
-- **How to avoid:** Specific string matching is maintainable within current codebase but remains brittle to upstream error message format changes; structured errors would be robust but impose integration burden
-
-#### [Pattern] Merge sequential state updates into atomic writes to prevent intermediate state visibility in state machines (2026-03-14)
-- **Problem solved:** Two sequential featureLoader.update() calls (status + failureCount + failureClassification) could be read partially by other processes, leaving system in inconsistent state
-- **Why this works:** State machine correctness depends on related state changes being visible as a unit; partial updates allow other processes to observe intermediate inconsistent states and make incorrect decisions
-- **Trade-offs:** Atomic merged writes are simpler and correct but couple state concerns; separate writes are more modular but require external transaction guarantees
-
-### Derive phase implicitly from context state signals instead of explicitly storing and updating phase on state entry (2026-03-14)
-- **Context:** EscalateProcessor.exit() needs to report originating phase but phase was hardcoded, requiring manual tracking across state transitions
-- **Why:** Implicit derivation avoids dual source of truth; phase is already encoded in observable context (mergeRetryCount > 0 means PUBLISH, prNumber means VERIFY, etc.), so explicitly storing it duplicates information
-- **Rejected:** Could explicitly store phase value at each state entry, making it unambiguous but adding state management complexity and synchronization requirements
-- **Trade-offs:** Implicit derivation is DRY and avoids state redundancy but depends on context signals being unambiguous; explicit storage is redundant but more defensive to ambiguous state
-- **Breaking if changed:** If multiple phases could produce the same context state (e.g., mergeRetryCount > 0 AND prNumber != null), derivation logic becomes ambiguous and reports wrong phase
-
-#### [Gotcha] Retry logic decision points must use explicit error string enumeration instead of broad keyword matching to avoid unintended retries (2026-03-14)
-- **Situation:** MergeProcessor used includes('check') || includes('pending') || includes('required') which matched incidentally in unrelated error messages, causing unintended merge retries
-- **Root cause:** Retry logic decisions are critical state machine transitions; false positives cause infinite retries or incorrect escalations. Keyword matching cannot distinguish intentional matches from incidental ones
-- **How to avoid:** Enumeration is verbose and requires maintenance for new error messages; keyword matching is concise but unsafe and fails unsafe (unintended retries)
-
-#### [Pattern] Use execution context flags (isRecursive parameter) to conditionally skip guards during continuation, rather than delete/re-add patterns on shared tracking state (2026-03-14)
-- **Problem solved:** Recursive feature execution where a feature needs to re-enter itself while maintaining a duplicate execution guard (runningFeatures map)
-- **Why this works:** Delete/re-add creates a critical race window: featureId is absent from runningFeatures between deletion and re-entry, allowing concurrent calls to see it as 'not running' and bypass the duplicate guard. A conditional flag skips the guard without state manipulation, eliminating the gap entirely
-- **Trade-offs:** Flag approach requires one extra parameter but guarantees state consistency; delete/re-add seems simpler initially but introduces subtle, hard-to-reproduce concurrency vulnerabilities
-
-#### [Gotcha] Any gap in tracking state visibility during async continuation creates a race condition vulnerability, even if the gap is microseconds long (2026-03-14)
-- **Situation:** Features need to track running state (runningFeatures.has(featureId)) to prevent concurrent duplicate execution, but recursive calls were deleting before re-entry
-- **Root cause:** In event-loop systems, 'delete then re-add immediately' is not atomic. Concurrent checks can execute in the gap between operations. The assumption that synchronous delete/re-add is safe ignores that other microtasks and I/O can yield control to event loop during the gap
-- **How to avoid:** Using conditional parameter passing adds one layer of explicitness but prevents entire class of race conditions; state mutation during continuation is simpler to reason about initially but creates fragile timing assumptions
-
-### 'review' status should not be classified as TERMINAL_STATUSES because auto-mode legitimately needs to restart execution when features fail CI review (2026-03-14)
-- **Context:** Features that reach 'review' status can fail validation and need re-execution, but TERMINAL_STATUSES blocks re-entry to execution
-- **Why:** Terminal status semantics assumed review is a final state, but in auto-mode flow, review is a transient checkpoint that can legitimately flow back to execution based on feedback. Blocking re-execution defeats auto-mode's core retry capability for failed reviews
-- **Rejected:** Keep review as terminal and implement separate retry logic outside the status machine; create bypass flags instead of removing from TERMINAL_STATUSES
-- **Trade-offs:** Removing review from terminal makes state machine more flexible and auto-mode simpler, but requires external logic to prevent infinite loop if a feature perpetually fails review; keeping it terminal prevents loops but requires special-case handling in auto-mode retry
-- **Breaking if changed:** If review is marked terminal, auto-mode cannot restart work on features that failed CI review, breaking the fundamental validation feedback loop that auto-mode depends on
-
-#### [Pattern] Dual-export pattern: CSS string exports + typed const object for same token set (2026-03-14)
-- **Problem solved:** Design tokens needed to be consumed in two different contexts: Tailwind configuration (CSS strings) and JS/TS runtime (inline styles, canvas, storybook)
-- **Why this works:** CSS strings can be injected into Tailwind config methods, but typed objects enable exhaustive type checking and IDE autocomplete in JS contexts. A single format couldn't serve both well.
-- **Trade-offs:** More code to maintain (mirrored values), but zero friction in either context. Parsing CSS in TS is error-prone; formatting objects as CSS loses type safety.
-
-### Centralize tokens as library module (templates package) rather than scattered across site HTML (2026-03-14)
-- **Context:** Tokens previously embedded in site/index.html CSS; now extracted as single source of truth in @protolabsai/templates
-- **Why:** Single source of truth prevents drift between site and other projects using same brand. Enables consistent updates across all consumers via npm version bump.
-- **Rejected:** Leaving tokens in site HTML: simpler for site, but makes it hard for other packages (docs, extensions) to use same tokens without duplication or copy-paste
-- **Trade-offs:** Site now depends on templates package (added build coupling), but consistency guaranteed across entire monorepo. Updates require rebuild of templates, then all consumers.
-- **Breaking if changed:** Site can no longer operate independently—must import from templates. Removing this pattern requires re-embedding tokens in site or creating alternative distribution mechanism
-
-#### [Pattern] Use 'as const' on designTokens object for exhaustive literal types, not just Record<string, string> (2026-03-14)
-- **Problem solved:** Token object includes nested structure (colors.surface.0, colors.accent.DEFAULT, etc.) typed as `typeof designTokens` const
-- **Why this works:** Exhaustive literal typing enables discriminated unions, type-safe theme interpolation, and IDE autocomplete showing exact keys and values. Generic Record type loses specificity.
-- **Trade-offs:** Slightly larger compiled type definition, but massive DX win (autocomplete, refactoring safety). No runtime cost.
-
-#### [Gotcha] Using `!this.settingsService` (null check on injected dependency) as a feature disable gate conflates two concerns: DI wiring errors and intentional feature flags. Null service suppresses errors instead of failing fast. (2026-03-14)
-- **Situation:** The service checks `if (!this.settingsService) return null` to disable the feature. But if settingsService fails to inject due to a wiring bug, the feature silently disables rather than throwing.
-- **Root cause:** Convenient for testing (can pass null to disable) and allows graceful degradation if settings service isn't available.
-- **How to avoid:** Implicit disable via null is convenient in tests but hides real DI configuration errors. Makes bugs harder to diagnose—code appears to work but feature silently disabled.
-
-### Feature flag requirement exists only at interface/test level; implementation was missing the gate entirely. Type signature (`Promise<HITLFormRequest | null>`) promised null return, but code never returned it. (2026-03-14)
-- **Context:** Tests at lines 93 and 99 expected null when feature disabled, but the create() method had no guard. This suggests requirements were spec'd in the interface contract but implementation was incomplete—possibly added post-facto.
-- **Why:** TypeScript interfaces define contracts; if a method signature says it can return null, the implementation must have a code path that returns null. The absence indicates incomplete implementation against spec.
-- **Rejected:** Could have removed the `| null` from return type if null return was never intended, but tests prove null *was* required.
-- **Trade-offs:** Type-driven development (interface-first) ensures completeness but requires discipline. Ad-hoc implementation (impl-first, types follow) is faster initially but can leave specs incomplete.
-- **Breaking if changed:** If you remove the feature flag gate (the fix), the method violates its type contract and tests fail again. The `| null` in the signature is not decorative—it enforces a contract.
-
-#### [Pattern] Astro components distributed as raw source files via wildcard package.json exports ("./components/*": "./src/components/*") without build or compilation step (2026-03-14)
-- **Problem solved:** Building a shared component library for reuse across multiple Astro projects in a monorepo
-- **Why this works:** Astro components require integration with consumer's styling context, layout engine, and build pipeline. Distributing source files allows each consumer to incorporate components into their own Astro build process, avoiding pre-built bottleneck. Enables per-project optimization.
-- **Trade-offs:** Library maintainer benefits from no build step; consumers must have Astro setup. Components cannot be independently versioned. Tight coupling between library and consumer build pipelines.
-
-### Selective React hydration: only MobileMenu (within Nav) is a React island with client:load; remaining 6 components (Footer, SEO, Button, Badge, Card) are pure zero-JS Astro (2026-03-14)
-- **Context:** Nav component requires mobile menu toggle interactivity; Footer, SEO, Button, Badge, Card are static or CSS-only interactive
-- **Why:** Minimizes JavaScript bundle by hydrating only components that require state/event handling. MobileMenu uses client:load (not client:idle) because mobile menu must be interactive immediately on page load. Other components achieve full functionality through HTML/CSS, avoiding JS overhead.
-- **Rejected:** Could make entire library React-first for consistency, but adds unnecessary JS payload (6 static components). Could use Alpine or HTMX for mobile menu, but React island pattern integrates cleanly with existing Astro/React codebase.
-- **Trade-offs:** Zero-JS for most components (excellent performance) vs. architectural complexity of managing React island within Astro. Future interactivity requests create pressure to add more islands (JS creep).
-- **Breaking if changed:** If future nav variants require complex state management, current client:load decision becomes bottleneck. If other components gain interactivity, decision to avoid hydration strategy breaks down and requires rearchitecture.
-
-#### [Pattern] Zero external dependencies for styling and icons: MobileMenu uses inline styles (satisfies React.CSSProperties); Footer inlines social icon SVG path data as strings (2026-03-14)
-- **Problem solved:** Lightweight component library should minimize dependency surface area and work across diverse Astro projects without imposing toolchain requirements
-- **Why this works:** Removes peerDependencies on styled-components/emotion/tailwind and icon libraries. Inlined SVG keeps asset size constant regardless of adoption. Reduces complexity for consumers who must install and manage additional tools.
-- **Trade-offs:** Lower barrier to adoption (fewer dependencies) and smaller distributed package; maintenance becomes painful if styling or icons need dynamic variation. Works for design system v1, becomes unmaintainable if extensive customization required.
-
-#### [Pattern] Dual distribution model: both direct component imports (via exports wildcard) AND string scaffold templates (src/components.ts functions like getNavComponent()) (2026-03-14)
-- **Problem solved:** Library serves two separate workflows: (1) import-and-use in existing Astro projects; (2) scaffold/code-generate components into new projects
-- **Why this works:** Single source of truth for component source: one template serves both import path and scaffold generation. Avoids code duplication between consumable components and scaffolding strings. Supports both advanced users (direct imports) and scaffolding tools (string generation).
-- **Trade-offs:** Two export surfaces must stay in sync (complexity); more maintainer burden. But avoids split implementations and source-of-truth fragmentation.
-
-### Added *.astro to .prettierignore instead of installing prettier-plugin-astro, despite Prettier being active in monorepo (2026-03-14)
-- **Context:** Monorepo has no prettier-plugin-astro; Prettier will error or mangle .astro files without plugin; installing plugin requires CI infrastructure changes and potential conflicts
-- **Why:** Pragmatic constraint: Installing new Prettier plugin requires CI testing, potential conflict resolution, and downstream impact. For design system library, deferring Astro formatting enforcement is acceptable. .astro formatting is lower priority than .ts/.tsx.
-- **Rejected:** Could install prettier-plugin-astro and enforce, but adds toolchain complexity. Could ignore formatting entirely, but .prettierignore is explicit and prevents accidental formatting attempts.
-- **Trade-offs:** Avoid toolchain friction now (good); no formatting enforcement for .astro files (risky for consistency at scale). Acceptable for small component set; breaks down as library grows.
-- **Breaking if changed:** Installing prettier-plugin-astro later requires reformatting all existing .astro files simultaneously (git history bloat). Upgrading plugin versions risks mass diffs if files were unformatted initially.
-
-#### [Gotcha] Nested monorepo packages (not in workspaces declaration) inherit parent node_modules via npm hoisting. Starlight 0.37 requires Zod v3, but monorepo root has Zod v4. npm hoisted v4 into starter's node_modules, breaking build. Fixed by explicitly pinning 'zod': '^3.25.0' in starter's package.json. (2026-03-14)
-- **Situation:** Creating a documentation starter kit nested inside a monorepo that is not declared as a workspace entry
-- **Root cause:** npm's hoisting algorithm traverses up the directory tree to find dependencies. Without an explicit version pin in the starter's own package.json, it uses the parent's Zod v4, causing a major version mismatch with Starlight's internal Zod v3 usage.
-- **How to avoid:** Explicit version pins in nested package.json prevent version conflicts but add maintenance burden — developers must track when parent versions change and whether nested packages need their own pins
-
-#### [Pattern] Content collections in Astro 5.x require explicit src/content.config.ts with docsLoader() and docsSchema() to avoid deprecation warnings about auto-generating collections from directories. (2026-03-14)
-- **Problem solved:** Setting up Starlight documentation with Astro 5 framework
-- **Why this works:** Astro is sunsetting auto-generated collection schemas. Explicit configuration prevents warnings and ensures forward compatibility through Astro 6 migration.
-- **Trade-offs:** Explicit config adds ~20 lines of boilerplate but guarantees no deprecation warnings and makes the collection schema discoverable in the codebase
-
-### Pinned Starlight to ^0.37.0 (not 0.38+) because 0.38+ requires Astro 6, which is not yet in this repo. Astro 5.9 is current; upgrade path documented as: when moving to Astro 6, upgrade Starlight to ^0.38.0 and remove zod pin. (2026-03-14)
-- **Context:** Choosing Starlight version for a production documentation scaffold that must be compatible with current monorepo Astro 5.x
-- **Why:** Starlight 0.38+ introduced a dependency requirement on Astro 6. Using 0.38+ in an Astro 5.x codebase causes peer dependency errors. 0.37.0 is the last Astro 5-compatible release.
-- **Rejected:** Using latest Starlight 0.38+ (would block on Astro 6 migration); using older Starlight 0.36 (missed features, no Pagefind support)
-- **Trade-offs:** 0.37.0 is stable but will require version bump during Astro 6 migration. No workarounds possible — this is a hard peer dependency constraint.
-- **Breaking if changed:** Installing Starlight 0.38+ with Astro 5 fails peer dependency check. Attempting to skip the check with --legacy-peer-deps creates runtime errors in Starlight internals.
-
-#### [Pattern] Used Starlight's CSS variable override system (in global.css) to customize theme (violet accent, dark zinc surfaces, Geist fonts) instead of forking Starlight components. Pattern: define @theme block in Tailwind v4, then override Starlight's --sl-* variables. (2026-03-14)
-- **Problem solved:** Applying protoLabs brand theme to a Starlight documentation site while maintaining upgrade path
-- **Why this works:** CSS variable customization is non-invasive and survives Starlight version upgrades. Forking components would create maintenance burden and block security updates. Starlight explicitly designed around this pattern.
-- **Trade-offs:** CSS variables are limited to color/spacing properties — complex structural theme changes require component overrides. But for brand theming, variables are sufficient and keep code minimal.
-
-#### [Pattern] Pagefind search is auto-enabled in Starlight with zero configuration — just add @astrojs/pagefind to dependencies, Starlight handles index generation during `astro build`. No CLI invocation or config needed. (2026-03-14)
-- **Problem solved:** Building documentation search functionality in Starlight
-- **Why this works:** Starlight integrates Pagefind as a default, built-in feature. The build hook automatically crawls HTML output and generates the index. This is a deliberate simplification over manual search setup.
-- **Trade-offs:** Zero configuration means no customization of search parameters — Pagefind uses defaults (word tokenization, no typo tolerance). For 5-page starter, this is fine; larger sites may need customization.
-
-#### [Pattern] Used Diataxis framework (tutorial, how-to guide, reference) for sample content structure instead of arbitrary examples. Each content type has different learning goals and structure. (2026-03-14)
-- **Problem solved:** Providing documentation template examples that demonstrate best practices for developers using the starter
-- **Why this works:** Diataxis is a well-researched framework for technical documentation structure. Each quadrant (tutorial, how-to, reference, explanation) serves a different user need. Providing examples in each category teaches developers this structure.
-- **Trade-offs:** Diataxis structure requires 4 different content types (3 provided here: tutorial, how-to, reference). This adds content volume but improves documentation quality. New developers inherit the pattern.
-
-### Tailwind v4 CSS-first approach: use @import 'tailwindcss' + @theme block in global.css instead of tailwind.config.js (2026-03-14)
-- **Context:** Configuring Tailwind v4 with brand design tokens (surface, accent, semantic colors)
-- **Why:** Tailwind v4 is CSS-first; no config file needed. Theme tokens are defined inline in CSS file wired through @tailwindcss/vite. Simpler mental model than v3's JS config.
-- **Rejected:** Traditional tailwind.config.js approach — this doesn't work in Tailwind v4 (v3 legacy approach)
-- **Trade-offs:** Easier: tokens colocated with styles. Harder: no JS-level theme access if future client-side theme switching is needed.
-- **Breaking if changed:** Removing @theme block breaks CSS variable generation; brand colors become undefined, all utility classes fail
-
-#### [Gotcha] View Transitions are built-in to Astro 5 (import from astro:transitions); @astrojs/view-transitions package is not needed and may conflict (2026-03-14)
-- **Situation:** Implementing page transitions in portfolio site
-- **Root cause:** Astro 5 made View Transitions a core feature. Developers upgrading from Astro 4 expect to install a package.
-- **How to avoid:** Easier: fewer dependencies, built-in. Harder: API is different from previous versions; documentation must clarify this.
-
-#### [Pattern] Separate data collections (JSON/YAML, type: 'data') from content collections (markdown, type: 'content') using Zod schemas for validation (2026-03-14)
-- **Problem solved:** Managing testimonials/siteConfig (structured JSON) vs projects/blog (markdown with frontmatter)
-- **Why this works:** Data collections skip markdown rendering pipeline entirely. Zod validation at build time catches schema violations early. Cleaner separation of concerns.
-- **Trade-offs:** Easier: simpler data files, compile-time validation. Harder: two different collection patterns in one project (mental overhead).
-
-### Portfolio is a completely standalone project (zero monorepo coupling); requires its own npm install, not monorepo-linked (2026-03-14)
-- **Context:** Creating reusable starter kit template within monorepo structure
-- **Why:** Monorepo worktree symlinks issue prevents @automaker/types resolution (resolves to main repo instead of worktree). Standalone template can be copied/distributed independently without tooling setup.
-- **Rejected:** Monorepo-linked setup (npm workspaces / pnpm imports) — symlink resolution breaks in development worktrees; increases maintenance burden
-- **Trade-offs:** Easier: independent deployment, no monorepo coupling. Harder: users must run 'npm install' in portfolio directory; not automatically built with monorepo.
-- **Breaking if changed:** Adding monorepo linking would require solving worktree symlink resolution; would then couple template updates to main monorepo release cycle
-
-### Static output mode (output: 'static' in astro.config.mjs) for deployment to Cloudflare Pages / Netlify; no SSR, no dynamic rendering (2026-03-14)
-- **Context:** Targeting static-only hosting platforms with pre-computed routes
-- **Why:** Deployment constraint — Cloudflare Pages and Netlify are static-first. Pre-computing all routes at build time allows zero-infrastructure deployment.
-- **Rejected:** Hybrid or server output mode — would require server infrastructure; increases deployment complexity and costs
-- **Trade-offs:** Easier: instant deployment, no server needed. Harder: all routes must be known at build time; dynamic routes require getStaticPaths() precomputation.
-- **Breaking if changed:** Switching to server output enables dynamic route rendering but requires self-hosted infrastructure; breaks Cloudflare Pages target
-
-#### [Pattern] Use render() function (not entry.render()) in Astro 5 to render content collection entries with layout wrapping (2026-03-14)
-- **Problem solved:** Rendering markdown blog posts and project details with consistent layouts
-- **Why this works:** Astro 5 API change: render() is now the standard method. Automatically handles frontmatter extraction, markdown compilation, and layout injection.
-- **Trade-offs:** Easier: cleaner API, less boilerplate. Harder: code breaks on Astro 4 projects; migration required for upgrades.
-
-#### [Pattern] Context files (.automaker/CONTEXT.md) loaded into agent system prompts—content structure (tables, bullets, code blocks) matters for agent parsing, not just human readability (2026-03-15)
-- **Problem solved:** Docs starter kit needed to provide Starlight structure knowledge to agents working on docs projects
-- **Why this works:** Agent services load context files as part of system prompt. Format directly affects agent comprehension. Structured/scannable format (not prose) enables quick reference during execution.
-- **Trade-offs:** Requires more discipline in content structure (tables/bullets preferred over narrative), but improves agent accuracy and latency
-
-### Scaffolding functions return raw strings (getDocsStarterContext() returns markdown as string) rather than object configs or template engines (2026-03-15)
-- **Context:** Need to generate .automaker/CONTEXT.md and .github/workflows/ci.yml files in new projects
-- **Why:** Simple, Git-trackable, requires no parsing/deserialization. Functions become source of truth—agents and tools read the actual string that gets written.
-- **Rejected:** Template engines (would require template syntax parsing), object configs (would require serialization logic), schema-driven generation (would require validation step)
-- **Trade-offs:** Easier: Git diff shows exact file contents, no runtime parsing. Harder: changes to generated files require modifying string literals, not config.
-- **Breaking if changed:** If scaffolding functions are changed to return objects or use templates, must update all call sites and add serialization/validation logic
-
-### Verify via workspace-level build (npm run build --workspace=libs/templates) rather than attempting to resolve monorepo-wide type checking issues (2026-03-15)
-- **Context:** Pre-existing monorepo-level tsc errors (MobileMenu.tsx, prettier-plugin-astro not at root) encountered during development
-- **Why:** Pragmatic scope boundary: verify the feature package builds cleanly, don't get blocked fixing unrelated monorepo config issues. Reduces blast radius of verification.
-- **Rejected:** Fixing prettier-plugin-astro at monorepo root would affect all packages and require coordinating with other teams
-- **Trade-offs:** Easier: feature ships faster, clear scope. Harder: monorepo-level type safety gap not addressed (but was pre-existing).
-- **Breaking if changed:** If workspace build is removed as verification step, could miss integration issues with monorepo build system
-
-#### [Pattern] Dual-purpose context files: .automaker/CONTEXT.md exists both IN the starter kit (for agents working on that project) AND is returned by getDocsStarterContext() (for scaffolding new projects) (2026-03-15)
-- **Problem solved:** Docs starter kit should both provide context to agents AND serve as template for new docs projects
-- **Why this works:** Single source of truth for structure/constraints. Reuses same documentation for both training agents on existing projects and configuring new projects.
-- **Trade-offs:** Easier: one file to update when Starlight changes. Harder: content must serve both purposes (instruction + template).
-
-### Docs/ directories placed at starter kit root (e.g., libs/templates/starters/portfolio/docs/), NOT inside src/content/ or src/content/docs/. This creates spatial separation between site documentation (consumed by site build) and in-app viewer documentation (consumed by protoLabs Studio UI reading files from disk). (2026-03-15)
-- **Context:** Both starter kits need documentation for the in-app viewer, but each also has its own site content (Starlight auto-generates sidebar from src/content/docs/, portfolio uses Content Collections). Risk of confusion about what's for whom.
-- **Why:** Reduces cognitive load. Site maintainers won't accidentally mix in-app docs with site docs. In-app viewer's file path resolution is deterministic (always looks at <kit-root>/docs/).
-- **Rejected:** Placing docs inside src/content/ with a special prefix (would require the viewer to understand site-specific structure) or generating docs at build time (adds complexity, loses static guarantees).
-- **Trade-offs:** Easier to reason about ownership, but creates duplication of structure knowledge (viewers need to know to look at root /docs/ folder). Harder to share tooling/build steps between site and viewer docs.
-- **Breaking if changed:** If in-app viewer's file resolution changes to look inside src/ instead of root, all file paths would need to be rewritten. Starter kit users won't see these docs if the viewer looks in the wrong place.
-
-#### [Pattern] Content duplication pattern: documentation-philosophy.md appears in both kits with ~80% identical Diataxis framework content, but with kit-specific examples (Starlight autogenerate sidebar vs. Content Collections schema). Instead of templating/generating from shared source, each file is standalone. (2026-03-15)
-- **Problem solved:** Both starter kits need to explain the same foundational documentation philosophy (Diataxis), but applied to different tools and workflows.
-- **Why this works:** Standalone files reduce indirection for users exploring a single kit. Each file is self-contained and discoverable without understanding how it was generated. Kit-specific examples are embedded where they're needed, not in separate examples section.
-- **Trade-offs:** Gains clarity and ease-of-discovery within a kit, but loses DRY principle. Updates to core Diataxis content must be made in both files (maintenance burden). Cache invalidation risk if one kit's philosophy falls out of sync.
-
-### Portfolio starter kit is treated as fully standalone project despite living in a monorepo. Project-structure.md explicitly guides users to run 'npm install' inside the starter kit directory, not from repo root. This affects dependency resolution and tooling behavior. (2026-03-15)
-- **Context:** Portfolio starter kit is a self-contained Astro project that can be extracted and deployed independently. Monorepo context is incidental, not the primary use case.
-- **Why:** Ensures users cloning/forking the starter get a complete, reproducible setup without monorepo assumptions. Simplifies onboarding. Dependencies are explicit in starter kit's own package.json, not inherited.
-- **Rejected:** Treating portfolio as a workspace that shares tooling with main repo (would couple starter kit to monorepo structure, breaks when extracted); documenting both monorepo and standalone flows (adds confusion about which is canonical).
-- **Trade-offs:** Cleaner user onboarding, but duplicates dependency declarations across monorepo and starter kit. npm hoisting in worktrees can cause symlink resolution issues (a known P3 issue in the codebase).
-- **Breaking if changed:** If monorepo structure is reorganized and starter kit paths change, the guidance becomes inaccurate. If users copy the starter but run npm install from repo root instead of inside the kit directory, they'll get unexpected dependency conflicts.
-
-### ProjectGrid implemented as React island (client-side hydration) embedded in Astro SSR context for filtering interactivity (2026-03-15)
-- **Context:** Portfolio page needed static SEO rendering + dynamic client-side tag filtering on same page
-- **Why:** Astro static rendering serves fast HTML; React island hydrates only the interactive piece; reduces JS bundle for non-interactive sections
-- **Rejected:** Full React component (requires client-side rendering of entire page), full Astro with server actions (limits real-time interactivity), htmx (adds dependency, less mature with Astro)
-- **Trade-offs:** Island hydration overhead (small) vs. benefits of selective interactivity; slightly complex setup vs. simplicity of full-client-side app
-- **Breaking if changed:** If island hydration fails or React target element unmounts, filtering won't work; island must be properly scoped to avoid state leaks
-
-#### [Pattern] Portfolio composed of 6 discrete section components (Hero, ProjectGrid, About, Testimonials, Contact, BlogList) imported into index.astro (2026-03-15)
-- **Problem solved:** Building reusable, maintainable portfolio template with multiple distinct content sections
-- **Why this works:** Each section is independent, testable, and reusable; allows portfolio layouts to be built by composing sections; easier to maintain and update individual sections
-- **Trade-offs:** Slightly more files and imports vs. clearer separation of concerns; each section can be styled/updated independently
-
-### Two-surface documentation strategy: separate `docs/` (public, VitePress static) from `docs/internal/` (internal team, in-app viewer). Different audiences, deployment models, and content scopes. (2026-03-15)
-- **Context:** Feature description said 'public-facing' but implementation path was `docs/internal/dev/`. Needed to determine which surface was authoritative.
-- **Why:** Cleanly separates product docs (for adopters) from engineering docs (for contributors). Different CI pipelines: static VitePress deployment vs. in-app reader. Prevents audience confusion.
-- **Rejected:** Single unified docs source with access controls; or content duplication across surfaces.
-- **Trade-offs:** Easier to maintain separate narratives and control audience visibility, but requires conscious decision about where each doc belongs. Links must target correct surface.
-- **Breaking if changed:** Merging into one surface requires access control layer, dilutes audience focus, or forces parallel hierarchies. Docs become ambiguous about intended reader.
-
-#### [Pattern] Use Diataxis framework (explanation/how-to/reference/tutorial) to classify documentation pages. Classification determines structure, tone, depth, and completeness criteria. (2026-03-15)
-- **Problem solved:** New documentation-philosophy page was correctly typed as 'Explanation' — narrative + conceptual, no procedural instructions. This classification shaped the entire page structure.
-- **Why this works:** Diataxis provides proven typology. Each type has predictable structure; readers learn to expect patterns. Explanation type = conceptual deep-dive; how-to type = step-by-step; reference type = lookup-oriented. Classification prevents 'kitchen sink' docs that try to do everything.
-- **Trade-offs:** Adds a classification decision when writing docs (extra thinking), but ensures pages serve clear purpose and have consistent structure across the site. Readers can trust patterns.
-
-#### [Gotcha] VitePress `generateSidebar()` auto-discovers markdown files from directory structure — no manual nav config required. New pages appear in sidebar automatically if placed in correct directory. (2026-03-15)
-- **Situation:** Added documentation-philosophy.md to `docs/internal/dev/` and it was immediately discoverable in the sidebar without touching any config files.
-- **Root cause:** Convention over configuration reduces friction for adding docs. Sidebar generation is filesystem-driven, not config-driven. Placement in directory is the interface.
-- **How to avoid:** Much easier to add new docs (just create file), but nav order/hierarchy is implicit in directory structure and naming — harder to fine-tune manually. Must rely on naming conventions being followed.
-
-### Voice and audience assumptions: documentation assumes reader knows CRDTs, webhooks, TypeScript generics. No marketing language. No hedged prose (avoid 'you might consider', use 'do X'). Second-person imperative. (2026-03-15)
-- **Context:** Brand voice policy explicitly stated: 'Technical, not approachable. Assume the reader knows what a CRDT is.' This shapes every example and sentence.
-- **Why:** Target audience is builders/contributors, not product adopters learning basics. Specific knowledge assumptions allow docs to be concise, technical, and direct. Avoids the need to explain foundational concepts in every page.
-- **Rejected:** Beginner-friendly tone; marketing language; hedged/qualified statements; generic feature lists without examples.
-- **Trade-offs:** Faster to read for target audience (no foundational fluff), but excludes newcomers and requires more domain knowledge from readers. Saves ~50% word count per page.
-- **Breaking if changed:** Changing voice to beginner-friendly requires rewriting all examples and adding foundational explanations — roughly 2x page length. Entire onboarding strategy changes.
-
-#### [Pattern] Consolidate scattered documentation standards (Diataxis mapping, IA principles, content rules, voice guidelines) into a single 'explanation' page that becomes the canonical reference for documentation contributors. (2026-03-15)
-- **Problem solved:** Rules were spread across CLAUDE.md, docs-standard.md, brand.md. New page centralizes them at `docs/internal/dev/documentation-philosophy.md` with links back to upstream Diataxis framework.
-- **Why this works:** Single canonical reference reduces ambiguity, becomes the onboarding/training doc for new contributors, easier to keep in sync. Provides a place for other docs to link to when asking 'why is this doc structured this way?'
-- **Trade-offs:** One place to check/update for all rules (easier maintenance), but requires someone to keep this page in sync with actual practices. Single point of failure if out of date.
-
-### Static generation with Astro `getStaticPaths()` for dynamic routes (`[slug].astro` pages) instead of server-side rendering (2026-03-15)
-- **Context:** Building portfolio with dynamic blog and project detail pages
-- **Why:** Pre-generated static HTML enables Lighthouse 95+ performance, semantic HTML rendering at build-time, static hosting (no server cost), and CDN-friendly caching. Framework renders everything upfront with full control.
-- **Rejected:** Server-side rendering (Next.js, Node.js server) would sacrifice build-time optimizations and require persistent hosting to maintain Lighthouse scores
-- **Trade-offs:** New content requires rebuild/redeploy cycle (via CI/CD) vs instant publishing, but gains: lower hosting cost, better cold-start perf, no server dependencies, predictable performance SLAs
-- **Breaking if changed:** Moving to server-side rendering eliminates static hosting benefits and adds runtime performance overhead. Requires infrastructure change (server scaling, monitoring).
-
-#### [Gotcha] Build-time content collection means new blog posts / projects are invisible until full rebuild completes (2026-03-15)
-- **Situation:** Using Astro Collections API with `getCollection()` fetched at build-time via `getStaticPaths()`
-- **Root cause:** Static generation is a compile-time model, not runtime. Content schema is validated and routes generated during CI/CD, not when server receives requests.
-- **How to avoid:** Trade immediate visibility for reliability (no missed frontmatter fields, type-safe, cached perf). Mitigate with fast CI/CD and web-hook triggers.
-
-#### [Pattern] Centralized SEO meta tag rendering in `BaseLayout.astro` component via accepted props (title, description). All sub-pages inherit SEO consistency. (2026-03-15)
-- **Problem solved:** ~6 pages (about, contact, blog/index, blog/[slug], projects/index, projects/[slug]) need identical meta tag structure (og:*, twitter:card, canonical)
-- **Why this works:** Single source of truth prevents duplication and ensures consistency. Framework-level enforcement means if layout changes meta structure, all pages auto-update. Reduces line count and cognitive load.
-- **Trade-offs:** Child pages must respect layout contract (pass required props) vs full flexibility to override. Gain: 0 duplication, instant schema updates, consistency. Lose: per-page meta overrides require prop drilling.
-
-#### [Pattern] Astro Collections API with schema validation (`content/config.ts`) instead of loose `.md` files in `pages/` directory (2026-03-15)
-- **Problem solved:** Blog posts and projects need consistent structure (frontmatter schema, type safety)
-- **Why this works:** Schema validation catches invalid data at build-time (missing fields, wrong types), enables IDE autocomplete in pages, prevents runtime errors from bad markdown. Type-safe frontmatter is enforced by framework.
-- **Trade-offs:** Schema changes require updates in two places (config.ts + existing content files) vs flexibility to add fields on-the-fly. Gain: type safety, IDE support, build-time validation. Lose: quick ad-hoc additions without validation.
-
-### Integration-based sitemap (`@astrojs/sitemap`) and RSS (`@astrojs/rss`) in `astro.config.mjs` vs manual XML generation (2026-03-15)
-- **Context:** SEO requires sitemap discovery, RSS feed readers expect standard format
-- **Why:** Integrations are declarative (config-driven), automatically discover all routes via Astro's internal route table, handle domain/path logic, maintain spec-compliant XML. Less code, fewer edge cases.
-- **Rejected:** Manual `sitemap.xml.ts` endpoint would give full control but requires manual route enumeration and XML format compliance; error-prone with new routes
-- **Trade-offs:** Config-driven limits customization (e.g., can't exclude routes easily) vs explicit control. Gain: automatic route discovery, less maintenance code, harder to break.
-- **Breaking if changed:** If you remove integrations, you must implement sitemap/RSS from scratch. Integration changes to Astro could affect generation; manual approach gives full control but higher maintenance.
-
-### Created distinct 'astro-react' CodingRulesType variant instead of reusing 'react' rules for portfolio starter (2026-03-15)
-- **Context:** Portfolio is Astro (static site generator) + React islands, fundamentally different from single-page React apps despite sharing React component syntax
-- **Why:** Astro has different mental model: Astro-first component selection, no client: directives by default, Tailwind v4 CSS-first config, static output to disk. Reusing 'react' rules would mislead developers on when to use islands vs static components
-- **Rejected:** Could have added 'useAstro' boolean flag or suffix to existing 'react' rules; would reduce type variants but increase conditional logic and rule conflation
-- **Trade-offs:** More type variants to maintain, but cleaner separation—each variant represents a coherent architectural model
-- **Breaking if changed:** Reusing 'react' rules would cascade wrong guidance: developers treating Astro like an SPA, missing static-first optimization opportunities, misusing client directives
-
-#### [Pattern] CI workflow template selection matched to package manager and deployment target, not build system alone (2026-03-15)
-- **Problem solved:** Portfolio CI uses 'npm ci' and mirrors getDocsCI() structure, while extension CI uses pnpm and different workflow
-- **Why this works:** Package manager affects lock file semantics, caching, and CI performance. Deployment target (Cloudflare Pages) matches docs starter. Reusing wrong template would work but with silent inefficiencies or incompatibilities
-- **Trade-offs:** More CI template variants to maintain, but each is cohesive and directly matches its starter kit's actual tooling. Prevents 'works but slow' scenarios
-
-#### [Pattern] Channel Handler Strategy Pattern: GitHubChannelHandler and UIChannelHandler are pluggable via ChannelRouter, selected based on feature.githubIssueNumber presence (2026-03-15)
-- **Problem solved:** Need to deliver HITL form approval requests to different channels (GitHub issue comments vs in-app UI) without modifying core HITLFormService logic
-- **Why this works:** Strategy pattern allows runtime selection of delivery mechanism. Keeps approval routing decoupled from form creation logic
-- **Trade-offs:** Added layer of indirection and startup wiring, but enables future channel types (Slack, email, etc.) without changing HITLFormService
-
-#### [Gotcha] In-memory pending approval tracking by featureId in GitHubChannelHandler loses state on server restart (2026-03-15)
-- **Situation:** GitHubChannelHandler maintains in-memory keyed map of pending approvals to correlate incoming /approve /reject webhook comments back to specific features
-- **Root cause:** Fast lookup for webhook correlation without database round-trip
-- **How to avoid:** Sub-millisecond lookup vs potential loss of pending approvals on server restart or in multi-server deployments
-
-#### [Gotcha] Module wiring (channel-handlers.module.ts) must execute before pipeline operations but failure is silent—missing call breaks GitHub comment routing without error (2026-03-15)
-- **Situation:** ChannelRouter is set on HITLFormService via setChannelRouter() in channel-handlers.module.ts registration function, which has no validation or error if skipped
-- **Root cause:** Late binding allows dependency injection at startup, avoids constructor coupling
-- **How to avoid:** Flexible ordering vs silent failure mode—missing module wiring leaves default no-op handler in place
-
-#### [Pattern] Silent feature flag gate: HITLFormService.create() returns null when featureFlags.hitlForms is false rather than throwing error (2026-03-15)
-- **Problem solved:** Need to support gradual rollout of HITL form feature without breaking existing pipeline behavior
-- **Why this works:** Null return allows callers to skip form creation logic gracefully; error would force try-catch handling
-- **Trade-offs:** Non-disruptive rollout vs risk of null-reference bugs if callers don't handle null case
-
-#### [Pattern] Dual-path HITL form delivery: GitHubChannelHandler posts approval request and form as GitHub comments; UIChannelHandler relies on hitl:form-requested WebSocket event to surface form in in-app dialog (2026-03-15)
-- **Problem solved:** HITL forms must work both in GitHub issue workflows (for GitHub-originating features) and in in-app UI (for direct board features)
-- **Why this works:** Separates approval notification (routed via ChannelHandler) from form data transport (WebSocket event). Allows both surfaces to be implemented independently
-- **Trade-offs:** Two systems must stay in sync; more moving parts but cleaner separation of concerns between GitHub and UI flows
-
-#### [Pattern] Automatic fallback to UIChannelHandler when githubIssueNumber is missing from feature (2026-03-15)
-- **Problem solved:** GitHubChannelHandler delegates to UIChannelHandler automatically when feature lacks GitHub issue association
-- **Why this works:** Graceful degradation—forms still work via UI channel even if GitHub issue data missing; no explicit error path needed
-- **Trade-offs:** Silent degradation vs explicit error—developers may not realize forms aren't going to GitHub
-
-#### [Gotcha] Path resolution for starter kits uses relative paths from __dirname, assuming a specific dist structure. The function resolveStarterDir() hardcodes '../starters/<kit>' relative to dist output. (2026-03-15)
-- **Situation:** Monorepo with compiled output. Starter kits need to be accessible from both dev and production builds.
-- **Root cause:** Simple and works for the current build configuration, but creates brittle coupling to output structure.
-- **How to avoid:** Simple implementation vs. fragility to build structure changes. Any change to how libs/templates is emitted to dist will break this.
-
-#### [Pattern] Configuration substitution uses regex matching on placeholder values (e.g., /site:\s*['"]https:\/\/[^'"]+['"]/) rather than template variables. Replaces found patterns with substituted values. (2026-03-15)
-- **Problem solved:** Need to customize starter templates (project name, domain, title) after copying from static directory.
-- **Why this works:** Pragmatic: avoids adding a templating dependency or modifying starter source files. Starters remain plain Astro projects.
-- **Trade-offs:** Simple, zero extra dependencies vs. extremely brittle. If starter's astro.config format changes, regex silently fails to match.
-
-#### [Pattern] copyDir() explicitly skips node_modules and package-lock.json during recursive copy. Copies source only, expects npm install in target. (2026-03-15)
-- **Problem solved:** Avoid copying dependency artifacts when scaffolding a new project directory.
-- **Why this works:** Clean slate principle: (1) reduces copy size, (2) avoids platform-specific compiled binaries, (3) ensures fresh dependency resolution in target environment.
-- **Trade-offs:** Smaller/cleaner copy but requires npm install in output dir before project is runnable. Caller must handle dependency installation.
-
-### Scaffold executes after project creation succeeds, with failures non-blocking (scaffold errors do not fail project creation) (2026-03-15)
-- **Context:** Starter kit template scaffolding could happen during project initiation or after. Chose post-creation.
-- **Why:** Decouples template scaffolding from core project creation atomicity. Project exists even if scaffolding fails. Prevents cascading failures when template libraries have issues.
-- **Rejected:** Atomic scaffolding-during-creation would simplify error handling but would fail entire project creation if any template library issue occurs. Leaves incomplete projects on failure.
-- **Trade-offs:** Simpler error handling vs. guaranteed project existence. Users get a project even if docs/portfolio setup partially fails. Requires separate error reporting for scaffold phase.
-- **Breaking if changed:** If scaffold failures become critical, changing to atomic pattern requires migrations for partially-scaffolded projects. Affects monitoring/alerting expectations.
-
-### Scaffold logic routed under /api/setup/* (existing setup routes) rather than under /api/projects/* or new dedicated /api/templates/* (2026-03-15)
-- **Context:** Three options for scaffold endpoint placement: setup (project initialization phase), projects (lifecycle management), or templates (template concern).
-- **Why:** Setup routes handle all project-creation-time operations. Semantically correct: scaffolding is setup work, not lifecycle. Reuses setup auth/validation. Logically groups related initialization endpoints.
-- **Rejected:** /api/projects/* mixes initialization concerns with project management. /api/templates/* creates new service boundary for single use case. Separate templating service premature.
-- **Trade-offs:** Clear semantic grouping vs. flatter API surface. Reuses setup middleware vs. duplicating auth. Mirrors product's setup-phase concept in routing vs. generic projects hierarchy.
-- **Breaking if changed:** Moving scaffold to /api/projects/* breaks routing assumption. If setup routes are ever removed/refactored, orphans scaffold endpoint. Route deprecation ripples.
-
-#### [Pattern] Use framework build helpers (generateSidebar) for content auto-discovery rather than manual registration in config (2026-03-15)
-- **Problem solved:** Adding templates section to VitePress documentation required sidebar configuration without page-by-page code changes
-- **Why this works:** Auto-discovery eliminates registration bottleneck—new .md files automatically appear without modifying config. Scales documentation addition from O(n) code changes to O(1).
-- **Trade-offs:** Self-maintaining documentation structure (+), but alphabetical ordering is fixed and not customizable via config alone (-)
-
-### Only document starter kits that exist as buildable templates with actual files, not those referenced in code but not yet implemented (2026-03-15)
-- **Context:** Extension starter exists in CLI but has no template files yet. Docs and portfolio starters are complete and usable.
-- **Why:** Documenting incomplete features creates broken user journeys and documentation debt. Users cannot scaffold non-existent templates. Better to add guides when feature ships.
-- **Rejected:** Documenting future/planned starters is lower effort now but creates maintenance burden and customer confusion
-- **Trade-offs:** Smaller documentation scope, higher trust in docs (+), but requires process discipline to add extension guide when that kit is built (-)
-- **Breaking if changed:** If extension starter ships without docs, users have no guide. If docs exist for templates that can't be scaffolded, user hits broken onboarding.
-
-#### [Pattern] Use relative cross-section links (../guides/*, ../self-hosting/*) within documentation to establish navigational relationships without URL fragility (2026-03-15)
-- **Problem solved:** Starter kit guides reference existing documentation sections across different hierarchies (guides, self-hosting). ignoreDeadLinks validation requires references to resolve.
-- **Why this works:** Relative links work in local preview and deployed site regardless of base URL or domain. Creates true site relationships that survive restructuring better than absolute URLs.
-- **Trade-offs:** Relative links work anywhere (+), but break if referenced sections move or are renamed (-). Requires documentation structure stability.
+#### [Gotcha] Manifest-driven service layer and synthetic API-layer agent creation represent a dual source of truth that creates impedance mismatches. getResolvedCapabilities() only knows about manifest agents, not synthetic built-in fallbacks created at the route layer. (2026-03-13)
+- **Situation:** Built-in agents are created synthetically in the API route (lines 108–114) when the manifest has no entry for operational resilience. Service methods like getResolvedCapabilities() were designed assuming the manifest is the single source of truth.
+- **Root cause:** The route layer intentionally deviates from manifest-as-canonical for fallback/resilience, but downstream abstractions weren't told about this exception pattern.
+- **How to avoid:** Route-level guard keeps synthetic fallback logic localized and explicit (easier to trace) but distributed the dual-source-of-truth logic. Service layer stays simpler but now has implicit constraints callers must understand.
+
+### The built-in agent fallback (synthetic agent creation + capability lookup) is placed at the API route layer, not in the service layer. This keeps the synthetic fallback pattern co-located with where synthetic agents are created, but distributes dual-source-of-truth handling. (2026-03-13)
+- **Context:** Routes create synthetic agents as a fallback (lines 108–114). Their capabilities also need a fallback. Decision: where should the fallback lookup live?
+- **Why:** Route layer creates the synthetic agents, so route layer is where they're fully understood. Keeps service layer pure/manifest-focused. Alternative (service-layer fallback) would require exposing fallback capability sources through service API, mixing concerns.
+- **Rejected:** Moving to service layer via new method like getCapabilitiesOrBuiltIn() would centralize dual-source logic but require service to know about synthetic agents, coupling service to route-layer operations.
+- **Trade-offs:** Route-level placement is more explicit and keeps service focused (testable in isolation). Cost: route now has special knowledge of how to find built-in capabilities; testing route logic in isolation requires mocking both manifest AND built-in sources.
+- **Breaking if changed:** If service layer ever needs to be the exclusive canonical source of truth (e.g., for caching strategies or audit trails), this pattern blocks that migration. Any code calling service directly bypasses the built-in fallback.
+
+#### [Pattern] Shutdown sequence is ordered — services disposed in specific sequence (after crdtSyncService.shutdown() but before shutdownLangfuse()) (2026-03-13)
+- **Problem solved:** AgentManifestService disposed in middle of shutdown sequence, not arbitrary
+- **Why this works:** Ordered disposal prevents resource dependency issues and ensures cleanup happens when dependent services are still available. Placing in 'service teardown zone' keeps related operations together.
+- **Trade-offs:** Adds cognitive load for new services — developers must understand shutdown ordering. Gains: predictable resource cleanup and no use-after-dispose bugs.
+
+#### [Pattern] Try/catch wrapping lifecycle methods (dispose, shutdown) during graceful shutdown — failures are logged but never block the shutdown path (2026-03-13)
+- **Problem solved:** getAgentManifestService().dispose() wrapped in try/catch with logger.warn fallback
+- **Why this works:** Shutdown must be non-blocking even if individual service cleanup fails. Ensures one broken service doesn't prevent full shutdown sequence.
+- **Trade-offs:** Hides dispose failures from strict error reporting. Gains: guaranteed shutdown completion and no hung processes. Cost: potential silent resource leaks if dispose fails.
+
+### Singleton getter pattern (getAgentManifestService()) used for accessing singleton services in shutdown path, not direct instantiation or dependency injection (2026-03-13)
+- **Context:** Import and call uses getAgentManifestService() getter, consistent with getTerminalService() and getReactiveSpawnerService() patterns throughout codebase
+- **Why:** Getter pattern allows initialization-on-demand and handles uninitialized state. Calling on singleton avoids coupling to construction, letting service optionally be created.
+- **Rejected:** Direct instantiation would require knowledge of constructor; DI would require shutdown.ts to be aware of all services upfront
+- **Trade-offs:** Getter adds indirection and silent no-op if service never initialized. Gains: loose coupling and graceful handling of uninitialized services.
+- **Breaking if changed:** Switching to direct field access would require tracking which services are initialized before calling dispose, adding shutdown fragility
+
+#### [Pattern] UI derives isBuiltIn from ROLE_LABELS (frontend's ground-truth constant) rather than trusting the API's _builtIn flag as source of truth. (2026-03-13)
+- **Problem solved:** Agent suggestion badge needs to identify built-in agents. Could trust API flag or validate against frontend's role registry.
+- **Why this works:** ROLE_LABELS is the frontend's contract for what roles it knows how to label. Deriving from it provides defense against API inconsistencies and creates a validation gate: if a role isn't in ROLE_LABELS, we shouldn't claim it's built-in regardless of what the API says.
+- **Trade-offs:** Trades implicit trust in API for explicit validation, but creates a hidden sync point between frontend and backend role lists that has no verification test.
+
+#### [Gotcha] DEFAULT_PROJECT_AGENT intentionally omits _builtIn field, creating an implicit contract that the API layer must set this flag for built-in agents during response serialization. (2026-03-13)
+- **Situation:** Default agent constant is used as a template for user-created agents. If not handled carefully during API serialization, all agents (user and built-in alike) could inherit missing _builtIn.
+- **Root cause:** DEFAULT_PROJECT_AGENT is user-authored scaffold, so it shouldn't have _builtIn set. But this means there's no 'safe default' for the field—the API must explicitly set it.
+- **How to avoid:** Cleaner manifests vs. implicit responsibility. If the API layer ever forgets to populate _builtIn for a built-in agent, the badge won't show—silent failure rather than explicit default.
+
+#### [Pattern] Used breaking return type change (ProjectAgent | null → MatchResult | null) as a compile-time verification mechanism to force discovery of all call sites. (2026-03-13)
+- **Problem solved:** Refactoring agent manifest scoring from hardcoded 1.0 confidence to computed values. Feature description listed 2 files to update, but TypeScript compilation revealed a third caller (routes/agents.ts) that needed updating.
+- **Why this works:** Return type changes propagate through the type system automatically, ensuring all consumers are found and forced to recompile. This is more reliable than grep-based refactoring for TypeScript APIs.
+- **Trade-offs:** Breaking change requires updating all call sites immediately (harder short-term) vs. ensures no call sites are missed (safer long-term). In a monorepo with build checks, this is low-friction.
+
+### Selected diminishing-returns formula (rawScore / (rawScore + 10)) instead of linear or sigmoid normalization to preserve match ordering invariant. (2026-03-13)
+- **Context:** Confidence scoring needs to reflect match strength while integrating with existing agent routing logic that depends on relative match scores.
+- **Why:** The formula is strictly monotone-increasing: if agent A has rawScore > agent B, then normalize(A) > normalize(B) always holds. This preserves the implicit invariant that 'best match' determined by highest raw score remains the best match in confidence space. Linear normalization (score/maxScore) or sigmoid could reorder matches.
+- **Rejected:** Linear normalization (simpler to understand), sigmoid (tighter bounds at extremes), fixed confidence tiers (easier to reason about in logs). All risk reordering matches in edge cases.
+- **Trade-offs:** Confidence never reaches 1.0 (max ~0.75 at reasonable scores), making the asymptotic behavior less intuitive. But prevents subtle bugs in routing logic where a different agent becomes 'top match' after scoring.
+- **Breaking if changed:** Any code assuming confidence can equal 1.0 or using it as a binary threshold (>= 1.0) will break. Formula change would need systematic re-verification of routing decisions.
+
+#### [Pattern] Implemented scoring formula as a private helper method (_normalizeScore) instead of inlining or externalizing to a separate service. (2026-03-13)
+- **Problem solved:** Normalization logic used in one place (matchFeature return), but likely to be needed in multiple scoring contexts as the system evolves.
+- **Why this works:** Private method creates a single source of truth for the formula, making it impossible for future developers to implement divergent normalization logic. Also keeps the method co-located with the data it operates on (raw match scores).
+- **Trade-offs:** One more private method to maintain, but prevents inconsistent scoring if scoring is needed elsewhere. Low cost for high consistency guarantee.
+
+### Preserve startingFeatures Set throughout the entire async dispatch lifecycle—don't clear it when ConcurrencyManager lease is acquired, only when the dispatch promise resolves. This keeps the synchronous double-start guard intact within a single loop iteration. (2026-03-13)
+- **Context:** startingFeatures serves two purposes: (1) reserve a capacity slot during startup, and (2) provide a cheap, synchronous guard against accidentally starting the same feature twice within one scheduler loop. If the Set is cleared upon lease acquisition, the synchronous guard disappears for the remainder of the iteration.
+- **Why:** The loop iteration is performance-critical and synchronous. Querying ConcurrencyManager state (async-created lease) in the hot path adds latency and creates implicit coupling. The Set provides an O(1) check without async dependencies. Keeping it until dispatch completion maintains clean architectural separation.
+- **Rejected:** Clear the Set immediately when lease acquired to eliminate the overlap window. This pushes the double-start guard responsibility to checking lease state, making the loop logic asynchronous and dependent on ConcurrencyManager implementation details.
+- **Trade-offs:** Keeping the Set in both states costs memory (set membership tracking continues) and requires consistent filtering logic everywhere capacity is calculated. In return, the loop stays synchronous and simple, and the separation between scheduler state and system state remains clean.
+- **Breaking if changed:** Removing the Set entirely and relying solely on ConcurrencyManager leases forces all double-start checks to go async. Clearing the Set immediately after lease acquisition makes it unsafe to check the Set anywhere in the loop after that point, creating fragile coupling between initialization code and state-checking code.
+
+### Poll-based watchers must call timer.unref() to prevent the poller from blocking process shutdown. clearInterval alone is insufficient if the process exits before the interval fires. (2026-03-13)
+- **Context:** setInterval returns a Timer reference that by default keeps the event loop alive. In a server that needs graceful shutdown, this timer can block exit.
+- **Why:** unref() marks the timer as 'non-blocking' — the event loop will exit even if the timer is pending. This is essential for clean server shutdown in production.
+- **Rejected:** Relying on clearInterval alone (process may hang waiting for final interval to fire); explicit shutdown handlers (more complex)
+- **Trade-offs:** unref() adds a single line but prevents shutdown hangs. Cost is negligible; benefit is process lifecycle correctness.
+- **Breaking if changed:** Removing unref() causes process shutdown to block until the next interval fires, potentially causing deployment timeouts or zombie processes
+
+#### [Pattern] File scope in specifications acts as semantic intent signal. When removal task lists only type and doc files (not service files), that signals 'remove, don't implement'—preventing scope creep and misaligned effort. (2026-03-14)
+- **Problem solved:** Feature description listed workflow-settings.ts and agent-manifests.md for modification, but NOT agent-manifest-service.ts. Developer correctly interpreted this as removal-only scope.
+- **Why this works:** Explicit service exclusion communicates: 'we don't want service-level changes.' Ambiguous specs lead to wasted implementation effort on features no one asked for.
+- **Trade-offs:** Minimal scope = faster completion, but requires developers to read scope intent carefully. Verbose specs with 'do NOT modify X' would be clearer but noisier.
+
+#### [Gotcha] Declared-but-never-consumed configuration fields create false APIs. Users can set manifestPaths, see no effect, and either think the feature is broken or doesn't exist—worse than not having the field at all. (2026-03-14)
+- **Situation:** manifestPaths existed in AgentConfig for ~Xmonths but AgentManifestService only hardcoded .automaker/agents.yml and .automaker/agents/ paths. No watcher, no dynamic loading, no effect.
+- **Root cause:** Field was probably added speculatively to 'future-proof' for extensibility. But undocumented constraints (hardcoded paths) + unused field = confusing API surface.
+- **How to avoid:** Removal reduces documentation burden and user confusion, but makes extending manifest paths later require a new field/migration. Trade clarity for flexibility.
+
+#### [Pattern] Exhaustive codebase search (grep all files) before removing config fields validates zero impact. If field only appears in type/doc, removal is objectively safe. (2026-03-14)
+- **Problem solved:** Developer ran: grep manifestPaths across entire repo → found only in type definition + docs, nowhere else. Enabled confident, zero-risk removal.
+- **Why this works:** Config removal is a breaking change if consumers exist. Grep proves non-existence. This is cheap insurance vs. silent breakage.
+- **Trade-offs:** 5 minutes of searching saves potential 2-hour rollback. Automation could enforce this (linter that flags declared-but-unused config fields).
+
+### Prefer minimal configuration surface (only expose what's consumed) over speculative future-proofing. When a feature isn't implemented, remove the declaration—users can request it if needed. (2026-03-14)
+- **Context:** manifestPaths was a speculative field waiting for a feature that never materialized. Keeping it causes confusion; removing it clarifies intent.
+- **Why:** Cognitive load: every extra config field users have to understand is a cost. Unused fields are net negative. Implement when requirements exist, not before.
+- **Rejected:** Keep field with warning docs ('planned for future'). But this leaves dead code that accumulates over time.
+- **Trade-offs:** Removal = simpler API + less documentation. Cost: future custom-path feature needs new field + migration path. But that's rare; most features don't need it.
+- **Breaking if changed:** If someone built automation around manifestPaths (config validation, schema checks), removal breaks it. Mitigated by proving nobody was using it (grep validation).
+
+#### [Pattern] Dual-path template registration: scaffold-based templates require @protolabsai/templates package changes + server route + UI registry entry, while clone-based templates only require UI registry entry. This split is driven by tooling constraints, not API design. (2026-03-15)
+- **Problem solved:** The starter kit system supports both scaffold kits (docs, portfolio, general) and clone kits (extension, future kits with native tooling). Different paths have different provisioning requirements.
+- **Why this works:** Scaffold kits work via local file copying because they're pure template content. Clone kits are necessary when the kit itself includes non-JS native tooling (WXT bundler for extensions) that can't be replicated via local file scaffolding — the git repo IS the distribution mechanism for the complete toolchain.
+- **Trade-offs:** Flexibility to support diverse stacks (easier for future kits) vs cognitive load (developers must understand two registration paths and when to use each). The complexity is unavoidable given the diversity of target stacks.
+
+#### [Gotcha] VitePress sidebar is auto-generated via generateSidebar() which scans docs/templates/ at build time. New .md files automatically appear in sidebar without config changes. This is convenient but creates a fragile assumption: if sidebar config is ever refactored to use explicit entries, auto-discovery breaks silently. (2026-03-15)
+- **Situation:** Three new .md files were added and automatically appeared in sidebar navigation. No manual sidebar config was needed. The feature worked, but the mechanism is undocumented in the codebase.
+- **Root cause:** Auto-generation reduces config maintenance overhead. Developers can add docs pages without understanding sidebar config. Works well for stable directory structures.
+- **How to avoid:** Automatic discovery (lower maintenance, faster doc publishing) vs explicit control (better UX, can curate ordering and visibility). Current approach implicitly assumes all .md files in the directory should be discoverable.
+
+#### [Gotcha] Extension kit is intentionally clone-based only. The server scaffold route validates kitType against ['docs', 'portfolio', 'general', 'my-kit'] — extension is not in this list. This is a tooling constraint (WXT native build tools can't be scaffolded), not an API limitation, but it's not obvious without investigation. (2026-03-15)
+- **Situation:** When writing add-a-starter.md, the absence of extension from the scaffold validation list needed explanation. Investigation revealed this is intentional: WXT bundler and native browser extension tooling require repo-level distribution.
+- **Root cause:** Browser extension projects require WXT build tools, manifest configuration, and specific directory structures that are better maintained in a git repo than scaffolded from a template. Cloning ensures the complete working toolchain is present without users having to install and configure separate build tools.
+- **How to avoid:** Clone approach (works out-of-the-box, users don't configure tooling) vs scaffold approach (smaller, users can update kit version independently). Chose clone because the repo IS the distribution mechanism for the complete, working toolchain.

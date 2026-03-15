@@ -5,9 +5,9 @@ relevantTo: [documentation]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 404
-  referenced: 114
-  successfulFeatures: 114
+  loaded: 375
+  referenced: 92
+  successfulFeatures: 92
 ---
 <!-- domain: Documentation | Docs standards, structure, maintenance patterns -->
 
@@ -48,3 +48,11 @@ usageStats:
 - **Rejected:** Treating modes as equally valid would lead users to always enable HITL unnecessarily
 - **Trade-offs:** Gained: clearer guidance, faster adoption; Lost: requires users to actively opt-in to HITL rather than being the default
 - **Breaking if changed:** If antagonistic review scoring becomes unreliable, this guidance breaks and HITL becomes necessary again
+
+
+### Documentation is structured in three pages that mirror code layers: index.md (what exists + all 4 kit types), architecture.md (how scaffold flow works), add-a-starter.md (how to extend). Each page has a specific concern and audience. (2026-03-15)
+- **Context:** Creating architecture.md and add-a-starter.md revealed that the original index.md was incomplete — it documented only docs and portfolio kits, missing browser extension and general kits. Documentation served as a completeness check on the system.
+- **Why:** Code architecture has three layers: UI template registry, server scaffold route, and @protolabsai/templates package. Documentation structure follows this split. Each layer gets explained at appropriate depth for its audience (users, developers, contributors).
+- **Rejected:** A single comprehensive page would have higher coupling — changes to one layer would require updating the whole page. Separate pages by concern allow independent evolution.
+- **Trade-offs:** Multiple smaller pages (modular, easier to update independently, clearer audience separation) vs fewer larger pages (complete picture in one place, less navigation). Cross-linking between pages mitigates navigation friction.
+- **Breaking if changed:** If add-a-starter.md is removed, contributors won't have guidance on registration paths and will likely make incorrect decisions (e.g., trying to scaffold a clone kit or vice versa). Architecture.md removal breaks understanding of the internal flow. The modular structure means each page is essential to different stakeholders.

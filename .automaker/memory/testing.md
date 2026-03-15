@@ -5,7 +5,7 @@ relevantTo: [testing]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 92
+  loaded: 98
   referenced: 28
   successfulFeatures: 28
 ---
@@ -150,120 +150,17 @@ usageStats:
 - **Root cause:** Turbo aggressively caches task outputs. Incremental changes don't trigger cache invalidation if task hash hasn't changed fundamentally.
 - **How to avoid:** Using tsc directly is faster for validation but doesn't test the full build pipeline (bundling, optimization). Full build catches more issues but is slower.
 
-### For documentation-only changes, targeted build verification (VitePress compilation) is sufficient; comprehensive behavioral test suites (Playwright) are cost-inefficient and unnecessary (2026-03-14)
-- **Context:** Docs-only changes to markdown files; question of whether to run full test suite or just build docs
-- **Why:** Docs changes don't affect application behavior or state. VitePress build validates syntax/structure/references; behavioral tests only add time without catching doc-specific issues.
-- **Rejected:** Running Playwright tests; running full CI pipeline; only manual verification
-- **Trade-offs:** Faster feedback loop (18s vs. minutes) vs. slightly reduced coverage (but coverage irrelevant for docs); build gate is proportional to change scope
-- **Breaking if changed:** If docs auto-generate code or have side effects, verification would need to expand; build-only gate assumes docs are passive
+#### [Pattern] For setInterval-based logic, use vi.useFakeTimers() + vi.advanceTimersByTime() instead of real setTimeout waits. This eliminates timing flakiness and makes tests deterministic and fast. (2026-03-13)
+- **Problem solved:** Original test used 3-second real-time polling with timeout checks, which is flaky due to OS scheduling variance. New test uses fake timers to advance exact intervals.
+- **Why this works:** Fake timers decouple test execution from wall-clock time, making interval-based logic testable without false negatives from CPU contention or slow CI runners. Tests also run sub-millisecond.
+- **Trade-offs:** Fake timers require wrapping in try/finally to restore real timers, but guarantee determinism and speed. Trade manual timer management for robustness.
 
-#### [Gotcha] Idempotence guard: test explicitly verifies that an epic already in 'done' status is not written to again when its last child completes. Prevents unnecessary IO and duplicate history entries. (2026-03-14)
-- **Situation:** Without this check, re-running the epic completion check on an already-done epic could cause spurious file writes and duplicate status history.
-- **Root cause:** In a system with multiple status changes or replay scenarios, the same epic could be checked for completion multiple times. The check must be idempotent to avoid false writes.
-- **How to avoid:** Extra condition (`if (epic.status === 'done') return`) prevents unnecessary writes and history clutter, but requires explicit test coverage to ensure the guard works.
+#### [Gotcha] Pre-existing tests accessed result?.name on MatchResult type that actually returns { agent, confidence }. Type assertions were not validated — tests were accessing non-existent properties without type errors. (2026-03-13)
+- **Situation:** 6 tests in matchFeature suite failed because they checked result?.name instead of result?.agent.name. This indicates test code drifted from the actual API.
+- **Root cause:** Tests were likely written before the MatchResult type was formalized, or type checking was bypassed (possible loose tsconfig or missing type validation in test setup). Property access on union/object types wasn't caught at test time.
+- **How to avoid:** Fixing tests revealed the actual type contract. Cost is finding and fixing 6 test assertions; benefit is ensuring tests validate the real API.
 
-#### [Pattern] Playwright test gracefully skips when precondition (projects in test env) is unavailable, rather than failing the test suite. (2026-03-14)
-- **Problem solved:** Timeline verification test needed to run in CI/test env that may not have seed data.
-- **Why this works:** Allows test to run in any environment without blocking CI. The skip is informative and expected, not a test failure.
-- **Trade-offs:** Test runs but provides limited coverage in data-empty environments, but that's acceptable for a component existence/interaction check.
-
-#### [Gotcha] Manual curl testing required to verify disk-only path; automated test framework (Playwright) test infrastructure assumptions didn't match actual API auth requirements (session vs API key). (2026-03-14)
-- **Situation:** Attempted Playwright test failed with 401; required manual curl with session auth to verify API works
-- **Root cause:** Test utils likely abstract auth away for UI tests; but API endpoint enforces session-based auth that test setup didn't provide
-- **How to avoid:** Real integration test catches auth mismatches but slower/more fragile; unit mocks are fast but hide environment issues
-
-#### [Gotcha] Tests exercising mesh behavior must explicitly include hivemind.enabled:true in mock config (2026-03-14)
-- **Situation:** Test mocks were updated to add hivemind.enabled guard wherever real mesh behavior (TTL enforcement, leader election, partition recovery) is tested
-- **Root cause:** Without explicit config, tests would exercise the feature against its default disabled state, testing the no-op path instead of actual mesh logic
-- **How to avoid:** Tests are more explicit about prerequisites vs. higher ceremony to set up mesh behavior. Failing to add this config means test passes but tests wrong code path
-
-#### [Pattern] When removing a package, identify and delete test files that exclusively import from the removed package (rather than refactoring them). Used grep to find all imports of @protolabsai/crdt and deleted crdt-store-module.test.ts and project-sync.test.ts which tested code that no longer exists. (2026-03-14)
-- **Problem solved:** Two unit test files imported @protolabsai/crdt directly. Since the package was being hard-removed (not refactored elsewhere), the tests had no purpose and were deleted as part of cleanup.
-- **Why this works:** Test files for deleted functionality have no value and create lint/type-check noise. Deleting them is cleaner than leaving orphaned tests. This only works when the package is truly removed and not being replaced by alternative code.
-- **Trade-offs:** Deletion is clean and decisive but requires high confidence nothing still needs the package. Refactoring would be safer but masks the fact that code path is gone.
-
-#### [Gotcha] Worktree node_modules lacks @protolabsai/* packages by default; required manual build and symlink of @protolabsai/crdt to resolve test imports (2026-03-14)
-- **Situation:** Tests importing @protolabsai/crdt failed in worktree despite existing in main repo
-- **Root cause:** Worktrees inherit package.json and lockfile but npm hoisting doesn't automatically populate workspace packages in node_modules; these need explicit build + linking
-- **How to avoid:** Manual linking is fragile but works; better solution would be worktree setup script or npm workspace improvements; caught test discovery issues early
-
-#### [Pattern] Typecheck acceptance criterion automatically detected that peer-mesh-service.ts needed updating even though it wasn't in the original file list (2026-03-14)
-- **Problem solved:** Spec omitted peer-mesh-service.ts but removing types from shared package broke typecheck
-- **Why this works:** Typecheck enforces transitive impact detection across the codebase; it's a better source of truth than manual file lists for refactoring scope
-- **Trade-offs:** Slower feedback loop (typecheck takes time) but more complete; catches hidden dependencies automatically; acceptance criteria act as specification enforcement
-
-#### [Gotcha] Node's promisify() utility with a vi.fn() mock only captures the first non-error callback argument as the resolved value - test callbacks must pass the complete result object (e.g., { stdout, stderr }) as arg[1], not spread across multiple args (2026-03-14)
-- **Situation:** Tests failed because mocks were calling cb(null, '[]', '') but the service code does { stdout } = await execFileAsync(...), expecting an object with stdout property
-- **Root cause:** promisify() has special logic for functions with [util.promisify.custom] symbol; vi.fn() lacks this, so promisify defaults to treating arg[1] (first non-error arg) as the entire resolved value. There's no automatic mapping of multiple callback args to an object.
-- **How to avoid:** Mocks now pass objects instead of spread arguments (slightly more boilerplate, but explicit and correct); avoids needing custom promisify logic
-
-#### [Gotcha] Module-level const mockExecFile = vi.fn() before vi.mock() hits temporal dead zone - use vi.hoisted(() => ({ mockExecFile: vi.fn() })) instead because vi.mock is hoisted above all module code (2026-03-14)
-- **Situation:** Tests threw 'Cannot access before initialization' even though mockExecFile was defined before vi.mock() in source order
-- **Root cause:** Vitest/TypeScript hoists vi.mock() calls to the top of the module during transformation, putting them before any module-level const declarations. The const stays in its source position, creating a temporal dead zone. vi.hoisted() runs the callback during the hoisting phase.
-- **How to avoid:** vi.hoisted() adds a wrapper function (slightly less readable), but it's the idiomatic Vitest pattern and guarantees the mock is initialized in the right phase
-
-#### [Pattern] Adversarial payload testing for injection vulnerabilities - test suite includes specific dangerous inputs like '$(rm -rf /)' to prove they are treated as literal strings, not executed (2026-03-14)
-- **Problem solved:** Security tests need to prove that shell injection attacks actually FAIL, not just that normal inputs work. This requires passing inputs that WOULD execute if the vulnerability existed.
-- **Why this works:** Normal test cases with alphanumeric titles pass regardless of vulnerability. Only payload tests with shell metacharacters reveal whether escaping/parameterization is actually working. The test case with backticks and command substitution proves the literal argument is received by gh, not interpreted by a shell.
-- **Trade-offs:** Adversarial tests are more complex to write and may seem strange to developers unfamiliar with security testing, but they're mandatory for proving injection protections actually work
-
-### Skip UI/browser testing for pure library package changes (libs/tools) (2026-03-14)
-- **Context:** Build completed successfully; question was whether to run Playwright suite anyway
-- **Why:** libs/tools has no UI surface—it's a TypeScript type definitions and factory functions package. Build passing (type checking + compilation) is the appropriate verification gate. Playwright testing would test the wrong layer.
-- **Rejected:** Run full browser test suite regardless of what changed
-- **Trade-offs:** Faster verification cycle when changing libraries, but requires discipline to skip unnecessary test layers
-- **Breaking if changed:** Nothing breaks by skipping tests, but would waste CI time testing unrelated UI layer
-
-### Skip Playwright browser-based verification for pure server-side GraphQL construction changes (2026-03-14)
-- **Context:** After implementing GraphQL variable changes, team considered running full Playwright test suite but decided against it
-- **Why:** Changes are confined to CLI argument construction in server code with no UI surface. Playwright tests would not exercise the fixed code path (browser cannot see execFileAsync calls). Resources better spent on compile/typecheck verification.
-- **Rejected:** Run full Playwright suite anyway (test pyramid violation - testing UI paths that don't exercise the fix); or skip all verification (insufficient)
-- **Trade-offs:** Faster feedback (no browser test overhead); but team must have high confidence in compile/typecheck/code review to replace integration tests
-- **Breaking if changed:** If the changes were later modified to include UI-visible behavior (e.g., logging response body to frontend), Playwright tests become necessary but would have been disabled
-
-#### [Gotcha] Existing tests checking world state synchronously after firing events require vi.advanceTimersByTimeAsync(0) to flush Promise chain (2026-03-14)
-- **Situation:** Two tests (feature:status-changed, auto-mode events) were asserting state changes immediately after event firing; now events process asynchronously
-- **Root cause:** Promise chain queues work on next microtask; vi.advanceTimersByTimeAsync(0) flushes microtasks without advancing wall-clock time; necessary after switching to async serialization
-- **How to avoid:** Tests become slightly more verbose but accurately reflect async execution model; encourages realistic testing patterns; catches real bugs where callers assumed sync behavior
-
-#### [Gotcha] Accepted success criteria as 'build passes + typecheck passes', but skipped value validation tests (hex codes, dimensions, format correctness) (2026-03-14)
-- **Situation:** Noted: 'This is a pure TypeScript data module—no UI interaction to verify with Playwright.' Decision to skip tests because structural exports were confirmed.
-- **Root cause:** Build + typecheck confirm syntax and exports exist, reducing obvious errors. But TypeScript only validates shape, not correctness of literal values.
-- **How to avoid:** Faster iteration (no test suite to maintain), but COLOR typos (e.g., `#a78bfx`) or invalid CSS values would only surface at Tailwind build time or runtime in UI
-
-#### [Gotcha] Running npm workspace tests from main repo root executes against main repo code, not worktree edits. Must run test commands from worktree directory root to test local changes. (2026-03-14)
-- **Situation:** Initial test runs showed 'all 54 pass' but were actually testing the unmodified main repo service. Only when running `npx vitest` from worktree root did the tests actually execute against the fixed code.
-- **Root cause:** npm workspaces resolve packages from the top-level monorepo, not the current working directory. Worktree isolation is not respected by workspace tooling.
-- **How to avoid:** Worktree isolation is lost for npm commands unless run from worktree root. Running from main repo is convenient but gives false confidence in test results.
-
-### Library verification uses build + typecheck + unit tests; deliberately omits Playwright/rendered output testing (2026-03-14)
-- **Context:** Pure library package (not app) without running Astro dev server; no environment to render .astro components during test phase
-- **Why:** Rendering .astro requires full Astro build pipeline. Rendered output testing adds significant CI overhead without proportional value for library (rendering is tested when library is consumed, not when library is built). Build + typecheck + unit tests verify source integrity (what matters for library distribution).
-- **Rejected:** Could stand up Astro dev server for Playwright, but overhead is high and provides testing value only at consumption time. Could ship unverified, but build/test gates catch source-level issues earlier.
-- **Trade-offs:** Faster CI/CD without Playwright overhead; lower confidence in rendered output. Rendering bugs caught by consumers instead of library CI. Acceptable for libraries (consumer builds will catch issues); unacceptable for apps.
-- **Breaking if changed:** Component rendering bugs in Astro builds not caught until library is consumed. This is acceptable because Astro compiler catches syntax errors; styling/layout bugs are harder to catch in library tests anyway.
-
-#### [Gotcha] Form field selectors via getByLabel() collided with nav aria-labels; switched to getByRole('textbox', { name: 'Field' }) (2026-03-15)
-- **Situation:** Playwright test locators failed because multiple elements matched the same aria-label
-- **Root cause:** Role-based selectors are scoped to semantic HTML role, avoiding collision with parent nav labels
-- **How to avoid:** Role selectors are more verbose but more resilient; requires form inputs to have proper ARIA roles
-
-#### [Pattern] Test assertions accept multiple valid states: expect(hasProjects || hasEmpty).toBe(true) instead of asserting specific project count (2026-03-15)
-- **Problem solved:** ProjectGrid filter behavior needed to work with dynamic data without assuming specific dataset
-- **Why this works:** Decouples test assertions from data fixtures; tests verify UI behavior (filtering returns something or shows empty state) not data assumptions
-- **Trade-offs:** Tests are less brittle but verify less strictly; caught by higher-level tests that do check data integrity
-
-#### [Gotcha] Tag filter test conditionally executes based on tag button count > 1 (only tests filter if non-All tags exist) (2026-03-15)
-- **Situation:** ProjectGrid renders 'All' button always, but other tag buttons are dynamic based on project data
-- **Root cause:** Tests that assume specific data presence are fragile; better to skip test path if precondition isn't met than fail
-- **How to avoid:** Test doesn't always exercise filter path vs. cleaner test logic; caught by integration tests with real data
-
-#### [Gotcha] Verified git diff --stat to detect unintended scope creep in multi-file edits (preventing accidental changes to related files) (2026-03-15)
-- **Situation:** Monorepo with 5 interdependent template files (types, features, rules, docs, CI) easy to miss or accidentally modify tangential code
-- **Root cause:** Silent scope expansion can cause cascade issues: unreviewed changes in CI, inconsistent feature definitions, compiler errors later. Explicit diff check catches before PR
-- **How to avoid:** One extra manual verification step, but catches mistakes at edit-time rather than CI-time
-
-#### [Gotcha] Temporary E2E test written (starter-kit-selection.spec.ts) and immediately deleted after manual verification. No permanent test coverage for starter kit selection flow. (2026-03-15)
-- **Situation:** Test was created to verify dialog renders and cards toggle. Then deleted after validation. No regression test remains.
-- **Root cause:** Rapid validation during development. Full E2E test infrastructure (server mocking, auth flow, dialog interaction) is heavy for one feature. Manual deletion keeps test suite clean.
-- **How to avoid:** Fast iteration vs. no regression coverage. Lightweight verification vs. fragile tests if dialog internals change. Manual validation confidence vs. CI coverage.
+#### [Gotcha] Keyword matching scoring includes indirect matches. The test expected confidence ≈0.545 (18/33) but actual was 0.697 (23/33) because 'component' keyword in the agent description also contributed to the match signal. (2026-03-13)
+- **Situation:** Multi-signal keyword matching test miscalculated expected score by omitting a matching signal that was actually present in the agent description.
+- **Root cause:** Keyword matching is cumulative across multiple signal sources (agent name, description, extends). Test assertion only counted primary signals and missed secondary keyword contributions.
+- **How to avoid:** Fixing test assertion requires understanding all signal sources. Cost is careful scoring audit; benefit is accurate confidence calibration.

@@ -2,7 +2,7 @@
   "slug": "project-level-agent-extensions",
   "title": "Project-Level Agent Extensions",
   "goal": "Make agent roles extensible at the project level — discoverable from .automaker/agents/*.yml manifests, wired into execution (model selection + prompt injection), with auto-assignment match rules and a settings UI.",
-  "status": "active",
+  "status": "completed",
   "milestones": [
     {
       "number": 1,
@@ -212,5 +212,5 @@
     ]
   },
   "createdAt": "2026-03-13T18:25:10.033Z",
-  "updatedAt": "2026-03-13T19:36:50.952Z"
+  "updatedAt": "2026-03-15T05:06:23.790Z"
 }

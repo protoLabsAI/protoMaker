@@ -91,3 +91,8 @@ usageStats:
 - **Problem solved:** Server's lifecycle/initiate endpoint requires non-empty ideaDescription. UI description field is optional.
 - **Why this works:** Pragmatic adaptation to incomplete API. Rather than mandate description, use goal as backup. Gracefully handles users who don't fill optional field.
 - **Trade-offs:** Gain: flexibility, matches form UX. Loss: ideaDescription quality degrades when using goal as fallback (less detailed).
+
+#### [Pattern] Defensive checks must use identical filtering logic as primary checks. Applied the same filter to both the main capacity decision (line 261) and the defensive race-condition warning (line 393) to maintain assertion reliability across code paths. (2026-03-13)
+- **Problem solved:** Two code paths compute totalOccupied. If the main path uses filtered startingCount but the defensive check uses raw Set.size, they disagree on capacity state. The defensive check then logs false warnings or fails to catch real problems, becoming unreliable for detecting actual bugs.
+- **Why this works:** A defensive check with different logic than the main code is worse than having no check—it creates false signals. Consistency between primary and defensive calculations is necessary for the safety net to actually work. This isn't about code deduplication; it's about assertion validity.
+- **Trade-offs:** Fixing both locations requires slightly more code but ensures the warning signal remains trustworthy. Alternative (extracting to a shared method) adds indirection for a two-location fix.
