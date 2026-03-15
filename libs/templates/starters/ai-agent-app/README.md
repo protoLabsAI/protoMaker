@@ -1,11 +1,89 @@
 # @@PROJECT_NAME — AI Agent App Starter Kit
 
-A full-stack AI agent app with a streaming chat UI, multi-provider LLM support, a tool system that works across MCP, LangGraph, and REST, slash commands, agent roles, and built-in observability. Follow this guide to get from `git clone` to a working agent in under five minutes.
+A full-stack AI agent platform with a streaming chat UI, multi-provider LLM support, a tool system that works across MCP, LangGraph, and REST, LangGraph flow utilities, a prompt management system, built-in observability, and a ready-to-use MCP server for Claude Code and Claude Desktop. Follow this guide to get from `git clone` to a working agent in under five minutes.
+
+---
+
+## Platform overview
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Browser                                                                      │
+│  packages/app (Vite SPA + TanStack Router)                                   │
+│  ┌────────────────────────────────────────────────────────────────────────┐  │
+│  │ /chat  /flows  /prompts  /traces  /sessions  /settings                 │  │
+│  │                                                                        │  │
+│  │  packages/ui ─── streaming chat, flow builder, prompt playground       │  │
+│  └─────────────────────────┬──────────────────────────────────────────────┘  │
+└────────────────────────────│────────────────────────────────────────────────┘
+                             │  REST + WebSocket (port 3001 / 3002)
+                             ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  packages/server (Express 5 + agentic loop)                                  │
+│                                                                               │
+│  packages/tools ──── shared tool definitions (MCP · LangGraph · REST)        │
+│  packages/tracing ── observability (Langfuse + local file tracing)           │
+│  packages/prompts ── prompt templates, roles, slash commands                 │
+│  packages/flows ──── LangGraph graph builders and utilities                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  MCP clients (Claude Code, Claude Desktop, any MCP-compatible client)        │
+│                                             │                                 │
+│                             packages/mcp ◄──┘  (stdio transport)             │
+│                             └── packages/tools (same tool definitions)       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Packages
+
+| Package            | Purpose                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------ |
+| `packages/server`  | Express 5 HTTP server — agentic loop, tool execution, roles, commands, model routing |
+| `packages/ui`      | React streaming chat components, flow builder canvas, prompt playground              |
+| `packages/app`     | Vite SPA entry point — mounts the UI, configures TanStack Router, ships six pages    |
+| `packages/tools`   | Shared tool definitions using `defineSharedTool` — adapts to MCP, LangGraph, Express |
+| `packages/tracing` | Observability layer — wraps every LLM call; backends: Langfuse or local JSON files   |
+| `packages/flows`   | LangGraph graph builders, routers, reducers, and HITL utilities                      |
+| `packages/prompts` | Prompt templates, `PromptBuilder`, `PromptRegistry`, and `PromptLoader`              |
+| `packages/mcp`     | MCP server exposing all registered tools to Claude Code and Claude Desktop           |
+
+### UI pages
+
+The `packages/app` SPA ships six pages via TanStack Router's file-based routing:
+
+| Route       | Page              | What it does                                                       |
+| ----------- | ----------------- | ------------------------------------------------------------------ |
+| `/chat`     | Chat              | Streaming conversation with tool calling and role switching        |
+| `/flows`    | Flow builder      | Visual LangGraph flow designer with TypeScript code export         |
+| `/prompts`  | Prompt playground | Edit, test, and iterate on prompt templates with live model output |
+| `/traces`   | Trace viewer      | Table of recent completions — tokens, latency, cost estimates      |
+| `/sessions` | Session history   | Browse and restore past conversations                              |
+| `/settings` | Settings          | Model provider, API keys, theme, and WebSocket configuration       |
+
+---
+
+## What can I build?
+
+| Project                     | How it fits                                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Customer support bot**    | Register tools that query your CRM, create tickets, and look up order status. Slot into the existing chat UI in an afternoon.      |
+| **Code review agent**       | Use the built-in `code-reviewer` role or write a custom one. Stream structured feedback directly in the chat window.               |
+| **Research assistant**      | Build a `search_web` + `summarize` tool chain with a LangGraph loop that iterates until a quality gate passes.                     |
+| **Internal knowledge base** | Add a `search_docs` tool backed by your vector store. The same definition works in the chat UI and as an MCP tool for Claude Code. |
+| **Data analysis agent**     | Register a `run_sql` tool, let the model write and execute queries, then render results with a custom tool card renderer.          |
+| **Workflow orchestrator**   | Use the Flow Builder to design a multi-step LangGraph pipeline visually, then export it as TypeScript and wire it to your data.    |
+
+> **Deep dives →** [Agent architecture](docs/concepts/agent-architecture.md) · [Building flows](docs/guides/building-flows.md) · [Creating tools](docs/guides/creating-tools.md)
 
 ---
 
 ## Contents
 
+- [Platform overview](#platform-overview)
+- [What can I build?](#what-can-i-build)
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
 - [Environment variables](#environment-variables)
@@ -17,7 +95,11 @@ A full-stack AI agent app with a streaming chat UI, multi-provider LLM support, 
 - [Slash commands](#slash-commands)
 - [Agent roles](#agent-roles)
 - [Tracing and observability](#tracing-and-observability)
+- [LangGraph flows](#langgraph-flows)
+- [Prompt management](#prompt-management)
+- [MCP server](#mcp-server)
 - [Production deployment](#production-deployment)
+- [Documentation](#documentation)
 
 ---
 
@@ -50,6 +132,8 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). You should see a streaming chat window. The server runs on port 3001 by default.
 
+> **Full walkthrough →** [Getting started](docs/getting-started/quickstart.md)
+
 ---
 
 ## Environment variables
@@ -67,7 +151,9 @@ All variables are read from `packages/server/.env` (or the process environment i
 | `CORS_ORIGIN`         |               | unrestricted                 | Allowed CORS origin, e.g. `http://localhost:5173`                        |
 | `LANGFUSE_PUBLIC_KEY` |               | —                            | Enable Langfuse tracing (see [Tracing](#tracing-and-observability))      |
 | `LANGFUSE_SECRET_KEY` |               | —                            | Required when `LANGFUSE_PUBLIC_KEY` is set                               |
-| `LANGFUSE_HOST`       |               | `https://cloud.langfuse.com` | Custom Langfuse host                                                     |
+| `LANGFUSE_HOST`       |               | `https://cloud.langfuse.com` | Custom Langfuse host for self-hosted deployments                         |
+
+> **Full Langfuse setup →** [Langfuse integration](docs/integrations/langfuse.md)
 
 ---
 
@@ -132,6 +218,8 @@ export const sendEmailTool = Object.assign(
 ```
 
 The server's `toolRequiresConfirmation(name)` check will gate this tool before execution.
+
+> **Complete tool guide →** [Creating tools](docs/guides/creating-tools.md) · [Tool adapters reference](docs/reference/tool-adapters.md)
 
 ---
 
@@ -320,6 +408,8 @@ const commands = await fetch('/api/commands').then((r) => r.json());
 // [{ name: 'summarize', description: '...' }, ...]
 ```
 
+> **Prompt engineering guide →** [Prompt engineering concepts](docs/concepts/prompt-engineering.md)
+
 ---
 
 ## Agent roles
@@ -412,6 +502,153 @@ Or use the built-in trace viewer at [http://localhost:5173/traces](http://localh
 
 Long-running tools emit progress updates over a WebSocket sideband (default port 3002). The UI connects automatically and displays live status labels while the tool runs. The sideband is optional — if the WebSocket port is unavailable, tools still execute; only the progress labels are missing.
 
+> **Tracing guide →** [Tracing and debugging](docs/guides/tracing-debugging.md) · [Langfuse integration](docs/integrations/langfuse.md)
+
+---
+
+## LangGraph flows
+
+The `packages/flows` package provides typed graph builders, routers, reducers, and HITL utilities that wrap `@langchain/langgraph`. Use them to build multi-step agent pipelines — without writing LangGraph boilerplate.
+
+### Three graph topologies
+
+```typescript
+import { createLinearGraph, createLoopGraph, createBranchingGraph } from '@@PROJECT_NAME-flows';
+
+// Sequential: A → B → C → END
+const pipeline = createLinearGraph({
+  nodes: [researchNode, analyzeNode, writeNode],
+  stateAnnotation: myStateAnnotation,
+});
+
+// Loop: generate → review → (approve → END | revise → generate)
+const iterative = createLoopGraph({
+  primaryNode: generateNode,
+  loopNode: reviewNode,
+  router: createBinaryRouter((state) => (state.approved ? '__end__' : 'generate')),
+  stateAnnotation: myStateAnnotation,
+});
+
+// Branching: classify → (route A | route B | route C)
+const branching = createBranchingGraph({
+  routerNode: classifyNode,
+  branches: { support: supportNode, billing: billingNode, general: generalNode },
+  stateAnnotation: myStateAnnotation,
+});
+```
+
+### Visual flow builder
+
+The `/flows` page in the UI provides a drag-and-drop canvas. Connect Agent, Tool, Condition, State, and HITL nodes visually, then export the design as TypeScript that imports from `@@PROJECT_NAME-flows`.
+
+### HITL (human-in-the-loop)
+
+Use `createSubgraphBridge` to pause a flow, await human approval, and resume with the decision:
+
+```typescript
+import { createSubgraphBridge } from '@@PROJECT_NAME-flows';
+
+const approvedFlow = createSubgraphBridge(mySubgraph, {
+  checkpointKey: 'approval',
+  pendingCheck: (state) => state.pendingApproval,
+});
+```
+
+> **Flow guide →** [Building flows](docs/guides/building-flows.md)
+
+---
+
+## Prompt management
+
+The `packages/prompts` package manages prompt templates stored as git-tracked markdown files with YAML frontmatter.
+
+### Define a prompt template
+
+Create a file in `prompts/` at the project root:
+
+```markdown
+---
+id: weekly-summary
+model: sonnet
+version: 1
+variables:
+  - teamName
+  - weekOf
+---
+
+You are a technical writer summarizing {{teamName}}'s work for the week of {{weekOf}}.
+
+Focus on: decisions made, blockers cleared, and next steps.
+Format your response as a concise executive summary (200–300 words).
+```
+
+### Load and use a template
+
+```typescript
+import { PromptLoader, PromptRegistry } from '@@PROJECT_NAME-prompts';
+
+const loader = new PromptLoader('./prompts');
+const registry = new PromptRegistry();
+await loader.loadAll(registry);
+
+const prompt = registry.createPromptFromTemplate('weekly-summary', {
+  teamName: 'Platform',
+  weekOf: '2025-01-13',
+});
+```
+
+### Prompt playground
+
+Browse and test all registered prompts at [http://localhost:5173/prompts](http://localhost:5173/prompts). Edit a template, fill in variables, and run it against the live model — no restarts needed.
+
+> **Prompt guide →** [Prompt playground](docs/guides/prompt-playground.md) · [Prompt engineering](docs/concepts/prompt-engineering.md)
+
+---
+
+## MCP server
+
+The `packages/mcp` package exposes every tool registered in `packages/tools` to any MCP-compatible client — including Claude Code and Claude Desktop — via the stdio transport.
+
+### Run the MCP server
+
+```bash
+node packages/mcp/dist/index.js
+```
+
+### Connect Claude Code
+
+Add this to `.claude/settings.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "@@PROJECT_NAME": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+### Connect Claude Desktop
+
+Add this to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "@@PROJECT_NAME": {
+      "command": "node",
+      "args": ["/absolute/path/to/packages/mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+After connecting, all tools from `packages/tools` are immediately available to Claude without any additional setup.
+
+> **MCP guide →** [MCP integration](docs/integrations/mcp.md)
+
 ---
 
 ## Production deployment
@@ -426,6 +663,7 @@ Output:
 
 - `packages/server/dist/` — compiled server (Node.js ESM)
 - `packages/app/dist/` — compiled Vite SPA (static files)
+- `packages/mcp/dist/` — compiled MCP server
 
 ### Start the server
 
@@ -480,3 +718,20 @@ Use this endpoint for load balancer health checks and uptime monitors.
 - Never commit `.env` files — add them to `.gitignore`.
 - Add authentication middleware in `packages/server/src/index.ts` before the API routes.
 - Tools with `requiresConfirmation: true` already gate dangerous operations — audit these before deploying.
+
+---
+
+## Documentation
+
+| Topic                   | Link                                                                       |
+| ----------------------- | -------------------------------------------------------------------------- |
+| Quick start             | [docs/getting-started/quickstart.md](docs/getting-started/quickstart.md)   |
+| Agent architecture      | [docs/concepts/agent-architecture.md](docs/concepts/agent-architecture.md) |
+| Prompt engineering      | [docs/concepts/prompt-engineering.md](docs/concepts/prompt-engineering.md) |
+| Creating tools          | [docs/guides/creating-tools.md](docs/guides/creating-tools.md)             |
+| Building flows          | [docs/guides/building-flows.md](docs/guides/building-flows.md)             |
+| Prompt playground       | [docs/guides/prompt-playground.md](docs/guides/prompt-playground.md)       |
+| Tracing and debugging   | [docs/guides/tracing-debugging.md](docs/guides/tracing-debugging.md)       |
+| MCP integration         | [docs/integrations/mcp.md](docs/integrations/mcp.md)                       |
+| Langfuse integration    | [docs/integrations/langfuse.md](docs/integrations/langfuse.md)             |
+| Tool adapters reference | [docs/reference/tool-adapters.md](docs/reference/tool-adapters.md)         |
