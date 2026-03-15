@@ -5,9 +5,9 @@ relevantTo: [api]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 573
-  referenced: 166
-  successfulFeatures: 166
+  loaded: 575
+  referenced: 168
+  successfulFeatures: 168
 ---
 <!-- domain: API Design & Integration | GitHub GraphQL, REST endpoints, HTTP client patterns -->
 
@@ -390,3 +390,10 @@ usageStats:
 - **Problem solved:** Claude must return refined components in a machine-readable format that the refine() method can extract and write back to disk
 - **Why this works:** Markdown is Claude-native and human-readable. Format is defined in the system prompt (`implement.md`), making the contract explicit and auditable
 - **Trade-offs:** Easier: prompt controls format, parser is simple regex. Harder: fragile if Claude drifts format; no validation that file block contains valid code
+
+### Chosen inline mock audit pattern in a11y-agent.ts; deleted separate a11y-audit-bridge.ts file. Mock code lives directly in agent alongside agentic tools. (2026-03-15)
+- **Context:** Initial design had bridge abstraction for mock axe audit; later consolidated to inline pattern
+- **Why:** Inline pattern reduces indirection, keeps agent self-contained, simpler mental model for consumers. Bridge file added complexity without reuse benefit.
+- **Rejected:** Keep bridge file abstraction — cleaner separation but unnecessary indirection if mock only used by agent
+- **Trade-offs:** Less modular but more maintainable. Agent is now single read-through unit.
+- **Breaking if changed:** If mock audit needs reuse in other packages, would require extracting back to bridge file or new package

@@ -5,11 +5,10 @@ relevantTo: [gotchas]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 1512
-  referenced: 391
-  successfulFeatures: 391
+  loaded: 1514
+  referenced: 393
+  successfulFeatures: 393
 ---
-
 <!-- domain: Gotchas & Pitfalls | Known traps, anti-patterns, and hard-won lessons across all domains -->
 
 # gotchas

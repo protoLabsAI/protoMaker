@@ -5,9 +5,9 @@ relevantTo: [architecture]
 importance: 0.9
 relatedFiles: []
 usageStats:
-  loaded: 544
-  referenced: 129
-  successfulFeatures: 129
+  loaded: 546
+  referenced: 131
+  successfulFeatures: 131
 ---
 <!-- domain: Architecture Decisions | System-wide structural decisions that have breaking consequences if changed -->
 
@@ -1633,3 +1633,57 @@ usageStats:
 - **Situation:** Prompt file is external, separate from agent code. If prompt is updated after agent starts, changes won't be visible until restart
 - **Root cause:** Prompt is read via fs.readFileSync() at call time. No hot-reload or caching. This is by design—prompts should be versioned and stable
 - **How to avoid:** Easier: iterate on prompt without rebuilding. Harder: prompt must be present at runtime, not bundled in compiled js
+
+#### [Gotcha] TypeScript statically resolves module names in dynamic imports(). Template placeholders like '@@PROJECT_NAME-a11y' get resolved at compile time even with await import(). String variable indirection required. (2026-03-15)
+- **Situation:** agents/src/a11y-agent.ts uses @@PROJECT_NAME-a11y placeholder; TypeScript tried to resolve it as real module
+- **Root cause:** TypeScript module resolution runs at compile time before runtime code execution. Dynamic imports don't bypass static analysis.
+- **How to avoid:** String variable adds one indirection level but keeps template placeholder intact and compilable
+
+#### [Pattern] @types/jsdom added as devDependency in a11y package even though jsdom is optional peer dependency. Types needed at compile-time TypeScript checking regardless of runtime availability. (2026-03-15)
+- **Problem solved:** axe-wrapper.ts uses jsdom for WCAG audits but doesn't require it at runtime (has mock fallback)
+- **Why this works:** TypeScript's type-checking phase is separate from runtime. Optional peer deps still need type definitions available for compilation.
+- **Trade-offs:** Slight build-time overhead but clean compilation and IDE support regardless of peer dep installation state
+
+#### [Pattern] Dual runtime fallback: axe-wrapper tries real axe-core+jsdom dynamic import, falls back to pattern-matching mock for images, buttons, inputs, landmarks. Both paths in same codebase. (2026-03-15)
+- **Problem solved:** agents package needs accessibility audit capability in varied deployment contexts (full deps vs lightweight)
+- **Why this works:** Agents must function across environments. Real implementation provides accurate WCAG checks when available; mock enables agent operation in resource-constrained settings. Same behavior surface either way.
+- **Trade-offs:** Code complexity increases but agent portability increases significantly. Maintenance burden is contained (mock pattern-matching is simple)
+
+### Semantic analysis layer added to a11y agent beyond axe-core automated checks. Catches: alt text quality, vague link text ('click here'), heading level skips, multiple h1s, div[role=button] without tabindex. (2026-03-15)
+- **Context:** Automated accessibility tools like axe-core have known blind spots in semantic HTML patterns
+- **Why:** Axe-core is regex/DOM-pattern based and misses semantic issues requiring contextual reasoning. Agentic LLM layer can evaluate quality (vague alt) and intent (proper heading hierarchy) that automated tools cannot.
+- **Rejected:** Rely solely on axe-core automated violations — misses ~30-40% of real accessibility problems per accessibility research
+- **Trade-offs:** Agent loop adds latency/cost but remediation quality increases substantially. Semantic checks are AI-specific value-add.
+- **Breaking if changed:** Removing semantic layer reduces agent to mere axe-core wrapper; quality of remediation suggestions degrades
+
+#### [Pattern] Dynamic import of color package at runtime (via `import(colorIndexPath)`) instead of static import to avoid TypeScript rootDir violations in monorepo. (2026-03-15)
+- **Problem solved:** Color agent needs to call color package functions, but static import of `../../color/src/` violates TypeScript's rootDir boundary checks in workspace packages.
+- **Why this works:** TypeScript strictly enforces rootDir to prevent accidental cross-package imports. Dynamic import defers resolution to runtime, bypassing compile-time rootDir checks. This mirrors the pattern already established in implement-agent.ts.
+- **Trade-offs:** Runtime import adds minimal overhead but requires inlining the ColorPackage interface. Gains: type-safe cross-package function calls without compilation errors. Loses: static analysis can't verify the import path exists at build time.
+
+#### [Gotcha] Inline hex→OKLCH conversion at module load time (before async color package import resolves) so agent can immediately parse brand color input. (2026-03-15)
+- **Situation:** Agent receives brand color as hex string. Must convert to OKLCH to feed into palette generation. But color package (which has parseOklch/formatOklch) is loaded asynchronously.
+- **Root cause:** Agent initialization must not wait for async import. Inlining the conversion (simple math) avoids a blocking async operation at startup. Agent can immediately begin its workflow once the result structure is created.
+- **How to avoid:** Gains: non-blocking startup, clear contract (agent always works with OKLCH internally). Loses: duplication of color conversion logic (inlined vs color package). Code maintenance burden if color space conversion rules change.
+
+#### [Pattern] Token accumulation state machine: `resolvedTokens` object grows as tools execute. Each tool reads and writes to this shared map. Later tools (e.g., check_contrast) resolve CSS variable references against accumulated tokens. (2026-03-15)
+- **Problem solved:** generate_palette emits token map. check_contrast must later resolve `--color-primary` style references back to actual hex values to compute contrast ratios.
+- **Why this works:** Agentic loops need shared state to enable tool chaining. By accumulating tokens in a mutable map, downstream tools see upstream results without re-computing. Mirrors functional composition but with imperative state updates.
+- **Trade-offs:** Gains: efficient state threading, supports variable indirection (CSS var → resolved value). Loses: pure functional guarantees, harder to replay/debug individual tool calls in isolation.
+
+### update_tokens tool left as stub (accumulates in result.tokenUpdates). Actual .pen file mutation deferred to later integration phase. (2026-03-15)
+- **Context:** Feature scope: color agent should generate tokens and accessibility-checked palettes. File I/O and design token file format (.pen) are out of scope.
+- **Why:** Incremental delivery: agent logic can be tested/shipped independently of file mutation. Allows full integration phase later without blocking agent feature. Keeps tool set focused on color logic (generate, check, suggest) vs. file operations.
+- **Rejected:** Full implementation would require: .pen file parser, write-back logic, potential file lock handling, dependency on .pen schema. Increases complexity and test surface.
+- **Trade-offs:** Gains: MVP-ready feature, decoupled file I/O. Loses: end-to-end demo (files don't persist).
+- **Breaking if changed:** If downstream code expects update_tokens to mutate .pen files, it will fail. Integration phase must implement the write-back before this stub can be used in production workflows.
+
+#### [Pattern] Rich result accumulation object (ColorAgentResult) that gathers all side effects from the agentic loop: tokens, harmonies, contrast checks, updates, response text, iteration count. (2026-03-15)
+- **Problem solved:** Agent runs in a loop, calling multiple tools. Caller needs visibility into all generated artifacts and validation results, not just final text response.
+- **Why this works:** Agentic loops produce multiple outputs: generated tokens, validation results, suggestions. A single response string is insufficient. Result object allows downstream code to extract any artifact (e.g., tokens for CSS generation, contrast checks for compliance reporting).
+- **Trade-offs:** Gains: structured access to all artifacts, reusable across UI/API/tests. Loses: result object grows with each new tool (maintenance burden).
+
+#### [Pattern] System prompt encodes full workflow (5-step pipeline), critical contrast pairs, OKLCH reference, semantic token mappings (light/dark/high-contrast), and WCAG rules. Prompt acts as executable specification for agent behavior. (2026-03-15)
+- **Problem solved:** Agent must know the workflow (generate → check contrast → suggest harmonies → update tokens), which token mappings apply to which theme, and which contrast pairs must always be validated.
+- **Why this works:** Rather than hard-code business logic in the agent factory, encode it in the prompt. Makes behavior inspectable, updatable without code changes, and testable (prompt can be versioned/compared). Educates the agent about domain constraints (WCAG AA 4.5:1, AAA 7:1, etc.).
+- **Trade-offs:** Gains: behavior as data, prompt versioning, agent can adapt within encoded constraints. Loses: some overhead (larger prompt token count), business logic less obviously tied to code.

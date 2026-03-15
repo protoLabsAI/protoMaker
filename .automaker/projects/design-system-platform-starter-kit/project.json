@@ -164,7 +164,7 @@
           ],
           "complexity": "large",
           "featureId": "feature-1773570576080-2vxwy330f",
-          "executionStatus": "in-progress"
+          "executionStatus": "blocked"
         },
         {
           "number": 2,
@@ -323,7 +323,7 @@
           ],
           "complexity": "medium",
           "featureId": "feature-1773570576085-vgklpzblc",
-          "executionStatus": "blocked"
+          "executionStatus": "in-progress"
         },
         {
           "number": 2,
@@ -342,7 +342,8 @@
             "Color harmony suggestions"
           ],
           "complexity": "medium",
-          "featureId": "feature-1773570576086-yaanyljkd"
+          "featureId": "feature-1773570576086-yaanyljkd",
+          "executionStatus": "blocked"
         }
       ],
       "status": "pending",
@@ -514,5 +515,5 @@
     "generatedAt": "2026-03-15T08:30:00.000Z"
   },
   "createdAt": "2026-03-15T08:33:36.469Z",
-  "updatedAt": "2026-03-15T13:49:15.027Z"
+  "updatedAt": "2026-03-15T14:24:31.331Z"
 }
