@@ -17,6 +17,7 @@ interface UseBoardColumnFeaturesProps {
   currentWorktreePath: string | null; // Currently selected worktree path
   currentWorktreeBranch: string | null; // Branch name of the selected worktree (null = main)
   projectPath: string | null; // Main project path (for main worktree)
+  selectedProjectSlug: string | null; // Filter features by project slug (null = show all)
 }
 
 export function useBoardColumnFeatures({
@@ -26,6 +27,7 @@ export function useBoardColumnFeatures({
   currentWorktreePath,
   currentWorktreeBranch,
   projectPath,
+  selectedProjectSlug,
 }: UseBoardColumnFeaturesProps) {
   // Memoize column features to prevent unnecessary re-renders
   const columnFeaturesMap = useMemo(() => {
@@ -45,15 +47,20 @@ export function useBoardColumnFeatures({
     const featureMap = createFeatureMap(features);
     const runningTaskIds = new Set(runningAutoTasks);
 
+    // Filter features by project slug when a project filter is active
+    const projectFiltered = selectedProjectSlug
+      ? features.filter((f) => f.projectSlug === selectedProjectSlug)
+      : features;
+
     // Filter features by search query (case-insensitive)
     const normalizedQuery = searchQuery.toLowerCase().trim();
     const searchFiltered = normalizedQuery
-      ? features.filter(
+      ? projectFiltered.filter(
           (f) =>
             f.description.toLowerCase().includes(normalizedQuery) ||
             f.category?.toLowerCase().includes(normalizedQuery)
         )
-      : features;
+      : projectFiltered;
 
     // Determine the effective worktree path and branch for filtering
     // If currentWorktreePath is null, we're on the main worktree
@@ -236,6 +243,7 @@ export function useBoardColumnFeatures({
     currentWorktreePath,
     currentWorktreeBranch,
     projectPath,
+    selectedProjectSlug,
   ]);
 
   const getColumnFeatures = useCallback(

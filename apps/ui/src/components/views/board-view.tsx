@@ -234,6 +234,8 @@ export function BoardView() {
 
   // Search filter for Kanban cards
   const [searchQuery, setSearchQuery] = useState('');
+  // Project filter for board features
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState<string | null>(null);
   // Plan approval loading state
   const [isPlanApprovalLoading, setIsPlanApprovalLoading] = useState(false);
   // Derive spec creation state from store - check if current project is the one being created
@@ -1141,6 +1143,7 @@ export function BoardView() {
     currentWorktreePath,
     currentWorktreeBranch,
     projectPath: currentProject?.path || null,
+    selectedProjectSlug,
   });
 
   // Build columnFeaturesMap for ListView
@@ -1374,6 +1377,8 @@ export function BoardView() {
         onShowBoardBackground={() => setShowBoardBackgroundModal(true)}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        selectedProjectSlug={selectedProjectSlug}
+        onProjectFilterChange={setSelectedProjectSlug}
       />
 
       {/* DndContext wraps both WorktreePanel and main content area to enable drag-to-worktree */}
