@@ -1,0 +1,29 @@
+{
+  "name": "@ai-agent-app/tools",
+  "version": "0.1.0",
+  "description": "Standalone tools package — define once, deploy everywhere across MCP, LangGraph, and Express",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.24.1"
+  },
+  "devDependencies": {
+    "@langchain/core": "^0.3.33",
+    "@types/express": "^5.0.0",
+    "express": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.0.0"
+  }
+}
