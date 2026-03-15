@@ -1,0 +1,37 @@
+---
+/**
+ * Contact page — renders the Contact React island.
+ */
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Contact from '@/components/sections/Contact';
+
+const [configEntry] = await getCollection('siteConfig');
+const config = configEntry.data;
+---
+
+<BaseLayout
+  title="Contact"
+  description={`Get in touch with ${config.name}. Open to freelance projects, consulting, and full-time opportunities.`}
+>
+  <div class="mx-auto max-w-3xl px-6 py-16">
+    <header class="mb-12">
+      <h1 class="mb-3 text-4xl font-extrabold text-white">Get in touch</h1>
+      <p class="text-base" style="color: #a1a1aa;">
+        Have a project in mind or just want to say hello? Fill out the form below
+        or email me directly at{' '}
+        {config.email && (
+          <a
+            href={`mailto:${config.email}`}
+            class="font-medium no-underline"
+            style="color: var(--color-accent);"
+          >
+            {config.email}
+          </a>
+        )}
+      </p>
+    </header>
+
+    <Contact client:load />
+  </div>
+</BaseLayout>
